@@ -1,42 +1,11 @@
 const STORE_KEY = "spread.v1";
 const LICENSE_KEY = "spread.license";
-const TEMPLATES = {
-  student: [
-    { name: "Student", hours: 8, color: "#7cb87a" },
-    { name: "Work / Job", hours: 6, color: "#c4a35a" },
-    { name: "Family", hours: 3, color: "#8aa7c4" },
-    { name: "Health", hours: 3, color: "#c46a8a" },
-    { name: "Friends", hours: 2, color: "#b48ac4" },
-  ],
-  gig: [
-    { name: "Client work", hours: 20, color: "#7cb87a" },
-    { name: "Finding work", hours: 4, color: "#c4a35a" },
-    { name: "Money / admin", hours: 2, color: "#8aa7c4" },
-    { name: "Home", hours: 3, color: "#c46a8a" },
-    { name: "Body", hours: 3, color: "#b48ac4" },
-  ],
-  homeschool: [
-    { name: "Teacher", hours: 12, color: "#7cb87a" },
-    { name: "Parent", hours: 8, color: "#c4a35a" },
-    { name: "Household", hours: 5, color: "#8aa7c4" },
-    { name: "Each child focus", hours: 4, color: "#c46a8a" },
-    { name: "Self", hours: 2, color: "#b48ac4" },
-  ],
-  business: [
-    { name: "Lead / owner", hours: 6, color: "#7cb87a" },
-    { name: "Delivery", hours: 12, color: "#c4a35a" },
-    { name: "People", hours: 3, color: "#8aa7c4" },
-    { name: "Pipeline", hours: 3, color: "#c46a8a" },
-    { name: "Self", hours: 2, color: "#b48ac4" },
-  ],
-  individual: [
-    { name: "Work", hours: 10, color: "#7cb87a" },
-    { name: "Home", hours: 4, color: "#c4a35a" },
-    { name: "Health", hours: 3, color: "#8aa7c4" },
-    { name: "People", hours: 3, color: "#c46a8a" },
-    { name: "Craft / growth", hours: 2, color: "#b48ac4" },
-  ],
-};
+const COLORS = ["#7cb87a", "#c4a35a", "#8aa7c4", "#c46a8a", "#b48ac4"];
+const DEFAULTS = [
+  { id: "work", name: "Work", hours: 8 },
+  { id: "home", name: "Home", hours: 4 },
+  { id: "health", name: "Health", hours: 3 },
+];
 function weekStart(d = new Date()) {
   const x = new Date(d);
   const day = x.getDay();
@@ -56,10 +25,36 @@ function fmtWeek(key) {
   return `${s.toLocaleDateString(undefined, opt)} – ${e.toLocaleDateString(undefined, { ...opt, year: "numeric" })}`;
 }
 function load() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || defaultState(); }
-  catch { return defaultState(); }
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (!saved) return defaultState();
+    if (isUntouchedPreset(saved)) return defaultState();
+    return saved;
+  } catch { return defaultState(); }
 }
-function defaultState() { return { hats: [], weeks: {}, currentWeek: weekKey() }; }
+const PRESET_NAMES = [
+  "Student|Work / Job|Family|Health|Friends",
+  "Client work|Finding work|Money / admin|Home|Body",
+  "Teacher|Parent|Household|Each child focus|Self",
+  "Lead / owner|Delivery|People|Pipeline|Self",
+  "Work|Home|Health|People|Craft / growth",
+];
+function isUntouchedPreset(saved) {
+  if (!saved || !Array.isArray(saved.hats)) return false;
+  const names = saved.hats.map((h) => h.name).join("|");
+  if (!PRESET_NAMES.includes(names)) return false;
+  const weeks = saved.weeks || {};
+  return Object.values(weeks).every((week) => (week.boxes || []).every((box) => !(box.tasks || []).length));
+}
+function defaultState() {
+  const hats = DEFAULTS.map((h, i) => ({ id: h.id, name: h.name, defaultHours: h.hours, color: COLORS[i % COLORS.length] }));
+  const currentWeek = weekKey();
+  return {
+    hats,
+    currentWeek,
+    weeks: { [currentWeek]: { boxes: hats.map((h) => ({ hatId: h.id, hours: h.defaultHours, tasks: [] })) } },
+  };
+}
 function save(state) { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 function ensureWeek(state) {
   const k = state.currentWeek;
@@ -98,7 +93,7 @@ function render() {
   ensureWeek(state); save(state); root.innerHTML = mainScreen(); bindMain();
 }
 function lockScreen() {
-  return `<div class="locked"><div class="logo" style="margin:0 auto 8px">▣</div><h1>Spread</h1><p>The weekly role spread. Allot hours. List the work. $10 one-time. Install it. Data stays on this device.</p><div class="audience"><span class="chip">College</span><span class="chip">Gig work</span><span class="chip">Homeschool</span><span class="chip">Small business</span><span class="chip">Life admin</span></div><input id="lic" placeholder="License key  SPR-XXXX-XXXX" autocomplete="off" /><button class="primary" id="unlock" style="width:100%">Unlock</button><p style="margin-top:12px;font-size:12px">Trial key: <b>SPR-DEMO-2026</b></p></div>`;
+  return `<div class="locked"><div class="logo" style="margin:0 auto 8px">▣</div><h1>Spread</h1><p>The weekly role spread. Allot hours. List the work. $10 one-time. Install it. Data stays on this device.</p><input id="lic" placeholder="License key  SPR-XXXX-XXXX" autocomplete="off" /><button class="primary" id="unlock" style="width:100%">Unlock</button><p style="margin-top:12px;font-size:12px">Trial key: <b>SPR-DEMO-2026</b></p></div>`;
 }
 function mainScreen() {
   const week = state.weeks[state.currentWeek];
@@ -110,33 +105,45 @@ function mainScreen() {
     const hat = hatsById[box.hatId];
     if (!hat) return "";
     const tasks = box.tasks.map((t) => `<li class="task ${t.done ? "done" : ""}"><input type="checkbox" data-act="toggle" data-hat="${hat.id}" data-tid="${t.id}" ${t.done ? "checked" : ""} /><div><span>${esc(t.text)}</span></div><button class="icon-btn" data-act="del-task" data-hat="${hat.id}" data-tid="${t.id}">×</button></li>`).join("");
-    return `<article class="hat" style="border-top: 3px solid ${hat.color || "var(--accent)"}"><header><div><h2>${esc(hat.name)}</h2><div class="prompt">What is the most important thing in this role this week?</div></div><span class="hours">${box.hours}h boxed</span></header><ul class="tasks">${tasks || '<li class="task-meta">No tasks yet.</li>'}</ul><div class="add-row"><input data-new="${hat.id}" placeholder="Add a task…" /><button data-act="add" data-hat="${hat.id}">Add</button></div><div class="add-row"><input type="number" min="0" max="40" step="0.5" value="${box.hours}" data-hours="${hat.id}" /><button class="ghost" data-act="hours" data-hat="${hat.id}">Set hours</button><button class="icon-btn" data-act="del-hat" data-hat="${hat.id}" title="Remove role">⌫</button></div></article>`;
+    return `<article class="hat" style="border-top: 3px solid ${hat.color || "var(--accent)"}"><header><div><input class="spread-name" data-name="${hat.id}" value="${esc(hat.name)}" aria-label="Name of ${esc(hat.name)}" /><div class="prompt">What is the most important thing in this spread this week?</div></div><span class="hours">${box.hours}h boxed</span></header><ul class="tasks">${tasks || '<li class="task-meta">No tasks yet.</li>'}</ul><div class="add-row"><input data-new="${hat.id}" placeholder="Add a task…" /><button data-act="add" data-hat="${hat.id}">Add</button></div><div class="add-row"><input type="number" min="0" max="40" step="0.5" value="${box.hours}" data-hours="${hat.id}" /><button class="ghost" data-act="hours" data-hat="${hat.id}">Set hours</button><button class="icon-btn" data-act="del-hat" data-hat="${hat.id}" title="Remove role">⌫</button></div></article>`;
   }).join("");
-  return `<div class="app"><div class="top"><div class="brand"><div class="logo">▣</div><div><h1>Spread</h1><p>Roles first. Hours second. Tasks last.</p></div></div><div class="week-nav"><button data-act="prev">←</button><div class="week-label">${fmtWeek(state.currentWeek)}</div><button data-act="next">→</button><button data-act="today">This week</button></div></div><div class="stats"><div class="stat"><b>${state.hats.length}</b><span>roles this season</span></div><div class="stat"><b>${totalH}h</b><span>boxed this week</span></div><div class="stat"><b>${doneT}/${totalT}</b><span>tasks closed</span></div></div><div class="grid">${boxes || emptyHats()}</div><div class="bar"><button data-act="new-hat">+ New role</button><button data-act="templates">Start from a life</button><button data-act="copy">Copy last week</button><button data-act="export">Export JSON</button><button data-act="install" id="installBtn">Install app</button><button data-act="print">Print week</button></div></div><div id="modal"></div>`;
+  return `<div class="app"><div class="top"><div class="brand"><div class="logo">▣</div><div><h1>Spread</h1><p>Roles first. Hours second. Tasks last.</p></div></div><div class="week-nav"><button data-act="prev">←</button><div class="week-label">${fmtWeek(state.currentWeek)}</div><button data-act="next">→</button><button data-act="today">This week</button></div></div><div class="stats"><div class="stat"><b>${state.hats.length}</b><span>spreads</span></div><div class="stat"><b>${totalH}h</b><span>boxed this week</span></div><div class="stat"><b>${doneT}/${totalT}</b><span>tasks closed</span></div></div><div class="grid">${boxes || emptyHats()}<article class="hat new-life"><h2>New Life</h2><p class="prompt">Make your own spreads. Name them. Give them hours.</p><button class="primary" data-act="new-life" style="width:100%">New Life</button></article></div><div class="bar"><button data-act="new-hat">+ New role</button><button data-act="copy">Copy last week</button><button data-act="export">Export JSON</button><button data-act="install" id="installBtn">Install app</button><button data-act="print">Print week</button></div></div><div id="modal"></div>`;
 }
-function emptyHats() { return `<article class="hat"><h2>No roles yet</h2><p class="prompt">Add the roles you actually live. Five to seven is the sweet spot.</p></article>`; }
-function esc(s) { return String(s || "").replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); }
+function emptyHats() { return `<article class="hat"><h2>No spreads yet</h2><p class="prompt">Use New Life to name your own.</p></article>`; }
+function esc(s) {
+  return String(s || "")
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, """);
+}
 function boxFor(hatId) { return state.weeks[state.currentWeek].boxes.find((b) => b.hatId === hatId); }
 function bindLock() {
   document.getElementById("unlock").onclick = () => {
     const v = validateLicense(document.getElementById("lic").value);
     if (!v.ok) { alert("That key is not valid."); return; }
     localStorage.setItem(LICENSE_KEY, JSON.stringify(v));
-    if (!state.hats.length) applyTemplate("individual");
+    if (!state.hats.length) state = defaultState();
     render();
   };
 }
-function applyTemplate(key) {
-  const list = TEMPLATES[key] || TEMPLATES.individual;
-  state.hats = list.map((h) => ({ id: uid(), name: h.name, defaultHours: h.hours, color: h.color }));
-  state.weeks[state.currentWeek] = { boxes: state.hats.map((h) => ({ hatId: h.id, hours: h.defaultHours, tasks: [] })) };
-  save(state);
-}
+
 function bindMain() {
   document.querySelectorAll("[data-act]").forEach((el) => el.addEventListener("click", onAct));
   document.querySelectorAll("[data-new]").forEach((inp) => {
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") addTask(inp.dataset.new, inp.value); });
   });
+  document.querySelectorAll("[data-name]").forEach((inp) => {
+    inp.addEventListener("change", () => renameHat(inp.dataset.name, inp.value));
+  });
+}
+function renameHat(id, name) {
+  const hat = state.hats.find((h) => h.id === id);
+  if (!hat) return;
+  name = (name || "").trim();
+  if (!name) return;
+  hat.name = name;
+  save(state);
 }
 function onAct(e) {
   const act = e.currentTarget.dataset.act;
@@ -160,13 +167,13 @@ function onAct(e) {
     save(state); render(); return;
   }
   if (act === "del-hat") {
-    if (!confirm("Remove this role?")) return;
+    if (!confirm("Remove this spread?")) return;
     state.hats = state.hats.filter((h) => h.id !== hatId);
     Object.values(state.weeks).forEach((w) => { w.boxes = w.boxes.filter((b) => b.hatId !== hatId); });
     save(state); render(); return;
   }
   if (act === "new-hat") return openNewHat();
-  if (act === "templates") return openTemplates();
+  if (act === "new-life") return openNewLife();
   if (act === "copy") return copyLast();
   if (act === "export") {
     const a = document.createElement("a");
@@ -196,10 +203,22 @@ function openNewHat() {
     state.hats.push(hat); ensureWeek(state); boxFor(hat.id).hours = hours; save(state); render();
   };
 }
-function openTemplates() {
-  document.getElementById("modal").innerHTML = `<div class="modal-bg"><div class="modal"><h3>Start from a life</h3><p>This replaces your current roles.</p><button class="primary" data-t="student">College student</button><button class="primary" data-t="gig">Gig / freelance</button><button class="primary" data-t="homeschool">Homeschool family</button><button class="primary" data-t="business">Small business</button><button class="primary" data-t="individual">Working individual</button><button class="ghost" id="cancel">Cancel</button></div></div>`;
-  document.getElementById("cancel").onclick = () => (document.getElementById("modal").innerHTML = "");
-  document.querySelectorAll("[data-t]").forEach((b) => { b.onclick = () => { applyTemplate(b.dataset.t); render(); }; });
+function openNewLife() {
+  document.getElementById("modal").innerHTML = `<div class="modal-bg"><div class="modal"><h3>New Life</h3><p>Name a spread and give it hours. Add as many as you live.</p><div class="field"><label>Name</label><input id="ln" placeholder="Parent, shop, study" /></div><div class="field"><label>Hours / week</label><input id="lh" type="number" value="2" min="0.5" step="0.5" /></div><div class="row"><button class="ghost" id="cancel">Done</button><button class="primary" id="addlife">Add spread</button></div></div></div>`;
+  const close = () => (document.getElementById("modal").innerHTML = "");
+  document.getElementById("cancel").onclick = close;
+  document.getElementById("addlife").onclick = () => {
+    const name = document.getElementById("ln").value.trim();
+    if (!name) return;
+    const hours = Number(document.getElementById("lh").value || 2);
+    const hat = { id: uid(), name, defaultHours: hours, color: COLORS[state.hats.length % COLORS.length] };
+    state.hats.push(hat);
+    ensureWeek(state);
+    boxFor(hat.id).hours = hours;
+    save(state);
+    render();
+    openNewLife();
+  };
 }
 function copyLast() {
   const d = new Date(state.currentWeek + "T00:00:00"); d.setDate(d.getDate() - 7);

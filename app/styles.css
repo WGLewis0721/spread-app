@@ -50,6 +50,14 @@ button { cursor: pointer; }
 }
 .hat header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .hat h2 { font-size: 18px; }
+.spread-name {
+  width: 100%;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 2px 0;
+  border-radius: 8px;
+}
+.spread-name:focus { outline: 1px solid var(--line); background: var(--bg2); padding: 2px 8px; }
 .hours {
   font-family: system-ui, sans-serif; font-size: 12px; color: var(--accent);
   background: #1e3324; border: 1px solid #2e4a36; padding: 4px 8px; border-radius: 999px;
