@@ -814,15 +814,35 @@ function AddTaskRow({ placeholder, onAdd }: { placeholder: string; onAdd: (text:
 }
 
 function AppSheet({ sheet, setSheet }: { sheet: Sheet; setSheet: (sheet: Sheet) => void }) {
-  useLockPageScroll(sheet !== null);
+  const [open, setOpen] = useState(false);
+  const closing = useRef(false);
+  if (sheet && !open && !closing.current) setOpen(true);
+
+  function close() {
+    if (closing.current || !sheet) return;
+    closing.current = true;
+    setOpen(false);
+    const wait = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 20 : 420;
+    window.setTimeout(() => {
+      closing.current = false;
+      setSheet(null);
+    }, wait);
+  }
+
+  function go(next: Sheet) {
+    if (next === null) close();
+    else setSheet(next);
+  }
+
+  useLockPageScroll(Boolean(sheet));
   return (
-    <Dialog.Root open={sheet !== null} onOpenChange={(open) => !open && setSheet(null)}>
+    <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
       <Dialog.Portal>
         <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
         <Dialog.Content className={cn("sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none", sheet === "more" && "sheet-stack")}>
-          {sheet === "more" && <MoreSheet setSheet={setSheet} />}
-          {sheet === "new" && <NewLifeSheet onClose={() => setSheet(null)} />}
-          {sheet === "license" && <LicenseSheet onClose={() => setSheet(null)} />}
+          {sheet === "more" && <MoreSheet setSheet={go} />}
+          {sheet === "new" && <NewLifeSheet onClose={close} />}
+          {sheet === "license" && <LicenseSheet onClose={close} />}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
