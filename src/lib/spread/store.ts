@@ -3,6 +3,8 @@ import {
   cloneWeek,
   clampHours,
   defaultData,
+  depositHours,
+  bankedHours,
   ensureWeek,
   LICENSE_KEY,
   normalizeData,
@@ -166,8 +168,6 @@ export const useSpread = create<Store>((set, get) => ({
   },
   setHours: (hatId, hours) => {
     const current = ensureWeek(get().data);
-    const week = current.weeks[current.currentWeek];
-    if (week.allocations.some((item) => item.hatId === hatId)) return;
     const value = clampHours(hours);
     const data = mapBox(current, hatId, (box) => ({ ...box, hours: value }));
     data.hats = data.hats.map((hat) => (hat.id === hatId ? { ...hat, defaultHours: value } : hat));
@@ -262,15 +262,19 @@ export const useSpread = create<Store>((set, get) => ({
   addAllocation: (hatId, day, hours = 1) => {
     const data = ensureWeek(get().data);
     const week = data.weeks[data.currentWeek];
+    const bank = week.boxes.find((box) => box.hatId === hatId)?.hours ?? 0;
+    const spent = week.allocations.filter((item) => item.hatId === hatId).reduce((sum, item) => sum + item.hours, 0);
     const existing = week.allocations.find((item) => item.hatId === hatId && item.day === day);
     let allocations: Allocation[];
     if (existing) {
-      allocations = week.allocations.map((item) =>
-        item.id === existing.id ? { ...item, hours: clampHours(item.hours + hours) } : item,
-      );
+      const nextHours = bankedHours(existing.hours, bank, spent - existing.hours, existing.hours + hours);
+      if (nextHours === existing.hours) return;
+      allocations = week.allocations.map((item) => (item.id === existing.id ? { ...item, hours: nextHours } : item));
     } else {
+      const take = depositHours(bank, spent, hours);
+      if (take <= 0) return;
       const order = week.allocations.filter((item) => item.day === day).reduce((max, item) => Math.max(max, item.order), -1) + 1;
-      allocations = [...week.allocations, { id: uid(), hatId, day, hours: clampHours(hours), order }];
+      allocations = [...week.allocations, { id: uid(), hatId, day, hours: take, order }];
     }
     const next = writeWeek(data, { ...week, allocations });
     persist(next);
@@ -279,9 +283,15 @@ export const useSpread = create<Store>((set, get) => ({
   setAllocationHours: (allocationId, hours) => {
     const data = ensureWeek(get().data);
     const week = data.weeks[data.currentWeek];
-    const allocations = week.allocations.map((item) =>
-      item.id === allocationId ? { ...item, hours: clampHours(hours) } : item,
-    );
+    const current = week.allocations.find((item) => item.id === allocationId);
+    if (!current) return;
+    const bank = week.boxes.find((box) => box.hatId === current.hatId)?.hours ?? 0;
+    const others = week.allocations
+      .filter((item) => item.hatId === current.hatId && item.id !== allocationId)
+      .reduce((sum, item) => sum + item.hours, 0);
+    const nextHours = bankedHours(current.hours, bank, others, hours);
+    if (nextHours === current.hours) return;
+    const allocations = week.allocations.map((item) => (item.id === allocationId ? { ...item, hours: nextHours } : item));
     const next = writeWeek(data, { ...week, allocations });
     persist(next);
     set({ data: next });

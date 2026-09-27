@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Check, ChevronRight, Ellipsis, Minus, Plus } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import { formatWeek, allocationHours, ROLE_COLORS, weekKey, type Hat } from "@/lib/spread/model";
+import { formatWeek, ROLE_COLORS, weekKey, type Hat } from "@/lib/spread/model";
 import { exportSpread, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { WeeklyView } from "@/spread/components/weekly-view";
@@ -184,7 +184,6 @@ function WeekScreen() {
   const rollover = useSpread((s) => s.rollover);
   const range = formatWeek(data.currentWeek);
   const isCurrent = data.currentWeek === weekKey();
-  const allocations = data.weeks[data.currentWeek]?.allocations ?? [];
   const rows = data.hats.map((hat) => {
     const box = data.weeks[data.currentWeek]?.boxes.find((item) => item.hatId === hat.id) ?? {
       hatId: hat.id,
@@ -193,8 +192,7 @@ function WeekScreen() {
     };
     return {
       hat,
-      box: { ...box, hours: allocationHours(allocations, hat.id, box.hours) },
-      distributed: allocations.some((item) => item.hatId === hat.id),
+      box,
     };
   });
 
@@ -281,14 +279,13 @@ function WeekScreen() {
                 }} />
               </div>
               <div className="mt-6 flex flex-col gap-5">
-                {rows.map(({ hat, box, distributed }, index) => (
+                {rows.map(({ hat, box }, index) => (
                   <div key={hat.id} className="week-seq-item" style={{ animationDelay: `${(index + 1) * 45}ms` }}>
                     <RoleBlock
                       hat={hat}
                       hours={box.hours}
                       tasks={box.tasks}
                       editing={editing}
-                      distributed={distributed}
                       onRemove={() => setRemoveId(hat.id)}
                       onOpenTask={(taskId) => setOpenTask({ hatId: hat.id, taskId })}
                     />
@@ -431,7 +428,6 @@ function RoleBlock({
   hours,
   tasks,
   editing,
-  distributed,
   onRemove,
   onOpenTask,
 }: {
@@ -439,7 +435,6 @@ function RoleBlock({
   hours: number;
   tasks: { id: string; text: string; done: boolean }[];
   editing: boolean;
-  distributed: boolean;
   onRemove: () => void;
   onOpenTask: (taskId: string) => void;
 }) {
@@ -517,7 +512,7 @@ function RoleBlock({
           }}
           className="min-w-0 flex-1 truncate rounded-lg bg-transparent px-2 text-base font-semibold outline-none focus:bg-fill"
         />
-        {adjusting && !distributed ? (
+        {adjusting ? (
           <Stepper
             value={hours}
             label={`${hat.name} hours`}
@@ -528,14 +523,8 @@ function RoleBlock({
           <button
             type="button"
             className="grid h-11 shrink-0 place-items-center px-1"
-            aria-label={
-              distributed
-                ? `${hat.name}, ${hourChip(hours)} ${hours === 1 ? "hour" : "hours"} across the week`
-                : `${hat.name}, ${hours} hours. Adjust`
-            }
-            onClick={() => {
-              if (!distributed) setAdjusting(true);
-            }}
+            aria-label={`${hat.name}, ${hourChip(hours)} hours. Adjust`}
+            onClick={() => setAdjusting(true)}
           >
             <span className="rounded-full bg-fill px-3 py-1 text-sm font-semibold tabular-nums">
               {hourChip(hours)}h

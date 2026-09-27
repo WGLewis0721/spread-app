@@ -108,6 +108,26 @@ export function emptyContent(): TaskContent {
   return { blocks: [] };
 }
 
+export function spentHours(allocations: { hatId: string; hours: number }[], hatId: string) {
+  return allocations.filter((item) => item.hatId === hatId).reduce((sum, item) => sum + item.hours, 0);
+}
+
+export function remainingHours(bank: number, allocations: { hatId: string; hours: number }[], hatId: string) {
+  return Math.round((bank - spentHours(allocations, hatId)) * 2) / 2;
+}
+
+export function bankedHours(current: number, bank: number, spentByOthers: number, requested: number) {
+  const next = clampHours(requested);
+  if (next <= current) return next;
+  return Math.min(next, Math.max(current, bank - spentByOthers));
+}
+
+export function depositHours(bank: number, spent: number, requested: number) {
+  const room = bank - spent;
+  if (room <= 0) return 0;
+  return Math.min(clampHours(requested), room);
+}
+
 export function allocationHours(allocations: Allocation[], hatId: string, fallback: number) {
   const mine = allocations.filter((item) => item.hatId === hatId);
   if (mine.length === 0) return fallback;
@@ -143,12 +163,7 @@ export function cloneWeek(week: WeekData): WeekData {
 }
 
 export function syncAllocationHours(week: WeekData): WeekData {
-  const boxes = week.boxes.map((box) => {
-    const mine = week.allocations.filter((item) => item.hatId === box.hatId);
-    if (mine.length === 0) return box;
-    return { ...box, hours: mine.reduce((sum, item) => sum + item.hours, 0) };
-  });
-  return { ...week, boxes };
+  return week;
 }
 
 export function clampHours(n: number) {
@@ -231,11 +246,12 @@ export function normalizeData(raw: unknown): SpreadData {
   if (value.weeks && typeof value.weeks === "object") {
     for (const [key, week] of Object.entries(value.weeks)) {
       if (!week || !Array.isArray(week.boxes)) continue;
+      const allocations = (Array.isArray(week.allocations) ? week.allocations.filter(isAllocation) : []).map(
+        (item, index) => ({ ...item, order: typeof item.order === "number" ? item.order : index }),
+      );
       weeks[key] = {
-        boxes: week.boxes.filter(isBox).map(normalizeBox),
-        allocations: (Array.isArray(week.allocations) ? week.allocations.filter(isAllocation) : []).map(
-          (item, index) => ({ ...item, order: typeof item.order === "number" ? item.order : index }),
-        ),
+        boxes: week.boxes.filter(isBox).map((box) => restoreBank(normalizeBox(box), allocations, hats)),
+        allocations,
       };
     }
   }
@@ -261,6 +277,15 @@ function normalizeBox(box: Box): Box {
     hours: box.hours,
     tasks: box.tasks.filter(isTask).map(normalizeTask),
   };
+}
+
+function restoreBank(box: Box, allocations: { hatId: string; hours: number }[], hats: Hat[]) {
+  const spent = spentHours(allocations, box.hatId);
+  const hat = hats.find((item) => item.id === box.hatId);
+  if (hat && spent > 0 && box.hours === spent && hat.defaultHours > box.hours) {
+    return { ...box, hours: hat.defaultHours };
+  }
+  return box;
 }
 
 function isTask(value: unknown): value is Task {

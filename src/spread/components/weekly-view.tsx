@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Minus, Plus } from "lucide-react";
-import { allocationHours, clampHours, weekDays } from "@/lib/spread/model";
+import { clampHours, remainingHours, weekDays } from "@/lib/spread/model";
 import { useSpread } from "@/lib/spread/store";
 import { edgeScrollDelta } from "@/spread/gestures/auto-scroll";
 import { highlightedDay, resolveDrop } from "@/spread/gestures/resolve-drop";
@@ -91,7 +91,8 @@ export function WeeklyView({
         <div className="mt-3 flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-1">
           {data.hats.map((hat) => {
             const box = week?.boxes.find((item) => item.hatId === hat.id);
-            const hours = allocationHours(allocations, hat.id, box?.hours ?? hat.defaultHours);
+            const bank = box?.hours ?? hat.defaultHours;
+            const hours = remainingHours(bank, allocations, hat.id);
             return (
               <SpreadChip
                 key={hat.id}

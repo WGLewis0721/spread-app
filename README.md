@@ -28,7 +28,7 @@ A touch holds briefly before a drag. A mouse or pen starts after a short move. A
 - Open a task and add only what you need: Notes, Outline, Table, or Photo. In Notes, a line that starts with I. or A. continues like a Word outline.
 - Tap a spread’s color dot to pick another color.
 - Week shows Sunday at the top through Monday at the bottom. Turn the crown, or swipe the week, to move.
-- Drag a spread onto a day, or tap it and then Add. The weekly total is the sum of those days.
+- The hours on a spread are a bank. The week bubble shows what is left. Adding hours to a day takes from that bank. Taking them off a day puts them back.
 - Log out is in More, under appearance. It locks the device. The weeks stay on the device.
 
 Trial key: `SPR-DEMO-2026`
