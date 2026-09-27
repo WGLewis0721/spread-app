@@ -254,7 +254,7 @@ function WeekScreen() {
                 )}
                 onClick={() => setView(key)}
               >
-                <SpreadIcon name={icon} size={16} />
+                <SpreadIcon name={icon} size={key === "week" ? 20 : 16} />
                 {label}
               </button>
             ))}
@@ -479,6 +479,7 @@ function RoleBlock({
   const [name, setName] = useState(hat.name);
   const [adjusting, setAdjusting] = useState(false);
   const [palette, setPalette] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(true);
 
   useEffect(() => {
     setName(hat.name);
@@ -553,6 +554,15 @@ function RoleBlock({
             {hourChip(hours)}h
           </button>
         )}
+        <button
+          type="button"
+          aria-expanded={tasksOpen}
+          aria-label={tasksOpen ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
+          className="grid size-8 shrink-0 place-items-center text-tertiary"
+          onClick={() => setTasksOpen((open) => !open)}
+        >
+          <ChevronRight className={cn("size-5 transition-transform", tasksOpen && "rotate-90")} />
+        </button>
       </div>
       {palette && (
         <div className="border-t border-line px-4 py-3">
@@ -606,7 +616,7 @@ function RoleBlock({
           </div>
         </div>
       )}
-      <ul>
+      <ul className={tasksOpen ? undefined : "hidden print:block"}>
         {tasks.map((task) => (
           <TaskRow key={task.id} hatId={hat.id} task={task} onOpen={() => onOpenTask(task.id)} />
         ))}
@@ -681,8 +691,8 @@ function TaskRow({
   const toggleTask = useSpread((s) => s.toggleTask);
   return (
     <li>
-      <div className="ms-16 border-t border-line" />
-      <div className="flex min-h-14 items-center">
+      <div className="ms-[4.75rem] border-t border-line" />
+      <div className="flex min-h-14 items-center ps-12">
         <button
           type="button"
           role="checkbox"
@@ -725,8 +735,8 @@ function AddTaskRow({ placeholder, onAdd }: { placeholder: string; onAdd: (text:
         setValue("");
       }}
     >
-      <div className="ms-16 border-t border-line" />
-      <div className="flex min-h-14 items-center">
+      <div className="ms-[4.75rem] border-t border-line" />
+      <div className="flex min-h-14 items-center ps-12">
         <span className="grid size-14 shrink-0 place-items-center" aria-hidden="true">
           <SpreadIcon name="icon-add.svg" size={20} />
         </span>
