@@ -1,0 +1,47 @@
+name: Deploy Spread friends test to Vercel
+
+on:
+  push:
+    branches:
+      - deploy/vercel-friends-test
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify Vercel token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN is not configured for this repository."
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+
+      - name: Create or link Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx vercel@latest project add spread-app --scope gray-matter5 --token="$VERCEL_TOKEN" || true
+          npx vercel@latest link --yes --project spread-app --scope gray-matter5 --token="$VERCEL_TOKEN"
+
+      - name: Deploy production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx vercel@latest deploy --prod --yes --scope gray-matter5 --token="$VERCEL_TOKEN"
