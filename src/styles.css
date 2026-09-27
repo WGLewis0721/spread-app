@@ -395,3 +395,103 @@
     background: white !important;
   }
 }
+@media print {
+  @page {
+    margin: 0.7in;
+  }
+  body > *:not(.spread-paper) {
+    display: none !important;
+  }
+  .spread-paper {
+    display: block !important;
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-family: Calibri, Carlito, "Segoe UI", sans-serif;
+    font-size: 11pt;
+    line-height: 1.35;
+  }
+}
+
+.spread-paper {
+  display: none;
+}
+
+.spread-paper h1,
+.spread-paper h2,
+.spread-paper h3 {
+  font-family: Cambria, Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  color: #111111;
+  page-break-after: avoid;
+}
+
+.spread-paper h1 {
+  font-size: 22pt;
+  margin: 0;
+}
+
+.spread-paper h2 {
+  font-size: 16pt;
+  margin: 16pt 0 4pt;
+}
+
+.spread-paper h3 {
+  font-size: 12pt;
+  margin: 12pt 0 2pt;
+}
+
+.spread-paper p,
+.spread-paper ul {
+  margin: 0 0 6pt;
+}
+
+.spread-paper ul {
+  padding-left: 16pt;
+}
+
+.spread-paper .paper-range {
+  margin: 2pt 0 14pt;
+  font-size: 12pt;
+}
+
+.spread-paper .paper-break {
+  break-before: page;
+}
+
+.spread-paper table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4pt 0 10pt;
+}
+
+.spread-paper th,
+.spread-paper td {
+  border: 0.5pt solid #bfbfbf;
+  padding: 4pt 6pt;
+  text-align: left;
+  vertical-align: top;
+  font-weight: 400;
+}
+
+.spread-paper thead th,
+.spread-paper tr:last-child th {
+  background: #f2f2f2;
+  font-weight: 700;
+}
+
+.spread-paper .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.spread-paper img {
+  display: block;
+  max-width: 100%;
+  max-height: 3.2in;
+  margin: 4pt 0 8pt;
+}
+
+.spread-paper .paper-task {
+  break-inside: avoid;
+  margin: 0 0 8pt;
+}

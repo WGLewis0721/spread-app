@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Check, ChevronRight, Ellipsis, List, Minus, Plus } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, weekDays, weekKey, type Hat } from "@/lib/spread/model";
-import { exportSpread, useSpread, type ThemeChoice } from "@/lib/spread/store";
+import { saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
+import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
+import { buildWeekDocument, weekDocumentText } from "@/lib/spread/week-document";
+import { weekDocxBlob } from "@/lib/spread/week-docx";
+import { saveFile } from "@/lib/spread/save-file";
+import { WeekPaper } from "@/spread/components/week-paper";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { WeeklyView } from "@/spread/components/weekly-view";
 import { WeekCrown } from "@/spread/components/week-crown";
@@ -225,6 +231,7 @@ function WeekScreen() {
 
   return (
     <div className="min-h-dvh">
+      {typeof document !== "undefined" && createPortal(<WeekPaper doc={buildWeekDocument(data)} />, document.body)}
       <div className="mx-auto w-full max-w-xl">
         <header className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
           <WeekCrown
@@ -736,7 +743,11 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
   const theme = useSpread((s) => s.theme);
   const setTheme = useSpread((s) => s.setTheme);
   const copyLastWeek = useSpread((s) => s.copyLastWeek);
+  const replaceData = useSpread((s) => s.replaceData);
   const data = useSpread((s) => s.data);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [backup, setBackup] = useState<SpreadBackup | null>(null);
+  const week = buildWeekDocument(data);
 
   const actions: { label: string; run: () => void }[] = [
     {
@@ -748,19 +759,42 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
       },
     },
     {
-      label: "Export JSON",
+      label: "Copy week",
       run: () => {
-        exportSpread(data);
-        setSheet(null);
+        void copyText(weekDocumentText(week)).then((ok) => {
+          toast(ok ? "Week copied." : "Couldn’t copy the week.");
+          if (ok) setSheet(null);
+        });
       },
     },
     {
-      label: "Print week",
+      label: "Word document",
+      run: () => {
+        void weekDocxBlob(week)
+          .then((blob) => {
+            saveFile(blob, `Spread-${data.currentWeek}.docx`);
+            toast("Word document saved.");
+            setSheet(null);
+          })
+          .catch(() => toast("Couldn’t make the Word document."));
+      },
+    },
+    {
+      label: "Print / Save PDF",
       run: () => {
         setSheet(null);
         window.setTimeout(() => window.print(), 250);
       },
     },
+    {
+      label: "Back Up Spread",
+      run: () => {
+        saveBackup(data);
+        toast("Backup saved.");
+        setSheet(null);
+      },
+    },
+    { label: "Restore Spread", run: () => fileRef.current?.click() },
     { label: "License key", run: () => setSheet("license") },
   ];
 
@@ -771,6 +805,26 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
       <Dialog.Description className="mt-1 text-sm text-secondary">
         {license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
       </Dialog.Description>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".spread,.json,application/json"
+        className="sr-only"
+        aria-label="Choose a Spread backup"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          void file.text().then((text) => {
+            const next = parseBackup(text);
+            if (!next) {
+              toast("That file isn’t a Spread backup.");
+              return;
+            }
+            setBackup(next);
+          });
+        }}
+      />
       <div className="mt-4 overflow-hidden rounded-3xl bg-canvas">
         {actions.map((action, index) => (
           <button
@@ -800,9 +854,76 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
       >
         Log out
       </button>
+      <RestoreDialog
+        backup={backup}
+        onClose={() => setBackup(null)}
+        onConfirm={() => {
+          if (!backup) return;
+          replaceData(backup.data);
+          setBackup(null);
+          setSheet(null);
+          toast("Backup restored.");
+        }}
+      />
       <p className="mt-5 text-xs text-tertiary">Spread · Gray Matter. Data stays on this device.</p>
     </>
   );
+}
+
+function RestoreDialog({
+  backup,
+  onClose,
+  onConfirm,
+}: {
+  backup: SpreadBackup | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const names = backup?.summary.spreads ?? [];
+  const listed = names.length === 0 ? "No spreads" : names.length <= 4 ? names.join(", ") : `${names.slice(0, 3).join(", ")}, and ${names.length - 3} more`;
+  return (
+    <AlertDialog.Root open={backup !== null} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="no-print fixed inset-0 z-[60] bg-scrim" />
+        <AlertDialog.Content className="no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+          <AlertDialog.Title className="text-center text-base font-semibold">Restore this backup?</AlertDialog.Title>
+          <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+            {listed}. {backup?.summary.weeks ?? 0} {backup?.summary.weeks === 1 ? "week" : "weeks"}, {backup?.summary.tasks ?? 0}{" "}
+            {backup?.summary.tasks === 1 ? "task" : "tasks"}. {backup?.summary.range}. This replaces everything on this device.
+          </AlertDialog.Description>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
+              Restore
+            </AlertDialog.Action>
+          </div>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
+  );
+}
+
+function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text).then(
+      () => true,
+      () => copyTextFallback(text),
+    );
+  }
+  return Promise.resolve(copyTextFallback(text));
+}
+
+function copyTextFallback(text: string) {
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.left = "-9999px";
+  document.body.appendChild(area);
+  area.select();
+  const ok = document.execCommand("copy");
+  area.remove();
+  return ok;
 }
 
 function Segmented({ value, onChange }: { value: ThemeChoice; onChange: (theme: ThemeChoice) => void }) {

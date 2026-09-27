@@ -1,3 +1,5 @@
+import { backupFile } from "@/lib/spread/backup";
+import { saveFile } from "@/lib/spread/save-file";
 import { create } from "zustand";
 import {
   cloneWeek,
@@ -56,6 +58,7 @@ type Store = {
   removeAllocation: (allocationId: string) => void;
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
   copyLastWeek: () => boolean;
+  replaceData: (data: SpreadData) => void;
 };
 
 function readLicense(): License | null {
@@ -390,19 +393,15 @@ export const useSpread = create<Store>((set, get) => ({
     set({ data: next });
     return true;
   },
+  replaceData: (incoming) => {
+    const data = normalizeData(incoming);
+    persist(data);
+    set({ data });
+  },
 }));
 
-export function exportSpread(data: SpreadData) {
-  const payload = {
-    hats: data.hats,
-    weeks: data.weeks,
-    currentWeek: data.currentWeek,
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `spread-${data.currentWeek}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
+export function saveBackup(data: SpreadData) {
+  const file = backupFile(data);
+  const blob = new Blob([JSON.stringify(file)], { type: "application/octet-stream" });
+  saveFile(blob, `Spread-${data.currentWeek}.spread`);
 }

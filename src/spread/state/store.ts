@@ -1,1 +1,1 @@
-export { useSpread, exportSpread, type ThemeChoice } from "@/lib/spread/store";
+export { useSpread, saveBackup, type ThemeChoice } from "@/lib/spread/store";
