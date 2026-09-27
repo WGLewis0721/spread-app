@@ -20,6 +20,11 @@ export const Route = createRootRoute({
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
     ],
+    scripts: [
+      {
+        children: `(function(){try{var raw=localStorage.getItem("spread.profiles")||localStorage.getItem("spread.people");var active=localStorage.getItem("spread.profile")||localStorage.getItem("spread.person");var theme=localStorage.getItem("spread.theme");if(raw&&active){var list=JSON.parse(raw);if(Array.isArray(list)){for(var i=0;i<list.length;i++){var row=list[i];if(row&&row.id===active&&(row.theme==="light"||row.theme==="dark"||row.theme==="system")){theme=row.theme;break}}}}if(theme==="light"||theme==="dark")document.documentElement.setAttribute("data-theme",theme)}catch(e){}})();`,
+      },
+    ],
   }),
   component: () => (
     <html lang="en" suppressHydrationWarning>

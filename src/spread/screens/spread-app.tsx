@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -21,6 +21,8 @@ import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-brow
 
 type Sheet = "more" | "new" | "license" | null;
 
+const useClientLayout = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 export function SpreadApp() {
   const ready = useSpread((s) => s.ready);
   const license = useSpread((s) => s.license);
@@ -28,7 +30,7 @@ export function SpreadApp() {
   const boot = useSpread((s) => s.boot);
   useBrowserFrame();
 
-  useEffect(() => {
+  useClientLayout(() => {
     boot();
   }, [boot]);
 
@@ -46,7 +48,7 @@ export function SpreadApp() {
           },
         }}
       />
-      {!ready || !license ? <UnlockScreen /> : <WeekScreen />}
+      {ready && (license ? <WeekScreen /> : <UnlockScreen />)}
     </>
   );
 }
