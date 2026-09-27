@@ -56,9 +56,9 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="no-print fixed inset-0 z-40 bg-scrim" />
+        <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
         <Dialog.Content
-          className={`sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl bg-elevated px-5 pt-3 pb-safe outline-none enter ${openNote ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
+          className={`sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl bg-elevated px-5 pt-3 pb-safe outline-none ${openNote ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
           style={openNote ? { height: sheetHeight } : undefined}
         >
           <div className="grid shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center">

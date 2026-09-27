@@ -616,7 +616,8 @@ function RoleBlock({
           </div>
         </div>
       )}
-      <ul className={tasksOpen ? undefined : "hidden print:block"}>
+      <div className={cn("task-fold", tasksOpen && "task-fold-open")}>
+      <ul>
         {tasks.map((task) => (
           <TaskRow key={task.id} hatId={hat.id} task={task} onOpen={() => onOpenTask(task.id)} />
         ))}
@@ -627,6 +628,7 @@ function RoleBlock({
           />
         </li>
       </ul>
+      </div>
     </section>
   );
 }
@@ -758,8 +760,8 @@ function AppSheet({ sheet, setSheet }: { sheet: Sheet; setSheet: (sheet: Sheet) 
   return (
     <Dialog.Root open={sheet !== null} onOpenChange={(open) => !open && setSheet(null)}>
       <Dialog.Portal>
-        <Dialog.Overlay className="no-print fixed inset-0 z-40 bg-scrim" />
-        <Dialog.Content className="sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none enter">
+        <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
+        <Dialog.Content className={cn("sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none", sheet === "more" && "sheet-stack")}>
           {sheet === "more" && <MoreSheet setSheet={setSheet} />}
           {sheet === "new" && <NewLifeSheet onClose={() => setSheet(null)} />}
           {sheet === "license" && <LicenseSheet onClose={() => setSheet(null)} />}
@@ -864,7 +866,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
           });
         }}
       />
-      <div className="mt-4 overflow-hidden rounded-3xl bg-canvas">
+      <div className="stack-rows mt-4 overflow-hidden rounded-3xl bg-canvas">
         {actions.map((action, index) => (
           <button
             key={action.label}
@@ -927,8 +929,8 @@ function RestoreDialog({
   return (
     <AlertDialog.Root open={backup !== null} onOpenChange={(open) => !open && onClose()}>
       <AlertDialog.Portal>
-        <AlertDialog.Overlay className="no-print fixed inset-0 z-[60] bg-scrim" />
-        <AlertDialog.Content className="no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+        <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
           <AlertDialog.Title className="text-center text-base font-semibold">Restore this backup?</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
             {listed}. {backup?.summary.weeks ?? 0} {backup?.summary.weeks === 1 ? "week" : "weeks"}, {backup?.summary.tasks ?? 0}{" "}
@@ -1162,8 +1164,8 @@ function RolloverDialog({
   return (
     <AlertDialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
       <AlertDialog.Portal>
-        <AlertDialog.Overlay className="no-print fixed inset-0 z-50 bg-scrim" />
-        <AlertDialog.Content className="no-print fixed inset-x-4 top-1/2 z-50 mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+        <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-50 bg-scrim" />
+        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-50 mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
           <AlertDialog.Title className="text-center text-base font-semibold">Replace next week?</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
             Next week already has tasks or days. Rollover will replace that week. This week stays as it is.
@@ -1189,8 +1191,8 @@ function RemoveDialog({ hat, onClose }: { hat: Hat | null; onClose: () => void }
   return (
     <AlertDialog.Root open={hat !== null} onOpenChange={(open) => !open && onClose()}>
       <AlertDialog.Portal>
-        <AlertDialog.Overlay className="no-print fixed inset-0 z-50 bg-scrim" />
-        <AlertDialog.Content className="no-print fixed inset-x-4 top-1/2 z-50 mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+        <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-50 bg-scrim" />
+        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-50 mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
           <div className="mx-auto mb-3 grid size-11 place-items-center">
             <SpreadIcon name="icon-trash.svg" size={20} />
           </div>
