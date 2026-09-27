@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Check, ChevronRight, Ellipsis, Minus, Plus } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import { formatWeek, ROLE_COLORS, weekKey, type Hat } from "@/lib/spread/model";
+import { formatWeek, ROLE_COLORS, weekDays, weekKey, type Hat } from "@/lib/spread/model";
 import { exportSpread, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { WeeklyView } from "@/spread/components/weekly-view";
@@ -419,6 +419,33 @@ function formatHourLabel(hours: number) {
   return `${shown} ${hours === 1 ? "hour" : "hours"}`;
 }
 
+const DAY_MARKS = ["M", "Tu", "W", "Th", "F", "Sa", "Su"] as const;
+
+function DayMarks({ hatId, name, color }: { hatId: string; name: string; color: string }) {
+  const data = useSpread((s) => s.data);
+  const placed = data.weeks[data.currentWeek]?.allocations.filter((item) => item.hatId === hatId && item.hours > 0) ?? [];
+  if (placed.length === 0) return null;
+  const days = weekDays(data.currentWeek).slice().reverse();
+  const used = new Set(placed.map((item) => item.day));
+  const spoken = days.filter((day) => used.has(day.date)).map((day) => day.label);
+  return (
+    <p className="flex gap-1.5 px-2 pb-0.5" aria-label={`${name} on ${spoken.join(", ")}`}>
+      {days.map((day, index) => {
+        const on = used.has(day.date);
+        return (
+          <span
+            key={day.date}
+            className={on ? "text-xs font-semibold leading-none" : "text-xs font-medium leading-none text-tertiary"}
+            style={on ? { color } : undefined}
+          >
+            {DAY_MARKS[index]}
+          </span>
+        );
+      })}
+    </p>
+  );
+}
+
 function hourChip(hours: number) {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
 }
@@ -499,19 +526,22 @@ function RoleBlock({
             ))}
           </div>
         )}
-        <input
-          value={name}
-          aria-label={`${hat.name} name`}
-          onChange={(event) => setName(event.target.value)}
-          onBlur={() => {
-            if (!name.trim()) setName(hat.name);
-            else renameHat(hat.id, name);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
-          }}
-          className="min-w-0 flex-1 truncate rounded-lg bg-transparent px-2 text-base font-semibold outline-none focus:bg-fill"
-        />
+        <div className="min-w-0 flex-1">
+          <input
+            value={name}
+            aria-label={`${hat.name} name`}
+            onChange={(event) => setName(event.target.value)}
+            onBlur={() => {
+              if (!name.trim()) setName(hat.name);
+              else renameHat(hat.id, name);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            className="w-full min-w-0 truncate rounded-lg bg-transparent px-2 text-base font-semibold outline-none focus:bg-fill"
+          />
+          <DayMarks hatId={hat.id} name={hat.name} color={hat.color} />
+        </div>
         {adjusting ? (
           <Stepper
             value={hours}
