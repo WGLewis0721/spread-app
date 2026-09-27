@@ -255,6 +255,7 @@ function WeekScreen() {
                 )}
                 onClick={() => {
                   if (view === key) return;
+                  if (key === "week") setEditing(false);
                   setViewPlay(true);
                   setView(key);
                   window.setTimeout(() => setViewPlay(false), 380);
@@ -310,7 +311,7 @@ function WeekScreen() {
 
       <div className="app-dock no-print pointer-events-none fixed inset-x-0 z-30 flex justify-center px-4 pb-safe">
         <div className="glass pointer-events-auto flex items-center gap-1 rounded-full p-1.5">
-          {editing ? (
+          {view === "spread" && (editing ? (
             <button
               type="button"
               className="h-11 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent"
@@ -319,24 +320,24 @@ function WeekScreen() {
               Done
             </button>
           ) : (
-            <>
-              <button
-                type="button"
-                className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
-                onClick={() => setEditing(true)}
-              >
-                <SpreadIcon name="icon-edit.svg" size={20} />
-                Edit
-              </button>
-              <button
-                type="button"
-                className="grid size-11 place-items-center rounded-full active:opacity-70"
-                aria-label="More"
-                onClick={() => setSheet("more")}
-              >
-                <Ellipsis className="size-5" />
-              </button>
-            </>
+            <button
+              type="button"
+              className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
+              onClick={() => setEditing(true)}
+            >
+              <SpreadIcon name="icon-edit.svg" size={20} />
+              Edit
+            </button>
+          ))}
+          {!(view === "spread" && editing) && (
+            <button
+              type="button"
+              className="grid size-11 place-items-center rounded-full active:opacity-70"
+              aria-label="More"
+              onClick={() => setSheet("more")}
+            >
+              <Ellipsis className="size-5" />
+            </button>
           )}
         </div>
       </div>

@@ -241,6 +241,22 @@ function DayCard({
   children: ReactNode;
 }) {
   const { setNodeRef } = useDroppable({ id: `day:${date}` });
+  const [shown, setShown] = useState(selectedName);
+  const [phase, setPhase] = useState<"in" | "out" | "gone">(selectedName ? "in" : "gone");
+
+  useEffect(() => {
+    if (selectedName) {
+      setShown(selectedName);
+      setPhase("in");
+      return;
+    }
+    setPhase((current) => (current === "gone" ? current : "out"));
+    const timer = window.setTimeout(() => {
+      setShown(undefined);
+      setPhase("gone");
+    }, 340);
+    return () => window.clearTimeout(timer);
+  }, [selectedName]);
   return (
     <section
       ref={setNodeRef}
@@ -254,9 +270,14 @@ function DayCard({
       </div>
       {empty && <p className="px-1 pt-2 text-sm text-tertiary">Nothing this day.</p>}
       <ul className="mt-2 flex flex-col gap-2">{children}</ul>
-      {selectedName && (
-        <button type="button" className="mt-2 h-11 w-full rounded-full text-sm font-semibold text-accent" onClick={onAdd}>
-          Add {selectedName}
+      {shown && (
+        <button
+          type="button"
+          className={`mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl bg-canvas text-sm font-semibold text-accent${phase === "out" ? " ascend-out" : " descend-in"}`}
+          onClick={onAdd}
+        >
+          <Plus className="size-4" strokeWidth={2.25} />
+          Add {shown}
         </button>
       )}
     </section>
