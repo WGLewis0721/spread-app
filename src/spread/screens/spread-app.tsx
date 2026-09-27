@@ -6,10 +6,9 @@ import { ChevronRight, List, Minus, Plus, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
-import { saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
+import { ACCENTS, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
-import { buildWeekDocument, weekDocumentText } from "@/lib/spread/week-document";
-import { weekDocxBlob } from "@/lib/spread/week-docx";
+import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile } from "@/lib/spread/save-file";
 import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
@@ -175,32 +174,45 @@ function brandCollapsed() {
 
 function SettingsGears({ turn }: { turn: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className={cn("gears size-[22px] text-ink", turn && "gears-turn")} aria-hidden="true">
-      <Gear className="gear gear-lg" cx={8} cy={8} r={3.5} teeth={8} />
-      <Gear className="gear gear-sm" cx={15.15} cy={15.15} r={2.75} teeth={6} />
+    <svg viewBox="0 0 24 24" className={cn("gears size-9 text-ink", turn && "gears-turn")} aria-hidden="true">
+      <Gear className="gear gear-lg" cx={8.2} cy={8.2} r={4.15} teeth={8} />
+      <Gear className="gear gear-sm" cx={16.1} cy={16.1} r={3.25} teeth={6} />
     </svg>
   );
 }
 
 function Gear({ className, cx, cy, r, teeth }: { className: string; cx: number; cy: number; r: number; teeth: number }) {
-  const tooth = 1.35;
+  const tooth = 1.75;
   return (
     <g className={className}>
       {Array.from({ length: teeth }, (_, index) => (
         <rect
           key={index}
           x={cx - tooth / 2}
-          y={cy - r - tooth + 0.35}
+          y={cy - r - tooth + 0.45}
           width={tooth}
           height={tooth}
-          rx={0.3}
+          rx={0.35}
           transform={`rotate(${(index / teeth) * 360} ${cx} ${cy})`}
           fill="currentColor"
         />
       ))}
       <circle cx={cx} cy={cy} r={r} fill="currentColor" />
-      <circle cx={cx} cy={cy} r={r * 0.4} className="gear-hole" />
+      <circle cx={cx} cy={cy} r={r * 0.38} className="gear-hole" />
     </g>
+  );
+}
+
+function BrandMark({ size = 26 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" className="shrink-0">
+      <rect width="32" height="32" rx="7.2" fill="var(--accent)" />
+      <g fill="#ffffff">
+        <rect x="13.2" y="6.4" width="11.4" height="8" rx="1.6" transform="rotate(18 18.9 10.4)" />
+        <rect x="10.8" y="9.8" width="11.4" height="8" rx="1.6" transform="rotate(6 16.5 13.8)" />
+        <rect x="7.6" y="14.2" width="12" height="8.4" rx="1.7" transform="rotate(-10 13.6 18.4)" />
+      </g>
+    </svg>
   );
 }
 
@@ -220,11 +232,13 @@ function WeekScreen() {
   const [dir, setDir] = useState<-1 | 1 | 0>(0);
   const [brand, setBrand] = useState<"full" | "folding" | "mark">(() => (brandCollapsed() ? "mark" : "full"));
   const brandOnce = useRef(brand === "mark");
+  const [printDoc, setPrintDoc] = useState<WeekDocument | null>(null);
   const rollover = useSpread((s) => s.rollover);
   const range = formatWeek(data.currentWeek);
   const isCurrent = data.currentWeek === weekKey();
+  const boxByHat = new Map(data.weeks[data.currentWeek]?.boxes.map((box) => [box.hatId, box]) ?? []);
   const rows = data.hats.map((hat) => {
-    const box = data.weeks[data.currentWeek]?.boxes.find((item) => item.hatId === hat.id) ?? {
+    const box = boxByHat.get(hat.id) ?? {
       hatId: hat.id,
       hours: hat.defaultHours,
       tasks: [],
@@ -290,6 +304,19 @@ function WeekScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!printDoc) return;
+    const id = window.setTimeout(() => window.print(), 50);
+    function done() {
+      setPrintDoc(null);
+    }
+    window.addEventListener("afterprint", done);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("afterprint", done);
+    };
+  }, [printDoc]);
+
   function goHome() {
     setEditing(false);
     setOpenTask(null);
@@ -301,11 +328,11 @@ function WeekScreen() {
 
   return (
     <div className="min-h-dvh">
-      {typeof document !== "undefined" && createPortal(<WeekPaper doc={buildWeekDocument(data)} />, document.body)}
+      {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
       <div className="mx-auto w-full max-w-xl">
         <header className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
           <button type="button" className="brand mb-3" aria-label="Spread, home" onClick={goHome}>
-            <SpreadIcon name="app-icon-spread-cards.svg" size={26} />
+            <BrandMark size={26} />
             {brand !== "mark" && (
               <span className={cn("brand-clip", brand === "folding" && "is-folding")}>
                 <span className="brand-word">Spread</span>
@@ -348,8 +375,14 @@ function WeekScreen() {
                   window.setTimeout(() => setViewPlay(false), 380);
                 }}
               >
-                <SpreadIcon name={icon} size={key === "week" ? 20 : 16} />
-                {label}
+                <span className={view === key ? "text-accent" : "text-secondary"}>
+                  <SpreadIcon name={icon} size={key === "week" ? 24 : 19} className="text-inherit" />
+                </span>
+                {brand !== "mark" && (
+                  <span className={cn("brand-clip", brand === "folding" && "is-folding")} style={{ "--lockup-gap": "6px" } as CSSProperties}>
+                    <span className="tab-word">{label}</span>
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -433,7 +466,7 @@ function WeekScreen() {
         </div>
       </div>
 
-      <AppSheet sheet={sheet} setSheet={setSheet} />
+      <AppSheet sheet={sheet} setSheet={setSheet} onPrint={() => setPrintDoc(buildWeekDocument(useSpread.getState().data))} />
       <RemoveDialog hat={removing} onClose={() => setRemoveId(null)} />
       <RolloverDialog
         open={rolloverAsk}
@@ -905,7 +938,7 @@ function AddTaskRow({ placeholder, onAdd }: { placeholder: string; onAdd: (text:
   );
 }
 
-function AppSheet({ sheet, setSheet }: { sheet: Sheet; setSheet: (sheet: Sheet) => void }) {
+function AppSheet({ sheet, setSheet, onPrint }: { sheet: Sheet; setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
   const [open, setOpen] = useState(false);
   const closing = useRef(false);
   if (sheet && !open && !closing.current) setOpen(true);
@@ -932,7 +965,7 @@ function AppSheet({ sheet, setSheet }: { sheet: Sheet; setSheet: (sheet: Sheet) 
       <Dialog.Portal>
         <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
         <Dialog.Content className={cn("sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none", sheet === "more" && "sheet-stack")}>
-          {sheet === "more" && <MoreSheet setSheet={go} />}
+          {sheet === "more" && <MoreSheet setSheet={go} onPrint={onPrint} />}
           {sheet === "new" && <NewLifeSheet onClose={close} />}
           {sheet === "license" && <LicenseSheet onClose={close} />}
         </Dialog.Content>
@@ -945,10 +978,12 @@ function Grabber() {
   return <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill" aria-hidden="true" />;
 }
 
-function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
+function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
   const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
   const setTheme = useSpread((s) => s.setTheme);
+  const accent = useSpread((s) => s.accent);
+  const setAccent = useSpread((s) => s.setAccent);
   const copyLastWeek = useSpread((s) => s.copyLastWeek);
   const replaceData = useSpread((s) => s.replaceData);
   const data = useSpread((s) => s.data);
@@ -979,9 +1014,12 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
       label: "Word document",
       icon: "icon-export.svg",
       run: () => {
-        void weekDocxBlob(week)
+        const snapshot = week;
+        const name = data.currentWeek;
+        void import("@/lib/spread/week-docx")
+          .then(({ weekDocxBlob }) => weekDocxBlob(snapshot))
           .then((blob) => {
-            saveFile(blob, `Spread-${data.currentWeek}.docx`);
+            saveFile(blob, `Spread-${name}.docx`);
             toast("Word document saved.");
             setSheet(null);
           })
@@ -992,8 +1030,8 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
       label: "Print / Save PDF",
       icon: "icon-print.svg",
       run: () => {
+        onPrint();
         setSheet(null);
-        window.setTimeout(() => window.print(), 250);
       },
     },
     {
@@ -1065,6 +1103,23 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
       </div>
       <div className="mt-5">
         <Segmented value={theme} onChange={setTheme} />
+      </div>
+      <div className="mt-4 flex gap-3 overflow-x-auto px-1 py-1" role="listbox" aria-label="Accent color">
+        {ACCENTS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="option"
+            aria-selected={(accent ?? "blue") === item.id}
+            aria-label={item.label}
+            className="size-8 shrink-0 rounded-full"
+            style={{
+              backgroundColor: item.color,
+              boxShadow: (accent ?? "blue") === item.id ? "0 0 0 2px var(--elevated), 0 0 0 4px var(--ink)" : undefined,
+            }}
+            onClick={() => setAccent(item.id)}
+          />
+        ))}
       </div>
       <button
         type="button"

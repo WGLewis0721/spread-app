@@ -7,14 +7,12 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Minus, Plus } from "lucide-react";
 import { clampHours, remainingHours, weekDays } from "@/lib/spread/model";
 import { useSpread } from "@/lib/spread/store";
 import { SpreadIcon } from "@/spread/components/spread-icon";
-import { edgeScrollDelta } from "@/spread/gestures/auto-scroll";
 import { highlightedDay, resolveDrop } from "@/spread/gestures/resolve-drop";
 import { FastPointerSensor, HoldPointerSensor, mouseActivation, touchActivation } from "@/spread/gestures/sensors";
 import { useWeekSwipe } from "@/spread/gestures/use-week-swipe";
@@ -82,13 +80,6 @@ export function WeeklyView({
     setActive(event.active.data.current as ActiveDrag);
   }
 
-  function onDragMove(event: DragMoveEvent) {
-    const native = event.activatorEvent;
-    if (!(native instanceof PointerEvent)) return;
-    const delta = edgeScrollDelta(native.clientY + event.delta.y, window.innerHeight);
-    if (delta) window.scrollBy({ top: delta });
-  }
-
   function finish(event?: DragEndEvent) {
     dragging.current = false;
     setActive(null);
@@ -101,12 +92,14 @@ export function WeeklyView({
     if (decision.action === "reorderAllocation") reorderAllocation(decision.allocationId, decision.beforeId);
   }
 
+  const hatsById = new Map(data.hats.map((hat) => [hat.id, hat]));
+  const boxesByHat = new Map(week?.boxes.map((box) => [box.hatId, box]) ?? []);
+
   return (
     <DndContext
       sensors={sensors}
       autoScroll
       onDragStart={onDragStart}
-      onDragMove={onDragMove}
       onDragOver={({ over }) => setOverId(over ? String(over.id) : null)}
       onDragEnd={finish}
       onDragCancel={() => finish()}
@@ -115,8 +108,7 @@ export function WeeklyView({
         <p className="px-1 pt-4 text-xs text-secondary">Drag a spread onto a day, or tap one, then add it.</p>
         <div className="mt-4 flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain px-1.5 pt-2 pb-2">
           {data.hats.map((hat) => {
-            const box = week?.boxes.find((item) => item.hatId === hat.id);
-            const bank = box?.hours ?? hat.defaultHours;
+            const bank = boxesByHat.get(hat.id)?.hours ?? hat.defaultHours;
             const hours = remainingHours(bank, allocations, hat.id);
             return (
               <SpreadChip
@@ -142,11 +134,11 @@ export function WeeklyView({
                 hot={hotDay === day.date}
                 delay={`${index * 45}ms`}
                 empty={items.length === 0}
-                selectedName={data.hats.find((hat) => hat.id === selected)?.name}
+                selectedName={selected ? hatsById.get(selected)?.name : undefined}
                 onAdd={() => selected && moveSpreadToDay(selected, day.date, 1)}
               >
                 {items.map((item) => {
-                  const hat = data.hats.find((entry) => entry.id === item.hatId);
+                  const hat = hatsById.get(item.hatId);
                   if (!hat) return null;
                   return (
                     <AllocationRow
@@ -170,7 +162,7 @@ export function WeeklyView({
         </div>
       </div>
       <DragOverlay dropAnimation={null}>
-        {active ? <DragCard name={data.hats.find((hat) => hat.id === active.hatId)?.name ?? ""} color={data.hats.find((hat) => hat.id === active.hatId)?.color ?? "#8E8E93"} /> : null}
+        {active ? <DragCard name={hatsById.get(active.hatId)?.name ?? ""} color={hatsById.get(active.hatId)?.color ?? "#8E8E93"} /> : null}
       </DragOverlay>
     </DndContext>
   );

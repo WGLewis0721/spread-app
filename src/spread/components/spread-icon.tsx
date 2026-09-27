@@ -22,6 +22,27 @@ const ICONS = {
   "icon-week.svg": "icon-week.svg",
 } as const;
 
+const TINTED = new Set<keyof typeof ICONS>([
+  "icon-add.svg",
+  "icon-backup.svg",
+  "icon-check.svg",
+  "icon-drag.svg",
+  "icon-edit.svg",
+  "icon-export.svg",
+  "icon-notes.svg",
+  "icon-outline.svg",
+  "icon-palette.svg",
+  "icon-photo.svg",
+  "icon-print.svg",
+  "icon-restore.svg",
+  "icon-rollover.svg",
+  "icon-settings.svg",
+  "icon-share.svg",
+  "icon-spread-list.svg",
+  "icon-table.svg",
+  "icon-week.svg",
+]);
+
 export function SpreadIcon({
   name,
   size,
@@ -32,9 +53,25 @@ export function SpreadIcon({
   className?: string;
 }) {
   const base = import.meta.env.BASE_URL || "/";
+  const src = `${base}icons/${ICONS[name]}`;
+  if (TINTED.has(name)) {
+    return (
+      <span
+        aria-hidden="true"
+        className={className ? `inline-block shrink-0 ${className}` : "inline-block shrink-0 text-accent"}
+        style={{
+          width: size,
+          height: size,
+          background: "currentColor",
+          WebkitMask: `url(${src}) center / contain no-repeat`,
+          mask: `url(${src}) center / contain no-repeat`,
+        }}
+      />
+    );
+  }
   return (
     <img
-      src={`${base}icons/${ICONS[name]}`}
+      src={src}
       alt=""
       width={size}
       height={size}

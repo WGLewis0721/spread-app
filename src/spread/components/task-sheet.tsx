@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { emptyContent, uid, type ContentBlock, type OutlineItem, type TaskContent } from "@/lib/spread/model";
-import { useSpread } from "@/lib/spread/store";
+import { flushSpread, useSpread } from "@/lib/spread/store";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { useLockPageScroll } from "@/spread/components/use-browser-frame";
 
@@ -40,6 +40,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
     setOpen(false);
     const wait = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 20 : 420;
     window.setTimeout(() => {
+      flushSpread();
       after?.();
       onClose();
     }, wait);
@@ -111,6 +112,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
             value={task.text}
             aria-label="Task title"
             onChange={(event) => setTaskText(hatId, taskId, event.target.value)}
+            onBlur={() => flushSpread()}
             className="w-full shrink-0 bg-transparent text-2xl font-bold tracking-tight outline-none"
           />
           {openNote && openNote.type === "notes" ? (
@@ -251,6 +253,7 @@ function NotesBlock({
               sizeField(event.target);
               commit(next);
             }}
+            onBlur={() => flushSpread()}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();

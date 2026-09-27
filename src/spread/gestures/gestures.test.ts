@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { acceptsPointer, mouseActivation, touchActivation } from "./activation.ts";
-import { edgeScrollDelta } from "./auto-scroll.ts";
 import { gestureAllowsSwipe, weekSwipeDirection, weekSwipeShift } from "./swipe.ts";
 import { highlightedDay, resolveDrop } from "./resolve-drop.ts";
 
@@ -20,12 +19,6 @@ test("the crown shift follows the finger until the gesture is mostly vertical", 
 test("an active drag wins over a week swipe", () => {
   assert.equal(gestureAllowsSwipe(true), false);
   assert.equal(gestureAllowsSwipe(false), true);
-});
-
-test("the edges of the screen scroll while a drag is near them", () => {
-  assert.ok(edgeScrollDelta(10, 800) < 0);
-  assert.ok(edgeScrollDelta(780, 800) > 0);
-  assert.equal(edgeScrollDelta(400, 800), 0);
 });
 
 test("touch holds before a drag and a mouse starts after a short move", () => {

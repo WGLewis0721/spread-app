@@ -30,16 +30,37 @@ import {
 
 export type ThemeChoice = "system" | "light" | "dark";
 
+export const ACCENTS = [
+  { id: "blue", label: "Blue", color: "#007AFF", on: "#ffffff" },
+  { id: "indigo", label: "Indigo", color: "#5856D6", on: "#ffffff" },
+  { id: "purple", label: "Purple", color: "#AF52DE", on: "#ffffff" },
+  { id: "pink", label: "Pink", color: "#FF2D55", on: "#ffffff" },
+  { id: "red", label: "Red", color: "#FF3B30", on: "#ffffff" },
+  { id: "orange", label: "Orange", color: "#FF9500", on: "#ffffff" },
+  { id: "yellow", label: "Yellow", color: "#FFCC00", on: "#1d1d1f" },
+  { id: "green", label: "Green", color: "#34C759", on: "#ffffff" },
+  { id: "mint", label: "Mint", color: "#00C7BE", on: "#1d1d1f" },
+  { id: "teal", label: "Teal", color: "#30B0C7", on: "#ffffff" },
+  { id: "cyan", label: "Cyan", color: "#32ADE6", on: "#ffffff" },
+  { id: "brown", label: "Brown", color: "#A2845E", on: "#ffffff" },
+] as const;
+
+export type AccentId = (typeof ACCENTS)[number]["id"];
+
+const ACCENT_KEY = "spread-accent";
+
 type Store = {
   ready: boolean;
   license: License | null;
   data: SpreadData;
   theme: ThemeChoice;
+  accent: AccentId | null;
   boot: () => void;
   beginTrial: () => void;
   unlock: (code: string) => boolean;
   logout: () => void;
   setTheme: (theme: ThemeChoice) => void;
+  setAccent: (accent: AccentId) => void;
   moveWeek: (direction: -1 | 1 | "today") => void;
   setHours: (hatId: string, hours: number) => void;
   renameHat: (hatId: string, name: string) => void;
@@ -104,8 +125,68 @@ export function applyTheme(theme: ThemeChoice) {
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#000000" : "#F2F2F7");
 }
 
+export function applyAccent(accent: AccentId | null) {
+  const root = document.documentElement;
+  const item = ACCENTS.find((entry) => entry.id === accent);
+  if (!item) {
+    root.style.removeProperty("--accent");
+    root.style.removeProperty("--on-accent");
+    return;
+  }
+  root.style.setProperty("--accent", item.color);
+  root.style.setProperty("--on-accent", item.on);
+}
+
+function readAccent(): AccentId | null {
+  const value = localStorage.getItem(ACCENT_KEY);
+  return ACCENTS.some((entry) => entry.id === value) ? (value as AccentId) : null;
+}
+
+let flushBound = false;
+
+function bindFlush() {
+  if (flushBound) return;
+  flushBound = true;
+  window.addEventListener("pagehide", flushSpread);
+  window.addEventListener("blur", flushSpread);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushSpread();
+  });
+}
+
 function persist(data: SpreadData) {
   localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+let pending: SpreadData | null = null;
+let persistTimer: number | null = null;
+
+export function flushSpread() {
+  if (persistTimer !== null) {
+    window.clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  if (!pending) return;
+  const data = pending;
+  pending = null;
+  persist(data);
+}
+
+function commit(set: (partial: { data: SpreadData }) => void, next: SpreadData) {
+  pending = null;
+  if (persistTimer !== null) {
+    window.clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  persist(next);
+  set({ data: next });
+}
+
+function stage(set: (partial: { data: SpreadData }) => void, next: SpreadData) {
+  pending = next;
+  set({ data: next });
+  if (persistTimer !== null) window.clearTimeout(persistTimer);
+  persistTimer = window.setTimeout(flushSpread, 400);
 }
 
 function mapBox(data: SpreadData, hatId: string, update: (box: WeekData["boxes"][number]) => WeekData["boxes"][number]) {
@@ -138,11 +219,15 @@ export const useSpread = create<Store>((set, get) => ({
   license: null,
   data: defaultData(),
   theme: "system",
+  accent: null,
   boot: () => {
     if (get().ready) return;
     const theme = readTheme();
+    const accent = readAccent();
     applyTheme(theme);
-    set({ ready: true, license: readLicense(), data: readData(), theme });
+    applyAccent(accent);
+    bindFlush();
+    set({ ready: true, license: readLicense(), data: readData(), theme, accent });
   },
   beginTrial: () => {
     const license: License = { ok: true, plan: "demo" };
@@ -165,28 +250,30 @@ export const useSpread = create<Store>((set, get) => ({
     applyTheme(theme);
     set({ theme });
   },
+  setAccent: (accent) => {
+    localStorage.setItem(ACCENT_KEY, accent);
+    applyAccent(accent);
+    set({ accent });
+  },
   moveWeek: (direction) => {
     const data = get().data;
     const currentWeek = direction === "today" ? weekKey() : shiftWeek(data.currentWeek, direction);
     const next = ensureWeek({ ...data, currentWeek });
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   setHours: (hatId, hours) => {
     const current = ensureWeek(get().data);
     const value = clampHours(hours);
     const data = mapBox(current, hatId, (box) => ({ ...box, hours: value }));
     data.hats = data.hats.map((hat) => (hat.id === hatId ? { ...hat, defaultHours: value } : hat));
-    persist(data);
-    set({ data });
+    commit(set, data);
   },
   renameHat: (hatId, name) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     const data = get().data;
     const next = { ...data, hats: data.hats.map((hat) => (hat.id === hatId ? { ...hat, name: trimmed } : hat)) };
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   removeHat: (hatId) => {
     const data = get().data;
@@ -198,8 +285,7 @@ export const useSpread = create<Store>((set, get) => ({
       };
     }
     const next = { ...data, hats: data.hats.filter((hat) => hat.id !== hatId), weeks };
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   addHat: (name, hours, options) => {
     const trimmed = name.trim();
@@ -215,8 +301,7 @@ export const useSpread = create<Store>((set, get) => ({
     };
     const withHat = ensureWeek({ ...data, hats: [...data.hats, hat] });
     const next = mapBox(withHat, hat.id, (box) => ({ ...box, hours: hat.defaultHours }));
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   addTask: (hatId, text) => {
     const trimmed = text.trim();
@@ -225,47 +310,41 @@ export const useSpread = create<Store>((set, get) => ({
       ...box,
       tasks: [...box.tasks, { id: uid(), text: trimmed, done: false }],
     }));
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   toggleTask: (hatId, taskId) => {
     const next = mapBox(get().data, hatId, (box) => ({
       ...box,
       tasks: box.tasks.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task)),
     }));
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   deleteTask: (hatId, taskId) => {
     const next = mapBox(get().data, hatId, (box) => ({
       ...box,
       tasks: box.tasks.filter((task) => task.id !== taskId),
     }));
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   setTaskText: (hatId, taskId, text) => {
     const next = mapBox(get().data, hatId, (box) => ({
       ...box,
       tasks: box.tasks.map((task) => (task.id === taskId ? { ...task, text } : task)),
     }));
-    persist(next);
-    set({ data: next });
+    stage(set, next);
   },
   setTaskContent: (hatId, taskId, content) => {
     const next = mapBox(get().data, hatId, (box) => ({
       ...box,
       tasks: box.tasks.map((task) => (task.id === taskId ? { ...task, content } : task)),
     }));
-    persist(next);
-    set({ data: next });
+    stage(set, next);
   },
   setHatColor: (hatId, color) => {
     if (!ROLE_COLORS.includes(color as (typeof ROLE_COLORS)[number]) && !/^#[0-9A-Fa-f]{6}$/.test(color)) return;
     const data = get().data;
     const next = { ...data, hats: data.hats.map((hat) => (hat.id === hatId ? { ...hat, color } : hat)) };
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   setHatCategory: (hatId, category) => {
     const preset = SPREAD_CATEGORIES.find((item) => item.id === category);
@@ -275,8 +354,7 @@ export const useSpread = create<Store>((set, get) => ({
       ...data,
       hats: data.hats.map((hat) => (hat.id === hatId ? { ...hat, category: preset.id, color: preset.color } : hat)),
     };
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   addAllocation: (hatId, day, hours = 1) => {
     const data = ensureWeek(get().data);
@@ -296,8 +374,7 @@ export const useSpread = create<Store>((set, get) => ({
       allocations = [...week.allocations, { id: uid(), hatId, day, hours: take, order }];
     }
     const next = writeWeek(data, { ...week, allocations });
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   setAllocationHours: (allocationId, hours) => {
     const data = ensureWeek(get().data);
@@ -312,8 +389,7 @@ export const useSpread = create<Store>((set, get) => ({
     if (nextHours === current.hours) return;
     const allocations = week.allocations.map((item) => (item.id === allocationId ? { ...item, hours: nextHours } : item));
     const next = writeWeek(data, { ...week, allocations });
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   moveAllocation: (allocationId, day, order) => {
     const data = ensureWeek(get().data);
@@ -337,8 +413,7 @@ export const useSpread = create<Store>((set, get) => ({
         .concat(allocations.filter((item) => item.day !== day));
     }
     const next = writeWeek(data, { ...week, allocations });
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   reorderAllocation: (allocationId, beforeId) => {
     const data = ensureWeek(get().data);
@@ -355,8 +430,7 @@ export const useSpread = create<Store>((set, get) => ({
       .filter((item) => item.day !== current.day)
       .concat(siblings.map((item, order) => ({ ...item, order })));
     const next = writeWeek(data, { ...week, allocations });
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   moveSpreadToDay: (hatId, day, hours = 1) => {
     get().addAllocation(hatId, day, hours);
@@ -373,8 +447,7 @@ export const useSpread = create<Store>((set, get) => ({
       tasks: box.tasks.map((task) => (task.allocationId === allocationId ? { ...task, allocationId: undefined } : task)),
     }));
     const next = writeWeek(data, { boxes, allocations });
-    persist(next);
-    set({ data: next });
+    commit(set, next);
   },
   rollover: (force = false) => {
     const data = ensureWeek(get().data);
@@ -389,8 +462,7 @@ export const useSpread = create<Store>((set, get) => ({
       currentWeek: nextKey,
       weeks: { ...data.weeks, [nextKey]: copied },
     };
-    persist(next);
-    set({ data: next });
+    commit(set, next);
     return "done";
   },
   copyLastWeek: () => {
@@ -405,14 +477,12 @@ export const useSpread = create<Store>((set, get) => ({
       ...data,
       weeks: { ...data.weeks, [data.currentWeek]: copy },
     };
-    persist(next);
-    set({ data: next });
+    commit(set, next);
     return true;
   },
   replaceData: (incoming) => {
     const data = normalizeData(incoming);
-    persist(data);
-    set({ data });
+    commit(set, data);
   },
 }));
 
