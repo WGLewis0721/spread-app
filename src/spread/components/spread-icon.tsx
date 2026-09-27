@@ -7,6 +7,7 @@ const ICONS = {
   "icon-edit.svg": "icon-edit.svg",
   "icon-export.svg": "icon-export.svg",
   "icon-new-life.svg": "icon-new-life.svg",
+  "icon-notes.svg": "icon-notes.svg",
   "icon-outline.svg": "icon-outline.svg",
   "icon-palette.svg": "icon-palette.svg",
   "icon-photo.svg": "icon-photo.svg",

@@ -10,9 +10,9 @@ const FORMATS: {
   type: ContentBlock["type"];
   label: string;
   detail: string;
-  icon?: "icon-outline.svg" | "icon-table.svg" | "icon-photo.svg";
+  icon: "icon-notes.svg" | "icon-outline.svg" | "icon-table.svg" | "icon-photo.svg";
 }[] = [
-  { type: "notes", label: "Notes", detail: "Write. I. or A. starts an outline." },
+  { type: "notes", label: "Notes", detail: "Write. I. or A. starts an outline.", icon: "icon-notes.svg" },
   { type: "outline", label: "Outline", detail: "Numbered like a traditional outline.", icon: "icon-outline.svg" },
   { type: "table", label: "Table", detail: "Rows and columns.", icon: "icon-table.svg" },
   { type: "photo", label: "Photo", detail: "A picture from this device.", icon: "icon-photo.svg" },
@@ -24,6 +24,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
   const setTaskContent = useSpread((s) => s.setTaskContent);
   const deleteTask = useSpread((s) => s.deleteTask);
   const [picking, setPicking] = useState(false);
+  const [expandedNote, setExpandedNote] = useState<string | null>(null);
   useLockPageScroll(true);
   const box = data.weeks[data.currentWeek]?.boxes.find((item) => item.hatId === hatId);
   const task = box?.tasks.find((item) => item.id === taskId);
@@ -49,13 +50,18 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
 
   if (!task) return null;
   const showMenu = content.blocks.length === 0 || picking;
+  const openNote = content.blocks.find((block) => block.id === expandedNote && block.type === "notes");
+  const sheetHeight = "min(92dvh, calc(100dvh - var(--browser-bottom, 0px) - 0.5rem))";
 
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="no-print fixed inset-0 z-40 bg-scrim" />
-        <Dialog.Content className="sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none enter">
-          <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
+        <Dialog.Content
+          className={`sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl bg-elevated px-5 pt-3 pb-safe outline-none enter ${openNote ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
+          style={openNote ? { height: sheetHeight } : undefined}
+        >
+          <div className="grid shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center">
             <span />
             <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
             <button
@@ -73,73 +79,108 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
             value={task.text}
             aria-label="Task title"
             onChange={(event) => setTaskText(hatId, taskId, event.target.value)}
-            className="w-full bg-transparent text-2xl font-bold tracking-tight outline-none"
+            className="w-full shrink-0 bg-transparent text-2xl font-bold tracking-tight outline-none"
           />
-          <div className="mt-6 flex flex-col gap-6">
-            {content.blocks.map((block) => (
-              <section key={block.id}>
-                <div className="mb-2 flex items-center justify-between px-1">
-                  <h2 className="text-xs font-medium text-secondary">{labelFor(block.type)}</h2>
-                  <button type="button" className="text-xs font-semibold text-danger" onClick={() => remove(block.id)}>
-                    Remove
-                  </button>
-                </div>
-                {block.type === "notes" && <NotesBlock text={block.text} onChange={(text) => update({ ...block, text })} />}
-                {block.type === "outline" && (
-                  <OutlineBlock items={block.items} onChange={(items) => update({ ...block, items })} />
-                )}
-                {block.type === "table" && <TableBlock cells={block.cells} onChange={(cells) => update({ ...block, cells })} />}
-                {block.type === "photo" && <PhotoBlock src={block.src} onChange={(src) => update({ ...block, src })} />}
-              </section>
-            ))}
-          </div>
-          {showMenu ? (
-            <div className={content.blocks.length === 0 ? "mt-6" : "mt-4"}>
-              <div className="overflow-hidden rounded-3xl bg-canvas">
-                {FORMATS.map((format, index) => (
-                  <button
-                    key={format.type}
-                    type="button"
-                    className={`flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill ${index > 0 ? "border-t border-line" : ""}`}
-                    onClick={() => add(format.type)}
-                  >
-                    {format.icon ? <SpreadIcon name={format.icon} size={20} /> : <span className="size-5" />}
-                    <span>
-                      <span className="block text-base font-semibold">{format.label}</span>
-                      <span className="block text-sm text-secondary">{format.detail}</span>
-                    </span>
-                  </button>
+          {openNote && openNote.type === "notes" ? (
+            <NotesBlock
+              expanded
+              text={openNote.text}
+              onChange={(text) => update({ ...openNote, text })}
+              onDone={() => setExpandedNote(null)}
+            />
+          ) : (
+            <>
+              <div className="mt-6 flex flex-col gap-6">
+                {content.blocks.map((block) => (
+                  <section key={block.id}>
+                    <div className="mb-2 flex items-center justify-between px-1">
+                      <h2 className="flex items-center gap-2 text-xs font-medium text-secondary">
+                        {block.type === "notes" && <SpreadIcon name="icon-notes.svg" size={16} />}
+                        {labelFor(block.type)}
+                      </h2>
+                      <span className="flex items-center gap-4">
+                        {block.type === "notes" && (
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-accent"
+                            onClick={() => setExpandedNote(block.id)}
+                          >
+                            Expand
+                          </button>
+                        )}
+                        <button type="button" className="text-xs font-semibold text-danger" onClick={() => remove(block.id)}>
+                          Remove
+                        </button>
+                      </span>
+                    </div>
+                    {block.type === "notes" && <NotesBlock text={block.text} onChange={(text) => update({ ...block, text })} />}
+                    {block.type === "outline" && (
+                      <OutlineBlock items={block.items} onChange={(items) => update({ ...block, items })} />
+                    )}
+                    {block.type === "table" && <TableBlock cells={block.cells} onChange={(cells) => update({ ...block, cells })} />}
+                    {block.type === "photo" && <PhotoBlock src={block.src} onChange={(src) => update({ ...block, src })} />}
+                  </section>
                 ))}
               </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="mt-4 flex h-11 items-center gap-2 text-sm font-semibold text-accent"
-              onClick={() => setPicking(true)}
-            >
-              <SpreadIcon name="icon-add.svg" size={20} />
-              Add
-            </button>
+              {showMenu ? (
+                <div className={content.blocks.length === 0 ? "mt-6" : "mt-4"}>
+                  <div className="overflow-hidden rounded-3xl bg-canvas">
+                    {FORMATS.map((format, index) => (
+                      <button
+                        key={format.type}
+                        type="button"
+                        className={`flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill ${index > 0 ? "border-t border-line" : ""}`}
+                        onClick={() => add(format.type)}
+                      >
+                        <SpreadIcon name={format.icon} size={20} />
+                        <span>
+                          <span className="block text-base font-semibold">{format.label}</span>
+                          <span className="block text-sm text-secondary">{format.detail}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="mt-4 flex h-11 items-center gap-2 text-sm font-semibold text-accent"
+                  onClick={() => setPicking(true)}
+                >
+                  <SpreadIcon name="icon-add.svg" size={20} />
+                  Add
+                </button>
+              )}
+              <button
+                type="button"
+                className="mt-6 mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-danger"
+                onClick={() => {
+                  deleteTask(hatId, taskId);
+                  onClose();
+                }}
+              >
+                <SpreadIcon name="icon-trash.svg" size={20} />
+                Delete task
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            className="mt-6 mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-danger"
-            onClick={() => {
-              deleteTask(hatId, taskId);
-              onClose();
-            }}
-          >
-            <SpreadIcon name="icon-trash.svg" size={20} />
-            Delete task
-          </button>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
 }
 
-function NotesBlock({ text, onChange }: { text: string; onChange: (text: string) => void }) {
+function NotesBlock({
+  text,
+  onChange,
+  expanded,
+  onDone,
+}: {
+  text: string;
+  onChange: (text: string) => void;
+  expanded?: boolean;
+  onDone?: () => void;
+}) {
   const lines = text.length === 0 ? [""] : text.split("\n");
   const pending = useRef<number | null>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -154,12 +195,17 @@ function NotesBlock({ text, onChange }: { text: string; onChange: (text: string)
     field.setSelectionRange(end, end);
   }, [text]);
 
+  useEffect(() => {
+    if (!expanded || !root.current) return;
+    root.current.querySelector<HTMLTextAreaElement>("textarea")?.focus();
+  }, [expanded]);
+
   function commit(next: string[]) {
     onChange(next.join("\n"));
   }
 
-  return (
-    <div ref={root} className="overflow-hidden rounded-3xl bg-canvas px-1 py-1">
+  const editor = (
+    <div ref={root} className={expanded ? "min-h-0 flex-1 overflow-y-auto rounded-3xl bg-canvas px-1 py-1" : "overflow-hidden rounded-3xl bg-canvas px-1 py-1"}>
       {lines.map((line, index) => {
         const marker = readMarker(line);
         return (
@@ -213,6 +259,23 @@ function NotesBlock({ text, onChange }: { text: string; onChange: (text: string)
           />
         );
       })}
+    </div>
+  );
+
+  if (!expanded) return editor;
+
+  return (
+    <div className="mt-4 flex min-h-0 flex-1 flex-col pb-2">
+      <div className="mb-2 flex shrink-0 items-center justify-between px-1">
+        <h2 className="flex items-center gap-2 text-xs font-medium text-secondary">
+          <SpreadIcon name="icon-notes.svg" size={16} />
+          Notes
+        </h2>
+        <button type="button" className="text-sm font-semibold text-accent" onClick={onDone}>
+          Done
+        </button>
+      </div>
+      {editor}
     </div>
   );
 }
