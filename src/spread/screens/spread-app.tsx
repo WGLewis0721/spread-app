@@ -7,7 +7,7 @@ import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { ACCENTS, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
-import { PEOPLE_LIMIT } from "@/lib/spread/people";
+import { PROFILE_LIMIT } from "@/lib/spread/profiles";
 import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile } from "@/lib/spread/save-file";
@@ -54,14 +54,14 @@ export function SpreadApp() {
 function UnlockScreen() {
   const beginTrial = useSpread((s) => s.beginTrial);
   const unlock = useSpread((s) => s.unlock);
-  const people = useSpread((s) => s.people);
+  const profiles = useSpread((s) => s.profiles);
   const activeId = useSpread((s) => s.activeId);
-  const switchPerson = useSpread((s) => s.switchPerson);
+  const switchProfile = useSpread((s) => s.switchProfile);
   const [showKey, setShowKey] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [name, setName] = useState("");
-  const known = people.length > 0;
+  const known = profiles.length > 0;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 pt-safe pb-safe">
@@ -72,28 +72,28 @@ function UnlockScreen() {
           Roles first. Hours second. Tasks last.
         </p>
         {known ? (
-          people.length > 1 ? (
+          profiles.length > 1 ? (
             <div className="mt-8 overflow-hidden rounded-3xl bg-elevated" role="listbox" aria-label="Profiles">
-              {people.map((person, index) => (
+              {profiles.map((profile, index) => (
                 <button
-                  key={person.id}
+                  key={profile.id}
                   type="button"
                   role="option"
-                  aria-selected={person.id === activeId}
+                  aria-selected={profile.id === activeId}
                   className={cn(
                     "flex h-12 w-full items-center px-4 text-left text-base",
-                    index < people.length - 1 && "border-b border-line",
-                    person.id === activeId && "font-semibold",
+                    index < profiles.length - 1 && "border-b border-line",
+                    profile.id === activeId && "font-semibold",
                   )}
-                  onClick={() => switchPerson(person.id)}
+                  onClick={() => switchProfile(profile.id)}
                 >
-                  <span className="flex-1 truncate">{person.name}</span>
-                  {person.id === activeId && <Check className="size-4 text-accent" />}
+                  <span className="flex-1 truncate">{profile.name}</span>
+                  {profile.id === activeId && <Check className="size-4 text-accent" />}
                 </button>
               ))}
             </div>
           ) : (
-            <p className="mt-8 text-sm text-secondary">Continuing as {people[0].name}.</p>
+            <p className="mt-8 text-sm text-secondary">Continuing as {profiles[0].name}.</p>
           )
         ) : (
           <input
@@ -276,9 +276,9 @@ function WeekScreen() {
   const [brand, setBrand] = useState<"full" | "folding" | "mark">(() => (brandCollapsed() ? "mark" : "full"));
   const brandOnce = useRef(brand === "mark");
   const [printDoc, setPrintDoc] = useState<WeekDocument | null>(null);
-  const people = useSpread((s) => s.people);
+  const profiles = useSpread((s) => s.profiles);
   const activeId = useSpread((s) => s.activeId);
-  const activeName = people.find((person) => person.id === activeId)?.name;
+  const activeName = profiles.find((profile) => profile.id === activeId)?.name;
   const rollover = useSpread((s) => s.rollover);
   const range = formatWeek(data.currentWeek);
   const isCurrent = data.currentWeek === weekKey();
@@ -399,7 +399,7 @@ function WeekScreen() {
                 </span>
               )}
             </button>
-            {people.length > 1 && activeName && (
+            {profiles.length > 1 && activeName && (
               <button
                 type="button"
                 className={cn(
@@ -1056,33 +1056,33 @@ function Grabber() {
   return <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill" aria-hidden="true" />;
 }
 
-function PeopleSection({ onSwitched }: { onSwitched: (name: string) => void }) {
-  const people = useSpread((s) => s.people);
+function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void }) {
+  const profiles = useSpread((s) => s.profiles);
   const activeId = useSpread((s) => s.activeId);
-  const addPerson = useSpread((s) => s.addPerson);
-  const renamePerson = useSpread((s) => s.renamePerson);
-  const switchPerson = useSpread((s) => s.switchPerson);
-  const removePerson = useSpread((s) => s.removePerson);
-  const active = people.find((person) => person.id === activeId);
+  const addProfile = useSpread((s) => s.addProfile);
+  const renameProfile = useSpread((s) => s.renameProfile);
+  const switchProfile = useSpread((s) => s.switchProfile);
+  const removeProfile = useSpread((s) => s.removeProfile);
+  const active = profiles.find((profile) => profile.id === activeId);
   const [draft, setDraft] = useState(active?.name ?? "");
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const [dropId, setDropId] = useState<string | null>(null);
-  const dropping = people.find((person) => person.id === dropId) ?? null;
+  const dropping = profiles.find((profile) => profile.id === dropId) ?? null;
   const shown = picked ?? activeId;
 
   useEffect(() => {
     setDraft(active?.name ?? "");
   }, [active?.id, active?.name]);
 
-  function choose(person: { id: string; name: string }) {
-    if (person.id === shown || picked) return;
-    setPicked(person.id);
+  function choose(profile: { id: string; name: string }) {
+    if (profile.id === shown || picked) return;
+    setPicked(profile.id);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.setTimeout(() => {
-      switchPerson(person.id);
-      onSwitched(person.name);
+      switchProfile(profile.id);
+      onSwitched(profile.name);
     }, reduced ? 0 : 260);
   }
 
@@ -1091,21 +1091,21 @@ function PeopleSection({ onSwitched }: { onSwitched: (name: string) => void }) {
       <div className="mb-2 flex items-baseline justify-between px-1">
         <h2 className="text-sm font-semibold">Profiles</h2>
         <span className="text-xs text-tertiary">
-          {people.length} of {PEOPLE_LIMIT}
+          {profiles.length} of {PROFILE_LIMIT}
         </span>
       </div>
       <div className="overflow-hidden rounded-3xl bg-canvas" role="listbox" aria-label="Profiles">
-        {people.map((person, index) => {
-          const edge = index < people.length - 1 || people.length < PEOPLE_LIMIT;
-          const selected = person.id === shown;
-          if (person.id === activeId && !picked) {
+        {profiles.map((profile, index) => {
+          const edge = index < profiles.length - 1 || profiles.length < PROFILE_LIMIT;
+          const selected = profile.id === shown;
+          if (profile.id === activeId && !picked) {
             return (
               <form
-                key={person.id}
+                key={profile.id}
                 className={cn("flex h-12 items-center", edge && "border-b border-line")}
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (!renamePerson(person.id, draft)) setDraft(person.name);
+                  if (!renameProfile(profile.id, draft)) setDraft(profile.name);
                 }}
               >
                 <input
@@ -1115,17 +1115,17 @@ function PeopleSection({ onSwitched }: { onSwitched: (name: string) => void }) {
                   autoCorrect="off"
                   onChange={(event) => setDraft(event.target.value)}
                   onBlur={() => {
-                    if (!renamePerson(person.id, draft)) setDraft(person.name);
+                    if (!renameProfile(profile.id, draft)) setDraft(profile.name);
                   }}
                   className="h-full min-w-0 flex-1 bg-transparent px-4 text-base outline-none"
                 />
-                <Check className={cn("size-4 shrink-0 text-accent", people.length < 2 && "mr-4")} aria-hidden="true" />
-                {people.length > 1 && (
+                <Check className={cn("size-4 shrink-0 text-accent", profiles.length < 2 && "mr-4")} aria-hidden="true" />
+                {profiles.length > 1 && (
                   <button
                     type="button"
                     className="h-full px-4 text-sm text-danger"
-                    aria-label={`Remove ${person.name}`}
-                    onClick={() => setDropId(person.id)}
+                    aria-label={`Remove ${profile.name}`}
+                    onClick={() => setDropId(profile.id)}
                   >
                     Remove
                   </button>
@@ -1134,23 +1134,23 @@ function PeopleSection({ onSwitched }: { onSwitched: (name: string) => void }) {
             );
           }
           return (
-            <div key={person.id} className={cn("flex h-12 items-center", selected && "bg-fill", edge && "border-b border-line")}>
+            <div key={profile.id} className={cn("flex h-12 items-center", selected && "bg-fill", edge && "border-b border-line")}>
               <button
                 type="button"
                 role="option"
                 aria-selected={selected}
                 className={cn("flex h-full min-w-0 flex-1 items-center px-4 text-left text-base", selected && "font-semibold")}
-                onClick={() => choose(person)}
+                onClick={() => choose(profile)}
               >
-                <span className="flex-1 truncate">{person.name}</span>
+                <span className="flex-1 truncate">{profile.name}</span>
                 {selected && <Check className="size-4 text-accent" />}
               </button>
-              {people.length > 1 && !picked && (
+              {profiles.length > 1 && !picked && (
                 <button
                   type="button"
                   className="h-full px-4 text-sm text-danger"
-                  aria-label={`Remove ${person.name}`}
-                  onClick={() => setDropId(person.id)}
+                  aria-label={`Remove ${profile.name}`}
+                  onClick={() => setDropId(profile.id)}
                 >
                   Remove
                 </button>
@@ -1158,15 +1158,15 @@ function PeopleSection({ onSwitched }: { onSwitched: (name: string) => void }) {
             </div>
           );
         })}
-        {people.length < PEOPLE_LIMIT &&
+        {profiles.length < PROFILE_LIMIT &&
           (adding ? (
             <form
               className="flex h-12 items-center gap-2 px-4"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (!addPerson(name)) return;
+                if (!addProfile(name)) return;
                 const current = useSpread.getState();
-                const who = current.people.find((person) => person.id === current.activeId)?.name ?? name.trim();
+                const who = current.profiles.find((profile) => profile.id === current.activeId)?.name ?? name.trim();
                 setName("");
                 setAdding(false);
                 onSwitched(who);
@@ -1209,14 +1209,14 @@ function PeopleSection({ onSwitched }: { onSwitched: (name: string) => void }) {
                 onClick={() => {
                   if (!dropId || !dropping) return;
                   const wasOpen = dropId === activeId;
-                  removePerson(dropId);
+                  removeProfile(dropId);
                   setDropId(null);
                   if (!wasOpen) {
                     toast(`Removed ${dropping.name}.`);
                     return;
                   }
                   const current = useSpread.getState();
-                  const who = current.people.find((person) => person.id === current.activeId)?.name;
+                  const who = current.profiles.find((profile) => profile.id === current.activeId)?.name;
                   if (who) onSwitched(who);
                 }}
               >
@@ -1317,7 +1317,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       <Dialog.Description className="mt-1 text-sm text-secondary">
         {license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
       </Dialog.Description>
-      <PeopleSection
+      <ProfilesSection
         onSwitched={(who) => {
           toast(`Switched to ${who}.`);
           setSheet(null);
@@ -1424,7 +1424,7 @@ function RestoreDialog({
           <AlertDialog.Title className="text-center text-base font-semibold">Restore this backup?</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
             {listed}. {backup?.summary.weeks ?? 0} {backup?.summary.weeks === 1 ? "week" : "weeks"}, {backup?.summary.tasks ?? 0}{" "}
-            {backup?.summary.tasks === 1 ? "task" : "tasks"}. {backup?.summary.range}. This replaces this person’s weeks.
+            {backup?.summary.tasks === 1 ? "task" : "tasks"}. {backup?.summary.range}. This replaces this profile’s weeks.
           </AlertDialog.Description>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>

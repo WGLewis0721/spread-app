@@ -1,14 +1,14 @@
 import { backupFile } from "@/lib/spread/backup";
 import { saveFile } from "@/lib/spread/save-file";
 import {
-  ACTIVE_PERSON_KEY,
-  PEOPLE_KEY,
-  legacyPerson,
-  parsePeople,
-  withPerson,
+  ACTIVE_PROFILE_KEY,
+  PROFILES_KEY,
+  legacyProfile,
+  migrateRoster,
+  withProfile,
   cleanName,
-  type Person,
-} from "@/lib/spread/people";
+  type Profile,
+} from "@/lib/spread/profiles";
 import { create } from "zustand";
 import {
   cloneWeek,
@@ -61,7 +61,7 @@ const ACCENT_KEY = "spread-accent";
 type Store = {
   ready: boolean;
   license: License | null;
-  people: Person[];
+  profiles: Profile[];
   activeId: string | null;
   data: SpreadData;
   theme: ThemeChoice;
@@ -72,10 +72,10 @@ type Store = {
   logout: () => void;
   setTheme: (theme: ThemeChoice) => void;
   setAccent: (accent: AccentId) => void;
-  addPerson: (name: string) => boolean;
-  renamePerson: (id: string, name: string) => boolean;
-  switchPerson: (id: string) => void;
-  removePerson: (id: string) => boolean;
+  addProfile: (name: string) => boolean;
+  renameProfile: (id: string, name: string) => boolean;
+  switchProfile: (id: string) => void;
+  removeProfile: (id: string) => boolean;
   moveWeek: (direction: -1 | 1 | "today") => void;
   setHours: (hatId: string, hours: number) => void;
   renameHat: (hatId: string, name: string) => void;
@@ -162,47 +162,47 @@ function accentFrom(value: string | null): AccentId | null {
 
 let activeStore = STORE_KEY;
 
-function writePeople(people: Person[]) {
-  localStorage.setItem(PEOPLE_KEY, JSON.stringify(people));
+function writeProfiles(profiles: Profile[]) {
+  localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
 }
 
-function loadPeople(license: License | null): Person[] {
-  const saved = parsePeople(localStorage.getItem(PEOPLE_KEY));
+function loadProfiles(license: License | null): Profile[] {
+  const saved = migrateRoster(localStorage);
   if (saved.length > 0) return saved;
   if (localStorage.getItem(STORE_KEY)) {
-    const person = legacyPerson(uid(), readTheme(), readAccent());
-    writePeople([person]);
-    localStorage.setItem(ACTIVE_PERSON_KEY, person.id);
-    return [person];
+    const profile = legacyProfile(uid(), readTheme(), readAccent());
+    writeProfiles([profile]);
+    localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+    return [profile];
   }
   if (!license) return [];
-  const created = withPerson([], "Me", uid());
+  const created = withProfile([], "Me", uid());
   if (!created) return [];
-  writePeople(created);
-  localStorage.setItem(ACTIVE_PERSON_KEY, created[0].id);
+  writeProfiles(created);
+  localStorage.setItem(ACTIVE_PROFILE_KEY, created[0].id);
   return created;
 }
 
-function adopt(person: Person) {
-  activeStore = person.store;
-  const theme = person.theme;
-  const accent = accentFrom(person.accent);
+function adopt(profile: Profile) {
+  activeStore = profile.store;
+  const theme = profile.theme;
+  const accent = accentFrom(profile.accent);
   applyTheme(theme);
   applyAccent(accent);
   return { theme, accent, data: readData() };
 }
 
-function ensurePerson(set: (partial: Partial<Store>) => void, get: () => Store, name?: string) {
-  if (get().people.length > 0) return;
-  const next = withPerson([], name ?? "", uid());
+function ensureProfile(set: (partial: Partial<Store>) => void, get: () => Store, name?: string) {
+  if (get().profiles.length > 0) return;
+  const next = withProfile([], name ?? "", uid());
   if (!next) return;
-  const person = next[0];
-  writePeople(next);
-  localStorage.setItem(ACTIVE_PERSON_KEY, person.id);
-  activeStore = person.store;
-  applyTheme(person.theme);
+  const profile = next[0];
+  writeProfiles(next);
+  localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+  activeStore = profile.store;
+  applyTheme(profile.theme);
   applyAccent(null);
-  set({ people: next, activeId: person.id, theme: person.theme, accent: null });
+  set({ profiles: next, activeId: profile.id, theme: profile.theme, accent: null });
 }
 
 let flushBound = false;
@@ -280,7 +280,7 @@ function writeWeek(data: SpreadData, week: WeekData) {
 export const useSpread = create<Store>((set, get) => ({
   ready: false,
   license: null,
-  people: [],
+  profiles: [],
   activeId: null,
   data: defaultData(),
   theme: "system",
@@ -289,10 +289,10 @@ export const useSpread = create<Store>((set, get) => ({
     if (get().ready) return;
     bindFlush();
     const license = readLicense();
-    const people = loadPeople(license);
-    const savedId = localStorage.getItem(ACTIVE_PERSON_KEY);
-    const active = people.find((person) => person.id === savedId) ?? people[0] ?? null;
-    if (active && savedId !== active.id) localStorage.setItem(ACTIVE_PERSON_KEY, active.id);
+    const profiles = loadProfiles(license);
+    const savedId = localStorage.getItem(ACTIVE_PROFILE_KEY);
+    const active = profiles.find((profile) => profile.id === savedId) ?? profiles[0] ?? null;
+    if (active && savedId !== active.id) localStorage.setItem(ACTIVE_PROFILE_KEY, active.id);
     const loaded = active
       ? adopt(active)
       : { theme: readTheme(), accent: readAccent(), data: defaultData() };
@@ -300,10 +300,10 @@ export const useSpread = create<Store>((set, get) => ({
       applyTheme(loaded.theme);
       applyAccent(loaded.accent);
     }
-    set({ ready: true, license, people, activeId: active?.id ?? null, ...loaded });
+    set({ ready: true, license, profiles, activeId: active?.id ?? null, ...loaded });
   },
   beginTrial: (name) => {
-    ensurePerson(set, get, name);
+    ensureProfile(set, get, name);
     const license: License = { ok: true, plan: "demo" };
     localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
     set({ license });
@@ -311,7 +311,7 @@ export const useSpread = create<Store>((set, get) => ({
   unlock: (code, name) => {
     const license = validateLicense(code);
     if (!license) return false;
-    ensurePerson(set, get, name);
+    ensureProfile(set, get, name);
     localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
     set({ license });
     return true;
@@ -323,65 +323,65 @@ export const useSpread = create<Store>((set, get) => ({
   },
   setTheme: (theme) => {
     applyTheme(theme);
-    const people = get().people.map((person) => (person.id === get().activeId ? { ...person, theme } : person));
-    if (people.length > 0) writePeople(people);
-    set({ theme, people: people.length > 0 ? people : get().people });
+    const profiles = get().profiles.map((profile) => (profile.id === get().activeId ? { ...profile, theme } : profile));
+    if (profiles.length > 0) writeProfiles(profiles);
+    set({ theme, profiles: profiles.length > 0 ? profiles : get().profiles });
   },
   setAccent: (accent) => {
     applyAccent(accent);
-    const people = get().people.map((person) => (person.id === get().activeId ? { ...person, accent } : person));
-    if (people.length > 0) writePeople(people);
-    set({ accent, people: people.length > 0 ? people : get().people });
+    const profiles = get().profiles.map((profile) => (profile.id === get().activeId ? { ...profile, accent } : profile));
+    if (profiles.length > 0) writeProfiles(profiles);
+    set({ accent, profiles: profiles.length > 0 ? profiles : get().profiles });
   },
-  addPerson: (name) => {
+  addProfile: (name) => {
     if (!cleanName(name)) return false;
-    const next = withPerson(get().people, name, uid());
-    const person = next?.[next.length - 1];
-    if (!next || !person) return false;
+    const next = withProfile(get().profiles, name, uid());
+    const profile = next?.[next.length - 1];
+    if (!next || !profile) return false;
     flushSpread();
     const data = defaultData();
-    localStorage.setItem(person.store, JSON.stringify(data));
-    writePeople(next);
-    localStorage.setItem(ACTIVE_PERSON_KEY, person.id);
-    activeStore = person.store;
-    applyTheme(person.theme);
+    localStorage.setItem(profile.store, JSON.stringify(data));
+    writeProfiles(next);
+    localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+    activeStore = profile.store;
+    applyTheme(profile.theme);
     applyAccent(null);
-    set({ people: next, activeId: person.id, data, theme: person.theme, accent: null });
+    set({ profiles: next, activeId: profile.id, data, theme: profile.theme, accent: null });
     return true;
   },
-  renamePerson: (id, name) => {
+  renameProfile: (id, name) => {
     const label = cleanName(name);
     if (!label) return false;
-    const people = get().people.map((person) => (person.id === id ? { ...person, name: label } : person));
-    writePeople(people);
-    set({ people });
+    const profiles = get().profiles.map((profile) => (profile.id === id ? { ...profile, name: label } : profile));
+    writeProfiles(profiles);
+    set({ profiles });
     return true;
   },
-  switchPerson: (id) => {
+  switchProfile: (id) => {
     if (id === get().activeId) return;
-    const person = get().people.find((item) => item.id === id);
-    if (!person) return;
+    const profile = get().profiles.find((item) => item.id === id);
+    if (!profile) return;
     flushSpread();
-    localStorage.setItem(ACTIVE_PERSON_KEY, person.id);
-    const loaded = adopt(person);
-    set({ activeId: person.id, ...loaded });
+    localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+    const loaded = adopt(profile);
+    set({ activeId: profile.id, ...loaded });
   },
-  removePerson: (id) => {
-    const people = get().people;
-    if (people.length <= 1) return false;
-    const person = people.find((item) => item.id === id);
-    if (!person) return false;
+  removeProfile: (id) => {
+    const profiles = get().profiles;
+    if (profiles.length <= 1) return false;
+    const profile = profiles.find((item) => item.id === id);
+    if (!profile) return false;
     flushSpread();
-    const next = people.filter((item) => item.id !== id);
-    localStorage.removeItem(person.store);
-    writePeople(next);
+    const next = profiles.filter((item) => item.id !== id);
+    localStorage.removeItem(profile.store);
+    writeProfiles(next);
     if (get().activeId !== id) {
-      set({ people: next });
+      set({ profiles: next });
       return true;
     }
-    localStorage.setItem(ACTIVE_PERSON_KEY, next[0].id);
+    localStorage.setItem(ACTIVE_PROFILE_KEY, next[0].id);
     const loaded = adopt(next[0]);
-    set({ people: next, activeId: next[0].id, ...loaded });
+    set({ profiles: next, activeId: next[0].id, ...loaded });
     return true;
   },
   moveWeek: (direction) => {

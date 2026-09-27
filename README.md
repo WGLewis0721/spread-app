@@ -29,7 +29,8 @@ A touch holds briefly before a drag. A mouse or pen starts after a short move. A
 - Tap a spread’s color dot to pick another color.
 - Week shows Sunday at the top through Monday at the bottom. Turn the crown, or swipe the week, to move.
 - The hours on a spread are a bank. The week bubble shows what is left. Adding hours to a day takes from that bank. Taking them off a day puts them back.
-- More can copy this week as text, save a Word document, or print a plain page you can keep as a PDF. Back Up Spread saves a `.spread` file. Restore Spread shows what is in the file and asks before it replaces this device.
+- More → Profiles holds up to ten profiles. Each profile has its own spreads and weeks. The open one is marked. Choosing another closes the menu, says which profile opened, and brings that profile’s spreads in.
+- More can copy this week as text, save a Word document, or print a plain page you can keep as a PDF. Back Up Spread saves a `.spread` file. Restore Spread shows what is in the file and asks before it replaces the open profile.
 
 Trial key: `SPR-DEMO-2026`
 
