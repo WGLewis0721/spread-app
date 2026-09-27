@@ -73,7 +73,7 @@ function UnlockScreen() {
         </p>
         {known ? (
           people.length > 1 ? (
-            <div className="mt-8 overflow-hidden rounded-3xl bg-elevated" role="listbox" aria-label="People">
+            <div className="mt-8 overflow-hidden rounded-3xl bg-elevated" role="listbox" aria-label="Profiles">
               {people.map((person, index) => (
                 <button
                   key={person.id}
@@ -266,6 +266,7 @@ function WeekScreen() {
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [view, setView] = useState<"spread" | "week">("spread");
   const [viewPlay, setViewPlay] = useState(false);
+  const [profilePlay, setProfilePlay] = useState(false);
   const [gears, setGears] = useState(false);
   const [openTask, setOpenTask] = useState<{ hatId: string; taskId: string } | null>(null);
   const [rolloverAsk, setRolloverAsk] = useState(false);
@@ -362,11 +363,17 @@ function WeekScreen() {
     };
   }, [printDoc]);
 
+  const profileSeen = useRef(activeId);
   useEffect(() => {
+    if (profileSeen.current === activeId) return;
+    profileSeen.current = activeId;
     setOpenTask(null);
     setEditing(false);
     setRemoveId(null);
     setPrintDoc(null);
+    setProfilePlay(true);
+    const id = window.setTimeout(() => setProfilePlay(false), 460);
+    return () => window.clearTimeout(id);
   }, [activeId]);
 
   function goHome() {
@@ -395,7 +402,11 @@ function WeekScreen() {
             {people.length > 1 && activeName && (
               <button
                 type="button"
-                className="ml-auto max-w-[45%] truncate text-sm font-medium text-secondary"
+                className={cn(
+                  "ml-auto h-8 max-w-[46%] truncate rounded-full bg-fill px-3 text-sm font-medium",
+                  profilePlay && "descend-in",
+                )}
+                aria-label={`${activeName}, profiles`}
                 onClick={() => setSheet("more")}
               >
                 {activeName}
@@ -454,24 +465,28 @@ function WeekScreen() {
         <main key={activeId ?? "solo"} className="px-4 pt-2 pb-dock">
           <h1 className="hidden print:block px-1 pt-4 text-2xl font-bold">Spread · {range}</h1>
           {view === "week" ? (
-            <div key={data.currentWeek} className={dir !== 0 || viewPlay ? "week-seq" : undefined} style={dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : followStyle(shift)}>
-              <WeeklyView onTurn={setGesture} onCommit={goWeek} />
+            <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : followStyle(shift)}>
+              <div className={profilePlay ? "cascade-item" : undefined}>
+                <WeeklyView onTurn={setGesture} onCommit={goWeek} />
+              </div>
             </div>
           ) : rows.length === 0 ? (
-            <div>
-              <p className="px-1 pt-8 text-sm text-secondary">Nothing on this week yet.</p>
-              <NewLifeBox onClick={() => setSheet("new")} />
+            <div className={profilePlay ? "cascade" : undefined}>
+              <p className={cn("px-1 pt-8 text-sm text-secondary", profilePlay && "cascade-item")}>Nothing on this week yet.</p>
+              <div className={profilePlay ? "cascade-item" : undefined} style={profilePlay ? { animationDelay: "45ms" } : undefined}>
+                <NewLifeBox onClick={() => setSheet("new")} />
+              </div>
             </div>
           ) : (
-            <div key={data.currentWeek} className={dir !== 0 || viewPlay ? "week-seq" : "enter"} style={dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(-1) : followStyle(shift)}>
-              <div className="week-seq-item">
+            <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : "enter"} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(-1) : followStyle(shift)}>
+              <div className={cn("week-seq-item", profilePlay && "cascade-item")}>
                 <Summary rows={rows} onRollover={() => {
                   if (rollover(false) === "confirm") setRolloverAsk(true);
                 }} />
               </div>
               <div className="mt-6 overflow-hidden rounded-[22px] bg-elevated">
                 {rows.map(({ hat, box }, index) => (
-                  <div key={hat.id} className="week-seq-item" style={{ animationDelay: `${(index + 1) * 45}ms` }}>
+                  <div key={hat.id} className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(index + 1) * 45}ms` }}>
                     <RoleBlock
                       hat={hat}
                       hours={box.hours}
@@ -484,7 +499,7 @@ function WeekScreen() {
                   </div>
                 ))}
               </div>
-              <div className="week-seq-item" style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}>
+              <div className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}>
                 <NewLifeBox onClick={() => setSheet("new")} />
               </div>
             </div>
@@ -1041,7 +1056,7 @@ function Grabber() {
   return <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill" aria-hidden="true" />;
 }
 
-function PeopleSection() {
+function PeopleSection({ onSwitched }: { onSwitched: (name: string) => void }) {
   const people = useSpread((s) => s.people);
   const activeId = useSpread((s) => s.activeId);
   const addPerson = useSpread((s) => s.addPerson);
@@ -1052,25 +1067,38 @@ function PeopleSection() {
   const [draft, setDraft] = useState(active?.name ?? "");
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
   const [dropId, setDropId] = useState<string | null>(null);
   const dropping = people.find((person) => person.id === dropId) ?? null;
+  const shown = picked ?? activeId;
 
   useEffect(() => {
     setDraft(active?.name ?? "");
   }, [active?.id, active?.name]);
 
+  function choose(person: { id: string; name: string }) {
+    if (person.id === shown || picked) return;
+    setPicked(person.id);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(() => {
+      switchPerson(person.id);
+      onSwitched(person.name);
+    }, reduced ? 0 : 260);
+  }
+
   return (
     <div className="mt-5">
       <div className="mb-2 flex items-baseline justify-between px-1">
-        <h2 className="text-sm font-semibold">People</h2>
+        <h2 className="text-sm font-semibold">Profiles</h2>
         <span className="text-xs text-tertiary">
           {people.length} of {PEOPLE_LIMIT}
         </span>
       </div>
-      <div className="overflow-hidden rounded-3xl bg-canvas">
+      <div className="overflow-hidden rounded-3xl bg-canvas" role="listbox" aria-label="Profiles">
         {people.map((person, index) => {
           const edge = index < people.length - 1 || people.length < PEOPLE_LIMIT;
-          if (person.id === activeId) {
+          const selected = person.id === shown;
+          if (person.id === activeId && !picked) {
             return (
               <form
                 key={person.id}
@@ -1082,7 +1110,7 @@ function PeopleSection() {
               >
                 <input
                   value={draft}
-                  aria-label="Your name"
+                  aria-label="Profile name"
                   autoCapitalize="words"
                   autoCorrect="off"
                   onChange={(event) => setDraft(event.target.value)}
@@ -1091,6 +1119,7 @@ function PeopleSection() {
                   }}
                   className="h-full min-w-0 flex-1 bg-transparent px-4 text-base outline-none"
                 />
+                <Check className={cn("size-4 shrink-0 text-accent", people.length < 2 && "mr-4")} aria-hidden="true" />
                 {people.length > 1 && (
                   <button
                     type="button"
@@ -1105,18 +1134,27 @@ function PeopleSection() {
             );
           }
           return (
-            <div key={person.id} className={cn("flex h-12 items-center", edge && "border-b border-line")}>
-              <button type="button" className="h-full min-w-0 flex-1 truncate px-4 text-left text-base" onClick={() => switchPerson(person.id)}>
-                {person.name}
-              </button>
+            <div key={person.id} className={cn("flex h-12 items-center", selected && "bg-fill", edge && "border-b border-line")}>
               <button
                 type="button"
-                className="h-full px-4 text-sm text-danger"
-                aria-label={`Remove ${person.name}`}
-                onClick={() => setDropId(person.id)}
+                role="option"
+                aria-selected={selected}
+                className={cn("flex h-full min-w-0 flex-1 items-center px-4 text-left text-base", selected && "font-semibold")}
+                onClick={() => choose(person)}
               >
-                Remove
+                <span className="flex-1 truncate">{person.name}</span>
+                {selected && <Check className="size-4 text-accent" />}
               </button>
+              {people.length > 1 && !picked && (
+                <button
+                  type="button"
+                  className="h-full px-4 text-sm text-danger"
+                  aria-label={`Remove ${person.name}`}
+                  onClick={() => setDropId(person.id)}
+                >
+                  Remove
+                </button>
+              )}
             </div>
           );
         })}
@@ -1127,15 +1165,18 @@ function PeopleSection() {
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!addPerson(name)) return;
+                const current = useSpread.getState();
+                const who = current.people.find((person) => person.id === current.activeId)?.name ?? name.trim();
                 setName("");
                 setAdding(false);
+                onSwitched(who);
               }}
             >
               <input
                 autoFocus
                 value={name}
                 placeholder="Name"
-                aria-label="New person"
+                aria-label="New profile"
                 autoCapitalize="words"
                 autoCorrect="off"
                 onChange={(event) => setName(event.target.value)}
@@ -1148,26 +1189,35 @@ function PeopleSection() {
           ) : (
             <button type="button" className="flex h-12 w-full items-center gap-3 px-4 text-left text-base text-accent" onClick={() => setAdding(true)}>
               <Plus className="size-5" strokeWidth={2.25} />
-              Add person
+              Add profile
             </button>
           ))}
       </div>
-      <p className="mt-2 px-1 text-xs text-tertiary">Each person keeps their own weeks on this phone. Nothing is shared.</p>
+      <p className="mt-2 px-1 text-xs text-tertiary">Each profile keeps its own spreads and weeks.</p>
       <AlertDialog.Root open={dropping !== null} onOpenChange={(open) => !open && setDropId(null)}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
           <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
             <AlertDialog.Title className="text-center text-base font-semibold">Remove {dropping?.name}?</AlertDialog.Title>
             <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-              Their weeks and tasks on this phone are deleted. Everyone else stays.
+              This profile’s spreads and weeks are deleted. The others stay.
             </AlertDialog.Description>
             <div className="mt-5 grid grid-cols-2 gap-2">
               <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
               <AlertDialog.Action
                 className="h-11 rounded-full bg-danger text-sm font-semibold text-on-danger"
                 onClick={() => {
-                  if (dropId) removePerson(dropId);
+                  if (!dropId || !dropping) return;
+                  const wasOpen = dropId === activeId;
+                  removePerson(dropId);
                   setDropId(null);
+                  if (!wasOpen) {
+                    toast(`Removed ${dropping.name}.`);
+                    return;
+                  }
+                  const current = useSpread.getState();
+                  const who = current.people.find((person) => person.id === current.activeId)?.name;
+                  if (who) onSwitched(who);
                 }}
               >
                 Remove
@@ -1189,9 +1239,6 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const copyLastWeek = useSpread((s) => s.copyLastWeek);
   const replaceData = useSpread((s) => s.replaceData);
   const data = useSpread((s) => s.data);
-  const people = useSpread((s) => s.people);
-  const activeId = useSpread((s) => s.activeId);
-  const activeName = people.find((person) => person.id === activeId)?.name;
   const fileRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<SpreadBackup | null>(null);
   const week = buildWeekDocument(data);
@@ -1268,10 +1315,14 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        {activeName ? `${activeName} · ` : ""}
         {license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
       </Dialog.Description>
-      <PeopleSection />
+      <PeopleSection
+        onSwitched={(who) => {
+          toast(`Switched to ${who}.`);
+          setSheet(null);
+        }}
+      />
       <input
         ref={fileRef}
         type="file"
