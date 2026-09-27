@@ -1,5 +1,14 @@
 import { backupFile } from "@/lib/spread/backup";
 import { saveFile } from "@/lib/spread/save-file";
+import {
+  ACTIVE_PERSON_KEY,
+  PEOPLE_KEY,
+  legacyPerson,
+  parsePeople,
+  withPerson,
+  cleanName,
+  type Person,
+} from "@/lib/spread/people";
 import { create } from "zustand";
 import {
   cloneWeek,
@@ -52,15 +61,21 @@ const ACCENT_KEY = "spread-accent";
 type Store = {
   ready: boolean;
   license: License | null;
+  people: Person[];
+  activeId: string | null;
   data: SpreadData;
   theme: ThemeChoice;
   accent: AccentId | null;
   boot: () => void;
-  beginTrial: () => void;
-  unlock: (code: string) => boolean;
+  beginTrial: (name?: string) => void;
+  unlock: (code: string, name?: string) => boolean;
   logout: () => void;
   setTheme: (theme: ThemeChoice) => void;
   setAccent: (accent: AccentId) => void;
+  addPerson: (name: string) => boolean;
+  renamePerson: (id: string, name: string) => boolean;
+  switchPerson: (id: string) => void;
+  removePerson: (id: string) => boolean;
   moveWeek: (direction: -1 | 1 | "today") => void;
   setHours: (hatId: string, hours: number) => void;
   renameHat: (hatId: string, name: string) => void;
@@ -101,7 +116,7 @@ function readLicense(): License | null {
 
 function readData(): SpreadData {
   try {
-    const raw = localStorage.getItem(STORE_KEY);
+    const raw = localStorage.getItem(activeStore);
     if (!raw) return defaultData();
     return normalizeData(JSON.parse(raw));
   } catch {
@@ -138,8 +153,56 @@ export function applyAccent(accent: AccentId | null) {
 }
 
 function readAccent(): AccentId | null {
-  const value = localStorage.getItem(ACCENT_KEY);
+  return accentFrom(localStorage.getItem(ACCENT_KEY));
+}
+
+function accentFrom(value: string | null): AccentId | null {
   return ACCENTS.some((entry) => entry.id === value) ? (value as AccentId) : null;
+}
+
+let activeStore = STORE_KEY;
+
+function writePeople(people: Person[]) {
+  localStorage.setItem(PEOPLE_KEY, JSON.stringify(people));
+}
+
+function loadPeople(license: License | null): Person[] {
+  const saved = parsePeople(localStorage.getItem(PEOPLE_KEY));
+  if (saved.length > 0) return saved;
+  if (localStorage.getItem(STORE_KEY)) {
+    const person = legacyPerson(uid(), readTheme(), readAccent());
+    writePeople([person]);
+    localStorage.setItem(ACTIVE_PERSON_KEY, person.id);
+    return [person];
+  }
+  if (!license) return [];
+  const created = withPerson([], "Me", uid());
+  if (!created) return [];
+  writePeople(created);
+  localStorage.setItem(ACTIVE_PERSON_KEY, created[0].id);
+  return created;
+}
+
+function adopt(person: Person) {
+  activeStore = person.store;
+  const theme = person.theme;
+  const accent = accentFrom(person.accent);
+  applyTheme(theme);
+  applyAccent(accent);
+  return { theme, accent, data: readData() };
+}
+
+function ensurePerson(set: (partial: Partial<Store>) => void, get: () => Store, name?: string) {
+  if (get().people.length > 0) return;
+  const next = withPerson([], name ?? "", uid());
+  if (!next) return;
+  const person = next[0];
+  writePeople(next);
+  localStorage.setItem(ACTIVE_PERSON_KEY, person.id);
+  activeStore = person.store;
+  applyTheme(person.theme);
+  applyAccent(null);
+  set({ people: next, activeId: person.id, theme: person.theme, accent: null });
 }
 
 let flushBound = false;
@@ -155,7 +218,7 @@ function bindFlush() {
 }
 
 function persist(data: SpreadData) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  localStorage.setItem(activeStore, JSON.stringify(data));
 }
 
 let pending: SpreadData | null = null;
@@ -217,43 +280,109 @@ function writeWeek(data: SpreadData, week: WeekData) {
 export const useSpread = create<Store>((set, get) => ({
   ready: false,
   license: null,
+  people: [],
+  activeId: null,
   data: defaultData(),
   theme: "system",
   accent: null,
   boot: () => {
     if (get().ready) return;
-    const theme = readTheme();
-    const accent = readAccent();
-    applyTheme(theme);
-    applyAccent(accent);
     bindFlush();
-    set({ ready: true, license: readLicense(), data: readData(), theme, accent });
+    const license = readLicense();
+    const people = loadPeople(license);
+    const savedId = localStorage.getItem(ACTIVE_PERSON_KEY);
+    const active = people.find((person) => person.id === savedId) ?? people[0] ?? null;
+    if (active && savedId !== active.id) localStorage.setItem(ACTIVE_PERSON_KEY, active.id);
+    const loaded = active
+      ? adopt(active)
+      : { theme: readTheme(), accent: readAccent(), data: defaultData() };
+    if (!active) {
+      applyTheme(loaded.theme);
+      applyAccent(loaded.accent);
+    }
+    set({ ready: true, license, people, activeId: active?.id ?? null, ...loaded });
   },
-  beginTrial: () => {
+  beginTrial: (name) => {
+    ensurePerson(set, get, name);
     const license: License = { ok: true, plan: "demo" };
     localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
     set({ license });
   },
-  unlock: (code) => {
+  unlock: (code, name) => {
     const license = validateLicense(code);
     if (!license) return false;
+    ensurePerson(set, get, name);
     localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
     set({ license });
     return true;
   },
   logout: () => {
+    flushSpread();
     localStorage.removeItem(LICENSE_KEY);
     set({ license: null });
   },
   setTheme: (theme) => {
-    localStorage.setItem(THEME_KEY, theme);
     applyTheme(theme);
-    set({ theme });
+    const people = get().people.map((person) => (person.id === get().activeId ? { ...person, theme } : person));
+    if (people.length > 0) writePeople(people);
+    set({ theme, people: people.length > 0 ? people : get().people });
   },
   setAccent: (accent) => {
-    localStorage.setItem(ACCENT_KEY, accent);
     applyAccent(accent);
-    set({ accent });
+    const people = get().people.map((person) => (person.id === get().activeId ? { ...person, accent } : person));
+    if (people.length > 0) writePeople(people);
+    set({ accent, people: people.length > 0 ? people : get().people });
+  },
+  addPerson: (name) => {
+    if (!cleanName(name)) return false;
+    const next = withPerson(get().people, name, uid());
+    const person = next?.[next.length - 1];
+    if (!next || !person) return false;
+    flushSpread();
+    const data = defaultData();
+    localStorage.setItem(person.store, JSON.stringify(data));
+    writePeople(next);
+    localStorage.setItem(ACTIVE_PERSON_KEY, person.id);
+    activeStore = person.store;
+    applyTheme(person.theme);
+    applyAccent(null);
+    set({ people: next, activeId: person.id, data, theme: person.theme, accent: null });
+    return true;
+  },
+  renamePerson: (id, name) => {
+    const label = cleanName(name);
+    if (!label) return false;
+    const people = get().people.map((person) => (person.id === id ? { ...person, name: label } : person));
+    writePeople(people);
+    set({ people });
+    return true;
+  },
+  switchPerson: (id) => {
+    if (id === get().activeId) return;
+    const person = get().people.find((item) => item.id === id);
+    if (!person) return;
+    flushSpread();
+    localStorage.setItem(ACTIVE_PERSON_KEY, person.id);
+    const loaded = adopt(person);
+    set({ activeId: person.id, ...loaded });
+  },
+  removePerson: (id) => {
+    const people = get().people;
+    if (people.length <= 1) return false;
+    const person = people.find((item) => item.id === id);
+    if (!person) return false;
+    flushSpread();
+    const next = people.filter((item) => item.id !== id);
+    localStorage.removeItem(person.store);
+    writePeople(next);
+    if (get().activeId !== id) {
+      set({ people: next });
+      return true;
+    }
+    localStorage.setItem(ACTIVE_PERSON_KEY, next[0].id);
+    const loaded = adopt(next[0]);
+    set({ people: next, activeId: next[0].id, ...loaded });
+    return true;
   },
   moveWeek: (direction) => {
     const data = get().data;

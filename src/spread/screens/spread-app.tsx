@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, List, Minus, Plus, X } from "lucide-react";
+import { ChevronRight, Check, List, Minus, Plus, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { ACCENTS, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
+import { PEOPLE_LIMIT } from "@/lib/spread/people";
 import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile } from "@/lib/spread/save-file";
@@ -53,9 +54,14 @@ export function SpreadApp() {
 function UnlockScreen() {
   const beginTrial = useSpread((s) => s.beginTrial);
   const unlock = useSpread((s) => s.unlock);
+  const people = useSpread((s) => s.people);
+  const activeId = useSpread((s) => s.activeId);
+  const switchPerson = useSpread((s) => s.switchPerson);
   const [showKey, setShowKey] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [name, setName] = useState("");
+  const known = people.length > 0;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 pt-safe pb-safe">
@@ -65,10 +71,46 @@ function UnlockScreen() {
         <p className="mt-3 max-w-xs text-base text-secondary text-pretty">
           Roles first. Hours second. Tasks last.
         </p>
+        {known ? (
+          people.length > 1 ? (
+            <div className="mt-8 overflow-hidden rounded-3xl bg-elevated" role="listbox" aria-label="People">
+              {people.map((person, index) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  role="option"
+                  aria-selected={person.id === activeId}
+                  className={cn(
+                    "flex h-12 w-full items-center px-4 text-left text-base",
+                    index < people.length - 1 && "border-b border-line",
+                    person.id === activeId && "font-semibold",
+                  )}
+                  onClick={() => switchPerson(person.id)}
+                >
+                  <span className="flex-1 truncate">{person.name}</span>
+                  {person.id === activeId && <Check className="size-4 text-accent" />}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-8 text-sm text-secondary">Continuing as {people[0].name}.</p>
+          )
+        ) : (
+          <input
+            value={name}
+            autoFocus
+            autoCapitalize="words"
+            autoCorrect="off"
+            placeholder="Your name"
+            aria-label="Your name"
+            onChange={(event) => setName(event.target.value)}
+            className="mt-8 h-12 w-full rounded-2xl bg-fill px-4 text-base outline-none placeholder:text-tertiary"
+          />
+        )}
         <button
           type="button"
-          className="mt-8 h-12 w-full rounded-full bg-accent text-base font-semibold text-on-accent active:opacity-80"
-          onClick={beginTrial}
+          className="mt-3 h-12 w-full rounded-full bg-accent text-base font-semibold text-on-accent active:opacity-80"
+          onClick={() => beginTrial(known ? undefined : name)}
         >
           Begin this week
         </button>
@@ -87,7 +129,7 @@ function UnlockScreen() {
             className="enter mt-1"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!unlock(code)) setError("That key isn’t valid.");
+              if (!unlock(code, known ? undefined : name)) setError("That key isn’t valid.");
             }}
           >
             <label className="sr-only" htmlFor="license-key">
@@ -233,6 +275,9 @@ function WeekScreen() {
   const [brand, setBrand] = useState<"full" | "folding" | "mark">(() => (brandCollapsed() ? "mark" : "full"));
   const brandOnce = useRef(brand === "mark");
   const [printDoc, setPrintDoc] = useState<WeekDocument | null>(null);
+  const people = useSpread((s) => s.people);
+  const activeId = useSpread((s) => s.activeId);
+  const activeName = people.find((person) => person.id === activeId)?.name;
   const rollover = useSpread((s) => s.rollover);
   const range = formatWeek(data.currentWeek);
   const isCurrent = data.currentWeek === weekKey();
@@ -317,6 +362,13 @@ function WeekScreen() {
     };
   }, [printDoc]);
 
+  useEffect(() => {
+    setOpenTask(null);
+    setEditing(false);
+    setRemoveId(null);
+    setPrintDoc(null);
+  }, [activeId]);
+
   function goHome() {
     setEditing(false);
     setOpenTask(null);
@@ -331,14 +383,25 @@ function WeekScreen() {
       {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
       <div className="mx-auto w-full max-w-xl">
         <header className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
-          <button type="button" className="brand mb-3" aria-label="Spread, home" onClick={goHome}>
-            <BrandMark size={26} />
-            {brand !== "mark" && (
-              <span className={cn("brand-clip", brand === "folding" && "is-folding")}>
-                <span className="brand-word">Spread</span>
-              </span>
+          <div className="mb-3 flex items-center gap-3">
+            <button type="button" className="brand" aria-label="Spread, home" onClick={goHome}>
+              <BrandMark size={26} />
+              {brand !== "mark" && (
+                <span className={cn("brand-clip", brand === "folding" && "is-folding")}>
+                  <span className="brand-word">Spread</span>
+                </span>
+              )}
+            </button>
+            {people.length > 1 && activeName && (
+              <button
+                type="button"
+                className="ml-auto max-w-[45%] truncate text-sm font-medium text-secondary"
+                onClick={() => setSheet("more")}
+              >
+                {activeName}
+              </button>
             )}
-          </button>
+          </div>
           <WeekCrown
             title={isCurrent ? "This week" : range}
             detail={isCurrent ? range : "Back to this week"}
@@ -388,7 +451,7 @@ function WeekScreen() {
           </div>
         </header>
 
-        <main className="px-4 pt-2 pb-dock">
+        <main key={activeId ?? "solo"} className="px-4 pt-2 pb-dock">
           <h1 className="hidden print:block px-1 pt-4 text-2xl font-bold">Spread · {range}</h1>
           {view === "week" ? (
             <div key={data.currentWeek} className={dir !== 0 || viewPlay ? "week-seq" : undefined} style={dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : followStyle(shift)}>
@@ -978,6 +1041,145 @@ function Grabber() {
   return <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill" aria-hidden="true" />;
 }
 
+function PeopleSection() {
+  const people = useSpread((s) => s.people);
+  const activeId = useSpread((s) => s.activeId);
+  const addPerson = useSpread((s) => s.addPerson);
+  const renamePerson = useSpread((s) => s.renamePerson);
+  const switchPerson = useSpread((s) => s.switchPerson);
+  const removePerson = useSpread((s) => s.removePerson);
+  const active = people.find((person) => person.id === activeId);
+  const [draft, setDraft] = useState(active?.name ?? "");
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [dropId, setDropId] = useState<string | null>(null);
+  const dropping = people.find((person) => person.id === dropId) ?? null;
+
+  useEffect(() => {
+    setDraft(active?.name ?? "");
+  }, [active?.id, active?.name]);
+
+  return (
+    <div className="mt-5">
+      <div className="mb-2 flex items-baseline justify-between px-1">
+        <h2 className="text-sm font-semibold">People</h2>
+        <span className="text-xs text-tertiary">
+          {people.length} of {PEOPLE_LIMIT}
+        </span>
+      </div>
+      <div className="overflow-hidden rounded-3xl bg-canvas">
+        {people.map((person, index) => {
+          const edge = index < people.length - 1 || people.length < PEOPLE_LIMIT;
+          if (person.id === activeId) {
+            return (
+              <form
+                key={person.id}
+                className={cn("flex h-12 items-center", edge && "border-b border-line")}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!renamePerson(person.id, draft)) setDraft(person.name);
+                }}
+              >
+                <input
+                  value={draft}
+                  aria-label="Your name"
+                  autoCapitalize="words"
+                  autoCorrect="off"
+                  onChange={(event) => setDraft(event.target.value)}
+                  onBlur={() => {
+                    if (!renamePerson(person.id, draft)) setDraft(person.name);
+                  }}
+                  className="h-full min-w-0 flex-1 bg-transparent px-4 text-base outline-none"
+                />
+                {people.length > 1 && (
+                  <button
+                    type="button"
+                    className="h-full px-4 text-sm text-danger"
+                    aria-label={`Remove ${person.name}`}
+                    onClick={() => setDropId(person.id)}
+                  >
+                    Remove
+                  </button>
+                )}
+              </form>
+            );
+          }
+          return (
+            <div key={person.id} className={cn("flex h-12 items-center", edge && "border-b border-line")}>
+              <button type="button" className="h-full min-w-0 flex-1 truncate px-4 text-left text-base" onClick={() => switchPerson(person.id)}>
+                {person.name}
+              </button>
+              <button
+                type="button"
+                className="h-full px-4 text-sm text-danger"
+                aria-label={`Remove ${person.name}`}
+                onClick={() => setDropId(person.id)}
+              >
+                Remove
+              </button>
+            </div>
+          );
+        })}
+        {people.length < PEOPLE_LIMIT &&
+          (adding ? (
+            <form
+              className="flex h-12 items-center gap-2 px-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!addPerson(name)) return;
+                setName("");
+                setAdding(false);
+              }}
+            >
+              <input
+                autoFocus
+                value={name}
+                placeholder="Name"
+                aria-label="New person"
+                autoCapitalize="words"
+                autoCorrect="off"
+                onChange={(event) => setName(event.target.value)}
+                className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-tertiary"
+              />
+              <button type="submit" className="text-sm font-semibold text-accent">
+                Add
+              </button>
+            </form>
+          ) : (
+            <button type="button" className="flex h-12 w-full items-center gap-3 px-4 text-left text-base text-accent" onClick={() => setAdding(true)}>
+              <Plus className="size-5" strokeWidth={2.25} />
+              Add person
+            </button>
+          ))}
+      </div>
+      <p className="mt-2 px-1 text-xs text-tertiary">Each person keeps their own weeks on this phone. Nothing is shared.</p>
+      <AlertDialog.Root open={dropping !== null} onOpenChange={(open) => !open && setDropId(null)}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+          <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+            <AlertDialog.Title className="text-center text-base font-semibold">Remove {dropping?.name}?</AlertDialog.Title>
+            <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+              Their weeks and tasks on this phone are deleted. Everyone else stays.
+            </AlertDialog.Description>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+              <AlertDialog.Action
+                className="h-11 rounded-full bg-danger text-sm font-semibold text-on-danger"
+                onClick={() => {
+                  if (dropId) removePerson(dropId);
+                  setDropId(null);
+                }}
+              >
+                Remove
+              </AlertDialog.Action>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
+    </div>
+  );
+}
+
 function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
   const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
@@ -987,6 +1189,9 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const copyLastWeek = useSpread((s) => s.copyLastWeek);
   const replaceData = useSpread((s) => s.replaceData);
   const data = useSpread((s) => s.data);
+  const people = useSpread((s) => s.people);
+  const activeId = useSpread((s) => s.activeId);
+  const activeName = people.find((person) => person.id === activeId)?.name;
   const fileRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<SpreadBackup | null>(null);
   const week = buildWeekDocument(data);
@@ -1063,8 +1268,10 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
+        {activeName ? `${activeName} · ` : ""}
         {license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
       </Dialog.Description>
+      <PeopleSection />
       <input
         ref={fileRef}
         type="file"
@@ -1166,7 +1373,7 @@ function RestoreDialog({
           <AlertDialog.Title className="text-center text-base font-semibold">Restore this backup?</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
             {listed}. {backup?.summary.weeks ?? 0} {backup?.summary.weeks === 1 ? "week" : "weeks"}, {backup?.summary.tasks ?? 0}{" "}
-            {backup?.summary.tasks === 1 ? "task" : "tasks"}. {backup?.summary.range}. This replaces everything on this device.
+            {backup?.summary.tasks === 1 ? "task" : "tasks"}. {backup?.summary.range}. This replaces this person’s weeks.
           </AlertDialog.Description>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
