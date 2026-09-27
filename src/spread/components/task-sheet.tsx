@@ -25,6 +25,8 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
   const deleteTask = useSpread((s) => s.deleteTask);
   const [picking, setPicking] = useState(false);
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
+  const [choice, setChoice] = useState<ContentBlock["type"] | null>(null);
+  const [menuPhase, setMenuPhase] = useState<"rest" | "apart" | "join">("rest");
   useLockPageScroll(true);
   const box = data.weeks[data.currentWeek]?.boxes.find((item) => item.hatId === hatId);
   const task = box?.tasks.find((item) => item.id === taskId);
@@ -34,10 +36,23 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
     setTaskContent(hatId, taskId, next);
   }
 
-  function add(type: ContentBlock["type"]) {
-    const block = blankBlock(type);
-    write({ blocks: [...content.blocks, block] });
-    setPicking(false);
+  function choose(type: ContentBlock["type"]) {
+    if (menuPhase === "apart") return;
+    const blocks = content.blocks;
+    setChoice(type);
+    setMenuPhase("apart");
+    window.setTimeout(() => {
+      write({ blocks: [...blocks, blankBlock(type)] });
+      setPicking(false);
+      setMenuPhase("rest");
+    }, 360);
+  }
+
+  function showFormats() {
+    setPicking(true);
+    if (!choice) return;
+    setMenuPhase("join");
+    window.setTimeout(() => setMenuPhase("rest"), 380);
   }
 
   function update(block: ContentBlock) {
@@ -45,7 +60,11 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
   }
 
   function remove(id: string) {
-    write({ blocks: content.blocks.filter((item) => item.id !== id) });
+    const next = content.blocks.filter((item) => item.id !== id);
+    write({ blocks: next });
+    if (next.length > 0 || !choice) return;
+    setMenuPhase("join");
+    window.setTimeout(() => setMenuPhase("rest"), 380);
   }
 
   if (!task) return null;
@@ -124,14 +143,13 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
               </div>
               {showMenu ? (
                 <div className={content.blocks.length === 0 ? "mt-6" : "mt-4"}>
-                  <div className="cascade overflow-hidden rounded-3xl bg-canvas">
+                  <div className={`overflow-hidden rounded-3xl bg-canvas${menuPhase === "apart" ? " format-apart" : menuPhase === "join" ? " format-join" : ""}`}>
                     {FORMATS.map((format, index) => (
                       <button
                         key={format.type}
                         type="button"
-                        className={`cascade-item flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill ${index > 0 ? "border-t border-line" : ""}`}
-                        style={{ animationDelay: `${index * 36}ms` }}
-                        onClick={() => add(format.type)}
+                        className={`format-row flex w-full items-center gap-3 px-4 py-3 text-left ${choice === format.type ? "is-choice" : "is-other"} ${index > 0 ? "border-t border-line" : ""}`}
+                        onClick={() => choose(format.type)}
                       >
                         <SpreadIcon name={format.icon} size={20} />
                         <span>
@@ -146,7 +164,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
                 <button
                   type="button"
                   className="mt-4 flex h-11 items-center gap-2 text-sm font-semibold text-accent"
-                  onClick={() => setPicking(true)}
+                  onClick={showFormats}
                 >
                   <SpreadIcon name="icon-add.svg" size={20} />
                   Add

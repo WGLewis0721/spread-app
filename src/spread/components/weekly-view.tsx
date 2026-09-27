@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -42,6 +42,8 @@ export function WeeklyView({
   const [active, setActive] = useState<ActiveDrag | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const dragging = useRef(false);
+  const seen = useRef<Set<string> | null>(null);
+  const [fresh, setFresh] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(FastPointerSensor, { activationConstraint: mouseActivation }),
     useSensor(HoldPointerSensor, { activationConstraint: touchActivation }),
@@ -52,6 +54,18 @@ export function WeeklyView({
     onCommit: (direction) => (onCommit ? onCommit(direction) : changeWeek(direction)),
   });
   const hotDay = highlightedDay(overId, allocations);
+
+  useEffect(() => {
+    const ids = allocations.map((item) => item.id);
+    const known = seen.current;
+    seen.current = new Set(ids);
+    if (!known) return;
+    const added = ids.find((id) => !known.has(id));
+    if (!added) return;
+    setFresh(added);
+    const timer = window.setTimeout(() => setFresh(null), 460);
+    return () => window.clearTimeout(timer);
+  }, [allocations]);
 
   function onDragStart(event: DragStartEvent) {
     dragging.current = true;
@@ -135,6 +149,7 @@ export function WeeklyView({
                       hours={item.hours}
                       onHours={(hours) => setAllocationHours(item.id, hours)}
                       onRemove={() => removeAllocation(item.id)}
+                      entering={item.id === fresh}
                     />
                   );
                 })}
@@ -246,6 +261,7 @@ function AllocationRow({
   hours,
   onHours,
   onRemove,
+  entering,
 }: {
   id: string;
   hatId: string;
@@ -255,11 +271,12 @@ function AllocationRow({
   hours: number;
   onHours: (hours: number) => void;
   onRemove: () => void;
+  entering?: boolean;
 }) {
   const drag = useDraggable({ id: `move:${id}`, data: { kind: "allocation", allocationId: id, hatId } });
   const drop = useDroppable({ id: `alloc:${id}` });
   return (
-    <li ref={drop.setNodeRef} className="flex items-center gap-1 rounded-2xl bg-canvas ps-2">
+    <li ref={drop.setNodeRef} className={`flex items-center gap-1 rounded-2xl bg-canvas ps-2${entering ? " descend-in" : ""}`}>
       <button
         ref={drag.setNodeRef}
         type="button"

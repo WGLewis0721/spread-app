@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, Ellipsis, List, Minus, Plus } from "lucide-react";
+import { ChevronRight, Ellipsis, List, Minus, Plus, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
@@ -529,19 +529,23 @@ function RoleBlock({
   return (
     <section className="print:break-inside-avoid">
       {!first && <div className="ms-16 border-t border-line" />}
-      <div className="relative flex min-h-16 items-center gap-3 px-4 py-2">
-        {editing && (
-          <button
-            type="button"
-            className="grid size-11 shrink-0 place-items-center"
-            aria-label={`Remove ${hat.name}`}
-            onClick={onRemove}
-          >
-            <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger">
-              <Minus className="size-4" strokeWidth={3} />
-            </span>
-          </button>
-        )}
+      <div className="relative overflow-hidden">
+        <button
+          type="button"
+          aria-label={`Remove ${hat.name}`}
+          aria-hidden={!editing}
+          tabIndex={editing ? 0 : -1}
+          className={cn(
+            "edit-minus absolute start-1 top-2 grid size-11 place-items-center",
+            editing ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-2 opacity-0",
+          )}
+          onClick={onRemove}
+        >
+          <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger">
+            <Minus className="size-4" strokeWidth={3} />
+          </span>
+        </button>
+        <div className={cn("edit-shift flex min-h-16 items-center gap-3 px-4 py-2", editing && "edit-shift-on")}>
         <button
           type="button"
           aria-label={`Color for ${hat.name}`}
@@ -604,6 +608,7 @@ function RoleBlock({
         >
           <ChevronRight className={cn("size-5 transition-transform duration-300", tasksOpen && taskMotion !== "out" && "rotate-90")} />
         </button>
+        </div>
       </div>
       {paletteOn && (
         <div className={cn("border-t border-line px-4 py-3", palettePhase === "out" ? "cascade cascade-out" : "cascade")}>
@@ -894,7 +899,18 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
 
   return (
     <>
-      <Grabber />
+      <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
+        <span />
+        <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={() => setSheet(null)}
+          className="grid size-11 place-items-center justify-self-end rounded-full text-secondary"
+        >
+          <X className="size-5" strokeWidth={2.25} />
+        </button>
+      </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
         {license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
