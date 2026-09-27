@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -6,7 +6,7 @@ import { ChevronRight, Check, List, Minus, Plus, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
-import { ACCENTS, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
+import { ACCENTS, consumeArrival, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
 import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
@@ -23,7 +23,16 @@ type Sheet = "more" | "new" | "license" | null;
 
 const useClientLayout = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+function useHydrated() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function SpreadApp() {
+  const hydrated = useHydrated();
   const ready = useSpread((s) => s.ready);
   const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
@@ -38,7 +47,7 @@ export function SpreadApp() {
     <>
       <Toaster
         position="top-center"
-        theme={theme === "system" ? "system" : theme}
+        theme={!hydrated || theme === "system" ? "system" : theme}
         toastOptions={{
           style: {
             background: "var(--elevated)",
@@ -48,7 +57,7 @@ export function SpreadApp() {
           },
         }}
       />
-      {ready && (license ? <WeekScreen /> : <UnlockScreen />)}
+      {hydrated && ready && (license ? <WeekScreen /> : <UnlockScreen />)}
     </>
   );
 }
@@ -66,7 +75,7 @@ function UnlockScreen() {
   const known = profiles.length > 0;
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 pt-safe pb-safe">
+    <main className="spread-gate mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 pt-safe pb-safe">
       <div className="mx-auto w-full max-w-sm">
         <SpreadIcon name="app-icon-spread-cards.svg" size={64} />
         <h1 className="mt-7 text-4xl font-bold tracking-tight text-balance">Spread</h1>
@@ -275,6 +284,7 @@ function WeekScreen() {
   const [gesture, setGesture] = useState(0);
   const [shift, setShift] = useState(0);
   const [dir, setDir] = useState<-1 | 1 | 0>(0);
+  const [arrive] = useState(consumeArrival);
   const [brand, setBrand] = useState<"full" | "folding" | "mark">(() => (brandCollapsed() ? "mark" : "full"));
   const brandOnce = useRef(brand === "mark");
   const [printDoc, setPrintDoc] = useState<WeekDocument | null>(null);
@@ -480,7 +490,7 @@ function WeekScreen() {
               </div>
             </div>
           ) : (
-            <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : "enter"} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(-1) : followStyle(shift)}>
+            <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : arrive ? "enter" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(-1) : followStyle(shift)}>
               <div className={cn("week-seq-item", profilePlay && "cascade-item")}>
                 <Summary rows={rows} onRollover={() => {
                   if (rollover(false) === "confirm") setRolloverAsk(true);

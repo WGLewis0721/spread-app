@@ -158,6 +158,9 @@
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
   }
+  html[data-spread="in"] .spread-gate {
+    display: none !important;
+  }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;

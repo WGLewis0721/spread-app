@@ -277,16 +277,17 @@ function writeWeek(data: SpreadData, week: WeekData) {
   };
 }
 
-export const useSpread = create<Store>((set, get) => ({
-  ready: false,
-  license: null,
-  profiles: [],
-  activeId: null,
-  data: defaultData(),
-  theme: "system",
-  accent: null,
-  boot: () => {
-    if (get().ready) return;
+let arriving = false;
+
+export function consumeArrival() {
+  const value = arriving;
+  arriving = false;
+  return value;
+}
+
+function readSession() {
+  if (typeof window === "undefined") return null;
+  try {
     bindFlush();
     const license = readLicense();
     const profiles = loadProfiles(license);
@@ -300,12 +301,41 @@ export const useSpread = create<Store>((set, get) => ({
       applyTheme(loaded.theme);
       applyAccent(loaded.accent);
     }
-    set({ ready: true, license, profiles, activeId: active?.id ?? null, ...loaded });
+    if (license) document.documentElement.setAttribute("data-spread", "in");
+    return {
+      ready: true as const,
+      license,
+      profiles,
+      activeId: active?.id ?? null,
+      ...loaded,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const restored = readSession();
+
+export const useSpread = create<Store>((set, get) => ({
+  ready: restored?.ready ?? false,
+  license: restored?.license ?? null,
+  profiles: restored?.profiles ?? [],
+  activeId: restored?.activeId ?? null,
+  data: restored?.data ?? defaultData(),
+  theme: restored?.theme ?? "system",
+  accent: restored?.accent ?? null,
+  boot: () => {
+    if (get().ready) return;
+    const session = readSession();
+    if (!session) return;
+    set(session);
   },
   beginTrial: (name) => {
     ensureProfile(set, get, name);
     const license: License = { ok: true, plan: "demo" };
     localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+    document.documentElement.setAttribute("data-spread", "in");
+    arriving = true;
     set({ license });
   },
   unlock: (code, name) => {
@@ -313,12 +343,15 @@ export const useSpread = create<Store>((set, get) => ({
     if (!license) return false;
     ensureProfile(set, get, name);
     localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+    document.documentElement.setAttribute("data-spread", "in");
+    arriving = true;
     set({ license });
     return true;
   },
   logout: () => {
     flushSpread();
     localStorage.removeItem(LICENSE_KEY);
+    document.documentElement.removeAttribute("data-spread");
     set({ license: null });
   },
   setTheme: (theme) => {
