@@ -257,6 +257,10 @@ function WeekScreen() {
       {typeof document !== "undefined" && createPortal(<WeekPaper doc={buildWeekDocument(data)} />, document.body)}
       <div className="mx-auto w-full max-w-xl">
         <header className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
+          <p className="mb-3 flex items-center gap-1.5">
+            <SpreadIcon name="app-icon-spread-cards.svg" size={22} />
+            <span className="text-[15px] font-semibold tracking-[-0.03em] max-[340px]:hidden">Spread</span>
+          </p>
           <WeekCrown
             title={isCurrent ? "This week" : range}
             detail={isCurrent ? range : "Back to this week"}
@@ -406,7 +410,7 @@ function NewLifeBox({ onClick }: { onClick: () => void }) {
         <SpreadIcon name="icon-new-life.svg" size={32} />
       </span>
       <span className="min-w-0">
-        <span className="block text-base font-semibold">New Life</span>
+        <span className="block text-base font-semibold">New Spread</span>
         <span className="block text-xs text-secondary">Make your own spreads.</span>
       </span>
     </button>
@@ -1142,7 +1146,7 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
       }}
     >
       <Grabber />
-      <Dialog.Title className="text-2xl font-bold tracking-tight">New Life</Dialog.Title>
+      <Dialog.Title className="text-2xl font-bold tracking-tight">New Spread</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
         Name the spreads you actually live. Add as many as you need.
       </Dialog.Description>
