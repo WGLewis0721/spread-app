@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Check, ChevronRight, Ellipsis, Minus, Plus } from "lucide-react";
+import { Check, ChevronRight, Ellipsis, List, Minus, Plus } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, weekDays, weekKey, type Hat } from "@/lib/spread/model";
@@ -278,7 +278,7 @@ function WeekScreen() {
                   if (rollover(false) === "confirm") setRolloverAsk(true);
                 }} />
               </div>
-              <div className="mt-6 flex flex-col gap-5">
+              <div className="mt-6 overflow-hidden rounded-[22px] bg-elevated">
                 {rows.map(({ hat, box }, index) => (
                   <div key={hat.id} className="week-seq-item" style={{ animationDelay: `${(index + 1) * 45}ms` }}>
                     <RoleBlock
@@ -286,6 +286,7 @@ function WeekScreen() {
                       hours={box.hours}
                       tasks={box.tasks}
                       editing={editing}
+                      first={index === 0}
                       onRemove={() => setRemoveId(hat.id)}
                       onOpenTask={(taskId) => setOpenTask({ hatId: hat.id, taskId })}
                     />
@@ -429,7 +430,7 @@ function DayMarks({ hatId, name, color }: { hatId: string; name: string; color: 
   const used = new Set(placed.map((item) => item.day));
   const spoken = days.filter((day) => used.has(day.date)).map((day) => day.label);
   return (
-    <p className="flex gap-1.5 px-2 pb-0.5" aria-label={`${name} on ${spoken.join(", ")}`}>
+    <p className="flex gap-2 pt-0.5" aria-label={`${name} on ${spoken.join(", ")}`}>
       {days.map((day, index) => {
         const on = used.has(day.date);
         return (
@@ -455,6 +456,7 @@ function RoleBlock({
   hours,
   tasks,
   editing,
+  first,
   onRemove,
   onOpenTask,
 }: {
@@ -462,6 +464,7 @@ function RoleBlock({
   hours: number;
   tasks: { id: string; text: string; done: boolean }[];
   editing: boolean;
+  first: boolean;
   onRemove: () => void;
   onOpenTask: (taskId: string) => void;
 }) {
@@ -479,16 +482,17 @@ function RoleBlock({
 
   return (
     <section className="print:break-inside-avoid">
-      <div className="relative mb-2 flex items-center gap-1 ps-1">
+      {!first && <div className="ms-16 border-t border-line" />}
+      <div className="relative flex min-h-16 items-center gap-3 px-4 py-2">
         {editing && (
           <button
             type="button"
-            className="grid size-11 place-items-center"
+            className="grid size-11 shrink-0 place-items-center"
             aria-label={`Remove ${hat.name}`}
             onClick={onRemove}
           >
-            <span className="grid size-6 place-items-center rounded-full bg-danger text-on-danger">
-              <Minus className="size-3.5" strokeWidth={3} />
+            <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger">
+              <Minus className="size-4" strokeWidth={3} />
             </span>
           </button>
         )}
@@ -499,10 +503,12 @@ function RoleBlock({
           className="grid size-11 shrink-0 place-items-center"
           onClick={() => setPalette((open) => !open)}
         >
-          <span className="size-2.5 rounded-full" style={{ backgroundColor: hat.color }} />
+          <span className="grid size-9 place-items-center rounded-full text-white" style={{ backgroundColor: hat.color }}>
+            <List className="size-[18px]" strokeWidth={2.5} />
+          </span>
         </button>
         {palette && (
-          <div className="absolute start-0 top-11 z-10 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-full bg-elevated p-1 shadow-lg">
+          <div className="absolute start-3 top-14 z-10 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-full bg-elevated p-1 shadow-lg">
             {ROLE_COLORS.map((color) => (
               <button
                 key={color}
@@ -515,7 +521,7 @@ function RoleBlock({
                 }}
               >
                 <span
-                  className="size-5 rounded-full"
+                  className="size-7 rounded-full"
                   style={{
                     backgroundColor: color,
                     outline: hat.color === color ? "2px solid var(--ink)" : undefined,
@@ -538,7 +544,7 @@ function RoleBlock({
             onKeyDown={(event) => {
               if (event.key === "Enter") event.currentTarget.blur();
             }}
-            className="w-full min-w-0 truncate rounded-lg bg-transparent px-2 text-base font-semibold outline-none focus:bg-fill"
+            className="w-full min-w-0 truncate bg-transparent text-[17px] font-normal tracking-[-0.02em] outline-none"
           />
           <DayMarks hatId={hat.id} name={hat.name} color={hat.color} />
         </div>
@@ -552,22 +558,21 @@ function RoleBlock({
         ) : (
           <button
             type="button"
-            className="grid h-11 shrink-0 place-items-center px-1"
+            className="grid h-11 min-w-8 shrink-0 place-items-center text-[17px] font-normal text-secondary tabular-nums"
             aria-label={`${hat.name}, ${hourChip(hours)} hours. Adjust`}
             onClick={() => setAdjusting(true)}
           >
-            <span className="rounded-full bg-fill px-3 py-1 text-sm font-semibold tabular-nums">
-              {hourChip(hours)}h
-            </span>
+            {hourChip(hours)}h
           </button>
         )}
       </div>
-      <ul className="overflow-hidden rounded-3xl bg-elevated">
+      <ul>
         {tasks.map((task) => (
-          <TaskRow key={task.id} hatId={hat.id} task={task} onOpen={() => onOpenTask(task.id)} />
+          <TaskRow key={task.id} hatId={hat.id} color={hat.color} task={task} onOpen={() => onOpenTask(task.id)} />
         ))}
         <li>
           <AddTaskRow
+            color={hat.color}
             placeholder={tasks.length === 0 ? "What matters most here?" : "Add a task"}
             onAdd={(text) => addTask(hat.id, text)}
           />
@@ -627,55 +632,59 @@ function Stepper({
 
 function TaskRow({
   hatId,
+  color,
   task,
   onOpen,
 }: {
   hatId: string;
+  color: string;
   task: { id: string; text: string; done: boolean };
   onOpen: () => void;
 }) {
   const toggleTask = useSpread((s) => s.toggleTask);
   return (
-    <li className="border-b border-line last:border-b-0">
-      <div className="flex items-center">
+    <li>
+      <div className="ms-16 border-t border-line" />
+      <div className="flex min-h-14 items-center">
         <button
           type="button"
           role="checkbox"
           aria-checked={task.done}
           aria-label={task.done ? `Mark not done: ${task.text}` : `Mark done: ${task.text}`}
           onClick={() => toggleTask(hatId, task.id)}
-          className="grid size-11 shrink-0 place-items-center"
+          className="grid size-14 shrink-0 place-items-center"
         >
           <span
-            className={cn(
-              "grid size-6 place-items-center rounded-full border-2",
-              task.done ? "border-accent bg-accent text-on-accent" : "border-tertiary",
-            )}
+            className="grid size-7 place-items-center rounded-full border-2"
+            style={
+              task.done
+                ? { backgroundColor: color, borderColor: color, color: "#fff" }
+                : { borderColor: "var(--tertiary)" }
+            }
           >
-            {task.done && <Check className="size-3.5" strokeWidth={3} />}
+            {task.done && <Check className="size-4" strokeWidth={3} />}
           </span>
         </button>
         <button
           type="button"
           onClick={onOpen}
           className={cn(
-            "flex h-11 min-w-0 flex-1 items-center pe-2 text-left text-base",
+            "flex min-h-14 min-w-0 flex-1 items-center pe-4 text-left text-[17px] leading-snug",
             task.done && "text-secondary line-through",
           )}
         >
           <span className="min-w-0 flex-1 truncate">{task.text}</span>
-          <ChevronRight className="size-4 shrink-0 text-tertiary" />
+          <ChevronRight className="size-5 shrink-0 text-tertiary" />
         </button>
       </div>
     </li>
   );
 }
 
-function AddTaskRow({ placeholder, onAdd }: { placeholder: string; onAdd: (text: string) => void }) {
+function AddTaskRow({ color, placeholder, onAdd }: { color: string; placeholder: string; onAdd: (text: string) => void }) {
   const [value, setValue] = useState("");
   return (
     <form
-      className="flex items-center"
       onSubmit={(event) => {
         event.preventDefault();
         const text = value.trim();
@@ -684,17 +693,20 @@ function AddTaskRow({ placeholder, onAdd }: { placeholder: string; onAdd: (text:
         setValue("");
       }}
     >
-      <span className="grid size-11 shrink-0 place-items-center text-accent" aria-hidden="true">
-        <Plus className="size-5" strokeWidth={2.25} />
-      </span>
-      <input
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        enterKeyHint="done"
-        className="h-11 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-tertiary"
-      />
+      <div className="ms-16 border-t border-line" />
+      <div className="flex min-h-14 items-center">
+        <span className="grid size-14 shrink-0 place-items-center" aria-hidden="true" style={{ color }}>
+          <Plus className="size-6" strokeWidth={2.25} />
+        </span>
+        <input
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder={placeholder}
+          aria-label={placeholder}
+          enterKeyHint="done"
+          className="h-14 min-w-0 flex-1 bg-transparent pe-4 text-[17px] outline-none placeholder:text-tertiary"
+        />
+      </div>
     </form>
   );
 }
