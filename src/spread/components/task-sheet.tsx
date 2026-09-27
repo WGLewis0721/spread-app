@@ -124,12 +124,13 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
               </div>
               {showMenu ? (
                 <div className={content.blocks.length === 0 ? "mt-6" : "mt-4"}>
-                  <div className="overflow-hidden rounded-3xl bg-canvas">
+                  <div className="cascade overflow-hidden rounded-3xl bg-canvas">
                     {FORMATS.map((format, index) => (
                       <button
                         key={format.type}
                         type="button"
-                        className={`flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill ${index > 0 ? "border-t border-line" : ""}`}
+                        className={`cascade-item flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill ${index > 0 ? "border-t border-line" : ""}`}
+                        style={{ animationDelay: `${index * 36}ms` }}
                         onClick={() => add(format.type)}
                       >
                         <SpreadIcon name={format.icon} size={20} />
@@ -265,7 +266,7 @@ function NotesBlock({
   if (!expanded) return editor;
 
   return (
-    <div className="mt-4 flex min-h-0 flex-1 flex-col pb-2">
+    <div className="slide-in mt-4 flex min-h-0 flex-1 flex-col pb-2">
       <div className="mb-2 flex shrink-0 items-center justify-between px-1">
         <h2 className="flex items-center gap-2 text-xs font-medium text-secondary">
           <SpreadIcon name="icon-notes.svg" size={16} />

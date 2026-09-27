@@ -172,6 +172,7 @@ function WeekScreen() {
   const [editing, setEditing] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [view, setView] = useState<"spread" | "week">("spread");
+  const [viewPlay, setViewPlay] = useState(false);
   const [openTask, setOpenTask] = useState<{ hatId: string; taskId: string } | null>(null);
   const [rolloverAsk, setRolloverAsk] = useState(false);
   const [gesture, setGesture] = useState(0);
@@ -252,7 +253,12 @@ function WeekScreen() {
                   "flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
                   view === key ? "bg-segment text-ink shadow-sm" : "text-secondary",
                 )}
-                onClick={() => setView(key)}
+                onClick={() => {
+                  if (view === key) return;
+                  setViewPlay(true);
+                  setView(key);
+                  window.setTimeout(() => setViewPlay(false), 380);
+                }}
               >
                 <SpreadIcon name={icon} size={key === "week" ? 20 : 16} />
                 {label}
@@ -264,7 +270,7 @@ function WeekScreen() {
         <main className="px-4 pt-2 pb-dock">
           <h1 className="hidden print:block px-1 pt-4 text-2xl font-bold">Spread · {range}</h1>
           {view === "week" ? (
-            <div key={data.currentWeek} className={dir === 0 ? undefined : "week-seq"} style={dir === 0 ? followStyle(shift) : weekFrom(dir)}>
+            <div key={data.currentWeek} className={dir !== 0 || viewPlay ? "week-seq" : undefined} style={dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : followStyle(shift)}>
               <WeeklyView onTurn={setGesture} onCommit={goWeek} />
             </div>
           ) : rows.length === 0 ? (
@@ -273,7 +279,7 @@ function WeekScreen() {
               <NewLifeBox onClick={() => setSheet("new")} />
             </div>
           ) : (
-            <div key={data.currentWeek} className={dir === 0 ? "enter" : "week-seq"} style={dir === 0 ? followStyle(shift) : weekFrom(dir)}>
+            <div key={data.currentWeek} className={dir !== 0 || viewPlay ? "week-seq" : "enter"} style={dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(-1) : followStyle(shift)}>
               <div className="week-seq-item">
                 <Summary rows={rows} onRollover={() => {
                   if (rollover(false) === "confirm") setRolloverAsk(true);
@@ -478,12 +484,47 @@ function RoleBlock({
   const addTask = useSpread((s) => s.addTask);
   const [name, setName] = useState(hat.name);
   const [adjusting, setAdjusting] = useState(false);
-  const [palette, setPalette] = useState(false);
+  const [paletteOn, setPaletteOn] = useState(false);
+  const [palettePhase, setPalettePhase] = useState<"in" | "out">("in");
   const [tasksOpen, setTasksOpen] = useState(true);
+  const [taskMotion, setTaskMotion] = useState<"idle" | "in" | "out">("idle");
+  const timers = useRef<number[]>([]);
 
   useEffect(() => {
     setName(hat.name);
   }, [hat.name]);
+
+  useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
+
+  function later(ms: number, run: () => void) {
+    const id = window.setTimeout(run, ms);
+    timers.current.push(id);
+  }
+
+  function togglePalette() {
+    if (paletteOn && palettePhase !== "out") {
+      setPalettePhase("out");
+      later(260, () => setPaletteOn(false));
+      return;
+    }
+    setPaletteOn(true);
+    setPalettePhase("in");
+  }
+
+  function toggleTasks() {
+    if (tasksOpen && taskMotion !== "out") {
+      setTaskMotion("out");
+      later(200 + Math.min(tasks.length + 1, 6) * 32, () => {
+        setTasksOpen(false);
+        setTaskMotion("idle");
+      });
+      return;
+    }
+    if (!tasksOpen) {
+      setTasksOpen(true);
+      setTaskMotion("in");
+    }
+  }
 
   return (
     <section className="print:break-inside-avoid">
@@ -504,9 +545,9 @@ function RoleBlock({
         <button
           type="button"
           aria-label={`Color for ${hat.name}`}
-          aria-expanded={palette}
+          aria-expanded={paletteOn && palettePhase !== "out"}
           className="relative grid size-11 shrink-0 place-items-center"
-          onClick={() => setPalette((open) => !open)}
+          onClick={togglePalette}
         >
           {hat.category ? (
             <CategoryBadge category={hat.category} color={hat.color} size={36} />
@@ -556,16 +597,16 @@ function RoleBlock({
         )}
         <button
           type="button"
-          aria-expanded={tasksOpen}
-          aria-label={tasksOpen ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
+          aria-expanded={tasksOpen && taskMotion !== "out"}
+          aria-label={tasksOpen && taskMotion !== "out" ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
           className="grid size-8 shrink-0 place-items-center text-tertiary"
-          onClick={() => setTasksOpen((open) => !open)}
+          onClick={toggleTasks}
         >
-          <ChevronRight className={cn("size-5 transition-transform", tasksOpen && "rotate-90")} />
+          <ChevronRight className={cn("size-5 transition-transform duration-300", tasksOpen && taskMotion !== "out" && "rotate-90")} />
         </button>
       </div>
-      {palette && (
-        <div className="border-t border-line px-4 py-3">
+      {paletteOn && (
+        <div className={cn("border-t border-line px-4 py-3", palettePhase === "out" ? "cascade cascade-out" : "cascade")}>
           <div className="flex items-center gap-2">
             <SpreadIcon name="icon-palette.svg" size={20} />
             <p className="text-sm font-medium">Color</p>
@@ -573,12 +614,13 @@ function RoleBlock({
           <div className="mt-2 flex flex-wrap">
             {[...ROLE_COLORS, ...SPREAD_CATEGORIES.map((item) => item.color)]
               .filter((color, index, all) => all.indexOf(color) === index)
-              .map((color) => (
+              .map((color, index) => (
                 <button
                   key={color}
                   type="button"
                   aria-label={`Use ${color}`}
-                  className="grid size-11 place-items-center"
+                  className="cascade-item grid size-11 place-items-center"
+                  style={{ animationDelay: `${index * 24}ms` }}
                   onClick={() => setHatColor(hat.id, color)}
                 >
                   <span
@@ -596,14 +638,17 @@ function RoleBlock({
             Symbol{hat.category ? ` · ${SPREAD_CATEGORIES.find((item) => item.id === hat.category)?.label}` : ""}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {SPREAD_CATEGORIES.map((item) => (
+            {SPREAD_CATEGORIES.map((item, index) => (
               <button
                 key={item.id}
                 type="button"
                 aria-label={item.label}
                 aria-pressed={hat.category === item.id}
-                className="grid size-11 place-items-center rounded-full"
-                style={hat.category === item.id ? { boxShadow: "0 0 0 2px var(--ink)" } : undefined}
+                className="cascade-item grid size-11 place-items-center rounded-full"
+                style={{
+                  animationDelay: `${index * 24}ms`,
+                  boxShadow: hat.category === item.id ? "0 0 0 2px var(--ink)" : undefined,
+                }}
                 onClick={() => setHatCategory(hat.id, item.id)}
               >
                 <CategoryBadge
@@ -616,12 +661,18 @@ function RoleBlock({
           </div>
         </div>
       )}
-      <div className={cn("task-fold", tasksOpen && "task-fold-open")}>
-      <ul>
-        {tasks.map((task) => (
-          <TaskRow key={task.id} hatId={hat.id} task={task} onOpen={() => onOpenTask(task.id)} />
+      <div className={cn("task-fold", (tasksOpen || taskMotion === "out") && "task-fold-open")}>
+      <ul className={taskMotion === "in" ? "cascade" : taskMotion === "out" ? "cascade cascade-out" : undefined}>
+        {tasks.map((task, index) => (
+          <TaskRow
+            key={task.id}
+            hatId={hat.id}
+            task={task}
+            delay={taskMotion === "idle" ? undefined : `${index * 32}ms`}
+            onOpen={() => onOpenTask(task.id)}
+          />
         ))}
-        <li>
+        <li className={taskMotion === "idle" ? undefined : "cascade-item"} style={taskMotion === "idle" ? undefined : { animationDelay: `${tasks.length * 32}ms` }}>
           <AddTaskRow
             placeholder={tasks.length === 0 ? "What matters most here?" : "Add a task"}
             onAdd={(text) => addTask(hat.id, text)}
@@ -684,15 +735,17 @@ function Stepper({
 function TaskRow({
   hatId,
   task,
+  delay,
   onOpen,
 }: {
   hatId: string;
   task: { id: string; text: string; done: boolean };
+  delay?: string;
   onOpen: () => void;
 }) {
   const toggleTask = useSpread((s) => s.toggleTask);
   return (
-    <li>
+    <li className={delay ? "cascade-item" : undefined} style={delay ? { animationDelay: delay } : undefined}>
       <div className="ms-[4.75rem] border-t border-line" />
       <div className="flex min-h-14 items-center ps-12">
         <button
