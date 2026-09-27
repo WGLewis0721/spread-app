@@ -1,0 +1,293 @@
+import { useRef, useState, type ReactNode } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { Minus, Plus } from "lucide-react";
+import { allocationHours, clampHours, weekDays } from "@/lib/spread/model";
+import { useSpread } from "@/lib/spread/store";
+import { edgeScrollDelta } from "@/spread/gestures/auto-scroll";
+import { highlightedDay, resolveDrop } from "@/spread/gestures/resolve-drop";
+import { FastPointerSensor, HoldPointerSensor, mouseActivation, touchActivation } from "@/spread/gestures/sensors";
+import { useWeekSwipe } from "@/spread/gestures/use-week-swipe";
+
+type ActiveDrag = { kind: "spread"; hatId: string } | { kind: "allocation"; allocationId: string; hatId: string };
+
+export function WeeklyView({
+  onTurn,
+  onCommit,
+}: {
+  onTurn?: (dx: number) => void;
+  onCommit?: (direction: -1 | 1) => void;
+}) {
+  const data = useSpread((s) => s.data);
+  const moveSpreadToDay = useSpread((s) => s.moveSpreadToDay);
+  const moveAllocation = useSpread((s) => s.moveAllocation);
+  const reorderAllocation = useSpread((s) => s.reorderAllocation);
+  const setAllocationHours = useSpread((s) => s.setAllocationHours);
+  const removeAllocation = useSpread((s) => s.removeAllocation);
+  const changeWeek = useSpread((s) => s.changeWeek);
+  const days = weekDays(data.currentWeek);
+  const week = data.weeks[data.currentWeek];
+  const allocations = week?.allocations ?? [];
+  const [selected, setSelected] = useState<string | null>(null);
+  const [active, setActive] = useState<ActiveDrag | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const dragging = useRef(false);
+  const sensors = useSensors(
+    useSensor(FastPointerSensor, { activationConstraint: mouseActivation }),
+    useSensor(HoldPointerSensor, { activationConstraint: touchActivation }),
+  );
+  const swipe = useWeekSwipe({
+    dragActive: () => dragging.current,
+    onShift: onTurn,
+    onCommit: (direction) => (onCommit ? onCommit(direction) : changeWeek(direction)),
+  });
+  const hotDay = highlightedDay(overId, allocations);
+
+  function onDragStart(event: DragStartEvent) {
+    dragging.current = true;
+    setActive(event.active.data.current as ActiveDrag);
+  }
+
+  function onDragMove(event: DragMoveEvent) {
+    const native = event.activatorEvent;
+    if (!(native instanceof PointerEvent)) return;
+    const delta = edgeScrollDelta(native.clientY + event.delta.y, window.innerHeight);
+    if (delta) window.scrollBy({ top: delta });
+  }
+
+  function finish(event?: DragEndEvent) {
+    dragging.current = false;
+    setActive(null);
+    setOverId(null);
+    if (!event?.over || !event.active.data.current) return;
+    const decision = resolveDrop(event.active.data.current as ActiveDrag, String(event.over.id), allocations);
+    if (!decision) return;
+    if (decision.action === "moveSpreadToDay") moveSpreadToDay(decision.hatId, decision.day);
+    if (decision.action === "moveAllocation") moveAllocation(decision.allocationId, decision.day);
+    if (decision.action === "reorderAllocation") reorderAllocation(decision.allocationId, decision.beforeId);
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      autoScroll
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
+      onDragOver={({ over }) => setOverId(over ? String(over.id) : null)}
+      onDragEnd={finish}
+      onDragCancel={() => finish()}
+    >
+      <div className="enter" style={{ touchAction: "pan-y" }} {...swipe}>
+        <p className="px-1 pt-4 text-xs text-secondary">Drag a spread onto a day, or tap one, then add it.</p>
+        <div className="mt-3 flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-1">
+          {data.hats.map((hat) => {
+            const box = week?.boxes.find((item) => item.hatId === hat.id);
+            const hours = allocationHours(allocations, hat.id, box?.hours ?? hat.defaultHours);
+            return (
+              <SpreadChip
+                key={hat.id}
+                id={hat.id}
+                name={hat.name}
+                color={hat.color}
+                hours={hours}
+                selected={selected === hat.id}
+                onSelect={() => setSelected((current) => (current === hat.id ? null : hat.id))}
+              />
+            );
+          })}
+        </div>
+        <div className="mt-4 flex flex-col gap-3">
+          {days.map((day, index) => {
+            const items = allocations.filter((item) => item.day === day.date).sort((a, b) => a.order - b.order);
+            return (
+              <DayCard
+                key={day.date}
+                date={day.date}
+                label={day.label}
+                hot={hotDay === day.date}
+                delay={`${index * 45}ms`}
+                empty={items.length === 0}
+                selectedName={data.hats.find((hat) => hat.id === selected)?.name}
+                onAdd={() => selected && moveSpreadToDay(selected, day.date, 1)}
+              >
+                {items.map((item) => {
+                  const hat = data.hats.find((entry) => entry.id === item.hatId);
+                  if (!hat) return null;
+                  return (
+                    <AllocationRow
+                      key={item.id}
+                      id={item.id}
+                      hatId={hat.id}
+                      name={hat.name}
+                      color={hat.color}
+                      day={day.label}
+                      hours={item.hours}
+                      onHours={(hours) => setAllocationHours(item.id, hours)}
+                      onRemove={() => removeAllocation(item.id)}
+                    />
+                  );
+                })}
+              </DayCard>
+            );
+          })}
+        </div>
+      </div>
+      <DragOverlay dropAnimation={null}>
+        {active ? <DragCard name={data.hats.find((hat) => hat.id === active.hatId)?.name ?? ""} color={data.hats.find((hat) => hat.id === active.hatId)?.color ?? "#8E8E93"} /> : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+function DragCard({ name, color }: { name: string; color: string }) {
+  return (
+    <div className="pointer-events-none flex h-11 items-center gap-2 rounded-full bg-elevated px-3 text-sm font-semibold shadow-lg">
+      <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
+      {name}
+    </div>
+  );
+}
+
+function SpreadChip({
+  id,
+  name,
+  color,
+  hours,
+  selected,
+  onSelect,
+}: {
+  id: string;
+  name: string;
+  color: string;
+  hours: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: `spread:${id}`, data: { kind: "spread", hatId: id } });
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      data-drag="spread"
+      className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-elevated px-3 text-sm font-semibold"
+      style={{ outline: selected ? `2px solid ${color}` : undefined, touchAction: "pan-x" }}
+      onClick={onSelect}
+      {...listeners}
+      {...attributes}
+      aria-pressed={selected}
+    >
+      <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
+      {name}
+      <span className="text-secondary tabular-nums">{hours}h</span>
+    </button>
+  );
+}
+
+function DayCard({
+  date,
+  label,
+  hot,
+  delay,
+  empty,
+  selectedName,
+  onAdd,
+  children,
+}: {
+  date: string;
+  label: string;
+  hot: boolean;
+  delay: string;
+  empty: boolean;
+  selectedName?: string;
+  onAdd: () => void;
+  children: ReactNode;
+}) {
+  const { setNodeRef } = useDroppable({ id: `day:${date}` });
+  return (
+    <section
+      ref={setNodeRef}
+      data-day={date}
+      className="week-seq-item rounded-3xl bg-elevated px-3 py-3"
+      style={{ animationDelay: delay, outline: hot ? "2px solid var(--accent)" : undefined }}
+    >
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-base font-semibold">{label}</h2>
+        <span className="text-xs text-secondary tabular-nums">{date.slice(5).replace("-", "/")}</span>
+      </div>
+      {empty && <p className="px-1 pt-2 text-sm text-tertiary">Nothing this day.</p>}
+      <ul className="mt-2 flex flex-col gap-2">{children}</ul>
+      {selectedName && (
+        <button type="button" className="mt-2 h-11 w-full rounded-full text-sm font-semibold text-accent" onClick={onAdd}>
+          Add {selectedName}
+        </button>
+      )}
+    </section>
+  );
+}
+
+function AllocationRow({
+  id,
+  hatId,
+  name,
+  color,
+  day,
+  hours,
+  onHours,
+  onRemove,
+}: {
+  id: string;
+  hatId: string;
+  name: string;
+  color: string;
+  day: string;
+  hours: number;
+  onHours: (hours: number) => void;
+  onRemove: () => void;
+}) {
+  const drag = useDraggable({ id: `move:${id}`, data: { kind: "allocation", allocationId: id, hatId } });
+  const drop = useDroppable({ id: `alloc:${id}` });
+  return (
+    <li ref={drop.setNodeRef} className="flex items-center gap-1 rounded-2xl bg-canvas ps-2">
+      <button
+        ref={drag.setNodeRef}
+        type="button"
+        data-drag="allocation"
+        aria-label={`Move ${name}`}
+        className="grid size-11 shrink-0 touch-none place-items-center"
+        {...drag.listeners}
+        {...drag.attributes}
+      >
+        <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
+      </button>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+      <DayHours value={hours} label={`${name} on ${day}`} onChange={onHours} />
+      <button type="button" aria-label={`Remove ${name} from ${day}`} className="grid size-11 place-items-center text-tertiary" onClick={onRemove}>
+        <Minus className="size-4" />
+      </button>
+    </li>
+  );
+}
+
+function DayHours({ value, label, onChange }: { value: number; label: string; onChange: (hours: number) => void }) {
+  const shown = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return (
+    <div className="flex items-center" role="group" aria-label={label}>
+      <button type="button" className="grid size-11 place-items-center" aria-label={`Decrease ${label}`} onClick={() => onChange(clampHours(value - 1))}>
+        <Minus className="size-4" />
+      </button>
+      <span className="w-8 text-center text-sm font-semibold tabular-nums">{shown}h</span>
+      <button type="button" className="grid size-11 place-items-center" aria-label={`Increase ${label}`} onClick={() => onChange(clampHours(value + 1))}>
+        <Plus className="size-4" />
+      </button>
+    </div>
+  );
+}
