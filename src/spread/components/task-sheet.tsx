@@ -6,11 +6,16 @@ import { useSpread } from "@/lib/spread/store";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { useLockPageScroll } from "@/spread/components/use-browser-frame";
 
-const FORMATS: { type: ContentBlock["type"]; label: string; detail: string }[] = [
+const FORMATS: {
+  type: ContentBlock["type"];
+  label: string;
+  detail: string;
+  icon?: "icon-outline.svg" | "icon-table.svg" | "icon-photo.svg";
+}[] = [
   { type: "notes", label: "Notes", detail: "Write. I. or A. starts an outline." },
-  { type: "outline", label: "Outline", detail: "Numbered like a traditional outline." },
-  { type: "table", label: "Table", detail: "Rows and columns." },
-  { type: "photo", label: "Photo", detail: "A picture from this device." },
+  { type: "outline", label: "Outline", detail: "Numbered like a traditional outline.", icon: "icon-outline.svg" },
+  { type: "table", label: "Table", detail: "Rows and columns.", icon: "icon-table.svg" },
+  { type: "photo", label: "Photo", detail: "A picture from this device.", icon: "icon-photo.svg" },
 ];
 
 export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: string; onClose: () => void }) {
@@ -95,11 +100,14 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
                   <button
                     key={format.type}
                     type="button"
-                    className={`flex w-full flex-col items-start px-4 py-3 text-left active:bg-fill ${index > 0 ? "border-t border-line" : ""}`}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill ${index > 0 ? "border-t border-line" : ""}`}
                     onClick={() => add(format.type)}
                   >
-                    <span className="text-base font-semibold">{format.label}</span>
-                    <span className="text-sm text-secondary">{format.detail}</span>
+                    {format.icon ? <SpreadIcon name={format.icon} size={20} /> : <span className="size-5" />}
+                    <span>
+                      <span className="block text-base font-semibold">{format.label}</span>
+                      <span className="block text-sm text-secondary">{format.detail}</span>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -110,7 +118,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
               className="mt-4 flex h-11 items-center gap-2 text-sm font-semibold text-accent"
               onClick={() => setPicking(true)}
             >
-              <Plus className="size-4" />
+              <SpreadIcon name="icon-add.svg" size={20} />
               Add
             </button>
           )}

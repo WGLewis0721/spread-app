@@ -11,6 +11,7 @@ import {
   LICENSE_KEY,
   normalizeData,
   ROLE_COLORS,
+  SPREAD_CATEGORIES,
   shiftWeek,
   STORE_KEY,
   syncAllocationHours,
@@ -21,6 +22,7 @@ import {
   weekKey,
   type Allocation,
   type License,
+  type SpreadCategory,
   type SpreadData,
   type TaskContent,
   type WeekData,
@@ -42,13 +44,14 @@ type Store = {
   setHours: (hatId: string, hours: number) => void;
   renameHat: (hatId: string, name: string) => void;
   removeHat: (hatId: string) => void;
-  addHat: (name: string, hours: number) => void;
+  addHat: (name: string, hours: number, options?: { category?: SpreadCategory }) => void;
   addTask: (hatId: string, text: string) => void;
   toggleTask: (hatId: string, taskId: string) => void;
   deleteTask: (hatId: string, taskId: string) => void;
   setTaskText: (hatId: string, taskId: string, text: string) => void;
   setTaskContent: (hatId: string, taskId: string, content: TaskContent) => void;
   setHatColor: (hatId: string, color: string) => void;
+  setHatCategory: (hatId: string, category: SpreadCategory) => void;
   addAllocation: (hatId: string, day: string, hours?: number) => void;
   setAllocationHours: (allocationId: string, hours: number) => void;
   moveAllocation: (allocationId: string, day: string, order?: number) => void;
@@ -198,15 +201,17 @@ export const useSpread = create<Store>((set, get) => ({
     persist(next);
     set({ data: next });
   },
-  addHat: (name, hours) => {
+  addHat: (name, hours, options) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     const data = get().data;
+    const preset = SPREAD_CATEGORIES.find((item) => item.id === options?.category);
     const hat = {
       id: uid(),
       name: trimmed,
       defaultHours: clampHours(hours),
-      color: ROLE_COLORS[data.hats.length % ROLE_COLORS.length],
+      color: preset?.color ?? ROLE_COLORS[data.hats.length % ROLE_COLORS.length],
+      ...(preset ? { category: preset.id } : {}),
     };
     const withHat = ensureWeek({ ...data, hats: [...data.hats, hat] });
     const next = mapBox(withHat, hat.id, (box) => ({ ...box, hours: hat.defaultHours }));
@@ -259,6 +264,17 @@ export const useSpread = create<Store>((set, get) => ({
     if (!ROLE_COLORS.includes(color as (typeof ROLE_COLORS)[number]) && !/^#[0-9A-Fa-f]{6}$/.test(color)) return;
     const data = get().data;
     const next = { ...data, hats: data.hats.map((hat) => (hat.id === hatId ? { ...hat, color } : hat)) };
+    persist(next);
+    set({ data: next });
+  },
+  setHatCategory: (hatId, category) => {
+    const preset = SPREAD_CATEGORIES.find((item) => item.id === category);
+    if (!preset) return;
+    const data = get().data;
+    const next = {
+      ...data,
+      hats: data.hats.map((hat) => (hat.id === hatId ? { ...hat, category: preset.id, color: preset.color } : hat)),
+    };
     persist(next);
     set({ data: next });
   },

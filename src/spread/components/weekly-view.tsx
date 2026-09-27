@@ -13,6 +13,7 @@ import {
 import { Minus, Plus } from "lucide-react";
 import { clampHours, remainingHours, weekDays } from "@/lib/spread/model";
 import { useSpread } from "@/lib/spread/store";
+import { SpreadIcon } from "@/spread/components/spread-icon";
 import { edgeScrollDelta } from "@/spread/gestures/auto-scroll";
 import { highlightedDay, resolveDrop } from "@/spread/gestures/resolve-drop";
 import { FastPointerSensor, HoldPointerSensor, mouseActivation, touchActivation } from "@/spread/gestures/sensors";
@@ -152,6 +153,7 @@ export function WeeklyView({
 function DragCard({ name, color }: { name: string; color: string }) {
   return (
     <div className="pointer-events-none flex h-11 items-center gap-2 rounded-full bg-elevated px-3 text-sm font-semibold shadow-lg">
+      <SpreadIcon name="icon-drag.svg" size={16} />
       <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
       {name}
     </div>

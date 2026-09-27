@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Check, ChevronRight, Ellipsis, List, Minus, Plus } from "lucide-react";
+import { ChevronRight, Ellipsis, List, Minus, Plus } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import { formatWeek, ROLE_COLORS, weekDays, weekKey, type Hat } from "@/lib/spread/model";
+import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText } from "@/lib/spread/week-document";
@@ -13,6 +13,7 @@ import { weekDocxBlob } from "@/lib/spread/week-docx";
 import { saveFile } from "@/lib/spread/save-file";
 import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
+import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { WeeklyView } from "@/spread/components/weekly-view";
 import { WeekCrown } from "@/spread/components/week-crown";
@@ -235,24 +236,25 @@ function WeekScreen() {
             onMove={goWeek}
             onShift={setShift}
           />
-          <div className="mx-auto mt-3 grid w-44 grid-cols-2 rounded-full bg-fill p-1" role="tablist" aria-label="View">
+          <div className="mx-auto mt-3 grid w-fit grid-cols-2 rounded-full bg-fill p-1" role="tablist" aria-label="View">
             {(
               [
-                ["spread", "Spread"],
-                ["week", "Week"],
+                ["spread", "Spread", "icon-spread-list.svg"],
+                ["week", "Week", "icon-week.svg"],
               ] as const
-            ).map(([key, label]) => (
+            ).map(([key, label, icon]) => (
               <button
                 key={key}
                 type="button"
                 role="tab"
                 aria-selected={view === key}
                 className={cn(
-                  "h-8 rounded-full text-sm font-medium",
+                  "flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
                   view === key ? "bg-segment text-ink shadow-sm" : "text-secondary",
                 )}
                 onClick={() => setView(key)}
               >
+                <SpreadIcon name={icon} size={16} />
                 {label}
               </button>
             ))}
@@ -408,7 +410,8 @@ function Summary({ rows, onRollover }: { rows: Row[]; onRollover: () => void }) 
       {totalHours > 45 && (
         <p className="mt-1 text-xs text-caution">If the hours don’t fit, something is lying.</p>
       )}
-      <button type="button" className="mt-3 text-sm font-semibold text-accent" onClick={onRollover}>
+      <button type="button" className="mt-3 flex items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
+        <SpreadIcon name="icon-rollover.svg" size={20} />
         Rollover
       </button>
     </section>
@@ -471,6 +474,7 @@ function RoleBlock({
   const setHours = useSpread((s) => s.setHours);
   const renameHat = useSpread((s) => s.renameHat);
   const setHatColor = useSpread((s) => s.setHatColor);
+  const setHatCategory = useSpread((s) => s.setHatCategory);
   const addTask = useSpread((s) => s.addTask);
   const [name, setName] = useState(hat.name);
   const [adjusting, setAdjusting] = useState(false);
@@ -500,38 +504,22 @@ function RoleBlock({
           type="button"
           aria-label={`Color for ${hat.name}`}
           aria-expanded={palette}
-          className="grid size-11 shrink-0 place-items-center"
+          className="relative grid size-11 shrink-0 place-items-center"
           onClick={() => setPalette((open) => !open)}
         >
-          <span className="grid size-9 place-items-center rounded-full text-white" style={{ backgroundColor: hat.color }}>
-            <List className="size-[18px]" strokeWidth={2.5} />
-          </span>
+          {hat.category ? (
+            <CategoryBadge category={hat.category} color={hat.color} size={36} />
+          ) : (
+            <span className="grid size-9 place-items-center rounded-full text-white" style={{ backgroundColor: hat.color }}>
+              <List className="size-[18px]" strokeWidth={2.5} />
+            </span>
+          )}
+          {editing && (
+            <span className="absolute bottom-0 end-0 grid size-5 place-items-center rounded-full bg-elevated">
+              <SpreadIcon name="icon-palette.svg" size={14} />
+            </span>
+          )}
         </button>
-        {palette && (
-          <div className="absolute start-3 top-14 z-10 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-full bg-elevated p-1 shadow-lg">
-            {ROLE_COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                aria-label={`Use ${color}`}
-                className="grid size-11 place-items-center"
-                onClick={() => {
-                  setHatColor(hat.id, color);
-                  setPalette(false);
-                }}
-              >
-                <span
-                  className="size-7 rounded-full"
-                  style={{
-                    backgroundColor: color,
-                    outline: hat.color === color ? "2px solid var(--ink)" : undefined,
-                    outlineOffset: 2,
-                  }}
-                />
-              </button>
-            ))}
-          </div>
-        )}
         <div className="min-w-0 flex-1">
           <input
             value={name}
@@ -566,13 +554,61 @@ function RoleBlock({
           </button>
         )}
       </div>
+      {palette && (
+        <div className="border-t border-line px-4 py-3">
+          <div className="flex items-center gap-2">
+            <SpreadIcon name="icon-palette.svg" size={20} />
+            <p className="text-sm font-medium">Color</p>
+          </div>
+          <div className="mt-2 flex flex-wrap">
+            {[...ROLE_COLORS, ...SPREAD_CATEGORIES.map((item) => item.color)]
+              .filter((color, index, all) => all.indexOf(color) === index)
+              .map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  aria-label={`Use ${color}`}
+                  className="grid size-11 place-items-center"
+                  onClick={() => setHatColor(hat.id, color)}
+                >
+                  <span
+                    className="size-7 rounded-full"
+                    style={{
+                      backgroundColor: color,
+                      outline: hat.color.toLowerCase() === color.toLowerCase() ? "2px solid var(--ink)" : undefined,
+                      outlineOffset: 2,
+                    }}
+                  />
+                </button>
+              ))}
+          </div>
+          <p className="mt-2 text-xs text-secondary">Symbol</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SPREAD_CATEGORIES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-label={item.label}
+                aria-pressed={hat.category === item.id}
+                className="grid size-11 place-items-center rounded-full active:opacity-70"
+                onClick={() => setHatCategory(hat.id, item.id)}
+              >
+                <CategoryBadge
+                  category={item.id}
+                  color={hat.category === item.id ? hat.color : item.color}
+                  size={32}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <ul>
         {tasks.map((task) => (
-          <TaskRow key={task.id} hatId={hat.id} color={hat.color} task={task} onOpen={() => onOpenTask(task.id)} />
+          <TaskRow key={task.id} hatId={hat.id} task={task} onOpen={() => onOpenTask(task.id)} />
         ))}
         <li>
           <AddTaskRow
-            color={hat.color}
             placeholder={tasks.length === 0 ? "What matters most here?" : "Add a task"}
             onAdd={(text) => addTask(hat.id, text)}
           />
@@ -632,12 +668,10 @@ function Stepper({
 
 function TaskRow({
   hatId,
-  color,
   task,
   onOpen,
 }: {
   hatId: string;
-  color: string;
   task: { id: string; text: string; done: boolean };
   onOpen: () => void;
 }) {
@@ -654,16 +688,11 @@ function TaskRow({
           onClick={() => toggleTask(hatId, task.id)}
           className="grid size-14 shrink-0 place-items-center"
         >
-          <span
-            className="grid size-7 place-items-center rounded-full border-2"
-            style={
-              task.done
-                ? { backgroundColor: color, borderColor: color, color: "#fff" }
-                : { borderColor: "var(--tertiary)" }
-            }
-          >
-            {task.done && <Check className="size-4" strokeWidth={3} />}
-          </span>
+          {task.done ? (
+            <SpreadIcon name="icon-check.svg" size={28} />
+          ) : (
+            <span className="size-7 rounded-full border-2" style={{ borderColor: "var(--tertiary)" }} />
+          )}
         </button>
         <button
           type="button"
@@ -681,7 +710,7 @@ function TaskRow({
   );
 }
 
-function AddTaskRow({ color, placeholder, onAdd }: { color: string; placeholder: string; onAdd: (text: string) => void }) {
+function AddTaskRow({ placeholder, onAdd }: { placeholder: string; onAdd: (text: string) => void }) {
   const [value, setValue] = useState("");
   return (
     <form
@@ -695,8 +724,8 @@ function AddTaskRow({ color, placeholder, onAdd }: { color: string; placeholder:
     >
       <div className="ms-16 border-t border-line" />
       <div className="flex min-h-14 items-center">
-        <span className="grid size-14 shrink-0 place-items-center" aria-hidden="true" style={{ color }}>
-          <Plus className="size-6" strokeWidth={2.25} />
+        <span className="grid size-14 shrink-0 place-items-center" aria-hidden="true">
+          <SpreadIcon name="icon-add.svg" size={20} />
         </span>
         <input
           value={value}
@@ -742,7 +771,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
   const [backup, setBackup] = useState<SpreadBackup | null>(null);
   const week = buildWeekDocument(data);
 
-  const actions: { label: string; icon?: "icon-share.svg"; run: () => void }[] = [
+  const actions: { label: string; icon?: "icon-share.svg" | "icon-export.svg" | "icon-print.svg" | "icon-backup.svg" | "icon-restore.svg"; run: () => void }[] = [
     {
       label: "Copy last week",
       run: () => {
@@ -763,7 +792,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
     },
     {
       label: "Word document",
-      icon: "icon-share.svg",
+      icon: "icon-export.svg",
       run: () => {
         void weekDocxBlob(week)
           .then((blob) => {
@@ -776,7 +805,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
     },
     {
       label: "Print / Save PDF",
-      icon: "icon-share.svg",
+      icon: "icon-print.svg",
       run: () => {
         setSheet(null);
         window.setTimeout(() => window.print(), 250);
@@ -784,13 +813,14 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
     },
     {
       label: "Back Up Spread",
+      icon: "icon-backup.svg",
       run: () => {
         saveBackup(data);
         toast("Backup saved.");
         setSheet(null);
       },
     },
-    { label: "Restore Spread", run: () => fileRef.current?.click() },
+    { label: "Restore Spread", icon: "icon-restore.svg", run: () => fileRef.current?.click() },
     { label: "License key", run: () => setSheet("license") },
   ];
 
@@ -958,7 +988,9 @@ function Segmented({ value, onChange }: { value: ThemeChoice; onChange: (theme: 
 
 function NewLifeSheet({ onClose }: { onClose: () => void }) {
   const addHat = useSpread((s) => s.addHat);
-  const [rows, setRows] = useState([{ key: 1, name: "", hours: 2 }]);
+  const [rows, setRows] = useState<{ key: number; name: string; hours: number; category: SpreadCategory | null }[]>([
+    { key: 1, name: "", hours: 2, category: null },
+  ]);
   const [nextKey, setNextKey] = useState(2);
   const ready = rows.some((row) => row.name.trim());
 
@@ -967,7 +999,7 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
       onSubmit={(event) => {
         event.preventDefault();
         for (const row of rows) {
-          if (row.name.trim()) addHat(row.name, row.hours);
+          if (row.name.trim()) addHat(row.name, row.hours, row.category ? { category: row.category } : undefined);
         }
         onClose();
       }}
@@ -1005,6 +1037,27 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
                 }
               />
             </div>
+            <p className="mt-3 text-xs text-secondary">Symbol</p>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {SPREAD_CATEGORIES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-label={item.label}
+                  aria-pressed={row.category === item.id}
+                  className="grid size-11 place-items-center rounded-full active:opacity-70"
+                  onClick={() =>
+                    setRows((current) =>
+                      current.map((entry) =>
+                        entry.key === row.key ? { ...entry, category: entry.category === item.id ? null : item.id } : entry,
+                      ),
+                    )
+                  }
+                >
+                  <CategoryBadge category={item.id} color={item.color} size={32} />
+                </button>
+              ))}
+            </div>
           </div>
         ))}
       </div>
@@ -1012,7 +1065,7 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
         type="button"
         className="mt-4 h-11 text-sm font-semibold text-accent"
         onClick={() => {
-          setRows((current) => [...current, { key: nextKey, name: "", hours: 2 }]);
+          setRows((current) => [...current, { key: nextKey, name: "", hours: 2, category: null }]);
           setNextKey((key) => key + 1);
         }}
       >
@@ -1100,9 +1153,10 @@ function RolloverDialog({
           <div className="mt-5 grid grid-cols-2 gap-2">
             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
             <AlertDialog.Action
-              className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
+              className="flex h-11 items-center justify-center gap-1.5 rounded-full bg-accent text-sm font-semibold text-on-accent"
               onClick={onConfirm}
             >
+              <SpreadIcon name="icon-rollover.svg" size={20} className="brightness-0 invert" />
               Replace
             </AlertDialog.Action>
           </div>

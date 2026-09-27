@@ -12,7 +12,13 @@ export type Task = {
   allocationId?: string;
   content?: TaskContent;
 };
-export type Hat = { id: string; name: string; defaultHours: number; color: string };
+export type Hat = {
+  id: string;
+  name: string;
+  defaultHours: number;
+  color: string;
+  category?: SpreadCategory;
+};
 export type Box = { hatId: string; hours: number; tasks: Task[] };
 export type Allocation = { id: string; hatId: string; day: string; hours: number; order: number };
 export type WeekData = { boxes: Box[]; allocations: Allocation[] };
@@ -27,6 +33,25 @@ export const STORE_KEY = "spread.v1";
 export const LICENSE_KEY = "spread.license";
 export const THEME_KEY = "spread.theme";
 
+export const SPREAD_CATEGORIES = [
+  { id: "work", label: "Work", color: "#34C759" },
+  { id: "school", label: "School", color: "#007AFF" },
+  { id: "home", label: "Home", color: "#FF9500" },
+  { id: "health", label: "Health", color: "#30B0C7" },
+  { id: "family", label: "Family", color: "#AF52DE" },
+  { id: "fitness", label: "Fitness", color: "#FFCC00" },
+  { id: "business", label: "Business", color: "#5856D6" },
+  { id: "project", label: "Project", color: "#FF9F0A" },
+  { id: "church", label: "Church", color: "#BF5AF2" },
+  { id: "personal", label: "Personal", color: "#FF2D55" },
+] as const;
+
+export type SpreadCategory = (typeof SPREAD_CATEGORIES)[number]["id"];
+
+export function isSpreadCategory(value: unknown): value is SpreadCategory {
+  return SPREAD_CATEGORIES.some((item) => item.id === value);
+}
+
 export const ROLE_COLORS = [
   "#34C759",
   "#FF9500",
@@ -37,10 +62,10 @@ export const ROLE_COLORS = [
   "#5856D6",
 ] as const;
 
-const DEFAULT_SPREADS: { id: string; name: string; hours: number }[] = [
-  { id: "work", name: "Work", hours: 8 },
-  { id: "home", name: "Home", hours: 4 },
-  { id: "health", name: "Health", hours: 3 },
+const DEFAULT_SPREADS: { id: SpreadCategory; name: string; hours: number; color: string }[] = [
+  { id: "work", name: "Work", hours: 8, color: "#34C759" },
+  { id: "home", name: "Home", hours: 4, color: "#FF9500" },
+  { id: "health", name: "Health", hours: 3, color: "#007AFF" },
 ];
 
 export function uid() {
@@ -174,11 +199,12 @@ export function clampHours(n: number) {
 
 export function defaultData(): SpreadData {
   const currentWeek = weekKey();
-  const hats: Hat[] = DEFAULT_SPREADS.map((spread, index) => ({
+  const hats: Hat[] = DEFAULT_SPREADS.map((spread) => ({
     id: spread.id,
     name: spread.name,
     defaultHours: spread.hours,
-    color: ROLE_COLORS[index % ROLE_COLORS.length],
+    color: spread.color,
+    category: spread.id,
   }));
   return {
     hats,
@@ -241,7 +267,7 @@ export function ensureWeek(data: SpreadData): SpreadData {
 export function normalizeData(raw: unknown): SpreadData {
   if (!raw || typeof raw !== "object") return defaultData();
   const value = raw as Partial<SpreadData>;
-  const hats = Array.isArray(value.hats) ? value.hats.filter(isHat) : [];
+  const hats = Array.isArray(value.hats) ? value.hats.filter(isHat).map(normalizeHat) : [];
   const weeks: Record<string, WeekData> = {};
   if (value.weeks && typeof value.weeks === "object") {
     for (const [key, week] of Object.entries(value.weeks)) {
@@ -257,6 +283,18 @@ export function normalizeData(raw: unknown): SpreadData {
   }
   const currentWeek = typeof value.currentWeek === "string" ? value.currentWeek : weekKey();
   return ensureWeek({ hats, weeks, currentWeek });
+}
+
+function normalizeHat(hat: Hat): Hat {
+  const next: Hat = {
+    id: hat.id,
+    name: hat.name,
+    defaultHours: hat.defaultHours,
+    color: typeof hat.color === "string" ? hat.color : ROLE_COLORS[0],
+  };
+  const category = isSpreadCategory(hat.category) ? hat.category : isSpreadCategory(hat.id) ? hat.id : undefined;
+  if (category) next.category = category;
+  return next;
 }
 
 function isHat(value: unknown): value is Hat {
