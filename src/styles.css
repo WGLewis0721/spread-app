@@ -222,7 +222,7 @@
 }
 
 .sheet[data-state="closed"] {
-  animation: sheet-down 300ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: sheet-down 420ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
 .scrim[data-state="open"] {
@@ -230,7 +230,7 @@
 }
 
 .scrim[data-state="closed"] {
-  animation: scrim-out 240ms ease forwards;
+  animation: scrim-out 420ms ease forwards;
 }
 
 .sheet-stack[data-state="open"] > * {
@@ -361,6 +361,18 @@ button:not(.crown-cap):active {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+.ascend-out {
+  animation: ascend-out 340ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  pointer-events: none;
+}
+
+@keyframes ascend-out {
+  to {
+    opacity: 0;
+    transform: translateY(-22px);
   }
 }
 

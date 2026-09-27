@@ -44,6 +44,7 @@ export function WeeklyView({
   const dragging = useRef(false);
   const seen = useRef<Set<string> | null>(null);
   const [fresh, setFresh] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(FastPointerSensor, { activationConstraint: mouseActivation }),
     useSensor(HoldPointerSensor, { activationConstraint: touchActivation }),
@@ -66,6 +67,15 @@ export function WeeklyView({
     const timer = window.setTimeout(() => setFresh(null), 460);
     return () => window.clearTimeout(timer);
   }, [allocations]);
+
+  function takeOff(id: string) {
+    if (leaving) return;
+    setLeaving(id);
+    window.setTimeout(() => {
+      removeAllocation(id);
+      setLeaving(null);
+    }, 340);
+  }
 
   function onDragStart(event: DragStartEvent) {
     dragging.current = true;
@@ -103,7 +113,7 @@ export function WeeklyView({
     >
       <div className="enter" style={{ touchAction: "pan-y" }} {...swipe}>
         <p className="px-1 pt-4 text-xs text-secondary">Drag a spread onto a day, or tap one, then add it.</p>
-        <div className="mt-3 flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-1">
+        <div className="mt-4 flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain px-1.5 pt-2 pb-2">
           {data.hats.map((hat) => {
             const box = week?.boxes.find((item) => item.hatId === hat.id);
             const bank = box?.hours ?? hat.defaultHours;
@@ -148,8 +158,9 @@ export function WeeklyView({
                       day={day.label}
                       hours={item.hours}
                       onHours={(hours) => setAllocationHours(item.id, hours)}
-                      onRemove={() => removeAllocation(item.id)}
+                      onRemove={() => takeOff(item.id)}
                       entering={item.id === fresh}
+                      leaving={item.id === leaving}
                     />
                   );
                 })}
@@ -262,6 +273,7 @@ function AllocationRow({
   onHours,
   onRemove,
   entering,
+  leaving,
 }: {
   id: string;
   hatId: string;
@@ -272,11 +284,12 @@ function AllocationRow({
   onHours: (hours: number) => void;
   onRemove: () => void;
   entering?: boolean;
+  leaving?: boolean;
 }) {
   const drag = useDraggable({ id: `move:${id}`, data: { kind: "allocation", allocationId: id, hatId } });
   const drop = useDroppable({ id: `alloc:${id}` });
   return (
-    <li ref={drop.setNodeRef} className={`flex items-center gap-1 rounded-2xl bg-canvas ps-2${entering ? " descend-in" : ""}`}>
+    <li ref={drop.setNodeRef} className={`flex items-center gap-1 rounded-2xl bg-canvas ps-2${entering ? " descend-in" : ""}${leaving ? " ascend-out" : ""}`}>
       <button
         ref={drag.setNodeRef}
         type="button"

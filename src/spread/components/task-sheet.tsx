@@ -27,10 +27,23 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
   const [choice, setChoice] = useState<ContentBlock["type"] | null>(null);
   const [menuPhase, setMenuPhase] = useState<"rest" | "apart" | "join">("rest");
+  const [open, setOpen] = useState(true);
+  const closed = useRef(false);
   useLockPageScroll(true);
   const box = data.weeks[data.currentWeek]?.boxes.find((item) => item.hatId === hatId);
   const task = box?.tasks.find((item) => item.id === taskId);
   const content = task?.content ?? emptyContent();
+
+  function close(after?: () => void) {
+    if (closed.current) return;
+    closed.current = true;
+    setOpen(false);
+    const wait = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 20 : 420;
+    window.setTimeout(() => {
+      after?.();
+      onClose();
+    }, wait);
+  }
 
   function write(next: TaskContent) {
     setTaskContent(hatId, taskId, next);
@@ -73,7 +86,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
   const sheetHeight = "min(92dvh, calc(100dvh - var(--browser-bottom, 0px) - 0.5rem))";
 
   return (
-    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+    <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
       <Dialog.Portal>
         <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
         <Dialog.Content
@@ -86,7 +99,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
             <button
               type="button"
               aria-label="Close"
-              onClick={onClose}
+              onClick={() => close()}
               className="grid size-11 place-items-center justify-self-end rounded-full text-secondary active:bg-fill"
             >
               <X className="size-5" strokeWidth={2.25} />
@@ -173,10 +186,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
               <button
                 type="button"
                 className="mt-6 mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-danger"
-                onClick={() => {
-                  deleteTask(hatId, taskId);
-                  onClose();
-                }}
+                onClick={() => close(() => deleteTask(hatId, taskId))}
               >
                 <SpreadIcon name="icon-trash.svg" size={20} />
                 Delete task
