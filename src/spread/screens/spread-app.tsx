@@ -582,7 +582,9 @@ function RoleBlock({
                 </button>
               ))}
           </div>
-          <p className="mt-2 text-xs text-secondary">Symbol</p>
+          <p className="mt-2 text-xs text-secondary">
+            Symbol{hat.category ? ` · ${SPREAD_CATEGORIES.find((item) => item.id === hat.category)?.label}` : ""}
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {SPREAD_CATEGORIES.map((item) => (
               <button
@@ -590,7 +592,8 @@ function RoleBlock({
                 type="button"
                 aria-label={item.label}
                 aria-pressed={hat.category === item.id}
-                className="grid size-11 place-items-center rounded-full active:opacity-70"
+                className="grid size-11 place-items-center rounded-full"
+                style={hat.category === item.id ? { boxShadow: "0 0 0 2px var(--ink)" } : undefined}
                 onClick={() => setHatCategory(hat.id, item.id)}
               >
                 <CategoryBadge
@@ -1037,26 +1040,31 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
                 }
               />
             </div>
-            <p className="mt-3 text-xs text-secondary">Symbol</p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {SPREAD_CATEGORIES.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-label={item.label}
-                  aria-pressed={row.category === item.id}
-                  className="grid size-11 place-items-center rounded-full active:opacity-70"
-                  onClick={() =>
-                    setRows((current) =>
-                      current.map((entry) =>
-                        entry.key === row.key ? { ...entry, category: entry.category === item.id ? null : item.id } : entry,
-                      ),
-                    )
-                  }
-                >
-                  <CategoryBadge category={item.id} color={item.color} size={32} />
-                </button>
-              ))}
+            <p className="mt-3 text-xs text-secondary">
+              Symbol
+              {row.category ? ` · ${SPREAD_CATEGORIES.find((item) => item.id === row.category)?.label}` : ""}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {SPREAD_CATEGORIES.map((item) => {
+                const selected = row.category === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-label={item.label}
+                    aria-pressed={selected}
+                    className="grid size-11 place-items-center rounded-full"
+                    style={selected ? { boxShadow: "0 0 0 2px var(--ink)" } : undefined}
+                    onClick={() =>
+                      setRows((current) =>
+                        current.map((entry) => (entry.key === row.key ? { ...entry, category: item.id } : entry)),
+                      )
+                    }
+                  >
+                    <CategoryBadge category={item.id} color={item.color} size={32} />
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
