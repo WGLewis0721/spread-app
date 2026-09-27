@@ -315,6 +315,31 @@ button:not(.crown-cap):active {
   animation: cascade-y 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
+.gear {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.gears-turn .gear-lg {
+  animation: gear-cw 480ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.gears-turn .gear-sm {
+  animation: gear-ccw 480ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.gear-hole {
+  fill: var(--glass);
+}
+
+@keyframes gear-cw {
+  to { transform: rotate(45deg); }
+}
+
+@keyframes gear-ccw {
+  to { transform: rotate(-60deg); }
+}
+
 .descend-in {
   animation: descend-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
 }

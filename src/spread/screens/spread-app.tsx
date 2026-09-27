@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, Ellipsis, List, Minus, Plus, X } from "lucide-react";
+import { ChevronRight, List, Minus, Plus, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
@@ -165,6 +165,37 @@ function weekFrom(dir: -1 | 1): CSSProperties {
   return { "--week-from": `${dir * 36}px` } as CSSProperties;
 }
 
+function SettingsGears({ turn }: { turn: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("gears size-[22px] text-ink", turn && "gears-turn")} aria-hidden="true">
+      <Gear className="gear gear-lg" cx={8} cy={8} r={3.5} teeth={8} />
+      <Gear className="gear gear-sm" cx={15.15} cy={15.15} r={2.75} teeth={6} />
+    </svg>
+  );
+}
+
+function Gear({ className, cx, cy, r, teeth }: { className: string; cx: number; cy: number; r: number; teeth: number }) {
+  const tooth = 1.35;
+  return (
+    <g className={className}>
+      {Array.from({ length: teeth }, (_, index) => (
+        <rect
+          key={index}
+          x={cx - tooth / 2}
+          y={cy - r - tooth + 0.35}
+          width={tooth}
+          height={tooth}
+          rx={0.3}
+          transform={`rotate(${(index / teeth) * 360} ${cx} ${cy})`}
+          fill="currentColor"
+        />
+      ))}
+      <circle cx={cx} cy={cy} r={r} fill="currentColor" />
+      <circle cx={cx} cy={cy} r={r * 0.4} className="gear-hole" />
+    </g>
+  );
+}
+
 function WeekScreen() {
   const data = useSpread((s) => s.data);
   const moveWeek = useSpread((s) => s.moveWeek);
@@ -173,6 +204,7 @@ function WeekScreen() {
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [view, setView] = useState<"spread" | "week">("spread");
   const [viewPlay, setViewPlay] = useState(false);
+  const [gears, setGears] = useState(false);
   const [openTask, setOpenTask] = useState<{ hatId: string; taskId: string } | null>(null);
   const [rolloverAsk, setRolloverAsk] = useState(false);
   const [gesture, setGesture] = useState(0);
@@ -333,10 +365,14 @@ function WeekScreen() {
             <button
               type="button"
               className="grid size-11 place-items-center rounded-full active:opacity-70"
-              aria-label="More"
+              aria-label="Settings"
+              onPointerDown={() => {
+                setGears(false);
+                window.requestAnimationFrame(() => setGears(true));
+              }}
               onClick={() => setSheet("more")}
             >
-              <Ellipsis className="size-5" />
+              <SettingsGears turn={gears} />
             </button>
           )}
         </div>
@@ -972,11 +1008,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
           </button>
         ))}
       </div>
-      <div className="mt-5 flex h-12 items-center gap-3 px-4">
-        <SpreadIcon name="icon-settings.svg" size={20} />
-        <p className="text-base">Settings</p>
-      </div>
-      <div className="mt-1">
+      <div className="mt-5">
         <Segmented value={theme} onChange={setTheme} />
       </div>
       <button
