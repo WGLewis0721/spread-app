@@ -165,6 +165,14 @@ function weekFrom(dir: -1 | 1): CSSProperties {
   return { "--week-from": `${dir * 36}px` } as CSSProperties;
 }
 
+function brandCollapsed() {
+  try {
+    return sessionStorage.getItem("spread-brand-collapsed") === "1";
+  } catch {
+    return false;
+  }
+}
+
 function SettingsGears({ turn }: { turn: boolean }) {
   return (
     <svg viewBox="0 0 24 24" className={cn("gears size-[22px] text-ink", turn && "gears-turn")} aria-hidden="true">
@@ -210,6 +218,8 @@ function WeekScreen() {
   const [gesture, setGesture] = useState(0);
   const [shift, setShift] = useState(0);
   const [dir, setDir] = useState<-1 | 1 | 0>(0);
+  const [brand, setBrand] = useState<"full" | "folding" | "mark">(() => (brandCollapsed() ? "mark" : "full"));
+  const brandOnce = useRef(brand === "mark");
   const rollover = useSpread((s) => s.rollover);
   const range = formatWeek(data.currentWeek);
   const isCurrent = data.currentWeek === weekKey();
@@ -252,15 +262,56 @@ function WeekScreen() {
     return () => window.clearTimeout(id);
   }, [dir, data.currentWeek]);
 
+  useEffect(() => {
+    if (brandOnce.current) return;
+    function fold() {
+      if (brandOnce.current) return;
+      brandOnce.current = true;
+      try {
+        sessionStorage.setItem("spread-brand-collapsed", "1");
+      } catch {
+        /* private mode */
+      }
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced) {
+        setBrand("mark");
+        return;
+      }
+      setBrand("folding");
+      window.setTimeout(() => setBrand("mark"), 780);
+    }
+    const timer = window.setTimeout(fold, 3500);
+    window.addEventListener("pointerdown", fold);
+    window.addEventListener("keydown", fold);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pointerdown", fold);
+      window.removeEventListener("keydown", fold);
+    };
+  }, []);
+
+  function goHome() {
+    setEditing(false);
+    setOpenTask(null);
+    if (view === "spread") return;
+    setViewPlay(true);
+    setView("spread");
+    window.setTimeout(() => setViewPlay(false), 380);
+  }
+
   return (
     <div className="min-h-dvh">
       {typeof document !== "undefined" && createPortal(<WeekPaper doc={buildWeekDocument(data)} />, document.body)}
       <div className="mx-auto w-full max-w-xl">
         <header className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
-          <p className="mb-3 flex items-center gap-1.5">
-            <SpreadIcon name="app-icon-spread-cards.svg" size={22} />
-            <span className="text-[15px] font-semibold tracking-[-0.03em] max-[340px]:hidden">Spread</span>
-          </p>
+          <button type="button" className="brand mb-3" aria-label="Spread, home" onClick={goHome}>
+            <SpreadIcon name="app-icon-spread-cards.svg" size={26} />
+            {brand !== "mark" && (
+              <span className={cn("brand-clip", brand === "folding" && "is-folding")}>
+                <span className="brand-word">Spread</span>
+              </span>
+            )}
+          </button>
           <WeekCrown
             title={isCurrent ? "This week" : range}
             detail={isCurrent ? range : "Back to this week"}
