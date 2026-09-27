@@ -3,6 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { emptyContent, uid, type ContentBlock, type OutlineItem, type TaskContent } from "@/lib/spread/model";
 import { useSpread } from "@/lib/spread/store";
+import { SpreadIcon } from "@/spread/components/spread-icon";
 import { useLockPageScroll } from "@/spread/components/use-browser-frame";
 
 const FORMATS: { type: ContentBlock["type"]; label: string; detail: string }[] = [
@@ -115,12 +116,13 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
           )}
           <button
             type="button"
-            className="mt-6 mb-2 h-12 w-full rounded-full text-sm font-semibold text-danger"
+            className="mt-6 mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-danger"
             onClick={() => {
               deleteTask(hatId, taskId);
               onClose();
             }}
           >
+            <SpreadIcon name="icon-trash.svg" size={20} />
             Delete task
           </button>
         </Dialog.Content>

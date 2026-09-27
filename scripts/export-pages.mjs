@@ -26,7 +26,10 @@ preview.kill("SIGTERM");
 const cleaned = html
   .replace('<script src="https://grok.com/grok-app-builder/extensions.js" defer></script>', "")
   .replace('<link rel="manifest" href="/__grok/manifest.webmanifest"/>', "")
-  .replace('<link rel="apple-touch-icon" href="/__grok/icon-180.png"/>', "")
+  .replace(
+    /<link rel="apple-touch-icon" href="\/__grok\/icon-180\.png"\s*\/?>/,
+    '<link rel="apple-touch-icon" href="/spread-app/icon-180.png"/>',
+  )
   .replace('href="/favicon.svg"', 'href="/spread-app/favicon.svg"');
 
 rmSync(out, { recursive: true, force: true });
@@ -35,6 +38,8 @@ writeFileSync(join(out, "index.html"), cleaned);
 writeFileSync(join(out, ".nojekyll"), "");
 cpSync(join(root, ".vercel/output/static/assets"), join(out, "assets"), { recursive: true });
 cpSync(join(root, ".vercel/output/static/favicon.svg"), join(out, "favicon.svg"));
+cpSync(join(root, "public/__grok/icon-180.png"), join(out, "icon-180.png"));
+cpSync(join(root, "public/icons"), join(out, "icons"), { recursive: true });
 if (!cleaned.includes("/spread-app/assets/")) throw new Error("pages html is missing assets");
 console.log("pages ready", out);
 

@@ -12,6 +12,7 @@ import { buildWeekDocument, weekDocumentText } from "@/lib/spread/week-document"
 import { weekDocxBlob } from "@/lib/spread/week-docx";
 import { saveFile } from "@/lib/spread/save-file";
 import { WeekPaper } from "@/spread/components/week-paper";
+import { SpreadIcon } from "@/spread/components/spread-icon";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { WeeklyView } from "@/spread/components/weekly-view";
 import { WeekCrown } from "@/spread/components/week-crown";
@@ -49,16 +50,6 @@ export function SpreadApp() {
   );
 }
 
-function Mark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
-      <rect x="8" y="14" width="34" height="8" rx="4" fill="currentColor" opacity="0.4" />
-      <rect x="8" y="28" width="48" height="8" rx="4" fill="currentColor" />
-      <rect x="8" y="42" width="22" height="8" rx="4" fill="currentColor" opacity="0.7" />
-    </svg>
-  );
-}
-
 function UnlockScreen() {
   const beginTrial = useSpread((s) => s.beginTrial);
   const unlock = useSpread((s) => s.unlock);
@@ -69,10 +60,8 @@ function UnlockScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 pt-safe pb-safe">
       <div className="mx-auto w-full max-w-sm">
-        <div className="mb-7 grid size-16 place-items-center rounded-3xl bg-fill text-accent">
-          <Mark className="size-9" />
-        </div>
-        <h1 className="text-4xl font-bold tracking-tight text-balance">Spread</h1>
+        <SpreadIcon name="app-icon-spread-cards.svg" size={64} />
+        <h1 className="mt-7 text-4xl font-bold tracking-tight text-balance">Spread</h1>
         <p className="mt-3 max-w-xs text-base text-secondary text-pretty">
           Roles first. Hours second. Tasks last.
         </p>
@@ -325,9 +314,10 @@ function WeekScreen() {
             <>
               <button
                 type="button"
-                className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold active:opacity-70"
+                className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
                 onClick={() => setEditing(true)}
               >
+                <SpreadIcon name="icon-edit.svg" size={20} />
                 Edit
               </button>
               <button
@@ -367,8 +357,8 @@ function NewLifeBox({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="mt-5 flex min-h-16 w-full items-center gap-3 rounded-3xl bg-elevated px-4 py-3 text-left active:opacity-80"
     >
-      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-fill text-accent">
-        <Plus className="size-4" strokeWidth={2.25} />
+      <span className="grid size-8 shrink-0 place-items-center">
+        <SpreadIcon name="icon-new-life.svg" size={32} />
       </span>
       <span className="min-w-0">
         <span className="block text-base font-semibold">New Life</span>
@@ -752,7 +742,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
   const [backup, setBackup] = useState<SpreadBackup | null>(null);
   const week = buildWeekDocument(data);
 
-  const actions: { label: string; run: () => void }[] = [
+  const actions: { label: string; icon?: "icon-share.svg"; run: () => void }[] = [
     {
       label: "Copy last week",
       run: () => {
@@ -763,6 +753,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
     },
     {
       label: "Copy week",
+      icon: "icon-share.svg",
       run: () => {
         void copyText(weekDocumentText(week)).then((ok) => {
           toast(ok ? "Week copied." : "Couldn’t copy the week.");
@@ -772,6 +763,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
     },
     {
       label: "Word document",
+      icon: "icon-share.svg",
       run: () => {
         void weekDocxBlob(week)
           .then((blob) => {
@@ -784,6 +776,7 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
     },
     {
       label: "Print / Save PDF",
+      icon: "icon-share.svg",
       run: () => {
         setSheet(null);
         window.setTimeout(() => window.print(), 250);
@@ -834,17 +827,21 @@ function MoreSheet({ setSheet }: { setSheet: (sheet: Sheet) => void }) {
             key={action.label}
             type="button"
             className={cn(
-              "flex h-12 w-full items-center px-4 text-left text-base active:bg-fill",
+              "flex h-12 w-full items-center gap-3 px-4 text-left text-base active:bg-fill",
               index < actions.length - 1 && "border-b border-line",
             )}
             onClick={action.run}
           >
+            {action.icon ? <SpreadIcon name={action.icon} size={20} /> : null}
             {action.label}
           </button>
         ))}
       </div>
-      <p className="mt-5 text-xs font-medium text-secondary">Appearance</p>
-      <div className="mt-2">
+      <div className="mt-5 flex h-12 items-center gap-3 px-4">
+        <SpreadIcon name="icon-settings.svg" size={20} />
+        <p className="text-base">Settings</p>
+      </div>
+      <div className="mt-1">
         <Segmented value={theme} onChange={setTheme} />
       </div>
       <button
@@ -1122,6 +1119,9 @@ function RemoveDialog({ hat, onClose }: { hat: Hat | null; onClose: () => void }
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="no-print fixed inset-0 z-50 bg-scrim" />
         <AlertDialog.Content className="no-print fixed inset-x-4 top-1/2 z-50 mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+          <div className="mx-auto mb-3 grid size-11 place-items-center">
+            <SpreadIcon name="icon-trash.svg" size={20} />
+          </div>
           <AlertDialog.Title className="text-center text-base font-semibold">
             Remove {hat?.name}?
           </AlertDialog.Title>
