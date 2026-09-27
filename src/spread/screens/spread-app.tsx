@@ -277,7 +277,10 @@ function WeekScreen() {
               <WeeklyView onTurn={setGesture} onCommit={goWeek} />
             </div>
           ) : rows.length === 0 ? (
-            <p className="px-1 pt-8 text-sm text-secondary">Nothing on this week yet.</p>
+            <div>
+              <p className="px-1 pt-8 text-sm text-secondary">Nothing on this week yet.</p>
+              <NewLifeBox onClick={() => setSheet("new")} />
+            </div>
           ) : (
             <div key={data.currentWeek} className={dir === 0 ? "enter" : "week-seq"} style={dir === 0 ? followStyle(shift) : weekFrom(dir)}>
               <div className="week-seq-item">

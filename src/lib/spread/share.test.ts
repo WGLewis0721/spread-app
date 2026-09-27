@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { backupFile, parseBackup } from "./backup.ts";
 import { defaultData, weekDays } from "./model.ts";
@@ -65,8 +69,14 @@ test("a backup file restores, and anything else is refused", () => {
   assert.equal(parseBackup(JSON.stringify({ kind: "spread-backup", version: 1, data: { nope: true } })), null);
 });
 
-test("the word document is a real docx package", async () => {
+test("the word summary table has real column widths", async () => {
   const blob = await weekDocxBlob(buildWeekDocument(defaultData()));
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  assert.equal(String.fromCharCode(bytes[0], bytes[1]), "PK");
+  const dir = mkdtempSync(join(tmpdir(), "spread-docx-"));
+  const file = join(dir, "week.docx");
+  writeFileSync(file, Buffer.from(await blob.arrayBuffer()));
+  const xml = execFileSync("unzip", ["-p", file, "word/document.xml"], { encoding: "utf8" });
+  assert.match(xml, /w:tblLayout w:type="fixed"/);
+  assert.match(xml, /w:gridCol w:w="4080"/);
+  assert.match(xml, /w:gridCol w:w="2000"/);
+  assert.doesNotMatch(xml, /w:gridCol w:w="0"/);
 });

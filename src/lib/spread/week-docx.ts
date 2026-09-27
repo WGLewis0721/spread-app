@@ -10,6 +10,7 @@ import {
   ShadingType,
   Table,
   TableCell,
+  TableLayoutType,
   TableRow,
   TextRun,
   WidthType,
@@ -114,25 +115,40 @@ async function contentBlocks(block: ContentBlock) {
   ];
 }
 
+const CONTENT = 10080;
+
+function columnWidths(count: number) {
+  if (count === 4) return [4080, 2000, 2000, 2000];
+  const base = Math.floor(CONTENT / count);
+  const widths = Array.from({ length: count }, () => base);
+  widths[widths.length - 1] += CONTENT - base * count;
+  return widths;
+}
+
 function hoursTable(rows: string[][]) {
-  const width = Math.max(...rows.map((row) => row.length), 1);
+  const count = Math.max(...rows.map((row) => row.length), 1);
+  const widths = columnWidths(count);
   return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: CONTENT, type: WidthType.DXA },
+    columnWidths: widths,
+    layout: TableLayoutType.FIXED,
     rows: rows.map((row, index) => {
       const last = index === rows.length - 1 && rows.length > 1 && row[0] === "Total";
       const header = index === 0;
       return new TableRow({
         tableHeader: header,
-        children: Array.from({ length: width }, (_, cell) => {
+        children: Array.from({ length: count }, (_, cell) => {
           const value = row[cell] ?? "";
-          const number = cell > 0;
+          const number = cell > 0 && count === 4;
           return new TableCell({
             borders: BORDERS,
-            width: { size: Math.floor(100 / width), type: WidthType.PERCENTAGE },
+            width: { size: widths[cell], type: WidthType.DXA },
+            margins: { marginUnitType: WidthType.DXA, top: 60, bottom: 60, left: 100, right: 100 },
             shading: header || last ? { type: ShadingType.CLEAR, fill: "F2F2F2" } : undefined,
             children: [
               new Paragraph({
                 alignment: number ? AlignmentType.RIGHT : AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 },
                 children: [new TextRun({ text: value, bold: header || last, font: BODY, size: 21 })],
               }),
             ],
