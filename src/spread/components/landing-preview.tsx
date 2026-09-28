@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowDown, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 
@@ -73,14 +73,14 @@ export function PaperToProduct() {
     <div
       ref={root}
       className="paper-to-product"
-      style={{ "--hero-progress": progress, "--paper-shift": `${paperShift}px`, "--product-shift": `${productShift}px` } as React.CSSProperties}
+      style={{ "--hero-progress": progress, "--paper-shift": `${paperShift}px`, "--product-shift": `${productShift}px` } as CSSProperties}
       aria-label="The handwritten Sunday plan, translated into Spread"
     >
       <div className="paper-plan">
         <p className="paper-note">A quiet Sunday. A fresh page.</p>
         <p className="paper-title">What matters<br /> this week?</p>
         {examples.map((item, index) => (
-          <div className="paper-role" key={item.name} style={{ "--role-index": index } as React.CSSProperties}>
+          <div className="paper-role" key={item.name} style={{ "--role-index": index } as CSSProperties}>
             <span>{item.name}</span><b>{item.hours} hrs</b>
           </div>
         ))}
@@ -96,7 +96,7 @@ export function PaperToProduct() {
         <div className="mini-toggle"><b>Spread</b><span>Week</span></div>
         <div className="mini-section-label"><span>Your responsibilities</span><span>Hours</span></div>
         {examples.map((item, index) => (
-          <div className="mini-role" key={item.name} style={{ "--role-index": index } as React.CSSProperties}>
+          <div className="mini-role" key={item.name} style={{ "--role-index": index } as CSSProperties}>
             <i style={{ background: item.color }} /><span>{item.name}</span><b>{item.hours}<small>h</small></b>
           </div>
         ))}
