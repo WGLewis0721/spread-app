@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowDown, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 
@@ -40,68 +40,69 @@ const examples = [
 ];
 
 export function PaperToProduct() {
+  const root = useRef<HTMLDivElement>(null);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const node = root.current;
+    if (!node) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const rect = node.getBoundingClientRect();
+      const travel = Math.max(1, window.innerHeight + rect.height);
+      const next = Math.max(0, Math.min(1, (window.innerHeight - rect.top) / travel));
+      setProgress(next);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  const paperShift = Math.max(0, progress - .18) * -34;
+  const productShift = Math.max(0, progress - .12) * -22;
   return (
     <div
+      ref={root}
       className="paper-to-product"
+      style={{ "--hero-progress": progress, "--paper-shift": `${paperShift}px`, "--product-shift": `${productShift}px` } as CSSProperties}
       aria-label="The handwritten Sunday plan, translated into Spread"
     >
       <div className="paper-plan">
         <p className="paper-note">A quiet Sunday. A fresh page.</p>
-        <p className="paper-title">
-          What matters
-          <br /> this week?
-        </p>
-        {examples.map((item) => (
-          <div className="paper-role" key={item.name}>
-            <span>{item.name}</span>
-            <b>{item.hours} hrs</b>
+        <p className="paper-title">What matters<br /> this week?</p>
+        {examples.map((item, index) => (
+          <div className="paper-role" key={item.name} style={{ "--role-index": index } as CSSProperties}>
+            <span>{item.name}</span><b>{item.hours} hrs</b>
           </div>
         ))}
-        <div className="paper-days">
-          {["M", "Tu", "W", "Th", "F", "Sa", "Su"].map((day) => (
-            <span key={day}>{day}</span>
-          ))}
-        </div>
+        <div className="paper-days">{["M","Tu","W","Th","F","Sa","Su"].map((day) => <span key={day}>{day}</span>)}</div>
         <p className="paper-task">Time first. The rest can follow.</p>
       </div>
+      <div className="hero-transfer-lines" aria-hidden="true">
+        <i /><i /><i />
+      </div>
       <div className="product-plan">
-        <div className="mini-brand">
-          <SpreadIcon name="app-icon-spread-cards.svg" size={32} />
-          <span>Spread</span>
-          <span className="preview-label">A sample week</span>
-        </div>
-        <div className="mini-crown">
-          <ChevronLeft size={14} />
-          <span>Sep 21 – Sep 27</span>
-          <ChevronRight size={14} />
-        </div>
-        <div className="mini-toggle">
-          <b>Spread</b>
-          <span>Week</span>
-        </div>
-        <div className="mini-section-label">
-          <span>Your responsibilities</span>
-          <span>Hours</span>
-        </div>
-        {examples.map((item) => (
-          <div className="mini-role" key={item.name}>
-            <i style={{ background: item.color }} />
-            <span>{item.name}</span>
-            <b>
-              {item.hours}
-              <small>h</small>
-            </b>
+        <div className="mini-brand"><SpreadIcon name="app-icon-spread-cards.svg" size={32} /><span>Spread</span><span className="preview-label">A sample week</span></div>
+        <div className="mini-crown"><ChevronLeft size={14} /><span>Sep 21 – Sep 27</span><ChevronRight size={14} /></div>
+        <div className="mini-toggle"><b>Spread</b><span>Week</span></div>
+        <div className="mini-section-label"><span>Your responsibilities</span><span>Hours</span></div>
+        {examples.map((item, index) => (
+          <div className="mini-role" key={item.name} style={{ "--role-index": index } as CSSProperties}>
+            <i style={{ background: item.color }} /><span>{item.name}</span><b>{item.hours}<small>h</small></b>
           </div>
         ))}
-        <div className="mini-summary">
-          <span>Three parts of your life.</span>
-          <strong>15 hours, with intention.</strong>
-        </div>
+        <div className="mini-summary"><span>Three parts of your life.</span><strong>15 hours, with intention.</strong></div>
       </div>
-      <div className="hero-object-caption">
-        <span>Born on paper.</span>
-        <span>Made for real life.</span>
-      </div>
+      <div className="hero-object-caption"><span>Born on paper.</span><span>Made for real life.</span></div>
     </div>
   );
 }
