@@ -68,119 +68,165 @@ function UnlockScreen() {
   const profiles = useSpread((s) => s.profiles);
   const activeId = useSpread((s) => s.activeId);
   const switchProfile = useSpread((s) => s.switchProfile);
-  const [showKey, setShowKey] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const known = profiles.length > 0;
   const activeName = profiles.find((profile) => profile.id === activeId)?.name ?? profiles[0]?.name ?? "Me";
 
+  function unlockWithKey(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!unlock(code, known ? undefined : name)) setError("That key isn’t valid.");
+  }
+
   return (
     <main className="spread-gate gate-shell min-h-dvh w-full px-5 pt-safe pb-safe">
       <div className="gate-wrap mx-auto w-full max-w-md">
-        <header className="gate-brand">
-          <BrandMark size={72} />
-          <div className="mt-5">
-            <p className="gate-kicker">A weekly life planner</p>
-            <h1 className="mt-1 text-[2.75rem] font-bold tracking-[-0.055em] leading-none text-balance">Spread</h1>
-            <p className="mt-4 max-w-sm text-[1.22rem] font-medium leading-snug text-balance">
-              Give every part of your life some of your week.
-            </p>
-            <p className="mt-2 max-w-sm text-[0.98rem] leading-relaxed text-secondary text-pretty">
-              Start with what you’re responsible for. Give it time. Then decide what that time is for.
-            </p>
+        <header className="gate-hero">
+          <div className="flex items-center gap-3">
+            <BrandMark size={54} />
+            <div>
+              <h1 className="text-[2.35rem] font-bold tracking-[-0.055em] leading-none">Spread</h1>
+              <p className="mt-1 text-sm font-medium text-secondary">Weekly role planning</p>
+            </div>
           </div>
+
+          <p className="gate-headline mt-7 text-balance">
+            For people who are always spread too thin.
+          </p>
+          <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary text-pretty">
+            Name the roles you live, give each one hours, then add tasks. The Week is where those hours land on days.
+          </p>
         </header>
 
-        <LandingWeekPreview />
+        <section className="gate-explainer" aria-label="How Spread works">
+          <p className="gate-section-label">How it works</p>
+          <div className="gate-step mt-3">
+            <span className="gate-step-num">1</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Name the roles you live.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="gate-pill"><i style={{ backgroundColor: "#34C759" }} />Work</span>
+                <span className="gate-pill"><i style={{ backgroundColor: "#FF9500" }} />Home</span>
+                <span className="gate-pill"><i style={{ backgroundColor: "#007AFF" }} />Health</span>
+              </div>
+            </div>
+          </div>
+          <div className="gate-step">
+            <span className="gate-step-num">2</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Give each role a bank of hours.</p>
+              <p className="mt-1 text-sm text-secondary">Maybe Work gets 8h, Home gets 4h, Health gets 3h.</p>
+            </div>
+          </div>
+          <div className="gate-step">
+            <span className="gate-step-num">3</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Spread those hours across your week.</p>
+              <div className="mt-2 grid grid-cols-7 gap-1" aria-hidden="true">
+                {["M", "T", "W", "Th", "F", "Sa", "Su"].map((day, index) => (
+                  <span key={day} className={cn("gate-day", [0, 2, 5].includes(index) && "is-accent")}>{day}</span>
+                ))}
+              </div>
+              <p className="mt-2 text-sm text-secondary">Then decide what you’re actually doing with that time.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="gate-story">
+          <p className="gate-section-label">Why I made it</p>
+          <p className="mt-3 leading-relaxed text-pretty">
+            When I was at State, I wore a lot of hats. On Sundays I’d spread 1–2 hours across each responsibility, draw boxes for what I was devoting that time to, then list the specific tasks.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-secondary text-pretty">
+            Spread is the app version of that habit. It turns out the idea is close to Stephen Covey’s role-based weekly planning, mixed with time boxing.
+          </p>
+        </section>
+
+        <section className="gate-privacy">
+          <div className="gate-lock" aria-hidden="true">✓</div>
+          <div>
+            <p className="font-semibold">No account. No cloud.</p>
+            <p className="mt-1 text-sm leading-relaxed text-secondary">
+              Your planning stays on this phone. You can keep up to ten separate profiles for a job, an org, a project, family members, or anything else.
+            </p>
+          </div>
+        </section>
 
         <section className="gate-start-card" aria-label="Start Spread">
           {known ? (
-            profiles.length > 1 ? (
-              <>
-                <p className="gate-card-label">Continue as</p>
-                <div className="mt-3 overflow-hidden rounded-[1.25rem] bg-fill" role="listbox" aria-label="Profiles">
-                  {profiles.map((profile, index) => (
-                    <button
-                      key={profile.id}
-                      type="button"
-                      role="option"
-                      aria-selected={profile.id === activeId}
-                      className={cn(
-                        "flex h-12 w-full items-center px-4 text-left text-base",
-                        index < profiles.length - 1 && "border-b border-line",
-                        profile.id === activeId && "font-semibold",
-                      )}
-                      onClick={() => switchProfile(profile.id)}
-                    >
-                      <span className="flex-1 truncate">{profile.name}</span>
-                      {profile.id === activeId && <Check className="size-4 text-accent" />}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="gate-card-label">Welcome back</p>
-                  <p className="mt-1 text-lg font-semibold">{activeName}</p>
-                </div>
-                <span className="gate-private-badge">On this device</span>
-              </div>
-            )
+            <>
+              {profiles.length > 1 ? (
+                <>
+                  <p className="gate-section-label">Choose a profile</p>
+                  <div className="mt-3 overflow-hidden rounded-2xl bg-fill" role="listbox" aria-label="Profiles">
+                    {profiles.map((profile, index) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        role="option"
+                        aria-selected={profile.id === activeId}
+                        className={cn(
+                          "flex h-12 w-full items-center px-4 text-left text-base",
+                          index < profiles.length - 1 && "border-b border-line",
+                          profile.id === activeId && "font-semibold",
+                        )}
+                        onClick={() => switchProfile(profile.id)}
+                      >
+                        <span className="flex-1 truncate">{profile.name}</span>
+                        {profile.id === activeId && <Check className="size-4 text-accent" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="gate-section-label">Welcome back</p>
+                  <p className="mt-1 text-xl font-semibold">{activeName}</p>
+                </>
+              )}
+
+              <button
+                type="button"
+                className="gate-primary mt-4 h-[3.25rem] w-full rounded-full bg-accent px-5 text-base font-semibold text-on-accent active:opacity-80"
+                onClick={() => beginTrial()}
+              >
+                Continue to this week
+              </button>
+            </>
           ) : (
             <>
-              <label className="gate-card-label" htmlFor="spread-name">
-                What should Spread call you?
+              <p className="gate-section-label">Start here</p>
+              <label className="mt-3 block text-sm font-medium" htmlFor="spread-name">
+                Your name
               </label>
               <input
                 id="spread-name"
                 value={name}
-                autoFocus
                 autoCapitalize="words"
                 autoCorrect="off"
                 placeholder="Your name"
-                aria-label="Your name"
                 onChange={(event) => setName(event.target.value)}
-                className="mt-3 h-12 w-full rounded-2xl bg-fill px-4 text-base outline-none placeholder:text-tertiary"
+                className="mt-2 h-12 w-full rounded-2xl bg-fill px-4 text-base outline-none placeholder:text-tertiary"
               />
+              <button
+                type="button"
+                className="gate-primary mt-3 h-[3.25rem] w-full rounded-full bg-accent px-5 text-base font-semibold text-on-accent active:opacity-80"
+                onClick={() => beginTrial(name)}
+              >
+                Begin this week
+              </button>
             </>
           )}
 
-          <button
-            type="button"
-            className="gate-primary mt-4 h-[3.25rem] w-full rounded-full bg-accent px-5 text-base font-semibold text-on-accent active:opacity-80"
-            onClick={() => beginTrial(known ? undefined : name)}
-          >
-            {known ? `Continue as ${activeName}` : "Start my week"}
-          </button>
+          <div className="gate-divider"><span>testing with a key?</span></div>
 
-          <button
-            type="button"
-            className="mt-2 h-11 w-full text-sm font-semibold text-accent"
-            onClick={() => {
-              setShowKey((open) => !open);
-              setError("");
-            }}
-          >
-            {showKey ? "Hide license key" : "I already have a key"}
-          </button>
-
-          {showKey && (
-            <form
-              className="enter mt-1"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!unlock(code, known ? undefined : name)) setError("That key isn’t valid.");
-              }}
-            >
-              <label className="sr-only" htmlFor="license-key">
-                License key
-              </label>
+          <form onSubmit={unlockWithKey}>
+            <label className="sr-only" htmlFor="license-key">License key</label>
+            <div className="flex gap-2">
               <input
                 id="license-key"
                 value={code}
-                autoFocus
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
@@ -189,90 +235,22 @@ function UnlockScreen() {
                   setCode(event.target.value);
                   setError("");
                 }}
-                className="h-12 w-full rounded-2xl bg-fill px-4 text-center text-base outline-none placeholder:text-tertiary"
+                className="h-12 min-w-0 flex-1 rounded-2xl bg-fill px-4 text-center text-sm font-semibold tracking-wide outline-none placeholder:text-tertiary"
               />
-              {error && (
-                <p className="mt-2 text-center text-sm text-danger" role="alert">
-                  {error}
-                </p>
-              )}
-              <button
-                type="submit"
-                className="mt-3 h-12 w-full rounded-full bg-fill text-base font-semibold active:opacity-80"
-              >
-                Unlock Spread
+              <button type="submit" className="h-12 rounded-2xl bg-fill px-5 text-sm font-semibold active:opacity-80">
+                Unlock
               </button>
-              <p className="mt-3 text-center text-xs text-tertiary">Trial key SPR-DEMO-2026</p>
-            </form>
-          )}
+            </div>
+            {error && <p className="mt-2 text-center text-sm text-danger" role="alert">{error}</p>}
+            <p className="mt-2 text-center text-xs text-tertiary">Friend test key: SPR-DEMO-2026</p>
+          </form>
         </section>
 
-        <div className="gate-footer">
-          <p>Private by default. Your planning stays on this device.</p>
-          <p className="mt-1">Gray Matter</p>
-        </div>
+        <footer className="gate-footer">
+          <p>Gray Matter</p>
+        </footer>
       </div>
     </main>
-  );
-}
-
-function LandingWeekPreview() {
-  return (
-    <section className="gate-preview" aria-label="Example weekly spread">
-      <div className="flex items-center justify-between gap-4 px-4 pt-4">
-        <div>
-          <p className="gate-card-label">This week</p>
-          <p className="mt-1 text-base font-semibold">Make room for what matters.</p>
-        </div>
-        <span className="gate-preview-chip">Roles → Hours → Week</span>
-      </div>
-
-      <div className="mt-4">
-        <LandingRoleRow name="Work" hours="8h" color="#34C759" days={["M", "T", "W", "Th"]} />
-        <LandingRoleRow name="Home" hours="4h" color="#FF9500" days={["T", "Th", "Sa"]} />
-        <LandingRoleRow name="Health" hours="3h" color="#007AFF" days={["M", "W", "Sa"]} last />
-      </div>
-    </section>
-  );
-}
-
-function LandingRoleRow({
-  name,
-  hours,
-  color,
-  days,
-  last,
-}: {
-  name: string;
-  hours: string;
-  color: string;
-  days: string[];
-  last?: boolean;
-}) {
-  const labels = ["M", "T", "W", "Th", "F", "Sa", "Su"];
-
-  return (
-    <div className={cn("gate-role-row", !last && "border-b border-line")}>
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-        <span className="min-w-0 flex-1 truncate text-[0.98rem] font-semibold">{name}</span>
-        <span className="text-sm font-medium text-secondary tabular-nums">{hours}</span>
-      </div>
-      <div className="mt-2.5 grid grid-cols-7 gap-1" aria-hidden="true">
-        {labels.map((day) => {
-          const active = days.includes(day);
-          return (
-            <span
-              key={day}
-              className={cn("gate-day", active && "is-active")}
-              style={active ? { "--role-dot": color } as CSSProperties : undefined}
-            >
-              {day}
-            </span>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
