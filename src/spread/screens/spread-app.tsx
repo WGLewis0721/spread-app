@@ -80,203 +80,142 @@ function UnlockScreen() {
   }
 
   return (
-    <main className="spread-gate gate-shell min-h-dvh w-full px-5 pt-safe pb-safe">
-      <div className="gate-wrap mx-auto w-full max-w-md">
-        <header className="gate-hero">
-          <div className="flex items-center gap-3">
-            <BrandMark size={54} />
-            <div>
-              <h1 className="text-[2.35rem] font-bold tracking-[-0.055em] leading-none">Spread</h1>
-              <p className="mt-1 text-sm font-medium text-secondary">A weekly planner for real life</p>
-            </div>
+    <main className="spread-site min-h-dvh">
+      <nav className="site-nav">
+        <a className="site-brand" href="#top" aria-label="Spread home">
+          <BrandMark size={36} />
+          <span>Spread</span>
+        </a>
+        <div className="site-nav-links">
+          <a href="#how">How it works</a>
+          <a href="#story">Story</a>
+          <a href="#start" className="site-nav-cta">Open Spread</a>
+        </div>
+      </nav>
+
+      <section id="top" className="site-hero">
+        <div className="site-hero-copy">
+          <p className="site-kicker">A weekly planner for real life</p>
+          <h1>Give every part of your life some of your week.</h1>
+          <p className="site-lede">You have a lot to keep up with, and all of it is competing for the same seven days. Spread helps you decide what deserves your time before the week gets away from you.</p>
+          <a href="#start" className="site-button">Start this week</a>
+        </div>
+
+        <div className="paper-to-product" aria-label="A paper weekly plan becoming Spread">
+          <div className="paper-plan">
+            <p className="paper-note">Sunday night</p>
+            <p className="paper-title">This week</p>
+            <div className="paper-role"><span>Work</span><b>8 hrs</b></div>
+            <div className="paper-role"><span>Home</span><b>4 hrs</b></div>
+            <div className="paper-role"><span>Health</span><b>3 hrs</b></div>
+            <div className="paper-days"><span>M</span><span>Tu</span><span>W</span><span>Th</span><span>F</span><span>Sa</span><span>Su</span></div>
+            <p className="paper-task">finish report · groceries · run</p>
           </div>
-
-          <p className="gate-headline mt-7 text-balance">
-            For people who are always spread too thin.
-          </p>
-          <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary text-pretty">
-            You have a lot to keep up with, and all of it is fighting for the same seven days. Spread helps you decide what deserves your time before the week gets away from you.
-          </p>
-        </header>
-
-        <section className="gate-explainer" aria-label="How Spread works">
-          <p className="gate-section-label">How it works</p>
-          <div className="gate-step mt-3">
-            <span className="gate-step-num">1</span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">Add what you’re responsible for.</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="gate-pill"><i style={{ backgroundColor: "#34C759" }} />Work</span>
-                <span className="gate-pill"><i style={{ backgroundColor: "#FF9500" }} />Home</span>
-                <span className="gate-pill"><i style={{ backgroundColor: "#007AFF" }} />Health</span>
-              </div>
-            </div>
+          <div className="transform-mark" aria-hidden="true">→</div>
+          <div className="product-plan">
+            <div className="mini-brand"><BrandMark size={34} /><span>Spread</span></div>
+            <div className="mini-crown">Sep 21 – Sep 27</div>
+            <div className="mini-toggle"><b>Spread</b><span>Week</span></div>
+            <div className="mini-role"><i className="dot-work" /><span>Work</span><b>8h</b></div>
+            <div className="mini-role"><i className="dot-home" /><span>Home</span><b>4h</b></div>
+            <div className="mini-role"><i className="dot-health" /><span>Health</span><b>3h</b></div>
           </div>
-          <div className="gate-step">
-            <span className="gate-step-num">2</span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">Decide how much time each one gets.</p>
-              <p className="mt-1 text-sm text-secondary">Maybe Work gets 8h, Home gets 4h, Health gets 3h. Those hours are your limit for the week.</p>
-            </div>
-          </div>
-          <div className="gate-step">
-            <span className="gate-step-num">3</span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">Put those hours on the days you’ll use them.</p>
-              <div className="mt-2 grid grid-cols-7 gap-1" aria-hidden="true">
-                {["M", "T", "W", "Th", "F", "Sa", "Su"].map((day, index) => (
-                  <span key={day} className={cn("gate-day", [0, 2, 5].includes(index) && "is-accent")}>{day}</span>
-                ))}
-              </div>
-              <p className="mt-2 text-sm text-secondary">Add the specific things you want to get done during that time.</p>
-            </div>
-          </div>
-        </section>
+        </div>
+        <p className="site-principle">Responsibilities first. Hours second. Tasks last.</p>
+      </section>
 
-        <section className="gate-philosophy">
-          <p className="gate-section-label">The idea behind Spread</p>
-          <h2 className="mt-3 text-xl font-semibold tracking-tight">Your time should follow what matters.</h2>
-          <p className="mt-3 leading-relaxed text-pretty">
-            A normal to-do list can make everything look equally important. Spread starts one step earlier: what parts of your life need your attention this week, and how much time are you actually willing to give them?
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-secondary text-pretty">
-            That idea is close to Stephen Covey’s role-based weekly planning: plan around the important parts of your life instead of only reacting to the next task. Spread mixes that with time boxing, which simply means setting aside a specific amount of time for something.
-          </p>
-          <p className="mt-3 text-sm font-semibold text-accent">Responsibilities first. Hours second. Tasks last.</p>
-        </section>
+      <section id="how" className="site-section">
+        <div className="site-section-heading">
+          <p className="site-kicker">How Spread works</p>
+          <h2>A week built in the right order.</h2>
+          <p>Start with what matters. Decide how much time it gets. Then decide what you will do with that time.</p>
+        </div>
+        <div className="site-steps">
+          <article><span>01</span><h3>Add what you’re responsible for.</h3><p>Work, school, family, health, a project, an organization—whatever needs a real place in your week.</p><div className="step-demo pills"><b>Work</b><b>Home</b><b>Health</b></div></article>
+          <article><span>02</span><h3>Decide how much time it gets.</h3><p>Give each responsibility a simple weekly hour bank. It makes the tradeoffs visible before your calendar fills itself.</p><div className="step-demo hours"><b>Work</b><strong>8h</strong><b>Home</b><strong>4h</strong></div></article>
+          <article><span>03</span><h3>Put those hours on real days.</h3><p>Spread the hours across the week, then add the specific work you intend to do inside them.</p><div className="step-demo days"><b>Su</b><b>Sa</b><b>F</b><b>Th</b><b>W</b><b>Tu</b><b>M</b></div></article>
+        </div>
+      </section>
 
-        <section className="gate-story">
-          <p className="gate-section-label">Looking back</p>
-          <h2 className="mt-3 text-xl font-semibold tracking-tight">I was doing this on paper before I knew it had a name.</h2>
-          <p className="mt-3 leading-relaxed text-pretty">
-            Spread grew out of a season of life when there never seemed to be enough hours for everything that mattered. It’s the tool I wish I’d had back then.
-          </p>
-          <details className="gate-story-more">
-            <summary>Read the full story</summary>
-            <div className="gate-story-more-body">
-              <p>
-                While I was working toward my bachelor’s degree in computer science, I had a lot competing for my time. I was working, holding leadership positions in multiple organizations, founding an organization of my own, keeping up with school, and eventually supporting a family.
-              </p>
-              <p>
-                And I wasn’t alone. A lot of my peers were wearing just as many hats. We were always saying we had “a lot going on” or that we were “spread too thin.”
-              </p>
-              <p>
-                On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility during the week. I’d draw boxes for those blocks of time, write down what I wanted to accomplish, and list the specific tasks that would get me there.
-              </p>
-              <p>
-                Years later, while researching Spread, I realized that the system I had built for myself shared a lot with Stephen Covey’s approach to weekly planning and the idea of time boxing.
-              </p>
-            </div>
-          </details>
-        </section>
+      <section className="site-product-band">
+        <div>
+          <p className="site-kicker">From intention to a real week</p>
+          <h2>Not another place to collect tasks.</h2>
+          <p>Spread gives the important parts of your life time first. Tasks come after the time exists.</p>
+        </div>
+        <div className="week-wireframe">
+          <div className="week-wire-crown">Sep 21 – Sep 27</div>
+          <div className="week-wire-chip">● Family&nbsp;&nbsp; 1h</div>
+          <div className="week-wire-day"><b>Sunday</b><span>09/27</span><p>Family · 1h</p></div>
+          <div className="week-wire-day"><b>Saturday</b><span>09/26</span><p>Nothing this day.</p></div>
+          <div className="week-wire-day"><b>Friday</b><span>09/25</span><p>Nothing this day.</p></div>
+        </div>
+      </section>
 
-        <section className="gate-privacy">
-          <div className="gate-lock" aria-hidden="true">✓</div>
+      <section id="story" className="site-story">
+        <div className="site-story-lead">
+          <p className="site-kicker">Looking back</p>
+          <h2>Before Spread was an app, it was a piece of paper.</h2>
+          <p>Spread grew out of a season of life when there never seemed to be enough hours for everything that mattered. It’s the tool I wish I’d had back then.</p>
+        </div>
+        <details className="site-story-more">
+          <summary>Read the full story</summary>
           <div>
-            <p className="font-semibold">No account. No cloud.</p>
-            <p className="mt-1 text-sm leading-relaxed text-secondary">
-              Your planning stays on this phone. No account is required, and Spread doesn’t send your planning to a cloud service. You can keep up to ten separate profiles for a job, an organization, a project, family members, or anything else you want to keep separate.
-            </p>
+            <p>While I was working toward my bachelor’s degree in computer science, I had a lot competing for my time. I was working, holding leadership positions in multiple organizations, founding an organization of my own, keeping up with school, and eventually supporting a family.</p>
+            <p>And I wasn’t alone. A lot of my peers were wearing just as many hats. We were always saying we had “a lot going on” or that we were “spread too thin.”</p>
+            <p>On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility during the week. I’d draw boxes for those blocks of time, write down what I wanted to accomplish, and list the specific tasks that would get me there.</p>
+            <p>Years later, while researching Spread, I realized that the system I had built for myself shared a lot with Stephen Covey’s approach to weekly planning and the idea of time boxing.</p>
           </div>
-        </section>
+        </details>
+      </section>
 
-        <section className="gate-start-card" aria-label="Start Spread">
+      <section className="site-philosophy">
+        <p className="site-kicker">The idea behind Spread</p>
+        <h2>Your time should follow what matters.</h2>
+        <p>A to-do list can make everything look equally important. Spread starts one step earlier: what needs your attention this week, and how much time are you actually willing to give it?</p>
+        <p>That is close to Stephen Covey’s role-based weekly planning: plan around the important parts of your life instead of only reacting to the next task. Spread combines that idea with time boxing—simply setting aside a specific amount of time for something.</p>
+      </section>
+
+      <section className="site-privacy">
+        <div><span className="privacy-mark">✓</span></div>
+        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>No account is required. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
+      </section>
+
+      <section id="start" className="site-start">
+        <div className="site-start-copy">
+          <p className="site-kicker">Start where you are</p>
+          <h2>You have 168 hours.<br />Spread them on purpose.</h2>
+          <p>Try the planner right here. No account required.</p>
+        </div>
+        <div className="site-start-card">
           {known ? (
             <>
+              <p className="site-card-label">Continue as</p>
               {profiles.length > 1 ? (
-                <>
-                  <p className="gate-section-label">Choose a profile</p>
-                  <div className="mt-3 overflow-hidden rounded-2xl bg-fill" role="listbox" aria-label="Profiles">
-                    {profiles.map((profile, index) => (
-                      <button
-                        key={profile.id}
-                        type="button"
-                        role="option"
-                        aria-selected={profile.id === activeId}
-                        className={cn(
-                          "flex h-12 w-full items-center px-4 text-left text-base",
-                          index < profiles.length - 1 && "border-b border-line",
-                          profile.id === activeId && "font-semibold",
-                        )}
-                        onClick={() => switchProfile(profile.id)}
-                      >
-                        <span className="flex-1 truncate">{profile.name}</span>
-                        {profile.id === activeId && <Check className="size-4 text-accent" />}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="gate-section-label">Welcome back</p>
-                  <p className="mt-1 text-xl font-semibold">{activeName}</p>
-                </>
-              )}
-
-              <button
-                type="button"
-                className="gate-primary mt-4 h-[3.25rem] w-full rounded-full bg-accent px-5 text-base font-semibold text-on-accent active:opacity-80"
-                onClick={() => beginTrial()}
-              >
-                Continue to this week
-              </button>
+                <div className="site-profile-list">
+                  {profiles.map((profile) => <button key={profile.id} type="button" onClick={() => switchProfile(profile.id)} className={profile.id === activeId ? "is-active" : ""}>{profile.name}{profile.id === activeId && <Check size={16} />}</button>)}
+                </div>
+              ) : <p className="site-active-name">{activeName}</p>}
+              <button type="button" onClick={() => beginTrial()} className="site-button site-button-full">Continue to this week</button>
             </>
           ) : (
             <>
-              <p className="gate-section-label">Start here</p>
-              <label className="mt-3 block text-sm font-medium" htmlFor="spread-name">
-                Your name
-              </label>
-              <input
-                id="spread-name"
-                value={name}
-                autoCapitalize="words"
-                autoCorrect="off"
-                placeholder="Your name"
-                onChange={(event) => setName(event.target.value)}
-                className="mt-2 h-12 w-full rounded-2xl bg-fill px-4 text-base outline-none placeholder:text-tertiary"
-              />
-              <button
-                type="button"
-                className="gate-primary mt-3 h-[3.25rem] w-full rounded-full bg-accent px-5 text-base font-semibold text-on-accent active:opacity-80"
-                onClick={() => beginTrial(name)}
-              >
-                Begin this week
-              </button>
+              <label className="site-card-label" htmlFor="trial-name">What should we call you?</label>
+              <input id="trial-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="site-input" />
+              <button type="button" onClick={() => beginTrial(name)} className="site-button site-button-full">Begin this week</button>
             </>
           )}
-
-          <div className="gate-divider"><span>testing with a key?</span></div>
-
-          <form onSubmit={unlockWithKey}>
-            <label className="sr-only" htmlFor="license-key">License key</label>
-            <div className="flex gap-2">
-              <input
-                id="license-key"
-                value={code}
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="SPR-XXXX-XXXX"
-                onChange={(event) => {
-                  setCode(event.target.value);
-                  setError("");
-                }}
-                className="h-12 min-w-0 flex-1 rounded-2xl bg-fill px-4 text-center text-sm font-semibold tracking-wide outline-none placeholder:text-tertiary"
-              />
-              <button type="submit" className="h-12 rounded-2xl bg-fill px-5 text-sm font-semibold active:opacity-80">
-                Unlock
-              </button>
-            </div>
-            {error && <p className="mt-2 text-center text-sm text-danger" role="alert">{error}</p>}
-            <p className="mt-2 text-center text-xs text-tertiary">Friend test key: SPR-DEMO-2026</p>
+          <div className="site-key-divider"><span>or use a friend test key</span></div>
+          <form onSubmit={unlockWithKey} className="site-key-form">
+            <input value={code} onChange={(e) => { setCode(e.target.value); setError(""); }} placeholder="SPR-XXXX-XXXX" aria-label="License key" className="site-input" />
+            <button type="submit">Unlock</button>
           </form>
-        </section>
+          {error && <p className="site-error">{error}</p>}
+          <p className="site-demo-key">Friend test key: SPR-DEMO-2026</p>
+        </div>
+      </section>
 
-        <footer className="gate-footer">
-          <p>Gray Matter</p>
-        </footer>
-      </div>
+      <footer className="site-footer"><span>Spread</span><span>Gray Matter</span><span>Data stays on this device.</span></footer>
     </main>
   );
 }
