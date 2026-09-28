@@ -258,6 +258,46 @@ function weekFrom(dir: -1 | 1): CSSProperties {
   return { "--week-from": `${dir * 36}px` } as CSSProperties;
 }
 
+const MORPH_EASE = "420ms cubic-bezier(0.32, 0.72, 0, 1)";
+const WEEK_LINES = [
+  { x: 3, y: 3, w: 18, h: 2.4, rx: 1.2 },
+  { x: 3, y: 8.2, w: 18, h: 2.4, rx: 1.2 },
+  { x: 3, y: 13.4, w: 18, h: 2.4, rx: 1.2 },
+  { x: 3, y: 18.6, w: 18, h: 2.4, rx: 1.2 },
+];
+const MONTH_BOXES = [
+  { x: 3, y: 3, w: 7.2, h: 7.2, rx: 1.8 },
+  { x: 13.8, y: 3, w: 7.2, h: 7.2, rx: 1.8 },
+  { x: 3, y: 13.8, w: 7.2, h: 7.2, rx: 1.8 },
+  { x: 13.8, y: 13.8, w: 7.2, h: 7.2, rx: 1.8 },
+];
+
+function ViewMorphIcon({ boxes }: { boxes: boolean }) {
+  const shapes = boxes ? MONTH_BOXES : WEEK_LINES;
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" className="text-accent">
+      {shapes.map((shape, index) => (
+        <rect
+          key={index}
+          fill="currentColor"
+          stroke="currentColor"
+          strokeLinejoin="round"
+          style={{
+            x: shape.x,
+            y: shape.y,
+            width: shape.w,
+            height: shape.h,
+            rx: shape.rx,
+            fillOpacity: boxes ? 0 : 1,
+            strokeWidth: boxes ? 2.4 : 0,
+            transition: `x ${MORPH_EASE}, y ${MORPH_EASE}, width ${MORPH_EASE}, height ${MORPH_EASE}, rx ${MORPH_EASE}, fill-opacity ${MORPH_EASE}, stroke-width ${MORPH_EASE}`,
+          }}
+        />
+      ))}
+    </svg>
+  );
+}
+
 function brandCollapsed() {
   try {
     return sessionStorage.getItem("spread-brand-collapsed") === "1";
@@ -710,7 +750,7 @@ function WeekScreen() {
               aria-label={monthChrome ? "Week" : "Month"}
               onClick={() => (monthChrome ? closeMonth() : openMonth())}
             >
-              <SpreadIcon name={monthChrome ? "icon-spread-list.svg" : "icon-month.svg"} size={24} />
+              <ViewMorphIcon boxes={!monthChrome} />
             </button>
           )}
           {view === "week" && <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />}
