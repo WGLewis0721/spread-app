@@ -868,6 +868,7 @@ button:not(.crown-cap):active {
 }
 
 .gate-explainer,
+.gate-philosophy,
 .gate-story,
 .gate-privacy,
 .gate-start-card {
@@ -939,8 +940,12 @@ button:not(.crown-cap):active {
   color: var(--accent);
 }
 
+.gate-philosophy {
+  background: color-mix(in srgb, var(--accent) 7%, var(--elevated));
+}
+
 .gate-story {
-  background: color-mix(in srgb, var(--accent) 6%, var(--elevated));
+  background: var(--elevated);
 }
 
 .gate-privacy {
