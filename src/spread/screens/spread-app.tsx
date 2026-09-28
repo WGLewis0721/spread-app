@@ -606,7 +606,6 @@ function WeekScreen() {
             onMove={monthChrome ? goMonth : goWeek}
             onShift={monthChrome ? setMonthShift : setShift}
           />
-          {!monthChrome && (
           <div className="mx-auto mt-3 grid w-fit grid-cols-2 rounded-full bg-fill p-1" role="tablist" aria-label="View">
             {(
               [
@@ -649,7 +648,6 @@ function WeekScreen() {
               </button>
             ))}
           </div>
-          )}
         </header>
 
         <main key={activeId ?? "solo"} className="px-4 pt-2 pb-dock">
