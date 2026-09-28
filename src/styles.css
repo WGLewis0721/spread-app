@@ -839,107 +839,165 @@ button:not(.crown-cap):active {
 
 /* Unlock / landing experience */
 .gate-shell {
-  background:
-    radial-gradient(circle at 50% -7rem, color-mix(in srgb, var(--accent) 18%, transparent), transparent 26rem),
-    var(--canvas);
+  background: var(--canvas);
 }
 
 .gate-wrap {
-  padding-top: clamp(2.25rem, 8dvh, 5.5rem);
+  padding-top: clamp(1.75rem, 5dvh, 3.5rem);
   padding-bottom: 2rem;
 }
 
-.gate-brand {
-  padding-inline: 0.25rem;
+.gate-hero {
+  padding: 0 0.25rem;
 }
 
-.gate-kicker,
-.gate-card-label {
+.gate-headline {
+  max-width: 22rem;
+  font-size: clamp(2rem, 8vw, 2.65rem);
+  font-weight: 750;
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+}
+
+.gate-section-label {
   color: var(--secondary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.095em;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.gate-preview {
-  margin-top: 2rem;
-  overflow: hidden;
+.gate-explainer,
+.gate-story,
+.gate-privacy,
+.gate-start-card {
+  margin-top: 1rem;
   border: 0.5px solid var(--line);
-  border-radius: 1.75rem;
-  background: color-mix(in srgb, var(--elevated) 92%, transparent);
-  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(18px) saturate(1.25);
-  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  border-radius: 1.6rem;
+  background: var(--elevated);
+  padding: 1rem;
 }
 
-.gate-preview-chip,
-.gate-private-badge {
+.gate-explainer {
+  margin-top: 1.75rem;
+}
+
+.gate-step {
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.95rem 0;
+}
+
+.gate-step + .gate-step {
+  border-top: 0.5px solid var(--line);
+}
+
+.gate-step-num {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
   flex: none;
+  place-items: center;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 10%, var(--fill));
-  color: var(--accent);
-  padding: 0.38rem 0.65rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.76rem;
+  font-weight: 800;
 }
 
-.gate-role-row {
-  padding: 0.9rem 1rem 0.85rem;
+.gate-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  background: var(--fill);
+  padding: 0.42rem 0.68rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.gate-pill i {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
 }
 
 .gate-day {
   display: grid;
   min-width: 0;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 0.65rem;
   background: var(--fill);
   color: var(--tertiary);
-  padding-block: 0.22rem;
-  font-size: 0.62rem;
-  font-weight: 700;
+  padding: 0.38rem 0;
+  font-size: 0.63rem;
+  font-weight: 750;
 }
 
-.gate-day.is-active {
-  background: color-mix(in srgb, var(--role-dot) 20%, var(--elevated));
-  color: color-mix(in srgb, var(--role-dot) 84%, var(--ink));
+.gate-day.is-accent {
+  background: color-mix(in srgb, var(--accent) 18%, var(--elevated));
+  color: var(--accent);
 }
 
-.gate-start-card {
-  margin-top: 1rem;
-  border: 0.5px solid var(--line);
-  border-radius: 1.75rem;
-  background: var(--elevated);
-  padding: 1rem;
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.06);
+.gate-story {
+  background: color-mix(in srgb, var(--accent) 6%, var(--elevated));
+}
+
+.gate-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.gate-lock {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--elevated));
+  color: var(--accent);
+  font-weight: 850;
 }
 
 .gate-primary {
-  min-height: 3.25rem;
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 26%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.gate-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 1.05rem 0 0.85rem;
+  color: var(--tertiary);
+  font-size: 0.69rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.gate-divider::before,
+.gate-divider::after {
+  content: "";
+  height: 0.5px;
+  flex: 1;
+  background: var(--line);
 }
 
 .gate-footer {
-  padding: 1.25rem 0.5rem 0;
+  padding: 1.2rem 0.5rem 0;
   text-align: center;
   color: var(--tertiary);
   font-size: 0.72rem;
-  line-height: 1.4;
 }
 
 @media (max-width: 390px) {
   .gate-wrap {
-    padding-top: 1.5rem;
+    padding-top: 1.35rem;
   }
 
-  .gate-preview {
-    margin-top: 1.5rem;
-  }
-
-  .gate-preview-chip {
-    font-size: 0.62rem;
-    padding-inline: 0.5rem;
+  .gate-headline {
+    font-size: 2.05rem;
   }
 }
