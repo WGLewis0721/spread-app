@@ -68,140 +68,216 @@ function UnlockScreen() {
   const profiles = useSpread((s) => s.profiles);
   const activeId = useSpread((s) => s.activeId);
   const switchProfile = useSpread((s) => s.switchProfile);
-  const [showKey, setShowKey] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const known = profiles.length > 0;
+  const activeName = profiles.find((profile) => profile.id === activeId)?.name ?? profiles[0]?.name ?? "Me";
+
+  function unlockWithKey(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!unlock(code, known ? undefined : name)) setError("That key isn’t valid.");
+  }
 
   return (
-    <main className="spread-gate mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 pt-safe pb-safe">
-      <div className="mx-auto w-full max-w-sm">
-        <SpreadIcon name="app-icon-spread-cards.svg" size={64} />
-        <h1 className="mt-7 text-4xl font-bold tracking-tight text-balance">Spread</h1>
-        <p className="mt-3 max-w-xs text-base text-secondary text-pretty">
-          Roles first. Hours second. Tasks last.
-        </p>
-        {known ? (
-          profiles.length > 1 ? (
-            <div className="mt-8 overflow-hidden rounded-3xl bg-elevated" role="listbox" aria-label="Profiles">
-              {profiles.map((profile, index) => (
-                <button
-                  key={profile.id}
-                  type="button"
-                  role="option"
-                  aria-selected={profile.id === activeId}
-                  className={cn(
-                    "flex h-12 w-full items-center px-4 text-left text-base",
-                    index < profiles.length - 1 && "border-b border-line",
-                    profile.id === activeId && "font-semibold",
-                  )}
-                  onClick={() => switchProfile(profile.id)}
-                >
-                  <span className="flex-1 truncate">{profile.name}</span>
-                  {profile.id === activeId && <Check className="size-4 text-accent" />}
-                </button>
-              ))}
+    <main className="spread-gate gate-shell min-h-dvh w-full px-5 pt-safe pb-safe">
+      <div className="gate-wrap mx-auto w-full max-w-md">
+        <header className="gate-hero">
+          <div className="flex items-center gap-3">
+            <BrandMark size={54} />
+            <div>
+              <h1 className="text-[2.35rem] font-bold tracking-[-0.055em] leading-none">Spread</h1>
+              <p className="mt-1 text-sm font-medium text-secondary">A weekly planner for real life</p>
             </div>
-          ) : (
-            <p className="mt-8 text-sm text-secondary">Continuing as {profiles[0].name}.</p>
-          )
-        ) : (
-          <input
-            value={name}
-            autoFocus
-            autoCapitalize="words"
-            autoCorrect="off"
-            placeholder="Your name"
-            aria-label="Your name"
-            onChange={(event) => setName(event.target.value)}
-            className="mt-8 h-12 w-full rounded-2xl bg-fill px-4 text-base outline-none placeholder:text-tertiary"
-          />
-        )}
-        <button
-          type="button"
-          className="mt-3 h-12 w-full rounded-full bg-accent text-base font-semibold text-on-accent active:opacity-80"
-          onClick={() => beginTrial(known ? undefined : name)}
-        >
-          Begin this week
-        </button>
-        <button
-          type="button"
-          className="mt-3 h-11 w-full text-sm font-medium text-accent"
-          onClick={() => {
-            setShowKey((open) => !open);
-            setError("");
-          }}
-        >
-          {showKey ? "Hide key" : "I have a key"}
-        </button>
-        {showKey && (
-          <form
-            className="enter mt-1"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!unlock(code, known ? undefined : name)) setError("That key isn’t valid.");
-            }}
-          >
-            <label className="sr-only" htmlFor="license-key">
-              License key
-            </label>
-            <input
-              id="license-key"
-              value={code}
-              autoFocus
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="SPR-XXXX-XXXX"
-              onChange={(event) => {
-                setCode(event.target.value);
-                setError("");
-              }}
-              className="h-12 w-full rounded-2xl bg-fill px-4 text-center text-base outline-none placeholder:text-tertiary"
-            />
-            {error && (
-              <p className="mt-2 text-center text-sm text-danger" role="alert">
-                {error}
+          </div>
+
+          <p className="gate-headline mt-7 text-balance">
+            For people who are always spread too thin.
+          </p>
+          <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary text-pretty">
+            You have a lot to keep up with, and all of it is fighting for the same seven days. Spread helps you decide what deserves your time before the week gets away from you.
+          </p>
+        </header>
+
+        <section className="gate-explainer" aria-label="How Spread works">
+          <p className="gate-section-label">How it works</p>
+          <div className="gate-step mt-3">
+            <span className="gate-step-num">1</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Add what you’re responsible for.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="gate-pill"><i style={{ backgroundColor: "#34C759" }} />Work</span>
+                <span className="gate-pill"><i style={{ backgroundColor: "#FF9500" }} />Home</span>
+                <span className="gate-pill"><i style={{ backgroundColor: "#007AFF" }} />Health</span>
+              </div>
+            </div>
+          </div>
+          <div className="gate-step">
+            <span className="gate-step-num">2</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Decide how much time each one gets.</p>
+              <p className="mt-1 text-sm text-secondary">Maybe Work gets 8h, Home gets 4h, Health gets 3h. Those hours are your limit for the week.</p>
+            </div>
+          </div>
+          <div className="gate-step">
+            <span className="gate-step-num">3</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Put those hours on the days you’ll use them.</p>
+              <div className="mt-2 grid grid-cols-7 gap-1" aria-hidden="true">
+                {["M", "T", "W", "Th", "F", "Sa", "Su"].map((day, index) => (
+                  <span key={day} className={cn("gate-day", [0, 2, 5].includes(index) && "is-accent")}>{day}</span>
+                ))}
+              </div>
+              <p className="mt-2 text-sm text-secondary">Add the specific things you want to get done during that time.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="gate-philosophy">
+          <p className="gate-section-label">The idea behind Spread</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight">Your time should follow what matters.</h2>
+          <p className="mt-3 leading-relaxed text-pretty">
+            A normal to-do list can make everything look equally important. Spread starts one step earlier: what parts of your life need your attention this week, and how much time are you actually willing to give them?
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-secondary text-pretty">
+            That idea is close to Stephen Covey’s role-based weekly planning: plan around the important parts of your life instead of only reacting to the next task. Spread mixes that with time boxing, which simply means setting aside a specific amount of time for something.
+          </p>
+          <p className="mt-3 text-sm font-semibold text-accent">Responsibilities first. Hours second. Tasks last.</p>
+        </section>
+
+        <section className="gate-story">
+          <p className="gate-section-label">Looking back</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight">I was doing this on paper before I knew it had a name.</h2>
+          <p className="mt-3 leading-relaxed text-pretty">
+            Spread grew out of a season of life when there never seemed to be enough hours for everything that mattered. It’s the tool I wish I’d had back then.
+          </p>
+          <details className="gate-story-more">
+            <summary>Read the full story</summary>
+            <div className="gate-story-more-body">
+              <p>
+                While I was working toward my bachelor’s degree in computer science, I had a lot competing for my time. I was working, holding leadership positions in multiple organizations, founding an organization of my own, keeping up with school, and eventually supporting a family.
               </p>
-            )}
-            <button
-              type="submit"
-              className="mt-3 h-12 w-full rounded-full bg-fill text-base font-semibold active:opacity-80"
-            >
-              Unlock
-            </button>
-            <p className="mt-3 text-center text-xs text-tertiary">Trial key SPR-DEMO-2026</p>
+              <p>
+                And I wasn’t alone. A lot of my peers were wearing just as many hats. We were always saying we had “a lot going on” or that we were “spread too thin.”
+              </p>
+              <p>
+                On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility during the week. I’d draw boxes for those blocks of time, write down what I wanted to accomplish, and list the specific tasks that would get me there.
+              </p>
+              <p>
+                Years later, while researching Spread, I realized that the system I had built for myself shared a lot with Stephen Covey’s approach to weekly planning and the idea of time boxing.
+              </p>
+            </div>
+          </details>
+        </section>
+
+        <section className="gate-privacy">
+          <div className="gate-lock" aria-hidden="true">✓</div>
+          <div>
+            <p className="font-semibold">No account. No cloud.</p>
+            <p className="mt-1 text-sm leading-relaxed text-secondary">
+              Your planning stays on this phone. No account is required, and Spread doesn’t send your planning to a cloud service. You can keep up to ten separate profiles for a job, an organization, a project, family members, or anything else you want to keep separate.
+            </p>
+          </div>
+        </section>
+
+        <section className="gate-start-card" aria-label="Start Spread">
+          {known ? (
+            <>
+              {profiles.length > 1 ? (
+                <>
+                  <p className="gate-section-label">Choose a profile</p>
+                  <div className="mt-3 overflow-hidden rounded-2xl bg-fill" role="listbox" aria-label="Profiles">
+                    {profiles.map((profile, index) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        role="option"
+                        aria-selected={profile.id === activeId}
+                        className={cn(
+                          "flex h-12 w-full items-center px-4 text-left text-base",
+                          index < profiles.length - 1 && "border-b border-line",
+                          profile.id === activeId && "font-semibold",
+                        )}
+                        onClick={() => switchProfile(profile.id)}
+                      >
+                        <span className="flex-1 truncate">{profile.name}</span>
+                        {profile.id === activeId && <Check className="size-4 text-accent" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="gate-section-label">Welcome back</p>
+                  <p className="mt-1 text-xl font-semibold">{activeName}</p>
+                </>
+              )}
+
+              <button
+                type="button"
+                className="gate-primary mt-4 h-[3.25rem] w-full rounded-full bg-accent px-5 text-base font-semibold text-on-accent active:opacity-80"
+                onClick={() => beginTrial()}
+              >
+                Continue to this week
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="gate-section-label">Start here</p>
+              <label className="mt-3 block text-sm font-medium" htmlFor="spread-name">
+                Your name
+              </label>
+              <input
+                id="spread-name"
+                value={name}
+                autoCapitalize="words"
+                autoCorrect="off"
+                placeholder="Your name"
+                onChange={(event) => setName(event.target.value)}
+                className="mt-2 h-12 w-full rounded-2xl bg-fill px-4 text-base outline-none placeholder:text-tertiary"
+              />
+              <button
+                type="button"
+                className="gate-primary mt-3 h-[3.25rem] w-full rounded-full bg-accent px-5 text-base font-semibold text-on-accent active:opacity-80"
+                onClick={() => beginTrial(name)}
+              >
+                Begin this week
+              </button>
+            </>
+          )}
+
+          <div className="gate-divider"><span>testing with a key?</span></div>
+
+          <form onSubmit={unlockWithKey}>
+            <label className="sr-only" htmlFor="license-key">License key</label>
+            <div className="flex gap-2">
+              <input
+                id="license-key"
+                value={code}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="SPR-XXXX-XXXX"
+                onChange={(event) => {
+                  setCode(event.target.value);
+                  setError("");
+                }}
+                className="h-12 min-w-0 flex-1 rounded-2xl bg-fill px-4 text-center text-sm font-semibold tracking-wide outline-none placeholder:text-tertiary"
+              />
+              <button type="submit" className="h-12 rounded-2xl bg-fill px-5 text-sm font-semibold active:opacity-80">
+                Unlock
+              </button>
+            </div>
+            {error && <p className="mt-2 text-center text-sm text-danger" role="alert">{error}</p>}
+            <p className="mt-2 text-center text-xs text-tertiary">Friend test key: SPR-DEMO-2026</p>
           </form>
-        )}
-        <div className="mt-10 overflow-hidden rounded-3xl bg-elevated" aria-hidden="true">
-          <PreviewRow name="Work" hours="8h" color="#34C759" />
-          <PreviewRow name="Home" hours="4h" color="#FF9500" />
-          <PreviewRow name="Health" hours="3h" color="#007AFF" last />
-        </div>
-        <p className="mt-4 text-center text-xs text-tertiary">Gray Matter · stays on this device</p>
+        </section>
+
+        <footer className="gate-footer">
+          <p>Gray Matter</p>
+        </footer>
       </div>
     </main>
-  );
-}
-
-function PreviewRow({
-  name,
-  hours,
-  color,
-  last,
-}: {
-  name: string;
-  hours: string;
-  color: string;
-  last?: boolean;
-}) {
-  return (
-    <div className={cn("flex items-center gap-3 px-4 py-3", !last && "border-b border-line")}>
-      <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
-      <span className="flex-1 text-base font-medium">{name}</span>
-      <span className="text-sm text-secondary tabular-nums">{hours}</span>
-    </div>
   );
 }
 
