@@ -171,7 +171,7 @@ export function WeeklyView({
 function DragCard({ name, color }: { name: string; color: string }) {
   return (
     <div className="pointer-events-none flex h-11 items-center gap-2 rounded-full bg-elevated px-3 text-sm font-semibold shadow-lg">
-      <SpreadIcon name="icon-drag.svg" size={16} />
+      <SpreadIcon name="icon-drag.svg" size={24} />
       <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
       {name}
     </div>

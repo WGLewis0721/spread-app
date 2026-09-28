@@ -129,7 +129,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
                   <section key={block.id}>
                     <div className="mb-2 flex items-center justify-between px-1">
                       <h2 className="flex items-center gap-2 text-xs font-medium text-secondary">
-                        {block.type === "notes" && <SpreadIcon name="icon-notes.svg" size={16} />}
+                        {block.type === "notes" && <SpreadIcon name="icon-notes.svg" size={24} />}
                         {labelFor(block.type)}
                       </h2>
                       <span className="flex items-center gap-4">
@@ -166,7 +166,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
                         className={`format-row flex w-full items-center gap-3 px-4 py-3 text-left ${choice === format.type ? "is-choice" : "is-other"} ${index > 0 ? "border-t border-line" : ""}`}
                         onClick={() => choose(format.type)}
                       >
-                        <SpreadIcon name={format.icon} size={20} />
+                        <SpreadIcon name={format.icon} size={24} />
                         <span>
                           <span className="block text-base font-semibold">{format.label}</span>
                           <span className="block text-sm text-secondary">{format.detail}</span>
@@ -181,7 +181,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
                   className="mt-4 flex h-11 items-center gap-2 text-sm font-semibold text-accent"
                   onClick={showFormats}
                 >
-                  <SpreadIcon name="icon-add.svg" size={20} />
+                  <SpreadIcon name="icon-add.svg" size={24} />
                   Add
                 </button>
               )}
@@ -190,7 +190,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
                 className="mt-6 mb-2 flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-danger"
                 onClick={() => close(() => deleteTask(hatId, taskId))}
               >
-                <SpreadIcon name="icon-trash.svg" size={20} />
+                <SpreadIcon name="icon-trash.svg" size={24} />
                 Delete task
               </button>
             </>
@@ -300,7 +300,7 @@ function NotesBlock({
     <div className="slide-in mt-4 flex min-h-0 flex-1 flex-col pb-2">
       <div className="mb-2 flex shrink-0 items-center justify-between px-1">
         <h2 className="flex items-center gap-2 text-xs font-medium text-secondary">
-          <SpreadIcon name="icon-notes.svg" size={16} />
+          <SpreadIcon name="icon-notes.svg" size={24} />
           Notes
         </h2>
         <button type="button" className="text-sm font-semibold text-accent" onClick={onDone}>

@@ -256,7 +256,7 @@ function Gear({ className, cx, cy, r, teeth }: { className: string; cx: number; 
   );
 }
 
-function BrandMark({ size = 26 }: { size?: number }) {
+function BrandMark({ size = 34 }: { size?: number }) {
   return <SpreadIcon name="app-icon-spread-cards.svg" size={size} />;
 }
 
@@ -395,7 +395,7 @@ function WeekScreen() {
         <header className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
           <div className="mb-3 flex items-center gap-3">
             <button type="button" className="brand" aria-label="Spread, home" onClick={goHome}>
-              <BrandMark size={26} />
+              <BrandMark size={34} />
               {brand !== "mark" && (
                 <span className={cn("brand-clip", brand === "folding" && "is-folding")}>
                   <span className="brand-word">Spread</span>
@@ -453,7 +453,7 @@ function WeekScreen() {
                 }}
               >
                 <span className={view === key ? "text-accent" : "text-secondary"}>
-                  <SpreadIcon name={icon} size={key === "week" ? 24 : 23} className="text-inherit" />
+                  <SpreadIcon name={icon} size={24} className="text-inherit" />
                 </span>
                 {brand !== "mark" && (
                   <span className={cn("brand-clip", brand === "folding" && "is-folding")} style={{ "--lockup-gap": "6px" } as CSSProperties}>
@@ -623,7 +623,7 @@ function Summary({ rows, onRollover }: { rows: Row[]; onRollover: () => void }) 
         <p className="mt-1 text-xs text-caution">If the hours don’t fit, something is lying.</p>
       )}
       <button type="button" className="mt-3 flex items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
-        <SpreadIcon name="icon-rollover.svg" size={26} />
+        <SpreadIcon name="icon-rollover.svg" size={24} />
         Rollover
       </button>
     </section>
@@ -819,7 +819,7 @@ function RoleBlock({
       {paletteOn && (
         <div className={cn("border-t border-line px-4 py-3", palettePhase === "out" ? "cascade cascade-out" : "cascade")}>
           <div className="flex items-center gap-2">
-            <SpreadIcon name="icon-palette.svg" size={20} />
+            <SpreadIcon name="icon-palette.svg" size={24} />
             <p className="text-sm font-medium">Color</p>
           </div>
           <div className="mt-2 flex flex-wrap">
@@ -1004,7 +1004,7 @@ function AddTaskRow({ placeholder, onAdd }: { placeholder: string; onAdd: (text:
       <div className="ms-[4.75rem] border-t border-line" />
       <div className="flex min-h-14 items-center ps-12">
         <span className="grid size-14 shrink-0 place-items-center" aria-hidden="true">
-          <SpreadIcon name="icon-add.svg" size={20} />
+          <SpreadIcon name="icon-add.svg" size={24} />
         </span>
         <input
           value={value}
@@ -1357,7 +1357,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
             )}
             onClick={action.run}
           >
-            {action.icon ? <SpreadIcon name={action.icon} size={20} /> : null}
+            {action.icon ? <SpreadIcon name={action.icon} size={24} /> : null}
             {action.label}
           </button>
         ))}
@@ -1669,7 +1669,7 @@ function RolloverDialog({
               className="flex h-11 items-center justify-center gap-1.5 rounded-full bg-accent text-sm font-semibold text-on-accent"
               onClick={onConfirm}
             >
-              <SpreadIcon name="icon-rollover.svg" size={20} className="brightness-0 invert" />
+              <SpreadIcon name="icon-rollover.svg" size={24} className="brightness-0 invert" />
               Replace
             </AlertDialog.Action>
           </div>
@@ -1687,7 +1687,7 @@ function RemoveDialog({ hat, onClose }: { hat: Hat | null; onClose: () => void }
         <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-50 bg-scrim" />
         <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-50 mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
           <div className="mx-auto mb-3 grid size-11 place-items-center">
-            <SpreadIcon name="icon-trash.svg" size={20} />
+            <SpreadIcon name="icon-trash.svg" size={24} />
           </div>
           <AlertDialog.Title className="text-center text-base font-semibold">
             Remove {hat?.name}?
