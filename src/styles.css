@@ -948,6 +948,42 @@ button:not(.crown-cap):active {
   background: var(--elevated);
 }
 
+.gate-story-more {
+  margin-top: 0.85rem;
+}
+
+.gate-story-more summary {
+  width: fit-content;
+  cursor: pointer;
+  list-style: none;
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.gate-story-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.gate-story-more summary::after {
+  content: " ↓";
+}
+
+.gate-story-more[open] summary::after {
+  content: " ↑";
+}
+
+.gate-story-more-body {
+  margin-top: 0.85rem;
+  color: var(--secondary);
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+.gate-story-more-body p + p {
+  margin-top: 0.8rem;
+}
+
 .gate-privacy {
   display: flex;
   align-items: flex-start;
