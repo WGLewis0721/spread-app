@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, Check, List, LockKeyhole, Minus, Plus, X } from "lucide-react";
+import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
+import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { ACCENTS, consumeArrival, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
 import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
@@ -18,8 +18,9 @@ import { TaskSheet } from "@/spread/components/task-sheet";
 import { WeeklyView } from "@/spread/components/weekly-view";
 import { WeekCrown } from "@/spread/components/week-crown";
 import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-browser-frame";
-import { PaperToProduct, WeekPreview } from "@/spread/components/landing-preview";
+import { PaperToProduct } from "@/spread/components/landing-preview";
 import { SpreadStack } from "@/spread/components/landing-stack";
+import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 
 type Sheet = "more" | "new" | "license" | null;
 
@@ -64,9 +65,25 @@ export function SpreadApp() {
   );
 }
 
+function useSystemDark() {
+  return useSyncExternalStore(
+    (notify) => {
+      const query = window.matchMedia("(prefers-color-scheme: dark)");
+      query.addEventListener("change", notify);
+      return () => query.removeEventListener("change", notify);
+    },
+    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
+    () => false,
+  );
+}
+
 function UnlockScreen() {
-  const beginTrial = useSpread((s) => s.beginTrial);
-  const unlock = useSpread((s) => s.unlock);
+  const beginTrialRaw = useSpread((s) => s.beginTrial);
+  const unlockRaw = useSpread((s) => s.unlock);
+  const theme = useSpread((s) => s.theme);
+  const setTheme = useSpread((s) => s.setTheme);
+  const systemDark = useSystemDark();
+  const dark = theme === "dark" || (theme === "system" && systemDark);
   const profiles = useSpread((s) => s.profiles);
   const activeId = useSpread((s) => s.activeId);
   const switchProfile = useSpread((s) => s.switchProfile);
@@ -74,6 +91,34 @@ function UnlockScreen() {
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const known = profiles.length > 0;
+
+  // The site and the planner share one appearance setting. A visitor without a profile keeps
+  // their choice in the planner's own theme key; a new profile starts on "system", so carry the
+  // choice into it when they begin.
+  function chooseTheme(next: "light" | "dark") {
+    if (next === (dark ? "dark" : "light")) return;
+    const run = () => {
+      setTheme(next);
+      if (!known) {
+        try { localStorage.setItem(THEME_KEY, next); } catch { /* private mode: this visit only */ }
+      }
+    };
+    const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
+    if (doc.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) doc.startViewTransition(() => flushSync(run));
+    else run();
+  }
+  function keepTheme() {
+    if (!known && theme !== "system") setTheme(theme);
+  }
+  function beginTrial(nameForProfile?: string) {
+    beginTrialRaw(nameForProfile);
+    keepTheme();
+  }
+  function unlock(key: string, nameForProfile?: string) {
+    const ok = unlockRaw(key, nameForProfile);
+    if (ok) keepTheme();
+    return ok;
+  }
   const activeName = profiles.find((profile) => profile.id === activeId)?.name ?? profiles[0]?.name ?? "Me";
 
   function unlockWithKey(event: React.FormEvent<HTMLFormElement>) {
@@ -82,7 +127,7 @@ function UnlockScreen() {
   }
 
   return (
-    <main className="spread-site min-h-dvh">
+    <main className="spread-site min-h-dvh" data-site-theme={dark ? "dark" : "light"}>
       <nav className="site-nav" aria-label="Main navigation">
         <a className="site-brand" href="#top" aria-label="Spread home">
           <BrandMark size={36} />
@@ -91,6 +136,10 @@ function UnlockScreen() {
         <div className="site-nav-links">
           <a href="#how">How it works</a>
           <a href="#story">Story</a>
+          <div className="site-theme" role="group" aria-label="Appearance">
+            <button type="button" aria-pressed={!dark} aria-label="Light mode" onClick={() => chooseTheme("light")}><Sun size={15} strokeWidth={1.8} aria-hidden="true" /></button>
+            <button type="button" aria-pressed={dark} aria-label="Dark mode" onClick={() => chooseTheme("dark")}><Moon size={15} strokeWidth={1.8} aria-hidden="true" /></button>
+          </div>
           <a href="#start" className="site-nav-cta">Open Spread</a>
         </div>
       </nav>
@@ -111,29 +160,17 @@ function UnlockScreen() {
         <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
       </section>
 
-      <section id="how" className="site-section">
-        <div className="site-section-heading">
-          <p className="site-kicker">How Spread works</p>
-          <h2>A full life.<br /><em>A considered week.</em></h2>
-          <p>Start with what matters. Decide how much time it gets. Then decide what you will do with that time.</p>
-        </div>
-        <div className="site-steps">
-          <article><span>01 / Responsibilities</span><h3>Start with your life.</h3><p>Work, school, family, health. Name the responsibilities that deserve a real place in your week.</p><div className="step-demo pills"><b>Work</b><b>Home</b><b>Health</b></div></article>
-          <article><span>02 / Hours</span><h3>Give it some time.</h3><p>A simple weekly hour bank makes the tradeoffs visible before your calendar fills itself.</p><div className="step-demo hours"><b>Work</b><strong>8h</strong><span className="hour-bank" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} />)}</span></div></article>
-          <article><span>03 / Week → Tasks</span><h3>Make room to do it.</h3><p>Put those hours on real days. Then add the specific things you want to do with them.</p><div className="step-demo days">{["M", "Tu", "W", "Th", "F", "Sa", "Su"].map((day, index) => <b key={day} className={index % 2 === 0 ? "has-time" : ""}>{day}<i /></b>)}</div></article>
-        </div>
-      </section>
+      <HowItWorks
+        heading={
+          <div className="site-section-heading">
+            <p className="site-kicker">How Spread works</p>
+            <h2>A full life.<br /><em>A considered week.</em></h2>
+            <p>Start with what matters. Decide how much time it gets. Then decide what you will do with that time.</p>
+          </div>
+        }
+      />
 
-      <section className="site-product-band">
-        <div>
-          <p className="site-kicker">From intention to a real week</p>
-          <h2>Good intentions.<br /><em>Meet real days.</em></h2>
-          <p>Spread gives the important parts of your life time first. Tasks come after the time exists.</p>
-          <div className="site-product-aside"><span>Time is the starting point.</span><p>Eight hours for work. Four for home. Three for you. A week you can see—and actually work with.</p></div>
-          <a href="#start" className="site-text-link">Make space for your week <ChevronRight size={16} aria-hidden="true" /></a>
-        </div>
-        <WeekPreview />
-      </section>
+      <WeekBand />
 
       <section id="story" className="site-story">
         <div className="site-story-lead">
@@ -158,11 +195,13 @@ function UnlockScreen() {
         <h2>Your time should follow what matters.</h2>
         <p>A to-do list can make everything look equally important. Spread starts one step earlier: what needs your attention this week, and how much time are you actually willing to give it?</p>
         <p>That is close to Stephen Covey’s role-based weekly planning: plan around the important parts of your life instead of only reacting to the next task. Spread combines that idea with time boxing—simply setting aside a specific amount of time for something.</p>
+        <ListVersusSpread />
       </section>
 
       <section className="site-privacy">
         <div><span className="privacy-mark"><LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" /></span></div>
         <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>No account is required. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
+        <PrivacyFacts />
       </section>
 
       <section id="start" className="site-start">
@@ -170,6 +209,7 @@ function UnlockScreen() {
           <p className="site-kicker">Start where you are</p>
           <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
           <p>Try the planner right here. No account required.</p>
+          <HourGrid />
         </div>
         <div className="site-start-card">
           {known ? (
