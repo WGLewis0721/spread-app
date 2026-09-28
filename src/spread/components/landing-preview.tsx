@@ -64,7 +64,7 @@ export function PaperToProduct() {
         setWritten(true);
         io.disconnect();
       }
-    }, { threshold: 0.3 });
+    }, { threshold: 0.6 });
     io.observe(node);
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -113,8 +113,13 @@ export function PaperToProduct() {
   );
 }
 
-export function WeekPreview() {
-  const [selected, setSelected] = useState(0);
+export function WeekPreview({ selected: controlled, onSelect }: { selected?: number; onSelect?: (index: number) => void } = {}) {
+  const [own, setOwn] = useState(0);
+  const selected = controlled ?? own;
+  const setSelected = (index: number) => {
+    setOwn(index);
+    onSelect?.(index);
+  };
   const example = examples[selected];
   return (
     <div className="week-preview">

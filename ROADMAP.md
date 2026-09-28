@@ -7,6 +7,7 @@ Spread's current release path is organized as concrete achievements. The frozen 
 - [x] Freeze the current app at commit `e4b68e6f124d249f0015cd7a5e5600ad0838bb84`.
 - [x] Preserve `golden/2026-09-27-friends-test-final`.
 - [x] Deploy that exact commit to Vercel for friend testing.
+  - Note: the Vercel project deploys `main` automatically, so production now tracks `main`. Redeploy the golden commit if a friend round needs the frozen build.
 - [x] Keep GitHub Pages available as a second web deployment.
 
 ## Achievement 1 — Friends Test Round
@@ -96,9 +97,14 @@ Apple-ready stills + preview assets
 
 ## Achievement 8 — Branded Landing Page
 
-- [ ] Build the public Spread landing page around the core promise: **Give every part of your life some of your week.**
-- [ ] Show the actual product instead of generic productivity imagery.
-- [ ] Add App Store CTA, privacy/local-first story, device family, and concise product explanation.
+The design direction is in [DESIGN.md](DESIGN.md). The hero is frozen as `golden/2026-09-28-stack-hero-landing`.
+
+- [x] Build the public Spread landing page around the product model: Responsibilities → Hours → Week → Tasks.
+- [x] Show the actual product instead of generic productivity imagery: every section's focal object is built from real Spread parts.
+- [x] Privacy and local-first story, and a concise product explanation.
+- [x] Light and dark modes, shared with the planner's own appearance setting.
+- [ ] Add the App Store CTA and device family once Achievement 3 ships.
+- [ ] Replace the drawn notebook with final paper artwork (texture, handwriting) without changing the choreography.
 - [ ] Use the same campaign assets and measurement loop as the social pipeline.
 
 ## Product guardrails
