@@ -97,7 +97,7 @@ Apple-ready stills + preview assets
 
 ## Achievement 8 — Branded Landing Page
 
-The design direction is in [DESIGN.md](DESIGN.md). The hero is frozen as `golden/2026-09-28-stack-hero-landing`.
+The design direction is in [DESIGN.md](DESIGN.md). The full page is frozen as `golden/2026-09-28-full-landing-modes`.
 
 - [x] Build the public Spread landing page around the product model: Responsibilities → Hours → Week → Tasks.
 - [x] Show the actual product instead of generic productivity imagery: every section's focal object is built from real Spread parts.
