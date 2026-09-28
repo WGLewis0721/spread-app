@@ -103,7 +103,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
               onClick={() => close()}
               className="grid size-11 place-items-center justify-self-end rounded-full text-secondary active:bg-fill"
             >
-              <X className="size-5" strokeWidth={2.25} />
+              <X className="size-5" strokeWidth={2.7} />
             </button>
           </div>
           <Dialog.Title className="sr-only">Task</Dialog.Title>

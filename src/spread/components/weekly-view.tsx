@@ -268,7 +268,7 @@ function DayCard({
           className={`mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl bg-canvas text-sm font-semibold text-accent${phase === "out" ? " ascend-out" : " descend-in"}`}
           onClick={onAdd}
         >
-          <Plus className="size-4" strokeWidth={2.25} />
+          <Plus className="size-4" strokeWidth={2.7} />
           Add {shown}
         </button>
       )}

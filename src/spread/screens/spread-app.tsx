@@ -748,7 +748,7 @@ function RoleBlock({
           onClick={onRemove}
         >
           <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger">
-            <Minus className="size-4" strokeWidth={3} />
+            <Minus className="size-4" strokeWidth={3.6} />
           </span>
         </button>
         <div className={cn("edit-shift flex min-h-16 items-center gap-3 px-4 py-2", editing && "edit-shift-on")}>
@@ -763,7 +763,7 @@ function RoleBlock({
             <CategoryBadge category={hat.category} color={hat.color} size={36} />
           ) : (
             <span className="grid size-9 place-items-center rounded-full text-white" style={{ backgroundColor: hat.color }}>
-              <List className="size-[18px]" strokeWidth={2.5} />
+              <List className="size-[18px]" strokeWidth={3} />
             </span>
           )}
           {editing && (
@@ -916,7 +916,7 @@ function Stepper({
         disabled={value <= 0}
         onClick={() => onChange(value - 1)}
       >
-        <Minus className="size-4" strokeWidth={2.25} />
+        <Minus className="size-4" strokeWidth={2.7} />
       </button>
       {onClose ? (
         <button
@@ -937,7 +937,7 @@ function Stepper({
         disabled={value >= 40}
         onClick={() => onChange(value + 1)}
       >
-        <Plus className="size-4" strokeWidth={2.25} />
+        <Plus className="size-4" strokeWidth={2.7} />
       </button>
     </div>
   );
@@ -1191,7 +1191,7 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
             </form>
           ) : (
             <button type="button" className="flex h-12 w-full items-center gap-3 px-4 text-left text-base text-accent" onClick={() => setAdding(true)}>
-              <Plus className="size-5" strokeWidth={2.25} />
+              <Plus className="size-5" strokeWidth={2.7} />
               Add profile
             </button>
           ))}
@@ -1313,7 +1313,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           onClick={() => setSheet(null)}
           className="grid size-11 place-items-center justify-self-end rounded-full text-secondary"
         >
-          <X className="size-5" strokeWidth={2.25} />
+          <X className="size-5" strokeWidth={2.7} />
         </button>
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
