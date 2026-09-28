@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, Check, List, Minus, Plus, X } from "lucide-react";
+import { ChevronRight, Check, List, LockKeyhole, Minus, Plus, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
@@ -18,6 +18,7 @@ import { TaskSheet } from "@/spread/components/task-sheet";
 import { WeeklyView } from "@/spread/components/weekly-view";
 import { WeekCrown } from "@/spread/components/week-crown";
 import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-browser-frame";
+import { PaperToProduct, WeekPreview } from "@/spread/components/landing-preview";
 
 type Sheet = "more" | "new" | "license" | null;
 
@@ -96,75 +97,50 @@ function UnlockScreen() {
       <section id="top" className="site-hero">
         <div className="site-hero-copy">
           <p className="site-kicker">A weekly planner for real life</p>
-          <h1>Give every part of your life some of your week.</h1>
-          <p className="site-lede">You have a lot to keep up with, and all of it is competing for the same seven days. Spread helps you decide what deserves your time before the week gets away from you.</p>
+          <h1>A little more room<br />for <em>what matters.</em></h1>
+          <p className="site-lede">Work. Home. Yourself. Give every part of your life a place in your week—with a planner that starts with your time.</p>
           <div className="site-hero-actions">
             <a href="#start" className="site-button">Start this week <ChevronRight size={17} aria-hidden="true" /></a>
-            <span>No account. Just your week.</span>
+            <a href="#how" className="site-text-link">See how it works <span aria-hidden="true">↗</span></a>
           </div>
+          <p className="site-hero-note">No account. On your device. At your pace.</p>
         </div>
 
-        <div className="paper-to-product" aria-label="A paper weekly plan becoming Spread">
-          <div className="paper-plan">
-            <span className="plan-caption">01 / The Sunday ritual</span>
-            <p className="paper-note">Sunday night</p>
-            <p className="paper-title">This week</p>
-            <div className="paper-role"><span>Work</span><b>8 hrs</b></div>
-            <div className="paper-role"><span>Home</span><b>4 hrs</b></div>
-            <div className="paper-role"><span>Health</span><b>3 hrs</b></div>
-            <div className="paper-days"><span>M</span><span>Tu</span><span>W</span><span>Th</span><span>F</span><span>Sa</span><span>Su</span></div>
-            <p className="paper-task">finish report · groceries · run</p>
-          </div>
-          <div className="transform-mark" aria-hidden="true"><span>Same idea.</span>→<span>Less friction.</span></div>
-          <div className="product-plan">
-            <span className="plan-caption">02 / A little more room to think</span>
-            <div className="mini-brand"><BrandMark size={34} /><span>Spread</span></div>
-            <div className="mini-crown">Sep 21 – Sep 27</div>
-            <div className="mini-toggle"><b>Spread</b><span>Week</span></div>
-            <div className="mini-role"><i className="dot-work" /><span>Work</span><b>8h</b></div>
-            <div className="mini-role"><i className="dot-home" /><span>Home</span><b>4h</b></div>
-            <div className="mini-role"><i className="dot-health" /><span>Health</span><b>3h</b></div>
-            <p className="mini-summary">15 hours. Three parts of your life.</p>
-          </div>
-        </div>
-        <p className="site-principle"><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p>
+        <PaperToProduct />
+        <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
       </section>
 
       <section id="how" className="site-section">
         <div className="site-section-heading">
           <p className="site-kicker">How Spread works</p>
-          <h2>A week built in the right order.</h2>
+          <h2>A full life.<br /><em>A considered week.</em></h2>
           <p>Start with what matters. Decide how much time it gets. Then decide what you will do with that time.</p>
         </div>
         <div className="site-steps">
-          <article><span>01</span><h3>Add what you’re responsible for.</h3><p>Work, school, family, health, a project, an organization—whatever needs a real place in your week.</p><div className="step-demo pills"><b>Work</b><b>Home</b><b>Health</b></div></article>
-          <article><span>02</span><h3>Decide how much time it gets.</h3><p>Give each responsibility a simple weekly hour bank. It makes the tradeoffs visible before your calendar fills itself.</p><div className="step-demo hours"><b>Work</b><strong>8h</strong><b>Home</b><strong>4h</strong></div></article>
-          <article><span>03</span><h3>Put those hours on real days.</h3><p>Spread the hours across the week, then add the specific work you intend to do inside them.</p><div className="step-demo days"><b>Su</b><b>Sa</b><b>F</b><b>Th</b><b>W</b><b>Tu</b><b>M</b></div></article>
+          <article><span>01 / Responsibilities</span><h3>Start with your life.</h3><p>Work, school, family, health. Name the responsibilities that deserve a real place in your week.</p><div className="step-demo pills"><b>Work</b><b>Home</b><b>Health</b></div></article>
+          <article><span>02 / Hours</span><h3>Give it some time.</h3><p>A simple weekly hour bank makes the tradeoffs visible before your calendar fills itself.</p><div className="step-demo hours"><b>Work</b><strong>8h</strong><span className="hour-bank" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} />)}</span></div></article>
+          <article><span>03 / Week → Tasks</span><h3>Make room to do it.</h3><p>Put those hours on real days. Then add the specific things you want to do with them.</p><div className="step-demo days">{["M", "Tu", "W", "Th", "F", "Sa", "Su"].map((day, index) => <b key={day} className={index % 2 === 0 ? "has-time" : ""}>{day}<i /></b>)}</div></article>
         </div>
       </section>
 
       <section className="site-product-band">
         <div>
           <p className="site-kicker">From intention to a real week</p>
-          <h2>Not another place to collect tasks.</h2>
+          <h2>Good intentions.<br /><em>Meet real days.</em></h2>
           <p>Spread gives the important parts of your life time first. Tasks come after the time exists.</p>
+          <div className="site-product-aside"><span>Time is the starting point.</span><p>Eight hours for work. Four for home. Three for you. A week you can see—and actually work with.</p></div>
+          <a href="#start" className="site-text-link">Make space for your week <ChevronRight size={16} aria-hidden="true" /></a>
         </div>
-        <div className="week-wireframe">
-          <div className="week-wire-crown">Sep 21 – Sep 27</div>
-          <div className="week-wire-chip">● Family&nbsp;&nbsp; 1h</div>
-          <div className="week-wire-day"><b>Sunday</b><span>09/27</span><p>Family · 1h</p></div>
-          <div className="week-wire-day"><b>Saturday</b><span>09/26</span><p>Nothing this day.</p></div>
-          <div className="week-wire-day"><b>Friday</b><span>09/25</span><p>Nothing this day.</p></div>
-        </div>
+        <WeekPreview />
       </section>
 
       <section id="story" className="site-story">
         <div className="site-story-lead">
-          <p className="site-kicker">Looking back</p>
+          <p className="site-kicker">An ordinary beginning</p>
           <h2>Before Spread was an app, it was a piece of paper.</h2>
           <p>Spread grew out of a season of life when there never seemed to be enough hours for everything that mattered. It’s the tool I wish I’d had back then.</p>
         </div>
-        <details className="site-story-more">
+        <div className="site-story-detail"><blockquote>“On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility.”</blockquote><p className="site-story-attribution">The Sunday ritual that became Spread</p><details className="site-story-more">
           <summary>Read the full story</summary>
           <div>
             <p>While I was working toward my bachelor’s degree in computer science, I had a lot competing for my time. I was working, holding leadership positions in multiple organizations, founding an organization of my own, keeping up with school, and eventually supporting a family.</p>
@@ -172,7 +148,7 @@ function UnlockScreen() {
             <p>On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility during the week. I’d draw boxes for those blocks of time, write down what I wanted to accomplish, and list the specific tasks that would get me there.</p>
             <p>Years later, while researching Spread, I realized that the system I had built for myself shared a lot with Stephen Covey’s approach to weekly planning and the idea of time boxing.</p>
           </div>
-        </details>
+        </details></div>
       </section>
 
       <section className="site-philosophy">
@@ -183,14 +159,14 @@ function UnlockScreen() {
       </section>
 
       <section className="site-privacy">
-        <div><span className="privacy-mark">✓</span></div>
+        <div><span className="privacy-mark"><LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" /></span></div>
         <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>No account is required. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
       </section>
 
       <section id="start" className="site-start">
         <div className="site-start-copy">
           <p className="site-kicker">Start where you are</p>
-          <h2>You have 168 hours.<br />Spread them on purpose.</h2>
+          <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
           <p>Try the planner right here. No account required.</p>
         </div>
         <div className="site-start-card">
@@ -221,7 +197,7 @@ function UnlockScreen() {
         </div>
       </section>
 
-      <footer className="site-footer"><span>Spread</span><span>Gray Matter</span><span>Data stays on this device.</span></footer>
+      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><span>Made by Gray Matter</span></footer>
     </main>
   );
 }
