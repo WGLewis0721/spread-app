@@ -22,9 +22,13 @@ type ActiveDrag = { kind: "spread"; hatId: string } | { kind: "allocation"; allo
 export function WeeklyView({
   onTurn,
   onCommit,
+  focusDate,
+  onFocused,
 }: {
   onTurn?: (dx: number) => void;
   onCommit?: (direction: -1 | 1) => void;
+  focusDate?: string | null;
+  onFocused?: () => void;
 }) {
   const data = useSpread((s) => s.data);
   const moveSpreadToDay = useSpread((s) => s.moveSpreadToDay);
@@ -53,6 +57,14 @@ export function WeeklyView({
     onCommit: (direction) => (onCommit ? onCommit(direction) : changeWeek(direction)),
   });
   const hotDay = highlightedDay(overId, allocations);
+  const focused = useRef(onFocused);
+  focused.current = onFocused;
+
+  useEffect(() => {
+    if (!focusDate) return;
+    document.querySelector(`[data-day="${CSS.escape(focusDate)}"]`)?.scrollIntoView({ block: "start" });
+    focused.current?.();
+  }, [focusDate]);
 
   useEffect(() => {
     const ids = allocations.map((item) => item.id);

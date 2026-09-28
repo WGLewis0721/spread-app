@@ -9,6 +9,7 @@ export function WeekCrown({
   turn,
   onMove,
   onShift,
+  unit = "week",
 }: {
   title: string;
   detail?: string;
@@ -16,6 +17,7 @@ export function WeekCrown({
   turn: number;
   onMove: (direction: -1 | 1) => void;
   onShift?: (pixels: number) => void;
+  unit?: string;
 }) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; pointer: number; origin: number } | null>(null);
@@ -132,10 +134,10 @@ export function WeekCrown({
             detail && <p className="truncate text-xs text-secondary tabular-nums">{detail}</p>
           )}
         </div>
-        <button type="button" className="crown-cap crown-cap-left" aria-label="Previous week" onClick={() => onMove(-1)} />
-        <button type="button" className="crown-cap crown-cap-right" aria-label="Next week" onClick={() => onMove(1)} />
+        <button type="button" className="crown-cap crown-cap-left" aria-label={`Previous ${unit}`} onClick={() => onMove(-1)} />
+        <button type="button" className="crown-cap crown-cap-right" aria-label={`Next ${unit}`} onClick={() => onMove(1)} />
       </div>
-      <p className="mt-2 text-center text-xs text-secondary">Scroll left or right to change weeks.</p>
+      <p className="mt-2 text-center text-xs text-secondary">Scroll left or right to change {unit}s.</p>
     </div>
   );
 }

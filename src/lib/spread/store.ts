@@ -77,6 +77,7 @@ type Store = {
   switchProfile: (id: string) => void;
   removeProfile: (id: string) => boolean;
   moveWeek: (direction: -1 | 1 | "today") => void;
+  openWeek: (key: string) => void;
   setHours: (hatId: string, hours: number) => void;
   renameHat: (hatId: string, name: string) => void;
   removeHat: (hatId: string) => void;
@@ -422,6 +423,11 @@ export const useSpread = create<Store>((set, get) => ({
     const currentWeek = direction === "today" ? weekKey() : shiftWeek(data.currentWeek, direction);
     const next = ensureWeek({ ...data, currentWeek });
     commit(set, next);
+  },
+  openWeek: (key) => {
+    const data = get().data;
+    if (data.currentWeek === key) return;
+    commit(set, ensureWeek({ ...data, currentWeek: key }));
   },
   setHours: (hatId, hours) => {
     const current = ensureWeek(get().data);

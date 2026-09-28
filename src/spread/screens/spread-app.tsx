@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { createPortal, flushSync } from "react-dom";
+import { createPortal } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
+import { ChevronRight, Check, List, Minus, Plus, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import { formatWeek, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
+import { formatWeek, parseKey, weekKey, ROLE_COLORS, SPREAD_CATEGORIES, weekDays, type Hat, type SpreadCategory } from "@/lib/spread/model";
+import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
 import { ACCENTS, consumeArrival, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
 import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
@@ -16,11 +17,9 @@ import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { WeeklyView } from "@/spread/components/weekly-view";
+import { MonthView } from "@/spread/components/month-view";
 import { WeekCrown } from "@/spread/components/week-crown";
 import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-browser-frame";
-import { PaperToProduct } from "@/spread/components/landing-preview";
-import { SpreadStack } from "@/spread/components/landing-stack";
-import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 
 type Sheet = "more" | "new" | "license" | null;
 
@@ -65,182 +64,146 @@ export function SpreadApp() {
   );
 }
 
-function useSystemDark() {
-  return useSyncExternalStore(
-    (notify) => {
-      const query = window.matchMedia("(prefers-color-scheme: dark)");
-      query.addEventListener("change", notify);
-      return () => query.removeEventListener("change", notify);
-    },
-    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
-    () => false,
-  );
-}
-
 function UnlockScreen() {
-  const beginTrialRaw = useSpread((s) => s.beginTrial);
-  const unlockRaw = useSpread((s) => s.unlock);
-  const theme = useSpread((s) => s.theme);
-  const setTheme = useSpread((s) => s.setTheme);
-  const systemDark = useSystemDark();
-  const dark = theme === "dark" || (theme === "system" && systemDark);
+  const beginTrial = useSpread((s) => s.beginTrial);
+  const unlock = useSpread((s) => s.unlock);
   const profiles = useSpread((s) => s.profiles);
   const activeId = useSpread((s) => s.activeId);
   const switchProfile = useSpread((s) => s.switchProfile);
+  const [showKey, setShowKey] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const known = profiles.length > 0;
 
-  // The site and the planner share one appearance setting. A visitor without a profile keeps
-  // their choice in the planner's own theme key; a new profile starts on "system", so carry the
-  // choice into it when they begin.
-  function chooseTheme(next: "light" | "dark") {
-    if (next === (dark ? "dark" : "light")) return;
-    const run = () => {
-      setTheme(next);
-      if (!known) {
-        try { localStorage.setItem(THEME_KEY, next); } catch { /* private mode: this visit only */ }
-      }
-    };
-    const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
-    if (doc.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) doc.startViewTransition(() => flushSync(run));
-    else run();
-  }
-  function keepTheme() {
-    if (!known && theme !== "system") setTheme(theme);
-  }
-  function beginTrial(nameForProfile?: string) {
-    beginTrialRaw(nameForProfile);
-    keepTheme();
-  }
-  function unlock(key: string, nameForProfile?: string) {
-    const ok = unlockRaw(key, nameForProfile);
-    if (ok) keepTheme();
-    return ok;
-  }
-  const activeName = profiles.find((profile) => profile.id === activeId)?.name ?? profiles[0]?.name ?? "Me";
-
-  function unlockWithKey(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!unlock(code, known ? undefined : name)) setError("That key isn’t valid.");
-  }
-
   return (
-    <main className="spread-site min-h-dvh" data-site-theme={dark ? "dark" : "light"}>
-      <nav className="site-nav" aria-label="Main navigation">
-        <a className="site-brand" href="#top" aria-label="Spread home">
-          <BrandMark size={36} />
-          <span>Spread</span>
-        </a>
-        <div className="site-nav-links">
-          <a href="#how">How it works</a>
-          <a href="#story">Story</a>
-          <div className="site-theme" role="group" aria-label="Appearance">
-            <button type="button" aria-pressed={!dark} aria-label="Light mode" onClick={() => chooseTheme("light")}><Sun size={15} strokeWidth={1.8} aria-hidden="true" /></button>
-            <button type="button" aria-pressed={dark} aria-label="Dark mode" onClick={() => chooseTheme("dark")}><Moon size={15} strokeWidth={1.8} aria-hidden="true" /></button>
-          </div>
-          <a href="#start" className="site-nav-cta">Open Spread</a>
-        </div>
-      </nav>
-
-      <section id="top" className="site-hero">
-        <div className="site-hero-copy">
-          <p className="site-kicker">A weekly planner for real life</p>
-          <h1><span className="site-line"><span>A little more room</span></span><span className="site-line"><span>for <em>what matters.</em></span></span></h1>
-          <p className="site-lede">Work. Home. Yourself. Give every part of your life a place in your week—with a planner that starts with your time.</p>
-          <div className="site-hero-actions">
-            <a href="#start" className="site-button">Start this week <ChevronRight size={17} aria-hidden="true" /></a>
-            <a href="#how" className="site-text-link">See how it works <span aria-hidden="true">↗</span></a>
-          </div>
-          <p className="site-hero-note">No account. On your device. At your pace.</p>
-        </div>
-
-        <SpreadStack />
-        <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
-      </section>
-
-      <HowItWorks
-        heading={
-          <div className="site-section-heading">
-            <p className="site-kicker">How Spread works</p>
-            <h2>A full life.<br /><em>A considered week.</em></h2>
-            <p>Start with what matters. Decide how much time it gets. Then decide what you will do with that time.</p>
-          </div>
-        }
-      />
-
-      <WeekBand />
-
-      <section id="story" className="site-story">
-        <div className="site-story-lead">
-          <p className="site-kicker">An ordinary beginning</p>
-          <h2>Before Spread was an app, it was a piece of paper.</h2>
-          <p>Spread grew out of a season of life when there never seemed to be enough hours for everything that mattered. It’s the tool I wish I’d had back then.</p>
-        </div>
-        <div className="site-story-object"><PaperToProduct /></div>
-        <div className="site-story-detail"><blockquote>“On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility.”</blockquote><p className="site-story-attribution">The Sunday ritual that became Spread</p><details className="site-story-more">
-          <summary>Read the full story</summary>
-          <div>
-            <p>While I was working toward my bachelor’s degree in computer science, I had a lot competing for my time. I was working, holding leadership positions in multiple organizations, founding an organization of my own, keeping up with school, and eventually supporting a family.</p>
-            <p>And I wasn’t alone. A lot of my peers were wearing just as many hats. We were always saying we had “a lot going on” or that we were “spread too thin.”</p>
-            <p>On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility during the week. I’d draw boxes for those blocks of time, write down what I wanted to accomplish, and list the specific tasks that would get me there.</p>
-            <p>Years later, while researching Spread, I realized that the system I had built for myself shared a lot with Stephen Covey’s approach to weekly planning and the idea of time boxing.</p>
-          </div>
-        </details></div>
-      </section>
-
-      <section className="site-philosophy">
-        <p className="site-kicker">The idea behind Spread</p>
-        <h2>Your time should follow what matters.</h2>
-        <p>A to-do list can make everything look equally important. Spread starts one step earlier: what needs your attention this week, and how much time are you actually willing to give it?</p>
-        <p>That is close to Stephen Covey’s role-based weekly planning: plan around the important parts of your life instead of only reacting to the next task. Spread combines that idea with time boxing—simply setting aside a specific amount of time for something.</p>
-        <ListVersusSpread />
-      </section>
-
-      <section className="site-privacy">
-        <div><span className="privacy-mark"><LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" /></span></div>
-        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>No account is required. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
-        <PrivacyFacts />
-      </section>
-
-      <section id="start" className="site-start">
-        <div className="site-start-copy">
-          <p className="site-kicker">Start where you are</p>
-          <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
-          <p>Try the planner right here. No account required.</p>
-          <HourGrid />
-        </div>
-        <div className="site-start-card">
-          {known ? (
-            <>
-              <p className="site-card-label">Continue as</p>
-              {profiles.length > 1 ? (
-                <div className="site-profile-list">
-                  {profiles.map((profile) => <button key={profile.id} type="button" onClick={() => switchProfile(profile.id)} className={profile.id === activeId ? "is-active" : ""}>{profile.name}{profile.id === activeId && <Check size={16} />}</button>)}
-                </div>
-              ) : <p className="site-active-name">{activeName}</p>}
-              <button type="button" onClick={() => beginTrial()} className="site-button site-button-full">Continue to this week</button>
-            </>
+    <main className="spread-gate mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 pt-safe pb-safe">
+      <div className="mx-auto w-full max-w-sm">
+        <SpreadIcon name="app-icon-spread-cards.svg" size={64} />
+        <h1 className="mt-7 text-4xl font-bold tracking-tight text-balance">Spread</h1>
+        <p className="mt-3 max-w-xs text-base text-secondary text-pretty">
+          Roles first. Hours second. Tasks last.
+        </p>
+        {known ? (
+          profiles.length > 1 ? (
+            <div className="mt-8 overflow-hidden rounded-3xl bg-elevated" role="listbox" aria-label="Profiles">
+              {profiles.map((profile, index) => (
+                <button
+                  key={profile.id}
+                  type="button"
+                  role="option"
+                  aria-selected={profile.id === activeId}
+                  className={cn(
+                    "flex h-12 w-full items-center px-4 text-left text-base",
+                    index < profiles.length - 1 && "border-b border-line",
+                    profile.id === activeId && "font-semibold",
+                  )}
+                  onClick={() => switchProfile(profile.id)}
+                >
+                  <span className="flex-1 truncate">{profile.name}</span>
+                  {profile.id === activeId && <Check className="size-4 text-accent" />}
+                </button>
+              ))}
+            </div>
           ) : (
-            <>
-              <label className="site-card-label" htmlFor="trial-name">What should we call you?</label>
-              <input id="trial-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="site-input" />
-              <button type="button" onClick={() => beginTrial(name)} className="site-button site-button-full">Begin this week</button>
-            </>
-          )}
-          <div className="site-key-divider"><span>or use a friend test key</span></div>
-          <form onSubmit={unlockWithKey} className="site-key-form">
-            <input value={code} onChange={(e) => { setCode(e.target.value); setError(""); }} placeholder="SPR-XXXX-XXXX" aria-label="License key" className="site-input" />
-            <button type="submit">Unlock</button>
+            <p className="mt-8 text-sm text-secondary">Continuing as {profiles[0].name}.</p>
+          )
+        ) : (
+          <input
+            value={name}
+            autoFocus
+            autoCapitalize="words"
+            autoCorrect="off"
+            placeholder="Your name"
+            aria-label="Your name"
+            onChange={(event) => setName(event.target.value)}
+            className="mt-8 h-12 w-full rounded-2xl bg-fill px-4 text-base outline-none placeholder:text-tertiary"
+          />
+        )}
+        <button
+          type="button"
+          className="mt-3 h-12 w-full rounded-full bg-accent text-base font-semibold text-on-accent active:opacity-80"
+          onClick={() => beginTrial(known ? undefined : name)}
+        >
+          Begin this week
+        </button>
+        <button
+          type="button"
+          className="mt-3 h-11 w-full text-sm font-medium text-accent"
+          onClick={() => {
+            setShowKey((open) => !open);
+            setError("");
+          }}
+        >
+          {showKey ? "Hide key" : "I have a key"}
+        </button>
+        {showKey && (
+          <form
+            className="enter mt-1"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!unlock(code, known ? undefined : name)) setError("That key isn’t valid.");
+            }}
+          >
+            <label className="sr-only" htmlFor="license-key">
+              License key
+            </label>
+            <input
+              id="license-key"
+              value={code}
+              autoFocus
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="SPR-XXXX-XXXX"
+              onChange={(event) => {
+                setCode(event.target.value);
+                setError("");
+              }}
+              className="h-12 w-full rounded-2xl bg-fill px-4 text-center text-base outline-none placeholder:text-tertiary"
+            />
+            {error && (
+              <p className="mt-2 text-center text-sm text-danger" role="alert">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              className="mt-3 h-12 w-full rounded-full bg-fill text-base font-semibold active:opacity-80"
+            >
+              Unlock
+            </button>
+            <p className="mt-3 text-center text-xs text-tertiary">Trial key SPR-DEMO-2026</p>
           </form>
-          {error && <p className="site-error" role="alert">{error}</p>}
-          <p className="site-demo-key">Friend test key: SPR-DEMO-2026</p>
+        )}
+        <div className="mt-10 overflow-hidden rounded-3xl bg-elevated" aria-hidden="true">
+          <PreviewRow name="Work" hours="8h" color="#34C759" />
+          <PreviewRow name="Home" hours="4h" color="#FF9500" />
+          <PreviewRow name="Health" hours="3h" color="#007AFF" last />
         </div>
-      </section>
-
-      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><span>Made by Gray Matter</span></footer>
+        <p className="mt-4 text-center text-xs text-tertiary">Gray Matter · stays on this device</p>
+      </div>
     </main>
+  );
+}
+
+function PreviewRow({
+  name,
+  hours,
+  color,
+  last,
+}: {
+  name: string;
+  hours: string;
+  color: string;
+  last?: boolean;
+}) {
+  return (
+    <div className={cn("flex items-center gap-3 px-4 py-3", !last && "border-b border-line")}>
+      <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
+      <span className="flex-1 text-base font-medium">{name}</span>
+      <span className="text-sm text-secondary tabular-nums">{hours}</span>
+    </div>
   );
 }
 
@@ -302,10 +265,17 @@ function BrandMark({ size = 34 }: { size?: number }) {
 function WeekScreen() {
   const data = useSpread((s) => s.data);
   const moveWeek = useSpread((s) => s.moveWeek);
+  const openWeek = useSpread((s) => s.openWeek);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [view, setView] = useState<"spread" | "week">("spread");
+  const [plane, setPlane] = useState<"week" | "month">("week");
+  const [motion, setMotion] = useState<"to-month" | "to-week" | null>(null);
+  const [monthCursor, setMonthCursor] = useState<MonthCursor>(() => dominantMonth(weekKey()));
+  const [monthDir, setMonthDir] = useState<-1 | 1 | 0>(0);
+  const [monthShift, setMonthShift] = useState(0);
+  const [focusDate, setFocusDate] = useState<string | null>(null);
   const [viewPlay, setViewPlay] = useState(false);
   const [profilePlay, setProfilePlay] = useState(false);
   const [gears, setGears] = useState(false);
@@ -324,6 +294,8 @@ function WeekScreen() {
   const rollover = useSpread((s) => s.rollover);
   const range = formatWeek(data.currentWeek);
   const isCurrent = data.currentWeek === weekKey();
+  const now = new Date();
+  const onThisMonth = monthCursor.year === now.getFullYear() && monthCursor.month === now.getMonth();
   const boxByHat = new Map(data.weeks[data.currentWeek]?.boxes.map((box) => [box.hatId, box]) ?? []);
   const rows = data.hats.map((hat) => {
     const box = boxByHat.get(hat.id) ?? {
@@ -344,17 +316,63 @@ function WeekScreen() {
     },
     [moveWeek],
   );
+  const motionTimer = useRef<number | null>(null);
+  const goMonth = useCallback((direction: -1 | 1) => {
+    setMonthDir(direction);
+    setMonthCursor((cursor) => shiftMonth(cursor.year, cursor.month, direction));
+  }, []);
+  const monthChrome = view === "week" && ((plane === "month" && motion !== "to-week") || motion === "to-month");
+  const showWeekLayer = plane === "week" || motion !== null;
+  const showMonthLayer = plane === "month" || motion !== null;
+
+  function runMotion(next: "to-month" | "to-week") {
+    if (motionTimer.current) window.clearTimeout(motionTimer.current);
+    setMotion(next);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    motionTimer.current = window.setTimeout(() => {
+      setPlane(next === "to-month" ? "month" : "week");
+      setMotion(null);
+      motionTimer.current = null;
+    }, reduced ? 0 : 420);
+  }
+
+  function openMonth() {
+    if (motion) return;
+    setMonthCursor(dominantMonth(data.currentWeek));
+    setMonthDir(0);
+    setMonthShift(0);
+    runMotion("to-month");
+  }
+
+  function closeMonth() {
+    if (motion || plane !== "month") return;
+    setMonthShift(0);
+    runMotion("to-week");
+  }
+
+  function pickDay(date: string) {
+    if (motion) return;
+    openWeek(weekKey(parseKey(date)));
+    setFocusDate(date);
+    setMonthShift(0);
+    runMotion("to-week");
+  }
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const tag = (event.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || sheet) return;
+      if (tag === "INPUT" || tag === "TEXTAREA" || sheet || motion) return;
+      if (monthChrome) {
+        if (event.key === "ArrowLeft") goMonth(-1);
+        if (event.key === "ArrowRight") goMonth(1);
+        return;
+      }
       if (event.key === "ArrowLeft") goWeek(-1);
       if (event.key === "ArrowRight") goWeek(1);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goWeek, sheet]);
+  }, [goWeek, goMonth, monthChrome, motion, sheet]);
 
   const removing = data.hats.find((hat) => hat.id === removeId) ?? null;
 
@@ -363,6 +381,12 @@ function WeekScreen() {
     const id = window.setTimeout(() => setDir(0), 420);
     return () => window.clearTimeout(id);
   }, [dir, data.currentWeek]);
+
+  useEffect(() => {
+    if (monthDir === 0) return;
+    const id = window.setTimeout(() => setMonthDir(0), 420);
+    return () => window.clearTimeout(id);
+  }, [monthDir, monthCursor.year, monthCursor.month]);
 
   useEffect(() => {
     if (brandOnce.current) return;
@@ -413,6 +437,10 @@ function WeekScreen() {
     setEditing(false);
     setRemoveId(null);
     setPrintDoc(null);
+    if (motionTimer.current) window.clearTimeout(motionTimer.current);
+    motionTimer.current = null;
+    setPlane("week");
+    setMotion(null);
     setProfilePlay(true);
     const id = window.setTimeout(() => setProfilePlay(false), 460);
     return () => window.clearTimeout(id);
@@ -421,6 +449,10 @@ function WeekScreen() {
   function goHome() {
     setEditing(false);
     setOpenTask(null);
+    if (motionTimer.current) window.clearTimeout(motionTimer.current);
+    motionTimer.current = null;
+    setPlane("week");
+    setMotion(null);
     if (view === "spread") return;
     setViewPlay(true);
     setView("spread");
@@ -456,17 +488,32 @@ function WeekScreen() {
             )}
           </div>
           <WeekCrown
-            title={isCurrent ? "This week" : range}
-            detail={isCurrent ? range : "Back to this week"}
-            onDetail={isCurrent ? undefined : () => {
-              const today = weekKey();
-              setDir(today > data.currentWeek ? 1 : -1);
-              moveWeek("today");
-            }}
-            turn={gesture}
-            onMove={goWeek}
-            onShift={setShift}
+            title={monthChrome ? formatMonth(monthCursor.year, monthCursor.month) : isCurrent ? "This week" : range}
+            detail={monthChrome ? (onThisMonth ? undefined : "Back to this month") : isCurrent ? range : "Back to this week"}
+            onDetail={
+              monthChrome
+                ? onThisMonth
+                  ? undefined
+                  : () => {
+                      const next = now.getFullYear() * 12 + now.getMonth();
+                      const current = monthCursor.year * 12 + monthCursor.month;
+                      setMonthDir(next >= current ? 1 : -1);
+                      setMonthCursor({ year: now.getFullYear(), month: now.getMonth() });
+                    }
+                : isCurrent
+                  ? undefined
+                  : () => {
+                      const today = weekKey();
+                      setDir(today > data.currentWeek ? 1 : -1);
+                      moveWeek("today");
+                    }
+            }
+            turn={monthChrome ? 0 : gesture}
+            unit={monthChrome ? "month" : "week"}
+            onMove={monthChrome ? goMonth : goWeek}
+            onShift={monthChrome ? setMonthShift : setShift}
           />
+          {!monthChrome && (
           <div className="mx-auto mt-3 grid w-fit grid-cols-2 rounded-full bg-fill p-1" role="tablist" aria-label="View">
             {(
               [
@@ -485,6 +532,12 @@ function WeekScreen() {
                 )}
                 onClick={() => {
                   if (view === key) return;
+                  if (key === "spread") {
+                    if (motionTimer.current) window.clearTimeout(motionTimer.current);
+                    motionTimer.current = null;
+                    setPlane("week");
+                    setMotion(null);
+                  }
                   if (key === "week") setEditing(false);
                   setViewPlay(true);
                   setView(key);
@@ -502,15 +555,40 @@ function WeekScreen() {
               </button>
             ))}
           </div>
+          )}
         </header>
 
         <main key={activeId ?? "solo"} className="px-4 pt-2 pb-dock">
           <h1 className="hidden print:block px-1 pt-4 text-2xl font-bold">Spread · {range}</h1>
           {view === "week" ? (
-            <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : followStyle(shift)}>
-              <div className={profilePlay ? "cascade-item" : undefined}>
-                <WeeklyView onTurn={setGesture} onCommit={goWeek} />
-              </div>
+            <div className="layer-stack">
+              {showWeekLayer && (
+                <div className={motion === "to-month" ? "layer-out" : motion === "to-week" ? "layer-in" : undefined}>
+                  <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : followStyle(shift)}>
+                    <div className={profilePlay ? "cascade-item" : undefined}>
+                      <WeeklyView
+                        onTurn={setGesture}
+                        onCommit={goWeek}
+                        focusDate={focusDate}
+                        onFocused={() => setFocusDate(null)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              {showMonthLayer && (
+                <div className={motion === "to-month" ? "layer-in" : motion === "to-week" ? "layer-out" : undefined}>
+                  <div
+                    key={`${monthCursor.year}-${monthCursor.month}`}
+                    className={monthDir !== 0 ? "week-seq" : undefined}
+                    style={monthDir !== 0 ? weekFrom(monthDir) : followStyle(monthShift)}
+                  >
+                    <div className="week-seq-item">
+                      <MonthView year={monthCursor.year} month={monthCursor.month} data={data} onPick={pickDay} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : rows.length === 0 ? (
             <div className={profilePlay ? "cascade" : undefined}>
@@ -550,7 +628,18 @@ function WeekScreen() {
       </div>
 
       <div className="app-dock no-print pointer-events-none fixed inset-x-0 z-30 flex justify-center px-4 pb-safe">
-        <div className="glass pointer-events-auto flex items-center gap-1 rounded-full p-1.5">
+        <div className={cn("glass pointer-events-auto flex items-center rounded-full p-1.5", view === "week" ? "" : "gap-1")}>
+          {view === "week" && (
+            <button
+              type="button"
+              className="grid size-11 place-items-center rounded-full active:opacity-70"
+              aria-label={monthChrome ? "Week" : "Month"}
+              onClick={() => (monthChrome ? closeMonth() : openMonth())}
+            >
+              <SpreadIcon name={monthChrome ? "icon-spread-list.svg" : "icon-month.svg"} size={24} />
+            </button>
+          )}
+          {view === "week" && <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />}
           {view === "spread" && (editing ? (
             <button
               type="button"
