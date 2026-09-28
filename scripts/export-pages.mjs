@@ -38,6 +38,9 @@ writeFileSync(join(out, "index.html"), cleaned);
 writeFileSync(join(out, ".nojekyll"), "");
 cpSync(join(root, ".vercel/output/static/assets"), join(out, "assets"), { recursive: true });
 cpSync(join(root, ".vercel/output/static/favicon.svg"), join(out, "favicon.svg"));
+// the landing type and the app icons are public files; Pages needs them beside the page
+cpSync(join(root, ".vercel/output/static/fonts"), join(out, "fonts"), { recursive: true });
+cpSync(join(root, ".vercel/output/static/icons"), join(out, "icons"), { recursive: true });
 cpSync(join(root, "public/__grok/icon-180.png"), join(out, "icon-180.png"));
 cpSync(join(root, "public/icons"), join(out, "icons"), { recursive: true });
 if (!cleaned.includes("/spread-app/assets/")) throw new Error("pages html is missing assets");

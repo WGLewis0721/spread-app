@@ -42,38 +42,47 @@ const examples = [
 export function PaperToProduct() {
   const root = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
+  const [written, setWritten] = useState(false);
 
   useEffect(() => {
     const node = root.current;
     if (!node) return;
     let frame = 0;
+    // 0 while the object sits low in the viewport, 1 once it has risen into place
     const update = () => {
       frame = 0;
       const rect = node.getBoundingClientRect();
-      const travel = Math.max(1, window.innerHeight + rect.height);
-      const next = Math.max(0, Math.min(1, (window.innerHeight - rect.top) / travel));
-      setProgress(next);
+      const vh = window.innerHeight;
+      setProgress(Math.max(0, Math.min(1, (vh * 0.8 - rect.top) / (vh * 0.62))));
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(update);
     };
+    // the Sunday page writes itself the first time it is seen
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setWritten(true);
+        io.disconnect();
+      }
+    }, { threshold: 0.3 });
+    io.observe(node);
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
+      io.disconnect();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, []);
 
-  const paperShift = Math.max(0, progress - .18) * -34;
-  const productShift = Math.max(0, progress - .12) * -22;
   return (
     <div
       ref={root}
-      className="paper-to-product"
-      style={{ "--hero-progress": progress, "--paper-shift": `${paperShift}px`, "--product-shift": `${productShift}px` } as CSSProperties}
+      role="group"
+      className={`paper-to-product${written ? " is-written" : ""}`}
+      style={{ "--hero-progress": progress } as CSSProperties}
       aria-label="The handwritten Sunday plan, translated into Spread"
     >
       <div className="paper-plan">
@@ -86,9 +95,6 @@ export function PaperToProduct() {
         ))}
         <div className="paper-days">{["M","Tu","W","Th","F","Sa","Su"].map((day) => <span key={day}>{day}</span>)}</div>
         <p className="paper-task">Time first. The rest can follow.</p>
-      </div>
-      <div className="hero-transfer-lines" aria-hidden="true">
-        <i /><i /><i />
       </div>
       <div className="product-plan">
         <div className="mini-brand"><SpreadIcon name="app-icon-spread-cards.svg" size={32} /><span>Spread</span><span className="preview-label">A sample week</span></div>
