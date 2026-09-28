@@ -77,3 +77,4 @@ Goldens are frozen `golden/*` branches. Never change one; branch from it instead
 | `golden/2026-09-27-friends-test-final` | the friends-test build |
 | `golden/2026-09-28-stack-hero-landing` | the landing page with the stack hero, orbit and drag-onto-spread tray |
 | `golden/2026-09-28-full-landing-modes` | the full landing page: every section reworked, light/dark modes, DESIGN.md |
+| `golden/2026-09-28-app-store` | the App Store gold. Month over the week, bubbles pinned on both, Done while adding, the Spread/Week switcher stays on month, and the four week lines morph into the month boxes. Also tagged `golden-2026-09-28-app-store` |
