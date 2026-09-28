@@ -67,7 +67,8 @@ export function SpreadStack() {
   const dragging = useRef<number | null>(null);
   const landing = useRef<number | null>(null);
   const reduced = useRef(false);
-  const mounted = useRef(false);
+  const wasOpen = useRef(false);
+  const fit = useRef<Orbit | null>(null);
 
   const relative = useCallback((rect: DOMRect): Box => {
     const base = wrap.current!.getBoundingClientRect();
@@ -114,7 +115,8 @@ export function SpreadStack() {
       ry += 6;
       span = spanFor();
     }
-    orbit.current = { cx, cy, rx, ry, front: Math.cos((span * Math.PI) / 180) - 0.001 };
+    fit.current = { cx, cy, rx, ry, front: Math.cos((span * Math.PI) / 180) - 0.001 };
+    if (!orbit.current) orbit.current = { ...fit.current };
   }, [relative]);
 
   const orbitPosition = useCallback((index: number, t: number) => {
@@ -145,6 +147,14 @@ export function SpreadStack() {
     const tick = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
+      // ease toward the latest measurement so a layout shift never snaps the orbit
+      const o = orbit.current;
+      const g = fit.current;
+      if (o && g) {
+        const k = Math.min(1, dt * 3);
+        o.cx += (g.cx - o.cx) * k; o.cy += (g.cy - o.cy) * k; o.rx += (g.rx - o.rx) * k; o.ry += (g.ry - o.ry) * k;
+        o.front = g.front;
+      }
       if (orbiting.current) {
         clock.current += dt;
         chips.current.forEach((chip, index) => {
@@ -164,8 +174,15 @@ export function SpreadStack() {
   useEffect(() => {
     const first = window.setTimeout(() => {
       measure();
-      if (!openRef.current && !reduced.current) orbiting.current = true;
-    }, 1500);
+      if (openRef.current || reduced.current) return;
+      chips.current.forEach((chip) => { if (chip) chip.style.transition = "opacity .9s ease"; });
+      orbiting.current = true;
+      window.setTimeout(() => chips.current.forEach((chip) => { if (chip) chip.style.transition = "none"; }), 1000);
+    }, 1600);
+    // keep the fit current: fonts arriving, a phone's address bar, the hero reflowing
+    const refit = window.setInterval(() => {
+      if (!openRef.current && landing.current === null && orbiting.current) measure();
+    }, 2000);
     let pending = 0;
     const onResize = () => {
       window.clearTimeout(pending);
@@ -174,6 +191,7 @@ export function SpreadStack() {
     window.addEventListener("resize", onResize);
     return () => {
       window.clearTimeout(first);
+      window.clearInterval(refit);
       window.clearTimeout(pending);
       window.removeEventListener("resize", onResize);
     };
@@ -184,6 +202,7 @@ export function SpreadStack() {
     if (!wrap.current) return;
     const ease = "transform .8s cubic-bezier(.22,1.2,.36,1), opacity .4s ease";
     if (open) {
+      wasOpen.current = true;
       orbiting.current = false;
       chips.current.forEach((chip, index) => {
         const slot = slots.current[index];
@@ -195,12 +214,10 @@ export function SpreadStack() {
       });
       return;
     }
+    if (!wasOpen.current) return;
+    wasOpen.current = false;
     setPlaced(cards.map(() => false));
     setNote("");
-    if (!mounted.current) {
-      mounted.current = true;
-      return;
-    }
     if (reduced.current) {
       chips.current.forEach((chip) => { if (chip) chip.style.opacity = "0"; });
       return;
