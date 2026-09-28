@@ -87,7 +87,7 @@ function UnlockScreen() {
             <BrandMark size={54} />
             <div>
               <h1 className="text-[2.35rem] font-bold tracking-[-0.055em] leading-none">Spread</h1>
-              <p className="mt-1 text-sm font-medium text-secondary">Weekly role planning</p>
+              <p className="mt-1 text-sm font-medium text-secondary">A weekly planner for real life</p>
             </div>
           </div>
 
@@ -95,7 +95,7 @@ function UnlockScreen() {
             For people who are always spread too thin.
           </p>
           <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary text-pretty">
-            Name the roles you live, give each one hours, then add tasks. The Week is where those hours land on days.
+            You have a lot to keep up with, and all of it is fighting for the same seven days. Spread helps you decide what deserves your time before the week gets away from you.
           </p>
         </header>
 
@@ -104,7 +104,7 @@ function UnlockScreen() {
           <div className="gate-step mt-3">
             <span className="gate-step-num">1</span>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold">Name the roles you live.</p>
+              <p className="font-semibold">Add what you’re responsible for.</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className="gate-pill"><i style={{ backgroundColor: "#34C759" }} />Work</span>
                 <span className="gate-pill"><i style={{ backgroundColor: "#FF9500" }} />Home</span>
@@ -115,31 +115,47 @@ function UnlockScreen() {
           <div className="gate-step">
             <span className="gate-step-num">2</span>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold">Give each role a bank of hours.</p>
-              <p className="mt-1 text-sm text-secondary">Maybe Work gets 8h, Home gets 4h, Health gets 3h.</p>
+              <p className="font-semibold">Decide how much time each one gets.</p>
+              <p className="mt-1 text-sm text-secondary">Maybe Work gets 8h, Home gets 4h, Health gets 3h. Those hours are your limit for the week.</p>
             </div>
           </div>
           <div className="gate-step">
             <span className="gate-step-num">3</span>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold">Spread those hours across your week.</p>
+              <p className="font-semibold">Put those hours on the days you’ll use them.</p>
               <div className="mt-2 grid grid-cols-7 gap-1" aria-hidden="true">
                 {["M", "T", "W", "Th", "F", "Sa", "Su"].map((day, index) => (
                   <span key={day} className={cn("gate-day", [0, 2, 5].includes(index) && "is-accent")}>{day}</span>
                 ))}
               </div>
-              <p className="mt-2 text-sm text-secondary">Then decide what you’re actually doing with that time.</p>
+              <p className="mt-2 text-sm text-secondary">Add the specific things you want to get done during that time.</p>
             </div>
           </div>
         </section>
 
-        <section className="gate-story">
-          <p className="gate-section-label">Why I made it</p>
+        <section className="gate-philosophy">
+          <p className="gate-section-label">The idea behind Spread</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight">Your time should follow what matters.</h2>
           <p className="mt-3 leading-relaxed text-pretty">
-            When I was at State, I wore a lot of hats. On Sundays I’d spread 1–2 hours across each responsibility, draw boxes for what I was devoting that time to, then list the specific tasks.
+            A normal to-do list can make everything look equally important. Spread starts one step earlier: what parts of your life need your attention this week, and how much time are you actually willing to give them?
           </p>
           <p className="mt-3 text-sm leading-relaxed text-secondary text-pretty">
-            Spread is the app version of that habit. It turns out the idea is close to Stephen Covey’s role-based weekly planning, mixed with time boxing.
+            That idea is close to Stephen Covey’s role-based weekly planning: plan around the important parts of your life instead of only reacting to the next task. Spread mixes that with time boxing, which simply means setting aside a specific amount of time for something.
+          </p>
+          <p className="mt-3 text-sm font-semibold text-accent">Responsibilities first. Hours second. Tasks last.</p>
+        </section>
+
+        <section className="gate-story">
+          <p className="gate-section-label">Looking back</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight">I was doing this on paper before I knew it had a name.</h2>
+          <p className="mt-3 leading-relaxed text-pretty">
+            When I was at State, I had a lot going on at the same time. On Sundays I would sit down, look at everything I was responsible for, and give each one an hour or two somewhere in my week.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-secondary text-pretty">
+            I’d draw boxes, write what I wanted that time to be for, then list the specific things I needed to do. Years later, while researching this app, I realized that habit was pretty close to Covey’s weekly planning mixed with time boxing.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-secondary text-pretty">
+            Spread is me turning that old paper system into the tool I wish I had back then.
           </p>
         </section>
 
@@ -148,7 +164,7 @@ function UnlockScreen() {
           <div>
             <p className="font-semibold">No account. No cloud.</p>
             <p className="mt-1 text-sm leading-relaxed text-secondary">
-              Your planning stays on this phone. You can keep up to ten separate profiles for a job, an org, a project, family members, or anything else.
+              Your planning stays on this phone. No account is required, and Spread doesn’t send your planning to a cloud service. You can keep up to ten separate profiles for a job, an organization, a project, family members, or anything else you want to keep separate.
             </p>
           </div>
         </section>
