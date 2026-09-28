@@ -81,7 +81,7 @@ function UnlockScreen() {
 
   return (
     <main className="spread-site min-h-dvh">
-      <nav className="site-nav">
+      <nav className="site-nav" aria-label="Main navigation">
         <a className="site-brand" href="#top" aria-label="Spread home">
           <BrandMark size={36} />
           <span>Spread</span>
@@ -98,11 +98,15 @@ function UnlockScreen() {
           <p className="site-kicker">A weekly planner for real life</p>
           <h1>Give every part of your life some of your week.</h1>
           <p className="site-lede">You have a lot to keep up with, and all of it is competing for the same seven days. Spread helps you decide what deserves your time before the week gets away from you.</p>
-          <a href="#start" className="site-button">Start this week</a>
+          <div className="site-hero-actions">
+            <a href="#start" className="site-button">Start this week <ChevronRight size={17} aria-hidden="true" /></a>
+            <span>No account. Just your week.</span>
+          </div>
         </div>
 
         <div className="paper-to-product" aria-label="A paper weekly plan becoming Spread">
           <div className="paper-plan">
+            <span className="plan-caption">01 / The Sunday ritual</span>
             <p className="paper-note">Sunday night</p>
             <p className="paper-title">This week</p>
             <div className="paper-role"><span>Work</span><b>8 hrs</b></div>
@@ -111,17 +115,19 @@ function UnlockScreen() {
             <div className="paper-days"><span>M</span><span>Tu</span><span>W</span><span>Th</span><span>F</span><span>Sa</span><span>Su</span></div>
             <p className="paper-task">finish report · groceries · run</p>
           </div>
-          <div className="transform-mark" aria-hidden="true">→</div>
+          <div className="transform-mark" aria-hidden="true"><span>Same idea.</span>→<span>Less friction.</span></div>
           <div className="product-plan">
+            <span className="plan-caption">02 / A little more room to think</span>
             <div className="mini-brand"><BrandMark size={34} /><span>Spread</span></div>
             <div className="mini-crown">Sep 21 – Sep 27</div>
             <div className="mini-toggle"><b>Spread</b><span>Week</span></div>
             <div className="mini-role"><i className="dot-work" /><span>Work</span><b>8h</b></div>
             <div className="mini-role"><i className="dot-home" /><span>Home</span><b>4h</b></div>
             <div className="mini-role"><i className="dot-health" /><span>Health</span><b>3h</b></div>
+            <p className="mini-summary">15 hours. Three parts of your life.</p>
           </div>
         </div>
-        <p className="site-principle">Responsibilities first. Hours second. Tasks last.</p>
+        <p className="site-principle"><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p>
       </section>
 
       <section id="how" className="site-section">
@@ -210,7 +216,7 @@ function UnlockScreen() {
             <input value={code} onChange={(e) => { setCode(e.target.value); setError(""); }} placeholder="SPR-XXXX-XXXX" aria-label="License key" className="site-input" />
             <button type="submit">Unlock</button>
           </form>
-          {error && <p className="site-error">{error}</p>}
+          {error && <p className="site-error" role="alert">{error}</p>}
           <p className="site-demo-key">Friend test key: SPR-DEMO-2026</p>
         </div>
       </section>
