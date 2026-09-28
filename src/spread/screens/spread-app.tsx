@@ -19,6 +19,7 @@ import { WeeklyView } from "@/spread/components/weekly-view";
 import { WeekCrown } from "@/spread/components/week-crown";
 import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-browser-frame";
 import { PaperToProduct, WeekPreview } from "@/spread/components/landing-preview";
+import { SpreadStack } from "@/spread/components/landing-stack";
 
 type Sheet = "more" | "new" | "license" | null;
 
@@ -97,7 +98,7 @@ function UnlockScreen() {
       <section id="top" className="site-hero">
         <div className="site-hero-copy">
           <p className="site-kicker">A weekly planner for real life</p>
-          <h1>A little more room<br />for <em>what matters.</em></h1>
+          <h1><span className="site-line"><span>A little more room</span></span><span className="site-line"><span>for <em>what matters.</em></span></span></h1>
           <p className="site-lede">Work. Home. Yourself. Give every part of your life a place in your week—with a planner that starts with your time.</p>
           <div className="site-hero-actions">
             <a href="#start" className="site-button">Start this week <ChevronRight size={17} aria-hidden="true" /></a>
@@ -106,7 +107,7 @@ function UnlockScreen() {
           <p className="site-hero-note">No account. On your device. At your pace.</p>
         </div>
 
-        <PaperToProduct />
+        <SpreadStack />
         <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
       </section>
 
@@ -140,6 +141,7 @@ function UnlockScreen() {
           <h2>Before Spread was an app, it was a piece of paper.</h2>
           <p>Spread grew out of a season of life when there never seemed to be enough hours for everything that mattered. It’s the tool I wish I’d had back then.</p>
         </div>
+        <div className="site-story-object"><PaperToProduct /></div>
         <div className="site-story-detail"><blockquote>“On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility.”</blockquote><p className="site-story-attribution">The Sunday ritual that became Spread</p><details className="site-story-more">
           <summary>Read the full story</summary>
           <div>
