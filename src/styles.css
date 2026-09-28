@@ -1184,11 +1184,10 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 .site-hero-note { margin: 18px 0 0; color: var(--site-faint); font-size: var(--fs-caption); letter-spacing: .005em; }
 
 /* ---------- hero focal object: the brand mark, made real ---------- */
-.spread-stack-wrap { align-self: center; display: grid; justify-items: center; padding: 8px 0 0; }
+.spread-stack-wrap { position: relative; isolation: isolate; align-self: center; display: grid; justify-items: center; padding: 8px 0 0; }
 .spread-stack {
   --card-w: min(280px, 44vw);
   position: relative; width: calc(var(--card-w) * 2 + 16px + 12px); max-width: 100%; aspect-ratio: 1.3;
-  isolation: isolate;
 }
 .spread-stack::before { content: ""; position: absolute; z-index: -2; inset: -4% -8%; background: radial-gradient(closest-side, #e7dfcf, transparent 78%); pointer-events: none; }
 .stack-toggle { position: absolute; inset: 8%; z-index: 5; border: 0; border-radius: 40px; background: transparent; cursor: pointer; }
@@ -1233,21 +1232,39 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 .stack-task.is-empty { background: transparent; border: 1px dashed #333337; animation: none; }
 .stack-task.is-empty > span { border-color: #3a3a3e; }
 
-/* tasks in orbit around the stack, waiting for a place in the week */
-.orbit { position: absolute; inset: -3% -4%; z-index: 4; pointer-events: none; transition: opacity .45s ease, scale .6s var(--ease-out); }
-.spread-stack.is-spread .orbit { opacity: 0; scale: 1.06; }
-.orbit-task, .orbit-ghost {
-  position: absolute; display: inline-flex; align-items: center; gap: 8px;
-  height: 34px; padding: 0 14px 0 10px; border: 1px solid var(--site-line); border-radius: 999px;
+/* tasks in orbit around the stack, waiting for a place in the week. Positions come from script:
+   the far half of the orbit passes behind the cards, the near half in front and clear of them. */
+.orbit { position: absolute; inset: 0; pointer-events: none; }
+.orbit-task, .tray-slot {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 36px; max-width: 220px; padding: 0 15px 0 11px; border: 1px solid var(--site-line); border-radius: 999px;
   background: var(--site-sheet); color: var(--site-ink);
-  font-size: .8125rem; font-weight: 520; letter-spacing: -.01em; white-space: nowrap;
-  box-shadow: 0 1px 1px #17171708, 0 10px 22px -12px #17171740;
+  font: inherit; font-size: .8125rem; font-weight: 520; letter-spacing: -.01em; white-space: nowrap;
 }
-.orbit-task i, .orbit-ghost i { width: 8px; height: 8px; border-radius: 50%; background: var(--role); }
-.orbit-task { top: 0; left: 0; offset-path: ellipse(50% 50% at 50% 50%); offset-rotate: 0deg; offset-anchor: 50% 50%; offset-distance: calc(var(--orbit-index) * 25% + 6%); transition: opacity .4s ease, scale .4s ease; }
-.orbit-task.is-away { opacity: 0; scale: .85; }
-.orbit-ghost { z-index: 6; margin: 0; pointer-events: none; }
-.stack-hint { margin: 40px 0 0; color: var(--site-faint); font-size: .75rem; font-weight: 550; letter-spacing: .14em; text-transform: uppercase; }
+.orbit-task > span, .tray-slot > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.orbit-task i, .tray-slot i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--role); }
+.orbit-task {
+  position: absolute; top: 0; left: 0; z-index: 0;
+  opacity: 0; transform-origin: 50% 50%; will-change: transform;
+  box-shadow: 0 1px 1px #17171708, 0 10px 22px -12px #17171740;
+  pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.spread-stack-wrap.is-open .orbit-task:not(.is-placed) { pointer-events: auto; cursor: grab; }
+.orbit-task.is-dragging { cursor: grabbing; box-shadow: 0 2px 4px #1717171a, 0 22px 34px -14px #17171766; }
+.orbit-task.is-placed { pointer-events: none; }
+
+/* the tray: invisible slots that hold each task's place under the spread week */
+.stack-tray { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: min(100%, 600px); margin-top: 34px; min-height: 82px; align-content: flex-start; }
+.tray-slot { visibility: hidden; border-color: transparent; }
+
+/* drag feedback on the cards */
+.stack-card::after { content: ""; position: absolute; inset: -5px; border-radius: 27px; border: 2px solid var(--role); opacity: 0; scale: .98; transition: opacity .2s ease, scale .25s var(--ease-out); pointer-events: none; }
+.stack-card.is-target::after { opacity: 1; scale: 1; }
+.stack-card.is-near::after { opacity: .35; scale: 1; border-style: dashed; border-color: #8f8a80; }
+@keyframes card-nope { 20%, 60% { left: calc(50% - 5px); } 40%, 80% { left: calc(50% + 5px); } }
+
+.stack-hint { min-height: 1.4em; margin: 22px 0 0; color: var(--site-faint); font-size: .75rem; font-weight: 550; letter-spacing: .14em; text-transform: uppercase; text-align: center; }
+.stack-hint-guide { color: var(--site-muted); font-family: var(--site-serif); font-size: 1.0625rem; font-style: italic; font-weight: 400; letter-spacing: -.005em; text-transform: none; }
 .stack-hint-touch { display: none; }
 @media (hover: none) { .stack-hint-hover { display: none; } .stack-hint-touch { display: inline; } }
 
@@ -1474,7 +1491,6 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 @keyframes site-rise { from { opacity: 0; translate: 0 28px; } to { opacity: 1; translate: 0 0; } }
 @keyframes line-rise { from { transform: translateY(105%); } to { transform: none; } }
 @keyframes card-deal { from { opacity: 0; transform: translateY(40px) rotate(-6deg) scale(.96); } to { opacity: 1; transform: none; } }
-@keyframes orbit { from { offset-distance: calc(var(--orbit-index) * 25% + 6%); } to { offset-distance: calc(var(--orbit-index) * 25% + 106%); } }
 @keyframes task-land { from { opacity: 0; transform: translateY(-6px); background: #2a2f38; } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1486,9 +1502,8 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
   .site-hero-actions { animation-delay: .38s; }
   .site-hero-note { animation-delay: .46s; }
   .stack-card { animation: card-deal .9s var(--ease-spring) calc(.35s + var(--i) * .09s) both; }
-  .orbit { animation: hero-fade 1s ease 1.2s backwards; }
-  .orbit-task { animation: orbit 48s linear infinite; }
-  .spread-stack.is-spread .orbit-task { animation-play-state: paused; }
+  /* keep the deal animation in the list so it isn't replayed after the shake */
+  .stack-card.is-wrong { animation: card-deal .9s var(--ease-spring) calc(.35s + var(--i) * .09s) both, card-nope .45s ease; }
   .stack-hint, .site-principle { animation: hero-fade .8s ease 1.3s both; }
 
   /* the Sunday page writes itself when first seen, then the week appears in Spread */
@@ -1598,13 +1613,13 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
   .stack-bank em { height: 5px; }
   .stack-task { height: 28px; padding: 0 8px; gap: 7px; font-size: .6875rem; border-radius: 8px; }
   .stack-task > span { width: 10px; height: 10px; }
-  .orbit { inset: -4% 30%; }
   /* the fan reads larger on a phone; the spread grid returns to true size */
   .spread-stack:not(.is-spread) .stack-card:not(.is-receiving) { scale: 1.28; }
   .stack-card { transition-property: translate, rotate, box-shadow, z-index, scale; }
-  .orbit-task { height: 30px; max-width: 44vw; padding: 0 11px 0 9px; font-size: .75rem; overflow: hidden; text-overflow: ellipsis; }
-  .orbit-task:nth-child(n + 3) { display: none; }
-  .stack-hint { margin-top: 20px; font-size: .6875rem; }
+  .orbit-task, .tray-slot { height: 34px; max-width: 46vw; padding: 0 13px 0 10px; font-size: .78rem; }
+  .stack-tray { gap: 8px; margin-top: 24px; min-height: 78px; }
+  .stack-hint { margin-top: 16px; font-size: .6875rem; }
+  .stack-hint-guide { font-size: 1rem; }
   .paper-to-product { max-width: 420px; padding: 0 6px; }
   .paper-plan { grid-column: 1 / 12; grid-row: 1; padding: 22px 28px 120px 38px; rotate: calc(-4deg - var(--p) * 2deg); translate: calc(var(--p) * -8px) calc(var(--p) * 10px); }
   .paper-plan::after { left: 24px; }
@@ -1641,7 +1656,7 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 
 @media (prefers-reduced-motion: reduce) {
   html:has(.spread-site) { scroll-behavior: auto; }
-  .orbit { display: none; }
+  .stack-card.is-wrong { animation: none; }
   .spread-site *, .spread-site *::before, .spread-site *::after { animation: none !important; transition: none !important; }
   .paper-plan { rotate: -5deg !important; translate: none !important; opacity: 1 !important; }
   .product-plan { rotate: 2deg !important; translate: none !important; scale: 1 !important; }
