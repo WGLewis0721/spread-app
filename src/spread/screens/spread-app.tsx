@@ -257,16 +257,7 @@ function Gear({ className, cx, cy, r, teeth }: { className: string; cx: number; 
 }
 
 function BrandMark({ size = 26 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" className="shrink-0">
-      <rect width="32" height="32" rx="7.2" fill="var(--accent)" />
-      <g fill="#ffffff">
-        <rect x="13.2" y="6.4" width="11.4" height="8" rx="1.6" transform="rotate(18 18.9 10.4)" />
-        <rect x="10.8" y="9.8" width="11.4" height="8" rx="1.6" transform="rotate(6 16.5 13.8)" />
-        <rect x="7.6" y="14.2" width="12" height="8.4" rx="1.7" transform="rotate(-10 13.6 18.4)" />
-      </g>
-    </svg>
-  );
+  return <SpreadIcon name="app-icon-spread-cards.svg" size={size} />;
 }
 
 function WeekScreen() {
@@ -462,7 +453,7 @@ function WeekScreen() {
                 }}
               >
                 <span className={view === key ? "text-accent" : "text-secondary"}>
-                  <SpreadIcon name={icon} size={key === "week" ? 24 : 19} className="text-inherit" />
+                  <SpreadIcon name={icon} size={key === "week" ? 24 : 23} className="text-inherit" />
                 </span>
                 {brand !== "mark" && (
                   <span className={cn("brand-clip", brand === "folding" && "is-folding")} style={{ "--lockup-gap": "6px" } as CSSProperties}>
@@ -535,7 +526,7 @@ function WeekScreen() {
               className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
               onClick={() => setEditing(true)}
             >
-              <SpreadIcon name="icon-edit.svg" size={20} />
+              <SpreadIcon name="icon-edit.svg" size={24} />
               Edit
             </button>
           ))}
