@@ -149,14 +149,25 @@ function UnlockScreen() {
           <p className="gate-section-label">Looking back</p>
           <h2 className="mt-3 text-xl font-semibold tracking-tight">I was doing this on paper before I knew it had a name.</h2>
           <p className="mt-3 leading-relaxed text-pretty">
-            When I was at State, I had a lot going on at the same time. On Sundays I would sit down, look at everything I was responsible for, and give each one an hour or two somewhere in my week.
+            Spread grew out of a season of life when there never seemed to be enough hours for everything that mattered. It’s the tool I wish I’d had back then.
           </p>
-          <p className="mt-3 text-sm leading-relaxed text-secondary text-pretty">
-            I’d draw boxes, write what I wanted that time to be for, then list the specific things I needed to do. Years later, while researching this app, I realized that habit was pretty close to Covey’s weekly planning mixed with time boxing.
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-secondary text-pretty">
-            Spread is me turning that old paper system into the tool I wish I had back then.
-          </p>
+          <details className="gate-story-more">
+            <summary>Read the full story</summary>
+            <div className="gate-story-more-body">
+              <p>
+                While I was working toward my bachelor’s degree in computer science, I had a lot competing for my time. I was working, holding leadership positions in multiple organizations, founding an organization of my own, keeping up with school, and eventually supporting a family.
+              </p>
+              <p>
+                And I wasn’t alone. A lot of my peers were wearing just as many hats. We were always saying we had “a lot going on” or that we were “spread too thin.”
+              </p>
+              <p>
+                On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility during the week. I’d draw boxes for those blocks of time, write down what I wanted to accomplish, and list the specific tasks that would get me there.
+              </p>
+              <p>
+                Years later, while researching Spread, I realized that the system I had built for myself shared a lot with Stephen Covey’s approach to weekly planning and the idea of time boxing.
+              </p>
+            </div>
+          </details>
         </section>
 
         <section className="gate-privacy">
