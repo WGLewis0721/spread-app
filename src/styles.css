@@ -1941,3 +1941,12 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 [data-day] {
   scroll-margin-top: 14rem;
 }
+
+.spread-bubbles {
+  position: sticky;
+  top: var(--spread-header, 0px);
+  z-index: 15;
+  margin-inline: -1rem;
+  padding-inline: 1rem;
+  background: var(--canvas);
+}

@@ -5,7 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import { formatWeek, parseKey, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
+import { formatWeek, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
 import { ACCENTS, consumeArrival, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
@@ -16,7 +16,7 @@ import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
-import { WeeklyView } from "@/spread/components/weekly-view";
+import { WeeklyView, SpreadBubbleStrip } from "@/spread/components/weekly-view";
 import { MonthView } from "@/spread/components/month-view";
 import { WeekCrown } from "@/spread/components/week-crown";
 import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-browser-frame";
@@ -315,6 +315,18 @@ function WeekScreen() {
   const [monthDir, setMonthDir] = useState<-1 | 1 | 0>(0);
   const [monthShift, setMonthShift] = useState(0);
   const [focusDate, setFocusDate] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerH, setHeaderH] = useState(0);
+  useLayoutEffect(() => {
+    const node = headerRef.current;
+    if (!node) return;
+    const measure = () => setHeaderH(Math.ceil(node.getBoundingClientRect().height));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   const [viewPlay, setViewPlay] = useState(false);
   const [profilePlay, setProfilePlay] = useState(false);
   const [gears, setGears] = useState(false);
@@ -377,6 +389,7 @@ function WeekScreen() {
 
   function openMonth() {
     if (motion) return;
+    setPicked(null);
     setMonthCursor(dominantMonth(data.currentWeek));
     setMonthDir(0);
     setMonthShift(0);
@@ -492,6 +505,7 @@ function WeekScreen() {
     motionTimer.current = null;
     setPlane("week");
     setMotion(null);
+    setPicked(null);
     if (view === "spread") return;
     setViewPlay(true);
     setView("spread");
@@ -501,8 +515,8 @@ function WeekScreen() {
   return (
     <div className="min-h-dvh">
       {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
-      <div className="mx-auto w-full max-w-xl">
-        <header className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
+      <div className="mx-auto w-full max-w-xl" style={{ "--spread-header": `${headerH}px` } as CSSProperties}>
+        <header ref={headerRef} className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
           <div className="mb-3 flex items-center gap-3">
             <button type="button" className="brand" aria-label="Spread, home" onClick={goHome}>
               <BrandMark size={34} />
@@ -576,6 +590,7 @@ function WeekScreen() {
                     motionTimer.current = null;
                     setPlane("week");
                     setMotion(null);
+                    setPicked(null);
                   }
                   if (key === "week") setEditing(false);
                   setViewPlay(true);
@@ -603,13 +618,15 @@ function WeekScreen() {
             <div className="layer-stack">
               {showWeekLayer && (
                 <div className={motion === "to-month" ? "layer-out" : motion === "to-week" ? "layer-in" : undefined}>
-                  <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : followStyle(shift)}>
+                  <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : shift !== 0 ? followStyle(shift) : undefined}>
                     <div className={profilePlay ? "cascade-item" : undefined}>
                       <WeeklyView
                         onTurn={setGesture}
                         onCommit={goWeek}
                         focusDate={focusDate}
                         onFocused={() => setFocusDate(null)}
+                        selectedId={picked}
+                        onSelected={setPicked}
                       />
                     </div>
                   </div>
@@ -617,6 +634,14 @@ function WeekScreen() {
               )}
               {showMonthLayer && (
                 <div className={motion === "to-month" ? "layer-in" : motion === "to-week" ? "layer-out" : undefined}>
+                  <SpreadBubbleStrip
+                    hats={data.hats}
+                    hoursFor={(id) => {
+                      const week = data.weeks[data.currentWeek];
+                      const bank = week?.boxes.find((box) => box.hatId === id)?.hours ?? data.hats.find((hat) => hat.id === id)?.defaultHours ?? 0;
+                      return remainingHours(bank, week?.allocations ?? [], id);
+                    }}
+                  />
                   <div
                     key={`${monthCursor.year}-${monthCursor.month}`}
                     className={monthDir !== 0 ? "week-seq" : undefined}
@@ -668,6 +693,16 @@ function WeekScreen() {
 
       <div className="app-dock no-print pointer-events-none fixed inset-x-0 z-30 flex justify-center px-4 pb-safe">
         <div className={cn("glass pointer-events-auto flex items-center rounded-full p-1.5", view === "week" ? "" : "gap-1")}>
+          {view === "week" && !monthChrome && picked && (
+            <button
+              type="button"
+              className="h-11 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent"
+              onClick={() => setPicked(null)}
+            >
+              Done
+            </button>
+          )}
+          {view === "week" && !monthChrome && picked && <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />}
           {view === "week" && (
             <button
               type="button"

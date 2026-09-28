@@ -24,11 +24,15 @@ export function WeeklyView({
   onCommit,
   focusDate,
   onFocused,
+  selectedId = null,
+  onSelected,
 }: {
   onTurn?: (dx: number) => void;
   onCommit?: (direction: -1 | 1) => void;
   focusDate?: string | null;
   onFocused?: () => void;
+  selectedId?: string | null;
+  onSelected?: (id: string | null) => void;
 }) {
   const data = useSpread((s) => s.data);
   const moveSpreadToDay = useSpread((s) => s.moveSpreadToDay);
@@ -40,7 +44,8 @@ export function WeeklyView({
   const days = weekDays(data.currentWeek);
   const week = data.weeks[data.currentWeek];
   const allocations = week?.allocations ?? [];
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedLocal, setSelectedLocal] = useState<string | null>(null);
+  const selected = onSelected ? selectedId : selectedLocal;
   const [active, setActive] = useState<ActiveDrag | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const dragging = useRef(false);
@@ -118,7 +123,7 @@ export function WeeklyView({
     >
       <div className="enter" style={{ touchAction: "pan-y" }} {...swipe}>
         <p className="px-1 pt-4 text-xs text-secondary">Drag a spread onto a day, or tap one, then add it.</p>
-        <div className="mt-4 flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain px-1.5 pt-2 pb-2">
+        <div className="spread-bubbles mt-3 flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain py-2">
           {data.hats.map((hat) => {
             const bank = boxesByHat.get(hat.id)?.hours ?? hat.defaultHours;
             const hours = remainingHours(bank, allocations, hat.id);
@@ -130,7 +135,11 @@ export function WeeklyView({
                 color={hat.color}
                 hours={hours}
                 selected={selected === hat.id}
-                onSelect={() => setSelected((current) => (current === hat.id ? null : hat.id))}
+                onSelect={() => {
+                  const next = selected === hat.id ? null : hat.id;
+                  if (onSelected) onSelected(next);
+                  else setSelectedLocal(next);
+                }}
               />
             );
           })}
@@ -222,6 +231,27 @@ function SpreadChip({
       {name}
       <span className="text-secondary tabular-nums">{hours}h</span>
     </button>
+  );
+}
+
+export function SpreadBubbleStrip({
+  hats,
+  hoursFor,
+}: {
+  hats: { id: string; name: string; color: string }[];
+  hoursFor: (id: string) => number;
+}) {
+  if (hats.length === 0) return null;
+  return (
+    <div className="spread-bubbles no-print flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain py-2">
+      {hats.map((hat) => (
+        <span key={hat.id} className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-elevated px-3 text-sm font-semibold">
+          <span className="size-2.5 rounded-full" style={{ backgroundColor: hat.color }} />
+          {hat.name}
+          <span className="text-secondary tabular-nums">{hoursFor(hat.id)}h</span>
+        </span>
+      ))}
+    </div>
   );
 }
 
