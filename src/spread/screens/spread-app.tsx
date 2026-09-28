@@ -623,7 +623,7 @@ function Summary({ rows, onRollover }: { rows: Row[]; onRollover: () => void }) 
         <p className="mt-1 text-xs text-caution">If the hours don’t fit, something is lying.</p>
       )}
       <button type="button" className="mt-3 flex items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
-        <SpreadIcon name="icon-rollover.svg" size={20} />
+        <SpreadIcon name="icon-rollover.svg" size={26} />
         Rollover
       </button>
     </section>
