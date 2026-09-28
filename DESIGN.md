@@ -76,7 +76,7 @@ components:
 
 This is the design direction for Spread's public site, the one-page landing and entry screen in `src/spread/screens/spread-app.tsx` (`UnlockScreen`). Read it before changing anything on that page. It is written the same way as the DESIGN.md references that shaped it, so any design tool can pick it up as prompt context.
 
-The frozen reference for this direction is `golden/2026-09-28-stack-hero-landing` (hero), extended by the sections pass that followed it.
+The frozen reference for this direction is `golden/2026-09-28-full-landing-modes`: the whole page, both modes. The hero alone is also frozen as `golden/2026-09-28-stack-hero-landing`.
 
 ## Overview
 

@@ -76,3 +76,4 @@ Goldens are frozen `golden/*` branches. Never change one; branch from it instead
 | `golden/2026-09-27-icon-interaction-build` | the dock gears that turn on press |
 | `golden/2026-09-27-friends-test-final` | the friends-test build |
 | `golden/2026-09-28-stack-hero-landing` | the landing page with the stack hero, orbit and drag-onto-spread tray |
+| `golden/2026-09-28-full-landing-modes` | the full landing page: every section reworked, light/dark modes, DESIGN.md |
