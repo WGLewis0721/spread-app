@@ -11,7 +11,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" },
       { title: APP_NAME },
-      { name: "description", content: "The weekly role spread. Give each part of your life a box of hours." },
+      { name: "description", content: "Be Spread out, not Spread too thin" },
       { name: "theme-color", content: "#000000" },
     ],
     links: [
