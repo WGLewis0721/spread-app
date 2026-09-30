@@ -114,3 +114,41 @@ The design direction is in [DESIGN.md](DESIGN.md). The full page is frozen as `g
 - Planning must remain faster than recreating the original paper method.
 - Preserve local-first behavior and the frozen golden checkpoints.
 - Distribution work should reuse the product's real UI and real workflow rather than inventing a separate marketing product.
+
+---
+
+# Production + App Store commercialization gate — September 30, 2026
+
+Spread has the shortest direct path to a paid App Store release because its core value is local-first and does not require a large hosted AI/backend service. The current roadmap's Achievements 1–3 remain the release sequence; the checks below define what “done” means commercially.
+
+## P0 — release-candidate quality
+- [ ] Finish the Friends Test Round and convert every repeated/release-blocking failure into a regression test.
+- [ ] Verify backup/export/import and local persistence across browser/app restart, device storage pressure, app upgrade, and schema migration.
+- [ ] Add a versioned data-migration strategy so future releases cannot silently corrupt existing weeks/spreads/tasks.
+- [ ] Complete accessibility: Dynamic Type/text scaling where applicable, VoiceOver labels/order, contrast, Reduce Motion behavior, touch target sizes, keyboard/external-keyboard behavior on iPad, and non-color-only meaning.
+- [ ] Complete privacy/support/terms pages and an in-app support/contact surface. If 1.0 truly collects no personal/analytics data, keep that promise technically true and make App Store privacy answers match the shipped binary.
+- [ ] Add production crash/error telemetry only if it can be done consistently with the local-first privacy promise; otherwise define a user-controlled diagnostic export/support path.
+- [ ] Physical-device matrix: supported iPhones, at least one iPad if included at launch, light/dark mode, portrait/landscape policy, safe areas, keyboard, interruption/resume, low storage, offline use, and date/time-zone/week-boundary behavior.
+
+## P0 — iOS packaging and $0.99 commerce
+- [ ] Choose the production iOS shell/native packaging approach and make the installed build self-contained for the core planner.
+- [ ] Configure Apple Developer/App Store Connect, permanent bundle ID, signing, app icon, launch screen, capabilities, version/build numbering, and release CI/archive process.
+- [ ] Decide the launch business model. For the previously discussed **$0.99 complete app**, use App Store paid-app pricing rather than adding an unnecessary in-app currency/ledger.
+- [ ] If 1.0 later becomes free + premium digital features, use StoreKit IAP/subscriptions for those in-app digital unlocks and add Restore Purchases; do not bolt web checkout into the iOS app for the same digital unlock.
+- [ ] Complete App Store listing metadata: name/subtitle/description/keywords/category, age rating, privacy answers, support/privacy URLs, screenshots for required device classes, pricing/availability, and review notes.
+- [ ] TestFlight internal build → external friends beta → release candidate. Verify install/update behavior from TestFlight rather than only browser/Vercel behavior.
+- [ ] Submit to App Review and resolve completeness/privacy/UI issues before launch.
+
+## P1 — sync is not a 1.0 blocker unless promised in the listing
+- [ ] Keep 1.0 local-first if that is the marketed contract.
+- [ ] If iCloud/CloudKit is advertised at launch, move Achievement 6 ahead of submission and prove offline edits, conflict resolution, device replacement, and multi-device convergence before release.
+- [ ] Do not advertise iPhone/iPad/macOS/Watch availability until each shipped target has its own accepted device QA and store build.
+
+## Commercial operations
+- [ ] Configure Paid Apps Agreement, banking, tax, territories, and pricing in App Store Connect before release.
+- [ ] Define support/refund-response workflow, release rollback/hotfix procedure, and App Store review/release ownership.
+- [ ] Instrument privacy-preserving activation/crash/store-conversion metrics sufficient to learn whether installs become completed weekly plans.
+- [ ] Update the landing page App Store CTA only when the public listing is live.
+
+**Paid-production exit:** a customer can buy Spread from the App Store, install/update it, complete the full Responsibilities → Hours → Week → Tasks loop offline, keep data across normal upgrades/restarts, export/backup it, and get support without the product depending on the Vercel site to function.
+
