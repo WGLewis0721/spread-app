@@ -56,41 +56,44 @@ jobs:
           import subprocess
           import time
 
-          def run(args, timeout=60, check=True):
-              return subprocess.run(args, text=True, capture_output=True, check=check, timeout=timeout)
+          def run(args, timeout=90, check=True):
+              result = subprocess.run(args, text=True, capture_output=True, timeout=timeout)
+              if result.stdout:
+                  print(result.stdout.strip())
+              if result.stderr:
+                  print(result.stderr.strip())
+              if check and result.returncode != 0:
+                  raise subprocess.CalledProcessError(result.returncode, args, result.stdout, result.stderr)
+              return result
 
           runtimes = json.loads(run(["xcrun", "simctl", "list", "runtimes", "-j"]).stdout)["runtimes"]
           runtime = next(r["identifier"] for r in reversed(runtimes) if ".iOS-" in r["identifier"] and r.get("isAvailable", True))
           device_types = json.loads(run(["xcrun", "simctl", "list", "devicetypes", "-j"]).stdout)["devicetypes"]
-          device_type = next(d["identifier"] for d in device_types if d["name"].startswith("iPhone"))
-          udid = run(["xcrun", "simctl", "create", "Spread CI", device_type, runtime]).stdout.strip()
+          device = next(d for d in device_types if d["name"].startswith("iPhone"))
+          udid = run(["xcrun", "simctl", "create", "Spread CI", device["identifier"], runtime]).stdout.strip()
           app = "artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
           os.makedirs("artifacts", exist_ok=True)
           if not os.path.isdir(app):
               raise SystemExit(f"Missing simulator app at {app}")
 
-          try:
-              run(["xcrun", "simctl", "boot", udid], timeout=30)
-              deadline = time.time() + 120
-              while time.time() < deadline:
-                  devices = json.loads(run(["xcrun", "simctl", "list", "devices", "-j"], timeout=20).stdout)["devices"]
-                  state = next((d["state"] for rows in devices.values() for d in rows if d["udid"] == udid), None)
-                  if state == "Booted":
-                      break
-                  time.sleep(2)
-              else:
-                  raise TimeoutError("iPhone Simulator did not reach Booted state")
+          print("Runtime:", runtime)
+          print("Device:", device["name"])
+          print("UDID:", udid)
+          run(["xcrun", "simctl", "boot", udid], timeout=30)
+          run(["open", "-a", "Simulator", "--args", "-CurrentDeviceUDID", udid], timeout=30, check=False)
 
-              run(["xcrun", "simctl", "install", udid, app], timeout=60)
-              launched = run(["xcrun", "simctl", "launch", udid, "com.graymatter.spread"], timeout=60)
-              print(launched.stdout.strip())
-              time.sleep(3)
-              container = run(["xcrun", "simctl", "get_app_container", udid, "com.graymatter.spread", "app"], timeout=30)
-              print("Installed app:", container.stdout.strip())
-              run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios.png"], timeout=30)
-          finally:
-              run(["xcrun", "simctl", "shutdown", udid], timeout=30, check=False)
-              run(["xcrun", "simctl", "delete", udid], timeout=30, check=False)
+          # Hosted macOS runners can take a while to finish starting CoreSimulator.
+          # A fixed warm-up is more reliable here than repeatedly querying simctl
+          # while the service is still initializing.
+          time.sleep(75)
+
+          run(["xcrun", "simctl", "install", udid, app], timeout=120)
+          run(["xcrun", "simctl", "launch", udid, "com.graymatter.spread"], timeout=120)
+          time.sleep(5)
+          container = run(["xcrun", "simctl", "get_app_container", udid, "com.graymatter.spread", "app"], timeout=60)
+          if not container.stdout.strip():
+              raise SystemExit("Spread launched but no installed app container was returned")
+          run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios.png"], timeout=60)
           PY
       - name: Upload simulator smoke screenshot
         uses: actions/upload-artifact@v4
