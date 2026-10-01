@@ -1,4 +1,4 @@
-[Live site](https://spread-app-teal.vercel.app/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design direction](DESIGN.md)
+[Live site](https://spread-app-teal.vercel.app/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design direction](DESIGN.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md)
 
 # Spread
 
@@ -10,6 +10,7 @@ Spread is a local-first weekly planner. You name the responsibilities in your li
 
 - **Vercel** builds every push to `main` and serves production at [spread-app-teal.vercel.app](https://spread-app-teal.vercel.app/). Branches get preview deployments.
 - **GitHub Pages** builds `dist-pages` from `main` with `scripts/export-pages.mjs` and serves [wglewis0721.github.io/spread-app](https://wglewis0721.github.io/spread-app/). Do not edit the compiled files by hand.
+- **iPhone/App Store (planned):** package the same proven Vite/React planner with Capacitor. Spread 1.0 stays local-first, requires no account, and is sold as a complete paid App Store app. See [APP_STORE_RELEASE_PLAN.md](APP_STORE_RELEASE_PLAN.md).
 
 Work goes on a branch, through a pull request, into `main`.
 
@@ -53,6 +54,10 @@ A touch holds briefly before a drag. A mouse or pen starts after a short move. A
 - More can copy this week as text, save a Word document, or print a plain page you can keep as a PDF. Back Up Spread saves a `.spread` file. Restore Spread shows what is in the file and asks before it replaces the open profile.
 
 Trial key: `SPR-DEMO-2026`
+
+## iOS release direction
+
+The App Store work is a packaging/reliability pass, not a redesign. The selected 1.0 path is **Capacitor + the existing React app**, with device-local data and no required account or SaaS backend. iCloud/CloudKit remains a later sync milestone unless it is deliberately moved into the 1.0 promise.
 
 ## Checks
 
