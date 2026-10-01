@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          RUNTIME="$(xcrun simctl list runtimes available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(r["identifier"] for r in reversed(data["runtimes"]) if r["platform"] == "iOS" and r.get("isAvailable", True)))')"
+          RUNTIME="$(xcrun simctl list runtimes available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(r["identifier"] for r in reversed(data["runtimes"]) if ".iOS-" in r["identifier"] and r.get("isAvailable", True)))')"
           DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(d["identifier"] for d in data["devicetypes"] if d["name"].startswith("iPhone")))')"
           UDID="$(xcrun simctl create "Spread CI" "$DEVICE_TYPE" "$RUNTIME")"
           trap 'xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true; xcrun simctl delete "$UDID" >/dev/null 2>&1 || true' EXIT
