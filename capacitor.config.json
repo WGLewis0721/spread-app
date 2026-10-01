@@ -1,0 +1,8 @@
+{
+  "appId": "com.graymatter.spread",
+  "appName": "Spread",
+  "webDir": "dist-ios",
+  "ios": {
+    "scheme": "App"
+  }
+}

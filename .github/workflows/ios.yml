@@ -1,0 +1,126 @@
+name: iOS shell
+
+on:
+  pull_request:
+    paths:
+      - "capacitor.config.json"
+      - "ios/**"
+      - "scripts/export-ios.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ios.yml"
+  push:
+    branches: [main]
+    paths:
+      - "capacitor.config.json"
+      - "ios/**"
+      - "scripts/export-ios.mjs"
+      - "package.json"
+      - "package-lock.json"
+
+concurrency:
+  group: ios-shell-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios-shell:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run ios:sync
+      - name: Build iPhone simulator app
+        run: >
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath artifacts/DerivedData
+          CODE_SIGNING_ALLOWED=NO
+          build
+      - name: Install and launch Spread in iPhone Simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          import os
+          import subprocess
+          import time
+
+          def run(args, timeout=90, check=True):
+              result = subprocess.run(args, text=True, capture_output=True, timeout=timeout)
+              if result.stdout:
+                  print(result.stdout.strip())
+              if result.stderr:
+                  print(result.stderr.strip())
+              if check and result.returncode != 0:
+                  raise subprocess.CalledProcessError(result.returncode, args, result.stdout, result.stderr)
+              return result
+
+          runtimes = json.loads(run(["xcrun", "simctl", "list", "runtimes", "-j"]).stdout)["runtimes"]
+          runtime = next(r["identifier"] for r in reversed(runtimes) if ".iOS-" in r["identifier"] and r.get("isAvailable", True))
+          device_types = json.loads(run(["xcrun", "simctl", "list", "devicetypes", "-j"]).stdout)["devicetypes"]
+          device = next(d for d in device_types if d["name"].startswith("iPhone"))
+          udid = run(["xcrun", "simctl", "create", "Spread CI", device["identifier"], runtime]).stdout.strip()
+          app = "artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
+          os.makedirs("artifacts", exist_ok=True)
+          if not os.path.isdir(app):
+              raise SystemExit(f"Missing simulator app at {app}")
+
+          print("Runtime:", runtime)
+          print("Device:", device["name"])
+          print("UDID:", udid)
+          run(["xcrun", "simctl", "boot", udid], timeout=30)
+          run(["open", "-a", "Simulator", "--args", "-CurrentDeviceUDID", udid], timeout=30, check=False)
+
+          # Hosted macOS runners can take a while to finish starting CoreSimulator.
+          # A fixed warm-up is more reliable here than repeatedly querying simctl
+          # while the service is still initializing.
+          time.sleep(75)
+
+          run(["xcrun", "simctl", "install", udid, app], timeout=120)
+          container = run(["xcrun", "simctl", "get_app_container", udid, "com.graymatter.spread", "app"], timeout=60)
+          if not container.stdout.strip():
+              raise SystemExit("Spread installed but no app container was returned")
+          print("Installed app:", container.stdout.strip())
+
+          # On GitHub's hosted macOS image, simctl can deliver the launch request
+          # but keep the CLI call open. Send it asynchronously, then prove the
+          # resulting UI with a simulator screenshot instead of trusting the CLI
+          # process to exit promptly.
+          launch = subprocess.Popen(
+              ["xcrun", "simctl", "launch", udid, "com.graymatter.spread"],
+              stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE,
+              text=True,
+          )
+          time.sleep(15)
+          run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios.png"], timeout=60)
+          if launch.poll() is None:
+              launch.terminate()
+              try:
+                  launch.wait(timeout=5)
+              except subprocess.TimeoutExpired:
+                  launch.kill()
+          else:
+              out, err = launch.communicate(timeout=5)
+              if out:
+                  print(out.strip())
+              if err:
+                  print(err.strip())
+          PY
+      - name: Upload simulator smoke screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spread-ios-smoke
+          path: artifacts/spread-ios.png

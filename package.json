@@ -18,7 +18,10 @@
     "check:auth": "node scripts/check-auth-invariant.mjs",
     "test": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "export:ios": "node scripts/export-ios.mjs",
+    "ios:sync": "npm run export:ios && npx --yes @capacitor/cli@8.5.1 sync ios",
+    "ios:open": "npm run ios:sync && npx --yes @capacitor/cli@8.5.1 open ios"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -78,7 +81,9 @@
     "vaul": "^1.1.2",
     "vite": "^8.2.0",
     "zod": "^4.4.0",
-    "zustand": "^5.0.0"
+    "zustand": "^5.0.0",
+    "@capacitor/core": "8.5.1",
+    "@capacitor/ios": "8.5.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
