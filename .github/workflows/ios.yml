@@ -46,9 +46,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          UDID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(d["udid"] for rows in data["devices"].values() for d in rows if "iPhone" in d["name"]))')"
-          xcrun simctl boot "$UDID" >/dev/null 2>&1 || true
-          xcrun simctl bootstatus "$UDID" -b
+          RUNTIME="$(xcrun simctl list runtimes available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(r["identifier"] for r in reversed(data["runtimes"]) if r["platform"] == "iOS" and r.get("isAvailable", True)))')"
+          DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(d["identifier"] for d in data["devicetypes"] if d["name"].startswith("iPhone")))')"
+          UDID="$(xcrun simctl create "Spread CI" "$DEVICE_TYPE" "$RUNTIME")"
+          trap 'xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true; xcrun simctl delete "$UDID" >/dev/null 2>&1 || true' EXIT
+          xcrun simctl boot "$UDID"
+          python3 - "$UDID" <<'PY'
+          import subprocess, sys
+          subprocess.run(["xcrun", "simctl", "bootstatus", sys.argv[1], "-b"], check=True, timeout=180)
+          PY
           APP="artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
           test -d "$APP"
           xcrun simctl install "$UDID" "$APP"
