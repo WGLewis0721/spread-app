@@ -21,7 +21,7 @@ on:
 jobs:
   build-ios-shell:
     runs-on: macos-26
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,5 +39,26 @@ jobs:
           -configuration Debug
           -sdk iphonesimulator
           -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath artifacts/DerivedData
           CODE_SIGNING_ALLOWED=NO
           build
+      - name: Install and launch Spread in iPhone Simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          UDID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(d["udid"] for rows in data["devices"].values() for d in rows if "iPhone" in d["name"]))')"
+          xcrun simctl boot "$UDID" >/dev/null 2>&1 || true
+          xcrun simctl bootstatus "$UDID" -b
+          APP="artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
+          test -d "$APP"
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" com.graymatter.spread
+          sleep 3
+          xcrun simctl get_app_container "$UDID" com.graymatter.spread app
+          mkdir -p artifacts
+          xcrun simctl io "$UDID" screenshot artifacts/spread-ios.png
+      - name: Upload simulator smoke screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: spread-ios-smoke
+          path: artifacts/spread-ios.png
