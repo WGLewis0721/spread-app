@@ -1,0 +1,43 @@
+name: iOS shell
+
+on:
+  pull_request:
+    paths:
+      - "capacitor.config.json"
+      - "ios/**"
+      - "scripts/export-ios.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ios.yml"
+  push:
+    branches: [main]
+    paths:
+      - "capacitor.config.json"
+      - "ios/**"
+      - "scripts/export-ios.mjs"
+      - "package.json"
+      - "package-lock.json"
+
+jobs:
+  build-ios-shell:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run ios:sync
+      - name: Build iPhone simulator app
+        run: >
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build
