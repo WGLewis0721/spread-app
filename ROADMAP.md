@@ -1,5 +1,7 @@
 # Spread Roadmap
 
+The chosen iPhone/App Store implementation is documented in [APP_STORE_RELEASE_PLAN.md](APP_STORE_RELEASE_PLAN.md): Capacitor around the existing Vite/React planner, local-first 1.0, no required account/backend, and paid-app commerce.
+
 Spread's current release path is organized as concrete achievements. The frozen friends-test build is the rollback point; future work should not modify that golden branch.
 
 ## Achievement 0 — Friends-Test Golden ✅
@@ -21,7 +23,7 @@ Spread's current release path is organized as concrete achievements. The frozen 
 
 ## Achievement 2 — iPhone / TestFlight Build
 
-- [ ] Package the existing proven Spread experience as an iOS app without redesigning it.
+- [ ] Package the existing proven Spread experience with Capacitor as an iOS app without redesigning it.
 - [ ] Configure the permanent bundle ID, signing, app icon, safe areas, and launch experience.
 - [ ] Verify the real app on iPhone.
 - [ ] Upload the first signed build to App Store Connect.
@@ -131,7 +133,7 @@ Spread has the shortest direct path to a paid App Store release because its core
 - [ ] Physical-device matrix: supported iPhones, at least one iPad if included at launch, light/dark mode, portrait/landscape policy, safe areas, keyboard, interruption/resume, low storage, offline use, and date/time-zone/week-boundary behavior.
 
 ## P0 — iOS packaging and $0.99 commerce
-- [ ] Choose the production iOS shell/native packaging approach and make the installed build self-contained for the core planner.
+- [ ] Implement the chosen Capacitor iOS shell and make the installed build self-contained for the core planner.
 - [ ] Configure Apple Developer/App Store Connect, permanent bundle ID, signing, app icon, launch screen, capabilities, version/build numbering, and release CI/archive process.
 - [ ] Decide the launch business model. For the previously discussed **$0.99 complete app**, use App Store paid-app pricing rather than adding an unnecessary in-app currency/ledger.
 - [ ] If 1.0 later becomes free + premium digital features, use StoreKit IAP/subscriptions for those in-app digital unlocks and add Restore Purchases; do not bolt web checkout into the iOS app for the same digital unlock.
