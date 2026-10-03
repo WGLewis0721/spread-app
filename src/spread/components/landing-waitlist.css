@@ -1,4 +1,4 @@
-.site-waitlist { width: var(--wrap); margin: 0 auto; padding: 0 0 var(--section); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(36px, 6vw, 95px); align-items: center; }
+.site-waitlist { width: var(--wrap); margin: 0 auto; padding: 0 0 var(--section); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(36px, 6vw, 95px); align-items: center; scroll-margin-top: 96px; }
 .site-waitlist h2 { max-width: 660px; margin: 18px 0 24px; color: var(--site-ink); font-size: var(--fs-h2); font-weight: 560; line-height: 1.04; letter-spacing: -.045em; }
 .site-waitlist h2 em { color: var(--site-blue); font-family: var(--site-serif); font-weight: 400; }
 .site-waitlist-copy > p:not(.site-kicker) { max-width: 54ch; color: var(--site-muted); font-size: var(--fs-lede); line-height: 1.6; }
