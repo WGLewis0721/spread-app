@@ -79,7 +79,7 @@ Same-origin plus `https://wglewis0721.github.io` (the Pages mirror). Add others 
 
 ## Spreadsheet
 
-Rows go to the **first tab** of **Spread Beta Waitlist** (in the owner's Drive folder *Beta Waitlists*), or to the tab named by `WAITLIST_SHEET_TAB`. Row 1 is the header, columns A–J:
+Rows go to the **first tab** of **Spread Beta Waitlist** (in *Gray Matter LLC › 03 - Sales & Clients › Beta Waitlists*), or to the tab named by `WAITLIST_SHEET_TAB`. Row 1 is the header, columns A–J:
 
 ```
 submitted_at | email | name | company | role | team_size | use_case | source | consent_version | status
