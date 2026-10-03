@@ -25,6 +25,10 @@ The short version:
 - Below it: a week that builds itself step by step, a bento for the week preview, the paper-to-app story, a to-do list beside a spread, privacy facts, and a 168-hour week at the start card.
 - Light and dark: the switch in the nav is the planner's own appearance setting. In dark mode the page goes warm near-black and the product cards turn to the app's light look, so they always stand out.
 
+## Beta waitlist
+
+`POST /api/waitlist` stores beta signups in a Google Sheet. It is server-only and separate from the local-first planner. See [docs/WAITLIST_API.md](docs/WAITLIST_API.md).
+
 ## The planner
 
 ```
