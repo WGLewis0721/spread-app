@@ -1,30 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import "./landing-waitlist.css";
 
-const media = import.meta.env.BASE_URL + "waitlist/";
-
 export function LandingWaitlist() {
-  const video = useRef<HTMLVideoElement>(null);
-  const [motion, setMotion] = useState(false);
   const [state, setState] = useState<"idle" | "sending" | "success" | "error">("idle");
-
-  useEffect(() => {
-    const query = matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setMotion(!query.matches);
-    sync(); query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    const element = video.current;
-    if (!element || !motion) { element?.pause(); return; }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) void element.play().catch(() => setMotion(false));
-      else element.pause();
-    }, { threshold: .2 });
-    observer.observe(element);
-    return () => { observer.disconnect(); element.pause(); };
-  }, [motion]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,10 +48,6 @@ export function LandingWaitlist() {
         <label className="site-waitlist-consent"><input type="checkbox" name="consent" required disabled={state === "sending"}/> Email me about the Spread iPhone beta and my invitation. I can unsubscribe at any time.</label>
         <p className="site-waitlist-feedback" role="status" aria-live="polite">{state === "success" ? "You're on the list. We'll email your invitation when it's ready." : state === "error" ? "We couldn't add you yet. Please try again later." : "You can use Spread on the web now. Your planner stays on your device; this form only asks for your name and email."}</p>
       </form>
-    </div>
-    <div className="site-waitlist-visual">
-      <video ref={video} muted loop playsInline preload="none" poster={media + "spread-poster.webp"} aria-label="Colored roles move from a handwritten week into Spread"><source src={media + "spread-loop.mp4"} type="video/mp4"/></video>
-      <button type="button" aria-label={motion ? "Pause waitlist motion" : "Play waitlist motion"} aria-pressed={motion} onClick={() => setMotion(value => !value)}>{motion ? "Pause motion" : "Play motion"}</button>
     </div>
   </section>;
 }
