@@ -1,4 +1,4 @@
-.site-waitlist { width: var(--wrap); margin: 0 auto; padding: 0 0 var(--section); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(36px, 6vw, 95px); align-items: center; scroll-margin-top: 96px; }
+.site-waitlist { width: var(--wrap); margin: 0 auto; padding: 0 0 var(--section); display: block; max-width: 900px; scroll-margin-top: 96px; }
 .site-waitlist h2 { max-width: 660px; margin: 18px 0 24px; color: var(--site-ink); font-size: var(--fs-h2); font-weight: 560; line-height: 1.04; letter-spacing: -.045em; }
 .site-waitlist h2 em { color: var(--site-blue); font-family: var(--site-serif); font-weight: 400; }
 .site-waitlist-copy > p:not(.site-kicker) { max-width: 54ch; color: var(--site-muted); font-size: var(--fs-lede); line-height: 1.6; }
@@ -11,13 +11,8 @@
 .site-waitlist-consent { display: flex; align-items: flex-start; gap: 9px; margin-top: 16px; color: var(--site-muted); font-size: .82rem; line-height: 1.5; }
 .site-waitlist-consent input { flex: none; margin-top: 3px; accent-color: var(--site-blue); }
 .site-waitlist-feedback { min-height: 2.8em; margin: 12px 0 0; color: var(--site-muted); font-size: .82rem; line-height: 1.45; }
-.site-waitlist-visual { position: relative; overflow: hidden; border: 1px solid var(--site-line); border-radius: 24px; background: var(--site-sheet); box-shadow: 0 22px 50px -30px #17171766; }
-.site-waitlist-visual video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
-.site-waitlist-visual button { position: absolute; right: 12px; bottom: 12px; padding: 7px 12px; border: 1px solid #17171755; border-radius: 999px; background: #f6f1e7ee; color: #171717; font: inherit; font-size: .72rem; font-weight: 600; cursor: pointer; }
 .site-waitlist :is(input, button):focus-visible { outline: 3px solid var(--site-blue); outline-offset: 3px; }
-.spread-site[data-site-theme="dark"] .site-waitlist-visual { border-color: #ffffff22; box-shadow: 0 25px 60px -30px #0009; }
 .spread-site[data-site-theme="dark"] .site-waitlist-fields input { background: var(--site-sheet); color: var(--site-ink); }
-@media (max-width: 900px) { .site-waitlist { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .site-waitlist-fields { flex-direction: column; } .site-waitlist-fields button { min-height: 50px; justify-content: center; } }
 
 .site-waitlist-form > label:not([class]) { display: block; margin: 0 0 9px; font-weight: 600; }
