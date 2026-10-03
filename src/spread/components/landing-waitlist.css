@@ -19,3 +19,8 @@
 .spread-site[data-site-theme="dark"] .site-waitlist-fields input { background: var(--site-sheet); color: var(--site-ink); }
 @media (max-width: 900px) { .site-waitlist { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .site-waitlist-fields { flex-direction: column; } .site-waitlist-fields button { min-height: 50px; justify-content: center; } }
+
+.site-waitlist-form > label:not([class]) { display: block; margin: 0 0 9px; font-weight: 600; }
+.site-waitlist-form > label:not([class]):not(:first-child) { margin-top: 17px; }
+.site-waitlist-form .site-waitlist-name { display: block; width: 100%; box-sizing: border-box; border: 1px solid var(--site-line); border-radius: 12px; background: var(--site-sheet); color: var(--site-ink); padding: 13px 16px; font: inherit; }
+.site-waitlist-form .site-waitlist-trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
