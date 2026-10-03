@@ -6,7 +6,11 @@ import { waitlistHandlerFromEnv } from "@/lib/waitlist.server";
 // The GitHub Pages mirror is a different origin, so it is allowed explicitly.
 let handler: ReturnType<typeof waitlistHandlerFromEnv> | undefined;
 const handle = (request: Request) =>
-  (handler ??= waitlistHandlerFromEnv(process.env, ["https://wglewis0721.github.io"]))(request);
+  (handler ??= waitlistHandlerFromEnv(process.env, {
+    product: "Spread",
+    siteUrl: "https://spread-app-teal.vercel.app/",
+    allowedOrigins: ["https://wglewis0721.github.io"],
+  }))(request);
 
 export const Route = createFileRoute("/api/waitlist")({
   server: {
