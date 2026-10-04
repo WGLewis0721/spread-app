@@ -242,15 +242,20 @@ jobs:
               if proc.poll() is None:
                   proc.terminate()
 
-          def wait_for_snapshot(min_seq, timeout=90):
-              deadline = time.time() + timeout
-              latest = None
-              while time.time() < deadline:
-                  latest = newest_snapshot()
-                  if latest is not None and latest["seq"] >= min_seq:
-                      return latest
-                  time.sleep(3)
-              return latest
+          def wait_for_snapshot(min_seq, relaunch_once=False):
+              """A snapshot at least as new as min_seq, or None. Never returns an older one, so a
+              check can't pass on a file the app did not just write."""
+              for attempt in range(2 if relaunch_once else 1):
+                  deadline = time.time() + (45 if relaunch_once else 90)
+                  while time.time() < deadline:
+                      latest = newest_snapshot()
+                      if latest is not None and latest["seq"] >= min_seq:
+                          return latest
+                      time.sleep(3)
+                  if relaunch_once and attempt == 0:
+                      note(f"No snapshot at seq {min_seq} after 45s, launching once more")
+                      relaunch(wait=5)
+              return None
 
           first = wait_for_snapshot(1)
           if first is None:
@@ -262,10 +267,12 @@ jobs:
 
           # Terminate and relaunch: the same profile must come back, not a fresh one.
           relaunch(wait=5)
-          second = wait_for_snapshot(first["seq"] + 1)
-          if second is None or profile_ids(second) != first_ids:
-              fail(f"Profile changed across termination. before={first_ids} after={second and profile_ids(second)}")
-          note(f"PASS data survived app termination. snapshot seq {second['seq']}")
+          second = wait_for_snapshot(first["seq"] + 1, relaunch_once=True)
+          if second is None:
+              fail("The relaunched app did not write a newer snapshot, so termination survival is unproven.%0A" + diagnose())
+          if profile_ids(second) != first_ids:
+              fail(f"Profile changed across termination. before={first_ids} after={profile_ids(second)}")
+          note(f"PASS data survived app termination. The relaunched app wrote snapshot seq {second['seq']} (was {first['seq']}) for the same profile")
 
           # Simulate iOS discarding the WebView's storage, then relaunch: the snapshot
           # must put the planner back.
@@ -288,14 +295,16 @@ jobs:
           with open(path, "w") as handle:
               json.dump(doc, handle)
           relaunch(wait=5)
-          third = wait_for_snapshot(second["seq"] + 1)
-          if third is None or profile_ids(third) != first_ids:
-              fail(f"Planner was not restored after storage loss. before={first_ids} after={third and profile_ids(third)}. Wiped {wiped}. Files:%0A" + listing())
+          third = wait_for_snapshot(second["seq"] + 1, relaunch_once=True)
+          if third is None:
+              fail("The app did not write a newer snapshot after storage was wiped.%0A" + diagnose() + "%0AFiles:%0A" + listing())
+          if profile_ids(third) != first_ids:
+              fail(f"Planner was not restored after storage loss. before={first_ids} after={profile_ids(third)}. Wiped {wiped}. Files:%0A" + listing())
           names = [row["name"] for row in json.loads(third["entries"]["spread.profiles"])]
           if wiped and names != ["Restored"]:
               fail(f"The renamed snapshot was not applied (names {names}), so the restore path did not run or the wipe did not clear storage")
           if wiped:
-              note("PASS planner restored from the snapshot after WebView storage was wiped (marker name came back)")
+              note(f"PASS planner restored from the snapshot after WebView storage was wiped (marker name came back in snapshot seq {third['seq']})")
           else:
               note("No LocalStorage folder was found to wipe, so the restore path was not exercised. Files:%0A" + listing())
           run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios-restored.png"], timeout=60)
