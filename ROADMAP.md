@@ -3,7 +3,8 @@
 The chosen iPhone/App Store implementation is documented in [APP_STORE_RELEASE_PLAN.md](APP_STORE_RELEASE_PLAN.md): Capacitor around the existing Vite/React planner, local-first 1.0, no required account/backend, and paid-app commerce.
 
 Spread's current release path is organized as concrete achievements. The frozen friends-test build is the rollback point; future work should not modify that golden branch.
-The current web planner on `main` is the shipped golden baseline. The iOS
+The current web planner on `main` is the shipped functional baseline.
+Frozen `golden/*` branches remain the immutable rollback checkpoints. The iOS
 shell is work in progress; an installed/TestFlight/App Store build is not yet
 accepted. This roadmap owns milestone order and status; the App Store release
 plan owns the detailed acceptance checklist.
@@ -63,7 +64,7 @@ Make orchestration
   ↓
 Social scheduler / platform publishing
   ↓
-Apple-ready stills + preview assets
+Apple-ready screenshots + still assets
 ```
 
 - [ ] Accept a simple content idea as the input.

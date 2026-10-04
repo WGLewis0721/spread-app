@@ -3,7 +3,8 @@
 **Decision date:** October 1, 2026
 
 This document is the canonical iPhone/App Store delivery plan for Spread 1.0.
-The current web planner on `main` is the golden functional baseline. The
+The current web planner on `main` is the shipped functional baseline;
+frozen `golden/*` branches are immutable rollback checkpoints. The
 Capacitor iOS shell is under development; physical-device, TestFlight, and
 store acceptance remain open. [ROADMAP.md](ROADMAP.md) owns milestone status.
 
@@ -91,6 +92,8 @@ If Spread later becomes free + premium digital features, evaluate StoreKit IAP/s
 - [ ] Add Capacitor to the current Vite/React project.
 - [ ] Create the iOS project from the existing production UI.
 - [ ] Configure permanent bundle ID, display name, version/build numbers, signing, app icon, launch screen, orientations, and safe areas.
+- [ ] Define the repeatable release CI/archive process and verify signing,
+      version/build numbering, and artifact ownership.
 - [ ] Make the core app assets/self-contained experience work without a development server.
 - [ ] Use native plugins only where the web implementation cannot provide a production-quality iOS experience.
 
@@ -120,6 +123,9 @@ If Spread later becomes free + premium digital features, evaluate StoreKit IAP/s
 - [ ] Privacy answers that match the binary.
 - [ ] Support, privacy, and terms URLs.
 - [ ] Screenshots for required device classes.
+- [ ] Advertise only the device families with accepted physical-device QA
+      and an approved store build; do not imply iPad/macOS/Watch availability
+      from the web layout alone.
 - [ ] Pricing, territories, and availability.
 - [ ] Paid Apps Agreement, banking, and tax setup.
 - [ ] App Review notes describing the local-first/no-account behavior.
