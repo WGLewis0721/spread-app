@@ -207,20 +207,25 @@ jobs:
                       continue
               return ""
 
-          def newest_snapshot():
+          def newest_snapshot_with_path():
               best = None
               for base, _dirs, files in os.walk(data_container() or "/nonexistent"):
                   for name in files:
                       if not (name.startswith("spread-mirror-") and name.endswith(".json")):
                           continue
+                      path = os.path.join(base, name)
                       try:
-                          with open(os.path.join(base, name)) as handle:
+                          with open(path) as handle:
                               doc = json.load(handle)
                       except (OSError, ValueError):
                           continue
-                      if doc.get("kind") == "spread-mirror" and (best is None or doc["seq"] > best["seq"]):
-                          best = doc
+                      if doc.get("kind") == "spread-mirror" and (best is None or doc["seq"] > best[0]["seq"]):
+                          best = (doc, path)
               return best
+
+          def newest_snapshot():
+              found = newest_snapshot_with_path()
+              return found[0] if found else None
 
           def profile_ids(doc):
               return [row["id"] for row in json.loads(doc["entries"]["spread.profiles"])]
@@ -274,12 +279,23 @@ jobs:
                       shutil.rmtree(target, ignore_errors=True)
                       wiped.append(target)
           note(f"Wiped WebView storage folders: {len(wiped)}")
+          # Rename the profile inside the snapshot. The name can only reappear in the planner if the
+          # app really restored it from the snapshot, since the WebView's own copy says "Me".
+          doc, path = newest_snapshot_with_path()
+          roster = json.loads(doc["entries"]["spread.profiles"])
+          roster[0]["name"] = "Restored"
+          doc["entries"]["spread.profiles"] = json.dumps(roster)
+          with open(path, "w") as handle:
+              json.dump(doc, handle)
           relaunch(wait=5)
           third = wait_for_snapshot(second["seq"] + 1)
           if third is None or profile_ids(third) != first_ids:
               fail(f"Planner was not restored after storage loss. before={first_ids} after={third and profile_ids(third)}. Wiped {wiped}. Files:%0A" + listing())
+          names = [row["name"] for row in json.loads(third["entries"]["spread.profiles"])]
+          if wiped and names != ["Restored"]:
+              fail(f"The renamed snapshot was not applied (names {names}), so the restore path did not run or the wipe did not clear storage")
           if wiped:
-              note("PASS planner restored from the snapshot after WebView storage was wiped")
+              note("PASS planner restored from the snapshot after WebView storage was wiped (marker name came back)")
           else:
               note("No LocalStorage folder was found to wipe, so the restore path was not exercised. Files:%0A" + listing())
           run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios-restored.png"], timeout=60)
