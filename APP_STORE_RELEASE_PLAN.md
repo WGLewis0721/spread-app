@@ -3,6 +3,9 @@
 **Decision date:** October 1, 2026
 
 This document is the canonical iPhone/App Store delivery plan for Spread 1.0.
+The current web planner on `main` is the golden functional baseline. The
+Capacitor iOS shell is under development; physical-device, TestFlight, and
+store acceptance remain open. [ROADMAP.md](ROADMAP.md) owns milestone status.
 
 ## Chosen architecture
 
@@ -71,10 +74,17 @@ If Spread later becomes free + premium digital features, evaluate StoreKit IAP/s
 - [ ] Complete the Friends Test Round.
 - [ ] Turn repeated/release-blocking failures into regression tests.
 - [ ] Verify backup/export/import and local persistence.
-- [ ] Add/verify versioned data migrations.
-- [ ] Complete accessibility and reduced-motion checks.
-- [ ] Finish privacy, support, and terms pages.
+- [ ] Prove storage survives browser/app restart, device storage pressure,
+      upgrade, and older-data migration; add/verify versioned data migrations.
+- [ ] Complete Dynamic Type/text scaling where applicable, VoiceOver
+      labels/order, contrast, Reduce Motion, touch targets, external keyboard,
+      and non-color-only meaning.
+- [ ] Finish privacy, support, and terms pages plus in-app support/contact.
+      Match App Store privacy answers to the shipped binary.
 - [ ] Define the user-controlled diagnostic/support path if no crash SDK is added.
+- [ ] Define support, refund response, release rollback/hotfix, and App Review
+      ownership. Use privacy-preserving activation/crash/conversion measurement
+      only if it fits the stated local-first data policy.
 
 ### 1. Add the Capacitor iOS shell
 
@@ -96,7 +106,9 @@ If Spread later becomes free + premium digital features, evaluate StoreKit IAP/s
 ### 3. Physical iPhone and TestFlight QA
 
 - [ ] Build and run on a physical iPhone.
-- [ ] Verify safe areas and all supported orientation decisions.
+- [ ] Verify supported iPhones and an iPad if included at launch; safe areas,
+      orientation, light/dark modes, keyboard, interruption/resume, low storage,
+      offline use, and date/time-zone/week-boundary behavior.
 - [ ] Internal TestFlight build.
 - [ ] External friends beta.
 - [ ] Verify install, upgrade, relaunch, low storage, offline use, backup/restore, and data migration from an older build.

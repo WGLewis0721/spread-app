@@ -20,10 +20,7 @@ These apply to any agent or tool working in this repository, alongside `AGENTS.m
 
 ## Checks before a pull request
 
-```
-npm run typecheck
-node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts
-npm run build
-```
+Run the typecheck, focused tests, and build commands in
+[`README.md` → Checks](README.md#checks).
 
 Then look at the page yourself at 1440, 820 and 390 wide, in light and dark, and with reduced motion on. For the hero, confirm that no orbiting task ever draws over a card, and that tap → tray → drag works on a phone-sized touch screen.
