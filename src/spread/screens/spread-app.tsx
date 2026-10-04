@@ -22,6 +22,7 @@ import { WeekCrown } from "@/spread/components/week-crown";
 import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-browser-frame";
 import { PaperToProduct } from "@/spread/components/landing-preview";
 import { SpreadStack } from "@/spread/components/landing-stack";
+import { LandingWaitlist } from "@/spread/components/landing-waitlist";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 
 type Sheet = "more" | "new" | "license" | null;
@@ -241,6 +242,7 @@ function UnlockScreen() {
         </div>
       </section>
 
+      <LandingWaitlist />
       <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><span>Made by Gray Matter</span></footer>
     </main>
   );
