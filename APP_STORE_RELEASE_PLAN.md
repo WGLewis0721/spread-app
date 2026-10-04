@@ -3,6 +3,10 @@
 **Decision date:** October 1, 2026
 
 This document is the canonical iPhone/App Store delivery plan for Spread 1.0.
+The current web planner on `main` is the shipped functional baseline;
+frozen `golden/*` branches are immutable rollback checkpoints. The
+Capacitor iOS shell is under development; physical-device, TestFlight, and
+store acceptance remain open. [ROADMAP.md](ROADMAP.md) owns milestone status.
 
 ## Chosen architecture
 
@@ -71,16 +75,25 @@ If Spread later becomes free + premium digital features, evaluate StoreKit IAP/s
 - [ ] Complete the Friends Test Round.
 - [ ] Turn repeated/release-blocking failures into regression tests.
 - [ ] Verify backup/export/import and local persistence.
-- [ ] Add/verify versioned data migrations.
-- [ ] Complete accessibility and reduced-motion checks.
-- [ ] Finish privacy, support, and terms pages.
+- [ ] Prove storage survives browser/app restart, device storage pressure,
+      upgrade, and older-data migration; add/verify versioned data migrations.
+- [ ] Complete Dynamic Type/text scaling where applicable, VoiceOver
+      labels/order, contrast, Reduce Motion, touch targets, external keyboard,
+      and non-color-only meaning.
+- [ ] Finish privacy, support, and terms pages plus in-app support/contact.
+      Match App Store privacy answers to the shipped binary.
 - [ ] Define the user-controlled diagnostic/support path if no crash SDK is added.
+- [ ] Define support, refund response, release rollback/hotfix, and App Review
+      ownership. Use privacy-preserving activation/crash/conversion measurement
+      only if it fits the stated local-first data policy.
 
 ### 1. Add the Capacitor iOS shell
 
 - [ ] Add Capacitor to the current Vite/React project.
 - [ ] Create the iOS project from the existing production UI.
 - [ ] Configure permanent bundle ID, display name, version/build numbers, signing, app icon, launch screen, orientations, and safe areas.
+- [ ] Define the repeatable release CI/archive process and verify signing,
+      version/build numbering, and artifact ownership.
 - [ ] Make the core app assets/self-contained experience work without a development server.
 - [ ] Use native plugins only where the web implementation cannot provide a production-quality iOS experience.
 
@@ -96,7 +109,9 @@ If Spread later becomes free + premium digital features, evaluate StoreKit IAP/s
 ### 3. Physical iPhone and TestFlight QA
 
 - [ ] Build and run on a physical iPhone.
-- [ ] Verify safe areas and all supported orientation decisions.
+- [ ] Verify supported iPhones and an iPad if included at launch; safe areas,
+      orientation, light/dark modes, keyboard, interruption/resume, low storage,
+      offline use, and date/time-zone/week-boundary behavior.
 - [ ] Internal TestFlight build.
 - [ ] External friends beta.
 - [ ] Verify install, upgrade, relaunch, low storage, offline use, backup/restore, and data migration from an older build.
@@ -108,6 +123,9 @@ If Spread later becomes free + premium digital features, evaluate StoreKit IAP/s
 - [ ] Privacy answers that match the binary.
 - [ ] Support, privacy, and terms URLs.
 - [ ] Screenshots for required device classes.
+- [ ] Advertise only the device families with accepted physical-device QA
+      and an approved store build; do not imply iPad/macOS/Watch availability
+      from the web layout alone.
 - [ ] Pricing, territories, and availability.
 - [ ] Paid Apps Agreement, banking, and tax setup.
 - [ ] App Review notes describing the local-first/no-account behavior.
