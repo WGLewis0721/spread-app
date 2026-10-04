@@ -15,8 +15,9 @@
     "preview:restart": "node scripts/preview.mjs restart",
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
+    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/waitlist.test.ts && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
+    "test": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/waitlist.test.ts && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "export:ios": "node scripts/export-ios.mjs",
@@ -24,6 +25,11 @@
     "ios:open": "npm run ios:sync && npx --yes @capacitor/cli@8.5.1 open ios"
   },
   "dependencies": {
+    "@capacitor/core": "8.5.1",
+    "@capacitor/filesystem": "8.1.4",
+    "@capacitor/ios": "8.5.1",
+    "@capacitor/share": "8.0.3",
+    "@capacitor/status-bar": "8.0.4",
     "@dnd-kit/core": "^6.3.1",
     "@electric-sql/pglite": "^0.5.4",
     "@hookform/resolvers": "^5.7.0",
@@ -81,9 +87,7 @@
     "vaul": "^1.1.2",
     "vite": "^8.2.0",
     "zod": "^4.4.0",
-    "zustand": "^5.0.0",
-    "@capacitor/core": "8.5.1",
-    "@capacitor/ios": "8.5.1"
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",

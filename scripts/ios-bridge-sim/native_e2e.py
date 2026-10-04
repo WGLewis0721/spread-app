@@ -1,0 +1,127 @@
+import json, sys
+from playwright.sync_api import sync_playwright
+
+fs = {}
+import os
+INIT = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'native-init.js')).read()
+SHOTS = sys.argv[1]
+results = []
+
+def check(name, ok, detail=''):
+    results.append((name, ok))
+    print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail else ''))
+
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    ctx = b.new_context(viewport={'width': 393, 'height': 852}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    ctx.expose_function('__fsRead', lambda path: fs.get(path))
+    ctx.expose_function('__fsWrite', lambda path, data, enc: fs.__setitem__(path, data))
+    ctx.add_init_script(INIT)
+    page = ctx.new_page()
+    errors = []
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    # Block every non-local request: the installed app must work with no network at all.
+    external = []
+    def gate(route):
+        url = route.request.url
+        if url.startswith('http://127.0.0.1:8097/') or url.startswith('data:') or url.startswith('blob:'):
+            route.continue_()
+        else:
+            external.append(url); route.abort()
+    page.route('**/*', gate)
+
+    page.goto('http://127.0.0.1:8097/'); page.wait_for_timeout(2000)
+    store_key = lambda: 'spread.v1.' + page.evaluate("localStorage.getItem('spread.profile')")
+    check('opens straight into the planner (no marketing or license gate)', page.evaluate("document.documentElement.getAttribute('data-spread')") == 'in' and page.get_by_placeholder('What matters most here?').count() > 0)
+    check('no license is written to storage', page.evaluate("localStorage.getItem('spread.license')") is None)
+    check('status bar style is synced on boot', page.evaluate("(window.__status||[]).length") >= 1, str(page.evaluate("window.__status")))
+
+    # Add a task through the UI.
+    page.get_by_placeholder('What matters most here?').first.click()
+    page.keyboard.type('Sunday review')
+    page.keyboard.press('Enter')
+    page.wait_for_timeout(600)
+    saved = page.evaluate("(k)=>localStorage.getItem(k)", store_key())
+    check('a task is written to local storage', saved is not None and 'Sunday review' in saved)
+    page.wait_for_timeout(1500)
+    mirrored = [json.loads(v) for k, v in fs.items() if k.startswith('spread-mirror-')]
+    newest = max(mirrored, key=lambda d: d['seq'])
+    check('the snapshot file follows the change', 'Sunday review' in newest['entries'].get(store_key(), ''), f"seq {newest['seq']}")
+
+    # More sheet content on the phone.
+    page.get_by_label('Settings').click(); page.wait_for_timeout(500)
+    page.screenshot(path=f'{SHOTS}/e2e-more.png')
+    body = page.inner_text('body')
+    check('More: no Log out, License key or Print', all(t not in body for t in ('Log out', 'License key', 'Print / Save PDF')))
+    check('More: backup, restore and Word export are present', all(t in body for t in ('Back Up Spread', 'Restore Spread', 'Word document')))
+    check('More: restore picker accepts any file type on iOS', page.evaluate("document.querySelector('input[type=file]').getAttribute('accept')") is None)
+
+    # Backup goes through the share sheet.
+    page.get_by_text('Back Up Spread').click(); page.wait_for_timeout(800)
+    shared = page.evaluate("window.__shared || []")
+    files = [k for k in fs if k.startswith('export/')]
+    check('Backup opens the share sheet with a .spread file', len(shared) == 1 and shared[0]['files'][0].endswith('.spread') and len(files) == 1, str(files))
+    if files:
+        import base64
+        doc = json.loads(base64.b64decode(fs[files[0]]))
+        check('the exported file is a restorable Spread backup containing the task', doc['kind'] == 'spread-backup' and 'Sunday review' in json.dumps(doc['data']))
+        backup_text = base64.b64decode(fs[files[0]]).decode()
+    check('Backup success toast is shown and the sheet closed', page.get_by_text('Backup exported.').count() > 0)
+
+    # Cancelling the share sheet is quiet and keeps the sheet open.
+    page.get_by_label('Settings').click(); page.wait_for_timeout(500)
+    page.evaluate("window.__shareCancel = true")
+    page.get_by_text('Back Up Spread').click(); page.wait_for_timeout(800)
+    check('Cancelling the share sheet shows no success toast', page.get_by_text('Backup exported.').count() <= 1 and page.get_by_text('Restore Spread').count() > 0)
+    page.evaluate("window.__shareCancel = false")
+    page.keyboard.press('Escape'); page.wait_for_timeout(300)
+
+    # Termination: a reload keeps the data (same WebView storage).
+    profile_before = page.evaluate("localStorage.getItem('spread.profile')")
+    page.reload(); page.wait_for_timeout(2000)
+    check('data survives relaunch', page.get_by_text('Sunday review').count() > 0 and page.evaluate("localStorage.getItem('spread.profile')") == profile_before)
+
+    # iOS discards WebView storage: the snapshot restores it.
+    page.evaluate("localStorage.clear()")
+    page.reload(); page.wait_for_timeout(2500)
+    check('planner is restored from the snapshot after storage loss', page.get_by_text('Sunday review').count() > 0 and page.evaluate("localStorage.getItem('spread.profile')") == profile_before)
+    page.screenshot(path=f'{SHOTS}/e2e-restored.png')
+
+    # Unreadable saved data is set aside, not silently erased.
+    key = store_key()
+    page.evaluate("(k)=>{localStorage.setItem(k,'{not json')}", key)
+    page.reload(); page.wait_for_timeout(2000)
+    rec = page.evaluate("(k)=>localStorage.getItem('spread.recovery.'+k)", key)
+    check('unreadable data is kept under a recovery key', rec == '{not json', str(rec))
+    check('the planner still opens after unreadable data', page.get_by_placeholder('What matters most here?').count() > 0)
+
+    # Restore a backup through the picker.
+    page.get_by_label('Settings').click(); page.wait_for_timeout(500)
+    page.set_input_files('input[type=file]', files=[{'name': 'Spread-restore.spread', 'mimeType': 'application/octet-stream', 'buffer': backup_text.encode()}])
+    page.wait_for_timeout(500)
+    check('Restore shows the confirmation for a .spread file', page.get_by_text('Restore this backup?').count() > 0)
+    page.get_by_role('button', name='Restore', exact=True).click(); page.wait_for_timeout(800)
+    check('Restore brings the task back', 'Sunday review' in (page.evaluate("(k)=>localStorage.getItem(k)", store_key()) or ''))
+
+    # A full device: writes fail, the planner stays usable and says so once.
+    page.evaluate("""() => {
+      const real = Storage.prototype.setItem;
+      window.__realSet = real;
+      Storage.prototype.setItem = function(k, v) { if (k.startsWith('spread.v1')) { throw new DOMException('full', 'QuotaExceededError'); } return real.call(this, k, v); };
+    }""")
+    page.keyboard.press('Escape'); page.wait_for_timeout(300)
+    page.get_by_placeholder('Add a task').first.click()
+    page.keyboard.type('While full')
+    page.keyboard.press('Enter'); page.wait_for_timeout(800)
+    check('a full store does not break the screen', page.get_by_text('While full').count() > 0 and not errors, str(errors))
+    check('a full store is announced', page.get_by_text('out of storage').count() > 0)
+    page.screenshot(path=f'{SHOTS}/e2e-full.png')
+    page.evaluate("() => { Storage.prototype.setItem = window.__realSet; }")
+
+    check('no request left the app', not external, str(external))
+    check('no page errors', not errors, str(errors))
+    b.close()
+
+bad = [n for n, ok in results if not ok]
+print(f"\n{len(results)-len(bad)}/{len(results)} passed")
+sys.exit(1 if bad else 0)

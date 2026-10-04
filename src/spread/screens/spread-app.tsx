@@ -7,11 +7,13 @@ import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
-import { ACCENTS, consumeArrival, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
+import { ACCENTS, consumeArrival, onSaveFailure, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
 import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
-import { saveFile } from "@/lib/spread/save-file";
+import { saveFile, type SaveResult } from "@/lib/spread/save-file";
+import { isNativeApp } from "@/lib/spread/native";
+import { prepareNativeStorage } from "@/lib/spread/native-mirror";
 import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
@@ -46,13 +48,40 @@ export function SpreadApp() {
   useBrowserFrame();
 
   useClientLayout(() => {
-    boot();
+    if (!isNativeApp()) {
+      boot();
+      return;
+    }
+    // The installed app restores its storage snapshot (if the system cleared web storage)
+    // before the first read. It never waits long and never throws.
+    let live = true;
+    void prepareNativeStorage().then(() => {
+      if (live) boot();
+    });
+    return () => {
+      live = false;
+    };
   }, [boot]);
+
+  useEffect(
+    () =>
+      onSaveFailure((failure) => {
+        toast.error(
+          failure === "full"
+            ? "Spread couldn’t save. This device is out of storage. Free some space, then back up from More."
+            : "Spread couldn’t save to this device. Back up from More before closing.",
+          { id: "save-failure", duration: 12000 },
+        );
+      }),
+    [],
+  );
 
   return (
     <>
       <Toaster
         position="top-center"
+        // Under the status bar and Dynamic Island on the phone; the web keeps the default.
+        offset={hydrated && isNativeApp() ? "calc(env(safe-area-inset-top, 0px) + 12px)" : undefined}
         theme={!hydrated || theme === "system" ? "system" : theme}
         toastOptions={{
           style: {
@@ -1488,7 +1517,18 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const [backup, setBackup] = useState<SpreadBackup | null>(null);
   const week = buildWeekDocument(data);
 
-  const actions: { label: string; icon?: "icon-share.svg" | "icon-export.svg" | "icon-print.svg" | "icon-backup.svg" | "icon-restore.svg"; run: () => void }[] = [
+  const native = isNativeApp();
+  // A file leaves the app through the share sheet on the phone and through a download on the web.
+  const finished = (result: SaveResult, done: string) => {
+    if (result === "saved") {
+      toast(done);
+      setSheet(null);
+    } else if (result === "failed") {
+      toast("Couldn’t export the file. Try again.");
+    }
+  };
+
+  const allActions: { label: string; icon?: "icon-share.svg" | "icon-export.svg" | "icon-print.svg" | "icon-backup.svg" | "icon-restore.svg"; run: () => void }[] = [
     {
       label: "Copy last week",
       run: () => {
@@ -1515,11 +1555,8 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
         const name = data.currentWeek;
         void import("@/lib/spread/week-docx")
           .then(({ weekDocxBlob }) => weekDocxBlob(snapshot))
-          .then((blob) => {
-            saveFile(blob, `Spread-${name}.docx`);
-            toast("Word document saved.");
-            setSheet(null);
-          })
+          .then((blob) => saveFile(blob, `Spread-${name}.docx`))
+          .then((result) => finished(result, native ? "Word document exported." : "Word document saved."))
           .catch(() => toast("Couldn’t make the Word document."));
       },
     },
@@ -1535,14 +1572,14 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       label: "Back Up Spread",
       icon: "icon-backup.svg",
       run: () => {
-        saveBackup(data);
-        toast("Backup saved.");
-        setSheet(null);
+        void saveBackup(data).then((result) => finished(result, native ? "Backup exported." : "Backup saved."));
       },
     },
     { label: "Restore Spread", icon: "icon-restore.svg", run: () => fileRef.current?.click() },
     { label: "License key", run: () => setSheet("license") },
   ];
+  // WKWebView can't print, and the installed app has no license step.
+  const actions = native ? allActions.filter((action) => action.label !== "Print / Save PDF" && action.label !== "License key") : allActions;
 
   return (
     <>
@@ -1560,7 +1597,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        {license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
+        {native ? "Everything stays on this iPhone." : license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
       </Dialog.Description>
       <ProfilesSection
         onSwitched={(who) => {
@@ -1571,7 +1608,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       <input
         ref={fileRef}
         type="file"
-        accept=".spread,.json,application/json"
+        accept={native ? undefined : ".spread,.json,application/json"}
         className="sr-only"
         aria-label="Choose a Spread backup"
         onChange={(event) => {
@@ -1624,16 +1661,18 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           />
         ))}
       </div>
-      <button
-        type="button"
-        className="mt-4 h-12 w-full rounded-full text-base font-semibold text-danger"
-        onClick={() => {
-          useSpread.getState().logout();
-          setSheet(null);
-        }}
-      >
-        Log out
-      </button>
+      {native ? null : (
+        <button
+          type="button"
+          className="mt-4 h-12 w-full rounded-full text-base font-semibold text-danger"
+          onClick={() => {
+            useSpread.getState().logout();
+            setSheet(null);
+          }}
+        >
+          Log out
+        </button>
+      )}
       <RestoreDialog
         backup={backup}
         onClose={() => setBackup(null)}

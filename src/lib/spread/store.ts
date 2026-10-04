@@ -1,5 +1,7 @@
 import { backupFile } from "@/lib/spread/backup";
-import { saveFile } from "@/lib/spread/save-file";
+import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
+import { flushMirror, notifyStorageChanged } from "@/lib/spread/native-mirror";
+import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import {
   ACTIVE_PROFILE_KEY,
   PROFILES_KEY,
@@ -101,7 +103,12 @@ type Store = {
   replaceData: (data: SpreadData) => void;
 };
 
+// The installed app has no sign-in step: whoever has the app has the planner. The license is
+// never written to storage there, so it can't go stale or be removed by a storage reset.
+const NATIVE_LICENSE: License = { ok: true, plan: "personal" };
+
 function readLicense(): License | null {
+  if (isNativeApp()) return NATIVE_LICENSE;
   try {
     const raw = localStorage.getItem(LICENSE_KEY);
     if (!raw) return null;
@@ -116,12 +123,31 @@ function readLicense(): License | null {
 }
 
 function readData(): SpreadData {
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(activeStore);
-    if (!raw) return defaultData();
-    return normalizeData(JSON.parse(raw));
+    raw = localStorage.getItem(activeStore);
   } catch {
     return defaultData();
+  }
+  if (!raw) return defaultData();
+  try {
+    return normalizeData(JSON.parse(raw));
+  } catch {
+    // Unreadable text is about to be replaced by the next save. Keep a copy first so the
+    // person (or support) can still recover it.
+    keepUnreadable(activeStore, raw);
+    return defaultData();
+  }
+}
+
+export const RECOVERY_PREFIX = "spread.recovery.";
+
+function keepUnreadable(store: string, raw: string) {
+  const key = `${RECOVERY_PREFIX}${store}`;
+  try {
+    if (localStorage.getItem(key) === null) put(key, raw);
+  } catch {
+    /* storage is unavailable: nothing more to do */
   }
 }
 
@@ -139,6 +165,7 @@ export function applyTheme(theme: ThemeChoice) {
     theme === "dark" ||
     (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#000000" : "#F2F2F7");
+  syncStatusBar(theme);
 }
 
 export function applyAccent(accent: AccentId | null) {
@@ -163,24 +190,80 @@ function accentFrom(value: string | null): AccentId | null {
 
 let activeStore = STORE_KEY;
 
+export type SaveFailure = "full" | "unavailable";
+
+const failureListeners = new Set<(failure: SaveFailure) => void>();
+let failureReported = false;
+
+/** Hear about a save that didn't land (storage full or blocked). Reported once per run of failures. */
+export function onSaveFailure(listener: (failure: SaveFailure) => void) {
+  failureListeners.add(listener);
+  return () => {
+    failureListeners.delete(listener);
+  };
+}
+
+function isFullError(error: unknown) {
+  if (!(error instanceof DOMException)) return false;
+  return error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED" || error.code === 22 || error.code === 1014;
+}
+
+/**
+ * Every planner write goes through here. A full or blocked store used to throw out of the action
+ * that caused it, which left the screen and the saved data out of step. Now the screen keeps the
+ * change, the failure is announced once, and the next write that works clears the alarm.
+ */
+function put(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    if (!failureReported) {
+      failureReported = true;
+      const failure: SaveFailure = isFullError(error) ? "full" : "unavailable";
+      for (const listener of failureListeners) listener(failure);
+    }
+    return false;
+  }
+  failureReported = false;
+  notifyStorageChanged();
+  return true;
+}
+
+function drop(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    return;
+  }
+  notifyStorageChanged();
+}
+
+const rosterStorage = {
+  getItem: (key: string) => localStorage.getItem(key),
+  setItem: (key: string, value: string) => {
+    put(key, value);
+  },
+  removeItem: drop,
+};
+
 function writeProfiles(profiles: Profile[]) {
-  localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+  put(PROFILES_KEY, JSON.stringify(profiles));
 }
 
 function loadProfiles(license: License | null): Profile[] {
-  const saved = migrateRoster(localStorage);
+  const saved = migrateRoster(rosterStorage);
   if (saved.length > 0) return saved;
   if (localStorage.getItem(STORE_KEY)) {
     const profile = legacyProfile(uid(), readTheme(), readAccent());
     writeProfiles([profile]);
-    localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+    put(ACTIVE_PROFILE_KEY, profile.id);
     return [profile];
   }
   if (!license) return [];
   const created = withProfile([], "Me", uid());
   if (!created) return [];
   writeProfiles(created);
-  localStorage.setItem(ACTIVE_PROFILE_KEY, created[0].id);
+  put(ACTIVE_PROFILE_KEY, created[0].id);
   return created;
 }
 
@@ -199,7 +282,7 @@ function ensureProfile(set: (partial: Partial<Store>) => void, get: () => Store,
   if (!next) return;
   const profile = next[0];
   writeProfiles(next);
-  localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+  put(ACTIVE_PROFILE_KEY, profile.id);
   activeStore = profile.store;
   applyTheme(profile.theme);
   applyAccent(null);
@@ -211,15 +294,19 @@ let flushBound = false;
 function bindFlush() {
   if (flushBound) return;
   flushBound = true;
-  window.addEventListener("pagehide", flushSpread);
-  window.addEventListener("blur", flushSpread);
+  const flushAll = () => {
+    flushSpread();
+    flushMirror();
+  };
+  window.addEventListener("pagehide", flushAll);
+  window.addEventListener("blur", flushAll);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushSpread();
+    if (document.visibilityState === "hidden") flushAll();
   });
 }
 
 function persist(data: SpreadData) {
-  localStorage.setItem(activeStore, JSON.stringify(data));
+  put(activeStore, JSON.stringify(data));
 }
 
 let pending: SpreadData | null = null;
@@ -294,7 +381,7 @@ function readSession() {
     const profiles = loadProfiles(license);
     const savedId = localStorage.getItem(ACTIVE_PROFILE_KEY);
     const active = profiles.find((profile) => profile.id === savedId) ?? profiles[0] ?? null;
-    if (active && savedId !== active.id) localStorage.setItem(ACTIVE_PROFILE_KEY, active.id);
+    if (active && savedId !== active.id) put(ACTIVE_PROFILE_KEY, active.id);
     const loaded = active
       ? adopt(active)
       : { theme: readTheme(), accent: readAccent(), data: defaultData() };
@@ -315,7 +402,9 @@ function readSession() {
   }
 }
 
-const restored = readSession();
+// The installed app restores its storage snapshot first (see native-mirror.ts), so it reads the
+// session from `boot()` once that has finished instead of at import time.
+const restored = isNativeApp() ? null : readSession();
 
 export const useSpread = create<Store>((set, get) => ({
   ready: restored?.ready ?? false,
@@ -334,7 +423,7 @@ export const useSpread = create<Store>((set, get) => ({
   beginTrial: (name) => {
     ensureProfile(set, get, name);
     const license: License = { ok: true, plan: "demo" };
-    localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+    put(LICENSE_KEY, JSON.stringify(license));
     document.documentElement.setAttribute("data-spread", "in");
     arriving = true;
     set({ license });
@@ -343,15 +432,16 @@ export const useSpread = create<Store>((set, get) => ({
     const license = validateLicense(code);
     if (!license) return false;
     ensureProfile(set, get, name);
-    localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+    put(LICENSE_KEY, JSON.stringify(license));
     document.documentElement.setAttribute("data-spread", "in");
     arriving = true;
     set({ license });
     return true;
   },
   logout: () => {
+    if (isNativeApp()) return;
     flushSpread();
-    localStorage.removeItem(LICENSE_KEY);
+    drop(LICENSE_KEY);
     document.documentElement.removeAttribute("data-spread");
     set({ license: null });
   },
@@ -374,9 +464,9 @@ export const useSpread = create<Store>((set, get) => ({
     if (!next || !profile) return false;
     flushSpread();
     const data = defaultData();
-    localStorage.setItem(profile.store, JSON.stringify(data));
+    put(profile.store, JSON.stringify(data));
     writeProfiles(next);
-    localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+    put(ACTIVE_PROFILE_KEY, profile.id);
     activeStore = profile.store;
     applyTheme(profile.theme);
     applyAccent(null);
@@ -396,7 +486,7 @@ export const useSpread = create<Store>((set, get) => ({
     const profile = get().profiles.find((item) => item.id === id);
     if (!profile) return;
     flushSpread();
-    localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+    put(ACTIVE_PROFILE_KEY, profile.id);
     const loaded = adopt(profile);
     set({ activeId: profile.id, ...loaded });
   },
@@ -407,13 +497,13 @@ export const useSpread = create<Store>((set, get) => ({
     if (!profile) return false;
     flushSpread();
     const next = profiles.filter((item) => item.id !== id);
-    localStorage.removeItem(profile.store);
+    drop(profile.store);
     writeProfiles(next);
     if (get().activeId !== id) {
       set({ profiles: next });
       return true;
     }
-    localStorage.setItem(ACTIVE_PROFILE_KEY, next[0].id);
+    put(ACTIVE_PROFILE_KEY, next[0].id);
     const loaded = adopt(next[0]);
     set({ profiles: next, activeId: next[0].id, ...loaded });
     return true;
@@ -654,8 +744,8 @@ export const useSpread = create<Store>((set, get) => ({
   },
 }));
 
-export function saveBackup(data: SpreadData) {
+export function saveBackup(data: SpreadData): Promise<SaveResult> {
   const file = backupFile(data);
   const blob = new Blob([JSON.stringify(file)], { type: "application/octet-stream" });
-  saveFile(blob, `Spread-${data.currentWeek}.spread`);
+  return saveFile(blob, `Spread-${data.currentWeek}.spread`);
 }
