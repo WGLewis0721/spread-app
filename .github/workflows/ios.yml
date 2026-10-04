@@ -59,6 +59,7 @@ jobs:
           import json
           import os
           import plistlib
+          import re
           import shutil
           import subprocess
           import sys
@@ -91,7 +92,9 @@ jobs:
           runtimes = json.loads(run(["xcrun", "simctl", "list", "runtimes", "-j"]).stdout)["runtimes"]
           runtime = next(r["identifier"] for r in reversed(runtimes) if ".iOS-" in r["identifier"] and r.get("isAvailable", True))
           device_types = json.loads(run(["xcrun", "simctl", "list", "devicetypes", "-j"]).stdout)["devicetypes"]
-          device = next(d for d in device_types if d["name"].startswith("iPhone"))
+          # A recent notch/Dynamic Island iPhone, so safe-area layout is exercised. Fall back to any iPhone.
+          phones = [d for d in device_types if re.match(r"^iPhone (1[5-9]|[2-9]\d)( Pro)?$", d["name"])]
+          device = phones[-1] if phones else next(d for d in device_types if d["name"].startswith("iPhone"))
           udid = run(["xcrun", "simctl", "create", "Spread CI", device["identifier"], runtime]).stdout.strip()
           app = "artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
           os.makedirs("artifacts", exist_ok=True)
@@ -101,13 +104,9 @@ jobs:
           print("Runtime:", runtime)
           print("Device:", device["name"])
           print("UDID:", udid)
-          run(["xcrun", "simctl", "boot", udid], timeout=30)
-          run(["open", "-a", "Simulator", "--args", "-CurrentDeviceUDID", udid], timeout=30, check=False)
-
-          # Hosted macOS runners can take a while to finish starting CoreSimulator.
-          # A fixed warm-up is more reliable here than repeatedly querying simctl
-          # while the service is still initializing.
-          time.sleep(75)
+          # Boot headless and wait until SpringBoard is really up. A fixed sleep left launch and
+          # listapps hanging on hosted runners: install worked, but the app never started.
+          run(["xcrun", "simctl", "bootstatus", udid, "-b"], timeout=600)
 
           run(["xcrun", "simctl", "install", udid, app], timeout=120)
           container = run(["xcrun", "simctl", "get_app_container", udid, "com.graymatter.spread", "app"], timeout=60)
