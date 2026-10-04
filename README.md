@@ -62,6 +62,11 @@ Trial key: `SPR-DEMO-2026`
 ## iOS release direction
 
 The App Store work is a packaging/reliability pass, not a redesign. The selected 1.0 path is **Capacitor + the existing React app**, with device-local data and no required account or SaaS backend. iCloud/CloudKit remains a later sync milestone unless it is deliberately moved into the 1.0 promise.
+The current web app is the shipped functional baseline. Immutable
+`golden/*` branches below remain rollback checkpoints. The iOS shell and
+physical-device/TestFlight acceptance are still in progress; see
+[`ROADMAP.md`](ROADMAP.md) for milestone status and
+[`APP_STORE_RELEASE_PLAN.md`](APP_STORE_RELEASE_PLAN.md) for release gates.
 
 The iPhone shell is in `ios/`. [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md) has the exact build and TestFlight upload steps, what has and has not been verified, and the remaining Apple-account and physical-device checklist.
 

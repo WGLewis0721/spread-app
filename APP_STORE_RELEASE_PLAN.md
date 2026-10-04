@@ -3,6 +3,10 @@
 **Decision date:** October 1, 2026
 
 This document is the canonical iPhone/App Store delivery plan for Spread 1.0.
+The current web planner on `main` is the shipped functional baseline;
+frozen `golden/*` branches are immutable rollback checkpoints. The
+Capacitor iOS shell is under development; physical-device, TestFlight, and
+store acceptance remain open. [ROADMAP.md](ROADMAP.md) owns milestone status.
 
 ## Chosen architecture
 
@@ -72,11 +76,21 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 
 - [ ] Complete the Friends Test Round.
 - [ ] Turn repeated/release-blocking failures into regression tests.
-- [ ] Verify backup/export/import and local persistence. (Unit-tested, simulator-verified for persistence; device pending.)
-- [ ] Add/verify versioned data migrations. (Older data shapes and the backup envelope are unit-tested; there is no schema version number yet.)
-- [ ] Complete accessibility and reduced-motion checks.
-- [ ] Finish privacy, support, and terms pages.
+- [ ] Verify backup/export/import and local persistence. (Unit-tested, and persistence is simulator-verified; device pending.)
+- [ ] Prove storage survives browser/app restart, device storage pressure,
+      upgrade, and older-data migration; add/verify versioned data migrations.
+      (Restart and storage loss are verified in the iOS Simulator. Older data shapes and the backup
+      envelope are unit-tested. There is no schema version number yet, and low storage and upgrade
+      over a prior build still need a device.)
+- [ ] Complete Dynamic Type/text scaling where applicable, VoiceOver
+      labels/order, contrast, Reduce Motion, touch targets, external keyboard,
+      and non-color-only meaning.
+- [ ] Finish privacy, support, and terms pages plus in-app support/contact.
+      Match App Store privacy answers to the shipped binary.
 - [ ] Define the user-controlled diagnostic/support path if no crash SDK is added.
+- [ ] Define support, refund response, release rollback/hotfix, and App Review
+      ownership. Use privacy-preserving activation/crash/conversion measurement
+      only if it fits the stated local-first data policy.
 
 ### 1. Add the Capacitor iOS shell
 
@@ -84,6 +98,9 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 - [x] Create the iOS project from the existing production UI.
 - [x] Configure permanent bundle ID, display name, version/build numbers, app icon, launch screen, privacy manifest, and orientations.
 - [ ] Choose the signing team and verify safe areas on a physical iPhone.
+- [ ] Define the repeatable release CI/archive process and verify signing,
+      version/build numbering, and artifact ownership. (Manual archive steps are in
+      docs/IOS_RELEASE.md. CI builds and smoke-tests the simulator app only.)
 - [x] Make the core app assets/self-contained experience work without a development server. (Verified in the iOS Simulator and by a bundle completeness check in `export:ios`.)
 - [x] Use native plugins only where the web implementation cannot provide a production-quality iOS experience. (Filesystem and Share for export, StatusBar for contrast.)
 
@@ -99,7 +116,9 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 ### 3. Physical iPhone and TestFlight QA
 
 - [ ] Build and run on a physical iPhone.
-- [ ] Verify safe areas and all supported orientation decisions.
+- [ ] Verify supported iPhones and an iPad if included at launch; safe areas,
+      orientation, light/dark modes, keyboard, interruption/resume, low storage,
+      offline use, and date/time-zone/week-boundary behavior.
 - [ ] Internal TestFlight build.
 - [ ] External friends beta.
 - [ ] Verify install, upgrade, relaunch, low storage, offline use, backup/restore, and data migration from an older build.
@@ -111,6 +130,9 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 - [ ] Privacy answers that match the binary.
 - [ ] Support, privacy, and terms URLs.
 - [ ] Screenshots for required device classes.
+- [ ] Advertise only the device families with accepted physical-device QA
+      and an approved store build; do not imply iPad/macOS/Watch availability
+      from the web layout alone.
 - [ ] Pricing, territories, and availability.
 - [ ] Paid Apps Agreement, banking, and tax setup.
 - [ ] App Review notes describing the local-first/no-account behavior.
