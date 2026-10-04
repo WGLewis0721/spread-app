@@ -131,6 +131,30 @@ jobs:
           # and could write through the Filesystem plugin, all with no server.
           bundle = "com.graymatter.spread"
 
+          # Workflow commands become annotations, which stay readable through the API
+          # even when the raw job log is not.
+          def note(message):
+              print(f"::notice::{message}", flush=True)
+
+          def fail(message):
+              print(f"::error::{message}", flush=True)
+              raise SystemExit(message)
+
+          def listing(limit=70):
+              rows = []
+              root = data_container()
+              for base, _dirs, files in os.walk(root):
+                  for name in files:
+                      path = os.path.join(base, name)
+                      try:
+                          size = os.path.getsize(path)
+                      except OSError:
+                          size = -1
+                      rows.append(f"{os.path.relpath(path, root)} ({size})")
+              rows.sort()
+              shown = rows[:limit]
+              return "%0A".join(shown) + (f"%0A... {len(rows) - limit} more" if len(rows) > limit else "")
+
           def data_container():
               return run(["xcrun", "simctl", "get_app_container", udid, bundle, "data"], timeout=60).stdout.strip()
 
@@ -164,20 +188,30 @@ jobs:
               if proc.poll() is None:
                   proc.terminate()
 
-          first = newest_snapshot()
+          def wait_for_snapshot(min_seq, timeout=90):
+              deadline = time.time() + timeout
+              latest = None
+              while time.time() < deadline:
+                  latest = newest_snapshot()
+                  if latest is not None and latest["seq"] >= min_seq:
+                      return latest
+                  time.sleep(3)
+              return latest
+
+          first = wait_for_snapshot(1)
           if first is None:
-              raise SystemExit("FAIL: the installed app never wrote a planner snapshot (it did not reach the planner)")
+              fail("The installed app never wrote a planner snapshot, so it did not reach the planner. App data files:%0A" + listing())
           first_ids = profile_ids(first)
           if len(first_ids) != 1:
-              raise SystemExit(f"FAIL: expected one profile after first launch, found {first_ids}")
-          print("PASS first launch reached the planner. Profile:", first_ids[0], "snapshot seq:", first["seq"])
+              fail(f"Expected one profile after first launch, found {first_ids}")
+          note(f"PASS first launch reached the planner. Profile {first_ids[0]}, snapshot seq {first['seq']}")
 
           # Terminate and relaunch: the same profile must come back, not a fresh one.
-          relaunch()
-          second = newest_snapshot()
+          relaunch(wait=5)
+          second = wait_for_snapshot(first["seq"] + 1)
           if second is None or profile_ids(second) != first_ids:
-              raise SystemExit(f"FAIL: profile changed across termination. before={first_ids} after={second and profile_ids(second)}")
-          print("PASS data survived app termination. snapshot seq:", second["seq"])
+              fail(f"Profile changed across termination. before={first_ids} after={second and profile_ids(second)}")
+          note(f"PASS data survived app termination. snapshot seq {second['seq']}")
 
           # Simulate iOS discarding the WebView's storage, then relaunch: the snapshot
           # must put the planner back.
@@ -190,15 +224,15 @@ jobs:
                       target = os.path.join(base, name)
                       shutil.rmtree(target, ignore_errors=True)
                       wiped.append(target)
-          print("Wiped WebView storage folders:", wiped)
-          relaunch()
-          third = newest_snapshot()
+          note(f"Wiped WebView storage folders: {len(wiped)}")
+          relaunch(wait=5)
+          third = wait_for_snapshot(second["seq"] + 1)
           if third is None or profile_ids(third) != first_ids:
-              raise SystemExit(f"FAIL: planner was not restored after storage loss. before={first_ids} after={third and profile_ids(third)}")
+              fail(f"Planner was not restored after storage loss. before={first_ids} after={third and profile_ids(third)}. Wiped {wiped}. Files:%0A" + listing())
           if wiped:
-              print("PASS planner restored from the snapshot after WebView storage was wiped")
+              note("PASS planner restored from the snapshot after WebView storage was wiped")
           else:
-              print("NOTE: no LocalStorage folder was found to wipe, so the restore path was not exercised")
+              note("No LocalStorage folder was found to wipe, so the restore path was not exercised. Files:%0A" + listing())
           run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios-restored.png"], timeout=60)
           PY
       - name: Upload simulator smoke screenshot
