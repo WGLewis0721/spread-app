@@ -66,30 +66,33 @@ If Spread later becomes free + premium digital features, evaluate StoreKit IAP/s
 
 ## Release sequence
 
+Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also holds the exact build and upload steps and the list of checks that still need an Apple account or a physical iPhone. A checked box below means the work is done and verified at the level the note says.
+
 ### 0. Release-candidate quality
 
 - [ ] Complete the Friends Test Round.
 - [ ] Turn repeated/release-blocking failures into regression tests.
-- [ ] Verify backup/export/import and local persistence.
-- [ ] Add/verify versioned data migrations.
+- [ ] Verify backup/export/import and local persistence. (Unit-tested, simulator-verified for persistence; device pending.)
+- [ ] Add/verify versioned data migrations. (Older data shapes and the backup envelope are unit-tested; there is no schema version number yet.)
 - [ ] Complete accessibility and reduced-motion checks.
 - [ ] Finish privacy, support, and terms pages.
 - [ ] Define the user-controlled diagnostic/support path if no crash SDK is added.
 
 ### 1. Add the Capacitor iOS shell
 
-- [ ] Add Capacitor to the current Vite/React project.
-- [ ] Create the iOS project from the existing production UI.
-- [ ] Configure permanent bundle ID, display name, version/build numbers, signing, app icon, launch screen, orientations, and safe areas.
-- [ ] Make the core app assets/self-contained experience work without a development server.
-- [ ] Use native plugins only where the web implementation cannot provide a production-quality iOS experience.
+- [x] Add Capacitor to the current Vite/React project.
+- [x] Create the iOS project from the existing production UI.
+- [x] Configure permanent bundle ID, display name, version/build numbers, app icon, launch screen, privacy manifest, and orientations.
+- [ ] Choose the signing team and verify safe areas on a physical iPhone.
+- [x] Make the core app assets/self-contained experience work without a development server. (Verified in the iOS Simulator and by a bundle completeness check in `export:ios`.)
+- [x] Use native plugins only where the web implementation cannot provide a production-quality iOS experience. (Filesystem and Share for export, StatusBar for contrast.)
 
 ### 2. Native integration pass
 
-- [ ] Verify local persistence in the installed app.
-- [ ] Make backup/export/restore work with the native file/share surfaces.
-- [ ] Verify print/PDF/Word export behavior and choose the supported 1.0 set.
-- [ ] Handle app background/resume and interruption safely.
+- [x] Verify local persistence in the installed app. (iOS Simulator: relaunch, and restore after the WebView's storage is deleted. Physical device is in step 3.)
+- [ ] Make backup/export/restore work with the native file/share surfaces. (Implemented with the share sheet and an unfiltered file picker; needs a device check.)
+- [x] Verify print/PDF/Word export behavior and choose the supported 1.0 set. (1.0 set: Copy week, Word document, and Back Up Spread through the share sheet. Print / Save PDF is hidden because WKWebView cannot print. The share sheet's Print action covers the Word file.)
+- [ ] Handle app background/resume and interruption safely. (Saves flush when the app hides; a device check is pending.)
 - [ ] Verify date/time-zone/week-boundary behavior.
 - [ ] Verify phone keyboard, touch, drag, crown/week navigation, month view, light/dark mode, and Reduce Motion.
 

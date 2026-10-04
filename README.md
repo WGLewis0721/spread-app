@@ -63,15 +63,18 @@ Trial key: `SPR-DEMO-2026`
 
 The App Store work is a packaging/reliability pass, not a redesign. The selected 1.0 path is **Capacitor + the existing React app**, with device-local data and no required account or SaaS backend. iCloud/CloudKit remains a later sync milestone unless it is deliberately moved into the 1.0 promise.
 
+The iPhone shell is in `ios/`. [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md) has the exact build and TestFlight upload steps, what has and has not been verified, and the remaining Apple-account and physical-device checklist.
+
 ## Checks
 
 ```
 npm run typecheck
+npm run test:spread
 node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts
 npm run build
 ```
 
-The four test files above are what the Pages workflow runs. `npm test` also runs the app-builder scaffolding tests, which expect a `.grok/` folder this repo does not have.
+`npm run test:spread` is the whole planner suite, including the iOS storage snapshot and backup tests. The four test files above are what the Pages workflow runs. `npm test` also runs the app-builder scaffolding tests, which expect a `.grok/` folder this repo does not have.
 
 ## Golden checkpoints
 
