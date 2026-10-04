@@ -1,0 +1,317 @@
+name: iOS shell
+
+on:
+  pull_request:
+    paths:
+      - "capacitor.config.json"
+      - "ios/**"
+      - "src/**"
+      - "public/**"
+      - "scripts/export-ios.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ios.yml"
+  push:
+    branches: [main]
+    paths:
+      - "capacitor.config.json"
+      - "ios/**"
+      - "src/**"
+      - "public/**"
+      - "scripts/export-ios.mjs"
+      - "package.json"
+      - "package-lock.json"
+
+concurrency:
+  group: ios-shell-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios-shell:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:spread
+      - run: npm run ios:sync
+      - name: Build iPhone simulator app
+        run: >
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath artifacts/DerivedData
+          CODE_SIGNING_ALLOWED=NO
+          build
+      - name: Install and launch Spread in iPhone Simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          import os
+          import plistlib
+          import re
+          import shutil
+          import subprocess
+          import sys
+          import time
+          import traceback
+
+          def report_crash(kind, value, tb):
+              text = "".join(traceback.format_exception(kind, value, tb))[-900:]
+              print("::error::" + text.replace("\n", "%0A"), flush=True)
+              sys.__excepthook__(kind, value, tb)
+
+          sys.excepthook = report_crash
+
+          def run(args, timeout=90, check=True):
+              try:
+                  result = subprocess.run(args, text=True, capture_output=True, timeout=timeout)
+              except subprocess.TimeoutExpired:
+                  print(f"::warning::timed out after {timeout}s: {' '.join(args[:5])}", flush=True)
+                  if check:
+                      raise
+                  return subprocess.CompletedProcess(args, 124, "", "")
+              if result.stdout:
+                  print(result.stdout.strip())
+              if result.stderr:
+                  print(result.stderr.strip())
+              if check and result.returncode != 0:
+                  raise subprocess.CalledProcessError(result.returncode, args, result.stdout, result.stderr)
+              return result
+
+          runtimes = json.loads(run(["xcrun", "simctl", "list", "runtimes", "-j"]).stdout)["runtimes"]
+          runtime = next(r["identifier"] for r in reversed(runtimes) if ".iOS-" in r["identifier"] and r.get("isAvailable", True))
+          device_types = json.loads(run(["xcrun", "simctl", "list", "devicetypes", "-j"]).stdout)["devicetypes"]
+          # A recent notch/Dynamic Island iPhone, so safe-area layout is exercised. Fall back to any iPhone.
+          phones = [d for d in device_types if re.match(r"^iPhone (1[5-9]|[2-9]\d)( Pro)?$", d["name"])]
+          device = phones[-1] if phones else next(d for d in device_types if d["name"].startswith("iPhone"))
+          udid = run(["xcrun", "simctl", "create", "Spread CI", device["identifier"], runtime]).stdout.strip()
+          app = "artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
+          os.makedirs("artifacts", exist_ok=True)
+          if not os.path.isdir(app):
+              raise SystemExit(f"Missing simulator app at {app}")
+
+          print("Runtime:", runtime)
+          print("Device:", device["name"])
+          print("UDID:", udid)
+          # Boot headless and wait until SpringBoard is really up. A fixed sleep left launch and
+          # listapps hanging on hosted runners: install worked, but the app never started.
+          run(["xcrun", "simctl", "bootstatus", udid, "-b"], timeout=600)
+
+          run(["xcrun", "simctl", "install", udid, app], timeout=120)
+          container = run(["xcrun", "simctl", "get_app_container", udid, "com.graymatter.spread", "app"], timeout=60)
+          if not container.stdout.strip():
+              raise SystemExit("Spread installed but no app container was returned")
+          print("Installed app:", container.stdout.strip())
+
+          # On GitHub's hosted macOS image, simctl can deliver the launch request
+          # but keep the CLI call open. Send it asynchronously, then prove the
+          # resulting UI with a simulator screenshot instead of trusting the CLI
+          # process to exit promptly.
+          launch = subprocess.Popen(
+              ["xcrun", "simctl", "launch", udid, "com.graymatter.spread"],
+              stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE,
+              text=True,
+          )
+          time.sleep(15)
+          run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios.png"], timeout=60)
+          if launch.poll() is None:
+              launch.terminate()
+              try:
+                  launch.wait(timeout=5)
+              except subprocess.TimeoutExpired:
+                  launch.kill()
+          else:
+              out, err = launch.communicate(timeout=5)
+              if out:
+                  print(out.strip())
+              if err:
+                  print(err.strip())
+
+          # --- Persistence checks -------------------------------------------------
+          # The planner keeps a snapshot of its storage in the app's Library folder
+          # (see src/lib/spread/native-mirror.ts). Its presence proves the installed
+          # app loaded its bundled web assets, skipped the web gate, created a profile
+          # and could write through the Filesystem plugin, all with no server.
+          bundle = "com.graymatter.spread"
+
+          # Workflow commands become annotations, which stay readable through the API
+          # even when the raw job log is not.
+          def note(message):
+              print(f"::notice::{message}", flush=True)
+
+          def fail(message):
+              print(f"::error::{message}", flush=True)
+              raise SystemExit(message)
+
+          def diagnose():
+              parts = []
+              try:
+                  parts.append(f"launch command exit code: {launch.poll()}")
+              except Exception as exc:
+                  parts.append(f"launch state unknown: {exc}")
+              state = run(["xcrun", "simctl", "listapps", udid], timeout=60, check=False).stdout
+              parts.append("installed: " + ("yes" if bundle in state else "NO"))
+              logs = run(
+                  ["xcrun", "simctl", "spawn", udid, "log", "show", "--last", "4m", "--style", "compact",
+                   "--predicate", 'process == "App" AND (messageType == error OR messageType == fault)'],
+                  timeout=120, check=False,
+              ).stdout.strip().splitlines()
+              parts.extend(line[:230] for line in logs[-18:])
+              reports = run(["bash", "-c", "ls -t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -5"], timeout=20, check=False).stdout.strip()
+              if reports:
+                  parts.append("crash reports: " + reports.replace("\n", ", "))
+              return "%0A".join(parts)
+
+          def listing(limit=70):
+              rows = []
+              root = data_container()
+              if not root:
+                  return "(the app has no data folder, so it never launched)"
+              for base, _dirs, files in os.walk(root):
+                  for name in files:
+                      path = os.path.join(base, name)
+                      try:
+                          size = os.path.getsize(path)
+                      except OSError:
+                          size = -1
+                      rows.append(f"{os.path.relpath(path, root)} ({size})")
+              rows.sort()
+              shown = rows[:limit]
+              return "%0A".join(shown) + (f"%0A... {len(rows) - limit} more" if len(rows) > limit else "")
+
+          def data_container():
+              # Read the simulator's folders directly: "simctl get_app_container ... data" can hang
+              # on a hosted runner while the app is launching.
+              root = os.path.expanduser(f"~/Library/Developer/CoreSimulator/Devices/{udid}/data/Containers/Data/Application")
+              if not os.path.isdir(root):
+                  return ""
+              for name in os.listdir(root):
+                  meta = os.path.join(root, name, ".com.apple.mobile_container_manager.metadata.plist")
+                  try:
+                      with open(meta, "rb") as handle:
+                          if plistlib.load(handle).get("MCMMetadataIdentifier") == bundle:
+                              return os.path.join(root, name)
+                  except (OSError, ValueError):
+                      continue
+              return ""
+
+          def newest_snapshot_with_path():
+              best = None
+              for base, _dirs, files in os.walk(data_container() or "/nonexistent"):
+                  for name in files:
+                      if not (name.startswith("spread-mirror-") and name.endswith(".json")):
+                          continue
+                      path = os.path.join(base, name)
+                      try:
+                          with open(path) as handle:
+                              doc = json.load(handle)
+                      except (OSError, ValueError):
+                          continue
+                      if doc.get("kind") == "spread-mirror" and (best is None or doc["seq"] > best[0]["seq"]):
+                          best = (doc, path)
+              return best
+
+          def newest_snapshot():
+              found = newest_snapshot_with_path()
+              return found[0] if found else None
+
+          def profile_ids(doc):
+              return [row["id"] for row in json.loads(doc["entries"]["spread.profiles"])]
+
+          def relaunch(wait=15):
+              run(["xcrun", "simctl", "terminate", udid, bundle], timeout=60, check=False)
+              time.sleep(3)
+              proc = subprocess.Popen(
+                  ["xcrun", "simctl", "launch", udid, bundle],
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.DEVNULL,
+              )
+              time.sleep(wait)
+              if proc.poll() is None:
+                  proc.terminate()
+
+          def wait_for_snapshot(min_seq, relaunch_once=False):
+              """A snapshot at least as new as min_seq, or None. Never returns an older one, so a
+              check can't pass on a file the app did not just write."""
+              for attempt in range(2 if relaunch_once else 1):
+                  deadline = time.time() + (45 if relaunch_once else 90)
+                  while time.time() < deadline:
+                      latest = newest_snapshot()
+                      if latest is not None and latest["seq"] >= min_seq:
+                          return latest
+                      time.sleep(3)
+                  if relaunch_once and attempt == 0:
+                      note(f"No snapshot at seq {min_seq} after 45s, launching once more")
+                      relaunch(wait=5)
+              return None
+
+          first = wait_for_snapshot(1)
+          if first is None:
+              fail("The installed app never wrote a planner snapshot, so it did not reach the planner.%0A" + diagnose() + "%0AApp data files:%0A" + listing())
+          first_ids = profile_ids(first)
+          if len(first_ids) != 1:
+              fail(f"Expected one profile after first launch, found {first_ids}")
+          note(f"PASS first launch reached the planner. Profile {first_ids[0]}, snapshot seq {first['seq']}")
+
+          # Terminate and relaunch: the same profile must come back, not a fresh one.
+          relaunch(wait=5)
+          second = wait_for_snapshot(first["seq"] + 1, relaunch_once=True)
+          if second is None:
+              fail("The relaunched app did not write a newer snapshot, so termination survival is unproven.%0A" + diagnose())
+          if profile_ids(second) != first_ids:
+              fail(f"Profile changed across termination. before={first_ids} after={profile_ids(second)}")
+          note(f"PASS data survived app termination. The relaunched app wrote snapshot seq {second['seq']} (was {first['seq']}) for the same profile")
+
+          # Simulate iOS discarding the WebView's storage, then relaunch: the snapshot
+          # must put the planner back.
+          run(["xcrun", "simctl", "terminate", udid, bundle], timeout=60, check=False)
+          time.sleep(3)
+          wiped = []
+          for base, dirs, _files in os.walk(data_container()):
+              for name in list(dirs):
+                  if name == "LocalStorage":
+                      target = os.path.join(base, name)
+                      shutil.rmtree(target, ignore_errors=True)
+                      wiped.append(target)
+          note(f"Wiped WebView storage folders: {len(wiped)}")
+          # Rename the profile inside the snapshot. The name can only reappear in the planner if the
+          # app really restored it from the snapshot, since the WebView's own copy says "Me".
+          doc, path = newest_snapshot_with_path()
+          roster = json.loads(doc["entries"]["spread.profiles"])
+          roster[0]["name"] = "Restored"
+          doc["entries"]["spread.profiles"] = json.dumps(roster)
+          with open(path, "w") as handle:
+              json.dump(doc, handle)
+          relaunch(wait=5)
+          third = wait_for_snapshot(second["seq"] + 1, relaunch_once=True)
+          if third is None:
+              fail("The app did not write a newer snapshot after storage was wiped.%0A" + diagnose() + "%0AFiles:%0A" + listing())
+          if profile_ids(third) != first_ids:
+              fail(f"Planner was not restored after storage loss. before={first_ids} after={profile_ids(third)}. Wiped {wiped}. Files:%0A" + listing())
+          names = [row["name"] for row in json.loads(third["entries"]["spread.profiles"])]
+          if wiped and names != ["Restored"]:
+              fail(f"The renamed snapshot was not applied (names {names}), so the restore path did not run or the wipe did not clear storage")
+          if wiped:
+              note(f"PASS planner restored from the snapshot after WebView storage was wiped (marker name came back in snapshot seq {third['seq']})")
+          else:
+              note("No LocalStorage folder was found to wipe, so the restore path was not exercised. Files:%0A" + listing())
+          run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios-restored.png"], timeout=60)
+          PY
+      - name: Upload simulator smoke screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spread-ios-smoke
+          path: artifacts/spread-ios*.png

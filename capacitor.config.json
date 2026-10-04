@@ -1,0 +1,13 @@
+{
+  "appId": "com.graymatter.spread",
+  "appName": "Spread",
+  "webDir": "dist-ios",
+  "server": {
+    "hostname": "localhost"
+  },
+  "ios": {
+    "scheme": "App",
+    "contentInset": "never",
+    "allowsLinkPreview": false
+  }
+}

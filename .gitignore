@@ -1,6 +1,7 @@
 node_modules
 .vercel
 dist-pages
+dist-ios
 artifacts
 screenshots
 attachments
