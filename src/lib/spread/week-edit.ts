@@ -29,8 +29,12 @@ export function makeEdit(id: string, profileId: string, before: SpreadData, afte
   return { id, profileId, weekKey, before: was, after: now };
 }
 
+/**
+ * Undo is safe while that week is exactly as the change left it, in the same profile. Which week is
+ * on screen does not matter: turning to next week and back must not cost the person their Undo.
+ */
 export function canUndo(edit: WeekEdit, profileId: string, data: SpreadData): boolean {
-  return edit.profileId === profileId && data.currentWeek === edit.weekKey && sameWeek(data.weeks[edit.weekKey], edit.after);
+  return edit.profileId === profileId && sameWeek(data.weeks[edit.weekKey], edit.after);
 }
 
 export function applyUndo(edit: WeekEdit, data: SpreadData): SpreadData {

@@ -106,13 +106,13 @@ type Store = {
   moveSpreadToDay: (hatId: string, day: string, hours?: number) => void;
   changeWeek: (direction: -1 | 1 | "today") => void;
   removeAllocation: (allocationId: string) => void;
-  /** Put a task on a day (an allocation of its own role), or take it off every day with null. */
   /** Move the chosen unfinished tasks to next week (ids kept). Returns how many moved. Safe to repeat. */
   carryOver: (picks: CarryPick[]) => number;
   /** Run one change and remember it so it can be undone. Returns an edit id, or null when nothing changed. */
   undoable: (run: () => void) => string | null;
   /** Reverse that change. False when the week has changed since, so newer work is never overwritten. */
   undoEdit: (editId: string) => boolean;
+  /** Put a task on a day (an allocation of its own role), or take it off every day with null. */
   assignTask: (hatId: string, taskId: string, allocationId: string | null) => { ok: true; changed: boolean } | { ok: false; reason: AssignFailure };
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
   copyLastWeek: () => boolean;

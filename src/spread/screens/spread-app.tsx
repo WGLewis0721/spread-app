@@ -27,6 +27,7 @@ import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { deriveLocalStatus, getSaveFacts, subscribeSaveFacts } from "@/lib/spread/local-status";
 import { openTasksOf } from "@/lib/spread/task-rollover";
+import { placedDay } from "@/lib/spread/task-schedule";
 import { completionHaptic } from "@/lib/spread/haptics";
 import { readViewContext, writeViewContext } from "@/lib/spread/view-context";
 import { showUndoToast } from "@/spread/ui/undo-toast";
@@ -406,17 +407,20 @@ function WeekScreen() {
   const profileId = useSpread((s) => s.activeId);
   const [view, setView] = useState<"spread" | "week">(() => readViewContext(safeStorage(), useSpread.getState().activeId).view);
   const [plane, setPlane] = useState<"week" | "month">(() => readViewContext(safeStorage(), useSpread.getState().activeId).plane);
-  const lastProfile = useRef(profileId);
+  // Which profile `view` and `plane` belong to. Until a newly opened profile's place is loaded, its
+  // key is not written, so one profile's view can never be saved under another's.
+  const [viewOwner, setViewOwner] = useState(profileId);
   useEffect(() => {
-    if (lastProfile.current === profileId) return;
-    lastProfile.current = profileId;
+    if (viewOwner === profileId) return;
     const remembered = readViewContext(safeStorage(), profileId);
     setView(remembered.view);
     setPlane(remembered.plane);
-  }, [profileId]);
+    setViewOwner(profileId);
+  }, [profileId, viewOwner]);
   useEffect(() => {
+    if (viewOwner !== profileId) return;
     writeViewContext(safeStorage(), profileId, { view, plane });
-  }, [view, plane, profileId]);
+  }, [view, plane, profileId, viewOwner]);
   const [motion, setMotion] = useState<"to-month" | "to-week" | null>(null);
   const [monthCursor, setMonthCursor] = useState<MonthCursor>(() => dominantMonth(weekKey()));
   const [monthDir, setMonthDir] = useState<-1 | 1 | 0>(0);
@@ -685,6 +689,7 @@ function WeekScreen() {
                 key={key}
                 type="button"
                 role="tab"
+                aria-label={label}
                 aria-selected={view === key}
                 className={cn(
                   "flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
@@ -770,9 +775,13 @@ function WeekScreen() {
           ) : (
             <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : arrive ? "enter" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(-1) : followStyle(shift)}>
               <div className={cn("week-seq-item", profilePlay && "cascade-item")}>
-                <Summary rows={rows} onRollover={() => {
-                  if (rollover(false) === "confirm") setRolloverAsk(true);
-                }} />
+                <Summary
+                  rows={rows}
+                  onRollover={() => {
+                    if (rollover(false) === "confirm") setRolloverAsk(true);
+                  }}
+                  onReview={openTasksOf(data).length > 0 ? () => setCarryAsk(true) : undefined}
+                />
               </div>
               <div className="mt-6 overflow-hidden rounded-[22px] bg-elevated">
                 {rows.map(({ hat, box }, index) => (
@@ -792,11 +801,6 @@ function WeekScreen() {
               <div className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}>
                 <NewLifeBox onClick={() => setSheet("new")} />
               </div>
-              {openTasksOf(data).length > 0 && (
-                <button type="button" className="mt-3 h-11 w-full rounded-full bg-fill text-sm font-semibold" onClick={() => setCarryAsk(true)}>
-                  Review open tasks
-                </button>
-              )}
             </div>
           )}
         </main>
@@ -901,7 +905,7 @@ type Row = {
   box: { hours: number; tasks: { done: boolean }[] };
 };
 
-function Summary({ rows, onRollover }: { rows: Row[]; onRollover: () => void }) {
+function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () => void; onReview?: () => void }) {
   const totalHours = rows.reduce((sum, row) => sum + Number(row.box.hours || 0), 0);
   const taskCount = rows.reduce((sum, row) => sum + row.box.tasks.length, 0);
   const done = rows.reduce((sum, row) => sum + row.box.tasks.filter((task) => task.done).length, 0);
@@ -936,10 +940,17 @@ function Summary({ rows, onRollover }: { rows: Row[]; onRollover: () => void }) 
       {totalHours > 45 && (
         <p className="mt-1 text-xs text-caution">If the hours don’t fit, something is lying.</p>
       )}
-      <button type="button" className="mt-3 flex items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
-        <SpreadIcon name="icon-rollover.svg" size={24} />
-        Rollover
-      </button>
+      <div className="mt-1 flex flex-wrap items-center gap-x-6">
+        <button type="button" className="flex min-h-11 items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
+          <SpreadIcon name="icon-rollover.svg" size={24} />
+          Rollover
+        </button>
+        {onReview && (
+          <button type="button" className="flex min-h-11 items-center text-sm font-semibold text-accent" onClick={onReview}>
+            Review open tasks
+          </button>
+        )}
+      </div>
     </section>
   );
 }
@@ -1269,20 +1280,20 @@ function TaskRow({
   onOpen: () => void;
 }) {
   const toggleTask = useSpread((s) => s.toggleTask);
-  const dayName = useSpread((s) => {
-    const week = s.data.weeks[s.data.currentWeek];
-    const found = task.allocationId ? week?.allocations.find((item) => item.id === task.allocationId) : undefined;
-    return found ? (weekDays(s.data.currentWeek).find((day) => day.date === found.day) ?? null) : null;
-  });
+  // Select a plain string, never a fresh object: a new object on every read makes React re-render
+  // forever ("Maximum update depth exceeded").
+  const placedOn = useSpread((s) => placedDay(s.data.weeks[s.data.currentWeek], task));
+  const currentWeek = useSpread((s) => s.data.currentWeek);
   const assignTask = useSpread((s) => s.assignTask);
   const undoable = useSpread((s) => s.undoable);
   const undoEdit = useSpread((s) => s.undoEdit);
-  const isToday = dayName?.date === isoDate(new Date());
+  const day = placedOn && !task.done ? weekDays(currentWeek).find((item) => item.date === placedOn) : undefined;
+  const isToday = day?.date === isoDate(new Date());
   function notToday() {
     const id = undoable(() => {
       assignTask(hatId, task.id, null);
     });
-    if (id) showUndoToast(isToday ? "Not today. It’s back in To place." : `Taken off ${dayName?.label}.`, () => undoEdit(id));
+    if (id) showUndoToast("Not today. It’s back in To place.", () => undoEdit(id));
   }
   return (
     <li className={delay ? "cascade-item" : undefined} style={delay ? { animationDelay: delay } : undefined}>
@@ -1314,12 +1325,17 @@ function TaskRow({
           )}
         >
           <span className="min-w-0 flex-1 truncate">{task.text}</span>
-          {dayName && !task.done && <span className="ms-2 shrink-0 text-xs font-semibold text-secondary">{dayName.label.slice(0, 3)}</span>}
+          {day && !isToday && (
+            <span className="ms-2 shrink-0 text-xs font-semibold text-secondary">
+              <span aria-hidden="true">{day.label.slice(0, 3)}</span>
+              <span className="sr-only">, on {day.label}</span>
+            </span>
+          )}
           <ChevronRight className="size-5 shrink-0 text-tertiary" />
         </button>
-        {dayName && !task.done && (
-          <button type="button" className="h-14 shrink-0 pe-4 ps-1 text-sm font-semibold text-accent" onClick={notToday}>
-            {isToday ? "Not today" : `Take off ${dayName.label.slice(0, 3)}`}
+        {isToday && (
+          <button type="button" className="h-14 shrink-0 pe-4 ps-1 text-sm font-semibold text-accent" aria-label={`Not today: ${task.text}`} onClick={notToday}>
+            Not today
           </button>
         )}
       </div>
@@ -2731,6 +2747,10 @@ function CarryOverSheet({ open, onClose }: { open: boolean; onClose: () => void 
   const carryOver = useSpread((s) => s.carryOver);
   const items = openTasksOf(data);
   const [off, setOff] = useState<Set<string>>(new Set());
+  // Every review starts with everything chosen, whatever was unticked last time.
+  useEffect(() => {
+    if (open) setOff(new Set());
+  }, [open]);
   const hats = new Map(data.hats.map((hat) => [hat.id, hat]));
   const key = (hatId: string, taskId: string) => `${hatId}:${taskId}`;
   const chosen = items.filter((item) => !off.has(key(item.hatId, item.task.id)));

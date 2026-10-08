@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
   useDraggable,
   useDroppable,
   useSensor,
@@ -20,7 +19,14 @@ import { suggestFreeTime, type Suggestion } from "@/lib/spread/free-time";
 import { assignFailureText, eligibleAllocations, tasksOnAllocation, unscheduledTasks } from "@/lib/spread/task-schedule";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { highlightedDay, resolveDrop, TRAY_ID } from "@/spread/gestures/resolve-drop";
-import { FastPointerSensor, HoldPointerSensor, mouseActivation, touchActivation } from "@/spread/gestures/sensors";
+import {
+  FastPointerSensor,
+  HoldPointerSensor,
+  mouseActivation,
+  TaskKeyboardSensor,
+  touchActivation,
+  zoneKeyboardCoordinates,
+} from "@/spread/gestures/sensors";
 import { useWeekSwipe } from "@/spread/gestures/use-week-swipe";
 
 type ActiveDrag =
@@ -67,7 +73,7 @@ export function WeeklyView({
   const sensors = useSensors(
     useSensor(FastPointerSensor, { activationConstraint: mouseActivation }),
     useSensor(HoldPointerSensor, { activationConstraint: touchActivation }),
-    useSensor(KeyboardSensor),
+    useSensor(TaskKeyboardSensor, { coordinateGetter: zoneKeyboardCoordinates }),
   );
   const [moving, setMoving] = useState<string | null>(null);
   const today = isoDate(new Date());
@@ -123,7 +129,7 @@ export function WeeklyView({
     if (decision.action === "refuseTask") {
       const roleName = hatsById.get(decision.hatId)?.name;
       const dayLabel = days.find((day) => day.date === decision.day)?.label;
-      toast(assignFailureText(decision.reason === "no-allocation" ? "no-allocation" : "wrong-role", roleName, dayLabel));
+      toast(assignFailureText(decision.reason, roleName, dayLabel));
     }
     if (decision.action === "moveSpreadToDay") withUndo("Added to the day.", () => moveSpreadToDay(decision.hatId, decision.day));
     if (decision.action === "moveAllocation") withUndo("Moved.", () => moveAllocation(decision.allocationId, decision.day));
@@ -193,7 +199,7 @@ export function WeeklyView({
         {freeTime.kind === "suggestions" && (
           <section aria-label="Free time" className="mt-3 rounded-3xl bg-elevated px-3 py-3">
             <h2 className="px-1 text-base font-semibold">Free time</h2>
-            <p className="px-1 pt-1 text-xs text-secondary">Hours not on a day yet. Tap to add one.</p>
+            <p className="px-1 pt-1 text-xs text-secondary">Hours not on a day yet, each on the lightest day ahead. Tap to add an hour.</p>
             <ul className="mt-2 flex flex-col gap-1">
               {freeTime.items.map((item) => (
                 <FreeTimeRow
@@ -470,7 +476,7 @@ function AllocationRow({
       {tasks.length > 0 && (
         <ul className="flex flex-col gap-1 px-2 pb-2" aria-label={`${name} tasks on ${day}`}>
           {tasks.map((task) => (
-            <TaskChip key={task.id} task={task} hatId={hatId} color={color} open={open} onOpen={onOpen} choices={choices} days={days} onPlace={onPlace} current={id} />
+            <TaskChip key={task.id} task={task} hatId={hatId} color={color} open={open} onOpen={onOpen} choices={choices} days={days} onPlace={onPlace} current={id} surface="elevated" />
           ))}
         </ul>
       )}
@@ -494,6 +500,9 @@ function DayHours({ value, label, onChange }: { value: number; label: string; on
 }
 
 type Day = { label: string; date: string };
+
+/** How many unplaced tasks the tray shows before folding the rest. */
+const TRAY_PREVIEW = 3;
 
 function labelOf(active: ActiveDrag | undefined, hats: Map<string, { name: string }>): string {
   if (!active) return "item";
@@ -532,6 +541,10 @@ function ToPlaceTray({
   onPlace: (hatId: string, taskId: string, allocationId: string | null) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: TRAY_ID });
+  const [all, setAll] = useState(false);
+  // Every task a person already has starts here, so a long list shows a few and folds the rest.
+  const shown = all || tasks.length <= TRAY_PREVIEW ? tasks : tasks.slice(0, TRAY_PREVIEW);
+  const hidden = tasks.length - shown.length;
   return (
     <section
       ref={setNodeRef}
@@ -546,22 +559,30 @@ function ToPlaceTray({
       {tasks.length === 0 ? (
         <p className="px-1 pt-2 text-sm text-tertiary">Every open task has a day.</p>
       ) : (
-        <ul className="mt-2 flex flex-col gap-1">
-          {tasks.map(({ hatId, task }) => (
-            <TaskChip
-              key={task.id}
-              task={task}
-              hatId={hatId}
-              color={hatsById.get(hatId)?.color ?? "var(--tertiary)"}
-              open={open}
-              onOpen={onOpen}
-              choices={choices(hatId)}
-              days={days}
-              onPlace={onPlace}
-              current={null}
-            />
-          ))}
-        </ul>
+        <>
+          <ul className="mt-2 flex flex-col gap-1">
+            {shown.map(({ hatId, task }) => (
+              <TaskChip
+                key={task.id}
+                task={task}
+                hatId={hatId}
+                color={hatsById.get(hatId)?.color ?? "var(--tertiary)"}
+                open={open}
+                onOpen={onOpen}
+                choices={choices(hatId)}
+                days={days}
+                onPlace={onPlace}
+                current={null}
+                surface="canvas"
+              />
+            ))}
+          </ul>
+          {(hidden > 0 || all) && tasks.length > TRAY_PREVIEW && (
+            <button type="button" className="mt-1 h-11 w-full rounded-xl text-sm font-semibold text-accent" aria-expanded={all} onClick={() => setAll(!all)}>
+              {all ? "Show fewer" : `Show ${hidden} more`}
+            </button>
+          )}
+        </>
       )}
     </section>
   );
@@ -577,6 +598,7 @@ function TaskChip({
   days,
   onPlace,
   current,
+  surface,
 }: {
   task: Task;
   hatId: string;
@@ -587,11 +609,14 @@ function TaskChip({
   days: Day[];
   onPlace: (hatId: string, taskId: string, allocationId: string | null) => void;
   current: string | null;
+  /** The chip's own surface; its day choices use the other one so they stand out. */
+  surface: "canvas" | "elevated";
 }) {
   const drag = useDraggable({ id: `task:${task.id}`, data: { kind: "task", hatId, taskId: task.id, text: task.text } });
   const expanded = open === task.id;
+  const choiceSurface = surface === "canvas" ? "bg-elevated" : "bg-canvas";
   return (
-    <li className="rounded-xl bg-elevated">
+    <li className={`rounded-xl ${surface === "canvas" ? "bg-canvas" : "bg-elevated"}`}>
       <div className="flex items-center gap-1 ps-1">
         <button
           ref={drag.setNodeRef}
@@ -624,7 +649,7 @@ function TaskChip({
               <button
                 type="button"
                 disabled={item.id === current}
-                className="flex h-11 w-full items-center justify-between rounded-xl bg-canvas px-3 text-sm font-medium disabled:text-tertiary"
+                className={`flex h-11 w-full items-center justify-between rounded-xl ${choiceSurface} px-3 text-sm font-medium disabled:text-tertiary`}
                 onClick={() => onPlace(hatId, task.id, item.id)}
               >
                 <span>{days.find((day) => day.date === item.day)?.label ?? item.day}</span>
@@ -634,7 +659,7 @@ function TaskChip({
           ))}
           {current && (
             <li>
-              <button type="button" className="h-11 w-full rounded-xl bg-canvas px-3 text-start text-sm font-medium text-danger" onClick={() => onPlace(hatId, task.id, null)}>
+              <button type="button" className={`h-11 w-full rounded-xl ${choiceSurface} px-3 text-start text-sm font-medium text-danger`} onClick={() => onPlace(hatId, task.id, null)}>
                 Take off this day
               </button>
             </li>

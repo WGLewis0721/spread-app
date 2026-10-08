@@ -10,7 +10,12 @@ export const UNDO_MS = 6000;
  * `onUndo` returns false when the change can no longer be reversed safely (something else changed
  * since). The person is then told so instead of being left wondering.
  */
+let showing: string | number | null = null;
+
 export function showUndoToast(message: string, onUndo: () => boolean) {
+  // Only the latest change can be undone (an older one would find its week changed), so an older
+  // Undo is taken away rather than left to fail.
+  if (showing !== null) toast.dismiss(showing);
   const id = toast(message, {
     duration: UNDO_MS,
     action: {
@@ -22,5 +27,6 @@ export function showUndoToast(message: string, onUndo: () => boolean) {
       },
     },
   });
+  showing = id;
   return id;
 }

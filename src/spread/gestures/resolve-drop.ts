@@ -3,7 +3,7 @@ export type DropTarget =
   | { action: "moveAllocation"; allocationId: string; day: string }
   | { action: "reorderAllocation"; allocationId: string; beforeId: string }
   | { action: "assignTask"; hatId: string; taskId: string; allocationId: string | null }
-  | { action: "refuseTask"; hatId: string; taskId: string; reason: "wrong-role" | "no-allocation"; day: string };
+  | { action: "refuseTask"; hatId: string; taskId: string; reason: "no-allocation"; day: string };
 
 type Active =
   | { kind: "spread"; hatId: string }
@@ -34,26 +34,19 @@ export function resolveDrop(active: Active, overId: string, allocations: Slot[])
 }
 
 /**
- * A task goes on an allocation of its own role. Dropped on a day, it finds that role's allocation
- * there; if the role is not on that day the drop is refused (never invented), and dropped on the
- * tray it comes off every day.
+ * A task goes on an allocation of its own role. Dropped anywhere on a day (the day itself, or any
+ * row in it, including another role's row: a finger is not that precise) it lands on its own role's
+ * row for that day. If its role has no hours that day the drop is refused, never invented. Dropped
+ * on the tray it comes off every day.
  */
 function resolveTaskDrop(active: { hatId: string; taskId: string }, overId: string, allocations: Slot[]): DropTarget | null {
   const base = { hatId: active.hatId, taskId: active.taskId };
   if (overId === TRAY_ID) return { action: "assignTask", ...base, allocationId: null };
-  if (overId.startsWith("alloc:")) {
-    const target = allocations.find((item) => item.id === overId.slice(6));
-    if (!target) return null;
-    if (target.hatId !== undefined && target.hatId !== active.hatId) return { action: "refuseTask", ...base, reason: "wrong-role", day: target.day };
-    return { action: "assignTask", ...base, allocationId: target.id };
-  }
-  if (overId.startsWith("day:")) {
-    const day = overId.slice(4);
-    const mine = allocations.find((item) => item.day === day && item.hatId === active.hatId && (item.hours ?? 1) > 0);
-    if (!mine) return { action: "refuseTask", ...base, reason: "no-allocation", day };
-    return { action: "assignTask", ...base, allocationId: mine.id };
-  }
-  return null;
+  const day = dayOf(overId, allocations);
+  if (!day) return null;
+  const mine = allocations.find((item) => item.day === day && (item.hatId === undefined || item.hatId === active.hatId) && (item.hours ?? 1) > 0);
+  if (!mine) return { action: "refuseTask", ...base, reason: "no-allocation", day };
+  return { action: "assignTask", ...base, allocationId: mine.id };
 }
 
 function dayOf(overId: string, allocations: Slot[]): string | null {

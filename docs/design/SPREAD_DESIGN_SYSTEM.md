@@ -27,8 +27,10 @@ Status is never colour alone: every state also has words.
 - **Card**: `rounded-3xl bg-elevated`, content rows `rounded-2xl bg-canvas`. Touch targets are at least 44 px.
 - **Sheet**: Radix Dialog with the `sheet` class and a Grabber. Used for "More", new spread and Open tasks.
 - **Dialog**: Radix AlertDialog for questions that need a yes or no.
-- **Toast and Undo**: one themed toast. Anything the person did with a drag, a tap on a day or "Not today" offers Undo through `showUndoToast` (`src/spread/ui/undo-toast.tsx`) for six seconds. Undo only runs if the week is exactly as the change left it; otherwise it says so and changes nothing.
-- **Compact task chip**: a 44 px handle (role dot), the task text, and one text button ("Place" or "Move to"). Used in To place and inside a day's role row.
+- **Toast and Undo**: one themed toast. Anything the person did with a drag, a tap on a day or "Not today" offers Undo through `showUndoToast` (`src/spread/ui/undo-toast.tsx`) for six seconds. Only the latest change shows Undo. It runs if that week is exactly as the change left it, even after turning to another week; otherwise it says so and changes nothing.
+- **Compact task chip**: a 44 px handle (role dot), the task text, and one text button ("Place" or "Move to"). Used in To place (on `--canvas`, like the Free time rows) and inside a day's role row (on `--elevated`). To place shows three tasks and folds the rest behind "Show N more": every task a person already has starts there.
+- **Quiet links**: secondary week actions (Rollover, Review open tasks) are accent text links side by side in the summary, not full-width buttons.
+- **Not today**: only on a task placed on today. Other placed tasks show their day as a small tag; Move to in Week takes them off.
 - **Drop highlight**: a 2 px `--accent` outline on the target. Refused drops explain themselves in a toast instead of doing something else.
 - **Status row**: a title, one quiet line of detail, `role="status"`. Problem state uses `--danger` on the title.
 - **Today**: the word "Today" in `--accent` beside the day name, with `aria-current="date"`.
@@ -43,11 +45,12 @@ Every drag has a tap equivalent and a keyboard equivalent:
 
 - a task: **Place** / **Move to** lists the days its role is on; **Take off this day** and **Not today** put it back in To place
 - a role on a day: tap the role, then **Add**; or tap a Free time suggestion
-- keyboard: focus a handle, Space to pick up, arrow keys to move, Space to drop, Escape to cancel; the moves are announced
+- keyboard: focus a task's handle, Space to pick up, arrow keys to step to the next day or the tray, Space to drop, Escape to cancel; the moves are announced. Only tasks are moved by keyboard: spreads and day rows keep Enter and Space for their own actions (select, add)
 
 ## Rules a change must keep
 
-1. A task goes on a day for its **own role** only. A drop on a day where that role has no hours is refused, never invented.
+1. A task goes on a day for its **own role** only. Dropped anywhere on a day (even on another role's row) it lands on its role's row there; a day where that role has no hours refuses it, never invents one.
 2. Nothing the planner shows may claim iCloud is working. The save row speaks only about this device. iCloud rows appear only when their feature flag is on.
 3. Stored planner data is not migrated for UI work. New UI reads existing fields.
 4. Convenience state (last view) lives under a key that does not start with `spread.`, so backups never treat it as planner data.
+5. Select plain values from the store (strings, numbers, ids), never objects built in the selector: a new object on every read re-renders forever and takes the whole planner down.

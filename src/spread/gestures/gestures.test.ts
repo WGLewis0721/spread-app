@@ -3,6 +3,7 @@ import test from "node:test";
 import { acceptsPointer, mouseActivation, touchActivation } from "./activation.ts";
 import { gestureAllowsSwipe, weekSwipeDirection, weekSwipeShift } from "./swipe.ts";
 import { highlightedDay, resolveDrop } from "./resolve-drop.ts";
+import { arrowDirection, stepZone } from "./keyboard-zones.ts";
 
 test("a sideways swipe changes week and a vertical one does not", () => {
   assert.equal(weekSwipeDirection({ x: 200, y: 100 }, { x: 100, y: 110 }, { width: 390 }), 1);
@@ -62,7 +63,7 @@ test("drops call spread actions instead of talking to the pointer", () => {
   assert.equal(resolveDrop({ kind: "spread", hatId: "work" }, "nope", allocations), null);
 });
 
-test("a task drop finds its own role's allocation, refuses the rest, and the tray takes it off", () => {
+test("a task drop lands on its own role's row that day, refuses a day without it, and the tray takes it off", () => {
   const slots = [
     { id: "w1", day: "2026-09-27", hatId: "work", hours: 2 },
     { id: "h1", day: "2026-09-27", hatId: "health", hours: 1 },
@@ -71,11 +72,33 @@ test("a task drop finds its own role's allocation, refuses the rest, and the tra
   const task = { kind: "task" as const, hatId: "work", taskId: "t1" };
   assert.deepEqual(resolveDrop(task, "alloc:w1", slots), { action: "assignTask", hatId: "work", taskId: "t1", allocationId: "w1" });
   assert.deepEqual(resolveDrop(task, "day:2026-09-27", slots), { action: "assignTask", hatId: "work", taskId: "t1", allocationId: "w1" });
-  assert.deepEqual(resolveDrop(task, "alloc:h1", slots), { action: "refuseTask", hatId: "work", taskId: "t1", reason: "wrong-role", day: "2026-09-27" });
+  // dropped on another role's row, it still lands on its own role's row that day
+  assert.deepEqual(resolveDrop(task, "alloc:h1", slots), { action: "assignTask", hatId: "work", taskId: "t1", allocationId: "w1" });
+  const home = { kind: "task" as const, hatId: "home", taskId: "t2" };
+  assert.deepEqual(resolveDrop(home, "alloc:w1", slots), { action: "refuseTask", hatId: "home", taskId: "t2", reason: "no-allocation", day: "2026-09-27" });
   assert.deepEqual(resolveDrop(task, "day:2026-09-29", slots), { action: "refuseTask", hatId: "work", taskId: "t1", reason: "no-allocation", day: "2026-09-29" });
-  // an allocation with no hours is not a place to put a task
+  // an allocation with no hours is not a place to put a task, whether the day or the row is the target
   assert.equal(resolveDrop(task, "day:2026-09-28", slots)?.action, "refuseTask");
+  assert.equal(resolveDrop(task, "alloc:w2", slots)?.action, "refuseTask");
   assert.deepEqual(resolveDrop(task, "tray", slots), { action: "assignTask", hatId: "work", taskId: "t1", allocationId: null });
   assert.equal(resolveDrop(task, "nope", slots), null);
   assert.equal(resolveDrop(task, "alloc:missing", slots), null);
+});
+
+test("arrow keys step a held task from one drop place to the next, and stop at the ends", () => {
+  const zones = [
+    { id: "day:2026-10-11", top: 600, left: 16 },
+    { id: "tray", top: 300, left: 16 },
+    { id: "day:2026-10-10", top: 760, left: 16 },
+  ];
+  assert.equal(stepZone(zones, 200, 1)?.id, "tray");
+  assert.equal(stepZone(zones, 312, 1)?.id, "day:2026-10-11");
+  assert.equal(stepZone(zones, 612, 1)?.id, "day:2026-10-10");
+  assert.equal(stepZone(zones, 772, 1), null);
+  assert.equal(stepZone(zones, 772, -1)?.id, "day:2026-10-10");
+  assert.equal(stepZone(zones, 760, -1)?.id, "day:2026-10-11");
+  assert.equal(stepZone(zones, 300, -1), null);
+  assert.equal(arrowDirection("ArrowDown"), 1);
+  assert.equal(arrowDirection("ArrowLeft"), -1);
+  assert.equal(arrowDirection("Space"), 0);
 });

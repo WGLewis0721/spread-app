@@ -11,45 +11,48 @@ export type OpenTask = { hatId: string; task: Task };
 export type CarryPick = { hatId: string; taskId: string };
 export type CarryResult = { data: SpreadData; moved: number };
 
+/** Open tasks of this week's roles, in role order. A box left behind by a removed role is not offered. */
 export function openTasksOf(data: SpreadData): OpenTask[] {
   const week = data.weeks[data.currentWeek];
   if (!week) return [];
-  return week.boxes.flatMap((box) => box.tasks.filter((task) => !task.done).map((task) => ({ hatId: box.hatId, task })));
+  const roles = new Set(data.hats.map((hat) => hat.id));
+  return week.boxes
+    .filter((box) => roles.has(box.hatId))
+    .flatMap((box) => box.tasks.filter((task) => !task.done).map((task) => ({ hatId: box.hatId, task })));
 }
 
 export function carryOpenTasks(data: SpreadData, picks: CarryPick[]): CarryResult {
   const source = data.weeks[data.currentWeek];
   if (!source || picks.length === 0) return { data, moved: 0 };
   const nextKey = shiftWeek(data.currentWeek, 1);
-  const withNext = ensureWeek({ ...data, currentWeek: nextKey });
-  const nextWeek = withNext.weeks[nextKey];
+  const nextWeek = ensureWeek({ ...data, currentWeek: nextKey }).weeks[nextKey];
   const chosen = new Set(picks.map((pick) => `${pick.hatId}:${pick.taskId}`));
+  // A task leaves this week only once it is known to be in next week (added now, or already there
+  // from an earlier run). Nothing can be removed here without landing there.
+  const landed = new Set<string>();
   let moved = 0;
-
-  const sourceBoxes = source.boxes.map((box) => {
-    const leaving = box.tasks.filter((task) => !task.done && chosen.has(`${box.hatId}:${task.id}`));
-    if (leaving.length === 0) return box;
-    return { ...box, tasks: box.tasks.filter((task) => !leaving.includes(task)) };
-  });
 
   const nextBoxes = nextWeek.boxes.map((box) => {
     const from = source.boxes.find((item) => item.hatId === box.hatId);
     if (!from) return box;
-    const incoming = from.tasks
-      .filter((task) => !task.done && chosen.has(`${box.hatId}:${task.id}`))
-      .filter((task) => !box.tasks.some((existing) => existing.id === task.id));
+    const incoming: Task[] = [];
+    for (const task of from.tasks) {
+      const key = `${box.hatId}:${task.id}`;
+      if (task.done || !chosen.has(key)) continue;
+      landed.add(key);
+      if (!box.tasks.some((existing) => existing.id === task.id)) incoming.push(offEveryDay(task));
+    }
     if (incoming.length === 0) return box;
     moved += incoming.length;
-    const clean = incoming.map((task) => {
-      const { allocationId: _link, ...rest } = task;
-      void _link;
-      return rest as Task;
-    });
-    return { ...box, tasks: [...box.tasks, ...clean] };
+    return { ...box, tasks: [...box.tasks, ...incoming] };
   });
+  if (landed.size === 0) return { data, moved: 0 };
 
-  const changedSource = sourceBoxes.some((box, index) => box !== source.boxes[index]);
-  if (!changedSource && moved === 0) return { data, moved: 0 };
+  const sourceBoxes = source.boxes.map((box) =>
+    box.tasks.some((task) => landed.has(`${box.hatId}:${task.id}`))
+      ? { ...box, tasks: box.tasks.filter((task) => !landed.has(`${box.hatId}:${task.id}`)) }
+      : box,
+  );
   return {
     moved,
     data: {
@@ -61,4 +64,11 @@ export function carryOpenTasks(data: SpreadData, picks: CarryPick[]): CarryResul
       },
     },
   };
+}
+
+/** Days belong to the week they are in, so a task that changes week comes off its day. */
+function offEveryDay(task: Task): Task {
+  const { allocationId: _day, ...rest } = task;
+  void _day;
+  return rest;
 }

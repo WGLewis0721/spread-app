@@ -54,7 +54,7 @@ Gestures call actions. They do not write week data themselves.
 
 A touch holds briefly before a drag. A mouse or pen starts after a short move. A week swipe stays separate and waits while a drag is active.
 
-- Tasks can be placed on a day. In Week, **To place** lists open tasks with no day; drag one onto its role on a day, or tap **Place** and pick the day. **Not today** (or **Take off Fri**) in Spread puts it back. Drags, placements and Not today offer **Undo** for six seconds.
+- Tasks can be placed on a day. In Week, **To place** lists open tasks with no day; drag one onto its role on a day, or tap **Place** and pick the day. A task on today shows **Not today** in Spread, which puts it back. Drags, placements and Not today offer **Undo** for six seconds (the latest change only).
 - **Free time** in Week suggests up to three roles that still have hours not on a day, each on the lightest day ahead. Nothing is added until you tap one.
 - **Review open tasks** moves the tasks you pick to next week, keeping them as they are. It does not touch next week's own tasks and is safe to repeat.
 - Spread reopens on the view (Spread or Week, week or month) you left, per profile.

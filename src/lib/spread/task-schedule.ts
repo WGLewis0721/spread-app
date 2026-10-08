@@ -17,6 +17,12 @@ export function allocationOfTask(week: WeekData | undefined, task: Task): Alloca
   return week.allocations.find((item) => item.id === task.allocationId) ?? null;
 }
 
+/** The date a task is placed on, or null. A plain string, so it is safe to select from the store. */
+export function placedDay(week: WeekData | undefined, task: Pick<Task, "allocationId">): string | null {
+  if (!week || !task.allocationId) return null;
+  return week.allocations.find((item) => item.id === task.allocationId)?.day ?? null;
+}
+
 export function isScheduled(week: WeekData | undefined, task: Task): boolean {
   return allocationOfTask(week, task) !== null;
 }

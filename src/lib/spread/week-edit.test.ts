@@ -69,6 +69,19 @@ test("undo refuses when the week changed since, so newer work is kept", () => {
   assert.equal(JSON.stringify(useSpread.getState().data), kept);
 });
 
+test("undo still works after turning to another week, and puts back only that week", () => {
+  seed();
+  const id = useSpread.getState().undoable(() => useSpread.getState().moveAllocation("a1", "2026-09-29"));
+  const edited = useSpread.getState().data.currentWeek;
+  useSpread.getState().changeWeek(1);
+  const away = useSpread.getState().data.currentWeek;
+  assert.notEqual(away, edited);
+  assert.equal(useSpread.getState().undoEdit(id as string), true);
+  const d = useSpread.getState().data;
+  assert.equal(d.currentWeek, away, "the open week does not jump");
+  assert.equal(d.weeks[edited].allocations.find((a) => a.id === "a1")?.day, "2026-09-27");
+});
+
 test("the pure helpers: guard, apply, bounded stack", () => {
   const a = defaultData();
   const b = structuredClone(a);

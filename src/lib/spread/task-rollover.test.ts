@@ -69,3 +69,14 @@ test("the input plan is not mutated", () => {
   carryOpenTasks(d, [{ hatId: hat, taskId: "t1" }]);
   assert.equal(JSON.stringify(d), before);
 });
+
+test("a task never leaves this week unless it lands in next week", () => {
+  const { d, hat } = plan();
+  // A box left behind by a role that was removed: next week has no box for it.
+  d.weeks[d.currentWeek].boxes.push({ hatId: "gone", hours: 0, tasks: [{ id: "orphan", text: "kept", done: false }] });
+  assert.equal(openTasksOf(d).some((o) => o.task.id === "orphan"), false, "it is not offered");
+  const { data, moved } = carryOpenTasks(d, [{ hatId: "gone", taskId: "orphan" }, { hatId: hat, taskId: "t3" }]);
+  assert.equal(moved, 1);
+  const here = data.weeks[data.currentWeek].boxes.find((b) => b.hatId === "gone")!.tasks;
+  assert.deepEqual(here.map((t) => t.id), ["orphan"], "the orphan stays where it was");
+});
