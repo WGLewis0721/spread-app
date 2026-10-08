@@ -179,7 +179,7 @@ Final report must include baseline main SHA, final branch SHA, PR URL, existing/
 
 ## Result matrix (filled in on `feature/spread-unified-ux`)
 
-Baseline: `5b0bdb05e4bfaf8dc86d7a8e081c6badf123e705` (main at the start of the work). Final SHA: the tip of this branch when the PR was opened (shown on the PR). Production, deploys and stored data were not touched.
+Baseline: `5b0bdb05e4bfaf8dc86d7a8e081c6badf123e705` (main at the start of the work; main was merged in again at `a0defbb` before review, with no conflicts). Final SHA: the tip of this branch when the PR was opened (shown on the PR). Production, deploys and stored data were not touched.
 
 | # | Feature | Result | Where | Evidence and honest limits |
 | --- | --- | --- | --- | --- |
@@ -199,7 +199,7 @@ Baseline: `5b0bdb05e4bfaf8dc86d7a8e081c6badf123e705` (main at the start of the w
 
 ### Checks run (all on the final tree)
 
-- `npm run typecheck`: 0 errors. `npm run lint`: 0 errors, 3 warnings (all pre-existing). `npm run test:spread`: 313 of 313. `npm run test:scripts`: 191 passed, 4 skipped. `npm run build`: succeeds.
+- `npm run typecheck`: 0 errors. `npm run lint`: 0 errors, 3 warnings (all pre-existing). `npm run test:spread`: 315 of 315. `npm run test:scripts`: 191 passed, 4 skipped. `npm run build`: succeeds.
 - iOS bridge simulators in Chromium: 27/27, 14/14, 29/29, 24/24.
 - Chromium at 390, 820, 1024 and 1366 wide, light and dark, reduced motion on in dark: no horizontal overflow, no page errors.
 
