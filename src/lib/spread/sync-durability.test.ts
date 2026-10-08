@@ -234,3 +234,35 @@ test("A09: a conflict choice is not applied without a verified safety copy", asy
   await settle(a, b);
   assert.equal(textOf(b, "shared"), "Phone wording");
 });
+
+// Astra A06: confirming "upload this profile again" must send the profile's COMPLETE contents.
+import { itemsToPush, reseedAll } from "./sync-state.ts";
+
+test("A06: an unchanged, fully agreed profile has nothing to send, so re-upload needs a reseed", async () => {
+  const cloud = new Cloud();
+  const x = device(cloud, "phone", seedData());
+  await x.session.start();
+  addTask(x, "t1", "kept");
+  await x.session.localChanged();
+  await settle(x);
+  const agreed = x.h.durable;
+  assert.ok(agreed);
+  assert.equal(itemsToPush(agreed).length, 0, "this is the defect: after a deleted zone or an account change, nothing is queued");
+  const reseeded = reseedAll(agreed);
+  const ids = itemsToPush(reseeded).map((item) => item.id).sort();
+  const everything = Object.keys(agreed.items).sort();
+  assert.deepEqual(ids, everything, "every item, tombstones included, goes up again");
+  assert.deepEqual(reseeded.items, agreed.items, "versions are untouched; only the send queue changes");
+  assert.deepEqual(reseeded.queued, {});
+});
+
+test("A06: reseeding a profile keeps its conflicts and other bookkeeping", async () => {
+  const { b } = await clash();
+  b.native.online = true;
+  await b.session.syncNow();
+  const state = b.h.durable;
+  assert.ok(state && state.conflicts.length > 0);
+  const reseeded = reseedAll(state);
+  assert.deepEqual(reseeded.conflicts, state.conflicts);
+  assert.deepEqual(reseeded.base, state.base);
+});

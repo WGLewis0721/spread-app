@@ -27,6 +27,7 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "syncNow", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncResume", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncClearPause", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncForget", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncBrowse", returnType: CAPPluginReturnPromise),
     ]
 
@@ -171,15 +172,32 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /// Allows sending. Refused while sync is paused for any reason.
     @objc func syncResume(_ call: CAPPluginCall) {
+        guard let syncId = call.getString("syncId"), !syncId.isEmpty else {
+            call.reject("syncId is required", "invalidArguments")
+            return
+        }
         Task {
-            if await sync.resume() { call.resolve() } else { call.reject("Sync is paused", "paused") }
+            if await sync.resume(syncId: syncId) { call.resolve() } else { call.reject("Sync is paused or the iCloud account could not be verified", "paused") }
         }
     }
 
     /// The person explicitly chose to upload to the current iCloud again.
     @objc func syncClearPause(_ call: CAPPluginCall) {
-        sync.clearPause()
+        guard let syncId = call.getString("syncId"), !syncId.isEmpty else {
+            call.reject("syncId is required", "invalidArguments")
+            return
+        }
+        sync.clearPause(syncId: syncId)
         call.resolve()
+    }
+
+    /// The profile stopped syncing: drop everything held for it so it can never be sent later.
+    @objc func syncForget(_ call: CAPPluginCall) {
+        guard let syncId = call.getString("syncId"), !syncId.isEmpty else {
+            call.reject("syncId is required", "invalidArguments")
+            return
+        }
+        if sync.forget(syncId: syncId) { call.resolve() } else { call.reject("Could not clear what was held for this profile", "writeFailed") }
     }
 
     /// Read-only: fetch and list. Never creates the zone or sends. Rejects when iCloud was not reached.

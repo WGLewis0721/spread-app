@@ -46,9 +46,11 @@ type SpreadCloudPlugin = {
   /** Keep these Library files out of device backups (iCloud/iTunes), so they are never restored onto another device. */
   syncExcludeFromBackup(options: { names: string[] }): Promise<void>;
   /** Allow sending. Rejects ("paused") while sync is paused for any reason. */
-  syncResume(): Promise<void>;
+  syncResume(options: { syncId: string }): Promise<void>;
   /** The person explicitly chose to upload to the current iCloud again. */
-  syncClearPause(): Promise<void>;
+  syncClearPause(options: { syncId: string }): Promise<void>;
+  /** The profile stopped syncing: drop its queued and inbound changes so they can never be sent later. */
+  syncForget(options: { syncId: string }): Promise<void>;
   /** Read-only fetch for the link screen: never creates or sends. Rejects when iCloud was not reached. */
   syncBrowse(): Promise<void>;
   syncQueue(options: { items: SyncRowDTO[] }): Promise<void>;
