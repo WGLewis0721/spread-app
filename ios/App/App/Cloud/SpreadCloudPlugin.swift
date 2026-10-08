@@ -232,8 +232,15 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func syncAck(_ call: CAPPluginCall) {
-        let names = (call.getArray("names") as? [String]) ?? []
-        syncStorage.ackInbox(names)
+        guard let items = decode(call) else {
+            call.reject("items are required", "invalidArguments")
+            return
+        }
+        // Compare-and-remove: a newer version staged since the web app read the inbox stays.
+        guard syncStorage.ackInbox(items) else {
+            call.reject("The acknowledgment could not be saved", "inboxWriteFailed")
+            return
+        }
         call.resolve()
     }
 

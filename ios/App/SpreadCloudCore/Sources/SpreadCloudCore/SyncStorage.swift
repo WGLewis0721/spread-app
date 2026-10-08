@@ -181,10 +181,17 @@ public final class SyncStorage {
         return inbox.values.sorted { $0.recordName < $1.recordName }
     }
 
-    public func ackInbox(_ names: [String]) {
+    /// Removes an item only if it is still exactly the version the caller merged. Returns false if
+    /// the change could not be saved.
+    @discardableResult
+    public func ackInbox(_ items: [SyncItemDTO]) -> Bool {
         lock.lock(); defer { lock.unlock() }
-        for name in names { inbox.removeValue(forKey: name) }
-        save(inbox, as: "inbox.json")
+        var changed = false
+        for item in items where inbox[item.recordName] == item {
+            inbox.removeValue(forKey: item.recordName)
+            changed = true
+        }
+        return changed ? save(inbox, as: "inbox.json") : true
     }
 
     // MARK: Record system fields (the change tags CloudKit needs to accept an update)

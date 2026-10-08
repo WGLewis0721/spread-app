@@ -51,7 +51,7 @@
       async syncQueue(o) { const e = engine(); for (const r of o.items) { const n = r.syncId + '|' + r.itemId; e.outbox[n] = r; e.sending.add(n); } await flush(); },
       async syncInbox() { await flush(); return { items: Object.values(engine().inbox) }; },
       async syncOutbox() { return { names: Object.keys(engine().outbox) }; },
-      async syncAck(o) { for (const n of o.names) delete engine().inbox[n]; },
+      async syncAck(o) { for (const r of o.items) { const n = r.syncId + '|' + r.itemId; const now = engine().inbox[n]; if (now && now.v === r.v && now.fields === r.fields && !!now.deleted === !!r.deleted && now.at === r.at) delete engine().inbox[n]; } },
       async syncNow() { await flush(); },
       async syncStatus() {
         const e = engine();

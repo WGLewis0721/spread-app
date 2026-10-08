@@ -52,7 +52,8 @@ type SpreadCloudPlugin = {
   syncQueue(options: { items: SyncRowDTO[] }): Promise<void>;
   syncInbox(): Promise<{ items: SyncRowDTO[] }>;
   syncOutbox(): Promise<{ names: string[] }>;
-  syncAck(options: { names: string[] }): Promise<void>;
+  /** Remove exactly these rows from the native inbox. A newer version of the same item stays. */
+  syncAck(options: { items: SyncRowDTO[] }): Promise<void>;
   syncDrop(options: { names: string[] }): Promise<void>;
   syncStatus(): Promise<SyncNativeStatus>;
   syncNow(): Promise<void>;

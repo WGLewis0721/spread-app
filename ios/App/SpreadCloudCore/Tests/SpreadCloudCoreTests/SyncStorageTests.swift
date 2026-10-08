@@ -70,10 +70,29 @@ final class SyncStorageTests: XCTestCase {
         XCTAssertNil(storage.systemFields(for: "s|a"))
     }
 
-    func testInboxIsAckedByName() {
+    func testInboxIsAckedByExactVersion() {
         let storage = SyncStorage(folder: folder)
         storage.putInbox([item("a"), item("b")])
-        storage.ackInbox(["s|a"])
+        storage.ackInbox([item("a")])
         XCTAssertEqual(storage.inboxItems().map(\.itemId), ["b"])
+    }
+
+    func testANewerVersionStagedAfterTheReadSurvivesTheAck() {
+        let storage = SyncStorage(folder: folder)
+        storage.putInbox([item("a", "{\"v\":2}")])
+        // The web app read version 2; version 3 arrives before it acknowledges.
+        storage.putInbox([item("a", "{\"v\":3}")])
+        XCTAssertTrue(storage.ackInbox([item("a", "{\"v\":2}")]))
+        XCTAssertEqual(storage.inboxItems().first?.fields, "{\"v\":3}")
+        // And it survives a relaunch.
+        XCTAssertEqual(SyncStorage(folder: folder).inboxItems().first?.fields, "{\"v\":3}")
+    }
+
+    func testAnAckThatCannotBeSavedIsReported() throws {
+        let storage = SyncStorage(folder: folder)
+        storage.putInbox([item("a")])
+        try FileManager.default.removeItem(at: folder.appendingPathComponent("inbox.json"))
+        try FileManager.default.createDirectory(at: folder.appendingPathComponent("inbox.json"), withIntermediateDirectories: true)
+        XCTAssertFalse(storage.ackInbox([item("a")]))
     }
 }

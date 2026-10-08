@@ -95,7 +95,7 @@ async function transport(): Promise<SyncTransport> {
     stop: () => plugin.syncStop(),
     queue: (rows) => plugin.syncQueue({ items: rows }),
     inbox: async () => (await plugin.syncInbox()).items,
-    ack: (names) => plugin.syncAck({ names }),
+    ack: (rows) => plugin.syncAck({ items: rows }),
     drop: (names) => plugin.syncDrop({ names }),
     outbox: async () => (await plugin.syncOutbox()).names,
     syncNow: () => plugin.syncNow(),
@@ -330,7 +330,7 @@ export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
   latest.applySynced(data, name);
   // Link first; only a link that reached storage lets the inbox rows go.
   if (!latest.setSyncId(latest.activeId as string, cloud.syncId)) return false;
-  await plugin.syncAck({ names: mine.map((row) => `${row.syncId}|${row.itemId}`) });
+  await plugin.syncAck({ items: mine });
   return true;
 }
 
@@ -347,7 +347,7 @@ export async function linkAddCopy(cloud: CloudProfileSummary): Promise<string | 
   if (!id) return null;
   writeStateFile(adoptRemote(cloud.syncId, await deviceId(), remote, new Date().toISOString()));
   await writeChain;
-  await plugin.syncAck({ names: mine.map((row) => `${row.syncId}|${row.itemId}`) });
+  await plugin.syncAck({ items: mine });
   return id;
 }
 

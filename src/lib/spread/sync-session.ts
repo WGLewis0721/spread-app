@@ -37,7 +37,8 @@ export type SyncTransport = {
   stop(): Promise<void>;
   queue(rows: SyncRow[]): Promise<void>;
   inbox(): Promise<SyncRow[]>;
-  ack(names: string[]): Promise<void>;
+  /** Remove exactly these rows from the native inbox. A newer version staged since the read must stay. */
+  ack(rows: SyncRow[]): Promise<void>;
   /** Names (`<syncId>|<itemId>`) the native engine has not finished sending. */
   outbox(): Promise<string[]>;
   /** Stop trying to send these: the merge made them unnecessary. */
@@ -81,6 +82,8 @@ export type SessionView = {
   /** Records from iCloud that were unreadable or incomplete. They are kept aside, never merged. */
   damaged: number;
   discarded: Discarded[];
+  /** Choices the person made that could not be applied yet. The conflict is still there; the choice is kept and retried. */
+  failedChoices: { id: string; choice: Choice }[];
 };
 
 export type SyncSession = {
@@ -108,6 +111,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
   let lastError: string | null = null;
   let blocked: CaptureBlock | null = null;
   let damaged = 0;
+  const failedChoices = new Map<string, Choice>();
   // Bumped by stop(). A pass that started before a stop notices and does nothing further to the planner.
   let generation = 0;
   let allowMassDelete = false;
@@ -124,6 +128,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     blocked,
     damaged,
     discarded: state.discarded ?? [],
+    failedChoices: [...failedChoices].map(([id, choice]) => ({ id, choice })),
   });
   const publish = () => {
     for (const listener of listeners) listener(view());
@@ -142,12 +147,57 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     }
   };
 
+  /** Resolves true only once the state is durably saved. Nothing is acknowledged or sent before that. */
+  async function persist(next: SyncState): Promise<boolean> {
+    try {
+      const done = await deps.saveState(next);
+      return done !== false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Settle one conflict as a unit: build the result off to the side, change the planner, save the
+   * state. The live state is replaced only when the planner took the change, so a refused write
+   * leaves the conflict (and the person's choice, kept for a retry) exactly as they were.
+   */
+  async function settleConflict(id: string, choice: Choice): Promise<boolean> {
+    if (!running || !deps.isActive()) return false;
+    const here = deps.current();
+    // Capture first so an edit made a moment ago is not lost when the resolution is applied.
+    const captured = captureLocal(state, here.data, here.name, deps.now());
+    if (captured.blocked) {
+      // Do not settle a conflict on top of a planner that looks accidentally emptied.
+      blocked = captured.blocked;
+      publish();
+      return false;
+    }
+    const candidate = resolve(captured.state, id, choice, deps.newId, deps.now());
+    const merged = liveData(candidate, here.data.currentWeek);
+    try {
+      deps.snapshot("pre-resolve");
+      deps.apply(merged.data, merged.name);
+    } catch (error) {
+      failedChoices.set(id, choice);
+      lastError = error instanceof Error ? error.message : "couldn’t apply that choice";
+      publish();
+      return false;
+    }
+    state = candidate;
+    failedChoices.delete(id);
+    if (!(await persist(state))) lastError = "state-not-saved";
+    publish();
+    return true;
+  }
+
   async function pass(): Promise<void> {
     if (!running) return;
     const started = generation;
     busy = true;
     publish();
     try {
+      for (const [id, choice] of [...failedChoices]) await settleConflict(id, choice);
       // Read iCloud's side first. This is the only slow step, so nothing is captured until it is
       // done: the person may have kept typing while it ran, and capture, merge and apply below
       // run with no pause between them, so a fresh edit can never be overwritten.
@@ -182,7 +232,10 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
           deps.apply(next.data, next.name);
         }
         state = merged.state;
-        await deps.transport.ack(rows.map((row) => `${row.syncId}|${row.itemId}`));
+        // iCloud's version may be the only copy of the other side of a conflict. It is acknowledged
+        // only after the state that records it is safely on disk; until then it stays in the inbox.
+        if (!(await persist(state))) throw new Error("state-not-saved");
+        await deps.transport.ack(rows);
       }
 
       // A queued version that the merge replaced with iCloud's own newer one no longer needs sending.
@@ -254,26 +307,12 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
       await queue(pass);
     },
     async resolveConflict(id, choice) {
+      let applied = false;
       await queue(async () => {
-        if (!running || !deps.isActive()) return;
-        const here = deps.current();
-        // Capture first so an edit made a moment ago is not lost when the resolution is applied.
-        const captured = captureLocal(state, here.data, here.name, deps.now());
-        if (captured.blocked) {
-          // Do not settle a conflict on top of a planner that looks accidentally emptied.
-          blocked = captured.blocked;
-          publish();
-          return;
-        }
-        state = captured.state;
-        state = resolve(state, id, choice, deps.newId, deps.now());
-        const merged = liveData(state, here.data.currentWeek);
-        deps.snapshot("pre-resolve");
-        deps.apply(merged.data, merged.name);
-        save();
-        publish();
+        applied = await settleConflict(id, choice);
       });
-      await queue(pass);
+      // A refused choice is kept and retried on the next pass; it is not retried in the same breath.
+      if (applied) await queue(pass);
     },
     async restoreDiscarded(index) {
       await queue(async () => {
@@ -285,11 +324,18 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
           publish();
           return;
         }
-        state = restoreDiscarded(captured.state, index, deps.now());
-        const merged = liveData(state, here.data.currentWeek);
-        deps.snapshot("pre-restore-discarded");
-        deps.apply(merged.data, merged.name);
-        save();
+        const candidate = restoreDiscarded(captured.state, index, deps.now());
+        const merged = liveData(candidate, here.data.currentWeek);
+        try {
+          deps.snapshot("pre-restore-discarded");
+          deps.apply(merged.data, merged.name);
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : "couldn’t put that back";
+          publish();
+          return;
+        }
+        state = candidate;
+        if (!(await persist(state))) lastError = "state-not-saved";
         publish();
       });
       await queue(pass);
