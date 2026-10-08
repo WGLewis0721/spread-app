@@ -9,14 +9,15 @@ import { formatWeek, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, T
 import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
 import { ACCENTS, consumeArrival, onSaveFailure, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
-import { parseAnyBackup, type ParsedBackup } from "@/lib/spread/backup";
+import { collectFullPayload, fullBackupText, parseAnyBackup, parseFullBackup, type ParsedBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import { isNativeApp } from "@/lib/spread/native";
-import { prepareNativeStorage } from "@/lib/spread/native-mirror";
-import { backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
+import { listPinned, prepareNativeStorage, readPinned, type PinnedCopy } from "@/lib/spread/native-mirror";
+import { ensureSafetyCopy } from "@/lib/spread/safety";
+import { acknowledgeBackup, backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
 import type { RemoteBackup } from "@/lib/spread/cloud";
-import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, uploadAgain, useCloudSync } from "@/lib/spread/cloud-sync";
+import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, restoreDiscardedChange, startSyncManager, syncAvailable, syncNowAction, unlink, uploadAgain, useCloudSync } from "@/lib/spread/cloud-sync";
 import { describeConflict, describeSync } from "@/lib/spread/sync-labels";
 import { canKeepBoth } from "@/lib/spread/sync-state";
 import type { LinkChoice } from "@/lib/spread/sync-link";
@@ -88,6 +89,7 @@ export function SpreadApp() {
 
   return (
     <>
+      <BackupDisclosure />
       <Toaster
         position="top-center"
         // Under the status bar and Dynamic Island on the phone; the web keeps the default.
@@ -1516,7 +1518,10 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
 }
 
 /** Apply a confirmed restore. Returns what to tell the person and whether the sheet can close. */
-function applyRestore(backup: ParsedBackup, select?: string[]): { ok: boolean; message: string } {
+async function applyRestore(backup: ParsedBackup, select?: string[]): Promise<{ ok: boolean; message: string }> {
+  if (!(await ensureSafetyCopy("pre-restore"))) {
+    return { ok: false, message: "Couldn’t save a safety copy first, so nothing was changed. Free some space and try again." };
+  }
   const state = useSpread.getState();
   if (backup.kind === "full") {
     const result = state.restoreAsNew(backup.payload, select);
@@ -1539,6 +1544,16 @@ function applyRestore(backup: ParsedBackup, select?: string[]): { ok: boolean; m
   return { ok: true, message: "Backup restored." };
 }
 
+function keyStoreOf(entries: Record<string, string>) {
+  const keys = Object.keys(entries);
+  return {
+    length: keys.length,
+    key: (index: number) => keys[index] ?? null,
+    getItem: (key: string) => (key in entries ? entries[key] : null),
+    setItem: () => undefined,
+  };
+}
+
 function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
   const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
@@ -1549,6 +1564,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const data = useSpread((s) => s.data);
   const fileRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<ParsedBackup | null>(null);
+  const [copies, setCopies] = useState<PinnedCopy[] | null>(null);
   const week = buildWeekDocument(data);
 
   const native = isNativeApp();
@@ -1678,6 +1694,47 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           </button>
         ))}
       </div>
+      {native && (
+        <>
+          <button
+            type="button"
+            className="mt-3 flex h-12 w-full items-center justify-between rounded-3xl bg-canvas px-4 text-left text-base active:bg-fill"
+            onClick={() => void listPinned().then((found) => setCopies(copies === null ? found : null))}
+          >
+            Restore from a safety copy
+            <ChevronRight className={cn("size-4 text-tertiary", copies !== null && "rotate-90")} strokeWidth={2.7} />
+          </button>
+          {copies !== null && (
+            <div className="mt-2 overflow-hidden rounded-3xl bg-canvas" role="list" aria-label="Safety copies on this device">
+              {copies.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-secondary">No safety copies yet. One is saved before anything is replaced.</p>
+              ) : (
+                copies.map((copy) => (
+                  <button
+                    key={copy.name}
+                    type="button"
+                    role="listitem"
+                    className="flex w-full items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-left active:bg-fill last:border-b-0"
+                    onClick={() =>
+                      void readPinned(copy.name).then(async (read) => {
+                        const shaped = read ? await parseFullBackup(await fullBackupText(collectFullPayload(keyStoreOf(read.entries), new Date(read.savedAt), null))) : null;
+                        if (!shaped) toast("That safety copy can’t be read.");
+                        else setBackup({ kind: "full", ...shaped });
+                      })
+                    }
+                  >
+                    <span>
+                      <span className="block text-base">{new Date(copy.savedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                      <span className="block text-xs text-secondary">Saved before {copy.label.replace(/^pre-/, "").replace(/-/g, " ")}</span>
+                    </span>
+                    <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
       <div className="mt-5">
         <Segmented value={theme} onChange={setTheme} />
       </div>
@@ -1715,10 +1772,11 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
         onClose={() => setBackup(null)}
         onConfirm={(selection) => {
           if (!backup) return;
-          const outcome = applyRestore(backup, selection);
-          setBackup(null);
-          if (outcome.ok) setSheet(null);
-          toast(outcome.message);
+          void applyRestore(backup, selection).then((outcome) => {
+            setBackup(null);
+            if (outcome.ok) setSheet(null);
+            toast(outcome.message);
+          });
         }}
       />
       <p className="mt-5 text-xs text-tertiary">Spread · Gray Matter. Data stays on this device.</p>
@@ -1771,6 +1829,34 @@ function ICloudSheet({ onBack }: { onBack: () => void }) {
   if (view === "link") return <SyncLinkView onBack={() => setView("main")} />;
   if (view === "conflicts") return <SyncConflictsView onBack={() => setView("main")} />;
   return <ICloudMain onBack={onBack} go={setView} />;
+}
+
+/** First-run notice. Nothing is uploaded until the person answers it. */
+function BackupDisclosure() {
+  const ready = useCloudBackup((s) => s.native !== null);
+  const acknowledged = useCloudBackup((s) => s.acknowledged);
+  if (!backupAvailable() || !ready || acknowledged) return null;
+  return (
+    <AlertDialog.Root open>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[70] bg-scrim" />
+        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[70] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+          <AlertDialog.Title className="text-center text-base font-semibold">Back up to iCloud?</AlertDialog.Title>
+          <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+            Spread can keep dated copies of all your profiles, tasks and photos in your iCloud Drive, so you can get them back on a new phone. Only you can see them. Nothing is uploaded until you choose. You can turn this off any time in Settings, and the copies stay in iCloud until you delete them.
+          </AlertDialog.Description>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={() => acknowledgeBackup(false)}>
+              Not now
+            </AlertDialog.Cancel>
+            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => acknowledgeBackup(true)}>
+              Turn on
+            </AlertDialog.Action>
+          </div>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
+  );
 }
 
 function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "conflicts") => void }) {
@@ -1889,10 +1975,11 @@ function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "c
         onClose={() => setPicked(null)}
         onConfirm={(selection) => {
           if (!picked) return;
-          const outcome = applyRestore(picked, selection);
-          setPicked(null);
-          toast(outcome.message);
-          if (outcome.ok) onBack();
+          void applyRestore(picked, selection).then((outcome) => {
+            setPicked(null);
+            toast(outcome.message);
+            if (outcome.ok) onBack();
+          });
         }}
       />
     </>
@@ -1956,9 +2043,11 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
                 </button>
               </>
             )}
-            {(state.view?.conflicts.length ?? 0) > 0 && (
+            {((state.view?.conflicts.length ?? 0) > 0 || (state.view?.discarded.length ?? 0) > 0) && (
               <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => go("conflicts")}>
-                Review {state.view?.conflicts.length} {state.view?.conflicts.length === 1 ? "change" : "changes"}
+                {(state.view?.conflicts.length ?? 0) > 0
+                  ? `Review ${state.view?.conflicts.length} ${state.view?.conflicts.length === 1 ? "change" : "changes"}`
+                  : `Set-aside changes (${state.view?.discarded.length})`}
                 <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
               </button>
             )}
@@ -2106,6 +2195,7 @@ function SyncLinkView({ onBack }: { onBack: () => void }) {
 
 function SyncConflictsView({ onBack }: { onBack: () => void }) {
   const conflicts = useCloudSync((s) => s.view?.conflicts ?? []);
+  const discarded = useCloudSync((s) => s.view?.discarded ?? []);
   const hats = useSpread((s) => s.data.hats);
   const [busy, setBusy] = useState(false);
   const lookup = (id: string) => hats.find((hat) => hat.id === id)?.name ?? null;
@@ -2119,7 +2209,7 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
       <SubHeader onBack={onBack} />
       <Dialog.Title className="text-2xl font-bold tracking-tight">Your choice</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        These were changed on two devices in ways Spread can’t combine. Nothing is lost whichever you pick, and what you don’t pick is saved in a copy.
+        These were changed on two devices in ways Spread can’t combine. Whichever you pick, the version you don’t pick is kept for 30 days below, so you can put it back.
       </Dialog.Description>
       {conflicts.length === 0 ? (
         <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Nothing needs your choice.</p>
@@ -2152,6 +2242,24 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
             </div>
           );
         })
+      )}
+      {discarded.length > 0 && (
+        <>
+          <h3 className="mt-6 text-sm font-semibold text-secondary">Set aside (kept 30 days)</h3>
+          <div className="mt-2 overflow-hidden rounded-3xl bg-canvas">
+            {discarded.map((entry, index) => (
+              <div key={`${entry.id}-${entry.at}`} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 text-sm last:border-b-0">
+                <span className="min-w-0">
+                  <span className="block truncate">{entry.item.deleted ? "Deleted item" : String(entry.item.fields.text ?? entry.item.fields.name ?? "Change")}</span>
+                  <span className="block text-xs text-secondary">{entry.side === "icloud" ? "From the other device" : "From this device"}</span>
+                </span>
+                <button type="button" disabled={busy} className="h-9 shrink-0 rounded-full bg-fill px-4 text-sm font-semibold" onClick={() => void restoreDiscardedChange(index)}>
+                  Put back
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </>
   );

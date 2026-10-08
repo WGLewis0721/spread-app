@@ -3,7 +3,9 @@
   const plugins = {
     Filesystem: {
       async readFile(o) { const v = await window.__fsRead(o.path); if (v === null) throw new Error('File does not exist.'); return { data: v }; },
-      async writeFile(o) { await window.__fsWrite(o.path, o.data, o.encoding || 'base64'); return { uri: 'file:///fake/' + o.path }; },
+      async writeFile(o) { await window.__fsWrite(o.path, o.data, o.encoding || 'base64'); (window.__fsNames = window.__fsNames || new Set()).add(o.path); return { uri: 'file:///fake/' + o.path }; },
+      async readdir() { return { files: [...(window.__fsNames || [])].map((name) => ({ name })) }; },
+      async deleteFile(o) { (window.__fsNames || new Set()).delete(o.path); },
       async rmdir() {},
     },
     Share: {

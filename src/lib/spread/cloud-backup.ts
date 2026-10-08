@@ -13,9 +13,13 @@ import { isNativeApp } from "./native.ts";
 import { onStorageChanged } from "./native-mirror.ts";
 
 export const BACKUP_PREF_KEY = "spread.cloud.backup";
+/** Set once the person has been told what is uploaded and chose. Nothing is uploaded before it. */
+export const BACKUP_ACK_KEY = "spread.cloud.backup.ack";
 
 type CloudStore = {
   enabled: boolean;
+  /** The person has seen the disclosure and answered it. */
+  acknowledged: boolean;
   native: NativeFacts | null;
   runner: RunnerState;
   now: number;
@@ -23,6 +27,7 @@ type CloudStore = {
 
 export const useCloudBackup = create<CloudStore>(() => ({
   enabled: false,
+  acknowledged: false,
   native: null,
   runner: { busy: false, lastError: null, lastSuccessAt: null },
   now: Date.now(),
@@ -32,13 +37,41 @@ export function backupAvailable(): boolean {
   return CLOUD_FLAGS.backup && isNativeApp();
 }
 
-/** On by default; the only way it is off is the person turning it off. */
+/**
+ * Backup is on unless the person turned it off. If the preference cannot be read it is treated
+ * as off: an unreadable opt-out must never become an opt-in.
+ */
 function readEnabled(): boolean {
   try {
     return localStorage.getItem(BACKUP_PREF_KEY) !== "off";
   } catch {
-    return true;
+    return false;
   }
+}
+
+function readAcknowledged(): boolean {
+  try {
+    return localStorage.getItem(BACKUP_ACK_KEY) === "yes";
+  } catch {
+    return false;
+  }
+}
+
+/** The one gate for writing anything to iCloud: the feature, the person's choice and their acknowledgement. */
+export function canWriteICloud(): boolean {
+  const state = useCloudBackup.getState();
+  return backupAvailable() && state.enabled && state.acknowledged;
+}
+
+/** The person answered the first-run notice. "Turn on" keeps backup on; "Not now" turns it off. */
+export function acknowledgeBackup(turnOn: boolean): void {
+  try {
+    localStorage.setItem(BACKUP_ACK_KEY, "yes");
+  } catch {
+    /* asked again next launch */
+  }
+  useCloudBackup.setState({ acknowledged: true });
+  setBackupEnabled(turnOn);
 }
 
 export function currentBackupStatus(state: CloudStore): BackupStatus {
@@ -81,7 +114,9 @@ async function buildBackup() {
 export async function startCloudBackup(): Promise<void> {
   if (started || !backupAvailable()) return;
   started = true;
-  useCloudBackup.setState({ enabled: readEnabled() });
+  const acknowledged = readAcknowledged();
+  // Until the person has answered the first-run notice, backup shows as off and uploads nothing.
+  useCloudBackup.setState({ enabled: readEnabled() && acknowledged, acknowledged });
   await refreshBackupStatus();
   const plugin = await cloudPlugin();
   runner = createBackupRunner({
@@ -92,7 +127,7 @@ export async function startCloudBackup(): Promise<void> {
       if (!state.busy) void refreshBackupStatus();
     },
   });
-  if (useCloudBackup.getState().enabled) attach();
+  if (canWriteICloud()) attach();
   void plugin.addListener("accountChanged", () => void refreshBackupStatus());
   window.addEventListener("pagehide", () => void runner?.flush());
   document.addEventListener("visibilitychange", () => {
@@ -115,7 +150,15 @@ export function setBackupEnabled(on: boolean) {
   } catch {
     /* the choice still applies for this run */
   }
-  useCloudBackup.setState({ enabled: on });
+  // Turning it on from Settings is itself the person's consent.
+  if (on) {
+    try {
+      localStorage.setItem(BACKUP_ACK_KEY, "yes");
+    } catch {
+      /* the choice still applies for this run */
+    }
+  }
+  useCloudBackup.setState({ enabled: on, ...(on ? { acknowledged: true } : {}) });
   if (on) {
     attach();
   } else {
@@ -130,7 +173,7 @@ export function setBackupEnabled(on: boolean) {
  * storage straight afterwards. Resolves false if the copy could not be made.
  */
 export async function pinBackup(label: string): Promise<boolean> {
-  if (!backupAvailable() || !started) return false;
+  if (!canWriteICloud() || !started) return false;
   try {
     const payload = collectFullPayload(localStorage, new Date(), deviceId);
     if (payload.roster.length === 0) return false;
@@ -144,6 +187,7 @@ export async function pinBackup(label: string): Promise<boolean> {
 }
 
 export async function backupNow(): Promise<void> {
+  if (!canWriteICloud()) return;
   runner?.changed();
   await runner?.flush();
 }

@@ -8,12 +8,16 @@
  *   pending  items changed here that the cloud has not confirmed yet
  *   conflicts items both devices changed in ways that cannot be combined, waiting for the person
  */
-import { bump, compareVectors, type VersionVector } from "./clock.ts";
+import { bump, compareVectors, mergeVectors, type VersionVector } from "./clock.ts";
 import { canonical, mergeItems, resolveConflict, type Choice, type Conflict, type Json, type LogEntry, type SyncItem } from "./merge.ts";
 import type { SpreadData } from "./model.ts";
 import { assemble, flatten } from "./sync-model.ts";
 
 export type StoredItem = { fields: Record<string, Json>; v: VersionVector; deleted?: boolean; at: string };
+
+/** The side a person chose not to keep, held so it can be put back. */
+export type Discarded = { id: string; item: SyncItem; side: "this-device" | "icloud"; at: string };
+export const DISCARD_KEEP_DAYS = 30;
 
 export type SyncState = {
   version: 1;
@@ -25,6 +29,8 @@ export type SyncState = {
   /** Versions handed to the native sync engine and not yet confirmed by iCloud, by item id. */
   queued: Record<string, VersionVector>;
   conflicts: Conflict[];
+  /** Versions set aside when a conflict was settled. Kept for 30 days. Absent in older state files. */
+  discarded?: Discarded[];
   lastSyncAt: string | null;
 };
 
@@ -214,7 +220,26 @@ export function resolve(state: SyncState, id: string, choice: Choice, newTaskId:
     items[item.id] = toStored({ ...item, at: now }, now);
     pending.add(item.id);
   }
-  return { ...state, items, pending: [...pending].sort(), conflicts: state.conflicts.filter((c) => c.id !== id) };
+  const kept = (state.discarded ?? []).filter((d) => Date.parse(now) - Date.parse(d.at) < DISCARD_KEEP_DAYS * 86_400_000);
+  if (effective === "local") kept.push({ id, item: conflict.remote, side: "icloud", at: now });
+  if (effective === "remote") kept.push({ id, item: conflict.local, side: "this-device", at: now });
+  return { ...state, items, pending: [...pending].sort(), conflicts: state.conflicts.filter((c) => c.id !== id), discarded: kept };
+}
+
+/** Put a set-aside version back. It becomes a new edit that dominates what is there now. */
+export function restoreDiscarded(state: SyncState, index: number, now: string): SyncState {
+  const list = state.discarded ?? [];
+  const entry = list[index];
+  if (!entry) return state;
+  const current = state.items[entry.id];
+  const v = bump(mergeVectors(current?.v ?? {}, entry.item.v), state.deviceId);
+  const items = { ...state.items, [entry.id]: toStored({ ...entry.item, v, at: now }, now) };
+  return {
+    ...state,
+    items,
+    pending: [...new Set([...state.pending, entry.id])].sort(),
+    discarded: list.filter((_, i) => i !== index),
+  };
 }
 
 export function liveData(state: SyncState, currentWeek: string): { data: SpreadData; name: string | null } {

@@ -18,6 +18,8 @@ import { isDamagedRow, toItems } from "./sync-link.ts";
 import {
   applyRemote,
   captureLocal,
+  type Discarded,
+  restoreDiscarded,
   type CaptureBlock,
   confirmQueued,
   itemsToPush,
@@ -78,6 +80,7 @@ export type SessionView = {
   blocked: CaptureBlock | null;
   /** Records from iCloud that were unreadable or incomplete. They are kept aside, never merged. */
   damaged: number;
+  discarded: Discarded[];
 };
 
 export type SyncSession = {
@@ -90,6 +93,8 @@ export type SyncSession = {
   /** Send and fetch now, then run a pass. */
   syncNow(): Promise<void>;
   resolveConflict(id: string, choice: Choice): Promise<void>;
+  /** Put back a version set aside when a conflict was settled. */
+  restoreDiscarded(index: number): Promise<void>;
   /** "restore" puts the last synced planner back; "keep-deletion" confirms the deletion was meant. */
   resolveBlocked(choice: "restore" | "keep-deletion"): Promise<void>;
   view(): SessionView;
@@ -118,6 +123,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     lastError,
     blocked,
     damaged,
+    discarded: state.discarded ?? [],
   });
   const publish = () => {
     for (const listener of listeners) listener(view());
@@ -263,6 +269,25 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
         state = resolve(state, id, choice, deps.newId, deps.now());
         const merged = liveData(state, here.data.currentWeek);
         deps.snapshot("pre-resolve");
+        deps.apply(merged.data, merged.name);
+        save();
+        publish();
+      });
+      await queue(pass);
+    },
+    async restoreDiscarded(index) {
+      await queue(async () => {
+        if (!running || !deps.isActive()) return;
+        const here = deps.current();
+        const captured = captureLocal(state, here.data, here.name, deps.now());
+        if (captured.blocked) {
+          blocked = captured.blocked;
+          publish();
+          return;
+        }
+        state = restoreDiscarded(captured.state, index, deps.now());
+        const merged = liveData(state, here.data.currentWeek);
+        deps.snapshot("pre-restore-discarded");
         deps.apply(merged.data, merged.name);
         save();
         publish();

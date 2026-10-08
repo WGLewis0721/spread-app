@@ -40,6 +40,7 @@ with sync_playwright() as p:
     def device(name):
         ctx = b.new_context(viewport={'width': 393, 'height': 852})
         ctx.add_init_script(INIT)
+        ctx.add_init_script("try { localStorage.setItem('spread.cloud.backup.ack', 'yes') } catch (e) {}")
         page = ctx.new_page()
         fs = {}
         page.expose_function('__fsRead', lambda path: fs.get(path))

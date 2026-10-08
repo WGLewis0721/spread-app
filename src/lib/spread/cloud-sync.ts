@@ -10,6 +10,7 @@ import { create } from "zustand";
 import { CLOUD_FLAGS } from "./cloud-flags.ts";
 import { cloudPlugin, type SyncNativeStatus } from "./cloud.ts";
 import { pinBackup } from "./cloud-backup.ts";
+import { ensureSafetyCopy } from "./safety.ts";
 import type { Choice } from "./merge.ts";
 import { weekKey } from "./model.ts";
 import { flushSpread, useSpread } from "./store.ts";
@@ -168,7 +169,7 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
       useSpread.getState().applySynced(data, nextName);
     },
     snapshot: (label) => {
-      pinSnapshot(label, collectEntries(localStorage));
+      void pinSnapshot(label, collectEntries(localStorage));
       if (Date.now() - lastBackupPin > 6 * 3_600_000) {
         lastBackupPin = Date.now();
         void pinBackup(label);
@@ -291,16 +292,15 @@ function newSyncId(): string {
   return crypto.randomUUID();
 }
 
-async function takeSafetyCopies(label: string) {
-  pinSnapshot(label, collectEntries(localStorage));
-  await pinBackup(label);
+async function takeSafetyCopies(label: string): Promise<boolean> {
+  return ensureSafetyCopy(label);
 }
 
 /** Upload the open profile as a new iCloud profile. */
 export async function linkUpload(): Promise<boolean> {
   const s = useSpread.getState();
   if (!s.activeId) return false;
-  await takeSafetyCopies("pre-sync-link");
+  if (!(await takeSafetyCopies("pre-sync-link"))) return false;
   const syncId = newSyncId();
   s.setSyncId(s.activeId, syncId);
   return true;
@@ -310,7 +310,7 @@ export async function linkUpload(): Promise<boolean> {
 export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
   const s = useSpread.getState();
   if (!s.activeId || !isPristine(s.data)) return false;
-  await takeSafetyCopies("pre-sync-link");
+  if (!(await takeSafetyCopies("pre-sync-link"))) return false;
   const plugin = await cloudPlugin();
   const { items } = await plugin.syncInbox();
   const mine = items.filter((row) => row.syncId === cloud.syncId);
@@ -381,6 +381,10 @@ export async function syncNowAction(): Promise<void> {
 
 export async function resolveBlockedSync(choice: "restore" | "keep-deletion"): Promise<void> {
   await session?.resolveBlocked(choice);
+}
+
+export async function restoreDiscardedChange(index: number): Promise<void> {
+  await session?.restoreDiscarded(index);
 }
 
 export async function resolveSyncConflict(id: string, choice: Choice): Promise<void> {

@@ -1,7 +1,6 @@
 import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
-import { collectEntries, flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
-import { pinBackup } from "@/lib/spread/cloud-backup";
+import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
 import { runMigrations } from "@/lib/spread/schema";
 import { isPristine } from "@/lib/spread/sync-link";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
@@ -427,7 +426,7 @@ function readSession() {
     bindFlush();
     const migration = runMigrations(localStorage, {
       snapshot: (label, entries) => {
-        if (isNativeApp()) pinSnapshot(label, entries);
+        if (isNativeApp()) void pinSnapshot(label, entries);
       },
     });
     schemaLocked = migration.status === "newer";
@@ -797,10 +796,6 @@ export const useSpread = create<Store>((set, get) => ({
     if (open?.syncId) return false;
     const data = normalizeData(incoming);
     flushSpread();
-    if (isNativeApp()) {
-      pinSnapshot("pre-restore", collectEntries(localStorage));
-      void pinBackup("pre-restore");
-    }
     commit(set, data);
     return true;
   },
@@ -856,10 +851,6 @@ export const useSpread = create<Store>((set, get) => ({
     const emptyId = emptyProfileId(get());
     const plan = planRestoreAsNew(payload, get().profiles, uid, { select, replaceEmpty: emptyId });
     if (!plan.ok) return plan;
-    if (isNativeApp()) {
-      pinSnapshot("pre-restore", collectEntries(localStorage));
-      void pinBackup("pre-restore");
-    }
     // Profile data first and the roster last, so a failed write leaves the roster as it was.
     for (const write of plan.writes) if (!put(write.key, write.value)) return { ok: false, reason: "write-failed" };
     writeProfiles(plan.profiles);
