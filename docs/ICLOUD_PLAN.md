@@ -261,9 +261,37 @@ A build may go to external TestFlight / App Review only when **all** are true:
 ## 13. Out of scope
 macOS, Watch, accounts, backend/SaaS, IAP/subscriptions, collaboration or sharing between different Apple IDs, planner redesign.
 
-## 14. Status (updated as PRs merge)
+## 14. Status
 
-| Phase | PR | State |
+Updated 2026-10-08. "Merged" means on `main` with CI green. Nothing below has run against real iCloud or on a physical device: every iCloud behavior is behind `cloud.backup` / `cloud.sync`, both **off** in the shipped binary until the matching gate in section 11 is met on hardware.
+
+| Phase | What | State |
 |---|---|---|
-| 0a docs aligned | this PR | in progress |
-| 0b CI + lint hygiene | this PR | in progress |
+| 0a | Docs aligned to the 1.0 direction | Merged (#22) |
+| 0b | CI workflow, lint errors fixed | Merged (#22). The `iOS shell` simulator job is occasionally flaky on hosted runners (first run on #22 failed to launch the simulator app, the re-run passed) |
+| 0c | Golden pixel-diff harness | **Not built.** Replaced by running the existing simulator suites with the flags off (installed app 27/27, website all pass) on every change. A real visual diff against `golden/2026-09-28-app-store` is still open |
+| 1a | Schema marker + migration runner | Merged (#25) |
+| 1b | Version vectors, profile `syncId` (device id is native, below) | Merged (#25) |
+| 1c | Attachments as separate files | **Deferred to 1.1.** Photos stay inline in the planner JSON. Sync sends item fields as a file (`CKAsset`) so the record limit does not apply, but the `localStorage` quota and large backups remain a known risk (R3) |
+| 1d | Full backup v2 + restore as new profiles | Merged (#25) |
+| 2 | iPad family, all orientations, iOS 17 | Merged (#23). Layout on a physical iPad not yet verified |
+| 3a/3b | Native backup foundation: plugin, device id, backup store, retention | Merged (#24) |
+| 3c/3d | Backup runner, status, restore from iCloud (UI) | PR #26 |
+| 4a/4c-core | Merge, planner split, sync state machine, link planning, session | PR #27 |
+| 4b | Native `CKSyncEngine` transport | PR #28 |
+| 4c-ui | Link flow, conflict screens, status | Follows #26 to #28 |
+
+### Where the build differs from the plan above
+
+- **Restore from a full backup always adds new profiles.** There is no "replace" for a v2 file. Replacing needs the person to remove a profile first. (v1 week files keep their original replace behavior, with a pinned copy first.)
+- **Linking never merges.** The only in-place join is an empty profile adopting an iCloud profile. Everything else adds a new profile or uploads separately.
+- **Only the open profile syncs.** Switching profiles stops one session and starts the next.
+- **No "delete the iCloud copy" action and no tombstone pruning.** Deleting the CloudKit zone would delete every profile's synced data, including other devices'. Turning sync off leaves the iCloud copy in place; removing it is done in Settings, iCloud, Manage Storage. Tombstones are kept (they are small).
+- **No background cadence.** Backups happen after changes, when the app is backgrounded, and at launch when the last one is over a day old. There is no background task, and the copy says so.
+- **Item fields are not end-to-end encrypted by Spread.** They are in the person's private CloudKit database, encrypted in transit and at rest by Apple (and end to end if Advanced Data Protection is on). The earlier plan to use `encryptedValues` was dropped so large and small items behave the same.
+- **Family Sharing is off.** Not confirmed available for paid apps.
+- **Retention** is 7 daily, about 5 weekly and about 4 monthly buckets, pinned copies for 30 days, a 200 MB per-device ceiling, and the newest regular backup is never removed.
+
+### Release gate evidence still owed
+
+Gate 3 (backup on hardware), Gate 4 (two real devices), CloudKit Production schema deployment, iPad layout and screenshots, VoiceOver and Dynamic Type for the new sheets, privacy answers and policy text, and the rollback rehearsal. See `docs/IOS_RELEASE.md` for the checklists.

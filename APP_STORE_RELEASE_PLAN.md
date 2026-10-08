@@ -125,7 +125,7 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 ### 3. Physical iPhone and TestFlight QA
 
 - [ ] Build and run on a physical iPhone.
-- [ ] Verify supported iPhones and an iPad if included at launch; safe areas,
+- [ ] Verify supported iPhones and an iPad (included at launch; configured, device QA pending); safe areas,
       orientation, light/dark modes, keyboard, interruption/resume, low storage,
       offline use, and date/time-zone/week-boundary behavior.
 - [ ] Internal TestFlight build.

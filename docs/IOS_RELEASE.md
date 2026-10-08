@@ -136,6 +136,55 @@ appear because the plist answers it.
   the iOS bundle only, on purpose (the installed app must not load a remote script). The website
   build is untouched.
 
+## iCloud and iPad: what has been checked, and what has not
+
+Flags: both iCloud features are off in a normal build. To test them, build with
+`VITE_SPREAD_CLOUD_BACKUP=1 VITE_SPREAD_CLOUD_SYNC=1 npm run ios:sync`. To ship them, change the
+defaults in `src/lib/spread/cloud-flags.ts` only after the gate in `docs/ICLOUD_PLAN.md` (section 11) is met.
+
+Checked in CI or the sandbox:
+
+| Check | Result |
+|---|---|
+| App compiles for the simulator with the SpreadCloud plugin, iCloud entitlements, iPad family, iOS 17 | Pass (CI `iOS shell`) |
+| Installed-app relaunch and storage-loss restore smoke, with the new native code present | Pass |
+| `SpreadCloudCore` (backup naming, path safety, retention) | `swift test`, Linux container in CI |
+| Backup runner, status wording, restore, merge, sync state, sync session, link planning | `npm run test:spread`, includes property tests and a three-device simulation |
+| Installed-app simulator, flags off | 27/27; website unchanged |
+| Backup UI against a fake iCloud plugin (`cloud_backup_e2e.py`) | 21/21 |
+| Two simulated devices through the real screens: link, sync, conflict held and settled (`sync_e2e.py`) | 18/18 |
+
+Not checked (needs a device or an Apple account): everything real in iCloud; the CloudKit schema in
+Production; iPad layout, Split View and windowed resizing; VoiceOver and Dynamic Type on the new
+sheets; the privacy answers.
+
+### Apple account steps for iCloud
+
+1. In Certificates, Identifiers and Profiles, enable **iCloud** (CloudKit and iCloud Documents) and
+   **Push Notifications** for `com.graymatter.spread`, and create the container
+   `iCloud.com.graymatter.spread`. Automatic signing in Xcode does this when you select the Team.
+2. Run a TestFlight-style debug build against the **Development** CloudKit environment first, so
+   the `SpreadItem` record type exists, then in the CloudKit Console use **Deploy Schema Changes**
+   to promote it to **Production**. TestFlight and App Store builds use Production. Production
+   schema changes are additive only.
+3. Confirm Xcode's Signing and Capabilities tab shows iCloud with both services ticked and the
+   container selected. `ios/App/App/App.entitlements` holds the same values.
+4. The `remote-notification` background mode is declared for CloudKit change pushes. If sync
+   slips to 1.1, App Review may ask why it is present: it is used only by iCloud Sync.
+
+### Device checklist for iCloud (do on a real iPhone and a real iPad, same Apple ID)
+
+1. With iCloud signed out: the planner works offline end to end; More shows the right message.
+2. Backup: make a change, background the app; the sheet shows "Saved here" then "Backed up to iCloud".
+   In Files, iCloud Drive, Spread, Backups shows a folder named for this device.
+3. Delete the app, reinstall: More, iCloud, Restore from iCloud lists the earlier backups, and restoring adds a profile and changes nothing else.
+4. Replace-phone case: restore an iPhone backup onto another phone; its device folder name in Files differs from the first phone's.
+5. iCloud full / Drive off / restricted: each shows its own message and the planner keeps saving locally.
+6. Sync: turn it on on the iPhone, then on the iPad (empty profile adopts, profile with content adds a copy); edits travel both ways; airplane mode on both, edit the same task, reconnect: the choice screen shows both versions and nothing is overwritten first.
+7. Sign out of iCloud on one device while synced: sync pauses, nothing on the device changes. Sign in to a different account: nothing is uploaded to it.
+8. Settings, iCloud, Manage Storage, Spread, Delete: both devices report the removed copy and do not re-upload.
+9. iPad: all four orientations, Split View, Slide Over, a resized window, keyboard and pointer.
+
 ## Physical iPhone checklist (not done)
 
 Do these on a real device from a TestFlight build, in this order:
