@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Clock, Inbox, Minus, Plus } from "lucide-react";
+import { ChevronDown, Clock, Inbox, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { showUndoToast } from "@/spread/ui/undo-toast";
 import { clampHours, isoDate, remainingHours, weekDays, type Allocation, type Task } from "@/lib/spread/model";
@@ -456,6 +456,9 @@ function AllocationRow({
 }) {
   const drag = useDraggable({ id: `move:${id}`, data: { kind: "allocation", allocationId: id, hatId } });
   const drop = useDroppable({ id: `alloc:${id}` });
+  // A day's tasks stay folded under their role until asked for, so a busy week stays scannable.
+  const [showTasks, setShowTasks] = useState(false);
+  const listId = `tasks-${id}`;
   return (
     <li ref={drop.setNodeRef} className={`rounded-2xl bg-canvas${entering ? " descend-in" : ""}${leaving ? " ascend-out" : ""}`}>
       <div className="flex items-center gap-1 ps-2">
@@ -470,14 +473,30 @@ function AllocationRow({
       >
         <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
       </button>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+      {tasks.length > 0 ? (
+        <button
+          type="button"
+          className="flex min-h-11 min-w-0 flex-1 flex-col items-start justify-center text-start"
+          aria-expanded={showTasks}
+          aria-controls={listId}
+          onClick={() => setShowTasks(!showTasks)}
+        >
+          <span className="w-full truncate text-sm font-medium">{name}</span>
+          <span className="flex items-center gap-0.5 text-xs text-secondary">
+            {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+            <ChevronDown className={`size-3.5 transition-transform${showTasks ? " rotate-180" : ""}`} strokeWidth={2.6} aria-hidden="true" />
+          </span>
+        </button>
+      ) : (
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+      )}
       <DayHours value={hours} label={`${name} on ${day}`} onChange={onHours} />
       <button type="button" aria-label={`Remove ${name} from ${day}`} className="grid size-11 place-items-center text-tertiary" onClick={onRemove}>
         <Minus className="size-4" />
       </button>
       </div>
-      {tasks.length > 0 && (
-        <ul className="flex flex-col gap-1 px-2 pb-2" aria-label={`${name} tasks on ${day}`}>
+      {tasks.length > 0 && showTasks && (
+        <ul id={listId} className="flex flex-col gap-1 px-2 pb-2" aria-label={`${name} tasks on ${day}`}>
           {tasks.map((task) => (
             <TaskChip key={task.id} task={task} hatId={hatId} color={color} open={open} onOpen={onOpen} choices={choices} days={days} onPlace={onPlace} current={id} surface="elevated" />
           ))}
