@@ -17,7 +17,7 @@
         const store = (window.__cloudStore = window.__cloudStore || []);
         const regular = store.filter((b) => !b.pin);
         const last = regular[regular.length - 1];
-        const base = { deviceId: 'DEV-AAAAAAAA', cloudKit: 'available', driveAvailable: true, backupCount: store.length };
+        const base = { deviceId: (sessionStorage.getItem('fakeDevice') || (sessionStorage.setItem('fakeDevice', 'DEV-' + Math.random().toString(16).slice(2, 10).padEnd(8, '0')), sessionStorage.getItem('fakeDevice'))), cloudKit: 'available', driveAvailable: true, backupCount: store.length };
         if (last) Object.assign(base, { lastBackupAt: new Date(last.at).toISOString(), lastBackupUploaded: window.__cloudUploaded !== false });
         return Object.assign(base, window.__cloudStatus || {});
       },
@@ -38,9 +38,38 @@
         if (!found) throw new Error('not found');
         return { text: found.text };
       },
-      async addListener() { return { remove: async () => {} }; },
+      async addListener(event, handler) { ((window.__syncHandlers = window.__syncHandlers || {})[event] = (window.__syncHandlers[event] || [])).push(handler); return { remove: async () => {} }; },
+
+      // --- Sync: a fake CKSyncEngine in front of a cloud the test harness owns (window.__cloudSave / __cloudChanges).
+      async syncStart() { engine().started = true; },
+      async syncStop() { engine().started = false; },
+      async syncQueue(o) { const e = engine(); for (const r of o.items) { const n = r.syncId + '|' + r.itemId; e.outbox[n] = r; e.sending.add(n); } await flush(); },
+      async syncInbox() { await flush(); return { items: Object.values(engine().inbox) }; },
+      async syncOutbox() { return { names: Object.keys(engine().outbox) }; },
+      async syncAck(o) { for (const n of o.names) delete engine().inbox[n]; },
+      async syncNow() { await flush(); },
+      async syncStatus() {
+        const e = engine();
+        return Object.assign({ running: e.started, zoneDeleted: false, quotaExceeded: false, outboxCount: Object.keys(e.outbox).length, inboxCount: Object.keys(e.inbox).length, accountKey: 'ACC1' }, window.__syncStatus || {});
+      },
     },
   };
+  function engine() {
+    return (window.__engine = window.__engine || { started: false, outbox: {}, inbox: {}, sending: new Set(), tags: {}, cursor: 0 });
+  }
+  async function flush() {
+    const e = engine();
+    if (window.__syncOffline || !e.started) return;
+    for (const name of Object.keys(e.outbox)) {
+      if (!e.sending.has(name)) continue;
+      const r = await window.__cloudSave(name, e.outbox[name], e.tags[name] === undefined ? null : e.tags[name]);
+      if (r.ok) { e.tags[name] = r.tag; delete e.outbox[name]; e.sending.delete(name); }
+      else { e.inbox[name] = r.row; e.tags[name] = r.tag; e.sending.delete(name); }
+    }
+    const changes = await window.__cloudChanges(e.cursor);
+    for (const c of changes.rows) { if (e.tags[c.name] !== c.tag && !(c.name in e.outbox)) { e.inbox[c.name] = c.row; e.tags[c.name] = c.tag; } }
+    e.cursor = changes.seq;
+  }
   const stub = {
     isNativePlatform: () => true,
     getPlatform: () => 'ios',

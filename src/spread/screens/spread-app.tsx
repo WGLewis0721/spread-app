@@ -16,6 +16,10 @@ import { isNativeApp } from "@/lib/spread/native";
 import { prepareNativeStorage } from "@/lib/spread/native-mirror";
 import { backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
 import type { RemoteBackup } from "@/lib/spread/cloud";
+import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, useCloudSync } from "@/lib/spread/cloud-sync";
+import { describeConflict, describeSync } from "@/lib/spread/sync-labels";
+import { canKeepBoth } from "@/lib/spread/sync-state";
+import type { LinkChoice } from "@/lib/spread/sync-link";
 import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
@@ -60,7 +64,7 @@ export function SpreadApp() {
     void prepareNativeStorage().then(() => {
       if (!live) return;
       boot();
-      void startCloudBackup();
+      void startCloudBackup().then(() => startSyncManager());
     });
     return () => {
       live = false;
@@ -1603,7 +1607,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       },
     },
     { label: "Restore Spread", icon: "icon-restore.svg", run: () => fileRef.current?.click() },
-    ...(backupAvailable() ? [{ label: "iCloud Backup", run: () => setSheet("icloud") }] : []),
+    ...(backupAvailable() || syncAvailable() ? [{ label: syncAvailable() ? "iCloud" : "iCloud Backup", run: () => setSheet("icloud") }] : []),
     { label: "License key", run: () => setSheet("license") },
   ];
   // WKWebView can't print, and the installed app has no license step.
@@ -1760,6 +1764,13 @@ function formatBytes(bytes: number) {
 }
 
 function ICloudSheet({ onBack }: { onBack: () => void }) {
+  const [view, setView] = useState<"main" | "link" | "conflicts">("main");
+  if (view === "link") return <SyncLinkView onBack={() => setView("main")} />;
+  if (view === "conflicts") return <SyncConflictsView onBack={() => setView("main")} />;
+  return <ICloudMain onBack={onBack} go={setView} />;
+}
+
+function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "conflicts") => void }) {
   const state = useCloudBackup();
   const status = currentBackupStatus(state);
   const [backups, setBackups] = useState<RemoteBackup[] | null>(null);
@@ -1803,11 +1814,14 @@ function ICloudSheet({ onBack }: { onBack: () => void }) {
         <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
         <span />
       </div>
-      <Dialog.Title className="text-2xl font-bold tracking-tight">iCloud Backup</Dialog.Title>
+      <Dialog.Title className="text-2xl font-bold tracking-tight">{syncAvailable() ? "iCloud" : "iCloud Backup"}</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
         Spread keeps a copy of everything in your own iCloud. It is never sent anywhere else.
       </Dialog.Description>
-      <div className="mt-4 rounded-3xl bg-canvas px-4 py-3" role="status" aria-live="polite">
+      {syncAvailable() && <SyncSection go={go} />}
+      {backupAvailable() && <>
+      <h3 className="mt-6 text-sm font-semibold text-secondary">Backup</h3>
+      <div className="mt-2 rounded-3xl bg-canvas px-4 py-3" role="status" aria-live="polite">
         <p className={cn("text-base font-semibold", status.tone === "problem" && "text-danger")}>{status.title}</p>
         {status.detail ? <p className="mt-0.5 text-sm text-secondary">{status.detail}</p> : null}
       </div>
@@ -1866,6 +1880,7 @@ function ICloudSheet({ onBack }: { onBack: () => void }) {
           )}
         </div>
       )}
+      </>}
       <RestoreDialog
         backup={picked}
         onClose={() => setPicked(null)}
@@ -1877,6 +1892,229 @@ function ICloudSheet({ onBack }: { onBack: () => void }) {
           if (outcome.ok) onBack();
         }}
       />
+    </>
+  );
+}
+
+function SubHeader({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
+      <button type="button" aria-label="Back" onClick={onBack} className="grid size-11 place-items-center rounded-full text-secondary">
+        <ChevronRight className="size-5 rotate-180" strokeWidth={2.7} />
+      </button>
+      <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
+      <span />
+    </div>
+  );
+}
+
+function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
+  const state = useCloudSync();
+  const profileName = useSpread((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? "this profile");
+  const [confirmOff, setConfirmOff] = useState(false);
+  const said = describeSync({
+    linked: state.linked,
+    paused: state.paused,
+    started: state.view?.running ?? false,
+    busy: state.view?.busy ?? false,
+    waitingToSend: state.view?.waitingToSend ?? 0,
+    conflicts: state.view?.conflicts.length ?? 0,
+    lastSyncAt: state.view?.lastSyncAt ?? null,
+    lastError: state.view?.lastError ?? null,
+    quotaExceeded: state.native?.quotaExceeded ?? false,
+    now: new Date(state.now),
+  });
+  const rowClass = "flex h-12 w-full items-center justify-between px-4 text-left text-base active:bg-fill disabled:text-tertiary";
+  return (
+    <>
+      <h3 className="mt-5 text-sm font-semibold text-secondary">Sync · {profileName}</h3>
+      <div className="mt-2 rounded-3xl bg-canvas px-4 py-3" role="status" aria-live="polite">
+        <p className={cn("text-base font-semibold", said.tone === "problem" && "text-danger")}>{said.title}</p>
+        {said.detail ? <p className="mt-0.5 text-sm text-secondary">{said.detail}</p> : null}
+      </div>
+      <div className="stack-rows mt-3 overflow-hidden rounded-3xl bg-canvas">
+        {!state.linked ? (
+          <button type="button" className={rowClass} onClick={() => go("link")}>
+            Turn on iCloud Sync
+            <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
+          </button>
+        ) : (
+          <>
+            {(state.view?.conflicts.length ?? 0) > 0 && (
+              <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => go("conflicts")}>
+                Review {state.view?.conflicts.length} {state.view?.conflicts.length === 1 ? "change" : "changes"}
+                <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
+              </button>
+            )}
+            <button type="button" disabled={Boolean(state.paused)} className={cn(rowClass, "border-b border-line")} onClick={() => void syncNowAction()}>
+              Sync now
+            </button>
+            <button type="button" className={cn(rowClass, "text-danger")} onClick={() => setConfirmOff(true)}>
+              Turn off sync for this profile
+            </button>
+          </>
+        )}
+      </div>
+      <AlertDialog.Root open={confirmOff} onOpenChange={setConfirmOff}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+          <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+            <AlertDialog.Title className="text-center text-base font-semibold">Turn off sync for {profileName}?</AlertDialog.Title>
+            <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+              Everything stays on this device. Your other devices keep what they have. The copy already in iCloud is not deleted.
+            </AlertDialog.Description>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+              <AlertDialog.Action
+                className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
+                onClick={() => {
+                  void unlink().then(() => toast("iCloud Sync is off for this profile."));
+                }}
+              >
+                Turn off
+              </AlertDialog.Action>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
+    </>
+  );
+}
+
+function SyncLinkView({ onBack }: { onBack: () => void }) {
+  const profileName = useSpread((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? "this profile");
+  const [choices, setChoices] = useState<LinkChoice[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    void linkChoices()
+      .then((found) => live && setChoices(found))
+      .catch(() => live && setFailed(true));
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  async function run(work: () => Promise<boolean | string | null>, done: string) {
+    setBusy(true);
+    try {
+      const result = await work();
+      if (result === false || result === null) toast("Couldn’t do that. Nothing was changed.");
+      else {
+        toast(done);
+        onBack();
+      }
+    } catch {
+      toast("Couldn’t reach iCloud. Nothing was changed.");
+    }
+    setBusy(false);
+  }
+
+  const rowClass = "flex w-full flex-col items-start gap-0.5 border-b border-line px-4 py-3 text-left active:bg-fill disabled:text-tertiary last:border-b-0";
+  return (
+    <>
+      <SubHeader onBack={onBack} />
+      <Dialog.Title className="text-2xl font-bold tracking-tight">Sync {profileName}</Dialog.Title>
+      <Dialog.Description className="mt-1 text-sm text-secondary">
+        Spread never combines profiles that were made separately. Every choice below keeps everything you have, and a copy is saved first.
+      </Dialog.Description>
+      {failed ? (
+        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Couldn’t reach iCloud. Check that you are signed in and online, then try again.</p>
+      ) : choices === null ? (
+        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Looking in iCloud…</p>
+      ) : (
+        <div className="mt-4 overflow-hidden rounded-3xl bg-canvas">
+          {choices.map((choice, index) => {
+            if (choice.kind === "upload") {
+              return (
+                <button key={index} type="button" disabled={busy} className={rowClass} onClick={() => void run(linkUpload, "iCloud Sync is on.")}>
+                  <span className="text-base">Upload {profileName} to iCloud</span>
+                  <span className="text-xs text-secondary">Nothing from this profile has been uploaded yet. It stays on this device too.</span>
+                </button>
+              );
+            }
+            if (choice.kind === "adopt") {
+              return (
+                <button key={index} type="button" disabled={busy} className={rowClass} onClick={() => void run(() => linkAdopt(choice.cloud), "iCloud Sync is on.")}>
+                  <span className="text-base">Use “{choice.cloud.name || "iCloud profile"}” from iCloud</span>
+                  <span className="text-xs text-secondary">{choice.cloud.tasks} {choice.cloud.tasks === 1 ? "task" : "tasks"}, {choice.cloud.weeks} {choice.cloud.weeks === 1 ? "week" : "weeks"}. This profile is empty, so it becomes that one.</span>
+                </button>
+              );
+            }
+            if (choice.kind === "add-copy") {
+              return (
+                <button key={index} type="button" disabled={busy || choice.needsSlot} className={rowClass} onClick={() => void run(() => linkAddCopy(choice.cloud), "Profile added.")}>
+                  <span className="text-base">Add “{choice.cloud.name || "iCloud profile"}” as a new profile</span>
+                  <span className="text-xs text-secondary">
+                    {choice.needsSlot ? "This device has no room for another profile. Remove one first." : `${choice.cloud.tasks} ${choice.cloud.tasks === 1 ? "task" : "tasks"}, ${choice.cloud.weeks} ${choice.cloud.weeks === 1 ? "week" : "weeks"}. ${profileName} is left as it is.`}
+                  </span>
+                </button>
+              );
+            }
+            return (
+              <button key={index} type="button" disabled={busy} className={rowClass} onClick={() => void run(linkUpload, "iCloud Sync is on.")}>
+                <span className="text-base">Upload {profileName} as its own iCloud profile</span>
+                <span className="text-xs text-secondary">Kept apart from the profiles already in iCloud.</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+function SyncConflictsView({ onBack }: { onBack: () => void }) {
+  const conflicts = useCloudSync((s) => s.view?.conflicts ?? []);
+  const hats = useSpread((s) => s.data.hats);
+  const [busy, setBusy] = useState(false);
+  const lookup = (id: string) => hats.find((hat) => hat.id === id)?.name ?? null;
+  async function choose(id: string, choice: "local" | "remote" | "both") {
+    setBusy(true);
+    await resolveSyncConflict(id, choice).catch(() => toast("Couldn’t save that choice. Try again."));
+    setBusy(false);
+  }
+  return (
+    <>
+      <SubHeader onBack={onBack} />
+      <Dialog.Title className="text-2xl font-bold tracking-tight">Your choice</Dialog.Title>
+      <Dialog.Description className="mt-1 text-sm text-secondary">
+        These were changed on two devices in ways Spread can’t combine. Nothing is lost whichever you pick, and what you don’t pick is saved in a copy.
+      </Dialog.Description>
+      {conflicts.length === 0 ? (
+        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Nothing needs your choice.</p>
+      ) : (
+        conflicts.map((conflict) => {
+          const card = describeConflict(conflict, lookup);
+          return (
+            <div key={conflict.id} className="mt-4 rounded-3xl bg-canvas px-4 py-3">
+              <p className="text-base font-semibold">{card.title}</p>
+              {card.lines.map((line) => (
+                <div key={line.label} className="mt-2 text-sm">
+                  <p className="text-secondary">{line.label}</p>
+                  <p>This device: {line.local}</p>
+                  <p>Other device: {line.remote}</p>
+                </div>
+              ))}
+              <div className="mt-3 grid gap-2">
+                <button type="button" disabled={busy} className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => void choose(conflict.id, "local")}>
+                  Keep this device’s
+                </button>
+                <button type="button" disabled={busy} className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={() => void choose(conflict.id, "remote")}>
+                  Use the other device’s
+                </button>
+                {canKeepBoth(conflict) && (
+                  <button type="button" disabled={busy} className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={() => void choose(conflict.id, "both")}>
+                    Keep both
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })
+      )}
     </>
   );
 }
