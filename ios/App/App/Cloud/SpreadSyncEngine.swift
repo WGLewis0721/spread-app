@@ -1,6 +1,8 @@
 import CloudKit
 import Foundation
+#if canImport(SpreadCloudCore)
 import SpreadCloudCore
+#endif
 
 /// Moves SyncItemDTOs between this device and the person's private iCloud database using Apple's
 /// `CKSyncEngine`. It decides nothing about content: a version iCloud rejects is handed to the

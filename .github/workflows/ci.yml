@@ -47,4 +47,4 @@ jobs:
           -target arm64-apple-ios17.0-simulator -swift-version 5
           -Xfrontend -warn-long-expression-type-checking=300
           -Xfrontend -warn-long-function-bodies=600
-          SpreadCloudConfig.swift SyncStorage.swift SpreadSyncEngine.swift
+          SpreadCloudConfig.swift SyncStorage.swift SpreadSyncEngine.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift
