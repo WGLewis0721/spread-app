@@ -337,6 +337,10 @@ export async function syncNowAction(): Promise<void> {
   await refreshNative();
 }
 
+export async function resolveBlockedSync(choice: "restore" | "keep-deletion"): Promise<void> {
+  await session?.resolveBlocked(choice);
+}
+
 export async function resolveSyncConflict(id: string, choice: Choice): Promise<void> {
   await session?.resolveConflict(id, choice);
 }

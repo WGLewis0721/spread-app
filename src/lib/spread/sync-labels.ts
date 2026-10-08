@@ -83,6 +83,8 @@ export type SyncDescribeInput = {
   lastSyncAt: string | null;
   lastError: string | null;
   quotaExceeded: boolean;
+  /** The planner looks emptied by accident and sync is waiting for a choice. */
+  blocked?: boolean;
   now: Date;
 };
 
@@ -92,6 +94,13 @@ export type SyncDescription = { title: string; detail: string; tone: Tone };
 export function describeSync(input: SyncDescribeInput): SyncDescription {
   if (!input.linked) {
     return { title: "iCloud Sync is off", detail: "This profile stays on this device until you turn sync on. Nothing is shared or combined.", tone: "off" };
+  }
+  if (input.blocked) {
+    return {
+      title: "Sync is paused: this profile looks empty",
+      detail: "Nothing has been deleted in iCloud or on your other devices. Put your last synced planner back, or confirm you meant to clear it.",
+      tone: "problem",
+    };
   }
   if (input.paused === "switchAccounts" || input.paused === "signOut") {
     return {

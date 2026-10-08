@@ -18,6 +18,7 @@ import { toItems } from "./sync-link.ts";
 import {
   applyRemote,
   captureLocal,
+  type CaptureBlock,
   confirmQueued,
   itemsToPush,
   liveData,
@@ -66,6 +67,8 @@ export type SessionView = {
   waitingToSend: number;
   conflicts: SyncState["conflicts"];
   lastError: string | null;
+  /** The planner looks emptied by accident. Nothing is recorded or sent until the person chooses. */
+  blocked: CaptureBlock | null;
 };
 
 export type SyncSession = {
@@ -78,6 +81,8 @@ export type SyncSession = {
   /** Send and fetch now, then run a pass. */
   syncNow(): Promise<void>;
   resolveConflict(id: string, choice: Choice): Promise<void>;
+  /** "restore" puts the last synced planner back; "keep-deletion" confirms the deletion was meant. */
+  resolveBlocked(choice: "restore" | "keep-deletion"): Promise<void>;
   view(): SessionView;
   onChange(listener: (view: SessionView) => void): () => void;
 };
@@ -87,6 +92,8 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
   let running = false;
   let busy = false;
   let lastError: string | null = null;
+  let blocked: CaptureBlock | null = null;
+  let allowMassDelete = false;
   let chain: Promise<void> = Promise.resolve();
   const listeners = new Set<(view: SessionView) => void>();
 
@@ -97,6 +104,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     waitingToSend: state.pending.filter((id) => !state.conflicts.some((c) => c.id === id)).length,
     conflicts: state.conflicts,
     lastError,
+    blocked,
   });
   const publish = () => {
     for (const listener of listeners) listener(view());
@@ -115,7 +123,15 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
 
       // 1. capture
       const here = deps.current();
-      state = captureLocal(state, here.data, here.name, deps.now()).state;
+      const captured = captureLocal(state, here.data, here.name, deps.now(), { allowMassDelete });
+      allowMassDelete = false;
+      if (captured.blocked) {
+        // Likely an empty or failed read, not a decision. Record nothing, send nothing, apply nothing.
+        blocked = captured.blocked;
+        return;
+      }
+      blocked = null;
+      state = captured.state;
 
       // 2. inbound, 3. apply
       if (rows.length > 0) {
@@ -200,12 +216,37 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
       await queue(async () => {
         const here = deps.current();
         // Capture first so an edit made a moment ago is not lost when the resolution is applied.
-        state = captureLocal(state, here.data, here.name, deps.now()).state;
+        const captured = captureLocal(state, here.data, here.name, deps.now());
+        if (captured.blocked) {
+          // Do not settle a conflict on top of a planner that looks accidentally emptied.
+          blocked = captured.blocked;
+          publish();
+          return;
+        }
+        state = captured.state;
         state = resolve(state, id, choice, deps.newId, deps.now());
         const merged = liveData(state, here.data.currentWeek);
         deps.snapshot("pre-resolve");
         deps.apply(merged.data, merged.name);
         save();
+        publish();
+      });
+      await queue(pass);
+    },
+    async resolveBlocked(choice) {
+      await queue(async () => {
+        if (!blocked) return;
+        if (choice === "restore") {
+          // The state still holds the last synced items, because the blocked capture changed nothing.
+          const here = deps.current();
+          deps.snapshot("pre-restore-guard");
+          const back = liveData(state, here.data.currentWeek);
+          deps.apply(back.data, back.name);
+          blocked = null;
+        } else {
+          allowMassDelete = true;
+          blocked = null;
+        }
         publish();
       });
       await queue(pass);

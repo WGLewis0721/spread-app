@@ -16,7 +16,7 @@ import { isNativeApp } from "@/lib/spread/native";
 import { prepareNativeStorage } from "@/lib/spread/native-mirror";
 import { backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
 import type { RemoteBackup } from "@/lib/spread/cloud";
-import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, useCloudSync } from "@/lib/spread/cloud-sync";
+import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, useCloudSync } from "@/lib/spread/cloud-sync";
 import { describeConflict, describeSync } from "@/lib/spread/sync-labels";
 import { canKeepBoth } from "@/lib/spread/sync-state";
 import type { LinkChoice } from "@/lib/spread/sync-link";
@@ -1922,6 +1922,7 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
     lastSyncAt: state.view?.lastSyncAt ?? null,
     lastError: state.view?.lastError ?? null,
     quotaExceeded: state.native?.quotaExceeded ?? false,
+    blocked: Boolean(state.view?.blocked),
     now: new Date(state.now),
   });
   const rowClass = "flex h-12 w-full items-center justify-between px-4 text-left text-base active:bg-fill disabled:text-tertiary";
@@ -1940,6 +1941,16 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
           </button>
         ) : (
           <>
+            {state.view?.blocked && (
+              <>
+                <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => void resolveBlockedSync("restore")}>
+                  Put my last synced planner back
+                </button>
+                <button type="button" className={cn(rowClass, "border-b border-line text-danger")} onClick={() => void resolveBlockedSync("keep-deletion")}>
+                  I cleared it on purpose
+                </button>
+              </>
+            )}
             {(state.view?.conflicts.length ?? 0) > 0 && (
               <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => go("conflicts")}>
                 Review {state.view?.conflicts.length} {state.view?.conflicts.length === 1 ? "change" : "changes"}

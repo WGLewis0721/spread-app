@@ -40,30 +40,67 @@ function sameStored(a: StoredItem | undefined, b: StoredItem | undefined): boole
   return !!a.deleted === !!b.deleted && compareVectors(a.v, b.v) === "equal" && (a.deleted || canonical(a.fields) === canonical(b.fields));
 }
 
+export type CaptureBlock = { deleting: number; live: number; reason: "everything" | "most" | "all-tasks" };
+
+/** Thresholds for treating a capture as a likely accident rather than an edit. */
+const MASS_MIN = 5;
+const TASKS_MIN = 3;
+
+/**
+ * Would capturing this planner delete so much that it is more likely a failed or empty read than
+ * a decision? Deleting one task, or a handful, is an edit. Everything vanishing, more than half
+ * of a sizeable planner vanishing, or every task vanishing at once is not.
+ */
+export function assessDeletion(state: SyncState, vanished: string[]): CaptureBlock | null {
+  const live = Object.entries(state.items).filter(([, item]) => !item.deleted).map(([id]) => id);
+  if (vanished.length === 0 || live.length === 0) return null;
+  const liveTasks = live.filter((id) => id.startsWith("task:"));
+  const vanishedTasks = vanished.filter((id) => id.startsWith("task:"));
+  if (vanished.length >= live.length) return { deleting: vanished.length, live: live.length, reason: "everything" };
+  if (vanished.length >= MASS_MIN && vanished.length * 2 > live.length) return { deleting: vanished.length, live: live.length, reason: "most" };
+  if (liveTasks.length >= TASKS_MIN && vanishedTasks.length === liveTasks.length) return { deleting: vanished.length, live: live.length, reason: "all-tasks" };
+  return null;
+}
+
 /**
  * Record what the person changed on this device. Items whose content differs from what the state
  * holds get a new version stamped by this device; items that vanished become tombstones.
+ *
+ * If the deletions look like an accident (see `assessDeletion`) nothing is recorded and `blocked`
+ * says why, unless the caller has been told the person confirmed it with `allowMassDelete`.
  */
-export function captureLocal(state: SyncState, data: SpreadData, name: string, now: string): { state: SyncState; changed: string[] } {
+export function captureLocal(
+  state: SyncState,
+  data: SpreadData,
+  name: string,
+  now: string,
+  options: { allowMassDelete?: boolean } = {},
+): { state: SyncState; changed: string[]; blocked?: CaptureBlock } {
+  const plain = flatten(data, name);
+  const seen = new Set(plain.map((item) => item.id));
+  const vanished = Object.entries(state.items).filter(([id, current]) => !seen.has(id) && !current.deleted).map(([id]) => id);
+  if (!options.allowMassDelete) {
+    const blocked = assessDeletion(state, vanished);
+    if (blocked) return { state, changed: [], blocked };
+  }
+
   const items = { ...state.items };
   const pending = new Set(state.pending);
   const conflicts = state.conflicts.slice();
   const changed: string[] = [];
-  const seen = new Set<string>();
 
-  for (const plain of flatten(data, name)) {
-    seen.add(plain.id);
-    const current = items[plain.id];
-    if (current && !current.deleted && canonical(current.fields) === canonical(plain.fields)) continue;
-    const next: StoredItem = { fields: plain.fields, v: bump(current?.v ?? {}, state.deviceId), at: now };
-    items[plain.id] = next;
-    pending.add(plain.id);
-    changed.push(plain.id);
-    const at = conflicts.findIndex((c) => c.id === plain.id);
-    if (at >= 0) conflicts[at] = { ...conflicts[at], local: toItem(plain.id, next) };
+  for (const item of plain) {
+    const current = items[item.id];
+    if (current && !current.deleted && canonical(current.fields) === canonical(item.fields)) continue;
+    const next: StoredItem = { fields: item.fields, v: bump(current?.v ?? {}, state.deviceId), at: now };
+    items[item.id] = next;
+    pending.add(item.id);
+    changed.push(item.id);
+    const at = conflicts.findIndex((c) => c.id === item.id);
+    if (at >= 0) conflicts[at] = { ...conflicts[at], local: toItem(item.id, next) };
   }
-  for (const [id, current] of Object.entries(items)) {
-    if (seen.has(id) || current.deleted) continue;
+  for (const id of vanished) {
+    const current = items[id];
     const next: StoredItem = { fields: {}, v: bump(current.v, state.deviceId), deleted: true, at: now };
     items[id] = next;
     pending.add(id);
