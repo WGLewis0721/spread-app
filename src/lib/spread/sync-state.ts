@@ -22,12 +22,14 @@ export type SyncState = {
   items: Record<string, StoredItem>;
   base: Record<string, StoredItem>;
   pending: string[];
+  /** Versions handed to the native sync engine and not yet confirmed by iCloud, by item id. */
+  queued: Record<string, VersionVector>;
   conflicts: Conflict[];
   lastSyncAt: string | null;
 };
 
 export function newSyncState(syncId: string, deviceId: string): SyncState {
-  return { version: 1, syncId, deviceId, items: {}, base: {}, pending: [], conflicts: [], lastSyncAt: null };
+  return { version: 1, syncId, deviceId, items: {}, base: {}, pending: [], queued: {}, conflicts: [], lastSyncAt: null };
 }
 
 const toItem = (id: string, stored: StoredItem): SyncItem => ({ id, fields: stored.fields, v: stored.v, ...(stored.deleted ? { deleted: true } : {}), at: stored.at });
@@ -115,7 +117,35 @@ export function applyRemote(state: SyncState, remote: SyncItem[], now: string): 
 /** Items to send. Anything still in conflict waits: it is not pushed until the person decides. */
 export function itemsToPush(state: SyncState): SyncItem[] {
   const held = new Set(state.conflicts.map((c) => c.id));
-  return state.pending.filter((id) => !held.has(id) && state.items[id]).map((id) => toItem(id, state.items[id]));
+  return state.pending
+    .filter((id) => !held.has(id) && state.items[id])
+    .filter((id) => !state.queued[id] || compareVectors(state.queued[id], state.items[id].v) !== "equal")
+    .map((id) => toItem(id, state.items[id]));
+}
+
+/** These versions were handed to the native engine. They stay pending until iCloud confirms them. */
+export function markQueued(state: SyncState, items: SyncItem[]): SyncState {
+  const queued = { ...state.queued };
+  for (const item of items) queued[item.id] = item.v;
+  return { ...state, queued };
+}
+
+/**
+ * The native engine's outbox no longer holds some queued items: iCloud has them. Those become the
+ * new agreed base. An item edited again since it was queued stays pending with its newer version.
+ */
+export function confirmQueued(state: SyncState, stillInOutbox: Set<string>, now: string): SyncState {
+  let next = state;
+  const queued = { ...state.queued };
+  for (const [id, vector] of Object.entries(state.queued)) {
+    if (stillInOutbox.has(id)) continue;
+    delete queued[id];
+    const current = state.items[id];
+    if (current && compareVectors(current.v, vector) === "equal") {
+      next = markPushed(next, [toItem(id, { ...current, v: vector })], now);
+    }
+  }
+  return { ...next, queued };
 }
 
 /** The cloud accepted these exactly as sent. */
