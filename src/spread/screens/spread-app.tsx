@@ -1516,21 +1516,22 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
 }
 
 /** Apply a confirmed restore. Returns what to tell the person and whether the sheet can close. */
-function applyRestore(backup: ParsedBackup): { ok: boolean; message: string } {
+function applyRestore(backup: ParsedBackup, select?: string[]): { ok: boolean; message: string } {
   const state = useSpread.getState();
   if (backup.kind === "full") {
-    const result = state.restoreAsNew(backup.payload);
+    const result = state.restoreAsNew(backup.payload, select);
     if (!result.ok) {
-      const missing = result.reason === "no-room" ? result.needed - result.free : 0;
       return {
         ok: false,
         message:
           result.reason === "no-room"
-            ? `Not enough room. Remove ${missing} profile${missing === 1 ? "" : "s"} first, then try again.`
+            ? `There is room for ${result.free} more. Choose fewer profiles to restore.`
             : "Couldn’t add the profiles. Nothing was changed.",
       };
     }
-    return { ok: true, message: result.added === 1 ? "Profile added." : `${result.added} profiles added.` };
+    const skipped = result.skipped.length > 0 ? ` ${result.skipped.length === 1 ? `“${result.skipped[0]}” was damaged in the backup and was not restored.` : `${result.skipped.length} profiles were damaged in the backup and were not restored.`}` : "";
+    const base = result.added === 1 ? "Profile restored." : `${result.added} profiles restored.`;
+    return { ok: true, message: `${base}${skipped}` };
   }
   if (!state.replaceData(backup.data)) {
     return { ok: false, message: "This profile syncs with iCloud, so a restore would change your other devices too. Turn sync off for it first, or restore into a new profile." };
@@ -1712,9 +1713,9 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       <RestoreDialog
         backup={backup}
         onClose={() => setBackup(null)}
-        onConfirm={() => {
+        onConfirm={(selection) => {
           if (!backup) return;
-          const outcome = applyRestore(backup);
+          const outcome = applyRestore(backup, selection);
           setBackup(null);
           if (outcome.ok) setSheet(null);
           toast(outcome.message);
@@ -1732,7 +1733,7 @@ function RestoreDialog({
 }: {
   backup: ParsedBackup | null;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (selection?: string[]) => void;
 }) {
   if (backup?.kind === "full") return <RestoreFullDialog backup={backup} onClose={onClose} onConfirm={onConfirm} />;
   const names = backup?.summary.spreads ?? [];
@@ -1749,7 +1750,7 @@ function RestoreDialog({
           </AlertDialog.Description>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
-            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
+            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => onConfirm()}>
               Restore
             </AlertDialog.Action>
           </div>
@@ -1886,9 +1887,9 @@ function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "c
       <RestoreDialog
         backup={picked}
         onClose={() => setPicked(null)}
-        onConfirm={() => {
+        onConfirm={(selection) => {
           if (!picked) return;
-          const outcome = applyRestore(picked);
+          const outcome = applyRestore(picked, selection);
           setPicked(null);
           toast(outcome.message);
           if (outcome.ok) onBack();
@@ -2139,24 +2140,61 @@ function RestoreFullDialog({
 }: {
   backup: Extract<ParsedBackup, { kind: "full" }>;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (selection?: string[]) => void;
 }) {
-  const names = backup.summary.profiles.map((item) => item.name);
+  const room = useSpread((st) => st.restoreRoom)();
+  const profiles = backup.summary.profiles;
+  const restorable = profiles.filter((item) => item.readable);
+  const damaged = profiles.filter((item) => !item.readable);
+  const mustChoose = restorable.length > room;
+  const [chosen, setChosen] = useState<string[]>(() => restorable.slice(0, room).map((item) => item.id));
+  const count = mustChoose ? chosen.length : restorable.length;
+  const names = restorable.map((item) => item.name);
   const listed = names.length <= 3 ? names.join(", ") : `${names.slice(0, 2).join(", ")}, and ${names.length - 2} more`;
   return (
     <AlertDialog.Root open onOpenChange={(open) => !open && onClose()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
-        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-          <AlertDialog.Title className="text-center text-base font-semibold">Add these profiles?</AlertDialog.Title>
+        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-h-[80vh] max-w-xs -translate-y-1/2 overflow-y-auto rounded-3xl bg-elevated p-5 outline-none">
+          <AlertDialog.Title className="text-center text-base font-semibold">{mustChoose ? "Choose profiles to restore" : "Add these profiles?"}</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-            {listed}. {backup.summary.weeks} {backup.summary.weeks === 1 ? "week" : "weeks"}, {backup.summary.tasks}{" "}
-            {backup.summary.tasks === 1 ? "task" : "tasks"}. Nothing on this device changes. Each profile is added with “restored” in its name.
+            {mustChoose
+              ? `This device has room for ${room}. Pick which of the ${restorable.length} to restore. The rest stay in the backup file.`
+              : `${listed}. ${backup.summary.weeks} ${backup.summary.weeks === 1 ? "week" : "weeks"}, ${backup.summary.tasks} ${backup.summary.tasks === 1 ? "task" : "tasks"}. Nothing that has content on this device changes. An empty profile may be filled; the others are added with “restored” in their names.`}
+            {damaged.length > 0 ? ` ${damaged.length === 1 ? `“${damaged[0].name}” is damaged and can’t be restored.` : `${damaged.length} profiles are damaged and can’t be restored.`}` : ""}
           </AlertDialog.Description>
+          {mustChoose && (
+            <div className="mt-3 overflow-hidden rounded-2xl bg-canvas" role="group" aria-label="Profiles in the backup">
+              {restorable.map((item) => {
+                const on = chosen.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    disabled={!on && chosen.length >= room}
+                    className="flex w-full items-center justify-between gap-3 border-b border-line px-3 py-2.5 text-left text-sm last:border-b-0 disabled:text-tertiary"
+                    onClick={() => setChosen((now) => (on ? now.filter((id) => id !== item.id) : [...now, item.id]))}
+                  >
+                    <span>
+                      {item.name}
+                      <span className="block text-xs text-secondary">{item.tasks} {item.tasks === 1 ? "task" : "tasks"}, {item.weeks} {item.weeks === 1 ? "week" : "weeks"}</span>
+                    </span>
+                    {on ? <Check className="size-4 text-accent" strokeWidth={3} /> : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="mt-5 grid grid-cols-2 gap-2">
             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
-            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
-              Add
+            <AlertDialog.Action
+              disabled={count === 0}
+              className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-50"
+              onClick={() => onConfirm(mustChoose ? chosen : undefined)}
+            >
+              {mustChoose ? `Restore ${chosen.length}` : "Add"}
             </AlertDialog.Action>
           </div>
         </AlertDialog.Content>

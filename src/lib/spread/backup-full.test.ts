@@ -123,5 +123,101 @@ test("a profile whose stored data is unreadable is skipped and counted", async (
   const plan = planRestoreAsNew(payload, [], () => `q${(n += 1)}`);
   assert.ok(plan.ok);
   assert.equal(plan.profiles.length, 1);
-  assert.equal(plan.skipped, 1);
+  assert.equal(plan.skipped.length, 1);
+});
+
+// --- Restore room (audit H3, M2, M3) ------------------------------------------------------------
+
+import { restoreCapacity } from "./backup.ts";
+
+function tenProfiles() {
+  const s = new Memory();
+  const roster = Array.from({ length: PROFILE_LIMIT }, (_, i) => profile(`p${i}`, `Profile ${i}`));
+  s.setItem(PROFILES_KEY, JSON.stringify(roster));
+  for (const p of roster) {
+    const d = defaultData();
+    d.hats[0].name = `Hat of ${p.id}`;
+    s.setItem(p.store, JSON.stringify(d));
+  }
+  return collectFullPayload(s, new Date(), null);
+}
+
+test("a full set of ten profiles restores onto a new install by filling its one empty profile", () => {
+  const payload = tenProfiles();
+  const empty = profile("fresh", "Me");
+  let n = 0;
+  const plan = planRestoreAsNew(payload, [empty], () => `n${(n += 1)}`, { replaceEmpty: "fresh" });
+  assert.ok(plan.ok);
+  assert.equal(plan.profiles.length, PROFILE_LIMIT);
+  assert.equal(plan.replacedId, "fresh");
+  assert.equal(plan.writes.length, PROFILE_LIMIT);
+  assert.equal(plan.profiles[0].id, "fresh", "the empty profile kept its place and its storage key");
+  assert.equal(plan.profiles[0].name, "Profile 0");
+  assert.equal(JSON.parse(plan.writes[0].value).hats[0].name, "Hat of p0");
+});
+
+test("without an empty profile to fill, ten onto one is still refused, but with the number that fits", () => {
+  const plan = planRestoreAsNew(tenProfiles(), [profile("mine", "Mine")], () => "x");
+  assert.deepEqual(plan, { ok: false, reason: "no-room", needed: 10, free: 9 });
+  assert.equal(restoreCapacity(1, false), 9);
+  assert.equal(restoreCapacity(1, true), 10);
+  assert.equal(restoreCapacity(10, false), 0);
+});
+
+test("choosing which profiles to restore fits any room", () => {
+  const payload = tenProfiles();
+  let n = 0;
+  const plan = planRestoreAsNew(payload, [profile("mine", "Mine")], () => `n${(n += 1)}`, { select: ["p0", "p3", "p7"] });
+  assert.ok(plan.ok);
+  assert.equal(plan.profiles.length, 4);
+  assert.deepEqual(plan.profiles.slice(1).map((p) => p.name), ["Profile 0 (restored)", "Profile 3 (restored)", "Profile 7 (restored)"]);
+  assert.equal(plan.replacedId, null);
+});
+
+test("an existing profile with content is never replaced, even if asked", () => {
+  const payload = tenProfiles();
+  const plan = planRestoreAsNew(payload, [profile("mine", "Mine")], () => "x", { select: ["p0"], replaceEmpty: null });
+  assert.ok(plan.ok);
+  assert.equal(plan.profiles[0].id, "mine");
+  assert.equal(plan.writes.every((w) => w.key !== profileStore("mine")), true);
+});
+
+test("unreadable profiles are named, not silently dropped", () => {
+  const s = twoProfilePlanner();
+  s.setItem(profileStore("p1"), "{not json");
+  const payload = collectFullPayload(s, new Date(), null);
+  let n = 0;
+  const plan = planRestoreAsNew(payload, [], () => `q${(n += 1)}`);
+  assert.ok(plan.ok);
+  assert.deepEqual(plan.skipped, ["Will"]);
+});
+
+test("the summary marks which profiles can be restored", async () => {
+  const s = twoProfilePlanner();
+  s.setItem(profileStore("p1"), "{not json");
+  const read = await parseFullBackup(await fullBackupText(collectFullPayload(s, new Date(), null)));
+  assert.ok(read);
+  assert.deepEqual(read.summary.profiles.map((p) => [p.id, p.readable]), [["p1", false], ["p2", true]]);
+});
+
+test("recovery copies are kept in the file, and files without them still read", async () => {
+  const s = twoProfilePlanner();
+  const payload = collectFullPayload(s, new Date(), null);
+  assert.deepEqual(payload.recovery, { "spread.recovery.spread.v1": "junk" });
+  const read = await parseFullBackup(await fullBackupText(payload));
+  assert.deepEqual(read?.payload.recovery, payload.recovery);
+  const old = { ...payload };
+  delete old.recovery;
+  const readOld = await parseFullBackup(await fullBackupText(old));
+  assert.ok(readOld);
+  assert.equal(readOld.payload.recovery, undefined);
+});
+
+test("device-local sync and backup state never goes into a backup file", () => {
+  const s = twoProfilePlanner();
+  s.setItem("spread.cloud.backup", "off");
+  s.setItem("spread.sync.account.S1", "_accountRecordName");
+  const payload = collectFullPayload(s, new Date(), null);
+  assert.deepEqual(Object.keys(payload.settings), ["spread-accent"]);
+  assert.ok(!JSON.stringify(payload).includes("_accountRecordName"));
 });

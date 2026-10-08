@@ -116,7 +116,7 @@ with sync_playwright() as p:
     items = page.get_by_role('listitem')
     check('the backups are listed', items.count() >= 2, str(items.count()))
     items.first.click(); page.wait_for_timeout(1000)
-    check('restore asks before adding, and says nothing is changed', page.get_by_text('Add these profiles?').count() > 0 and 'Nothing on this device changes' in page.inner_text('body'))
+    check('restore asks before adding, and says nothing is changed', page.get_by_text('Add these profiles?').count() > 0 and 'Nothing that has content on this device changes' in page.inner_text('body'))
     page.get_by_role('button', name='Add', exact=True).click(); page.wait_for_timeout(1500)
     roster_after = json.loads(page.evaluate("localStorage.getItem('spread.profiles')"))
     check('a profile was added and the existing ones are unchanged', len(roster_after) == len(roster_before) + 1 and roster_after[:len(roster_before)] == roster_before)

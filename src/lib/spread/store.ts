@@ -1,8 +1,9 @@
-import { collectFullPayload, fullBackupText, planRestoreAsNew, type FullBackupPayload } from "@/lib/spread/backup";
+import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
 import { collectEntries, flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
 import { pinBackup } from "@/lib/spread/cloud-backup";
 import { runMigrations } from "@/lib/spread/schema";
+import { isPristine } from "@/lib/spread/sync-link";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import {
   ACTIVE_PROFILE_KEY,
@@ -104,7 +105,9 @@ type Store = {
   copyLastWeek: () => boolean;
   /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
   replaceData: (data: SpreadData) => boolean;
-  restoreAsNew: (payload: FullBackupPayload) => RestoreResult;
+  restoreAsNew: (payload: FullBackupPayload, select?: string[]) => RestoreResult;
+  /** How many profiles a restore can add right now (free slots, plus an empty profile it may fill). */
+  restoreRoom: () => number;
   /** Put a merged planner from iCloud Sync into the open profile. Keeps the week being viewed. */
   applySynced: (data: SpreadData, name: string | null) => void;
   setSyncId: (profileId: string, syncId: string | null) => void;
@@ -113,7 +116,7 @@ type Store = {
 };
 
 export type RestoreResult =
-  | { ok: true; added: number; skipped: number }
+  | { ok: true; added: number; replacedEmpty: boolean; skipped: string[] }
   | { ok: false; reason: "no-room"; needed: number; free: number }
   | { ok: false; reason: "write-failed" };
 
@@ -269,6 +272,27 @@ const rosterStorage = {
   },
   removeItem: drop,
 };
+
+/**
+ * An existing profile with nothing in it that is not linked to iCloud, which a restore may fill.
+ * The open profile is preferred. Content is judged from what is saved, never guessed.
+ */
+function emptyProfileId(state: { profiles: Profile[]; activeId: string | null }): string | null {
+  const candidates = [...state.profiles].sort((a, b) => Number(b.id === state.activeId) - Number(a.id === state.activeId));
+  for (const profile of candidates) {
+    if (profile.syncId) continue;
+    try {
+      // Judge what is saved (the caller has flushed pending edits). A profile whose saved text is
+      // unreadable is not empty: it holds something, so it is never overwritten.
+      const raw = localStorage.getItem(profile.store);
+      if (raw === null) return profile.id;
+      if (isPristine(normalizeData(JSON.parse(raw)))) return profile.id;
+    } catch {
+      /* unreadable: not treated as empty */
+    }
+  }
+  return null;
+}
 
 function writeProfiles(profiles: Profile[]) {
   put(PROFILES_KEY, JSON.stringify(profiles));
@@ -823,9 +847,14 @@ export const useSpread = create<Store>((set, get) => ({
     set({ profiles: next });
     return id;
   },
-  restoreAsNew: (payload) => {
+  restoreRoom: () => {
     flushSpread();
-    const plan = planRestoreAsNew(payload, get().profiles, uid);
+    return restoreCapacity(get().profiles.length, emptyProfileId(get()) !== null);
+  },
+  restoreAsNew: (payload, select) => {
+    flushSpread();
+    const emptyId = emptyProfileId(get());
+    const plan = planRestoreAsNew(payload, get().profiles, uid, { select, replaceEmpty: emptyId });
     if (!plan.ok) return plan;
     if (isNativeApp()) {
       pinSnapshot("pre-restore", collectEntries(localStorage));
@@ -834,8 +863,16 @@ export const useSpread = create<Store>((set, get) => ({
     // Profile data first and the roster last, so a failed write leaves the roster as it was.
     for (const write of plan.writes) if (!put(write.key, write.value)) return { ok: false, reason: "write-failed" };
     writeProfiles(plan.profiles);
+    if (plan.replacedId && plan.replacedId === get().activeId) {
+      const filled = plan.profiles.find((profile) => profile.id === plan.replacedId);
+      if (filled) {
+        const loaded = adopt(filled);
+        set({ profiles: plan.profiles, ...loaded });
+        return { ok: true, added: plan.writes.length, replacedEmpty: true, skipped: plan.skipped };
+      }
+    }
     set({ profiles: plan.profiles });
-    return { ok: true, added: plan.writes.length, skipped: plan.skipped };
+    return { ok: true, added: plan.writes.length, replacedEmpty: plan.replacedId !== null, skipped: plan.skipped };
   },
 }));
 

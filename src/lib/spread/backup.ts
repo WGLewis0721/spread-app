@@ -82,11 +82,19 @@ export type FullBackupPayload = {
   roster: Profile[];
   /** Raw stored text per profile, keyed by the profile's id. */
   stores: Record<string, string>;
-  /** Other `spread.*` settings worth keeping (not the license, schema marker or recovery copies). */
+  /**
+   * Other `spread.*` settings kept for completeness (not the license or the schema marker).
+   * Restoring a backup adds profiles; it does not apply these.
+   */
   settings: Record<string, string>;
+  /**
+   * Copies of data that could not be read (`spread.recovery.*`), kept in the file for support.
+   * Optional so older files and older readers are unaffected. Not applied on restore.
+   */
+  recovery?: Record<string, string>;
 };
 
-export type FullBackupProfileSummary = { name: string; spreads: string[]; weeks: number; tasks: number; range: string };
+export type FullBackupProfileSummary = { id: string; readable: boolean; name: string; spreads: string[]; weeks: number; tasks: number; range: string };
 
 export type FullBackup = { payload: FullBackupPayload; summary: { profiles: FullBackupProfileSummary[]; weeks: number; tasks: number } };
 
@@ -110,8 +118,15 @@ export function collectFullPayload(storage: KeyStore, now: Date, deviceId: strin
     if (typeof text === "string") stores[profile.id] = text;
   }
   const settings: Record<string, string> = {};
+  const recovery: Record<string, string> = {};
   for (const [key, value] of Object.entries(collectEntries(storage))) {
-    if (owned.has(key) || SKIPPED_SETTINGS.has(key) || isPlannerKey(key) || key.startsWith("spread.recovery.")) continue;
+    if (key.startsWith("spread.recovery.")) {
+      recovery[key] = value;
+      continue;
+    }
+    // Device-local state never goes into a file that can be shared or restored elsewhere: the
+    // backup preference and the iCloud account each synced profile was linked under.
+    if (owned.has(key) || SKIPPED_SETTINGS.has(key) || isPlannerKey(key) || key.startsWith("spread.cloud.") || key.startsWith("spread.sync.")) continue;
     settings[key] = value;
   }
   const active = storage.getItem(ACTIVE_PROFILE_KEY);
@@ -123,6 +138,7 @@ export function collectFullPayload(storage: KeyStore, now: Date, deviceId: strin
     roster,
     stores,
     settings,
+    ...(Object.keys(recovery).length > 0 ? { recovery } : {}),
   };
 }
 
@@ -179,6 +195,7 @@ export async function parseFullBackup(text: string): Promise<FullBackup | null> 
     roster,
     stores: item.stores,
     settings: item.settings,
+    ...(isRecordOfStrings(item.recovery) && Object.keys(item.recovery).length > 0 ? { recovery: item.recovery } : {}),
   };
   return { payload, summary: summarizeFull(payload) };
 }
@@ -186,13 +203,14 @@ export async function parseFullBackup(text: string): Promise<FullBackup | null> 
 export function summarizeFull(payload: FullBackupPayload): FullBackup["summary"] {
   const profiles = payload.roster.map((profile) => {
     let one: BackupSummary = { spreads: [], weeks: 0, tasks: 0, range: "No weeks" };
+    let readable = true;
     try {
       const stored = payload.stores[profile.id];
       if (stored) one = summarize(normalizeData(JSON.parse(stored)));
     } catch {
-      /* an unreadable profile is listed as empty and skipped on restore */
+      readable = false; // listed, but it cannot be restored
     }
-    return { name: profile.name, ...one };
+    return { id: profile.id, readable, name: profile.name, ...one };
   });
   return {
     profiles,
@@ -210,8 +228,28 @@ export async function parseAnyBackup(text: string): Promise<ParsedBackup | null>
 }
 
 export type RestorePlan =
-  | { ok: true; profiles: Profile[]; writes: { key: string; value: string }[]; skipped: number }
+  | {
+      ok: true;
+      profiles: Profile[];
+      writes: { key: string; value: string }[];
+      /** Names of profiles in the backup that could not be read and were not restored. */
+      skipped: string[];
+      /** An empty profile that took the place of the first restored one, if any. */
+      replacedId: string | null;
+    }
   | { ok: false; reason: "no-room"; needed: number; free: number };
+
+export type RestoreOptions = {
+  /** Ids (from the backup's roster) to restore. Default: every readable profile. */
+  select?: string[];
+  /** An existing empty profile (never one with content) that may be filled by the first restored profile. */
+  replaceEmpty?: string | null;
+};
+
+/** How many profiles a restore can add: free slots, plus one if an empty profile can be filled. */
+export function restoreCapacity(existingCount: number, hasEmptyProfile: boolean): number {
+  return Math.max(0, PROFILE_LIMIT - existingCount) + (hasEmptyProfile ? 1 : 0);
+}
 
 function restoredName(name: string, taken: Set<string>): string {
   const suffix = " (restored)";
@@ -225,42 +263,55 @@ function restoredName(name: string, taken: Set<string>): string {
   return candidate;
 }
 
+function readable(payload: FullBackupPayload, source: Profile): boolean {
+  try {
+    const text = payload.stores[source.id];
+    if (text === undefined) return true;
+    normalizeData(JSON.parse(text));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Add every profile in a full backup as a new profile. Nothing that is already on the device is
- * changed or removed: new ids, new storage keys, and names that say they were restored.
+ * Add profiles from a full backup. Nothing on the device that has content is changed or removed:
+ * restored profiles get new ids, new storage keys, and names that say they were restored. The one
+ * exception is an *empty* profile (`replaceEmpty`), which the first restored profile may fill, so a
+ * brand-new install (which always has one empty profile) can take a full set of ten.
  */
-export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[], newId: () => string): RestorePlan {
-  const free = PROFILE_LIMIT - existing.length;
-  const usable = payload.roster.filter((profile) => {
-    try {
-      const text = payload.stores[profile.id];
-      if (text === undefined) return true;
-      normalizeData(JSON.parse(text));
-      return true;
-    } catch {
-      return false;
-    }
-  });
-  if (usable.length > free) return { ok: false, reason: "no-room", needed: usable.length, free: Math.max(free, 0) };
-  const taken = new Set(existing.map((profile) => profile.name.toLowerCase()));
+export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[], newId: () => string, options: RestoreOptions = {}): RestorePlan {
+  const usable = payload.roster.filter((profile) => readable(payload, profile));
+  const skipped = payload.roster.filter((profile) => !readable(payload, profile)).map((profile) => profile.name);
+  const wanted = options.select ? new Set(options.select) : null;
+  const chosen = wanted ? usable.filter((profile) => wanted.has(profile.id)) : usable;
+  const replaceTarget = options.replaceEmpty ? (existing.find((profile) => profile.id === options.replaceEmpty) ?? null) : null;
+  const capacity = restoreCapacity(existing.length, replaceTarget !== null);
+  if (chosen.length > capacity) return { ok: false, reason: "no-room", needed: chosen.length, free: capacity };
+
+  const taken = new Set(existing.filter((profile) => profile.id !== replaceTarget?.id).map((profile) => profile.name.toLowerCase()));
   const used = new Set(existing.map((profile) => profile.id));
-  const profiles: Profile[] = [...existing];
+  let profiles: Profile[] = [...existing];
   const writes: { key: string; value: string }[] = [];
-  for (const source of usable) {
+  let replacedId: string | null = null;
+  chosen.forEach((source, index) => {
+    const text = payload.stores[source.id];
+    const data = JSON.stringify(text === undefined ? normalizeData(null) : normalizeData(JSON.parse(text)));
+    if (index === 0 && replaceTarget) {
+      const plainName = cleanName(source.name) || "Me";
+      const name = taken.has(plainName.toLowerCase()) ? restoredName(source.name, taken) : plainName;
+      taken.add(name.toLowerCase());
+      writes.push({ key: replaceTarget.store, value: data });
+      profiles = profiles.map((profile) => (profile.id === replaceTarget.id ? { id: profile.id, name, store: profile.store, theme: source.theme, accent: source.accent } : profile));
+      replacedId = replaceTarget.id;
+      return;
+    }
     let id = newId();
     while (!id || used.has(id)) id = newId();
     used.add(id);
     const store = profileStore(id);
-    const text = payload.stores[source.id];
-    const data = text === undefined ? normalizeData(null) : normalizeData(JSON.parse(text));
-    writes.push({ key: store, value: JSON.stringify(data) });
-    profiles.push({
-      id,
-      name: restoredName(source.name, taken),
-      store,
-      theme: source.theme,
-      accent: source.accent,
-    });
-  }
-  return { ok: true, profiles, writes, skipped: payload.roster.length - usable.length };
+    writes.push({ key: store, value: data });
+    profiles.push({ id, name: restoredName(source.name, taken), store, theme: source.theme, accent: source.accent });
+  });
+  return { ok: true, profiles, writes, skipped, replacedId };
 }
