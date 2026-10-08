@@ -148,8 +148,11 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         for row in rows {
             guard let syncId = row["syncId"] as? String, let itemId = row["itemId"] as? String,
                   let fields = row["fields"] as? String, let v = row["v"] as? String else { return nil }
-            out.append(SyncItemDTO(syncId: syncId, itemId: itemId, fields: fields, v: v,
-                                   deleted: row["deleted"] as? Bool ?? false, at: row["at"] as? String ?? ""))
+            var deleted = false
+            if let flag = row["deleted"] as? Bool { deleted = flag }
+            var at = ""
+            if let stamp = row["at"] as? String { at = stamp }
+            out.append(SyncItemDTO(syncId: syncId, itemId: itemId, fields: fields, v: v, deleted: deleted, at: at))
         }
         return out
     }
