@@ -224,6 +224,20 @@ async function filesystemAdapter(): Promise<MirrorAdapter> {
   };
 }
 
+/**
+ * Keep a labelled copy of the planner that is never overwritten by the rolling snapshot, e.g.
+ * just before a migration. Best effort: a failure here never blocks the caller. `entries` must
+ * already be copied, because the write happens later.
+ */
+export function pinSnapshot(label: string, entries: Record<string, string>): void {
+  const safe = label.replace(/[^a-z0-9-]/gi, "-");
+  void (async () => {
+    const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
+    const text = JSON.stringify({ kind: "spread-pinned", version: 1, label, savedAt: new Date().toISOString(), entries });
+    await Filesystem.writeFile({ path: `spread-pinned-${safe}.json`, data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
+  })().catch(() => undefined);
+}
+
 function timeout<T>(work: Promise<T>, ms: number): Promise<T | "timeout"> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve("timeout"), ms);

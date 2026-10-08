@@ -1,6 +1,7 @@
 import { backupFile } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
-import { flushMirror, notifyStorageChanged } from "@/lib/spread/native-mirror";
+import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
+import { runMigrations } from "@/lib/spread/schema";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import {
   ACTIVE_PROFILE_KEY,
@@ -190,7 +191,7 @@ function accentFrom(value: string | null): AccentId | null {
 
 let activeStore = STORE_KEY;
 
-export type SaveFailure = "full" | "unavailable";
+export type SaveFailure = "full" | "unavailable" | "newer";
 
 const failureListeners = new Set<(failure: SaveFailure) => void>();
 let failureReported = false;
@@ -208,20 +209,29 @@ function isFullError(error: unknown) {
   return error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED" || error.code === 22 || error.code === 1014;
 }
 
+function reportFailure(failure: SaveFailure) {
+  if (failureReported) return;
+  failureReported = true;
+  for (const listener of failureListeners) listener(failure);
+}
+
+/** Set when the stored planner was written by a newer build. Nothing may be written then. */
+let schemaLocked = false;
+
 /**
  * Every planner write goes through here. A full or blocked store used to throw out of the action
  * that caused it, which left the screen and the saved data out of step. Now the screen keeps the
  * change, the failure is announced once, and the next write that works clears the alarm.
  */
 function put(key: string, value: string): boolean {
+  if (schemaLocked) {
+    reportFailure("newer");
+    return false;
+  }
   try {
     localStorage.setItem(key, value);
   } catch (error) {
-    if (!failureReported) {
-      failureReported = true;
-      const failure: SaveFailure = isFullError(error) ? "full" : "unavailable";
-      for (const listener of failureListeners) listener(failure);
-    }
+    reportFailure(isFullError(error) ? "full" : "unavailable");
     return false;
   }
   failureReported = false;
@@ -230,6 +240,7 @@ function put(key: string, value: string): boolean {
 }
 
 function drop(key: string) {
+  if (schemaLocked) return;
   try {
     localStorage.removeItem(key);
   } catch {
@@ -377,6 +388,12 @@ function readSession() {
   if (typeof window === "undefined") return null;
   try {
     bindFlush();
+    const migration = runMigrations(localStorage, {
+      snapshot: (label, entries) => {
+        if (isNativeApp()) pinSnapshot(label, entries);
+      },
+    });
+    schemaLocked = migration.status === "newer";
     const license = readLicense();
     const profiles = loadProfiles(license);
     const savedId = localStorage.getItem(ACTIVE_PROFILE_KEY);

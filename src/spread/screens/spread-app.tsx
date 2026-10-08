@@ -69,7 +69,9 @@ export function SpreadApp() {
         toast.error(
           failure === "full"
             ? "Spread couldn’t save. This device is out of storage. Free some space, then back up from More."
-            : "Spread couldn’t save to this device. Back up from More before closing.",
+            : failure === "newer"
+              ? "This planner was saved by a newer version of Spread. Update Spread to make changes."
+              : "Spread couldn’t save to this device. Back up from More before closing.",
           { id: "save-failure", duration: 12000 },
         );
       }),
