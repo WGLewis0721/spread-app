@@ -15,6 +15,7 @@ import {
   cleanName,
   type Profile,
 } from "@/lib/spread/profiles";
+import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
 import { create } from "zustand";
 import {
   cloneWeek,
@@ -102,6 +103,8 @@ type Store = {
   moveSpreadToDay: (hatId: string, day: string, hours?: number) => void;
   changeWeek: (direction: -1 | 1 | "today") => void;
   removeAllocation: (allocationId: string) => void;
+  /** Put a task on a day (an allocation of its own role), or take it off every day with null. */
+  assignTask: (hatId: string, taskId: string, allocationId: string | null) => { ok: true; changed: boolean } | { ok: false; reason: AssignFailure };
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
   copyLastWeek: () => boolean;
   /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
@@ -739,6 +742,10 @@ export const useSpread = create<Store>((set, get) => ({
       allocations = allocations.map((item) =>
         item.id === sameDay.id ? { ...item, hours: clampHours(item.hours + current.hours) } : item,
       );
+      // Tasks on the folded allocation follow the one that survives.
+      const next = writeWeek(data, repointTasks({ ...week, allocations }, current.id, sameDay.id));
+      commit(set, next);
+      return;
     } else {
       const siblings = allocations.filter((item) => item.day === day);
       const nextOrder = order ?? siblings.reduce((max, item) => Math.max(max, item.order), -1) + 1;
@@ -774,6 +781,12 @@ export const useSpread = create<Store>((set, get) => ({
   },
   changeWeek: (direction) => {
     get().moveWeek(direction);
+  },
+  assignTask: (hatId, taskId, allocationId) => {
+    const data = ensureWeek(get().data);
+    const result = assignTaskTo(data, hatId, taskId, allocationId);
+    if (result.ok && result.changed) commit(set, result.data);
+    return result.ok ? { ok: true, changed: result.changed } : result;
   },
   removeAllocation: (allocationId) => {
     const data = ensureWeek(get().data);

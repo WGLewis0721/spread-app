@@ -61,3 +61,21 @@ test("drops call spread actions instead of talking to the pointer", () => {
   assert.equal(highlightedDay("alloc:c", allocations), "2026-09-28");
   assert.equal(resolveDrop({ kind: "spread", hatId: "work" }, "nope", allocations), null);
 });
+
+test("a task drop finds its own role's allocation, refuses the rest, and the tray takes it off", () => {
+  const slots = [
+    { id: "w1", day: "2026-09-27", hatId: "work", hours: 2 },
+    { id: "h1", day: "2026-09-27", hatId: "health", hours: 1 },
+    { id: "w2", day: "2026-09-28", hatId: "work", hours: 0 },
+  ];
+  const task = { kind: "task" as const, hatId: "work", taskId: "t1" };
+  assert.deepEqual(resolveDrop(task, "alloc:w1", slots), { action: "assignTask", hatId: "work", taskId: "t1", allocationId: "w1" });
+  assert.deepEqual(resolveDrop(task, "day:2026-09-27", slots), { action: "assignTask", hatId: "work", taskId: "t1", allocationId: "w1" });
+  assert.deepEqual(resolveDrop(task, "alloc:h1", slots), { action: "refuseTask", hatId: "work", taskId: "t1", reason: "wrong-role", day: "2026-09-27" });
+  assert.deepEqual(resolveDrop(task, "day:2026-09-29", slots), { action: "refuseTask", hatId: "work", taskId: "t1", reason: "no-allocation", day: "2026-09-29" });
+  // an allocation with no hours is not a place to put a task
+  assert.equal(resolveDrop(task, "day:2026-09-28", slots)?.action, "refuseTask");
+  assert.deepEqual(resolveDrop(task, "tray", slots), { action: "assignTask", hatId: "work", taskId: "t1", allocationId: null });
+  assert.equal(resolveDrop(task, "nope", slots), null);
+  assert.equal(resolveDrop(task, "alloc:missing", slots), null);
+});
