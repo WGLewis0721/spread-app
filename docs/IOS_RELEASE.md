@@ -1,7 +1,10 @@
 # Spread for iPhone: release candidate runbook
 
-Spread 1.0 for iPhone is the existing planner packaged with Capacitor. It is local-first, has no
-account, no subscription, no sync and no backend, and does not depend on Vercel once installed.
+Spread 1.0 is the existing planner packaged with Capacitor for iPhone and iPad. It is local-first, has
+no Spread account, no subscription and no backend, and does not depend on Vercel once installed.
+iCloud Backup (automatic) and iCloud Sync (opt-in) are being added; see
+[ICLOUD_PLAN.md](ICLOUD_PLAN.md). **Until the phases in its status table are merged and verified on
+devices, the shipped build described below has no iCloud features and is iPhone-only.**
 This file says what the release candidate does, how to build and upload it, what has been checked,
 and what still needs an Apple account or a physical iPhone.
 
@@ -16,8 +19,8 @@ below is done.
 | Bundle ID | `com.graymatter.spread` |
 | Display name | Spread |
 | Version / build | 1.0 / 1 (raise the build number for every upload) |
-| Devices | iPhone only, portrait only |
-| Minimum iOS | 15.0 |
+| Devices | iPhone only, portrait only today. Target for 1.0: iPhone + iPad, all orientations (see ICLOUD_PLAN.md) |
+| Minimum iOS | 15.0 today. Target for 1.0: 17.0 (`CKSyncEngine`) |
 | Signing | Automatic, no team set in the repo (you choose it in Xcode) |
 | Encryption | `ITSAppUsesNonExemptEncryption = NO` (HTTPS and OS crypto only) |
 | App icon | `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`, from `public/icons/app-icon-spread-cards-square.svg` |
