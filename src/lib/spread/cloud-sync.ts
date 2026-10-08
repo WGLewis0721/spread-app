@@ -59,16 +59,19 @@ async function readStateFile(syncId: string): Promise<SyncState | null> {
 }
 
 let writeChain: Promise<void> = Promise.resolve();
-function writeStateFile(state: SyncState) {
+function writeStateFile(state: SyncState): Promise<boolean> {
   const text = JSON.stringify(state);
-  writeChain = writeChain.then(async () => {
+  const done = writeChain.then(async () => {
     try {
       const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
       await Filesystem.writeFile({ path: stateFile(state.syncId), data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
+      return true;
     } catch {
-      /* the next pass writes it again */
+      return false; // reported by the session; the next pass writes it again
     }
   });
+  writeChain = done.then(() => undefined);
+  return done;
 }
 
 async function deleteStateFile(syncId: string) {
@@ -150,7 +153,7 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
     loadState: () => saved,
     saveState: (next) => {
       saved = next;
-      writeStateFile(next);
+      return writeStateFile(next);
     },
     isActive: () => useSpread.getState().activeId === profileId,
     current: () => {

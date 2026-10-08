@@ -108,3 +108,10 @@ test("a planner that looks emptied says nothing was deleted and asks for a choic
   assert.equal(said.tone, "problem");
   assert.notEqual(say({ blocked: true, waitingToSend: 0 }).title, "Synced with iCloud");
 });
+
+test("damaged records are reported plainly and nothing is claimed erased", () => {
+  const said = describeSync({ ...base, damaged: 2 });
+  assert.equal(said.title, "Some iCloud data couldn’t be read");
+  assert.equal(said.tone, "problem");
+  assert.match(said.detail, /2 items were left out/);
+});

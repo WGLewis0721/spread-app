@@ -83,6 +83,8 @@ export type SyncDescribeInput = {
   lastSyncAt: string | null;
   lastError: string | null;
   quotaExceeded: boolean;
+  /** Records from iCloud (or queue files here) that were unreadable and left out. */
+  damaged?: number;
   /** The planner looks emptied by accident and sync is waiting for a choice. */
   blocked?: boolean;
   now: Date;
@@ -121,6 +123,13 @@ export function describeSync(input: SyncDescribeInput): SyncDescription {
   }
   const needs = input.conflicts > 0 ? ` ${input.conflicts} ${input.conflicts === 1 ? "change needs" : "changes need"} your choice.` : "";
   if (input.quotaExceeded) return { title: "iCloud storage is full", detail: `Your changes are safe on this device and will send when there is room.${needs}`, tone: "problem" };
+  if (input.damaged && input.damaged > 0) {
+    return {
+      title: "Some iCloud data couldn’t be read",
+      detail: `${input.damaged === 1 ? "One item was" : `${input.damaged} items were`} left out so nothing here is erased. Everything on this device is unchanged.${needs}`,
+      tone: "problem",
+    };
+  }
   if (input.lastError) return { title: "Couldn’t sync", detail: `Your changes are safe on this device. Spread will try again.${needs}`, tone: "problem" };
   if (!input.started) return { title: "Starting sync…", detail: needs.trim(), tone: "wait" };
   if (input.busy || input.waitingToSend > 0) {

@@ -1925,6 +1925,7 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
     lastSyncAt: state.view?.lastSyncAt ?? null,
     lastError: state.view?.lastError ?? null,
     quotaExceeded: state.native?.quotaExceeded ?? false,
+    damaged: (state.view?.damaged ?? 0) + (state.native?.damagedRecords ?? 0) + (state.native?.needsRepair ? 1 : 0),
     blocked: Boolean(state.view?.blocked),
     now: new Date(state.now),
   });

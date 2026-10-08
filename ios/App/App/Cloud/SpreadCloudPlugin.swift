@@ -173,7 +173,10 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("items are required", "invalidArguments")
             return
         }
-        sync.queue(items)
+        guard sync.queue(items) else {
+            call.reject("The changes could not be saved on this device", "queueWriteFailed")
+            return
+        }
         call.resolve()
     }
 
@@ -215,6 +218,8 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
                 "running": current.running,
                 "zoneDeleted": current.zoneDeleted,
                 "quotaExceeded": current.quotaExceeded,
+                "damagedRecords": current.damagedRecords,
+                "needsRepair": current.needsRepair || syncStorage.needsRepair,
                 "outboxCount": syncStorage.outboxCount,
                 "inboxCount": syncStorage.inboxItems().count,
             ]

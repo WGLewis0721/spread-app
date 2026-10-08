@@ -1,5 +1,6 @@
 import CloudKit
 import Foundation
+import SpreadCloudCore
 
 /// Moves SyncItemDTOs between this device and the person's private iCloud database using Apple's
 /// `CKSyncEngine`. It decides nothing about content: a version iCloud rejects is handed to the
@@ -18,7 +19,15 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         var zoneDeleted = false
         var quotaExceeded = false
         var lastError: String?
+        /// Records iCloud sent that failed the payload check. They were not applied.
+        var damagedRecords = 0
+        /// A local queue file was unreadable and has been set aside.
+        var needsRepair = false
     }
+
+    /// Temp payload files for records handed to CloudKit; removed once the send finishes.
+    private var tempFiles: [URL] = []
+    private let tempLock = NSLock()
 
     private let storage: SyncStorage
     private let container: CKContainer
@@ -70,6 +79,8 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
             status.zoneDeleted = false
             status.quotaExceeded = false
             status.lastError = nil
+            status.damagedRecords = 0
+            status.needsRepair = storage.needsRepair
         }
     }
 
@@ -79,12 +90,14 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
     }
 
     /// Queue local changes. They are written to disk first, so a crash cannot lose them.
-    func queue(_ items: [SyncItemDTO]) {
-        storage.putOutbox(items)
-        guard let engine else { return }
+    @discardableResult
+    func queue(_ items: [SyncItemDTO]) -> Bool {
+        guard storage.putOutbox(items) else { return false }
+        guard let engine else { return true }
         var changes: [CKSyncEngine.PendingRecordZoneChange] = []
         for item in items { changes.append(.saveRecord(recordID(for: item.recordName))) }
         engine.state.add(pendingRecordZoneChanges: changes)
+        return true
     }
 
     /// The web app no longer needs these sent (it merged iCloud's newer version instead).
@@ -150,7 +163,7 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
                 incoming.append(dto)
             }
             if !incoming.isEmpty {
-                storage.putInbox(incoming)
+                if !storage.putInbox(incoming) { self.update { (status: inout Status) in status.lastError = "inboxWrite" } }
                 emit("syncInbound")
             }
 
@@ -159,6 +172,7 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
                 storage.setSystemFields(systemFields(of: record), for: record.recordID.recordName)
                 if let dto = dto(from: record) { storage.confirmSent(dto) }
             }
+            removeTempFiles()
             for failure in sent.failedRecordSaves { handleFailedSave(failure, syncEngine: syncEngine) }
             var quota = false
             for failure in sent.failedRecordSaves where failure.error.code == .quotaExceeded { quota = true }
@@ -217,7 +231,12 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
 
     // MARK: Records
 
-    private func record(for item: SyncItemDTO, recordID: CKRecord.ID) -> CKRecord {
+    private func record(for item: SyncItemDTO, recordID: CKRecord.ID) -> CKRecord? {
+        guard PayloadCheck.fits(item.fields) else {
+            // Too large to send: keep it in the outbox and say so, rather than sending part of it.
+            self.update { (status: inout Status) in status.lastError = "payloadTooLarge" }
+            return nil
+        }
         let record: CKRecord
         if let data = storage.systemFields(for: item.recordName),
            let coder = try? NSKeyedUnarchiver(forReadingFrom: data) {
@@ -233,7 +252,15 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         record["deleted"] = (item.deleted ? 1 : 0) as CKRecordValue
         record["at"] = item.at as CKRecordValue
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("spread-\(UUID().uuidString).json")
-        try? Data(item.fields.utf8).write(to: file, options: .atomic)
+        do {
+            try Data(item.fields.utf8).write(to: file, options: .atomic)
+        } catch {
+            // Never hand CloudKit an asset that does not exist. The change stays in the outbox.
+            self.update { (status: inout Status) in status.lastError = "payloadWrite" }
+            return nil
+        }
+        tempLock.lock(); tempFiles.append(file); tempLock.unlock()
+        record["h"] = PayloadCheck.hash(item.fields) as CKRecordValue
         record["payload"] = CKAsset(fileURL: file)
         return record
     }
@@ -243,17 +270,28 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
               let syncId = record["syncId"] as? String,
               let itemId = record["itemId"] as? String,
               let v = record["v"] as? String else { return nil }
-        let fields: String
-        if let url = (record["payload"] as? CKAsset)?.fileURL, let text = try? String(contentsOf: url, encoding: .utf8) {
-            fields = text
-        } else {
-            fields = "{}"
+        let text = (record["payload"] as? CKAsset)?.fileURL.flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+        guard case .ok(let fields) = PayloadCheck.verify(text: text, expectedHash: record["h"] as? String) else {
+            // Missing, truncated or altered: never read as an empty item. Counted and reported.
+            self.update { (status: inout Status) in
+                status.damagedRecords += 1
+                status.lastError = "payloadDamaged"
+            }
+            return nil
         }
         var deleted = false
         if let flag = record["deleted"] as? NSNumber { deleted = flag.int64Value != 0 }
         var at = ""
         if let stamp = record["at"] as? String { at = stamp }
         return SyncItemDTO(syncId: syncId, itemId: itemId, fields: fields, v: v, deleted: deleted, at: at)
+    }
+
+    private func removeTempFiles() {
+        tempLock.lock()
+        let files = tempFiles
+        tempFiles = []
+        tempLock.unlock()
+        for file in files { try? FileManager.default.removeItem(at: file) }
     }
 
     private func systemFields(of record: CKRecord) -> Data {

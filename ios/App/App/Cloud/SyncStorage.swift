@@ -24,6 +24,8 @@ final class SyncStorage {
     private var outbox: [String: SyncItemDTO]
     private var inbox: [String: SyncItemDTO]
     private var systemFields: [String: Data]
+    /// Set when a queue file was unreadable (moved aside) or a write failed. The web app is told.
+    private(set) var needsRepair = false
 
     init() {
         let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
@@ -34,19 +36,34 @@ final class SyncStorage {
         values.isExcludedFromBackup = true
         try? folder.setResourceValues(values)
         self.folder = folder
-        outbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("outbox.json")) ?? [:]
-        inbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("inbox.json")) ?? [:]
-        systemFields = SyncStorage.load([String: Data].self, from: folder.appendingPathComponent("system-fields.json")) ?? [:]
+        var repair = false
+        outbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("outbox.json"), repair: &repair) ?? [:]
+        inbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("inbox.json"), repair: &repair) ?? [:]
+        systemFields = SyncStorage.load([String: Data].self, from: folder.appendingPathComponent("system-fields.json"), repair: &repair) ?? [:]
+        needsRepair = repair
     }
 
-    private static func load<T: Decodable>(_ type: T.Type, from url: URL) -> T? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(type, from: data)
+    /// A missing file is normal (first run). A file that exists but cannot be read or decoded is set
+    /// aside as `<name>.corrupt-<time>` so it can be inspected, and `repair` is raised.
+    private static func load<T: Decodable>(_ type: T.Type, from url: URL, repair: inout Bool) -> T? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        if let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(type, from: data) { return value }
+        let aside = url.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent + ".corrupt-\(Int(Date().timeIntervalSince1970))")
+        try? FileManager.default.moveItem(at: url, to: aside)
+        repair = true
+        return nil
     }
 
-    private func save<T: Encodable>(_ value: T, as name: String) {
-        guard let data = try? JSONEncoder().encode(value) else { return }
-        try? data.write(to: folder.appendingPathComponent(name), options: .atomic)
+    @discardableResult
+    private func save<T: Encodable>(_ value: T, as name: String) -> Bool {
+        do {
+            let data = try JSONEncoder().encode(value)
+            try data.write(to: folder.appendingPathComponent(name), options: .atomic)
+            return true
+        } catch {
+            needsRepair = true
+            return false
+        }
     }
 
     // MARK: Engine state
@@ -66,10 +83,12 @@ final class SyncStorage {
 
     // MARK: Outbox (changes made here that iCloud has not confirmed)
 
-    func putOutbox(_ items: [SyncItemDTO]) {
+    /// False when the queue could not be written; the caller must report that, not assume it is queued.
+    @discardableResult
+    func putOutbox(_ items: [SyncItemDTO]) -> Bool {
         lock.lock(); defer { lock.unlock() }
         for item in items { outbox[item.recordName] = item }
-        save(outbox, as: "outbox.json")
+        return save(outbox, as: "outbox.json")
     }
 
     func outboxItem(_ recordName: String) -> SyncItemDTO? {
@@ -104,10 +123,11 @@ final class SyncStorage {
 
     // MARK: Inbox (changes from iCloud the web app has not merged yet)
 
-    func putInbox(_ items: [SyncItemDTO]) {
+    @discardableResult
+    func putInbox(_ items: [SyncItemDTO]) -> Bool {
         lock.lock(); defer { lock.unlock() }
         for item in items { inbox[item.recordName] = item }
-        save(inbox, as: "inbox.json")
+        return save(inbox, as: "inbox.json")
     }
 
     func inboxItems() -> [SyncItemDTO] {

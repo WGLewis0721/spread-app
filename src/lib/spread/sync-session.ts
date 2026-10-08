@@ -14,7 +14,7 @@
  */
 import type { Choice } from "./merge.ts";
 import type { SpreadData } from "./model.ts";
-import { toItems } from "./sync-link.ts";
+import { isDamagedRow, toItems } from "./sync-link.ts";
 import {
   applyRemote,
   captureLocal,
@@ -49,7 +49,8 @@ export type SessionDeps = {
   deviceId: string;
   transport: SyncTransport;
   loadState(): SyncState | null;
-  saveState(state: SyncState): void;
+  /** May reject (or resolve false) when the state could not be written; the session then reports it. */
+  saveState(state: SyncState): void | boolean | Promise<void | boolean>;
   /**
    * True only while the profile this session belongs to is the one on screen. The planner calls
    * (`current`, `apply`) always act on the open profile, so every use is guarded by this: a
@@ -75,6 +76,8 @@ export type SessionView = {
   lastError: string | null;
   /** The planner looks emptied by accident. Nothing is recorded or sent until the person chooses. */
   blocked: CaptureBlock | null;
+  /** Records from iCloud that were unreadable or incomplete. They are kept aside, never merged. */
+  damaged: number;
 };
 
 export type SyncSession = {
@@ -99,6 +102,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
   let busy = false;
   let lastError: string | null = null;
   let blocked: CaptureBlock | null = null;
+  let damaged = 0;
   // Bumped by stop(). A pass that started before a stop notices and does nothing further to the planner.
   let generation = 0;
   let allowMassDelete = false;
@@ -113,11 +117,24 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     conflicts: state.conflicts,
     lastError,
     blocked,
+    damaged,
   });
   const publish = () => {
     for (const listener of listeners) listener(view());
   };
-  const save = () => deps.saveState(state);
+  const save = () => {
+    const report = () => {
+      lastError = "state-not-saved";
+      publish();
+    };
+    try {
+      const done = deps.saveState(state);
+      if (done === false) report();
+      else if (done instanceof Promise) void done.then((ok) => (ok === false ? report() : undefined), report);
+    } catch {
+      report();
+    }
+  };
 
   async function pass(): Promise<void> {
     if (!running) return;
@@ -128,7 +145,9 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
       // Read iCloud's side first. This is the only slow step, so nothing is captured until it is
       // done: the person may have kept typing while it ran, and capture, merge and apply below
       // run with no pause between them, so a fresh edit can never be overwritten.
-      const rows = (await deps.transport.inbox()).filter((row) => row.syncId === deps.syncId);
+      const incoming = (await deps.transport.inbox()).filter((row) => row.syncId === deps.syncId);
+      const rows = incoming.filter((row) => !isDamagedRow(row));
+      damaged = incoming.length - rows.length;
 
       // The read above is slow. If the session was stopped, or another profile was opened meanwhile,
       // this pass must not touch the planner at all.

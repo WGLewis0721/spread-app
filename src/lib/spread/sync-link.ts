@@ -81,6 +81,31 @@ export function rosterWithSyncId(profiles: Profile[], profileId: string, syncId:
   return profiles.map((profile) => (profile.id === profileId ? { ...profile, syncId } : profile));
 }
 
+/** Keys a live item of each kind always carries. An item without them is damaged, not empty. */
+const REQUIRED: [string, string[]][] = [
+  ["hat:", ["name"]],
+  ["task:", ["text", "week", "hat"]],
+  ["alloc:", ["hatId", "day", "week"]],
+  ["box:", ["hours"]],
+  ["profile", ["name"]],
+];
+
+export function isDamagedRow(row: { itemId: string; fields: string; v: string; deleted: boolean }): boolean {
+  try {
+    const v = JSON.parse(row.v || "{}") as unknown;
+    if (!v || typeof v !== "object") return true;
+    const fields = JSON.parse(row.fields || "{}") as unknown;
+    if (!fields || typeof fields !== "object" || Array.isArray(fields)) return true;
+    if (row.deleted) return false;
+    const need = REQUIRED.find(([prefix]) => row.itemId.startsWith(prefix))?.[1];
+    if (need) return need.some((key) => !(key in (fields as object)));
+    if (row.itemId.startsWith("week:")) return Object.keys(fields as object).length === 0;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export function toItems(rows: { itemId: string; fields: string; v: string; deleted: boolean; at: string }[]): SyncItem[] {
   const out: SyncItem[] = [];
   for (const row of rows) {

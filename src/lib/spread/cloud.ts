@@ -25,6 +25,10 @@ export type SyncNativeStatus = {
   running: boolean;
   zoneDeleted: boolean;
   quotaExceeded: boolean;
+  /** Records iCloud sent that failed the integrity check and were not applied. */
+  damagedRecords?: number;
+  /** A local queue file was unreadable and has been set aside. */
+  needsRepair?: boolean;
   outboxCount: number;
   inboxCount: number;
   accountChanged?: "signOut" | "switchAccounts";
