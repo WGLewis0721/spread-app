@@ -21,7 +21,10 @@ for (let i = 0; i < args.length; i += 1) {
     const walk = (d) => readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : n.endsWith(suffix) ? [join(d, n)] : []));
     files.push(...walk(dir).sort());
   } else if (a.startsWith("--node-arg=")) nodeArgs.push(a.slice("--node-arg=".length));
-  else if (a === "--") files.push(...args.slice(i + 1)), (i = args.length);
+  else if (a === "--") {
+    files.push(...args.slice(i + 1));
+    i = args.length;
+  }
   else files.push(a);
 }
 if (!Number.isFinite(min) || files.length === 0) {
