@@ -59,12 +59,18 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         let created = CKSyncEngine(configuration)
         created.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
         engine = created
-        update { $0.running = true; $0.accountChanged = nil; $0.zoneDeleted = false; $0.quotaExceeded = false; $0.lastError = nil }
+        update { (status: inout Status) in
+            status.running = true
+            status.accountChanged = nil
+            status.zoneDeleted = false
+            status.quotaExceeded = false
+            status.lastError = nil
+        }
     }
 
     func stop() {
         engine = nil
-        update { $0.running = false }
+        update { (status: inout Status) in status.running = false }
     }
 
     /// Queue local changes. They are written to disk first, so a crash cannot lose them.
@@ -101,14 +107,14 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         case .accountChange(let change):
             switch change.changeType {
             case .signIn:
-                self.update { $0.accountChanged = nil }
+                self.update { (status: inout Status) in status.accountChanged = nil }
             case .signOut:
                 // Keep every local change. Sync waits until the person decides what to do.
                 storage.resetCloudState()
-                self.update { $0.accountChanged = "signOut" }
+                self.update { (status: inout Status) in status.accountChanged = "signOut" }
             case .switchAccounts:
                 storage.resetCloudState()
-                self.update { $0.accountChanged = "switchAccounts" }
+                self.update { (status: inout Status) in status.accountChanged = "switchAccounts" }
             @unknown default:
                 break
             }
@@ -117,7 +123,7 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
             for deletion in changes.deletions where deletion.zoneID == Self.zoneID {
                 // The person (or iCloud storage management) removed the data. Never re-upload silently.
                 storage.resetCloudState()
-                self.update { $0.zoneDeleted = true }
+                self.update { (status: inout Status) in status.zoneDeleted = true }
             }
 
         case .fetchedRecordZoneChanges(let changes):
@@ -138,7 +144,10 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
                 if let dto = dto(from: record) { storage.confirmSent(dto) }
             }
             for failure in sent.failedRecordSaves { handleFailedSave(failure, syncEngine: syncEngine) }
-            update { $0.quotaExceeded = sent.failedRecordSaves.contains { $0.error.code == .quotaExceeded } }
+            var quota = false
+            for failure in sent.failedRecordSaves where failure.error.code == .quotaExceeded { quota = true }
+            let quotaExceeded = quota
+            self.update { (status: inout Status) in status.quotaExceeded = quotaExceeded }
 
         case .sentDatabaseChanges, .willFetchChanges, .willFetchRecordZoneChanges, .didFetchRecordZoneChanges,
              .didFetchChanges, .willSendChanges, .didSendChanges:
@@ -172,7 +181,8 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         case .quotaExceeded:
             break
         default:
-            update { $0.lastError = "\(failure.error.code.rawValue)" }
+            let code = String(failure.error.code.rawValue)
+            update { (status: inout Status) in status.lastError = code }
         }
     }
 
@@ -223,11 +233,11 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         } else {
             fields = "{}"
         }
-        return SyncItemDTO(
-            syncId: syncId, itemId: itemId, fields: fields, v: v,
-            deleted: (record["deleted"] as? Int64 ?? 0) != 0,
-            at: record["at"] as? String ?? ""
-        )
+        var deleted = false
+        if let flag = record["deleted"] as? NSNumber { deleted = flag.int64Value != 0 }
+        var at = ""
+        if let stamp = record["at"] as? String { at = stamp }
+        return SyncItemDTO(syncId: syncId, itemId: itemId, fields: fields, v: v, deleted: deleted, at: at)
     }
 
     private func systemFields(of record: CKRecord) -> Data {
