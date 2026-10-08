@@ -1,0 +1,9 @@
+
+  swift-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: swift:6.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test SpreadCloudCore (naming, path safety, retention)
+        run: swift test --package-path ios/App/SpreadCloudCore

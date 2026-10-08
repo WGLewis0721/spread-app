@@ -39,6 +39,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:spread
+      - run: swift test --package-path ios/App/SpreadCloudCore
       - run: npm run ios:sync
       - name: Build iPhone simulator app
         run: >

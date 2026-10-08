@@ -15,6 +15,15 @@
   <key>ITSAppUsesNonExemptEncryption</key><false/>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>NSCameraUsageDescription</key><string>Spread uses the camera only when you choose Take Photo to attach a picture to a task. Photos stay on this device.</string>
+  <key>NSUbiquitousContainers</key>
+  <dict>
+    <key>iCloud.com.graymatter.spread</key>
+    <dict>
+      <key>NSUbiquitousContainerIsDocumentScopePublic</key><true/>
+      <key>NSUbiquitousContainerName</key><string>Spread</string>
+      <key>NSUbiquitousContainerSupportedFolderLevels</key><string>Any</string>
+    </dict>
+  </dict>
   <key>UIApplicationSceneManifest</key>
   <dict>
     <key>UIApplicationSupportsMultipleScenes</key><false/>
@@ -41,6 +50,7 @@
     <string>UIInterfaceOrientationLandscapeLeft</string>
     <string>UIInterfaceOrientationLandscapeRight</string>
   </array>
+  <key>UIBackgroundModes</key><array><string>remote-notification</string></array>
   <key>UIViewControllerBasedStatusBarAppearance</key><true/>
 </dict>
 </plist>
