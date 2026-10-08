@@ -91,6 +91,7 @@ async function transport(): Promise<SyncTransport> {
     queue: (rows) => plugin.syncQueue({ items: rows }),
     inbox: async () => (await plugin.syncInbox()).items,
     ack: (names) => plugin.syncAck({ names }),
+    drop: (names) => plugin.syncDrop({ names }),
     outbox: async () => (await plugin.syncOutbox()).names,
     syncNow: () => plugin.syncNow(),
   };
