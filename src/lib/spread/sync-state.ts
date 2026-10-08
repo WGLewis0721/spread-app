@@ -182,6 +182,16 @@ export function itemsToPush(state: SyncState): SyncItem[] {
     .map((id) => toItem(id, state.items[id]));
 }
 
+/**
+ * Send the whole profile again. After iCloud's copy was deleted, or the account changed, the state
+ * still says everything is agreed, so nothing is "pending" and an upload would send nothing. This
+ * marks every item (tombstones included) as waiting to be sent, without touching any version, base
+ * or conflict, so the person's confirmation uploads the profile's complete contents.
+ */
+export function reseedAll(state: SyncState): SyncState {
+  return { ...state, pending: Object.keys(state.items).sort(), queued: {} };
+}
+
 /** These versions were handed to the native engine. They stay pending until iCloud confirms them. */
 export function markQueued(state: SyncState, items: SyncItem[]): SyncState {
   const queued = { ...state.queued };

@@ -19,7 +19,7 @@ import { onStorageChanged } from "./native-mirror.ts";
 import { isNativeApp } from "./native.ts";
 import { isDamagedRow, isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
 import { createSyncSession, type SessionView, type SyncSession, type SyncTransport } from "./sync-session.ts";
-import { adoptDeviceIdentity, adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
+import { adoptDeviceIdentity, adoptRemote, dataFromItems, newSyncState, reseedAll, type SyncState } from "./sync-state.ts";
 import { PROFILE_LIMIT } from "./profiles.ts";
 import { createSerial } from "./serial.ts";
 
@@ -215,7 +215,7 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
   await created.start();
   // Only now may native send: the engine is up, the account matches and nothing is paused.
   try {
-    await (await cloudPlugin()).syncResume();
+    await (await cloudPlugin()).syncResume({ syncId });
   } catch {
     await refreshNative();
     return;
@@ -372,22 +372,39 @@ export async function linkAddCopy(cloud: CloudProfileSummary): Promise<string | 
   return id;
 }
 
-/** The person confirmed: lift the pause and upload this profile to the iCloud that is signed in now. */
+/**
+ * The person confirmed: upload THIS profile, completely, to the iCloud that is signed in now.
+ * The profile's whole state is marked as waiting to send first (a profile whose copy was deleted
+ * still believes everything is agreed, so a plain restart would send nothing). If that cannot be
+ * saved, nothing is changed and the pause stays. Other profiles are not released.
+ */
 export async function uploadAgain(): Promise<void> {
-  const plugin = await cloudPlugin();
-  const id = activeSyncId;
-  await plugin.syncClearPause();
-  if (id) localStorage.removeItem(accountKeyKey(id));
   const s = useSpread.getState();
   const profile = s.profiles.find((p) => p.id === s.activeId);
+  const syncId = profile?.syncId;
+  if (!profile || !syncId) return;
+  const plugin = await cloudPlugin();
   await stopSession();
-  if (profile?.syncId) await startSessionFor(profile.id, profile.syncId, profile.name);
+  const found = await readStateFile(syncId);
+  if (found && !(await writeStateFile(reseedAll(found)))) return;
+  await plugin.syncClearPause({ syncId });
+  localStorage.removeItem(accountKeyKey(syncId));
+  await startSessionFor(profile.id, syncId, profile.name);
 }
 
 export async function unlink(): Promise<void> {
   const s = useSpread.getState();
   if (!s.activeId) return;
   const id = activeSyncId;
+  // Whatever is queued or waiting for this profile is dropped first, so it can never be sent after
+  // it stops syncing. If that fails the profile stays linked and nothing is lost; try again.
+  if (id) {
+    try {
+      await (await cloudPlugin()).syncForget({ syncId: id });
+    } catch {
+      return;
+    }
+  }
   // If the roster cannot be written the profile stays linked and its sync state is kept.
   if (!s.setSyncId(s.activeId, null)) return;
   if (id) {
