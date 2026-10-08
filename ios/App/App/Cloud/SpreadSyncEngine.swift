@@ -82,11 +82,6 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         try? await engine?.sendChanges()
     }
 
-    /// Remove this device's copy of the synced data from iCloud. Only ever called after the person confirms.
-    func deleteCloudData() {
-        engine?.state.add(pendingDatabaseChanges: [.deleteZone(Self.zoneID)])
-    }
-
     func userKey() async -> String? {
         guard let id = try? await container.userRecordID() else { return nil }
         return id.recordName

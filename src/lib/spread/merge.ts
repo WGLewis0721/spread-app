@@ -108,7 +108,10 @@ export function mergeItems(input: MergeInput): MergeResult {
     }
     if (!l || !r) continue;
 
-    const order = compareVectors(l.v, r.v);
+    // Equal vectors with different content can only mean two devices share an id (a cloned
+    // install, a damaged state). It is not safe to pick one, so it is treated as concurrent.
+    const raw = compareVectors(l.v, r.v);
+    const order = raw === "equal" && !sameItem(l, r) ? "concurrent" : raw;
     if (order === "equal" || (order !== "concurrent" && sameItem(l, r))) {
       merged.push(order === "before" ? r : l);
       continue;

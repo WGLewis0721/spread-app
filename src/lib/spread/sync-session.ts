@@ -4,11 +4,13 @@
  * tests with a simulated iCloud.
  *
  * One pass, always in this order, one at a time:
+ *   0. read      the native inbox (the one slow step, done before anything is captured)
  *   1. capture   what the person changed since last time becomes new item versions
  *   2. inbound   items from iCloud are merged; conflicts are held, nothing is overwritten
  *   3. apply     if merging changed the planner, a snapshot is taken and the planner is updated
  *   4. outbound  changed items are handed to the native engine
  *   5. confirm   items the native engine has finished sending become the agreed base
+ * Steps 1 to 3 run without yielding, which is what keeps a just-typed edit safe.
  */
 import type { Choice } from "./merge.ts";
 import type { SpreadData } from "./model.ts";
@@ -90,7 +92,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     running,
     busy,
     lastSyncAt: state.lastSyncAt,
-    waitingToSend: state.pending.length,
+    waitingToSend: state.pending.filter((id) => !state.conflicts.some((c) => c.id === id)).length,
     conflicts: state.conflicts,
     lastError,
   });
@@ -104,20 +106,23 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     busy = true;
     publish();
     try {
+      // Read iCloud's side first. This is the only slow step, so nothing is captured until it is
+      // done: the person may have kept typing while it ran, and capture, merge and apply below
+      // run with no pause between them, so a fresh edit can never be overwritten.
+      const rows = (await deps.transport.inbox()).filter((row) => row.syncId === deps.syncId);
+
       // 1. capture
       const here = deps.current();
       state = captureLocal(state, here.data, here.name, deps.now()).state;
 
-      // 2. inbound
-      const rows = (await deps.transport.inbox()).filter((row) => row.syncId === deps.syncId);
+      // 2. inbound, 3. apply
       if (rows.length > 0) {
-        const probe = applyRemote(state, toItems(rows), deps.now());
-        if (probe.dataChanged) deps.snapshot("pre-sync");
-        state = probe.state;
-        // 3. apply
-        if (probe.dataChanged) {
-          const merged = liveData(state, here.data.currentWeek);
-          deps.apply(merged.data, merged.name);
+        const merged = applyRemote(state, toItems(rows), deps.now());
+        state = merged.state;
+        if (merged.dataChanged) {
+          deps.snapshot("pre-sync");
+          const next = liveData(state, here.data.currentWeek);
+          deps.apply(next.data, next.name);
         }
         await deps.transport.ack(rows.map((row) => `${row.syncId}|${row.itemId}`));
       }

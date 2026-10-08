@@ -169,6 +169,7 @@ test("offline edits on both devices are reconciled when they come back, with con
   const conflicts = [...a.session.view().conflicts, ...b.session.view().conflicts];
   
   assert.ok(conflicts.some((c) => c.id === "task:shared"), "the clash is held, not decided");
+  assert.equal(a.session.view().conflicts.length > 0 ? a.session.view().waitingToSend : b.session.view().waitingToSend, 0, "a held clash is not counted as waiting to send");
   const texts = [a, b].map((d) => d.env.data.weeks[d.env.data.currentWeek].boxes[0].tasks.find((t) => t.id === "shared")!.text);
   assert.deepEqual(texts.sort(), ["Pad wording", "Phone wording"].sort(), "each device still shows its own wording until someone chooses");
 });
@@ -243,4 +244,28 @@ test("a transport failure is reported and does not lose the pending change", asy
   assert.equal(a.session.view().lastError, null);
   await settle(a);
   assert.equal(a.session.view().waitingToSend, 0);
+});
+
+test("an edit typed while iCloud's side is being read is not overwritten by what arrives", async () => {
+  const cloud = new Cloud();
+  const seed = normalizeData(structuredClone(defaultData()));
+  const a = device(cloud, "phone", normalizeData(structuredClone(seed)));
+  const b = device(cloud, "pad", normalizeData(structuredClone(seed)));
+  await a.session.start();
+  await b.session.start();
+  addTask(a, "from-phone", "Phone");
+  await a.session.localChanged();
+  await settle(a);
+  // While the pad reads its inbox (which now holds the phone's task), the person types a new task.
+  const realInbox = b.native.inbox.bind(b.native);
+  b.native.inbox = async () => {
+    const rows = await realInbox();
+    addTask(b, "typed-meanwhile", "Typed during the read");
+    return rows;
+  };
+  await b.session.localChanged();
+  b.native.inbox = realInbox;
+  assert.deepEqual(taskIds(b), ["from-phone", "typed-meanwhile"]);
+  await settle(a, b);
+  assert.deepEqual(taskIds(a), ["from-phone", "typed-meanwhile"]);
 });

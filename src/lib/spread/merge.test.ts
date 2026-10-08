@@ -279,3 +279,12 @@ test("item merge: an id-list field merges as a list, so adds in the same box do 
   assert.equal(result.conflicts.length, 0);
   assert.deepEqual(result.merged[0].fields["tasks$ids"], ["a", "p", "b", "q"]);
 });
+
+test("the same version vector with different content (two devices sharing an id) is a conflict, never a silent pick", () => {
+  const t = item("t", { text: "Call" }, { origin: 1 });
+  const l = edit(t, "same", { text: "Phone wording" });
+  const r = edit(t, "same", { text: "Pad wording" });
+  const result = mergeItems({ base: [t], local: [l], remote: [r], device: "same" });
+  assert.equal(result.merged.length, 0);
+  assert.equal(result.conflicts.length, 1);
+});

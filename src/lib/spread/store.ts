@@ -104,6 +104,11 @@ type Store = {
   copyLastWeek: () => boolean;
   replaceData: (data: SpreadData) => void;
   restoreAsNew: (payload: FullBackupPayload) => RestoreResult;
+  /** Put a merged planner from iCloud Sync into the open profile. Keeps the week being viewed. */
+  applySynced: (data: SpreadData, name: string | null) => void;
+  setSyncId: (profileId: string, syncId: string | null) => void;
+  /** Add a profile that is already linked to iCloud. Does not switch to it. Null if there is no room. */
+  addSyncedProfile: (name: string, syncId: string, data: SpreadData) => string | null;
 };
 
 export type RestoreResult =
@@ -770,6 +775,40 @@ export const useSpread = create<Store>((set, get) => ({
       void pinBackup("pre-restore");
     }
     commit(set, data);
+  },
+  applySynced: (incoming, name) => {
+    const data = normalizeData(incoming);
+    commit(set, data);
+    const { activeId, profiles } = get();
+    const label = name ? cleanName(name) : "";
+    if (label && activeId) {
+      const next = profiles.map((profile) => (profile.id === activeId && profile.name !== label ? { ...profile, name: label } : profile));
+      if (next.some((profile, i) => profile !== profiles[i])) {
+        writeProfiles(next);
+        set({ profiles: next });
+      }
+    }
+  },
+  setSyncId: (profileId, syncId) => {
+    const next = get().profiles.map((profile) => {
+      if (profile.id !== profileId) return profile;
+      const { syncId: _old, ...rest } = profile;
+      void _old;
+      return syncId ? { ...rest, syncId } : rest;
+    });
+    writeProfiles(next);
+    set({ profiles: next });
+  },
+  addSyncedProfile: (name, syncId, incoming) => {
+    const id = uid();
+    const created = withProfile(get().profiles, name, id);
+    const profile = created?.[created.length - 1];
+    if (!created || !profile) return null;
+    if (!put(profile.store, JSON.stringify(normalizeData(incoming)))) return null;
+    const next = created.map((item) => (item.id === id ? { ...item, syncId } : item));
+    writeProfiles(next);
+    set({ profiles: next });
+    return id;
   },
   restoreAsNew: (payload) => {
     flushSpread();

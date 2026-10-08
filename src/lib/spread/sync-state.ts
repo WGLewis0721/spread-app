@@ -160,6 +160,7 @@ export function markPushed(state: SyncState, pushed: SyncItem[], now: string): S
   return { ...state, base, pending: [...pending].sort(), lastSyncAt: now };
 }
 
+/** "Keep both" only makes sense for a task that was edited differently on both devices. */
 export function canKeepBoth(conflict: Conflict): boolean {
   return conflict.id.startsWith("task:") && conflict.kind !== "delete-edit";
 }
@@ -184,4 +185,24 @@ export function liveData(state: SyncState, currentWeek: string): { data: SpreadD
     .filter(([, item]) => !item.deleted)
     .map(([id, item]) => ({ id, fields: item.fields }));
   return assemble(live, currentWeek);
+}
+
+/** Build a planner from items that came straight from iCloud (used to add an iCloud profile to a device). */
+export function dataFromItems(items: SyncItem[], currentWeek: string): { data: SpreadData; name: string | null } {
+  return assemble(
+    items.filter((item) => !item.deleted).map((item) => ({ id: item.id, fields: item.fields })),
+    currentWeek,
+  );
+}
+
+/**
+ * Start a state that already agrees with iCloud: used when an empty profile becomes an iCloud
+ * profile in place, or an iCloud profile is added to the device. Nothing is pending and nothing
+ * can conflict, because there is no local content to disagree with.
+ */
+export function adoptRemote(syncId: string, deviceId: string, remote: SyncItem[], now: string): SyncState {
+  const state = newSyncState(syncId, deviceId);
+  const items: Record<string, StoredItem> = {};
+  for (const item of remote) items[item.id] = toStored(item, now);
+  return { ...state, items, base: { ...items }, lastSyncAt: now };
 }

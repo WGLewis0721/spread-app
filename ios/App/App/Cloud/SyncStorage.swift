@@ -86,6 +86,11 @@ final class SyncStorage {
         }
     }
 
+    var outboxNames: [String] {
+        lock.lock(); defer { lock.unlock() }
+        return outbox.keys.sorted()
+    }
+
     var outboxCount: Int {
         lock.lock(); defer { lock.unlock() }
         return outbox.count

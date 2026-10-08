@@ -3,7 +3,7 @@ import test from "node:test";
 import type { SyncItem } from "./merge.ts";
 import { canonical } from "./merge.ts";
 import { defaultData, normalizeData, type SpreadData } from "./model.ts";
-import { applyRemote, captureLocal, itemsToPush, liveData, markPushed, newSyncState, resolve, type SyncState } from "./sync-state.ts";
+import { adoptRemote, applyRemote, captureLocal, itemsToPush, liveData, markPushed, newSyncState, resolve, type SyncState } from "./sync-state.ts";
 
 // A small in-memory iCloud. Like CloudKit it refuses a write made on top of a version the writer
 // has not seen (`serverRecordChanged`) and hands back the newer one.
@@ -317,4 +317,16 @@ test("property: random edits on three devices in a random order always converge 
       }
     }
   }
+});
+
+test("adopting iCloud's items gives a state with nothing pending, nothing in conflict, and the same planner", () => {
+  const { cloud, a } = pair();
+  const items = cloud.changesSince(0).map((e) => e.item);
+  const state = adoptRemote("sync-1", "pad", items, "2026-10-08T12:00:00Z");
+  assert.deepEqual(state.pending, []);
+  assert.deepEqual(state.conflicts, []);
+  const data = liveData(state, a.data.currentWeek).data;
+  assert.equal(canonical(data as never), canonical(a.data as never));
+  const again = captureLocal(state, data, "Me", "2026-10-08T12:01:00Z");
+  assert.deepEqual(again.changed, [], "capturing the adopted planner finds no edits");
 });

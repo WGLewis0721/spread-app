@@ -19,10 +19,10 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "syncStop", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncQueue", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncInbox", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncOutbox", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncAck", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncNow", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "syncDeleteCloudData", returnType: CAPPluginReturnPromise),
     ]
 
     private let io = DispatchQueue(label: "com.graymatter.spread.cloud.io", qos: .utility)
@@ -180,6 +180,10 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(["items": rows])
     }
 
+    @objc func syncOutbox(_ call: CAPPluginCall) {
+        call.resolve(["names": syncStorage.outboxNames])
+    }
+
     @objc func syncAck(_ call: CAPPluginCall) {
         let names = (call.getArray("names") as? [String]) ?? []
         syncStorage.ackInbox(names)
@@ -209,10 +213,5 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
             await sync.fetchNow()
             call.resolve()
         }
-    }
-
-    @objc func syncDeleteCloudData(_ call: CAPPluginCall) {
-        sync.deleteCloudData()
-        call.resolve()
     }
 }
