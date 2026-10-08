@@ -8,7 +8,7 @@
  *  - Every other path adds a new profile or uploads this one as a new iCloud profile.
  */
 import type { SyncItem } from "./merge.ts";
-import { defaultData, type SpreadData } from "./model.ts";
+import type { SpreadData } from "./model.ts";
 import { PROFILE_LIMIT, type Profile } from "./profiles.ts";
 
 export type CloudProfileSummary = {
@@ -36,19 +36,8 @@ export function summarizeCloud(items: { syncId: string; itemId: string; deleted:
   return [...groups.values()].filter((g) => g.tasks > 0 || g.weeks > 0 || g.name).sort((a, b) => (a.name || a.syncId).localeCompare(b.name || b.syncId));
 }
 
-/** True when a profile holds nothing a person typed: no tasks, no notes, and only the starting spreads. */
-export function isPristine(data: SpreadData): boolean {
-  const start = defaultData();
-  const sameHats =
-    data.hats.length === start.hats.length &&
-    data.hats.every((hat, i) => hat.id === start.hats[i].id && hat.name === start.hats[i].name && hat.defaultHours === start.hats[i].defaultHours);
-  if (!sameHats) return false;
-  for (const week of Object.values(data.weeks)) {
-    if (week.allocations.length > 0) return false;
-    for (const box of week.boxes) if (box.tasks.length > 0) return false;
-  }
-  return true;
-}
+export { isPristine } from "./pristine.ts";
+import { isPristine } from "./pristine.ts";
 
 export type LinkChoice =
   /** Nothing in iCloud for this person yet: upload this profile as a new iCloud profile. */

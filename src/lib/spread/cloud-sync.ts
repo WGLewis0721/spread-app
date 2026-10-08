@@ -302,8 +302,7 @@ export async function linkUpload(): Promise<boolean> {
   if (!s.activeId) return false;
   if (!(await takeSafetyCopies("pre-sync-link"))) return false;
   const syncId = newSyncId();
-  s.setSyncId(s.activeId, syncId);
-  return true;
+  return s.setSyncId(s.activeId, syncId);
 }
 
 /** The open profile is empty: it becomes the iCloud profile in place. */
@@ -329,8 +328,9 @@ export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
   }
   const { data, name } = dataFromItems(remote, latest.data.currentWeek);
   latest.applySynced(data, name);
+  // Link first; only a link that reached storage lets the inbox rows go.
+  if (!latest.setSyncId(latest.activeId as string, cloud.syncId)) return false;
   await plugin.syncAck({ names: mine.map((row) => `${row.syncId}|${row.itemId}`) });
-  latest.setSyncId(latest.activeId as string, cloud.syncId);
   return true;
 }
 
@@ -367,7 +367,8 @@ export async function unlink(): Promise<void> {
   const s = useSpread.getState();
   if (!s.activeId) return;
   const id = activeSyncId;
-  s.setSyncId(s.activeId, null);
+  // If the roster cannot be written the profile stays linked and its sync state is kept.
+  if (!s.setSyncId(s.activeId, null)) return;
   if (id) {
     localStorage.removeItem(accountKeyKey(id));
     await deleteStateFile(id);

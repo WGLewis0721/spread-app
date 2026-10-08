@@ -1538,7 +1538,9 @@ async function applyRestore(backup: ParsedBackup, select?: string[]): Promise<{ 
         message:
           result.reason === "no-room"
             ? `There is room for ${result.free} more. Choose fewer profiles to restore.`
-            : "Couldn’t add the profiles. Nothing was changed.",
+            : result.reason === "rollback-failed"
+              ? "Couldn’t finish adding the profiles, and couldn’t fully undo it. Quit and reopen Spread, which will finish putting things back."
+              : "Couldn’t add the profiles. Nothing was changed.",
       };
     }
     const skipped = result.skipped.length > 0 ? ` ${result.skipped.length === 1 ? `“${result.skipped[0]}” was damaged in the backup and was not restored.` : `${result.skipped.length} profiles were damaged in the backup and were not restored.`}` : "";
