@@ -142,7 +142,7 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
             if zoneDeleted { $0.zoneDeleted = true }
             if let account { $0.accountChanged = account }
         }
-        engine?.cancelOperations()
+        if let running = engine { Task { await running.cancelOperations() } }
         engine = nil
         resumed = false
         let pause = storage.pause
