@@ -1240,11 +1240,16 @@ function TaskRow({
   onOpen,
 }: {
   hatId: string;
-  task: { id: string; text: string; done: boolean };
+  task: { id: string; text: string; done: boolean; allocationId?: string };
   delay?: string;
   onOpen: () => void;
 }) {
   const toggleTask = useSpread((s) => s.toggleTask);
+  const dayName = useSpread((s) => {
+    const week = s.data.weeks[s.data.currentWeek];
+    const found = task.allocationId ? week?.allocations.find((item) => item.id === task.allocationId) : undefined;
+    return found ? (weekDays(s.data.currentWeek).find((day) => day.date === found.day)?.label ?? null) : null;
+  });
   return (
     <li className={delay ? "cascade-item" : undefined} style={delay ? { animationDelay: delay } : undefined}>
       <div className="ms-[4.75rem] border-t border-line" />
@@ -1272,6 +1277,7 @@ function TaskRow({
           )}
         >
           <span className="min-w-0 flex-1 truncate">{task.text}</span>
+          {dayName && !task.done && <span className="ms-2 shrink-0 text-xs font-semibold text-secondary">{dayName.slice(0, 3)}</span>}
           <ChevronRight className="size-5 shrink-0 text-tertiary" />
         </button>
       </div>
