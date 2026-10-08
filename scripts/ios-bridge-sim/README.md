@@ -16,3 +16,8 @@ python3 scripts/ios-bridge-sim/web_regress.py /tmp/shots  # the website is uncha
 ```
 
 Needs Python Playwright (`pip install playwright`) and a Chromium build.
+
+
+## Running everything
+
+`sh scripts/ios-bridge-sim/run-all.sh` builds each flag configuration and runs the matching simulators (CI job `bridge-sims`). Set `PW_CHROME` to use an existing Chromium.
