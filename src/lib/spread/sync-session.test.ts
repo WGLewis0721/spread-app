@@ -98,6 +98,7 @@ function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S1") {
     transport: native,
     loadState: () => saved,
     saveState: (s) => void (saved = s),
+    isActive: () => true,
     current: () => ({ data: env.data, name: env.name }),
     apply: (next, nm) => {
       env.data = normalizeData({ ...next, currentWeek: env.data.currentWeek });
@@ -304,4 +305,86 @@ test("a queued change that iCloud's newer version replaced is dropped from the n
   await settle(a, b, a, b);
   assert.equal(b.native.outboxRows.size, 0, "nothing stale is left in the native outbox");
   assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
+});
+
+// --- Profile binding (audit C1) ---------------------------------------------------------------
+
+function boundHarness() {
+  const own = defaultData();
+  own.weeks[own.currentWeek].boxes[0].tasks.push({ id: "a1", text: "This profile", done: false });
+  const other = defaultData();
+  other.weeks[other.currentWeek].boxes[0].tasks.push({ id: "b1", text: "A different profile", done: false });
+  const env = { open: "mine" as "mine" | "other", applied: 0, queued: [] as SyncRow[], released: false };
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let saved: SyncState | null = null;
+  const session = createSyncSession({
+    syncId: "S",
+    deviceId: "phone",
+    transport: {
+      async start() {},
+      async stop() {},
+      async queue(rows) {
+        env.queued.push(...rows);
+      },
+      async inbox() {
+        if (!env.released) await gate;
+        return [];
+      },
+      async ack() {},
+      async outbox() {
+        return [];
+      },
+      async drop() {},
+      async syncNow() {},
+    },
+    loadState: () => saved,
+    saveState: (s) => void (saved = s),
+    isActive: () => env.open === "mine",
+    current: () => ({ data: env.open === "mine" ? own : other, name: "Me" }),
+    apply: () => void (env.applied += 1),
+    snapshot: () => {},
+    newId: () => "x",
+    now: () => "t",
+  });
+  return { env, session, release: () => ((env.released = true), release()) };
+}
+
+test("switching profiles while a pass waits on iCloud sends nothing from the other profile", async () => {
+  const h = boundHarness();
+  const starting = h.session.start();
+  await new Promise((r) => setTimeout(r, 20));
+  h.env.open = "other";
+  h.release();
+  await starting;
+  assert.deepEqual(h.env.queued, [], "the other profile's tasks were not queued into this profile's iCloud copy");
+  assert.equal(h.env.applied, 0);
+});
+
+test("stopping a session while a pass is waiting stops that pass from touching the planner", async () => {
+  const h = boundHarness();
+  const starting = h.session.start();
+  await new Promise((r) => setTimeout(r, 20));
+  await h.session.stop();
+  h.release();
+  await starting;
+  assert.deepEqual(h.env.queued, []);
+  assert.equal(h.env.applied, 0);
+});
+
+test("resolving a conflict or a pause is ignored when the session's profile is not open", async () => {
+  const h = boundHarness();
+  h.release();
+  await h.session.start();
+  h.env.open = "other";
+  await h.session.resolveConflict("task:a1", "local");
+  await h.session.resolveBlocked("restore");
+  assert.equal(h.env.applied, 0);
+});
+
+test("the same session still syncs normally while its profile stays open", async () => {
+  const h = boundHarness();
+  h.release();
+  await h.session.start();
+  assert.ok(h.env.queued.some((row) => row.itemId === "task:a1"));
 });

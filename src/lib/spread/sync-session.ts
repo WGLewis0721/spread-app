@@ -50,6 +50,12 @@ export type SessionDeps = {
   transport: SyncTransport;
   loadState(): SyncState | null;
   saveState(state: SyncState): void;
+  /**
+   * True only while the profile this session belongs to is the one on screen. The planner calls
+   * (`current`, `apply`) always act on the open profile, so every use is guarded by this: a
+   * session must never read or write another profile's planner.
+   */
+  isActive(): boolean;
   /** The planner as it is right now, with any debounced edit already written. */
   current(): { data: SpreadData; name: string };
   /** Put a merged planner into the app. Must not touch the view (which week is open). */
@@ -93,6 +99,8 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
   let busy = false;
   let lastError: string | null = null;
   let blocked: CaptureBlock | null = null;
+  // Bumped by stop(). A pass that started before a stop notices and does nothing further to the planner.
+  let generation = 0;
   let allowMassDelete = false;
   let chain: Promise<void> = Promise.resolve();
   const listeners = new Set<(view: SessionView) => void>();
@@ -113,6 +121,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
 
   async function pass(): Promise<void> {
     if (!running) return;
+    const started = generation;
     busy = true;
     publish();
     try {
@@ -120,6 +129,10 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
       // done: the person may have kept typing while it ran, and capture, merge and apply below
       // run with no pause between them, so a fresh edit can never be overwritten.
       const rows = (await deps.transport.inbox()).filter((row) => row.syncId === deps.syncId);
+
+      // The read above is slow. If the session was stopped, or another profile was opened meanwhile,
+      // this pass must not touch the planner at all.
+      if (generation !== started || !running || !deps.isActive()) return;
 
       // 1. capture
       const here = deps.current();
@@ -197,6 +210,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     },
     async stop() {
       running = false;
+      generation += 1;
       await deps.transport.stop();
       publish();
     },
@@ -214,6 +228,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     },
     async resolveConflict(id, choice) {
       await queue(async () => {
+        if (!running || !deps.isActive()) return;
         const here = deps.current();
         // Capture first so an edit made a moment ago is not lost when the resolution is applied.
         const captured = captureLocal(state, here.data, here.name, deps.now());
@@ -235,7 +250,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     },
     async resolveBlocked(choice) {
       await queue(async () => {
-        if (!blocked) return;
+        if (!blocked || !running || !deps.isActive()) return;
         if (choice === "restore") {
           // The state still holds the last synced items, because the blocked capture changed nothing.
           const here = deps.current();

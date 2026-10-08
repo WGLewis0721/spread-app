@@ -19,6 +19,7 @@ import { isPristine, planLink, summarizeCloud, toItems, type CloudProfileSummary
 import { createSyncSession, type SessionView, type SyncSession, type SyncTransport } from "./sync-session.ts";
 import { adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
 import { PROFILE_LIMIT } from "./profiles.ts";
+import { createSerial } from "./serial.ts";
 
 export type SyncPhase = "off" | "starting" | "syncing" | "synced" | "paused" | "problem";
 
@@ -151,13 +152,18 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
       saved = next;
       writeStateFile(next);
     },
+    isActive: () => useSpread.getState().activeId === profileId,
     current: () => {
       flushSpread();
       const s = useSpread.getState();
       const profile = s.profiles.find((p) => p.id === s.activeId);
       return { data: s.data, name: profile?.name ?? name };
     },
-    apply: (data, nextName) => useSpread.getState().applySynced(data, nextName),
+    apply: (data, nextName) => {
+      // applySynced writes into whichever profile is open, so refuse if it is not this one.
+      if (useSpread.getState().activeId !== profileId) throw new Error("another profile is open");
+      useSpread.getState().applySynced(data, nextName);
+    },
     snapshot: (label) => {
       pinSnapshot(label, collectEntries(localStorage));
       if (Date.now() - lastBackupPin > 6 * 3_600_000) {
@@ -178,6 +184,11 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
   useCloudSync.setState({ linked: true, view: created.view(), paused: null });
   await refreshNative();
   if (useCloudSync.getState().paused) return;
+  // Profile switched while this was starting: leave it to the next alignment.
+  if (useSpread.getState().activeId !== profileId) {
+    await stopSession();
+    return;
+  }
   const native = useCloudSync.getState().native;
   if (native?.accountKey && !localStorage.getItem(accountKeyKey(syncId))) localStorage.setItem(accountKeyKey(syncId), native.accountKey);
   await created.start();
@@ -193,7 +204,8 @@ async function deviceId(): Promise<string> {
 export async function startSyncManager(): Promise<void> {
   if (!syncAvailable() || listening) return;
   listening = true;
-  const align = async () => {
+  const serially = createSerial();
+  const alignOnce = async () => {
     const s = useSpread.getState();
     const profile = s.profiles.find((p) => p.id === s.activeId);
     const wanted = profile?.syncId ?? null;
@@ -201,7 +213,8 @@ export async function startSyncManager(): Promise<void> {
     await stopSession();
     if (profile && wanted) await startSessionFor(profile.id, wanted, profile.name);
   };
-  useSpread.subscribe(() => void align());
+  const align = () => serially(alignOnce);
+  useSpread.subscribe(() => void align().catch(() => undefined));
   const plugin = await cloudPlugin();
   const wake = () => {
     void refreshNative();

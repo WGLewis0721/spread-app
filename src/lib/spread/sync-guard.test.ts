@@ -86,6 +86,7 @@ function harness(initial: SpreadData) {
     transport,
     loadState: () => saved,
     saveState: (s) => void (saved = s),
+    isActive: () => true,
     current: () => ({ data: env.data, name: "Me" }),
     apply: (data) => {
       env.data = normalizeData({ ...data, currentWeek: env.data.currentWeek });
