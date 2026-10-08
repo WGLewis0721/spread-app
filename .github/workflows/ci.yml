@@ -32,3 +32,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test SpreadCloudCore (naming, path safety, retention)
         run: swift test --package-path ios/App/SpreadCloudCore
+
+  swift-cloudkit-typecheck:
+    # Type-checks the CloudKit code on its own in about a minute, with a hard time limit, so a
+    # compiler problem is reported here instead of hanging the long simulator build.
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Type-check the sync engine
+        working-directory: ios/App/App/Cloud
+        run: >
+          xcrun --sdk iphonesimulator swiftc -typecheck
+          -target arm64-apple-ios17.0-simulator -swift-version 5
+          -Xfrontend -warn-long-expression-type-checking=300
+          -Xfrontend -warn-long-function-bodies=600
+          SpreadCloudConfig.swift SyncStorage.swift SpreadSyncEngine.swift
