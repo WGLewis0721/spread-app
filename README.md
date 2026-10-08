@@ -61,7 +61,7 @@ Trial key: `SPR-DEMO-2026`
 
 ## iOS release direction
 
-The App Store work is a packaging/reliability pass, not a redesign. The selected 1.0 path is **Capacitor + the existing React app**, with device-local data and no required account or SaaS backend. iCloud/CloudKit remains a later sync milestone unless it is deliberately moved into the 1.0 promise.
+The App Store work is a packaging/reliability pass, not a redesign. The selected 1.0 path is **Capacitor + the existing React app**, with device-local data and no required account or SaaS backend. As of 2026-10-08 the 1.0 promise is a $2.99 one-time universal (iPhone + iPad) app with automatic iCloud Backup and optional, off-by-default iCloud Sync, still with no required account. The plan, phases and release gates are in [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md).
 The current web app is the shipped functional baseline. Immutable
 `golden/*` branches below remain rollback checkpoints. The iOS shell and
 physical-device/TestFlight acceptance are still in progress; see
@@ -74,6 +74,7 @@ The iPhone shell is in `ios/`. [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md) has th
 
 ```
 npm run typecheck
+npm run lint
 npm run test:spread
 node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts
 npm run build

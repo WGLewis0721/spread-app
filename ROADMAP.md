@@ -90,6 +90,10 @@ Apple-ready screenshots + still assets
 
 ## Achievement 6 — Apple-Native Data Foundation
 
+> **Pulled into 1.0 (2026-10-08):** iCloud Backup, optional iCloud Sync and iPad are part of the
+> Spread 1.0 direction. See [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md) for phases and gates. The
+> checklists below remain the long-term view; macOS and Watch stay post-1.0.
+
 - [ ] Define the shared native Spread data model.
 - [ ] Preserve the product hierarchy: Spread → Week → Day allocation → Task → optional content.
 - [ ] Move from device-only persistence toward user's iCloud/CloudKit sync.
