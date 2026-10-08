@@ -241,8 +241,7 @@ async function filesystemAdapter(): Promise<MirrorAdapter> {
   };
 }
 
-const PINNED_PREFIX = "spread-pinned-";
-const PINNED_KEEP = 15;
+import { PINNED_PREFIX, pinsToDelete } from "./pins.ts";
 
 export type PinnedCopy = { name: string; label: string; savedAt: string };
 
@@ -277,8 +276,7 @@ async function pinnedFiles(): Promise<string[]> {
 
 async function prunePinned(): Promise<void> {
   const { Filesystem, Directory } = await import("@capacitor/filesystem");
-  const names = await pinnedFiles();
-  for (const name of names.slice(0, Math.max(0, names.length - PINNED_KEEP))) {
+  for (const name of pinsToDelete(await pinnedFiles())) {
     await Filesystem.deleteFile({ path: name, directory: Directory.Library }).catch(() => undefined);
   }
 }

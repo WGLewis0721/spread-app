@@ -94,3 +94,59 @@ test("A02: a failed replacement of an untouched profile puts the original bytes 
   assert.equal(result.ok, false);
   assert.equal(storage.map.get(local.store), before);
 });
+
+// Astra A09: rollback must work when every profile slot is in use.
+function tenProfiles(prefix: string) {
+  const roster: Profile[] = Array.from({ length: 10 }, (_, i) => ({ id: `${prefix}${i}`, name: `${prefix}${i}`, store: profileStore(`${prefix}${i}`), theme: "light", accent: null }));
+  const entries: Record<string, string> = { [PROFILES_KEY]: JSON.stringify(roster), "spread.profile": roster[0].id };
+  roster.forEach((profile, i) => {
+    const d = defaultData();
+    d.weeks[d.currentWeek].boxes[0].tasks.push({ id: `${prefix}${i}`, text: `${prefix} task ${i}`, done: false });
+    entries[profile.store] = JSON.stringify(d);
+  });
+  return { roster, entries };
+}
+
+test("A09: with ten profiles in use, a safety copy can be rolled back in place", () => {
+  const now = tenProfiles("now");
+  const was = tenProfiles("was");
+  storage.map.clear();
+  storage.failWhen = null;
+  for (const [k, v] of Object.entries(now.entries)) storage.map.set(k, v);
+  useSpread.setState({ profiles: now.roster, activeId: now.roster[0].id, data: JSON.parse(now.entries[now.roster[0].store]) });
+  const result = useSpread.getState().rollbackToCopy(was.entries);
+  assert.equal(result.ok, true);
+  assert.deepEqual(JSON.parse(storage.map.get(PROFILES_KEY) as string).map((p: Profile) => p.id), was.roster.map((p) => p.id));
+  assert.equal(storage.map.get(was.roster[3].store), was.entries[was.roster[3].store]);
+  assert.equal(storage.map.has(now.roster[3].store), false, "the replaced profiles' leftovers are removed");
+  assert.equal(useSpread.getState().profiles.length, 10);
+});
+
+test("A09: a rollback that fails part-way leaves the current planner exactly as it was", () => {
+  const now = tenProfiles("now");
+  const was = tenProfiles("was");
+  storage.map.clear();
+  for (const [k, v] of Object.entries(now.entries)) storage.map.set(k, v);
+  useSpread.setState({ profiles: now.roster, activeId: now.roster[0].id, data: JSON.parse(now.entries[now.roster[0].store]) });
+  const before = new Map(storage.map);
+  let n = 0;
+  storage.failWhen = (key) => key.startsWith("spread.v1.was") && ++n === 4;
+  const result = useSpread.getState().rollbackToCopy(was.entries);
+  storage.failWhen = null;
+  assert.equal(result.ok, false);
+  assert.deepEqual([...storage.map], [...before]);
+  assert.equal(useSpread.getState().profiles[0].id, "now0");
+});
+
+test("A09: a copy holding an unreadable profile is refused, not partly restored", () => {
+  const now = tenProfiles("now");
+  const was = tenProfiles("was");
+  was.entries[was.roster[2].store] = "null";
+  storage.map.clear();
+  for (const [k, v] of Object.entries(now.entries)) storage.map.set(k, v);
+  useSpread.setState({ profiles: now.roster, activeId: now.roster[0].id, data: JSON.parse(now.entries[now.roster[0].store]) });
+  const before = new Map(storage.map);
+  const result = useSpread.getState().rollbackToCopy(was.entries);
+  assert.deepEqual(result, { ok: false, reason: "damaged" });
+  assert.deepEqual([...storage.map], [...before]);
+});

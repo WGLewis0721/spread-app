@@ -1574,6 +1574,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const fileRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<ParsedBackup | null>(null);
   const [copies, setCopies] = useState<PinnedCopy[] | null>(null);
+  const [pickedCopy, setPickedCopy] = useState<{ copy: PinnedCopy; entries: Record<string, string> } | null>(null);
   const week = buildWeekDocument(data);
 
   const native = isNativeApp();
@@ -1725,10 +1726,9 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
                     role="listitem"
                     className="flex w-full items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-left active:bg-fill last:border-b-0"
                     onClick={() =>
-                      void readPinned(copy.name).then(async (read) => {
-                        const shaped = read ? await parseFullBackup(await fullBackupText(collectFullPayload(keyStoreOf(read.entries), new Date(read.savedAt), null))) : null;
-                        if (!shaped) toast("That safety copy can’t be read.");
-                        else setBackup({ kind: "full", ...shaped });
+                      void readPinned(copy.name).then((read) => {
+                        if (!read) toast("That safety copy can’t be read.");
+                        else setPickedCopy({ copy, entries: read.entries });
                       })
                     }
                   >
@@ -1776,6 +1776,58 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           Log out
         </button>
       )}
+      <AlertDialog.Root open={pickedCopy !== null} onOpenChange={(open) => !open && setPickedCopy(null)}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+          <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+            <AlertDialog.Title className="text-center text-base font-semibold">Use this safety copy?</AlertDialog.Title>
+            <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+              “Put everything back” replaces all your profiles with the ones in this copy, even when all ten are in use. A new safety copy of what is here now is saved first. “Add as profiles” keeps what you have and adds the copy’s profiles beside it.
+            </AlertDialog.Description>
+            <div className="mt-5 grid gap-2">
+              <AlertDialog.Action
+                className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
+                onClick={() => {
+                  const chosen = pickedCopy;
+                  if (!chosen) return;
+                  void ensureSafetyCopy("pre-rollback").then((saved) => {
+                    if (!saved) {
+                      toast("Couldn’t save a safety copy first, so nothing was changed.");
+                      return;
+                    }
+                    const result = useSpread.getState().rollbackToCopy(chosen.entries);
+                    setPickedCopy(null);
+                    if (result.ok) {
+                      toast(`Put everything back (${result.profiles} ${result.profiles === 1 ? "profile" : "profiles"}).`);
+                      setSheet(null);
+                    } else {
+                      toast(result.reason === "rollback-failed" ? "Couldn’t finish, and couldn’t fully undo it. Quit and reopen Spread, which will finish putting things back." : "Couldn’t put it back. Nothing was changed.");
+                    }
+                  });
+                }}
+              >
+                Put everything back
+              </AlertDialog.Action>
+              <AlertDialog.Action
+                className="h-11 rounded-full bg-fill text-sm font-semibold"
+                onClick={() => {
+                  const chosen = pickedCopy;
+                  if (!chosen) return;
+                  void (async () => {
+                    const shaped = await parseFullBackup(await fullBackupText(collectFullPayload(keyStoreOf(chosen.entries), new Date(chosen.copy.savedAt), null)));
+                    if (!shaped) toast("That safety copy can’t be read.");
+                    else setBackup({ kind: "full", ...shaped });
+                    setPickedCopy(null);
+                  })();
+                }}
+              >
+                Add as profiles
+              </AlertDialog.Action>
+              <AlertDialog.Cancel className="h-11 rounded-full text-sm font-semibold text-secondary">Cancel</AlertDialog.Cancel>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
       <RestoreDialog
         backup={backup}
         onClose={() => setBackup(null)}

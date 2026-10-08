@@ -4,6 +4,7 @@ import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/nat
 import { runMigrations } from "@/lib/spread/schema";
 import { classifyStored } from "@/lib/spread/pristine";
 import { commitRestore, recoverRestore } from "@/lib/spread/restore-tx";
+import { planRollback } from "@/lib/spread/rollback";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import {
   ACTIVE_PROFILE_KEY,
@@ -106,6 +107,8 @@ type Store = {
   /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
   replaceData: (data: SpreadData) => boolean;
   restoreAsNew: (payload: FullBackupPayload, select?: string[]) => RestoreResult;
+  /** Put the whole planner back from a safety copy's stored entries. Works with all ten slots in use. */
+  rollbackToCopy: (entries: Record<string, string>) => RollbackResult;
   /** How many profiles a restore can add right now (free slots, plus an empty profile it may fill). */
   restoreRoom: () => number;
   /** Put a merged planner from iCloud Sync into the open profile. Keeps the week being viewed. */
@@ -114,6 +117,8 @@ type Store = {
   /** Add a profile that is already linked to iCloud. Does not switch to it. Null if there is no room. */
   addSyncedProfile: (name: string, syncId: string, data: SpreadData) => string | null;
 };
+
+export type RollbackResult = { ok: true; profiles: number } | { ok: false; reason: "no-profiles" | "damaged" | "write-failed" | "rollback-failed" };
 
 export type RestoreResult =
   | { ok: true; added: number; replacedEmpty: boolean; skipped: string[] }
@@ -867,6 +872,23 @@ export const useSpread = create<Store>((set, get) => ({
   restoreRoom: () => {
     flushSpread();
     return restoreCapacity(get().profiles.length, emptyProfileId(get()) !== null);
+  },
+  rollbackToCopy: (entries) => {
+    flushSpread();
+    const plan = planRollback(entries);
+    if (!plan.ok) return { ok: false, reason: plan.reason };
+    const committed = commitRestore(txStorage, { writes: plan.writes, rosterKey: PROFILES_KEY, rosterValue: plan.rosterValue });
+    if (!committed.ok) return { ok: false, reason: committed.rolledBack ? "write-failed" : "rollback-failed" };
+    // The roster is the commit point; bodies of profiles that are no longer listed are only leftovers.
+    const keep = new Set(plan.profiles.map((profile) => profile.store));
+    for (const old of get().profiles) if (!keep.has(old.store)) drop(old.store);
+    failureReported = false;
+    notifyStorageChanged();
+    const active = plan.profiles.find((profile) => profile.id === plan.activeId) ?? plan.profiles[0];
+    pending = null;
+    const loaded = adopt(active);
+    set({ profiles: plan.profiles, activeId: active.id, ...loaded });
+    return { ok: true, profiles: plan.profiles.length };
   },
   restoreAsNew: (payload, select) => {
     flushSpread();

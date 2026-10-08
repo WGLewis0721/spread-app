@@ -11,10 +11,7 @@ import { deriveBackupStatus, type BackupStatus, type NativeFacts } from "./cloud
 import { createBackupRunner, type BackupRunner, type RunnerState } from "./backup-runner.ts";
 import { isNativeApp } from "./native.ts";
 import { onStorageChanged } from "./native-mirror.ts";
-
-export const BACKUP_PREF_KEY = "spread.cloud.backup";
-/** Set once the person has been told what is uploaded and chose. Nothing is uploaded before it. */
-export const BACKUP_ACK_KEY = "spread.cloud.backup.ack";
+import { readConsent, writeConsent } from "./consent.ts";
 
 type CloudStore = {
   enabled: boolean;
@@ -37,26 +34,6 @@ export function backupAvailable(): boolean {
   return CLOUD_FLAGS.backup && isNativeApp();
 }
 
-/**
- * Backup is on unless the person turned it off. If the preference cannot be read it is treated
- * as off: an unreadable opt-out must never become an opt-in.
- */
-function readEnabled(): boolean {
-  try {
-    return localStorage.getItem(BACKUP_PREF_KEY) !== "off";
-  } catch {
-    return false;
-  }
-}
-
-function readAcknowledged(): boolean {
-  try {
-    return localStorage.getItem(BACKUP_ACK_KEY) === "yes";
-  } catch {
-    return false;
-  }
-}
-
 /** The one gate for writing anything to iCloud: the feature, the person's choice and their acknowledgement. */
 export function canWriteICloud(): boolean {
   const state = useCloudBackup.getState();
@@ -65,13 +42,11 @@ export function canWriteICloud(): boolean {
 
 /** The person answered the first-run notice. "Turn on" keeps backup on; "Not now" turns it off. */
 export function acknowledgeBackup(turnOn: boolean): void {
-  try {
-    localStorage.setItem(BACKUP_ACK_KEY, "yes");
-  } catch {
-    /* asked again next launch */
-  }
-  useCloudBackup.setState({ acknowledged: true });
-  setBackupEnabled(turnOn);
+  // One value, written once. If it cannot be written nothing is turned on, and the question comes back.
+  const saved = writeConsent(localStorage, turnOn ? "on" : "off");
+  useCloudBackup.setState({ acknowledged: true, enabled: turnOn && saved });
+  if (turnOn && saved) attach();
+  else detach();
 }
 
 export function currentBackupStatus(state: CloudStore): BackupStatus {
@@ -127,14 +102,15 @@ export function startCloudBackup(): Promise<void> {
 }
 
 async function begin(): Promise<void> {
-  const acknowledged = readAcknowledged();
+  const consent = readConsent(localStorage);
   // Until the person has answered the first-run notice, backup shows as off and uploads nothing.
-  useCloudBackup.setState({ enabled: readEnabled() && acknowledged, acknowledged });
+  useCloudBackup.setState({ enabled: consent === "on", acknowledged: consent !== "unanswered" });
   await refreshBackupStatus();
   const plugin = await cloudPlugin();
   runner = createBackupRunner({
     transport: { write: (text, pin) => plugin.backupWrite({ text, pin }) },
     build: buildBackup,
+    allowed: canWriteICloud,
     onState: (state) => {
       useCloudBackup.setState({ runner: state, now: Date.now() });
       if (!state.busy) void refreshBackupStatus();
@@ -145,7 +121,11 @@ async function begin(): Promise<void> {
   window.addEventListener("pagehide", () => void runner?.flush());
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") void runner?.flush();
-    else void refreshBackupStatus();
+    else {
+      void refreshBackupStatus();
+      // Coming back to the app is a good moment to hand an undelivered copy to iCloud again.
+      if (useCloudBackup.getState().runner.waitingForICloud) runner?.changed();
+    }
   });
 }
 
@@ -156,28 +136,21 @@ function attach() {
   runner.launch(last ? Date.parse(last) : null);
 }
 
-export function setBackupEnabled(on: boolean) {
-  try {
-    if (on) localStorage.removeItem(BACKUP_PREF_KEY);
-    else localStorage.setItem(BACKUP_PREF_KEY, "off");
-  } catch {
-    /* the choice still applies for this run */
-  }
-  // Turning it on from Settings is itself the person's consent.
-  if (on) {
-    try {
-      localStorage.setItem(BACKUP_ACK_KEY, "yes");
-    } catch {
-      /* the choice still applies for this run */
-    }
-  }
-  useCloudBackup.setState({ enabled: on, ...(on ? { acknowledged: true } : {}) });
-  if (on) {
-    attach();
-  } else {
-    stopStorage?.();
-    stopStorage = null;
-  }
+function detach() {
+  stopStorage?.();
+  stopStorage = null;
+  // Anything waiting (a debounce, a retry, an undelivered copy) is dropped, not just un-listened.
+  runner?.cancel();
+}
+
+/** Returns false when turning it on could not be saved: it stays off. */
+export function setBackupEnabled(on: boolean): boolean {
+  const saved = writeConsent(localStorage, on ? "on" : "off");
+  if (on && !saved) return false;
+  useCloudBackup.setState({ enabled: on, acknowledged: true });
+  if (on) attach();
+  else detach();
+  return true;
 }
 
 /**

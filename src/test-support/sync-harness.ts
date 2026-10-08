@@ -101,6 +101,10 @@ export function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S
     failApply: 0,
     /** Number of upcoming snapshots that fail (throw), like a safety copy that cannot be written. */
     failSnapshot: 0,
+    /** When set, snapshot() resolves with this after a tick (a verified write that failed or succeeded). */
+    snapshotResult: null as null | boolean,
+    /** Runs while a snapshot is being written, so a test can edit the planner mid-write. */
+    duringSnapshot: null as null | (() => void),
   };
   const env = { data, name: "Me", snapshots: [] as string[] };
   const deps: SessionDeps = {
@@ -113,7 +117,8 @@ export function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S
       h.durable = s;
     },
     isActive: () => true,
-    current: () => ({ data: env.data, name: env.name }),
+    // A copy, like the real store, which never mutates a planner in place.
+    current: () => ({ data: structuredClone(env.data), name: env.name }),
     apply: (next, nm) => {
       if (h.failApply > 0) {
         h.failApply -= 1;
@@ -126,6 +131,15 @@ export function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S
       if (h.failSnapshot > 0) {
         h.failSnapshot -= 1;
         throw new Error("snapshot not written");
+      }
+      if (h.snapshotResult !== null) {
+        return new Promise<boolean>((resolve) =>
+          setImmediate(() => {
+            h.duringSnapshot?.();
+            if (h.snapshotResult) env.snapshots.push(label);
+            resolve(h.snapshotResult === true);
+          }),
+        );
       }
       env.snapshots.push(label);
     },

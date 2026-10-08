@@ -108,7 +108,7 @@ with sync_playwright() as p:
     count = len(store())
     page.get_by_role('switch').click(); page.wait_for_timeout(500)
     check('turning it off says so', 'iCloud Backup is off' in page.inner_text('body'))
-    check('and the choice is remembered', page.evaluate("localStorage.getItem('spread.cloud.backup')") == 'off')
+    check('and the choice is remembered', page.evaluate("localStorage.getItem('spread.cloud.backup.consent')") == 'v1:off')
     page.get_by_role('switch').click(); page.wait_for_timeout(500)
 
     # Restore from iCloud: added as a new profile, existing data untouched, pre-restore copy kept.

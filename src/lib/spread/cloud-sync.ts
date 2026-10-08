@@ -10,11 +10,11 @@ import { create } from "zustand";
 import { CLOUD_FLAGS } from "./cloud-flags.ts";
 import { cloudPlugin, type SyncNativeStatus } from "./cloud.ts";
 import { pinBackup } from "./cloud-backup.ts";
-import { ensureSafetyCopy } from "./safety.ts";
+import { ensureSafetyCopy, localSafetyCopy } from "./safety.ts";
 import type { Choice } from "./merge.ts";
 import { weekKey } from "./model.ts";
 import { flushSpread, useSpread } from "./store.ts";
-import { collectEntries, onStorageChanged, pinSnapshot } from "./native-mirror.ts";
+import { onStorageChanged } from "./native-mirror.ts";
 import { isNativeApp } from "./native.ts";
 import { isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
 import { createSyncSession, type SessionView, type SyncSession, type SyncTransport } from "./sync-session.ts";
@@ -168,12 +168,14 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
       if (useSpread.getState().activeId !== profileId) throw new Error("another profile is open");
       useSpread.getState().applySynced(data, nextName);
     },
-    snapshot: (label) => {
-      void pinSnapshot(label, collectEntries(localStorage));
+    // Resolves false when the copy was not written and verified; the session then changes nothing.
+    snapshot: async (label) => {
+      if (!(await localSafetyCopy(label))) return false;
       if (Date.now() - lastBackupPin > 6 * 3_600_000) {
         lastBackupPin = Date.now();
         void pinBackup(label);
       }
+      return true;
     },
     newId: () => Math.random().toString(36).slice(2, 10),
     now: () => new Date().toISOString(),
@@ -337,6 +339,7 @@ export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
 /** Add the iCloud profile to this device as a new profile and leave the open one alone. */
 export async function linkAddCopy(cloud: CloudProfileSummary): Promise<string | null> {
   if (useSpread.getState().profiles.length >= PROFILE_LIMIT) return null;
+  if (!(await takeSafetyCopies("pre-sync-link"))) return null;
   const plugin = await cloudPlugin();
   const { items } = await plugin.syncInbox();
   const mine = items.filter((row) => row.syncId === cloud.syncId);

@@ -64,8 +64,11 @@ export type SessionDeps = {
   current(): { data: SpreadData; name: string };
   /** Put a merged planner into the app. Must not touch the view (which week is open). */
   apply(data: SpreadData, name: string | null): void;
-  /** Called before merged changes replace anything on screen. */
-  snapshot(label: string): void;
+  /**
+   * A safety copy before merged changes replace anything on screen. Resolve false (or throw) when
+   * the copy was not written and verified: the change is then not applied.
+   */
+  snapshot(label: string): void | boolean | Promise<boolean | void>;
   newId(): string;
   now(): string;
 };
@@ -147,6 +150,22 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     }
   };
 
+  /** True only if a safety copy was written and verified. */
+  async function safetyCopy(label: string): Promise<boolean> {
+    try {
+      return (await deps.snapshot(label)) !== false;
+    } catch {
+      return false;
+    }
+  }
+
+  /** The planner was edited (or another profile opened) while we waited: whatever was computed is stale. */
+  function movedSince(before: { data: SpreadData; name: string }): boolean {
+    if (!deps.isActive()) return true;
+    const now = deps.current();
+    return now.name !== before.name || JSON.stringify(now.data) !== JSON.stringify(before.data);
+  }
+
   /** Resolves true only once the state is durably saved. Nothing is acknowledged or sent before that. */
   async function persist(next: SyncState): Promise<boolean> {
     try {
@@ -176,7 +195,8 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     const candidate = resolve(captured.state, id, choice, deps.newId, deps.now());
     const merged = liveData(candidate, here.data.currentWeek);
     try {
-      deps.snapshot("pre-resolve");
+      if (!(await safetyCopy("pre-resolve"))) throw new Error("couldn’t save a safety copy first");
+      if (!running || movedSince(here)) throw new Error("the planner changed meanwhile");
       deps.apply(merged.data, merged.name);
     } catch (error) {
       failedChoices.set(id, choice);
@@ -225,7 +245,10 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
       if (rows.length > 0) {
         const merged = applyRemote(state, toItems(rows), deps.now());
         if (merged.dataChanged) {
-          deps.snapshot("pre-sync");
+          // No safety copy, no change. Writing it takes a moment, so if the person kept typing (or
+          // left the profile) the merge computed above is stale: drop it and let the next pass redo it.
+          if (!(await safetyCopy("pre-sync"))) throw new Error("no-safety-copy");
+          if (generation !== started || !running || movedSince(here)) return;
           const next = liveData(merged.state, here.data.currentWeek);
           // If the planner cannot be updated, sync state stays as it was. Advancing it anyway
           // would make the next pass read the unchanged planner as an edit undoing iCloud's change.
@@ -327,7 +350,8 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
         const candidate = restoreDiscarded(captured.state, index, deps.now());
         const merged = liveData(candidate, here.data.currentWeek);
         try {
-          deps.snapshot("pre-restore-discarded");
+          if (!(await safetyCopy("pre-restore-discarded"))) throw new Error("couldn’t save a safety copy first");
+          if (!running || movedSince(here)) throw new Error("the planner changed meanwhile");
           deps.apply(merged.data, merged.name);
         } catch (error) {
           lastError = error instanceof Error ? error.message : "couldn’t put that back";
@@ -346,7 +370,11 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
         if (choice === "restore") {
           // The state still holds the last synced items, because the blocked capture changed nothing.
           const here = deps.current();
-          deps.snapshot("pre-restore-guard");
+          if (!(await safetyCopy("pre-restore-guard")) || movedSince(here)) {
+            lastError = "couldn’t save a safety copy first";
+            publish();
+            return;
+          }
           const back = liveData(state, here.data.currentWeek);
           deps.apply(back.data, back.name);
           blocked = null;

@@ -185,3 +185,52 @@ test("A04: state is saved after the planner took iCloud's change but before the 
   await y.session.syncNow();
   assert.equal(y.native.inboxRows.size, 0, "and is acknowledged on the next pass");
 });
+
+// Astra A09: a safety copy must exist and be verified before the planner is changed.
+test("A09: iCloud's change is not applied when the safety copy was not written", async () => {
+  const cloud = new Cloud();
+  const x = device(cloud, "phone", seedData());
+  const y = device(cloud, "pad", seedData());
+  await x.session.start();
+  addTask(x, "t1", "From phone");
+  await x.session.localChanged();
+  await settle(x);
+  y.h.snapshotResult = false;
+  await y.session.start();
+  assert.deepEqual(y.env.data.weeks[y.env.data.currentWeek].boxes[0].tasks.map((t) => t.id), [], "the planner did not change");
+  assert.ok(y.native.inboxRows.size > 0, "and the change waits in the inbox");
+  assert.ok(y.session.view().lastError);
+  y.h.snapshotResult = true;
+  await y.session.syncNow();
+  assert.deepEqual(y.env.data.weeks[y.env.data.currentWeek].boxes[0].tasks.map((t) => t.id), ["t1"], "once a copy can be written, it applies");
+  assert.equal(y.env.snapshots.includes("pre-sync"), true);
+});
+
+test("A09: an edit typed while the safety copy was being written is not overwritten", async () => {
+  const cloud = new Cloud();
+  const x = device(cloud, "phone", seedData());
+  const y = device(cloud, "pad", seedData());
+  await x.session.start();
+  addTask(x, "t1", "From phone");
+  await x.session.localChanged();
+  await settle(x);
+  y.h.snapshotResult = true;
+  y.h.duringSnapshot = () => addTask(y, "typed", "Typed meanwhile");
+  await y.session.start();
+  y.h.duringSnapshot = null;
+  assert.ok(y.env.data.weeks[y.env.data.currentWeek].boxes[0].tasks.some((t) => t.id === "typed"), "the edit is still there");
+  await settle(x, y);
+  const ids = y.env.data.weeks[y.env.data.currentWeek].boxes[0].tasks.map((t) => t.id).sort();
+  assert.deepEqual(ids, ["t1", "typed"], "both arrive once the pass runs again");
+});
+
+test("A09: a conflict choice is not applied without a verified safety copy", async () => {
+  const { a, b } = await readyToChoose();
+  b.h.snapshotResult = false;
+  await b.session.resolveConflict("task:shared", "remote");
+  assert.equal(textOf(b, "shared"), "Pad wording");
+  assert.equal(b.session.view().conflicts.some((c) => c.id === "task:shared"), true);
+  b.h.snapshotResult = true;
+  await settle(a, b);
+  assert.equal(textOf(b, "shared"), "Phone wording");
+});
