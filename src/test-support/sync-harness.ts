@@ -99,6 +99,8 @@ export function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S
     failSave: false,
     /** Number of upcoming apply() calls that throw, like a planner whose write is refused. */
     failApply: 0,
+    /** Number of upcoming snapshots that fail (throw), like a safety copy that cannot be written. */
+    failSnapshot: 0,
   };
   const env = { data, name: "Me", snapshots: [] as string[] };
   const deps: SessionDeps = {
@@ -120,7 +122,13 @@ export function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S
       env.data = normalizeData({ ...next, currentWeek: env.data.currentWeek });
       if (nm) env.name = nm;
     },
-    snapshot: (label) => void env.snapshots.push(label),
+    snapshot: (label) => {
+      if (h.failSnapshot > 0) {
+        h.failSnapshot -= 1;
+        throw new Error("snapshot not written");
+      }
+      env.snapshots.push(label);
+    },
     newId: () => `n${clock++}`,
     now: () => `2026-10-08T12:${String(clock++ % 60).padStart(2, "0")}:00Z`,
   };
