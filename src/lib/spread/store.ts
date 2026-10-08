@@ -15,6 +15,7 @@ import {
   cleanName,
   type Profile,
 } from "@/lib/spread/profiles";
+import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
 import { create } from "zustand";
 import {
@@ -104,6 +105,10 @@ type Store = {
   changeWeek: (direction: -1 | 1 | "today") => void;
   removeAllocation: (allocationId: string) => void;
   /** Put a task on a day (an allocation of its own role), or take it off every day with null. */
+  /** Run one change and remember it so it can be undone. Returns an edit id, or null when nothing changed. */
+  undoable: (run: () => void) => string | null;
+  /** Reverse that change. False when the week has changed since, so newer work is never overwritten. */
+  undoEdit: (editId: string) => boolean;
   assignTask: (hatId: string, taskId: string, allocationId: string | null) => { ok: true; changed: boolean } | { ok: false; reason: AssignFailure };
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
   copyLastWeek: () => boolean;
@@ -378,6 +383,8 @@ function bindFlush() {
 function persist(data: SpreadData) {
   put(activeStore, JSON.stringify(data));
 }
+
+let editStack: WeekEdit[] = [];
 
 let pending: SpreadData | null = null;
 let persistTimer: number | null = null;
@@ -781,6 +788,23 @@ export const useSpread = create<Store>((set, get) => ({
   },
   changeWeek: (direction) => {
     get().moveWeek(direction);
+  },
+  undoable: (run) => {
+    const before = get().data;
+    run();
+    const edit = makeEdit(uid(), get().activeId ?? "", before, get().data);
+    if (!edit) return null;
+    editStack = pushEdit(editStack, edit);
+    return edit.id;
+  },
+  undoEdit: (editId) => {
+    const edit = editStack.find((item) => item.id === editId);
+    if (!edit) return false;
+    const state = get();
+    if (!canUndo(edit, state.activeId ?? "", state.data)) return false;
+    editStack = editStack.filter((item) => item.id !== editId);
+    commit(set, applyUndo(edit, state.data));
+    return true;
   },
   assignTask: (hatId, taskId, allocationId) => {
     const data = ensureWeek(get().data);

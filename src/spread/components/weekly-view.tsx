@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { showUndoToast } from "@/spread/ui/undo-toast";
 import { clampHours, isoDate, remainingHours, weekDays, type Allocation, type Task } from "@/lib/spread/model";
 import { useSpread } from "@/lib/spread/store";
 import { assignFailureText, eligibleAllocations, tasksOnAllocation, unscheduledTasks } from "@/lib/spread/task-schedule";
@@ -48,6 +49,8 @@ export function WeeklyView({
   const setAllocationHours = useSpread((s) => s.setAllocationHours);
   const removeAllocation = useSpread((s) => s.removeAllocation);
   const assignTask = useSpread((s) => s.assignTask);
+  const undoable = useSpread((s) => s.undoable);
+  const undoEdit = useSpread((s) => s.undoEdit);
   const changeWeek = useSpread((s) => s.changeWeek);
   const days = weekDays(data.currentWeek);
   const week = data.weeks[data.currentWeek];
@@ -98,7 +101,7 @@ export function WeeklyView({
     if (leaving) return;
     setLeaving(id);
     window.setTimeout(() => {
-      removeAllocation(id);
+      withUndo("Took it off the day.", () => removeAllocation(id));
       setLeaving(null);
     }, 340);
   }
@@ -121,15 +124,23 @@ export function WeeklyView({
       const dayLabel = days.find((day) => day.date === decision.day)?.label;
       toast(assignFailureText(decision.reason === "no-allocation" ? "no-allocation" : "wrong-role", roleName, dayLabel));
     }
-    if (decision.action === "moveSpreadToDay") moveSpreadToDay(decision.hatId, decision.day);
-    if (decision.action === "moveAllocation") moveAllocation(decision.allocationId, decision.day);
-    if (decision.action === "reorderAllocation") reorderAllocation(decision.allocationId, decision.beforeId);
+    if (decision.action === "moveSpreadToDay") withUndo("Added to the day.", () => moveSpreadToDay(decision.hatId, decision.day));
+    if (decision.action === "moveAllocation") withUndo("Moved.", () => moveAllocation(decision.allocationId, decision.day));
+    if (decision.action === "reorderAllocation") withUndo("Reordered.", () => reorderAllocation(decision.allocationId, decision.beforeId));
   }
 
   const hatsById = new Map(data.hats.map((hat) => [hat.id, hat]));
+  function withUndo(message: string, run: () => void) {
+    const id = undoable(run);
+    if (id) showUndoToast(message, () => undoEdit(id));
+  }
   function placeTask(hatId: string, taskId: string, allocationId: string | null) {
-    const result = assignTask(hatId, taskId, allocationId);
-    if (!result.ok) toast(assignFailureText(result.reason));
+    let failure: string | null = null;
+    withUndo(allocationId === null ? "Taken off the day." : "Task placed.", () => {
+      const result = assignTask(hatId, taskId, allocationId);
+      if (!result.ok) failure = assignFailureText(result.reason);
+    });
+    if (failure) toast(failure);
     setMoving(null);
   }
   const toPlace = unscheduledTasks(week);

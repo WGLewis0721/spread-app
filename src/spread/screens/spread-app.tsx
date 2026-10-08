@@ -5,7 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import { formatWeek, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
+import { formatWeek, isoDate, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
 import { ACCENTS, consumeArrival, onSaveFailure, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
@@ -25,6 +25,7 @@ import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
+import { showUndoToast } from "@/spread/ui/undo-toast";
 import { WeeklyView, SpreadBubbleStrip } from "@/spread/components/weekly-view";
 import { MonthView } from "@/spread/components/month-view";
 import { WeekCrown } from "@/spread/components/week-crown";
@@ -1248,8 +1249,18 @@ function TaskRow({
   const dayName = useSpread((s) => {
     const week = s.data.weeks[s.data.currentWeek];
     const found = task.allocationId ? week?.allocations.find((item) => item.id === task.allocationId) : undefined;
-    return found ? (weekDays(s.data.currentWeek).find((day) => day.date === found.day)?.label ?? null) : null;
+    return found ? (weekDays(s.data.currentWeek).find((day) => day.date === found.day) ?? null) : null;
   });
+  const assignTask = useSpread((s) => s.assignTask);
+  const undoable = useSpread((s) => s.undoable);
+  const undoEdit = useSpread((s) => s.undoEdit);
+  const isToday = dayName?.date === isoDate(new Date());
+  function notToday() {
+    const id = undoable(() => {
+      assignTask(hatId, task.id, null);
+    });
+    if (id) showUndoToast(isToday ? "Not today. It’s back in To place." : `Taken off ${dayName?.label}.`, () => undoEdit(id));
+  }
   return (
     <li className={delay ? "cascade-item" : undefined} style={delay ? { animationDelay: delay } : undefined}>
       <div className="ms-[4.75rem] border-t border-line" />
@@ -1277,9 +1288,14 @@ function TaskRow({
           )}
         >
           <span className="min-w-0 flex-1 truncate">{task.text}</span>
-          {dayName && !task.done && <span className="ms-2 shrink-0 text-xs font-semibold text-secondary">{dayName.slice(0, 3)}</span>}
+          {dayName && !task.done && <span className="ms-2 shrink-0 text-xs font-semibold text-secondary">{dayName.label.slice(0, 3)}</span>}
           <ChevronRight className="size-5 shrink-0 text-tertiary" />
         </button>
+        {dayName && !task.done && (
+          <button type="button" className="h-14 shrink-0 pe-4 ps-1 text-sm font-semibold text-accent" onClick={notToday}>
+            {isToday ? "Not today" : `Take off ${dayName.label.slice(0, 3)}`}
+          </button>
+        )}
       </div>
     </li>
   );
