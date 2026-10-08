@@ -134,14 +134,6 @@ test("launch backs up when there is no recent backup, and stays quiet when there
   assert.equal(fresh.writes.length, 0);
 });
 
-test("pin writes a labelled copy even when nothing changed, and reports failure instead of throwing", async () => {
-  const h = harness();
-  assert.equal(await h.runner.pin("pre-restore"), true);
-  assert.equal(h.writes[0].pin, "pre-restore");
-  const broken = harness({ write: async () => { throw new Error("no"); } });
-  assert.equal(await broken.runner.pin("pre-restore"), false);
-});
-
 test("a change during a write is picked up afterwards", async () => {
   let release!: () => void;
   const gate = new Promise<void>((r) => (release = r));

@@ -43,8 +43,6 @@ export type BackupRunner = {
   flush(): Promise<void>;
   /** App launch: back up soon if there is no recent backup. */
   launch(lastBackupAtMs: number | null): void;
-  /** Make a labelled copy right now (before a restore or migration), even if nothing changed. */
-  pin(label: string): Promise<boolean>;
   state(): RunnerState;
   dispose(): void;
 };
@@ -135,16 +133,6 @@ export function createBackupRunner(options: RunnerOptions): BackupRunner {
       if (lastBackupAtMs === null || now() - lastBackupAtMs > staleMs) {
         dirty = true;
         schedule(launchDelayMs);
-      }
-    },
-    async pin(label) {
-      try {
-        const built = await options.build();
-        if (!built.hasData) return false;
-        const result = await options.transport.write(built.text, label);
-        return result.verified;
-      } catch {
-        return false;
       }
     },
     state: () => current,
