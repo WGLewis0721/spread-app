@@ -196,9 +196,26 @@ export function createMirrorWriter(
 let writer: MirrorWriter | null = null;
 let preparing: Promise<{ restored: boolean }> | null = null;
 
+const changeListeners = new Set<() => void>();
+
+/** Hear about every planner write (the iCloud backup uses this). Returns the unsubscribe. */
+export function onStorageChanged(listener: () => void) {
+  changeListeners.add(listener);
+  return () => {
+    changeListeners.delete(listener);
+  };
+}
+
 /** Called whenever planner data is written to web storage. A no-op until the mirror is running. */
 export function notifyStorageChanged() {
   writer?.schedule();
+  for (const listener of changeListeners) {
+    try {
+      listener();
+    } catch {
+      /* a listener must never break a save */
+    }
+  }
 }
 
 /** Called when the app is going to the background. */
