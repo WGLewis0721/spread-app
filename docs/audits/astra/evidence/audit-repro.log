@@ -1,0 +1,13 @@
+CONFIRMED ack-before-durable-save: conflict visible=1, durable conflicts=0, inbox=0, error=state-not-saved
+CONFIRMED failed resolution: conflict removed; next pass queues old local text with resolution vector
+CONFIRMED sync apply proceeds without successful safety snapshot
+CONFIRMED name-only ack race: version 3 removed while planner only has version 2 (transport model mirrors Swift ackInbox)
+CONFIRMED backup validation: missing/bad-shape stores labeled readable; 2 blank profiles restored, skipped=0
+CONFIRMED pristine classifier ignores custom weekly hours and color
+CONFIRMED payload validator accepts null task fields and array vector
+CONFIRMED copied-week roundtrip: 2 task occurrences flatten/assemble to 1 (duplicate task IDs)
+CONFIRMED pending runner work uploads after disable (same flush path as manager pagehide)
+CONFIRMED local-only backup: later explicit flush of unchanged data does not retry cloud handoff
+CONFIRMED small planner reset: sole task vanishes without mass-delete guard
+CONFIRMED malformed task row: accepted, task text blanked in planner, inbound acked
+CONFIRMED retained agreed state does not reseed an empty cloud: no outbound rows on restart

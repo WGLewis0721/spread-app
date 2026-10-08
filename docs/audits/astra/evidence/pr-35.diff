@@ -1,0 +1,618 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 9c7c350..f01cede 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -47,4 +47,4 @@ jobs:
+           -target arm64-apple-ios17.0-simulator -swift-version 5
+           -Xfrontend -warn-long-expression-type-checking=300
+           -Xfrontend -warn-long-function-bodies=600
+-          SpreadCloudConfig.swift SyncStorage.swift SpreadSyncEngine.swift
++          SpreadCloudConfig.swift SyncStorage.swift SpreadSyncEngine.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift
+diff --git a/ios/App/App/Cloud/SpreadCloudPlugin.swift b/ios/App/App/Cloud/SpreadCloudPlugin.swift
+index 9625b69..7f5d720 100644
+--- a/ios/App/App/Cloud/SpreadCloudPlugin.swift
++++ b/ios/App/App/Cloud/SpreadCloudPlugin.swift
+@@ -173,7 +173,10 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
+             call.reject("items are required", "invalidArguments")
+             return
+         }
+-        sync.queue(items)
++        guard sync.queue(items) else {
++            call.reject("The changes could not be saved on this device", "queueWriteFailed")
++            return
++        }
+         call.resolve()
+     }
+ 
+@@ -215,6 +218,8 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
+                 "running": current.running,
+                 "zoneDeleted": current.zoneDeleted,
+                 "quotaExceeded": current.quotaExceeded,
++                "damagedRecords": current.damagedRecords,
++                "needsRepair": current.needsRepair || syncStorage.needsRepair,
+                 "outboxCount": syncStorage.outboxCount,
+                 "inboxCount": syncStorage.inboxItems().count,
+             ]
+diff --git a/ios/App/App/Cloud/SpreadSyncEngine.swift b/ios/App/App/Cloud/SpreadSyncEngine.swift
+index 6c02d8f..f2a23c4 100644
+--- a/ios/App/App/Cloud/SpreadSyncEngine.swift
++++ b/ios/App/App/Cloud/SpreadSyncEngine.swift
+@@ -1,5 +1,8 @@
+ import CloudKit
+ import Foundation
++#if canImport(SpreadCloudCore)
++import SpreadCloudCore
++#endif
+ 
+ /// Moves SyncItemDTOs between this device and the person's private iCloud database using Apple's
+ /// `CKSyncEngine`. It decides nothing about content: a version iCloud rejects is handed to the
+@@ -18,8 +21,16 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+         var zoneDeleted = false
+         var quotaExceeded = false
+         var lastError: String?
++        /// Records iCloud sent that failed the payload check. They were not applied.
++        var damagedRecords = 0
++        /// A local queue file was unreadable and has been set aside.
++        var needsRepair = false
+     }
+ 
++    /// Temp payload files for records handed to CloudKit; removed once the send finishes.
++    private var tempFiles: [URL] = []
++    private let tempLock = NSLock()
++
+     private let storage: SyncStorage
+     private let container: CKContainer
+     private var engine: CKSyncEngine?
+@@ -70,6 +81,8 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+             status.zoneDeleted = false
+             status.quotaExceeded = false
+             status.lastError = nil
++            status.damagedRecords = 0
++            status.needsRepair = storage.needsRepair
+         }
+     }
+ 
+@@ -79,12 +92,14 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+     }
+ 
+     /// Queue local changes. They are written to disk first, so a crash cannot lose them.
+-    func queue(_ items: [SyncItemDTO]) {
+-        storage.putOutbox(items)
+-        guard let engine else { return }
++    @discardableResult
++    func queue(_ items: [SyncItemDTO]) -> Bool {
++        guard storage.putOutbox(items) else { return false }
++        guard let engine else { return true }
+         var changes: [CKSyncEngine.PendingRecordZoneChange] = []
+         for item in items { changes.append(.saveRecord(recordID(for: item.recordName))) }
+         engine.state.add(pendingRecordZoneChanges: changes)
++        return true
+     }
+ 
+     /// The web app no longer needs these sent (it merged iCloud's newer version instead).
+@@ -150,7 +165,7 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+                 incoming.append(dto)
+             }
+             if !incoming.isEmpty {
+-                storage.putInbox(incoming)
++                if !storage.putInbox(incoming) { self.update { (status: inout Status) in status.lastError = "inboxWrite" } }
+                 emit("syncInbound")
+             }
+ 
+@@ -159,6 +174,7 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+                 storage.setSystemFields(systemFields(of: record), for: record.recordID.recordName)
+                 if let dto = dto(from: record) { storage.confirmSent(dto) }
+             }
++            removeTempFiles()
+             for failure in sent.failedRecordSaves { handleFailedSave(failure, syncEngine: syncEngine) }
+             var quota = false
+             for failure in sent.failedRecordSaves where failure.error.code == .quotaExceeded { quota = true }
+@@ -217,7 +233,12 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+ 
+     // MARK: Records
+ 
+-    private func record(for item: SyncItemDTO, recordID: CKRecord.ID) -> CKRecord {
++    private func record(for item: SyncItemDTO, recordID: CKRecord.ID) -> CKRecord? {
++        guard PayloadCheck.fits(item.fields) else {
++            // Too large to send: keep it in the outbox and say so, rather than sending part of it.
++            self.update { (status: inout Status) in status.lastError = "payloadTooLarge" }
++            return nil
++        }
+         let record: CKRecord
+         if let data = storage.systemFields(for: item.recordName),
+            let coder = try? NSKeyedUnarchiver(forReadingFrom: data) {
+@@ -233,7 +254,15 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+         record["deleted"] = (item.deleted ? 1 : 0) as CKRecordValue
+         record["at"] = item.at as CKRecordValue
+         let file = FileManager.default.temporaryDirectory.appendingPathComponent("spread-\(UUID().uuidString).json")
+-        try? Data(item.fields.utf8).write(to: file, options: .atomic)
++        do {
++            try Data(item.fields.utf8).write(to: file, options: .atomic)
++        } catch {
++            // Never hand CloudKit an asset that does not exist. The change stays in the outbox.
++            self.update { (status: inout Status) in status.lastError = "payloadWrite" }
++            return nil
++        }
++        tempLock.lock(); tempFiles.append(file); tempLock.unlock()
++        record["h"] = PayloadCheck.hash(item.fields) as CKRecordValue
+         record["payload"] = CKAsset(fileURL: file)
+         return record
+     }
+@@ -243,11 +272,14 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+               let syncId = record["syncId"] as? String,
+               let itemId = record["itemId"] as? String,
+               let v = record["v"] as? String else { return nil }
+-        let fields: String
+-        if let url = (record["payload"] as? CKAsset)?.fileURL, let text = try? String(contentsOf: url, encoding: .utf8) {
+-            fields = text
+-        } else {
+-            fields = "{}"
++        let text = (record["payload"] as? CKAsset)?.fileURL.flatMap { try? String(contentsOf: $0, encoding: .utf8) }
++        guard case .ok(let fields) = PayloadCheck.verify(text: text, expectedHash: record["h"] as? String) else {
++            // Missing, truncated or altered: never read as an empty item. Counted and reported.
++            self.update { (status: inout Status) in
++                status.damagedRecords += 1
++                status.lastError = "payloadDamaged"
++            }
++            return nil
+         }
+         var deleted = false
+         if let flag = record["deleted"] as? NSNumber { deleted = flag.int64Value != 0 }
+@@ -256,6 +288,14 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
+         return SyncItemDTO(syncId: syncId, itemId: itemId, fields: fields, v: v, deleted: deleted, at: at)
+     }
+ 
++    private func removeTempFiles() {
++        tempLock.lock()
++        let files = tempFiles
++        tempFiles = []
++        tempLock.unlock()
++        for file in files { try? FileManager.default.removeItem(at: file) }
++    }
++
+     private func systemFields(of record: CKRecord) -> Data {
+         let coder = NSKeyedArchiver(requiringSecureCoding: true)
+         record.encodeSystemFields(with: coder)
+diff --git a/ios/App/App/Cloud/SyncStorage.swift b/ios/App/App/Cloud/SyncStorage.swift
+index ef88b11..71914b8 100644
+--- a/ios/App/App/Cloud/SyncStorage.swift
++++ b/ios/App/App/Cloud/SyncStorage.swift
+@@ -24,6 +24,8 @@ final class SyncStorage {
+     private var outbox: [String: SyncItemDTO]
+     private var inbox: [String: SyncItemDTO]
+     private var systemFields: [String: Data]
++    /// Set when a queue file was unreadable (moved aside) or a write failed. The web app is told.
++    private(set) var needsRepair = false
+ 
+     init() {
+         let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+@@ -34,19 +36,34 @@ final class SyncStorage {
+         values.isExcludedFromBackup = true
+         try? folder.setResourceValues(values)
+         self.folder = folder
+-        outbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("outbox.json")) ?? [:]
+-        inbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("inbox.json")) ?? [:]
+-        systemFields = SyncStorage.load([String: Data].self, from: folder.appendingPathComponent("system-fields.json")) ?? [:]
+-    }
+-
+-    private static func load<T: Decodable>(_ type: T.Type, from url: URL) -> T? {
+-        guard let data = try? Data(contentsOf: url) else { return nil }
+-        return try? JSONDecoder().decode(type, from: data)
+-    }
+-
+-    private func save<T: Encodable>(_ value: T, as name: String) {
+-        guard let data = try? JSONEncoder().encode(value) else { return }
+-        try? data.write(to: folder.appendingPathComponent(name), options: .atomic)
++        var repair = false
++        outbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("outbox.json"), repair: &repair) ?? [:]
++        inbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("inbox.json"), repair: &repair) ?? [:]
++        systemFields = SyncStorage.load([String: Data].self, from: folder.appendingPathComponent("system-fields.json"), repair: &repair) ?? [:]
++        needsRepair = repair
++    }
++
++    /// A missing file is normal (first run). A file that exists but cannot be read or decoded is set
++    /// aside as `<name>.corrupt-<time>` so it can be inspected, and `repair` is raised.
++    private static func load<T: Decodable>(_ type: T.Type, from url: URL, repair: inout Bool) -> T? {
++        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
++        if let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(type, from: data) { return value }
++        let aside = url.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent + ".corrupt-\(Int(Date().timeIntervalSince1970))")
++        try? FileManager.default.moveItem(at: url, to: aside)
++        repair = true
++        return nil
++    }
++
++    @discardableResult
++    private func save<T: Encodable>(_ value: T, as name: String) -> Bool {
++        do {
++            let data = try JSONEncoder().encode(value)
++            try data.write(to: folder.appendingPathComponent(name), options: .atomic)
++            return true
++        } catch {
++            needsRepair = true
++            return false
++        }
+     }
+ 
+     // MARK: Engine state
+@@ -66,10 +83,12 @@ final class SyncStorage {
+ 
+     // MARK: Outbox (changes made here that iCloud has not confirmed)
+ 
+-    func putOutbox(_ items: [SyncItemDTO]) {
++    /// False when the queue could not be written; the caller must report that, not assume it is queued.
++    @discardableResult
++    func putOutbox(_ items: [SyncItemDTO]) -> Bool {
+         lock.lock(); defer { lock.unlock() }
+         for item in items { outbox[item.recordName] = item }
+-        save(outbox, as: "outbox.json")
++        return save(outbox, as: "outbox.json")
+     }
+ 
+     func outboxItem(_ recordName: String) -> SyncItemDTO? {
+@@ -104,10 +123,11 @@ final class SyncStorage {
+ 
+     // MARK: Inbox (changes from iCloud the web app has not merged yet)
+ 
+-    func putInbox(_ items: [SyncItemDTO]) {
++    @discardableResult
++    func putInbox(_ items: [SyncItemDTO]) -> Bool {
+         lock.lock(); defer { lock.unlock() }
+         for item in items { inbox[item.recordName] = item }
+-        save(inbox, as: "inbox.json")
++        return save(inbox, as: "inbox.json")
+     }
+ 
+     func inboxItems() -> [SyncItemDTO] {
+diff --git a/ios/App/SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift b/ios/App/SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift
+new file mode 100644
+index 0000000..0078c98
+--- /dev/null
++++ b/ios/App/SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift
+@@ -0,0 +1,35 @@
++import Foundation
++
++/// Integrity check for a synced item's payload. A record whose payload file is missing, truncated
++/// or altered must be refused, never read as an empty item (which would erase the local copy).
++public enum PayloadCheck {
++    /// Largest payload we will send. CloudKit assets allow far more; this keeps one item sane.
++    public static let maxBytes = 1_000_000
++
++    /// FNV-1a 64-bit over the UTF-8 bytes, as 16 hex digits. Not a security feature: it catches
++    /// truncation and corruption. It needs no framework, so it also runs under `swift test` on Linux.
++    public static func hash(_ text: String) -> String {
++        var h: UInt64 = 0xcbf29ce484222325
++        for byte in text.utf8 {
++            h ^= UInt64(byte)
++            h = h &* 0x100000001b3
++        }
++        let hex = String(h, radix: 16)
++        return String(repeating: "0", count: 16 - hex.count) + hex
++    }
++
++    public enum Verdict: Equatable {
++        case ok(String)
++        case missing
++        case mismatch
++    }
++
++    /// `text` is nil when the asset could not be read.
++    public static func verify(text: String?, expectedHash: String?) -> Verdict {
++        guard let text else { return .missing }
++        guard let expectedHash, expectedHash == hash(text) else { return .mismatch }
++        return .ok(text)
++    }
++
++    public static func fits(_ text: String) -> Bool { text.utf8.count <= maxBytes }
++}
+diff --git a/ios/App/SpreadCloudCore/Tests/SpreadCloudCoreTests/PayloadCheckTests.swift b/ios/App/SpreadCloudCore/Tests/SpreadCloudCoreTests/PayloadCheckTests.swift
+new file mode 100644
+index 0000000..1d97082
+--- /dev/null
++++ b/ios/App/SpreadCloudCore/Tests/SpreadCloudCoreTests/PayloadCheckTests.swift
+@@ -0,0 +1,34 @@
++import XCTest
++@testable import SpreadCloudCore
++
++final class PayloadCheckTests: XCTestCase {
++    func testRoundTrip() {
++        let text = #"{"text":"Pay rent"}"#
++        XCTAssertEqual(PayloadCheck.verify(text: text, expectedHash: PayloadCheck.hash(text)), .ok(text))
++    }
++
++    func testMissingAssetIsNotAnEmptyItem() {
++        XCTAssertEqual(PayloadCheck.verify(text: nil, expectedHash: PayloadCheck.hash("{}")), .missing)
++    }
++
++    func testTruncatedPayloadIsRefused() {
++        let text = #"{"text":"Pay rent","done":false}"#
++        let cut = String(text.prefix(12))
++        XCTAssertEqual(PayloadCheck.verify(text: cut, expectedHash: PayloadCheck.hash(text)), .mismatch)
++    }
++
++    func testMissingHashIsRefused() {
++        XCTAssertEqual(PayloadCheck.verify(text: "{}", expectedHash: nil), .mismatch)
++    }
++
++    func testHashIsStableAndSixteenDigits() {
++        XCTAssertEqual(PayloadCheck.hash("").count, 16)
++        XCTAssertEqual(PayloadCheck.hash(""), "cbf29ce484222325")
++        XCTAssertEqual(PayloadCheck.hash("a"), "af63dc4c8601ec8c")
++    }
++
++    func testSizeCap() {
++        XCTAssertTrue(PayloadCheck.fits("small"))
++        XCTAssertFalse(PayloadCheck.fits(String(repeating: "x", count: PayloadCheck.maxBytes + 1)))
++    }
++}
+diff --git a/package.json b/package.json
+index a4cf0f5..51ca1f6 100644
+--- a/package.json
++++ b/package.json
+@@ -15,7 +15,7 @@
+     "preview:restart": "node scripts/preview.mjs restart",
+     "preview:stop": "node scripts/preview.mjs stop",
+     "typecheck": "tsc --noEmit",
+-    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/spread/cloud-status.test.ts src/lib/spread/backup-runner.test.ts src/lib/spread/sync-model.test.ts src/lib/spread/sync-sim.test.ts src/lib/spread/sync-link.test.ts src/lib/spread/sync-session.test.ts src/lib/spread/sync-guard.test.ts src/lib/spread/serial.test.ts src/lib/spread/sync-labels.test.ts",
++    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/spread/cloud-status.test.ts src/lib/spread/backup-runner.test.ts src/lib/spread/sync-model.test.ts src/lib/spread/sync-sim.test.ts src/lib/spread/sync-link.test.ts src/lib/spread/sync-session.test.ts src/lib/spread/sync-guard.test.ts src/lib/spread/serial.test.ts src/lib/spread/sync-labels.test.ts src/lib/spread/sync-integrity.test.ts",
+     "check:auth": "node scripts/check-auth-invariant.mjs",
+     "test": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/waitlist.test.ts && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
+     "lint": "eslint .",
+diff --git a/src/lib/spread/cloud-sync.ts b/src/lib/spread/cloud-sync.ts
+index 6a0089d..11e0285 100644
+--- a/src/lib/spread/cloud-sync.ts
++++ b/src/lib/spread/cloud-sync.ts
+@@ -59,16 +59,19 @@ async function readStateFile(syncId: string): Promise<SyncState | null> {
+ }
+ 
+ let writeChain: Promise<void> = Promise.resolve();
+-function writeStateFile(state: SyncState) {
++function writeStateFile(state: SyncState): Promise<boolean> {
+   const text = JSON.stringify(state);
+-  writeChain = writeChain.then(async () => {
++  const done = writeChain.then(async () => {
+     try {
+       const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
+       await Filesystem.writeFile({ path: stateFile(state.syncId), data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
++      return true;
+     } catch {
+-      /* the next pass writes it again */
++      return false; // reported by the session; the next pass writes it again
+     }
+   });
++  writeChain = done.then(() => undefined);
++  return done;
+ }
+ 
+ async function deleteStateFile(syncId: string) {
+@@ -150,7 +153,7 @@ async function startSessionFor(profileId: string, syncId: string, name: string)
+     loadState: () => saved,
+     saveState: (next) => {
+       saved = next;
+-      writeStateFile(next);
++      return writeStateFile(next);
+     },
+     isActive: () => useSpread.getState().activeId === profileId,
+     current: () => {
+diff --git a/src/lib/spread/cloud.ts b/src/lib/spread/cloud.ts
+index 05c7a88..ceb30ee 100644
+--- a/src/lib/spread/cloud.ts
++++ b/src/lib/spread/cloud.ts
+@@ -25,6 +25,10 @@ export type SyncNativeStatus = {
+   running: boolean;
+   zoneDeleted: boolean;
+   quotaExceeded: boolean;
++  /** Records iCloud sent that failed the integrity check and were not applied. */
++  damagedRecords?: number;
++  /** A local queue file was unreadable and has been set aside. */
++  needsRepair?: boolean;
+   outboxCount: number;
+   inboxCount: number;
+   accountChanged?: "signOut" | "switchAccounts";
+diff --git a/src/lib/spread/sync-integrity.test.ts b/src/lib/spread/sync-integrity.test.ts
+new file mode 100644
+index 0000000..44e829e
+--- /dev/null
++++ b/src/lib/spread/sync-integrity.test.ts
+@@ -0,0 +1,35 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { isDamagedRow } from "./sync-link.ts";
++
++const row = (itemId: string, fields: unknown, extra: Partial<{ v: string; deleted: boolean }> = {}) => ({
++  itemId,
++  fields: typeof fields === "string" ? fields : JSON.stringify(fields),
++  v: "{}",
++  deleted: false,
++  ...extra,
++});
++
++test("a task without its text is damaged, not an empty task", () => {
++  assert.equal(isDamagedRow(row("task:a", {})), true);
++  assert.equal(isDamagedRow(row("task:a", { done: false, week: "w", hat: "h" })), true);
++  assert.equal(isDamagedRow(row("task:a", { text: "x", week: "w", hat: "h" })), false);
++});
++
++test("truncated or non-object payloads are damaged", () => {
++  assert.equal(isDamagedRow(row("task:a", '{"text":"x"')), true);
++  assert.equal(isDamagedRow(row("hat:a", "[]")), true);
++  assert.equal(isDamagedRow(row("hat:a", "null")), true);
++  assert.equal(isDamagedRow(row("hat:a", { name: "A" }, { v: "oops" })), true);
++});
++
++test("a tombstone may carry no fields", () => {
++  assert.equal(isDamagedRow(row("task:a", {}, { deleted: true })), false);
++});
++
++test("empty hat, box and week items are damaged; other kinds follow their keys", () => {
++  assert.equal(isDamagedRow(row("hat:h", {})), true);
++  assert.equal(isDamagedRow(row("box:w:h", {})), true);
++  assert.equal(isDamagedRow(row("week:w", {})), true);
++  assert.equal(isDamagedRow(row("alloc:a", { hatId: "h", day: "mon", week: "w" })), false);
++});
+diff --git a/src/lib/spread/sync-labels.test.ts b/src/lib/spread/sync-labels.test.ts
+index 774b026..f009f40 100644
+--- a/src/lib/spread/sync-labels.test.ts
++++ b/src/lib/spread/sync-labels.test.ts
+@@ -108,3 +108,10 @@ test("a planner that looks emptied says nothing was deleted and asks for a choic
+   assert.equal(said.tone, "problem");
+   assert.notEqual(say({ blocked: true, waitingToSend: 0 }).title, "Synced with iCloud");
+ });
++
++test("damaged records are reported plainly and nothing is claimed erased", () => {
++  const said = describeSync({ ...base, damaged: 2 });
++  assert.equal(said.title, "Some iCloud data couldn’t be read");
++  assert.equal(said.tone, "problem");
++  assert.match(said.detail, /2 items were left out/);
++});
+diff --git a/src/lib/spread/sync-labels.ts b/src/lib/spread/sync-labels.ts
+index 188d58e..7301418 100644
+--- a/src/lib/spread/sync-labels.ts
++++ b/src/lib/spread/sync-labels.ts
+@@ -83,6 +83,8 @@ export type SyncDescribeInput = {
+   lastSyncAt: string | null;
+   lastError: string | null;
+   quotaExceeded: boolean;
++  /** Records from iCloud (or queue files here) that were unreadable and left out. */
++  damaged?: number;
+   /** The planner looks emptied by accident and sync is waiting for a choice. */
+   blocked?: boolean;
+   now: Date;
+@@ -121,6 +123,13 @@ export function describeSync(input: SyncDescribeInput): SyncDescription {
+   }
+   const needs = input.conflicts > 0 ? ` ${input.conflicts} ${input.conflicts === 1 ? "change needs" : "changes need"} your choice.` : "";
+   if (input.quotaExceeded) return { title: "iCloud storage is full", detail: `Your changes are safe on this device and will send when there is room.${needs}`, tone: "problem" };
++  if (input.damaged && input.damaged > 0) {
++    return {
++      title: "Some iCloud data couldn’t be read",
++      detail: `${input.damaged === 1 ? "One item was" : `${input.damaged} items were`} left out so nothing here is erased. Everything on this device is unchanged.${needs}`,
++      tone: "problem",
++    };
++  }
+   if (input.lastError) return { title: "Couldn’t sync", detail: `Your changes are safe on this device. Spread will try again.${needs}`, tone: "problem" };
+   if (!input.started) return { title: "Starting sync…", detail: needs.trim(), tone: "wait" };
+   if (input.busy || input.waitingToSend > 0) {
+diff --git a/src/lib/spread/sync-link.ts b/src/lib/spread/sync-link.ts
+index e9102b6..1ec32c7 100644
+--- a/src/lib/spread/sync-link.ts
++++ b/src/lib/spread/sync-link.ts
+@@ -81,6 +81,31 @@ export function rosterWithSyncId(profiles: Profile[], profileId: string, syncId:
+   return profiles.map((profile) => (profile.id === profileId ? { ...profile, syncId } : profile));
+ }
+ 
++/** Keys a live item of each kind always carries. An item without them is damaged, not empty. */
++const REQUIRED: [string, string[]][] = [
++  ["hat:", ["name"]],
++  ["task:", ["text", "week", "hat"]],
++  ["alloc:", ["hatId", "day", "week"]],
++  ["box:", ["hours"]],
++  ["profile", ["name"]],
++];
++
++export function isDamagedRow(row: { itemId: string; fields: string; v: string; deleted: boolean }): boolean {
++  try {
++    const v = JSON.parse(row.v || "{}") as unknown;
++    if (!v || typeof v !== "object") return true;
++    const fields = JSON.parse(row.fields || "{}") as unknown;
++    if (!fields || typeof fields !== "object" || Array.isArray(fields)) return true;
++    if (row.deleted) return false;
++    const need = REQUIRED.find(([prefix]) => row.itemId.startsWith(prefix))?.[1];
++    if (need) return need.some((key) => !(key in (fields as object)));
++    if (row.itemId.startsWith("week:")) return Object.keys(fields as object).length === 0;
++    return false;
++  } catch {
++    return true;
++  }
++}
++
+ export function toItems(rows: { itemId: string; fields: string; v: string; deleted: boolean; at: string }[]): SyncItem[] {
+   const out: SyncItem[] = [];
+   for (const row of rows) {
+diff --git a/src/lib/spread/sync-session.ts b/src/lib/spread/sync-session.ts
+index 5dca3a4..d1d2017 100644
+--- a/src/lib/spread/sync-session.ts
++++ b/src/lib/spread/sync-session.ts
+@@ -14,7 +14,7 @@
+  */
+ import type { Choice } from "./merge.ts";
+ import type { SpreadData } from "./model.ts";
+-import { toItems } from "./sync-link.ts";
++import { isDamagedRow, toItems } from "./sync-link.ts";
+ import {
+   applyRemote,
+   captureLocal,
+@@ -49,7 +49,8 @@ export type SessionDeps = {
+   deviceId: string;
+   transport: SyncTransport;
+   loadState(): SyncState | null;
+-  saveState(state: SyncState): void;
++  /** May reject (or resolve false) when the state could not be written; the session then reports it. */
++  saveState(state: SyncState): void | boolean | Promise<void | boolean>;
+   /**
+    * True only while the profile this session belongs to is the one on screen. The planner calls
+    * (`current`, `apply`) always act on the open profile, so every use is guarded by this: a
+@@ -75,6 +76,8 @@ export type SessionView = {
+   lastError: string | null;
+   /** The planner looks emptied by accident. Nothing is recorded or sent until the person chooses. */
+   blocked: CaptureBlock | null;
++  /** Records from iCloud that were unreadable or incomplete. They are kept aside, never merged. */
++  damaged: number;
+ };
+ 
+ export type SyncSession = {
+@@ -99,6 +102,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+   let busy = false;
+   let lastError: string | null = null;
+   let blocked: CaptureBlock | null = null;
++  let damaged = 0;
+   // Bumped by stop(). A pass that started before a stop notices and does nothing further to the planner.
+   let generation = 0;
+   let allowMassDelete = false;
+@@ -113,11 +117,24 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+     conflicts: state.conflicts,
+     lastError,
+     blocked,
++    damaged,
+   });
+   const publish = () => {
+     for (const listener of listeners) listener(view());
+   };
+-  const save = () => deps.saveState(state);
++  const save = () => {
++    const report = () => {
++      lastError = "state-not-saved";
++      publish();
++    };
++    try {
++      const done = deps.saveState(state);
++      if (done === false) report();
++      else if (done instanceof Promise) void done.then((ok) => (ok === false ? report() : undefined), report);
++    } catch {
++      report();
++    }
++  };
+ 
+   async function pass(): Promise<void> {
+     if (!running) return;
+@@ -128,7 +145,9 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+       // Read iCloud's side first. This is the only slow step, so nothing is captured until it is
+       // done: the person may have kept typing while it ran, and capture, merge and apply below
+       // run with no pause between them, so a fresh edit can never be overwritten.
+-      const rows = (await deps.transport.inbox()).filter((row) => row.syncId === deps.syncId);
++      const incoming = (await deps.transport.inbox()).filter((row) => row.syncId === deps.syncId);
++      const rows = incoming.filter((row) => !isDamagedRow(row));
++      damaged = incoming.length - rows.length;
+ 
+       // The read above is slow. If the session was stopped, or another profile was opened meanwhile,
+       // this pass must not touch the planner at all.
+diff --git a/src/spread/screens/spread-app.tsx b/src/spread/screens/spread-app.tsx
+index 23ddc6d..ce60b95 100644
+--- a/src/spread/screens/spread-app.tsx
++++ b/src/spread/screens/spread-app.tsx
+@@ -1925,6 +1925,7 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
+     lastSyncAt: state.view?.lastSyncAt ?? null,
+     lastError: state.view?.lastError ?? null,
+     quotaExceeded: state.native?.quotaExceeded ?? false,
++    damaged: (state.view?.damaged ?? 0) + (state.native?.damagedRecords ?? 0) + (state.native?.needsRepair ? 1 : 0),
+     blocked: Boolean(state.view?.blocked),
+     now: new Date(state.now),
+   });

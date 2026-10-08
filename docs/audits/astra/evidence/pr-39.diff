@@ -1,0 +1,449 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index f01cede..38baeb7 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -24,13 +24,35 @@ jobs:
+       - run: npm run lint
+       - run: npm run test:spread
+ 
++  bridge-sims:
++    # The installed-app logic against a fake native plugin, in Chromium: backup, restore, sync and
++    # the shipped (flags off) behavior. This is what makes a broken restore, conflict or link rule fail CI.
++    runs-on: ubuntu-latest
++    timeout-minutes: 25
++    steps:
++      - uses: actions/checkout@v4
++      - uses: actions/setup-node@v4
++        with:
++          node-version: 22
++          cache: npm
++      - run: npm ci
++      - run: pip install playwright && python3 -m playwright install --with-deps chromium
++      - run: sh scripts/ios-bridge-sim/run-all.sh
++        env:
++          SHOTS: ${{ runner.temp }}/shots
++      - uses: actions/upload-artifact@v4
++        if: failure()
++        with:
++          name: bridge-sim-shots
++          path: ${{ runner.temp }}/shots
++
+   swift-core:
+     runs-on: ubuntu-latest
+     timeout-minutes: 15
+     container: swift:6.0-noble
+     steps:
+       - uses: actions/checkout@v4
+-      - name: Test SpreadCloudCore (naming, path safety, retention)
++      - name: Test SpreadCloudCore (naming, path safety, retention, payload check, sync storage)
+         run: swift test --package-path ios/App/SpreadCloudCore
+ 
+   swift-cloudkit-typecheck:
+@@ -47,4 +69,4 @@ jobs:
+           -target arm64-apple-ios17.0-simulator -swift-version 5
+           -Xfrontend -warn-long-expression-type-checking=300
+           -Xfrontend -warn-long-function-bodies=600
+-          SpreadCloudConfig.swift SyncStorage.swift SpreadSyncEngine.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift
++          SpreadCloudConfig.swift SpreadSyncEngine.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/SyncStorage.swift
+diff --git a/ios/App/App.xcodeproj/project.pbxproj b/ios/App/App.xcodeproj/project.pbxproj
+index f90c9fd..24fd5f6 100644
+--- a/ios/App/App.xcodeproj/project.pbxproj
++++ b/ios/App/App.xcodeproj/project.pbxproj
+@@ -24,7 +24,6 @@
+ 		9A1C0000000000000000000A /* BackupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000009 /* BackupStore.swift */; };
+ 		9A1C0000000000000000000C /* SpreadCloudPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C0000000000000000000B /* SpreadCloudPlugin.swift */; };
+ 		9A1C00000000000000000011 /* SpreadCloudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1C00000000000000000010 /* SpreadCloudCore */; };
+-		9A1C00000000000000000101 /* SyncStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000100 /* SyncStorage.swift */; };
+ 		9A1C00000000000000000103 /* SpreadSyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000102 /* SpreadSyncEngine.swift */; };
+ /* End PBXBuildFile section */
+ 
+@@ -48,7 +47,6 @@
+ 		9A1C00000000000000000009 /* BackupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupStore.swift; sourceTree = "<group>"; };
+ 		9A1C0000000000000000000B /* SpreadCloudPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadCloudPlugin.swift; sourceTree = "<group>"; };
+ 		9A1C0000000000000000000E /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
+-		9A1C00000000000000000100 /* SyncStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStorage.swift; sourceTree = "<group>"; };
+ 		9A1C00000000000000000102 /* SpreadSyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadSyncEngine.swift; sourceTree = "<group>"; };
+ /* End PBXFileReference section */
+ 
+@@ -105,7 +103,6 @@
+ 		9A1C0000000000000000000D /* Cloud */ = {
+ 			isa = PBXGroup;
+ 			children = (
+-				9A1C00000000000000000100 /* SyncStorage.swift */,
+ 				9A1C00000000000000000102 /* SpreadSyncEngine.swift */,
+ 				9A1C00000000000000000003 /* SpreadCloudConfig.swift */,
+ 				9A1C00000000000000000005 /* DeviceIdentity.swift */,
+@@ -208,7 +205,6 @@
+ 				9A1C00000000000000000008 /* AccountMonitor.swift in Sources */,
+ 				9A1C0000000000000000000A /* BackupStore.swift in Sources */,
+ 				9A1C0000000000000000000C /* SpreadCloudPlugin.swift in Sources */,
+-				9A1C00000000000000000101 /* SyncStorage.swift in Sources */,
+ 				9A1C00000000000000000103 /* SpreadSyncEngine.swift in Sources */,
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+diff --git a/ios/App/App/Cloud/SyncStorage.swift b/ios/App/SpreadCloudCore/Sources/SpreadCloudCore/SyncStorage.swift
+similarity index 69%
+rename from ios/App/App/Cloud/SyncStorage.swift
+rename to ios/App/SpreadCloudCore/Sources/SpreadCloudCore/SyncStorage.swift
+index 53adae8..3cfd3fe 100644
+--- a/ios/App/App/Cloud/SyncStorage.swift
++++ b/ios/App/SpreadCloudCore/Sources/SpreadCloudCore/SyncStorage.swift
+@@ -2,34 +2,45 @@ import Foundation
+ 
+ /// One synced item as it crosses the bridge. The native side never looks inside `fields` or `v`:
+ /// the web app owns what an item means and how two versions merge.
+-struct SyncItemDTO: Codable, Equatable {
+-    var syncId: String
+-    var itemId: String
++public struct SyncItemDTO: Codable, Equatable {
++    public var syncId: String
++    public var itemId: String
+     /// JSON text of the item's fields (empty object for a tombstone).
+-    var fields: String
++    public var fields: String
+     /// JSON text of the version vector.
+-    var v: String
+-    var deleted: Bool
+-    var at: String
++    public var v: String
++    public var deleted: Bool
++    public var at: String
+ 
+-    var recordName: String { "\(syncId)|\(itemId)" }
++    public init(syncId: String, itemId: String, fields: String, v: String, deleted: Bool, at: String) {
++        self.syncId = syncId
++        self.itemId = itemId
++        self.fields = fields
++        self.v = v
++        self.deleted = deleted
++        self.at = at
++    }
++
++    public var recordName: String { "\(syncId)|\(itemId)" }
+ }
+ 
+ /// Why sync must not send, kept on disk so a relaunch cannot forget it.
+-struct SyncPause: Codable, Equatable {
+-    var zoneDeleted = false
++public struct SyncPause: Codable, Equatable {
++    public var zoneDeleted = false
+     /// "signOut" or "switchAccounts"
+-    var accountChanged: String?
++    public var accountChanged: String?
+     /// The iCloud account this device's sync was set up with.
+-    var boundAccount: String?
++    public var boundAccount: String?
++
++    public init() {}
+ 
+-    var isPaused: Bool { zoneDeleted || accountChanged != nil }
++    public var isPaused: Bool { zoneDeleted || accountChanged != nil }
+ }
+ 
+ /// Everything the sync engine must not lose across a relaunch, as small JSON files in
+ /// Application Support. The files are excluded from device backups: restoring a phone from
+ /// another phone's backup must not inherit that phone's change tokens or half-sent changes.
+-final class SyncStorage {
++public final class SyncStorage {
+     private let lock = NSLock()
+     private let folder: URL
+     private var outbox: [String: SyncItemDTO]
+@@ -37,16 +48,24 @@ final class SyncStorage {
+     private var systemFields: [String: Data]
+     private var pauseState: SyncPause
+     /// Set when a queue file was unreadable (moved aside) or a write failed. The web app is told.
+-    private(set) var needsRepair = false
+-
+-    init() {
+-        let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+-            ?? FileManager.default.temporaryDirectory
+-        var folder = base.appendingPathComponent("SpreadSync", isDirectory: true)
++    public private(set) var needsRepair = false
++
++    /// `folder` is for tests; the app passes nothing and gets Application Support.
++    public init(folder given: URL? = nil) {
++        var folder: URL
++        if let given {
++            folder = given
++        } else {
++            let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
++                ?? FileManager.default.temporaryDirectory
++            folder = base.appendingPathComponent("SpreadSync", isDirectory: true)
++        }
+         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
++        #if os(iOS) || os(macOS)
+         var values = URLResourceValues()
+         values.isExcludedFromBackup = true
+         try? folder.setResourceValues(values)
++        #endif
+         self.folder = folder
+         var repair = false
+         outbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("outbox.json"), repair: &repair) ?? [:]
+@@ -81,13 +100,13 @@ final class SyncStorage {
+ 
+     // MARK: Pause (durable)
+ 
+-    var pause: SyncPause {
++    public var pause: SyncPause {
+         lock.lock(); defer { lock.unlock() }
+         return pauseState
+     }
+ 
+     @discardableResult
+-    func updatePause(_ change: (inout SyncPause) -> Void) -> Bool {
++    public func updatePause(_ change: (inout SyncPause) -> Void) -> Bool {
+         lock.lock(); defer { lock.unlock() }
+         change(&pauseState)
+         return save(pauseState, as: "pause.json")
+@@ -95,13 +114,13 @@ final class SyncStorage {
+ 
+     // MARK: Engine state
+ 
+-    var engineStateURL: URL { folder.appendingPathComponent("engine-state.json") }
++    public var engineStateURL: URL { folder.appendingPathComponent("engine-state.json") }
+ 
+-    func loadEngineState() -> Data? { try? Data(contentsOf: engineStateURL) }
++    public func loadEngineState() -> Data? { try? Data(contentsOf: engineStateURL) }
+ 
+-    func saveEngineState(_ data: Data) { try? data.write(to: engineStateURL, options: .atomic) }
++    public func saveEngineState(_ data: Data) { try? data.write(to: engineStateURL, options: .atomic) }
+ 
+-    func clearEngineState() {
++    public func clearEngineState() {
+         lock.lock(); defer { lock.unlock() }
+         try? FileManager.default.removeItem(at: engineStateURL)
+         systemFields = [:]
+@@ -112,19 +131,19 @@ final class SyncStorage {
+ 
+     /// False when the queue could not be written; the caller must report that, not assume it is queued.
+     @discardableResult
+-    func putOutbox(_ items: [SyncItemDTO]) -> Bool {
++    public func putOutbox(_ items: [SyncItemDTO]) -> Bool {
+         lock.lock(); defer { lock.unlock() }
+         for item in items { outbox[item.recordName] = item }
+         return save(outbox, as: "outbox.json")
+     }
+ 
+-    func outboxItem(_ recordName: String) -> SyncItemDTO? {
++    public func outboxItem(_ recordName: String) -> SyncItemDTO? {
+         lock.lock(); defer { lock.unlock() }
+         return outbox[recordName]
+     }
+ 
+     /// Remove an item once iCloud has it, unless the web app queued a newer version meanwhile.
+-    func confirmSent(_ sent: SyncItemDTO) {
++    public func confirmSent(_ sent: SyncItemDTO) {
+         lock.lock(); defer { lock.unlock() }
+         if outbox[sent.recordName] == sent {
+             outbox.removeValue(forKey: sent.recordName)
+@@ -132,18 +151,18 @@ final class SyncStorage {
+         }
+     }
+ 
+-    func dropOutbox(_ names: [String]) {
++    public func dropOutbox(_ names: [String]) {
+         lock.lock(); defer { lock.unlock() }
+         for name in names { outbox.removeValue(forKey: name) }
+         save(outbox, as: "outbox.json")
+     }
+ 
+-    var outboxNames: [String] {
++    public var outboxNames: [String] {
+         lock.lock(); defer { lock.unlock() }
+         return outbox.keys.sorted()
+     }
+ 
+-    var outboxCount: Int {
++    public var outboxCount: Int {
+         lock.lock(); defer { lock.unlock() }
+         return outbox.count
+     }
+@@ -151,18 +170,18 @@ final class SyncStorage {
+     // MARK: Inbox (changes from iCloud the web app has not merged yet)
+ 
+     @discardableResult
+-    func putInbox(_ items: [SyncItemDTO]) -> Bool {
++    public func putInbox(_ items: [SyncItemDTO]) -> Bool {
+         lock.lock(); defer { lock.unlock() }
+         for item in items { inbox[item.recordName] = item }
+         return save(inbox, as: "inbox.json")
+     }
+ 
+-    func inboxItems() -> [SyncItemDTO] {
++    public func inboxItems() -> [SyncItemDTO] {
+         lock.lock(); defer { lock.unlock() }
+         return inbox.values.sorted { $0.recordName < $1.recordName }
+     }
+ 
+-    func ackInbox(_ names: [String]) {
++    public func ackInbox(_ names: [String]) {
+         lock.lock(); defer { lock.unlock() }
+         for name in names { inbox.removeValue(forKey: name) }
+         save(inbox, as: "inbox.json")
+@@ -170,19 +189,19 @@ final class SyncStorage {
+ 
+     // MARK: Record system fields (the change tags CloudKit needs to accept an update)
+ 
+-    func setSystemFields(_ data: Data?, for recordName: String) {
++    public func setSystemFields(_ data: Data?, for recordName: String) {
+         lock.lock(); defer { lock.unlock() }
+         systemFields[recordName] = data
+         save(systemFields, as: "system-fields.json")
+     }
+ 
+-    func systemFields(for recordName: String) -> Data? {
++    public func systemFields(for recordName: String) -> Data? {
+         lock.lock(); defer { lock.unlock() }
+         return systemFields[recordName]
+     }
+ 
+     /// Everything but the user's pending work: used when iCloud account changes or sync is turned off.
+-    func resetCloudState() {
++    public func resetCloudState() {
+         clearEngineState()
+     }
+ }
+diff --git a/ios/App/SpreadCloudCore/Tests/SpreadCloudCoreTests/SyncStorageTests.swift b/ios/App/SpreadCloudCore/Tests/SpreadCloudCoreTests/SyncStorageTests.swift
+new file mode 100644
+index 0000000..f94f551
+--- /dev/null
++++ b/ios/App/SpreadCloudCore/Tests/SpreadCloudCoreTests/SyncStorageTests.swift
+@@ -0,0 +1,79 @@
++import XCTest
++@testable import SpreadCloudCore
++
++final class SyncStorageTests: XCTestCase {
++    private var folder: URL!
++
++    override func setUp() {
++        folder = FileManager.default.temporaryDirectory.appendingPathComponent("spread-sync-\(UUID().uuidString)")
++    }
++
++    override func tearDown() {
++        try? FileManager.default.removeItem(at: folder)
++    }
++
++    private func item(_ id: String, _ fields: String = "{}", at: String = "t") -> SyncItemDTO {
++        SyncItemDTO(syncId: "s", itemId: id, fields: fields, v: "{}", deleted: false, at: at)
++    }
++
++    func testQueuedChangesSurviveARelaunch() {
++        let first = SyncStorage(folder: folder)
++        XCTAssertTrue(first.putOutbox([item("a"), item("b")]))
++        let second = SyncStorage(folder: folder)
++        XCTAssertEqual(second.outboxNames, ["s|a", "s|b"])
++        XCTAssertFalse(second.needsRepair)
++    }
++
++    func testConfirmSentKeepsANewerQueuedVersion() {
++        let storage = SyncStorage(folder: folder)
++        storage.putOutbox([item("a", "{\"v\":1}")])
++        storage.putOutbox([item("a", "{\"v\":2}")])
++        storage.confirmSent(item("a", "{\"v\":1}"))
++        XCTAssertEqual(storage.outboxNames, ["s|a"])
++        storage.confirmSent(item("a", "{\"v\":2}"))
++        XCTAssertEqual(storage.outboxNames, [])
++    }
++
++    func testACorruptQueueFileIsSetAsideAndReported() throws {
++        _ = SyncStorage(folder: folder)
++        try Data("not json".utf8).write(to: folder.appendingPathComponent("outbox.json"))
++        let storage = SyncStorage(folder: folder)
++        XCTAssertTrue(storage.needsRepair)
++        XCTAssertEqual(storage.outboxNames, [])
++        let names = try FileManager.default.contentsOfDirectory(atPath: folder.path)
++        XCTAssertTrue(names.contains { $0.hasPrefix("outbox.json.corrupt-") })
++        XCTAssertFalse(names.contains("outbox.json"))
++    }
++
++    func testAFailedWriteIsReportedNotSwallowed() throws {
++        let storage = SyncStorage(folder: folder)
++        // A directory where the file should be makes the write fail.
++        try FileManager.default.createDirectory(at: folder.appendingPathComponent("outbox.json"), withIntermediateDirectories: true)
++        XCTAssertFalse(storage.putOutbox([item("a")]))
++        XCTAssertTrue(storage.needsRepair)
++    }
++
++    func testAPauseSurvivesARelaunchAndIsExplicitlyCleared() {
++        let first = SyncStorage(folder: folder)
++        XCTAssertTrue(first.updatePause { $0.zoneDeleted = true })
++        XCTAssertTrue(SyncStorage(folder: folder).pause.isPaused)
++        first.updatePause { $0 = SyncPause() }
++        XCTAssertFalse(SyncStorage(folder: folder).pause.isPaused)
++    }
++
++    func testResetKeepsTheUsersPendingWork() {
++        let storage = SyncStorage(folder: folder)
++        storage.putOutbox([item("a")])
++        storage.setSystemFields(Data([1, 2]), for: "s|a")
++        storage.resetCloudState()
++        XCTAssertEqual(storage.outboxNames, ["s|a"])
++        XCTAssertNil(storage.systemFields(for: "s|a"))
++    }
++
++    func testInboxIsAckedByName() {
++        let storage = SyncStorage(folder: folder)
++        storage.putInbox([item("a"), item("b")])
++        storage.ackInbox(["s|a"])
++        XCTAssertEqual(storage.inboxItems().map(\.itemId), ["b"])
++    }
++}
+diff --git a/scripts/ios-bridge-sim/README.md b/scripts/ios-bridge-sim/README.md
+index 7d22c40..09a9725 100644
+--- a/scripts/ios-bridge-sim/README.md
++++ b/scripts/ios-bridge-sim/README.md
+@@ -16,3 +16,8 @@ python3 scripts/ios-bridge-sim/web_regress.py /tmp/shots  # the website is uncha
+ ```
+ 
+ Needs Python Playwright (`pip install playwright`) and a Chromium build.
++
++
++## Running everything
++
++`sh scripts/ios-bridge-sim/run-all.sh` builds each flag configuration and runs the matching simulators (CI job `bridge-sims`). Set `PW_CHROME` to use an existing Chromium.
+diff --git a/scripts/ios-bridge-sim/native_e2e.py b/scripts/ios-bridge-sim/native_e2e.py
+index 1ce556f..3579618 100644
+--- a/scripts/ios-bridge-sim/native_e2e.py
++++ b/scripts/ios-bridge-sim/native_e2e.py
+@@ -12,7 +12,7 @@ def check(name, ok, detail=''):
+     print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail else ''))
+ 
+ with sync_playwright() as p:
+-    b = p.chromium.launch()
++    b = p.chromium.launch(**({'executable_path': os.environ['PW_CHROME']} if os.environ.get('PW_CHROME') else {}))
+     ctx = b.new_context(viewport={'width': 393, 'height': 852}, device_scale_factor=2, is_mobile=True, has_touch=True)
+     ctx.expose_function('__fsRead', lambda path: fs.get(path))
+     ctx.expose_function('__fsWrite', lambda path, data, enc: fs.__setitem__(path, data))
+diff --git a/scripts/ios-bridge-sim/run-all.sh b/scripts/ios-bridge-sim/run-all.sh
+new file mode 100755
+index 0000000..2186e9f
+--- /dev/null
++++ b/scripts/ios-bridge-sim/run-all.sh
+@@ -0,0 +1,27 @@
++#!/bin/sh
++# Builds the installed-app web bundle in each flag configuration and runs the matching Chromium
++# simulators against it. Used by CI; also works locally (set PW_CHROME to a Chromium binary).
++#   flags off      -> native_e2e.py, restore_e2e.py          (the shipped configuration)
++#   backup only    -> cloud_backup_e2e.py
++#   backup + sync  -> sync_e2e.py
++set -u
++cd "$(dirname "$0")/../.."
++SHOTS="${SHOTS:-/tmp/spread-shots}"; mkdir -p "$SHOTS"
++fail=0
++serve() { (cd dist-ios && exec python3 -m http.server 8097 --bind 127.0.0.1 >/dev/null 2>&1) & SERVER=$!; sleep 1; }
++run() { # name, env..., script
++  name="$1"; shift
++  echo "=== $name"
++  if ! python3 "scripts/ios-bridge-sim/$1" "$SHOTS"; then fail=1; echo "FAILED: $name"; fi
++}
++build() { env "$@" npm run export:ios >/dev/null || { echo "bundle build failed"; exit 1; }; }
++
++build VITE_SPREAD_CLOUD_BACKUP= VITE_SPREAD_CLOUD_SYNC=
++serve; run "flags off: installed app" native_e2e.py; run "flags off: restore" restore_e2e.py; kill $SERVER 2>/dev/null
++
++build VITE_SPREAD_CLOUD_BACKUP=1 VITE_SPREAD_CLOUD_SYNC=
++serve; run "backup only" cloud_backup_e2e.py; kill $SERVER 2>/dev/null
++
++build VITE_SPREAD_CLOUD_BACKUP=1 VITE_SPREAD_CLOUD_SYNC=1
++serve; run "backup + sync" sync_e2e.py; kill $SERVER 2>/dev/null
++exit $fail

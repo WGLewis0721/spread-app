@@ -1,0 +1,17 @@
+
+> lint
+> eslint .
+
+
+C:\Users\[REDACTED_USER]\Documents\Codex\2026-10-08\act-as-astra-the-independent-senior\work\spread-review\src\lib\auth\use-current-user.ts
+  59:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
+
+C:\Users\[REDACTED_USER]\Documents\Codex\2026-10-08\act-as-astra-the-independent-senior\work\spread-review\src\lib\spread\backup-runner.test.ts
+  90:19  warning  'text' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\[REDACTED_USER]\Documents\Codex\2026-10-08\act-as-astra-the-independent-senior\work\spread-review\src\spread\components\weekly-view.tsx
+  46:9  warning  The 'allocations' logical expression could make the dependencies of useEffect Hook (at line 84) change on every render. To fix this, wrap the initialization of 'allocations' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+✖ 3 problems (0 errors, 3 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

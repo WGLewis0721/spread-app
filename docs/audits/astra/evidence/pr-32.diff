@@ -1,0 +1,313 @@
+diff --git a/package.json b/package.json
+index d681081..a4cf0f5 100644
+--- a/package.json
++++ b/package.json
+@@ -15,7 +15,7 @@
+     "preview:restart": "node scripts/preview.mjs restart",
+     "preview:stop": "node scripts/preview.mjs stop",
+     "typecheck": "tsc --noEmit",
+-    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/spread/cloud-status.test.ts src/lib/spread/backup-runner.test.ts src/lib/spread/sync-model.test.ts src/lib/spread/sync-sim.test.ts src/lib/spread/sync-link.test.ts src/lib/spread/sync-session.test.ts src/lib/spread/sync-guard.test.ts src/lib/spread/sync-labels.test.ts",
++    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/spread/cloud-status.test.ts src/lib/spread/backup-runner.test.ts src/lib/spread/sync-model.test.ts src/lib/spread/sync-sim.test.ts src/lib/spread/sync-link.test.ts src/lib/spread/sync-session.test.ts src/lib/spread/sync-guard.test.ts src/lib/spread/serial.test.ts src/lib/spread/sync-labels.test.ts",
+     "check:auth": "node scripts/check-auth-invariant.mjs",
+     "test": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/waitlist.test.ts && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
+     "lint": "eslint .",
+diff --git a/src/lib/spread/cloud-sync.ts b/src/lib/spread/cloud-sync.ts
+index 1605dbf..38932b4 100644
+--- a/src/lib/spread/cloud-sync.ts
++++ b/src/lib/spread/cloud-sync.ts
+@@ -19,6 +19,7 @@ import { isPristine, planLink, summarizeCloud, toItems, type CloudProfileSummary
+ import { createSyncSession, type SessionView, type SyncSession, type SyncTransport } from "./sync-session.ts";
+ import { adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
+ import { PROFILE_LIMIT } from "./profiles.ts";
++import { createSerial } from "./serial.ts";
+ 
+ export type SyncPhase = "off" | "starting" | "syncing" | "synced" | "paused" | "problem";
+ 
+@@ -151,13 +152,18 @@ async function startSessionFor(profileId: string, syncId: string, name: string)
+       saved = next;
+       writeStateFile(next);
+     },
++    isActive: () => useSpread.getState().activeId === profileId,
+     current: () => {
+       flushSpread();
+       const s = useSpread.getState();
+       const profile = s.profiles.find((p) => p.id === s.activeId);
+       return { data: s.data, name: profile?.name ?? name };
+     },
+-    apply: (data, nextName) => useSpread.getState().applySynced(data, nextName),
++    apply: (data, nextName) => {
++      // applySynced writes into whichever profile is open, so refuse if it is not this one.
++      if (useSpread.getState().activeId !== profileId) throw new Error("another profile is open");
++      useSpread.getState().applySynced(data, nextName);
++    },
+     snapshot: (label) => {
+       pinSnapshot(label, collectEntries(localStorage));
+       if (Date.now() - lastBackupPin > 6 * 3_600_000) {
+@@ -178,6 +184,11 @@ async function startSessionFor(profileId: string, syncId: string, name: string)
+   useCloudSync.setState({ linked: true, view: created.view(), paused: null });
+   await refreshNative();
+   if (useCloudSync.getState().paused) return;
++  // Profile switched while this was starting: leave it to the next alignment.
++  if (useSpread.getState().activeId !== profileId) {
++    await stopSession();
++    return;
++  }
+   const native = useCloudSync.getState().native;
+   if (native?.accountKey && !localStorage.getItem(accountKeyKey(syncId))) localStorage.setItem(accountKeyKey(syncId), native.accountKey);
+   await created.start();
+@@ -193,7 +204,8 @@ async function deviceId(): Promise<string> {
+ export async function startSyncManager(): Promise<void> {
+   if (!syncAvailable() || listening) return;
+   listening = true;
+-  const align = async () => {
++  const serially = createSerial();
++  const alignOnce = async () => {
+     const s = useSpread.getState();
+     const profile = s.profiles.find((p) => p.id === s.activeId);
+     const wanted = profile?.syncId ?? null;
+@@ -201,7 +213,8 @@ export async function startSyncManager(): Promise<void> {
+     await stopSession();
+     if (profile && wanted) await startSessionFor(profile.id, wanted, profile.name);
+   };
+-  useSpread.subscribe(() => void align());
++  const align = () => serially(alignOnce);
++  useSpread.subscribe(() => void align().catch(() => undefined));
+   const plugin = await cloudPlugin();
+   const wake = () => {
+     void refreshNative();
+diff --git a/src/lib/spread/serial.test.ts b/src/lib/spread/serial.test.ts
+new file mode 100644
+index 0000000..5e38a45
+--- /dev/null
++++ b/src/lib/spread/serial.test.ts
+@@ -0,0 +1,31 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { createSerial } from "./serial.ts";
++
++test("jobs never overlap and run in the order requested", async () => {
++  const serial = createSerial();
++  let running = 0;
++  let overlapped = false;
++  const order: number[] = [];
++  const job = (n: number, ms: number) => () =>
++    (async () => {
++      running += 1;
++      if (running > 1) overlapped = true;
++      await new Promise((r) => setTimeout(r, ms));
++      order.push(n);
++      running -= 1;
++    })();
++  await Promise.all([serial(job(1, 20)), serial(job(2, 1)), serial(job(3, 5))]);
++  assert.equal(overlapped, false);
++  assert.deepEqual(order, [1, 2, 3]);
++});
++
++test("a failing job does not stop the ones after it, and still reports its own error", async () => {
++  const serial = createSerial();
++  const failed = serial(async () => {
++    throw new Error("boom");
++  });
++  const after = serial(async () => "ok");
++  await assert.rejects(failed, /boom/);
++  assert.equal(await after, "ok");
++});
+diff --git a/src/lib/spread/serial.ts b/src/lib/spread/serial.ts
+new file mode 100644
+index 0000000..b36f562
+--- /dev/null
++++ b/src/lib/spread/serial.ts
+@@ -0,0 +1,13 @@
++/**
++ * Run async jobs strictly one after another, in the order they were asked for, whether or not an
++ * earlier one failed. Used so that "line the sync session up with the open profile" can never run
++ * twice at once (two overlapping runs used to start two sessions for one profile).
++ */
++export function createSerial(): <T>(job: () => Promise<T>) => Promise<T> {
++  let tail: Promise<unknown> = Promise.resolve();
++  return <T>(job: () => Promise<T>) => {
++    const run = tail.then(job, job);
++    tail = run.catch(() => undefined);
++    return run;
++  };
++}
+diff --git a/src/lib/spread/sync-guard.test.ts b/src/lib/spread/sync-guard.test.ts
+index 82867b7..2d20d6a 100644
+--- a/src/lib/spread/sync-guard.test.ts
++++ b/src/lib/spread/sync-guard.test.ts
+@@ -86,6 +86,7 @@ function harness(initial: SpreadData) {
+     transport,
+     loadState: () => saved,
+     saveState: (s) => void (saved = s),
++    isActive: () => true,
+     current: () => ({ data: env.data, name: "Me" }),
+     apply: (data) => {
+       env.data = normalizeData({ ...data, currentWeek: env.data.currentWeek });
+diff --git a/src/lib/spread/sync-session.test.ts b/src/lib/spread/sync-session.test.ts
+index 5d2f91f..0470aca 100644
+--- a/src/lib/spread/sync-session.test.ts
++++ b/src/lib/spread/sync-session.test.ts
+@@ -98,6 +98,7 @@ function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S1") {
+     transport: native,
+     loadState: () => saved,
+     saveState: (s) => void (saved = s),
++    isActive: () => true,
+     current: () => ({ data: env.data, name: env.name }),
+     apply: (next, nm) => {
+       env.data = normalizeData({ ...next, currentWeek: env.data.currentWeek });
+@@ -305,3 +306,85 @@ test("a queued change that iCloud's newer version replaced is dropped from the n
+   assert.equal(b.native.outboxRows.size, 0, "nothing stale is left in the native outbox");
+   assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
+ });
++
++// --- Profile binding (audit C1) ---------------------------------------------------------------
++
++function boundHarness() {
++  const own = defaultData();
++  own.weeks[own.currentWeek].boxes[0].tasks.push({ id: "a1", text: "This profile", done: false });
++  const other = defaultData();
++  other.weeks[other.currentWeek].boxes[0].tasks.push({ id: "b1", text: "A different profile", done: false });
++  const env = { open: "mine" as "mine" | "other", applied: 0, queued: [] as SyncRow[], released: false };
++  let release!: () => void;
++  const gate = new Promise<void>((r) => (release = r));
++  let saved: SyncState | null = null;
++  const session = createSyncSession({
++    syncId: "S",
++    deviceId: "phone",
++    transport: {
++      async start() {},
++      async stop() {},
++      async queue(rows) {
++        env.queued.push(...rows);
++      },
++      async inbox() {
++        if (!env.released) await gate;
++        return [];
++      },
++      async ack() {},
++      async outbox() {
++        return [];
++      },
++      async drop() {},
++      async syncNow() {},
++    },
++    loadState: () => saved,
++    saveState: (s) => void (saved = s),
++    isActive: () => env.open === "mine",
++    current: () => ({ data: env.open === "mine" ? own : other, name: "Me" }),
++    apply: () => void (env.applied += 1),
++    snapshot: () => {},
++    newId: () => "x",
++    now: () => "t",
++  });
++  return { env, session, release: () => ((env.released = true), release()) };
++}
++
++test("switching profiles while a pass waits on iCloud sends nothing from the other profile", async () => {
++  const h = boundHarness();
++  const starting = h.session.start();
++  await new Promise((r) => setTimeout(r, 20));
++  h.env.open = "other";
++  h.release();
++  await starting;
++  assert.deepEqual(h.env.queued, [], "the other profile's tasks were not queued into this profile's iCloud copy");
++  assert.equal(h.env.applied, 0);
++});
++
++test("stopping a session while a pass is waiting stops that pass from touching the planner", async () => {
++  const h = boundHarness();
++  const starting = h.session.start();
++  await new Promise((r) => setTimeout(r, 20));
++  await h.session.stop();
++  h.release();
++  await starting;
++  assert.deepEqual(h.env.queued, []);
++  assert.equal(h.env.applied, 0);
++});
++
++test("resolving a conflict or a pause is ignored when the session's profile is not open", async () => {
++  const h = boundHarness();
++  h.release();
++  await h.session.start();
++  h.env.open = "other";
++  await h.session.resolveConflict("task:a1", "local");
++  await h.session.resolveBlocked("restore");
++  assert.equal(h.env.applied, 0);
++});
++
++test("the same session still syncs normally while its profile stays open", async () => {
++  const h = boundHarness();
++  h.release();
++  await h.session.start();
++  assert.ok(h.env.queued.some((row) => row.itemId === "task:a1"));
++});
+diff --git a/src/lib/spread/sync-session.ts b/src/lib/spread/sync-session.ts
+index 398e123..3ce900a 100644
+--- a/src/lib/spread/sync-session.ts
++++ b/src/lib/spread/sync-session.ts
+@@ -50,6 +50,12 @@ export type SessionDeps = {
+   transport: SyncTransport;
+   loadState(): SyncState | null;
+   saveState(state: SyncState): void;
++  /**
++   * True only while the profile this session belongs to is the one on screen. The planner calls
++   * (`current`, `apply`) always act on the open profile, so every use is guarded by this: a
++   * session must never read or write another profile's planner.
++   */
++  isActive(): boolean;
+   /** The planner as it is right now, with any debounced edit already written. */
+   current(): { data: SpreadData; name: string };
+   /** Put a merged planner into the app. Must not touch the view (which week is open). */
+@@ -93,6 +99,8 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+   let busy = false;
+   let lastError: string | null = null;
+   let blocked: CaptureBlock | null = null;
++  // Bumped by stop(). A pass that started before a stop notices and does nothing further to the planner.
++  let generation = 0;
+   let allowMassDelete = false;
+   let chain: Promise<void> = Promise.resolve();
+   const listeners = new Set<(view: SessionView) => void>();
+@@ -113,6 +121,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+ 
+   async function pass(): Promise<void> {
+     if (!running) return;
++    const started = generation;
+     busy = true;
+     publish();
+     try {
+@@ -121,6 +130,10 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+       // run with no pause between them, so a fresh edit can never be overwritten.
+       const rows = (await deps.transport.inbox()).filter((row) => row.syncId === deps.syncId);
+ 
++      // The read above is slow. If the session was stopped, or another profile was opened meanwhile,
++      // this pass must not touch the planner at all.
++      if (generation !== started || !running || !deps.isActive()) return;
++
+       // 1. capture
+       const here = deps.current();
+       const captured = captureLocal(state, here.data, here.name, deps.now(), { allowMassDelete });
+@@ -197,6 +210,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+     },
+     async stop() {
+       running = false;
++      generation += 1;
+       await deps.transport.stop();
+       publish();
+     },
+@@ -214,6 +228,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+     },
+     async resolveConflict(id, choice) {
+       await queue(async () => {
++        if (!running || !deps.isActive()) return;
+         const here = deps.current();
+         // Capture first so an edit made a moment ago is not lost when the resolution is applied.
+         const captured = captureLocal(state, here.data, here.name, deps.now());
+@@ -235,7 +250,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+     },
+     async resolveBlocked(choice) {
+       await queue(async () => {
+-        if (!blocked) return;
++        if (!blocked || !running || !deps.isActive()) return;
+         if (choice === "restore") {
+           // The state still holds the last synced items, because the blocked capture changed nothing.
+           const here = deps.current();
