@@ -70,4 +70,4 @@ jobs:
           -target arm64-apple-ios17.0-simulator -swift-version 5
           -Xfrontend -warn-long-expression-type-checking=300
           -Xfrontend -warn-long-function-bodies=600
-          SpreadCloudConfig.swift SpreadSyncEngine.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/SyncStorage.swift
+          SpreadCloudConfig.swift SpreadSyncEngine.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/SyncStorage.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/OutboxGate.swift
