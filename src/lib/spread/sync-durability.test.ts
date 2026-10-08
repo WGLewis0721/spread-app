@@ -113,3 +113,75 @@ test("A05: after the planner recovers, the same choice goes through and both dev
   assert.equal(textOf(a, "shared"), "Phone wording");
   assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
 });
+
+async function readyToChoose() {
+  const { a, b } = await clash();
+  b.native.online = true;
+  await b.session.syncNow();
+  await a.session.syncNow();
+  assert.ok(b.session.view().conflicts.find((c) => c.id === "task:shared"), "b has the clash to settle");
+  return { a, b };
+}
+
+test("A05: a refused safety copy stops the choice before anything changes, and the choice is retried", async () => {
+  const { a, b } = await readyToChoose();
+  b.h.failSnapshot = 1;
+  await b.session.resolveConflict("task:shared", "remote");
+  assert.equal(b.session.view().conflicts.some((c) => c.id === "task:shared"), true);
+  assert.equal(textOf(b, "shared"), "Pad wording");
+  assert.equal(b.session.view().failedChoices.length, 1);
+  await settle(a, b);
+  assert.equal(textOf(b, "shared"), "Phone wording");
+  assert.equal(textOf(a, "shared"), "Phone wording");
+});
+
+test("A05: after a refused planner write, a restart still shows the conflict and the retried choice goes the person's way", async () => {
+  const { a, b } = await readyToChoose();
+  b.h.failApply = 1;
+  await b.session.resolveConflict("task:shared", "remote");
+  const reopened = b.restart();
+  await reopened.start();
+  assert.equal(reopened.view().conflicts.some((c) => c.id === "task:shared"), true, "durable state still holds the conflict");
+  assert.equal(textOf(b, "shared"), "Pad wording", "planner untouched");
+  await reopened.resolveConflict("task:shared", "remote");
+  await a.session.syncNow();
+  await reopened.syncNow();
+  assert.equal(textOf(b, "shared"), "Phone wording");
+  assert.equal(textOf(a, "shared"), "Phone wording");
+});
+
+test("A05: the state cannot be saved after the planner took the choice: the choice is not reversed, now or after a restart", async () => {
+  const { a, b } = await readyToChoose();
+  b.h.failSave = true;
+  await b.session.resolveConflict("task:shared", "remote");
+  assert.equal(textOf(b, "shared"), "Phone wording", "the planner took the choice");
+  assert.equal(b.session.view().lastError, "state-not-saved");
+  // The app is killed before any save succeeds. Only the old durable state (with the conflict) survives.
+  b.h.failSave = false;
+  const reopened = b.restart();
+  await reopened.start();
+  await settle(a, b);
+  assert.equal(textOf(b, "shared"), "Phone wording", "the person's choice survived the restart");
+  assert.equal(textOf(a, "shared"), "Phone wording", "and did not flip on the other device");
+});
+
+test("A04: state is saved after the planner took iCloud's change but before the acknowledgment; a failed save leaves the inbox for a retry", async () => {
+  const cloud = new Cloud();
+  const x = device(cloud, "phone", seedData());
+  const y = device(cloud, "pad", seedData());
+  await x.session.start();
+  addTask(x, "t1", "From phone");
+  await x.session.localChanged();
+  await settle(x);
+  y.h.failSave = true;
+  await y.session.start();
+  assert.deepEqual(
+    y.env.data.weeks[y.env.data.currentWeek].boxes[0].tasks.map((t) => t.id),
+    ["t1"],
+    "the planner took the change",
+  );
+  assert.ok(y.native.inboxRows.size > 0, "but the inbox row waits until the state is safe");
+  y.h.failSave = false;
+  await y.session.syncNow();
+  assert.equal(y.native.inboxRows.size, 0, "and is acknowledged on the next pass");
+});

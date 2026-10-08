@@ -126,3 +126,31 @@ test("A02: recovery with no journal does nothing; an unreadable journal is dropp
   assert.equal(recoverRestore(m), "failed");
   assert.equal(m.map.has(RESTORE_JOURNAL_KEY), false);
 });
+
+test("A02: recovery that is itself killed at any step is finished by the next launch", () => {
+  const oldState = dump(seeded());
+  const done = seeded();
+  commitRestore(done, plan);
+  const newState = dump(done);
+  for (let crash = 0; crash <= 12; crash += 1) {
+    for (let recoveryBudget = 0; recoveryBudget <= 8; recoveryBudget += 1) {
+      const m = seeded();
+      m.budget = crash;
+      try {
+        commitRestore(m, plan);
+      } catch {
+        /* killed during the restore */
+      }
+      m.budget = recoveryBudget;
+      try {
+        recoverRestore(m);
+      } catch {
+        /* killed during recovery */
+      }
+      m.budget = Infinity;
+      recoverRestore(m);
+      const now = dump(m);
+      assert.ok(now === oldState || now === newState, `restore killed at ${crash}, recovery killed at ${recoveryBudget}: ${now}`);
+    }
+  }
+});
