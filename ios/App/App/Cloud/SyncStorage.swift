@@ -86,6 +86,12 @@ final class SyncStorage {
         }
     }
 
+    func dropOutbox(_ names: [String]) {
+        lock.lock(); defer { lock.unlock() }
+        for name in names { outbox.removeValue(forKey: name) }
+        save(outbox, as: "outbox.json")
+    }
+
     var outboxNames: [String] {
         lock.lock(); defer { lock.unlock() }
         return outbox.keys.sorted()

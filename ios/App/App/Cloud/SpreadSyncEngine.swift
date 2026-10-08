@@ -59,6 +59,11 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         let created = CKSyncEngine(configuration)
         created.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
         engine = created
+        // Anything still in the outbox is sent again. If iCloud has a newer version it rejects the
+        // write and hands that version to the web app, which merges it, so this cannot overwrite.
+        var resend: [CKSyncEngine.PendingRecordZoneChange] = []
+        for name in storage.outboxNames { resend.append(.saveRecord(recordID(for: name))) }
+        if !resend.isEmpty { created.state.add(pendingRecordZoneChanges: resend) }
         update { (status: inout Status) in
             status.running = true
             status.accountChanged = nil
@@ -80,6 +85,15 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         var changes: [CKSyncEngine.PendingRecordZoneChange] = []
         for item in items { changes.append(.saveRecord(recordID(for: item.recordName))) }
         engine.state.add(pendingRecordZoneChanges: changes)
+    }
+
+    /// The web app no longer needs these sent (it merged iCloud's newer version instead).
+    func drop(_ names: [String]) {
+        storage.dropOutbox(names)
+        guard let engine else { return }
+        var removals: [CKSyncEngine.PendingRecordZoneChange] = []
+        for name in names { removals.append(.saveRecord(recordID(for: name))) }
+        engine.state.remove(pendingRecordZoneChanges: removals)
     }
 
     func fetchNow() async {

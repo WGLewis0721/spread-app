@@ -20,6 +20,7 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "syncQueue", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncInbox", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncOutbox", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncDrop", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncAck", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncNow", returnType: CAPPluginReturnPromise),
@@ -193,6 +194,12 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func syncOutbox(_ call: CAPPluginCall) {
         call.resolve(["names": syncStorage.outboxNames])
+    }
+
+    @objc func syncDrop(_ call: CAPPluginCall) {
+        let names = (call.getArray("names") as? [String]) ?? []
+        sync.drop(names)
+        call.resolve()
     }
 
     @objc func syncAck(_ call: CAPPluginCall) {
