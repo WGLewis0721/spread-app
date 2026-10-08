@@ -21,6 +21,16 @@ import { renderInstallPage } from "./grok-pwa-plugin.mjs";
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+// These tests describe the platform's head-injection rules for an app with NO custom branding.
+// Run from the real checkout they would read this product's own site.json and public/og.jpg
+// (Spread's name and share card) and fail. Each test file runs in its own process, so working from
+// a blank workspace here is local to this file.
+const BLANK_WORKSPACE = mkdtempSync(join(tmpdir(), "grok-pwa-blank-"));
+mkdirSync(join(BLANK_WORKSPACE, "src/lib/og"), { recursive: true });
+mkdirSync(join(BLANK_WORKSPACE, "public"), { recursive: true });
+writeFileSync(join(BLANK_WORKSPACE, "src/lib/og/site.json"), "{}\n");
+process.chdir(BLANK_WORKSPACE);
+
 test("injects before </head>", () => {
   const out = injectGrokPwaHead("<html><head><title>x</title></head><body></body></html>");
   assert.match(out, /rel="manifest"/);

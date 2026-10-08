@@ -23,6 +23,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:spread
+      - run: npm run test:scripts
 
   bridge-sims:
     # The installed-app logic against a fake native plugin, in Chromium: backup, restore, sync and
