@@ -15,11 +15,23 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "backupWrite", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "backupList", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "backupRead", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncStart", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncStop", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncQueue", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncInbox", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncOutbox", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncAck", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncNow", returnType: CAPPluginReturnPromise),
     ]
 
     private let io = DispatchQueue(label: "com.graymatter.spread.cloud.io", qos: .utility)
     private let accounts = AccountMonitor()
     private lazy var store = BackupStore(deviceId: DeviceIdentity.current())
+    private let syncStorage = SyncStorage()
+    private lazy var sync = SpreadSyncEngine(storage: syncStorage) { [weak self] event in
+        self?.notifyListeners(event, data: [:])
+    }
     private static let iso: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
@@ -125,6 +137,81 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
             } catch {
                 fail(call, error)
             }
+        }
+    }
+
+    // MARK: Sync
+
+    private func decode(_ call: CAPPluginCall) -> [SyncItemDTO]? {
+        guard let rows = call.getArray("items") as? [[String: Any]] else { return nil }
+        var out: [SyncItemDTO] = []
+        for row in rows {
+            guard let syncId = row["syncId"] as? String, let itemId = row["itemId"] as? String,
+                  let fields = row["fields"] as? String, let v = row["v"] as? String else { return nil }
+            out.append(SyncItemDTO(syncId: syncId, itemId: itemId, fields: fields, v: v,
+                                   deleted: row["deleted"] as? Bool ?? false, at: row["at"] as? String ?? ""))
+        }
+        return out
+    }
+
+    @objc func syncStart(_ call: CAPPluginCall) {
+        sync.start()
+        call.resolve()
+    }
+
+    @objc func syncStop(_ call: CAPPluginCall) {
+        sync.stop()
+        call.resolve()
+    }
+
+    @objc func syncQueue(_ call: CAPPluginCall) {
+        guard let items = decode(call) else {
+            call.reject("items are required", "invalidArguments")
+            return
+        }
+        sync.queue(items)
+        call.resolve()
+    }
+
+    @objc func syncInbox(_ call: CAPPluginCall) {
+        let rows: [[String: Any]] = syncStorage.inboxItems().map {
+            ["syncId": $0.syncId, "itemId": $0.itemId, "fields": $0.fields, "v": $0.v, "deleted": $0.deleted, "at": $0.at]
+        }
+        call.resolve(["items": rows])
+    }
+
+    @objc func syncOutbox(_ call: CAPPluginCall) {
+        call.resolve(["names": syncStorage.outboxNames])
+    }
+
+    @objc func syncAck(_ call: CAPPluginCall) {
+        let names = (call.getArray("names") as? [String]) ?? []
+        syncStorage.ackInbox(names)
+        call.resolve()
+    }
+
+    @objc func syncStatus(_ call: CAPPluginCall) {
+        Task {
+            let current = sync.currentStatus()
+            var result: [String: Any] = [
+                "running": current.running,
+                "zoneDeleted": current.zoneDeleted,
+                "quotaExceeded": current.quotaExceeded,
+                "outboxCount": syncStorage.outboxCount,
+                "inboxCount": syncStorage.inboxItems().count,
+            ]
+            if let changed = current.accountChanged { result["accountChanged"] = changed }
+            if let error = current.lastError { result["lastError"] = error }
+            if let key = await sync.userKey() { result["accountKey"] = key }
+            call.resolve(result)
+        }
+    }
+
+    @objc func syncNow(_ call: CAPPluginCall) {
+        Task {
+            await sync.sendNow()
+            await sync.fetchNow()
+            call.resolve()
         }
     }
 }
