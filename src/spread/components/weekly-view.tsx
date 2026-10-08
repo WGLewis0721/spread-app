@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronDown, Clock, Inbox, Minus, Plus } from "lucide-react";
+import { ChevronDown, Clock, GripVertical, Inbox, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { showUndoToast } from "@/spread/ui/undo-toast";
 import { clampHours, isoDate, remainingHours, weekDays, type Allocation, type Task } from "@/lib/spread/model";
@@ -496,9 +496,9 @@ function AllocationRow({
       </button>
       </div>
       {tasks.length > 0 && showTasks && (
-        <ul id={listId} className="flex flex-col gap-1 px-2 pb-2" aria-label={`${name} tasks on ${day}`}>
+        <ul id={listId} className="mx-2 mb-2 overflow-hidden rounded-xl bg-elevated" aria-label={`${name} tasks on ${day}`}>
           {tasks.map((task) => (
-            <TaskChip key={task.id} task={task} hatId={hatId} color={color} open={open} onOpen={onOpen} choices={choices} days={days} onPlace={onPlace} current={id} surface="elevated" />
+            <TaskLine key={task.id} task={task} hatId={hatId} open={open} onOpen={onOpen} choices={choices} days={days} onPlace={onPlace} current={id} />
           ))}
         </ul>
       )}
@@ -523,8 +523,10 @@ function DayHours({ value, label, onChange }: { value: number; label: string; on
 
 type Day = { label: string; date: string };
 
-/** How many unplaced tasks the tray shows before folding the rest. */
-const TRAY_PREVIEW = 3;
+/** Up to this many unplaced tasks, the tray's role groups start open. */
+const TRAY_OPEN_ALL = 5;
+/** Tasks an open group shows before "Show N more". */
+const GROUP_PREVIEW = 6;
 
 function labelOf(active: ActiveDrag | undefined, hats: Map<string, { name: string }>): string {
   if (!active) return "item";
@@ -563,10 +565,17 @@ function ToPlaceTray({
   onPlace: (hatId: string, taskId: string, allocationId: string | null) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: TRAY_ID });
-  const [all, setAll] = useState(false);
-  // Every task a person already has starts here, so a long list shows a few and folds the rest.
-  const shown = all || tasks.length <= TRAY_PREVIEW ? tasks : tasks.slice(0, TRAY_PREVIEW);
-  const hidden = tasks.length - shown.length;
+  // A task can only go on its own role's days, so the tray is grouped by role. Every task a person
+  // already has starts here: past a handful, the groups start folded and open one at a time.
+  const groups: { hatId: string; tasks: Task[] }[] = [];
+  for (const { hatId, task } of tasks) {
+    const group = groups.find((item) => item.hatId === hatId);
+    if (group) group.tasks.push(task);
+    else groups.push({ hatId, tasks: [task] });
+  }
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  const [full, setFull] = useState<Record<string, boolean>>({});
+  const isOpen = (hatId: string) => toggled[hatId] ?? tasks.length <= TRAY_OPEN_ALL;
   return (
     <section
       ref={setNodeRef}
@@ -586,82 +595,100 @@ function ToPlaceTray({
           </span>
         )}
       </div>
-      {tasks.length === 0 ? null : (
-        <>
-          <ul className="mt-2 flex flex-col gap-1">
-            {shown.map(({ hatId, task }) => (
-              <TaskChip
-                key={task.id}
-                task={task}
-                hatId={hatId}
-                color={hatsById.get(hatId)?.color ?? "var(--tertiary)"}
-                open={open}
-                onOpen={onOpen}
-                choices={choices(hatId)}
-                days={days}
-                onPlace={onPlace}
-                current={null}
-                surface="elevated"
-              />
-            ))}
-          </ul>
-          {(hidden > 0 || all) && tasks.length > TRAY_PREVIEW && (
-            <button type="button" className="mt-1 h-11 w-full rounded-xl text-sm font-semibold text-accent" aria-expanded={all} onClick={() => setAll(!all)}>
-              {all ? "Show fewer" : `Show ${hidden} more`}
-            </button>
-          )}
-        </>
+      {groups.length > 0 && (
+        <ul className="mt-2 overflow-hidden rounded-2xl bg-elevated">
+          {groups.map((group, index) => {
+            const hat = hatsById.get(group.hatId);
+            const name = hat?.name ?? "";
+            const opened = isOpen(group.hatId);
+            const listId = `to-place-${group.hatId}`;
+            const count = group.tasks.length;
+            const showAll = full[group.hatId] || count <= GROUP_PREVIEW;
+            const shown = showAll ? group.tasks : group.tasks.slice(0, GROUP_PREVIEW);
+            return (
+              <li key={group.hatId} className={index > 0 ? "border-t border-line" : undefined}>
+                <button
+                  type="button"
+                  className="flex h-12 w-full items-center gap-3 px-4 text-start"
+                  aria-expanded={opened}
+                  aria-controls={listId}
+                  onClick={() => setToggled((current) => ({ ...current, [group.hatId]: !opened }))}
+                >
+                  <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: hat?.color ?? "var(--tertiary)" }} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{name}</span>
+                  <span className="text-xs text-secondary tabular-nums">
+                    {count} {count === 1 ? "task" : "tasks"}
+                  </span>
+                  <ChevronDown className={`size-4 text-tertiary transition-transform${opened ? " rotate-180" : ""}`} strokeWidth={2.6} aria-hidden="true" />
+                </button>
+                {opened && (
+                  <ul id={listId} className="border-t border-line" aria-label={`${name} tasks to place`}>
+                    {shown.map((task) => (
+                      <TaskLine key={task.id} task={task} hatId={group.hatId} open={open} onOpen={onOpen} choices={choices(group.hatId)} days={days} onPlace={onPlace} current={null} />
+                    ))}
+                    {!showAll && (
+                      <li className="border-t border-line">
+                        <button type="button" className="h-11 w-full text-sm font-semibold text-accent" onClick={() => setFull((current) => ({ ...current, [group.hatId]: true }))}>
+                          Show {count - GROUP_PREVIEW} more
+                        </button>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );
 }
 
-function TaskChip({
+/**
+ * One task in a list: a grip to drag it, its text, and Place (or Move to). The days it can go on
+ * open as a row of small chips under it.
+ */
+function TaskLine({
   task,
   hatId,
-  color,
   open,
   onOpen,
   choices,
   days,
   onPlace,
   current,
-  surface,
 }: {
   task: Task;
   hatId: string;
-  color: string;
   open: string | null;
   onOpen: (id: string | null) => void;
   choices: Allocation[];
   days: Day[];
   onPlace: (hatId: string, taskId: string, allocationId: string | null) => void;
   current: string | null;
-  /** The chip's own surface; its day choices use the other one so they stand out. */
-  surface: "canvas" | "elevated";
 }) {
   const drag = useDraggable({ id: `task:${task.id}`, data: { kind: "task", hatId, taskId: task.id, text: task.text } });
   const expanded = open === task.id;
-  const choiceSurface = surface === "canvas" ? "bg-elevated" : "bg-canvas";
+  const text = task.text || "Untitled task";
   return (
-    <li className={`rounded-xl ${surface === "canvas" ? "bg-canvas" : "bg-elevated"}`}>
-      <div className="flex items-center gap-1 ps-1">
+    <li className="border-t border-line first:border-t-0">
+      <div className="flex items-center">
         <button
           ref={drag.setNodeRef}
           type="button"
           data-drag="task"
           aria-label={`Move task ${task.text}`}
-          className="grid size-11 shrink-0 touch-none place-items-center"
+          className="grid size-11 shrink-0 touch-none place-items-center text-tertiary"
           {...drag.listeners}
           {...drag.attributes}
         >
-          <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
+          <GripVertical className="size-4" aria-hidden="true" />
         </button>
-        <span className={`min-w-0 flex-1 truncate text-sm${task.done ? " text-tertiary line-through" : ""}`}>{task.text || "Untitled task"}</span>
+        <span className={`min-w-0 flex-1 truncate text-sm${task.done ? " text-tertiary line-through" : ""}`}>{text}</span>
         {!task.done && (
           <button
             type="button"
-            className="h-11 shrink-0 px-3 text-sm font-semibold text-accent"
+            className="h-11 shrink-0 px-4 text-sm font-semibold text-accent"
             aria-expanded={expanded}
             onClick={() => onOpen(expanded ? null : task.id)}
           >
@@ -670,24 +697,25 @@ function TaskChip({
         )}
       </div>
       {expanded && (
-        <ul className="flex flex-col gap-1 px-2 pb-2" aria-label={`Days for ${task.text}`}>
-          {choices.length === 0 && <li className="px-2 py-2 text-sm text-tertiary">This role isn’t on a day yet. Add it to a day first.</li>}
+        <ul className="flex flex-wrap gap-2 pe-3 pb-3 ps-11" aria-label={`Days for ${task.text}`}>
+          {choices.length === 0 && <li className="py-2 text-sm text-tertiary">This role isn’t on a day yet. Add it to a day first.</li>}
           {choices.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
                 disabled={item.id === current}
-                className={`flex h-11 w-full items-center justify-between rounded-xl ${choiceSurface} px-3 text-sm font-medium disabled:text-tertiary`}
+                aria-current={item.id === current ? "true" : undefined}
+                className="flex h-11 items-center gap-1.5 rounded-full bg-fill px-4 text-sm font-semibold disabled:opacity-40"
                 onClick={() => onPlace(hatId, task.id, item.id)}
               >
-                <span>{days.find((day) => day.date === item.day)?.label ?? item.day}</span>
-                <span className="tabular-nums text-secondary">{item.hours}h</span>
+                {days.find((day) => day.date === item.day)?.label ?? item.day}
+                <span className="font-normal tabular-nums text-secondary">{item.hours}h</span>
               </button>
             </li>
           ))}
           {current && (
             <li>
-              <button type="button" className={`h-11 w-full rounded-xl ${choiceSurface} px-3 text-start text-sm font-medium text-danger`} onClick={() => onPlace(hatId, task.id, null)}>
+              <button type="button" className="h-11 rounded-full bg-fill px-4 text-sm font-semibold text-danger" onClick={() => onPlace(hatId, task.id, null)}>
                 Take off this day
               </button>
             </li>
