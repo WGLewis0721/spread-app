@@ -10,6 +10,9 @@ export default tseslint.config(
   {
     ignores: [
       "dist/**",
+      "dist-ios/**",
+      "dist-pages/**",
+      "ios/App/App/public/**",
       ".output/**",
       ".vercel/**",
       ".nitro/**",

@@ -124,9 +124,23 @@ export function setBackupEnabled(on: boolean) {
   }
 }
 
-/** A labelled copy before something risky (a restore). Resolves false if it could not be made. */
+/**
+ * A labelled copy before something risky (a restore). The planner is read before the first
+ * `await`, so the copy is the state as it was when this was called, even if the caller changes
+ * storage straight afterwards. Resolves false if the copy could not be made.
+ */
 export async function pinBackup(label: string): Promise<boolean> {
-  return runner ? runner.pin(label) : false;
+  if (!backupAvailable() || !started) return false;
+  try {
+    const payload = collectFullPayload(localStorage, new Date(), deviceId);
+    if (payload.roster.length === 0) return false;
+    const textPromise = fullBackupText(payload);
+    const plugin = await cloudPlugin();
+    const result = await plugin.backupWrite({ text: await textPromise, pin: label });
+    return result.verified;
+  } catch {
+    return false;
+  }
 }
 
 export async function backupNow(): Promise<void> {

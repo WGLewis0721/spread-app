@@ -14,6 +14,8 @@ import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/sp
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import { isNativeApp } from "@/lib/spread/native";
 import { prepareNativeStorage } from "@/lib/spread/native-mirror";
+import { backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
+import type { RemoteBackup } from "@/lib/spread/cloud";
 import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
@@ -27,7 +29,7 @@ import { SpreadStack } from "@/spread/components/landing-stack";
 import { LandingWaitlist } from "@/spread/components/landing-waitlist";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 
-type Sheet = "more" | "new" | "license" | null;
+type Sheet = "more" | "new" | "license" | "icloud" | null;
 
 const useClientLayout = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -56,7 +58,9 @@ export function SpreadApp() {
     // before the first read. It never waits long and never throws.
     let live = true;
     void prepareNativeStorage().then(() => {
-      if (live) boot();
+      if (!live) return;
+      boot();
+      void startCloudBackup();
     });
     return () => {
       live = false;
@@ -1322,6 +1326,7 @@ function AppSheet({ sheet, setSheet, onPrint }: { sheet: Sheet; setSheet: (sheet
           {sheet === "more" && <MoreSheet setSheet={go} onPrint={onPrint} />}
           {sheet === "new" && <NewLifeSheet onClose={close} />}
           {sheet === "license" && <LicenseSheet onClose={close} />}
+          {sheet === "icloud" && <ICloudSheet onBack={() => go("more")} />}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -1506,6 +1511,27 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
   );
 }
 
+/** Apply a confirmed restore. Returns what to tell the person and whether the sheet can close. */
+function applyRestore(backup: ParsedBackup): { ok: boolean; message: string } {
+  const state = useSpread.getState();
+  if (backup.kind === "full") {
+    const result = state.restoreAsNew(backup.payload);
+    if (!result.ok) {
+      const missing = result.reason === "no-room" ? result.needed - result.free : 0;
+      return {
+        ok: false,
+        message:
+          result.reason === "no-room"
+            ? `Not enough room. Remove ${missing} profile${missing === 1 ? "" : "s"} first, then try again.`
+            : "Couldn’t add the profiles. Nothing was changed.",
+      };
+    }
+    return { ok: true, message: result.added === 1 ? "Profile added." : `${result.added} profiles added.` };
+  }
+  state.replaceData(backup.data);
+  return { ok: true, message: "Backup restored." };
+}
+
 function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
   const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
@@ -1513,8 +1539,6 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const accent = useSpread((s) => s.accent);
   const setAccent = useSpread((s) => s.setAccent);
   const copyLastWeek = useSpread((s) => s.copyLastWeek);
-  const replaceData = useSpread((s) => s.replaceData);
-  const restoreAsNew = useSpread((s) => s.restoreAsNew);
   const data = useSpread((s) => s.data);
   const fileRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<ParsedBackup | null>(null);
@@ -1579,6 +1603,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       },
     },
     { label: "Restore Spread", icon: "icon-restore.svg", run: () => fileRef.current?.click() },
+    ...(backupAvailable() ? [{ label: "iCloud Backup", run: () => setSheet("icloud") }] : []),
     { label: "License key", run: () => setSheet("license") },
   ];
   // WKWebView can't print, and the installed app has no license step.
@@ -1600,7 +1625,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        {native ? "Everything stays on this iPhone." : license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
+        {native ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
       </Dialog.Description>
       <ProfilesSection
         onSwitched={(who) => {
@@ -1683,26 +1708,10 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
         onClose={() => setBackup(null)}
         onConfirm={() => {
           if (!backup) return;
-          if (backup.kind === "full") {
-            const result = restoreAsNew(backup.payload);
-            if (!result.ok) {
-              toast(
-                result.reason === "no-room"
-                  ? `Not enough room. Remove ${result.needed - result.free} profile${result.needed - result.free === 1 ? "" : "s"} first, then try again.`
-                  : "Couldn’t add the profiles. Nothing was changed.",
-              );
-              setBackup(null);
-              return;
-            }
-            setBackup(null);
-            setSheet(null);
-            toast(result.added === 1 ? "Profile added." : `${result.added} profiles added.`);
-            return;
-          }
-          replaceData(backup.data);
+          const outcome = applyRestore(backup);
           setBackup(null);
-          setSheet(null);
-          toast("Backup restored.");
+          if (outcome.ok) setSheet(null);
+          toast(outcome.message);
         }}
       />
       <p className="mt-5 text-xs text-tertiary">Spread · Gray Matter. Data stays on this device.</p>
@@ -1741,6 +1750,134 @@ function RestoreDialog({
         </AlertDialog.Content>
       </AlertDialog.Portal>
     </AlertDialog.Root>
+  );
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function ICloudSheet({ onBack }: { onBack: () => void }) {
+  const state = useCloudBackup();
+  const status = currentBackupStatus(state);
+  const [backups, setBackups] = useState<RemoteBackup[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [picked, setPicked] = useState<ParsedBackup | null>(null);
+
+  useEffect(() => {
+    void refreshBackupStatus();
+  }, []);
+
+  async function openList() {
+    setBusy(true);
+    try {
+      setBackups(await listBackups());
+    } catch {
+      toast("Couldn’t reach iCloud. Try again.");
+    }
+    setBusy(false);
+  }
+
+  async function choose(item: RemoteBackup) {
+    setBusy(true);
+    try {
+      const text = await readBackupText(item.deviceId, item.name);
+      const parsed = await parseAnyBackup(text);
+      if (!parsed) toast("That backup is damaged, so it was not opened.");
+      else setPicked(parsed);
+    } catch {
+      toast("Couldn’t open that backup. If it is still downloading from iCloud, try again in a moment.");
+    }
+    setBusy(false);
+  }
+
+  const rows = backups ?? [];
+  return (
+    <>
+      <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
+        <button type="button" aria-label="Back" onClick={onBack} className="grid size-11 place-items-center rounded-full text-secondary">
+          <ChevronRight className="size-5 rotate-180" strokeWidth={2.7} />
+        </button>
+        <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
+        <span />
+      </div>
+      <Dialog.Title className="text-2xl font-bold tracking-tight">iCloud Backup</Dialog.Title>
+      <Dialog.Description className="mt-1 text-sm text-secondary">
+        Spread keeps a copy of everything in your own iCloud. It is never sent anywhere else.
+      </Dialog.Description>
+      <div className="mt-4 rounded-3xl bg-canvas px-4 py-3" role="status" aria-live="polite">
+        <p className={cn("text-base font-semibold", status.tone === "problem" && "text-danger")}>{status.title}</p>
+        {status.detail ? <p className="mt-0.5 text-sm text-secondary">{status.detail}</p> : null}
+      </div>
+      <div className="stack-rows mt-4 overflow-hidden rounded-3xl bg-canvas">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={state.enabled}
+          className="flex h-12 w-full items-center justify-between border-b border-line px-4 text-left text-base active:bg-fill"
+          onClick={() => setBackupEnabled(!state.enabled)}
+        >
+          Back up automatically
+          <span className={cn("flex h-7 w-12 items-center rounded-full p-0.5 transition-colors", state.enabled ? "bg-accent" : "bg-fill")} aria-hidden="true">
+            <span className="block size-6 rounded-full bg-white transition-transform" style={{ transform: state.enabled ? "translateX(20px)" : "none" }} />
+          </span>
+        </button>
+        <button
+          type="button"
+          disabled={!state.enabled || state.runner.busy}
+          className="flex h-12 w-full items-center border-b border-line px-4 text-left text-base active:bg-fill disabled:text-tertiary"
+          onClick={() => void backupNow().then(() => refreshBackupStatus())}
+        >
+          Back up now
+        </button>
+        <button type="button" disabled={busy} className="flex h-12 w-full items-center px-4 text-left text-base active:bg-fill disabled:text-tertiary" onClick={() => void openList()}>
+          Restore from iCloud
+        </button>
+      </div>
+      {backups !== null && (
+        <div className="mt-4 overflow-hidden rounded-3xl bg-canvas" role="list" aria-label="Backups in iCloud">
+          {rows.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-secondary">No backups found yet.</p>
+          ) : (
+            rows.slice(0, 30).map((item) => (
+              <button
+                key={`${item.deviceId}/${item.name}`}
+                type="button"
+                role="listitem"
+                disabled={busy}
+                className="flex w-full items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-left active:bg-fill last:border-b-0"
+                onClick={() => void choose(item)}
+              >
+                <span>
+                  <span className="block text-base">
+                    {new Date(item.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </span>
+                  <span className="block text-xs text-secondary">
+                    {item.own ? "This device" : "Another device"}
+                    {item.pin ? ` · saved before ${item.pin.replace(/^pre-/, "").replace(/-/g, " ")}` : ""} · {formatBytes(item.bytes)}
+                    {item.downloaded ? "" : " · in iCloud"}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
+              </button>
+            ))
+          )}
+        </div>
+      )}
+      <RestoreDialog
+        backup={picked}
+        onClose={() => setPicked(null)}
+        onConfirm={() => {
+          if (!picked) return;
+          const outcome = applyRestore(picked);
+          setPicked(null);
+          toast(outcome.message);
+          if (outcome.ok) onBack();
+        }}
+      />
+    </>
   );
 }
 
