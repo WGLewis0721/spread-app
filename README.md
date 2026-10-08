@@ -80,7 +80,7 @@ node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/
 npm run build
 ```
 
-`npm run test:spread` is the whole planner suite, including the iOS storage snapshot and backup tests. The four test files above are what the Pages workflow runs. `npm test` also runs the app-builder scaffolding tests, which expect a `.grok/` folder this repo does not have.
+`npm run test:spread` is the whole planner suite, including the iOS storage snapshot, backup, merge and sync simulation tests. Swift: `swift test --package-path ios/App/SpreadCloudCore`. The iCloud features are off unless built with `VITE_SPREAD_CLOUD_BACKUP=1` / `VITE_SPREAD_CLOUD_SYNC=1`; see `docs/IOS_RELEASE.md`. The four test files above are what the Pages workflow runs. `npm test` also runs the app-builder scaffolding tests, which expect a `.grok/` folder this repo does not have.
 
 ## Golden checkpoints
 
