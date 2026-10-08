@@ -24,6 +24,9 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "syncAck", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncNow", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncResume", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncClearPause", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncBrowse", returnType: CAPPluginReturnPromise),
     ]
 
     private let io = DispatchQueue(label: "com.graymatter.spread.cloud.io", qos: .utility)
@@ -159,8 +162,31 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func syncStart(_ call: CAPPluginCall) {
-        sync.start()
+        Task {
+            await sync.start()
+            call.resolve()
+        }
+    }
+
+    /// Allows sending. Refused while sync is paused for any reason.
+    @objc func syncResume(_ call: CAPPluginCall) {
+        Task {
+            if await sync.resume() { call.resolve() } else { call.reject("Sync is paused", "paused") }
+        }
+    }
+
+    /// The person explicitly chose to upload to the current iCloud again.
+    @objc func syncClearPause(_ call: CAPPluginCall) {
+        sync.clearPause()
         call.resolve()
+    }
+
+    /// Read-only: fetch and list. Never creates the zone or sends. Rejects when iCloud was not reached.
+    @objc func syncBrowse(_ call: CAPPluginCall) {
+        Task {
+            await sync.start()
+            if await sync.fetchNow() { call.resolve() } else { call.reject("Couldn't reach iCloud", "fetchFailed") }
+        }
     }
 
     @objc func syncStop(_ call: CAPPluginCall) {
@@ -233,7 +259,7 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func syncNow(_ call: CAPPluginCall) {
         Task {
             await sync.sendNow()
-            await sync.fetchNow()
+            _ = await sync.fetchNow()
             call.resolve()
         }
     }

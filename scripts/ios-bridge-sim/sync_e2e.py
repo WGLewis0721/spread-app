@@ -151,6 +151,19 @@ with sync_playwright() as p:
     close_sheet(third)
     check('the third device’s own task is untouched', tasks_on(third) == ['Third device task'])
 
+    # A paused sync (iCloud copy removed) offers only an explicit, confirmed upload.
+    phone.evaluate("window.__syncStatus = { zoneDeleted: true }; window.__resumed = 0")
+    phone.evaluate("(window.__syncHandlers.syncStatus || []).forEach((h) => h())"); phone.wait_for_timeout(800)
+    open_icloud(phone)
+    text = body(phone)
+    check('a removed iCloud copy pauses sync and says it was not uploaded again', 'was not uploaded again' in text, text[:300])
+    check('the only way forward is an explicit upload', 'Upload this profile to this iCloud again' in text)
+    phone.get_by_text('Upload this profile to this iCloud again').click(); phone.wait_for_timeout(500)
+    check('it asks first', 'Nothing on this device changes' in body(phone) and phone.evaluate("window.__clearedPause || 0") == 0)
+    phone.get_by_role('button', name='Upload', exact=True).click(); phone.wait_for_timeout(1500)
+    check('after confirming the pause is cleared and sending resumes', phone.evaluate("window.__clearedPause") == 1 and phone.evaluate("window.__resumed") >= 1)
+    close_sheet(phone)
+
     check('no request left the app', not external, str(external))
     check('no page errors', not errors, str(errors))
     b.close()

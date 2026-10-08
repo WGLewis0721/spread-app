@@ -25,6 +25,9 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         var needsRepair = false
     }
 
+    /// Set by `resume()`. Until then the engine only fetches: nothing is created or sent in iCloud.
+    private var resumed = false
+
     /// Temp payload files for records handed to CloudKit; removed once the send finishes.
     private var tempFiles: [URL] = []
     private let tempLock = NSLock()
@@ -41,6 +44,10 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         self.container = CKContainer(identifier: SpreadCloudConfig.containerId)
         self.emit = emit
         super.init()
+        let pause = storage.pause
+        status.zoneDeleted = pause.zoneDeleted
+        status.accountChanged = pause.accountChanged
+        status.needsRepair = storage.needsRepair
     }
 
     // MARK: Control
@@ -57,22 +64,34 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         emit("syncStatus")
     }
 
-    func start() {
+    /// Starts fetching only. It never creates the iCloud zone or sends anything: the web app calls
+    /// `resume()` once it knows the account matches and the person has agreed to upload.
+    func start() async {
         if engine != nil { return }
+        var pause = storage.pause
+        // The account check runs here, not only in the web app, so a relaunch cannot skip it.
+        if !pause.isPaused, let bound = pause.boundAccount, let live = await userKey(), live != bound {
+            storage.updatePause { $0.accountChanged = "switchAccounts" }
+            pause = storage.pause
+        }
+        if engine != nil { return }
+        if pause.isPaused {
+            update { (status: inout Status) in
+                status.running = false
+                status.zoneDeleted = pause.zoneDeleted
+                status.accountChanged = pause.accountChanged
+                status.needsRepair = storage.needsRepair
+            }
+            return
+        }
         var serialization: CKSyncEngine.State.Serialization?
         if let data = storage.loadEngineState() {
             serialization = try? JSONDecoder().decode(CKSyncEngine.State.Serialization.self, from: data)
         }
         var configuration = CKSyncEngine.Configuration(database: container.privateCloudDatabase, stateSerialization: serialization, delegate: self)
         configuration.automaticallySync = true
-        let created = CKSyncEngine(configuration)
-        created.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
-        engine = created
-        // Anything still in the outbox is sent again. If iCloud has a newer version it rejects the
-        // write and hands that version to the web app, which merges it, so this cannot overwrite.
-        var resend: [CKSyncEngine.PendingRecordZoneChange] = []
-        for name in storage.outboxNames { resend.append(.saveRecord(recordID(for: name))) }
-        if !resend.isEmpty { created.state.add(pendingRecordZoneChanges: resend) }
+        engine = CKSyncEngine(configuration)
+        resumed = false
         update { (status: inout Status) in
             status.running = true
             status.accountChanged = nil
@@ -84,8 +103,57 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         }
     }
 
+    /// Allow sending: create the zone if needed and send what the outbox holds. Refused while paused.
+    /// If iCloud has a newer version of an item it rejects the write and hands that version to the
+    /// web app, which merges it, so this cannot overwrite.
+    @discardableResult
+    func resume() async -> Bool {
+        let pause = storage.pause
+        guard !pause.isPaused, let engine else { return false }
+        if pause.boundAccount == nil, let live = await userKey() {
+            storage.updatePause { $0.boundAccount = live }
+        }
+        resumed = true
+        engine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
+        var resend: [CKSyncEngine.PendingRecordZoneChange] = []
+        for name in storage.outboxNames { resend.append(.saveRecord(recordID(for: name))) }
+        if !resend.isEmpty { engine.state.add(pendingRecordZoneChanges: resend) }
+        return true
+    }
+
+    /// The person chose to upload this device's data to the current iCloud again. Clears the pause
+    /// and the old account binding and forgets the old engine state; the outbox is kept.
+    func clearPause() {
+        engine = nil
+        resumed = false
+        storage.updatePause { $0 = SyncPause() }
+        storage.resetCloudState()
+        update { (status: inout Status) in
+            status.running = false
+            status.zoneDeleted = false
+            status.accountChanged = nil
+        }
+    }
+
+    private func pauseNow(zoneDeleted: Bool = false, account: String? = nil) {
+        storage.updatePause {
+            if zoneDeleted { $0.zoneDeleted = true }
+            if let account { $0.accountChanged = account }
+        }
+        engine?.cancelOperations()
+        engine = nil
+        resumed = false
+        let pause = storage.pause
+        update { (status: inout Status) in
+            status.running = false
+            status.zoneDeleted = pause.zoneDeleted
+            status.accountChanged = pause.accountChanged
+        }
+    }
+
     func stop() {
         engine = nil
+        resumed = false
         update { (status: inout Status) in status.running = false }
     }
 
@@ -93,7 +161,7 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
     @discardableResult
     func queue(_ items: [SyncItemDTO]) -> Bool {
         guard storage.putOutbox(items) else { return false }
-        guard let engine else { return true }
+        guard let engine, resumed else { return true }
         var changes: [CKSyncEngine.PendingRecordZoneChange] = []
         for item in items { changes.append(.saveRecord(recordID(for: item.recordName))) }
         engine.state.add(pendingRecordZoneChanges: changes)
@@ -109,11 +177,20 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         engine.state.remove(pendingRecordZoneChanges: removals)
     }
 
-    func fetchNow() async {
-        try? await engine?.fetchChanges()
+    /// True when iCloud was reached. False means "couldn't tell", which is not "nothing there".
+    func fetchNow() async -> Bool {
+        guard let engine else { return false }
+        do {
+            try await engine.fetchChanges()
+            return true
+        } catch {
+            update { (status: inout Status) in status.lastError = "fetchFailed" }
+            return false
+        }
     }
 
     func sendNow() async {
+        guard resumed else { return }
         try? await engine?.sendChanges()
     }
 
@@ -136,14 +213,15 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
         case .accountChange(let change):
             switch change.changeType {
             case .signIn:
-                self.update { (status: inout Status) in status.accountChanged = nil }
+                // Signing back in does not lift a pause: only the person can, explicitly.
+                break
             case .signOut:
                 // Keep every local change. Sync waits until the person decides what to do.
                 storage.resetCloudState()
-                self.update { (status: inout Status) in status.accountChanged = "signOut" }
+                pauseNow(account: "signOut")
             case .switchAccounts:
                 storage.resetCloudState()
-                self.update { (status: inout Status) in status.accountChanged = "switchAccounts" }
+                pauseNow(account: "switchAccounts")
             @unknown default:
                 break
             }
@@ -152,7 +230,7 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
             for deletion in changes.deletions where deletion.zoneID == Self.zoneID {
                 // The person (or iCloud storage management) removed the data. Never re-upload silently.
                 storage.resetCloudState()
-                self.update { (status: inout Status) in status.zoneDeleted = true }
+                pauseNow(zoneDeleted: true)
             }
 
         case .fetchedRecordZoneChanges(let changes):
@@ -200,8 +278,8 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
                 emit("syncInbound")
             }
         case .zoneNotFound:
-            syncEngine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
-            syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(failure.record.recordID)])
+            // The iCloud copy was removed. Do not recreate it and re-upload on our own.
+            pauseNow(zoneDeleted: true)
         case .unknownItem:
             storage.setSystemFields(nil, for: name)
             syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(failure.record.recordID)])

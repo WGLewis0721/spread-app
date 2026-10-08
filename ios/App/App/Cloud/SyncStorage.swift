@@ -15,6 +15,17 @@ struct SyncItemDTO: Codable, Equatable {
     var recordName: String { "\(syncId)|\(itemId)" }
 }
 
+/// Why sync must not send, kept on disk so a relaunch cannot forget it.
+struct SyncPause: Codable, Equatable {
+    var zoneDeleted = false
+    /// "signOut" or "switchAccounts"
+    var accountChanged: String?
+    /// The iCloud account this device's sync was set up with.
+    var boundAccount: String?
+
+    var isPaused: Bool { zoneDeleted || accountChanged != nil }
+}
+
 /// Everything the sync engine must not lose across a relaunch, as small JSON files in
 /// Application Support. The files are excluded from device backups: restoring a phone from
 /// another phone's backup must not inherit that phone's change tokens or half-sent changes.
@@ -24,6 +35,7 @@ final class SyncStorage {
     private var outbox: [String: SyncItemDTO]
     private var inbox: [String: SyncItemDTO]
     private var systemFields: [String: Data]
+    private var pauseState: SyncPause
     /// Set when a queue file was unreadable (moved aside) or a write failed. The web app is told.
     private(set) var needsRepair = false
 
@@ -40,6 +52,7 @@ final class SyncStorage {
         outbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("outbox.json"), repair: &repair) ?? [:]
         inbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("inbox.json"), repair: &repair) ?? [:]
         systemFields = SyncStorage.load([String: Data].self, from: folder.appendingPathComponent("system-fields.json"), repair: &repair) ?? [:]
+        pauseState = SyncStorage.load(SyncPause.self, from: folder.appendingPathComponent("pause.json"), repair: &repair) ?? SyncPause()
         needsRepair = repair
     }
 
@@ -64,6 +77,20 @@ final class SyncStorage {
             needsRepair = true
             return false
         }
+    }
+
+    // MARK: Pause (durable)
+
+    var pause: SyncPause {
+        lock.lock(); defer { lock.unlock() }
+        return pauseState
+    }
+
+    @discardableResult
+    func updatePause(_ change: (inout SyncPause) -> Void) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        change(&pauseState)
+        return save(pauseState, as: "pause.json")
     }
 
     // MARK: Engine state

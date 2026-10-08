@@ -43,6 +43,9 @@
       // --- Sync: a fake CKSyncEngine in front of a cloud the test harness owns (window.__cloudSave / __cloudChanges).
       async syncStart() { engine().started = true; },
       async syncStop() { engine().started = false; },
+      async syncResume() { if (window.__syncStatus && (window.__syncStatus.zoneDeleted || window.__syncStatus.accountChanged)) throw new Error('paused'); window.__resumed = (window.__resumed || 0) + 1; },
+      async syncClearPause() { window.__syncStatus = {}; window.__clearedPause = (window.__clearedPause || 0) + 1; },
+      async syncBrowse() { if (window.__browseFails) throw new Error('fetchFailed'); engine().started = true; await flush(); },
       async syncQueue(o) { const e = engine(); for (const r of o.items) { const n = r.syncId + '|' + r.itemId; e.outbox[n] = r; e.sending.add(n); } await flush(); },
       async syncInbox() { await flush(); return { items: Object.values(engine().inbox) }; },
       async syncOutbox() { return { names: Object.keys(engine().outbox) }; },

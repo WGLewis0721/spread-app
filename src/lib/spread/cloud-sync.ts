@@ -195,6 +195,13 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
   const native = useCloudSync.getState().native;
   if (native?.accountKey && !localStorage.getItem(accountKeyKey(syncId))) localStorage.setItem(accountKeyKey(syncId), native.accountKey);
   await created.start();
+  // Only now may native send: the engine is up, the account matches and nothing is paused.
+  try {
+    await (await cloudPlugin()).syncResume();
+  } catch {
+    await refreshNative();
+    return;
+  }
   void profileId;
 }
 
@@ -249,8 +256,8 @@ export async function loadCloudProfiles(): Promise<CloudProfileSummary[]> {
   const plugin = await cloudPlugin();
   useCloudSync.setState({ linking: true });
   try {
-    await plugin.syncStart();
-    await plugin.syncNow();
+    // Read-only: nothing is created or sent in iCloud while the person is only looking.
+    await plugin.syncBrowse();
     const { items } = await plugin.syncInbox();
     const parsed = items.map((row) => ({ syncId: row.syncId, itemId: row.itemId, deleted: row.deleted, at: row.at, fields: safeParse(row.fields) }));
     const cloud = summarizeCloud(parsed);
@@ -342,6 +349,18 @@ export async function linkAddCopy(cloud: CloudProfileSummary): Promise<string | 
   await writeChain;
   await plugin.syncAck({ names: mine.map((row) => `${row.syncId}|${row.itemId}`) });
   return id;
+}
+
+/** The person confirmed: lift the pause and upload this profile to the iCloud that is signed in now. */
+export async function uploadAgain(): Promise<void> {
+  const plugin = await cloudPlugin();
+  const id = activeSyncId;
+  await plugin.syncClearPause();
+  if (id) localStorage.removeItem(accountKeyKey(id));
+  const s = useSpread.getState();
+  const profile = s.profiles.find((p) => p.id === s.activeId);
+  await stopSession();
+  if (profile?.syncId) await startSessionFor(profile.id, profile.syncId, profile.name);
 }
 
 export async function unlink(): Promise<void> {

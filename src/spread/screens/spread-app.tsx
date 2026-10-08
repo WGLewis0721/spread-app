@@ -16,7 +16,7 @@ import { isNativeApp } from "@/lib/spread/native";
 import { prepareNativeStorage } from "@/lib/spread/native-mirror";
 import { backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
 import type { RemoteBackup } from "@/lib/spread/cloud";
-import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, useCloudSync } from "@/lib/spread/cloud-sync";
+import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, uploadAgain, useCloudSync } from "@/lib/spread/cloud-sync";
 import { describeConflict, describeSync } from "@/lib/spread/sync-labels";
 import { canKeepBoth } from "@/lib/spread/sync-state";
 import type { LinkChoice } from "@/lib/spread/sync-link";
@@ -1915,6 +1915,7 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
   const state = useCloudSync();
   const profileName = useSpread((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? "this profile");
   const [confirmOff, setConfirmOff] = useState(false);
+  const [confirmAgain, setConfirmAgain] = useState(false);
   const said = describeSync({
     linked: state.linked,
     paused: state.paused,
@@ -1964,12 +1965,34 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
             <button type="button" disabled={Boolean(state.paused)} className={cn(rowClass, "border-b border-line")} onClick={() => void syncNowAction()}>
               Sync now
             </button>
+            {state.paused && (
+              <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => setConfirmAgain(true)}>
+                Upload this profile to this iCloud again
+              </button>
+            )}
             <button type="button" className={cn(rowClass, "text-danger")} onClick={() => setConfirmOff(true)}>
               Turn off sync for this profile
             </button>
           </>
         )}
       </div>
+      <AlertDialog.Root open={confirmAgain} onOpenChange={setConfirmAgain}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+          <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+            <AlertDialog.Title className="text-center text-base font-semibold">Upload {profileName} again?</AlertDialog.Title>
+            <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+              This sends {profileName} from this device to the iCloud account that is signed in now. Nothing on this device changes.
+            </AlertDialog.Description>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+              <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => void uploadAgain()}>
+                Upload
+              </AlertDialog.Action>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
       <AlertDialog.Root open={confirmOff} onOpenChange={setConfirmOff}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />

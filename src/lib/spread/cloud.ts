@@ -43,6 +43,12 @@ type SpreadCloudPlugin = {
   backupRead(options: { deviceId: string; name: string }): Promise<{ text: string }>;
   syncStart(): Promise<void>;
   syncStop(): Promise<void>;
+  /** Allow sending. Rejects ("paused") while sync is paused for any reason. */
+  syncResume(): Promise<void>;
+  /** The person explicitly chose to upload to the current iCloud again. */
+  syncClearPause(): Promise<void>;
+  /** Read-only fetch for the link screen: never creates or sends. Rejects when iCloud was not reached. */
+  syncBrowse(): Promise<void>;
   syncQueue(options: { items: SyncRowDTO[] }): Promise<void>;
   syncInbox(): Promise<{ items: SyncRowDTO[] }>;
   syncOutbox(): Promise<{ names: string[] }>;
