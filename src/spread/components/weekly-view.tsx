@@ -200,7 +200,7 @@ export function WeeklyView({
                   key={`${item.hatId}:${item.day}`}
                   item={item}
                   name={hatsById.get(item.hatId)?.name ?? ""}
-                  color={hatsById.get(item.hatId)?.color ?? "#8E8E93"}
+                  color={hatsById.get(item.hatId)?.color ?? "var(--tertiary)"}
                   onAdd={() => withUndo(`Added to ${item.dayLabel}.`, () => moveSpreadToDay(item.hatId, item.day, item.hours))}
                 />
               ))}
@@ -268,7 +268,7 @@ export function WeeklyView({
         {active ? (
           <DragCard
             name={active.kind === "task" ? active.text : (hatsById.get(active.hatId)?.name ?? "")}
-            color={hatsById.get(active.hatId)?.color ?? "#8E8E93"}
+            color={hatsById.get(active.hatId)?.color ?? "var(--tertiary)"}
           />
         ) : null}
       </DragOverlay>
@@ -552,7 +552,7 @@ function ToPlaceTray({
               key={task.id}
               task={task}
               hatId={hatId}
-              color={hatsById.get(hatId)?.color ?? "#8E8E93"}
+              color={hatsById.get(hatId)?.color ?? "var(--tertiary)"}
               open={open}
               onOpen={onOpen}
               choices={choices(hatId)}
