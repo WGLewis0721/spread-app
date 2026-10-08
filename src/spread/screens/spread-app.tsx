@@ -25,6 +25,7 @@ import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
+import { deriveLocalStatus, getSaveFacts, subscribeSaveFacts } from "@/lib/spread/local-status";
 import { openTasksOf } from "@/lib/spread/task-rollover";
 import { completionHaptic } from "@/lib/spread/haptics";
 import { readViewContext, writeViewContext } from "@/lib/spread/view-context";
@@ -1707,6 +1708,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       <Dialog.Description className="mt-1 text-sm text-secondary">
         {native ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
       </Dialog.Description>
+      <LocalStatusRow />
       <ProfilesSection
         onSwitched={(who) => {
           toast(`Switched to ${who}.`);
@@ -2791,5 +2793,16 @@ function CarryOverSheet({ open, onClose }: { open: boolean; onClose: () => void 
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function LocalStatusRow() {
+  const facts = useSyncExternalStore(subscribeSaveFacts, getSaveFacts, getSaveFacts);
+  const status = deriveLocalStatus(facts, new Date());
+  return (
+    <div className="mt-3 rounded-2xl bg-canvas px-4 py-3" role="status">
+      <p className={cn("text-sm font-semibold", status.tone === "problem" && "text-danger")}>{status.title}</p>
+      <p className="mt-0.5 text-xs text-secondary">{status.detail}</p>
+    </div>
   );
 }

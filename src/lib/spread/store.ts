@@ -16,6 +16,7 @@ import {
   type Profile,
 } from "@/lib/spread/profiles";
 import { carryOpenTasks, type CarryPick } from "@/lib/spread/task-rollover";
+import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
 import { create } from "zustand";
@@ -258,15 +259,19 @@ let schemaLocked = false;
  */
 function put(key: string, value: string): boolean {
   if (schemaLocked) {
+    noteSaveFailed("newer");
     reportFailure("newer");
     return false;
   }
   try {
     localStorage.setItem(key, value);
   } catch (error) {
-    reportFailure(isFullError(error) ? "full" : "unavailable");
+    const kind = isFullError(error) ? "full" : "unavailable";
+    noteSaveFailed(kind);
+    reportFailure(kind);
     return false;
   }
+  noteSaved();
   failureReported = false;
   notifyStorageChanged();
   return true;
