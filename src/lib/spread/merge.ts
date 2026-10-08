@@ -149,7 +149,14 @@ export function mergeItems(input: MergeInput): MergeResult {
       const rv = r.fields[key];
       const bv = baseFields[key];
       let pick: Json | undefined;
-      if (sameValue(lv, rv)) pick = lv;
+      if (key.endsWith(ID_LIST_SUFFIX) && !sameValue(lv, rv) && isIdList(lv) && isIdList(rv) && (bv === undefined || isIdList(bv))) {
+        const listed = mergeIdList(bv ?? [], lv, rv);
+        if (!listed.ok) {
+          clashing.push(key);
+          continue;
+        }
+        pick = listed.value;
+      } else if (sameValue(lv, rv)) pick = lv;
       else if (sameValue(lv, bv)) pick = rv;
       else if (sameValue(rv, bv)) pick = lv;
       else {
@@ -166,6 +173,72 @@ export function mergeItems(input: MergeInput): MergeResult {
     log.push({ id, kind: "auto-merged", fields: Object.keys(combined).filter((key) => !sameValue(combined[key], baseFields[key])) });
   }
   return { merged, conflicts, log };
+}
+
+/** A field whose name ends in this holds an ordered list of ids and merges as a list, not as one value. */
+export const ID_LIST_SUFFIX = "$ids";
+
+function isIdList(value: Json | undefined): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+const inOrder = (list: string[], keep: Set<string>) => list.filter((id) => keep.has(id));
+const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((id, i) => id === b[i]);
+
+/**
+ * Three-way merge of an ordered list of ids (the tasks in a box, the spreads in a profile).
+ *
+ * - An id on both sides stays. An id only on one side is an addition if the base did not have it,
+ *   and a deletion by the other side if the base did.
+ * - If both sides ordered the shared ids differently, and neither matches the base, it is a
+ *   conflict. Otherwise the side that changed the order wins.
+ * - Additions go after the nearest earlier shared id from the list they came from. Additions at
+ *   the same spot are ordered by id, so the result is the same whichever side is "local".
+ */
+export function mergeIdList(base: string[], local: string[], remote: string[]): { ok: true; value: string[] } | { ok: false } {
+  const inLocal = new Set(local);
+  const inRemote = new Set(remote);
+  const inBase = new Set(base);
+  const common = new Set(local.filter((id) => inRemote.has(id)));
+
+  const orderL = inOrder(local, common);
+  const orderR = inOrder(remote, common);
+  let chosen: string[];
+  if (sameList(orderL, orderR)) chosen = orderL;
+  else {
+    const allInBase = [...common].every((id) => inBase.has(id));
+    const orderB = allInBase ? inOrder(base, common) : null;
+    if (orderB && sameList(orderL, orderB)) chosen = orderR;
+    else if (orderB && sameList(orderR, orderB)) chosen = orderL;
+    else return { ok: false };
+  }
+
+  const additions = (list: string[], other: Set<string>) => {
+    const out: { id: string; anchor: string | null; run: string }[] = [];
+    let anchor: string | null = null;
+    for (const id of list) {
+      if (common.has(id)) anchor = id;
+      else if (!other.has(id) && !inBase.has(id)) out.push({ id, anchor, run: "" });
+    }
+    return out;
+  };
+  const added = [...additions(local, inRemote), ...additions(remote, inLocal)];
+  const byAnchor = new Map<string | null, { id: string; origin: "l" | "r" }[]>();
+  for (const item of added) {
+    const origin: "l" | "r" = inLocal.has(item.id) ? "l" : "r";
+    const group = byAnchor.get(item.anchor) ?? [];
+    group.push({ id: item.id, origin });
+    byAnchor.set(item.anchor, group);
+  }
+  const arranged = (anchor: string | null) => {
+    const group = byAnchor.get(anchor) ?? [];
+    const runs = (["l", "r"] as const).map((origin) => group.filter((g) => g.origin === origin).map((g) => g.id)).filter((run) => run.length > 0);
+    runs.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    return runs.flat();
+  };
+  const value = [...arranged(null)];
+  for (const id of chosen) value.push(id, ...arranged(id));
+  return { ok: true, value };
 }
 
 export type Choice = "local" | "remote" | "both";
