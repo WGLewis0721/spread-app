@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Minus, Plus } from "lucide-react";
+import { Clock, Inbox, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { showUndoToast } from "@/spread/ui/undo-toast";
 import { clampHours, isoDate, remainingHours, weekDays, type Allocation, type Task } from "@/lib/spread/model";
@@ -197,12 +197,15 @@ export function WeeklyView({
           })}
         </div>
         {freeTime.kind === "suggestions" && (
-          <section aria-label="Free time" className="mt-3 rounded-3xl bg-elevated px-3 py-3">
-            <h2 className="px-1 text-base font-semibold">Free time</h2>
-            <p className="px-1 pt-1 text-xs text-secondary">Hours not on a day yet, each on the lightest day ahead. Tap to add an hour.</p>
-            <ul className="mt-2 flex flex-col gap-1">
+          <section aria-label="Free time" className="mt-4">
+            <h2 className="flex items-center gap-1.5 px-1 text-sm font-semibold text-accent">
+              <Clock className="size-4" strokeWidth={2.4} aria-hidden="true" />
+              Free time
+            </h2>
+            <p className="px-1 pt-0.5 text-xs text-secondary">Tap to add an hour on the lightest day ahead.</p>
+            <ul className="mt-2 flex flex-wrap gap-2">
               {freeTime.items.map((item) => (
-                <FreeTimeRow
+                <FreeTimeChip
                   key={`${item.hatId}:${item.day}`}
                   item={item}
                   name={hatsById.get(item.hatId)?.name ?? ""}
@@ -225,7 +228,7 @@ export function WeeklyView({
             onPlace={placeTask}
           />
         )}
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="mt-6 flex flex-col gap-3">
           {days.map((day, index) => {
             const items = allocations.filter((item) => item.day === day.date).sort((a, b) => a.order - b.order);
             return (
@@ -549,16 +552,22 @@ function ToPlaceTray({
     <section
       ref={setNodeRef}
       aria-label="To place"
-      className="mt-3 rounded-3xl bg-elevated px-3 py-3"
-      style={{ outline: hot ? "2px solid var(--accent)" : undefined }}
+      className={`mt-4 rounded-3xl border-2 border-dashed px-3 transition-colors ${
+        hot ? "border-accent bg-accent/10" : "border-tertiary/50"
+      } ${tasks.length === 0 ? "py-2" : "py-3"}`}
     >
-      <div className="flex items-center justify-between px-1">
-        <h2 className="text-base font-semibold">To place</h2>
-        <span className="text-xs text-secondary tabular-nums">{tasks.length}</span>
+      <div className="flex min-h-7 items-center gap-2 px-1">
+        <Inbox className="size-4 text-secondary" strokeWidth={2.4} aria-hidden="true" />
+        <h2 className="flex-1 text-sm font-semibold">To place</h2>
+        {tasks.length === 0 ? (
+          <span className="text-xs text-secondary">Drop a task here to take it off its day.</span>
+        ) : (
+          <span className="grid h-6 min-w-6 place-items-center rounded-full bg-fill px-2 text-xs font-semibold tabular-nums" aria-label={`${tasks.length} to place`}>
+            {tasks.length}
+          </span>
+        )}
       </div>
-      {tasks.length === 0 ? (
-        <p className="px-1 pt-2 text-sm text-tertiary">Every open task has a day.</p>
-      ) : (
+      {tasks.length === 0 ? null : (
         <>
           <ul className="mt-2 flex flex-col gap-1">
             {shown.map(({ hatId, task }) => (
@@ -573,7 +582,7 @@ function ToPlaceTray({
                 days={days}
                 onPlace={onPlace}
                 current={null}
-                surface="canvas"
+                surface="elevated"
               />
             ))}
           </ul>
@@ -670,16 +679,20 @@ function TaskChip({
   );
 }
 
-function FreeTimeRow({ item, name, color, onAdd }: { item: Suggestion; name: string; color: string; onAdd: () => void }) {
+function FreeTimeChip({ item, name, color, onAdd }: { item: Suggestion; name: string; color: string; onAdd: () => void }) {
   return (
     <li>
-      <button type="button" className="flex h-11 w-full items-center gap-2 rounded-xl bg-canvas px-3 text-start text-sm font-medium" onClick={onAdd}>
-        <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
-        <span className="min-w-0 flex-1 truncate">
-          {name} on {item.dayLabel}
-        </span>
-        <span className="tabular-nums text-secondary">{item.hours}h</span>
-        <Plus className="size-4 text-accent" strokeWidth={2.7} />
+      <button
+        type="button"
+        className="flex h-11 items-center gap-2 rounded-full bg-accent/10 ps-3 pe-4 text-sm font-semibold text-accent"
+        aria-label={`Add ${item.hours} ${item.hours === 1 ? "hour" : "hours"} of ${name} on ${item.dayLabel}`}
+        onClick={onAdd}
+      >
+        <Plus className="size-4" strokeWidth={2.7} aria-hidden="true" />
+        <span className="size-2 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
+        <span className="text-ink">{name}</span>
+        <span>{item.dayLabel.slice(0, 3)}</span>
+        <span className="tabular-nums opacity-70">{item.hours}h</span>
       </button>
     </li>
   );
