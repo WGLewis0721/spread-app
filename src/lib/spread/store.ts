@@ -102,7 +102,8 @@ type Store = {
   removeAllocation: (allocationId: string) => void;
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
   copyLastWeek: () => boolean;
-  replaceData: (data: SpreadData) => void;
+  /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
+  replaceData: (data: SpreadData) => boolean;
   restoreAsNew: (payload: FullBackupPayload) => RestoreResult;
   /** Put a merged planner from iCloud Sync into the open profile. Keeps the week being viewed. */
   applySynced: (data: SpreadData, name: string | null) => void;
@@ -768,6 +769,8 @@ export const useSpread = create<Store>((set, get) => ({
     return true;
   },
   replaceData: (incoming) => {
+    const open = get().profiles.find((profile) => profile.id === get().activeId);
+    if (open?.syncId) return false;
     const data = normalizeData(incoming);
     flushSpread();
     if (isNativeApp()) {
@@ -775,10 +778,20 @@ export const useSpread = create<Store>((set, get) => ({
       void pinBackup("pre-restore");
     }
     commit(set, data);
+    return true;
   },
   applySynced: (incoming, name) => {
     const data = normalizeData(incoming);
-    commit(set, data);
+    // A merge that did not reach storage must not look applied: the sync state would then run
+    // ahead of the saved planner, and the next pass would read the old planner as an edit that
+    // undoes iCloud's change. Throwing lets the session put its state back.
+    pending = null;
+    if (persistTimer !== null) {
+      window.clearTimeout(persistTimer);
+      persistTimer = null;
+    }
+    if (!put(activeStore, JSON.stringify(data))) throw new Error("couldn't save the synced changes");
+    set({ data });
     const { activeId, profiles } = get();
     const label = name ? cleanName(name) : "";
     if (label && activeId) {

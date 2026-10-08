@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { defaultData } from "./model.ts";
 import { PROFILE_LIMIT } from "./profiles.ts";
-import { isPristine, planLink, summarizeCloud, toItems } from "./sync-link.ts";
+import { isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems } from "./sync-link.ts";
 
 const row = (syncId: string, itemId: string, fields: Record<string, unknown> = {}, deleted = false, at = "2026-10-08T10:00:00Z") => ({ syncId, itemId, deleted, at, fields });
 
@@ -66,4 +66,14 @@ test("rows from the bridge that do not parse are skipped, not guessed at", () =>
     { itemId: "task:c", fields: "{}", v: "7", deleted: false, at: "t" },
   ]);
   assert.deepEqual(items.map((i) => i.id), ["task:a"]);
+});
+
+test("adopting is refused if the planner changed or another profile opened since the check", () => {
+  const empty = defaultData();
+  assert.equal(stillSafeToAdopt({ profileId: "p1" }, { profileId: "p1", data: empty }), true);
+  const typed = defaultData();
+  typed.weeks[typed.currentWeek].boxes[0].tasks.push({ id: "t", text: "typed meanwhile", done: false });
+  assert.equal(stillSafeToAdopt({ profileId: "p1" }, { profileId: "p1", data: typed }), false);
+  assert.equal(stillSafeToAdopt({ profileId: "p1" }, { profileId: "p2", data: empty }), false);
+  assert.equal(stillSafeToAdopt({ profileId: null }, { profileId: null, data: empty }), false);
 });

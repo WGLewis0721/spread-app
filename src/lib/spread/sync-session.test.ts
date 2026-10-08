@@ -108,8 +108,8 @@ function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S1") {
     newId: () => `n${clock++}`,
     now: () => `2026-10-08T12:${String(clock++ % 60).padStart(2, "0")}:00Z`,
   };
-  const session = createSyncSession(deps);
-  return { env, native, session, get state() { return saved; } };
+  const session = createSyncSession({ ...deps, apply: (...args) => deps.apply(...args) });
+  return { env, native, session, deps, get state() { return saved; } };
 }
 
 const taskIds = (d: ReturnType<typeof device>) => Object.values(d.env.data.weeks).flatMap((w) => w.boxes.flatMap((b) => b.tasks.map((t) => t.id))).sort();
@@ -387,4 +387,31 @@ test("the same session still syncs normally while its profile stays open", async
   h.release();
   await h.session.start();
   assert.ok(h.env.queued.some((row) => row.itemId === "task:a1"));
+});
+
+test("if iCloud's changes cannot be saved to the planner, sync state does not run ahead of it", async () => {
+  const cloud = new Cloud();
+  const seed = normalizeData(structuredClone(defaultData()));
+  const a = device(cloud, "phone", normalizeData(structuredClone(seed)));
+  const b = device(cloud, "pad", normalizeData(structuredClone(seed)));
+  await a.session.start();
+  addTask(a, "t1", "From phone");
+  await a.session.localChanged();
+  await settle(a);
+  // The pad's storage refuses the write until told otherwise.
+  const realApply = b.deps.apply;
+  let refuse = true;
+  b.deps.apply = (next, nm) => {
+    if (refuse) throw new Error("storage full");
+    realApply(next, nm);
+  };
+  await b.session.start();
+  await b.session.syncNow();
+  assert.ok(b.session.view().lastError);
+  assert.deepEqual(taskIds(b), [], "the planner is unchanged");
+  refuse = false;
+  await settle(a, b);
+  assert.deepEqual(taskIds(b), ["t1"], "the change arrives once storage works");
+  assert.deepEqual(taskIds(a), ["t1"], "and was never undone on the other device");
+  assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
 });

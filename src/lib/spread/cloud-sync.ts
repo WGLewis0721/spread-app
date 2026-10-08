@@ -15,7 +15,7 @@ import { weekKey } from "./model.ts";
 import { flushSpread, useSpread } from "./store.ts";
 import { collectEntries, onStorageChanged, pinSnapshot } from "./native-mirror.ts";
 import { isNativeApp } from "./native.ts";
-import { isPristine, planLink, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
+import { isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
 import { createSyncSession, type SessionView, type SyncSession, type SyncTransport } from "./sync-session.ts";
 import { adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
 import { PROFILE_LIMIT } from "./profiles.ts";
@@ -310,10 +310,17 @@ export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
   const state = adoptRemote(cloud.syncId, await deviceId(), remote, new Date().toISOString());
   writeStateFile(state);
   await writeChain;
-  const { data, name } = dataFromItems(remote, s.data.currentWeek);
-  s.applySynced(data, name);
+  // The steps above took a while. Look again, in the same breath as the replacement, so nothing
+  // typed in the meantime is overwritten.
+  const latest = useSpread.getState();
+  if (!stillSafeToAdopt({ profileId: s.activeId }, { profileId: latest.activeId, data: latest.data })) {
+    await deleteStateFile(cloud.syncId);
+    return false;
+  }
+  const { data, name } = dataFromItems(remote, latest.data.currentWeek);
+  latest.applySynced(data, name);
   await plugin.syncAck({ names: mine.map((row) => `${row.syncId}|${row.itemId}`) });
-  s.setSyncId(s.activeId, cloud.syncId);
+  latest.setSyncId(latest.activeId as string, cloud.syncId);
   return true;
 }
 

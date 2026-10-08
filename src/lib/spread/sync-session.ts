@@ -149,12 +149,14 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
       // 2. inbound, 3. apply
       if (rows.length > 0) {
         const merged = applyRemote(state, toItems(rows), deps.now());
-        state = merged.state;
         if (merged.dataChanged) {
           deps.snapshot("pre-sync");
-          const next = liveData(state, here.data.currentWeek);
+          const next = liveData(merged.state, here.data.currentWeek);
+          // If the planner cannot be updated, sync state stays as it was. Advancing it anyway
+          // would make the next pass read the unchanged planner as an edit undoing iCloud's change.
           deps.apply(next.data, next.name);
         }
+        state = merged.state;
         await deps.transport.ack(rows.map((row) => `${row.syncId}|${row.itemId}`));
       }
 

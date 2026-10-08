@@ -1532,7 +1532,9 @@ function applyRestore(backup: ParsedBackup): { ok: boolean; message: string } {
     }
     return { ok: true, message: result.added === 1 ? "Profile added." : `${result.added} profiles added.` };
   }
-  state.replaceData(backup.data);
+  if (!state.replaceData(backup.data)) {
+    return { ok: false, message: "This profile syncs with iCloud, so a restore would change your other devices too. Turn sync off for it first, or restore into a new profile." };
+  }
   return { ok: true, message: "Backup restored." };
 }
 

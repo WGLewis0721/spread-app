@@ -127,6 +127,17 @@ with sync_playwright() as p:
     check('and the phone has nothing left to decide', 'need your choice' not in body(phone) and 'needs your choice' not in body(phone), body(phone)[:300])
     close_sheet(phone)
 
+    # Restoring a file into a profile that syncs would delete on every device: it is refused.
+    legacy = json.dumps({'kind': 'spread-backup', 'version': 1, 'savedAt': '2026-10-01T00:00:00Z', 'data': {'hats': [{'id': 'work', 'name': 'Work', 'defaultHours': 8, 'color': '#34C759'}], 'weeks': {'2026-09-28': {'boxes': [{'hatId': 'work', 'hours': 8, 'tasks': [{'id': 't1', 'text': 'Old file task', 'done': False}]}]}}, 'currentWeek': '2026-09-28'}})
+    before_restore = tasks_on(phone)
+    phone.get_by_label('Settings').click(); phone.wait_for_timeout(500)
+    phone.set_input_files('input[type=file]', files=[{'name': 'old.spread', 'mimeType': 'application/octet-stream', 'buffer': legacy.encode()}])
+    phone.wait_for_timeout(500)
+    phone.get_by_role('button', name='Restore', exact=True).click(); phone.wait_for_timeout(800)
+    check('a file restore into a synced profile is refused with a reason', 'syncs with iCloud' in body(phone), body(phone)[:200])
+    check('and nothing in the profile changed', tasks_on(phone) == before_restore, str(tasks_on(phone)))
+    close_sheet(phone)
+
     # Linking a profile that has content never merges it with iCloud.
     pad.evaluate("window.__x = 1")
     third = device('third')

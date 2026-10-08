@@ -95,3 +95,12 @@ export function toItems(rows: { itemId: string; fields: string; v: string; delet
   }
   return out;
 }
+
+/**
+ * Joining iCloud data in place replaces the planner, so it is only allowed while the planner is
+ * still the empty one the person was shown. Called again immediately before the replacement,
+ * because the checks and downloads before it take seconds and the person may have typed meanwhile.
+ */
+export function stillSafeToAdopt(started: { profileId: string | null }, now: { profileId: string | null; data: SpreadData }): boolean {
+  return started.profileId !== null && started.profileId === now.profileId && isPristine(now.data);
+}
