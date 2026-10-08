@@ -12,6 +12,12 @@ export type Profile = {
   store: string;
   theme: ProfileTheme;
   accent: string | null;
+  /**
+   * Set only when the person links this profile to iCloud Sync. It names the profile across
+   * devices; the local `id` stays as it is. Unlinked profiles never carry one, so two devices'
+   * independent profiles can never be matched to each other by accident.
+   */
+  syncId?: string;
 };
 
 type RosterStorage = {
@@ -51,6 +57,7 @@ export function parseProfiles(raw: string | null): Profile[] {
         store,
         theme: isTheme(row.theme) ? row.theme : "system",
         accent: typeof row.accent === "string" ? row.accent : null,
+        ...(typeof row.syncId === "string" && row.syncId ? { syncId: row.syncId } : {}),
       });
       if (profiles.length === PROFILE_LIMIT) break;
     }

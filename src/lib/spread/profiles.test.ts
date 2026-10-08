@@ -66,3 +66,15 @@ test("a roster saved before the profile name keeps its weeks", () => {
   assert.equal(saved.has("spread.person"), false);
   assert.equal(migrateRoster(storage)[0].id, "a");
 });
+
+test("a sync id survives reading the roster, and unlinked profiles never gain one", () => {
+  const raw = JSON.stringify([
+    { id: "a", name: "Me", store: profileStore("a"), theme: "system", accent: null, syncId: "sync-1" },
+    { id: "b", name: "Other", store: profileStore("b"), theme: "system", accent: null },
+    { id: "c", name: "Bad", store: profileStore("c"), theme: "system", accent: null, syncId: 7 },
+  ]);
+  const roster = parseProfiles(raw);
+  assert.equal(roster[0].syncId, "sync-1");
+  assert.equal("syncId" in roster[1], false);
+  assert.equal("syncId" in roster[2], false);
+});
