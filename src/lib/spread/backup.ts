@@ -109,6 +109,15 @@ async function sha256Hex(text: string): Promise<string> {
 
 const SKIPPED_SETTINGS = new Set([LICENSE_KEY, SCHEMA_KEY, PROFILES_KEY, ACTIVE_PROFILE_KEY]);
 
+/**
+ * True once any listed profile has actually been saved. A full backup lists a default body for a
+ * profile that was never written (so a missing body always means damage), which means "the backup
+ * has stores" cannot be used to decide whether there is anything worth backing up.
+ */
+export function plannerHasSavedData(storage: KeyStore): boolean {
+  return parseProfiles(storage.getItem(PROFILES_KEY)).some((profile) => storage.getItem(profile.store) !== null);
+}
+
 export function collectFullPayload(storage: KeyStore, now: Date, deviceId: string | null): FullBackupPayload {
   const roster = parseProfiles(storage.getItem(PROFILES_KEY));
   const stores: Record<string, string> = {};
