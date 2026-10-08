@@ -30,10 +30,13 @@ g.EventSource = class {
     throw new TypeError("offline");
   }
 };
-(g.navigator as { sendBeacon?: unknown } | undefined) && ((g.navigator as { sendBeacon?: unknown }).sendBeacon = () => {
-  attempts++;
-  return false;
-});
+const nav = g.navigator as { sendBeacon?: unknown } | undefined;
+if (nav) {
+  nav.sendBeacon = () => {
+    attempts++;
+    return false;
+  };
+}
 
 const { useSpread } = await import("@/lib/spread/store");
 const local: Profile = { id: "local", name: "Local", store: profileStore("local"), theme: "light", accent: null };

@@ -174,3 +174,43 @@ Document rollback: revert PR before merge; if any persisted data shape changes, 
 Final report must include baseline main SHA, final branch SHA, PR URL, existing/added/modified/deferred matrix, implementation summary, files and architecture changes, reference links, tests/results, device/accessibility limitations, security risks, documentation changes, rollback plan, and explicit **READY FOR REVIEW** or **BLOCKED** recommendation.
 
 **Never merge or deploy without explicit human authorization.**
+
+---
+
+## Result matrix (filled in on `feature/spread-unified-ux`)
+
+Baseline: `5b0bdb05e4bfaf8dc86d7a8e081c6badf123e705` (main at the start of the work). Final SHA: the tip of this branch when the PR was opened (shown on the PR). Production, deploys and stored data were not touched.
+
+| # | Feature | Result | Where | Evidence and honest limits |
+| --- | --- | --- | --- | --- |
+| 3 | Design system | PASS | `docs/design/SPREAD_DESIGN_SYSTEM.md`, `src/spread/ui/undo-toast.tsx` | Tokens and patterns written down from the code that exists. No new colours, fonts or decorative styles; the three hard-coded grey fallbacks in the new week code were changed to `var(--tertiary)`. |
+| 4.9 | Drag and drop for tasks (added request) | PASS with a hardware pass owed | `task-schedule.ts`, `resolve-drop.ts`, `weekly-view.tsx`, store `assignTask` | Resolution and store logic unit tested. Tap path ("Place" / "Move to") and keyboard drag (Space, arrows, Space, announced) driven in Chromium and persisted. A synthetic mouse drag did not start in headless Chromium, **and neither did the existing allocation drag used as a control**, so mouse and touch-hold drags are unverified here and need the iPhone/iPad pass. A task only goes on its own role's day; a drop elsewhere is refused with a message. |
+| 4.1 | Undo after drag | PASS | `week-edit.ts`, store `undoable`/`undoEdit` | Restores the exact week, is saved, undoes once, refuses (and changes nothing) if the week changed since. Also covers placement, take-off, Free time and Not today. |
+| 4.2 | One-tap "Not today" | PASS | `spread-app.tsx` `TaskRow` | Button reads "Not today" for today's tasks and "Take off Fri" otherwise. Task keeps id, text and notes; it returns to To place; Undo offered. |
+| 4.3 | Remember where I was | PASS | `view-context.ts` | Spread or Week and week or month, per profile, under `spread-view.<profileId>` so backups never sweep it up. Verified across a browser reload. Does not restore scroll position or open task. |
+| 4.4 | Completion haptics | PASS in code; DEFERRED on hardware | `haptics.ts`, `@capacitor/haptics@8.0.2`, `ios/App/CapApp-SPM/Package.swift` | One light tap on completing, iPhone app only, none on web or with Reduce Motion, failures swallowed. Unit tested with a fake device. Not felt on a real phone. |
+| 4.5 | Free-time suggestion | PASS (adapted) | `free-time.ts`, Free time card in Week | Spread has hours per role, not task durations or clock times, so the "45 minutes" wording is **DEFERRED**. What ships is deterministic, at most three suggestions of roles with unplaced hours on the lightest day ahead, applied only on tap, with abstain states. |
+| 4.6 | Weekly rollover review | PASS | `task-rollover.ts`, "Review open tasks" sheet | Chosen open tasks move once with ids and notes kept, are taken off days, never duplicate on repeat, never touch next week's own tasks. The existing whole-week Rollover and Copy last week are unchanged. |
+| 4.7 | Offline-first | PASS in simulation; DEFERRED on device | `offline.test.ts` | With fetch, XHR, WebSocket, EventSource and sendBeacon all throwing, the whole new flow makes zero network attempts and what is on screen equals what is saved. Airplane Mode on a device is part of the hardware pass. |
+| 4.8 | Truthful status | PASS for this device; cloud DEFERRED/BLOCKED | `local-status.ts`, "Saved on this device" row in More | Reports the real result of the last write (full, blocked, paused by a newer version) and the time. Never mentions iCloud. iCloud status code is unchanged and still behind its flags; its re-audit and hardware gates are still owed. |
+| 5 | Apple-native (App Intents, widgets, on-device models) | DEFERRED | none | Not verifiable here and the data model has no durations to feed them. Only `@capacitor/haptics` was added. |
+| Fix | Folding two allocations of one role on one day dropped the tasks linked to the removed one | FIXED | store `moveAllocation` | Regression test in `task-schedule-store.test.ts`. |
+| Doc | `docs/ICLOUD_PLAN.md` audit row said fixes were unmerged | FIXED | docs | Now says merged (35761a9), re-audit not done. |
+
+### Checks run (all on the final tree)
+
+- `npm run typecheck`: 0 errors. `npm run lint`: 0 errors, 3 warnings (all pre-existing). `npm run test:spread`: 313 of 313. `npm run test:scripts`: 191 passed, 4 skipped. `npm run build`: succeeds.
+- iOS bridge simulators in Chromium: 27/27, 14/14, 29/29, 24/24.
+- Chromium at 390, 820, 1024 and 1366 wide, light and dark, reduced motion on in dark: no horizontal overflow, no page errors.
+
+### Not touched
+
+`cloud*`, `sync-*`, `backup*`, `merge.ts`, `restore-tx.ts`, `pins.ts`, `consent.ts`, `safety.ts`, `rollback.ts`, `native-mirror.ts`, `schema.ts`, `ios/App/App/Cloud`, `ios/App/SpreadCloudCore`, the landing page, `public/__grok`, `server/`, and every `golden/*` branch. Stored planner data format is unchanged (no migration); `Task.allocationId` already existed.
+
+### Rollback
+
+Revert the PR. Nothing is stored in a new format: a task's day link is the existing optional `allocationId`, and the remembered view is a separate `spread-view.*` key that older builds ignore. The one native change is `@capacitor/haptics` in `Package.swift`; reverting removes it.
+
+### Recommendation
+
+**READY FOR REVIEW**, with these owed before TestFlight: touch-hold and mouse drag of a task on an iPhone and iPad, the haptic, Airplane Mode planning, and the existing iCloud re-audit and Gates 3 and 4.
