@@ -1,0 +1,147 @@
+/**
+ * Automatic iCloud backup for the installed app. Wires the pure pieces together:
+ * `createBackupRunner` (when) + the native plugin (where) + `deriveBackupStatus` (what to say).
+ * Nothing here runs unless `CLOUD_FLAGS.backup` is on inside the installed app.
+ */
+import { create } from "zustand";
+import { collectFullPayload, fullBackupText } from "./backup.ts";
+import { CLOUD_FLAGS } from "./cloud-flags.ts";
+import { cloudPlugin, type RemoteBackup } from "./cloud.ts";
+import { deriveBackupStatus, type BackupStatus, type NativeFacts } from "./cloud-status.ts";
+import { createBackupRunner, type BackupRunner, type RunnerState } from "./backup-runner.ts";
+import { isNativeApp } from "./native.ts";
+import { onStorageChanged } from "./native-mirror.ts";
+
+export const BACKUP_PREF_KEY = "spread.cloud.backup";
+
+type CloudStore = {
+  enabled: boolean;
+  native: NativeFacts | null;
+  runner: RunnerState;
+  now: number;
+};
+
+export const useCloudBackup = create<CloudStore>(() => ({
+  enabled: false,
+  native: null,
+  runner: { busy: false, lastError: null, lastSuccessAt: null },
+  now: Date.now(),
+}));
+
+export function backupAvailable(): boolean {
+  return CLOUD_FLAGS.backup && isNativeApp();
+}
+
+/** On by default; the only way it is off is the person turning it off. */
+function readEnabled(): boolean {
+  try {
+    return localStorage.getItem(BACKUP_PREF_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function currentBackupStatus(state: CloudStore): BackupStatus {
+  return deriveBackupStatus({
+    enabled: state.enabled,
+    native: state.native,
+    busy: state.runner.busy,
+    lastError: state.runner.lastError,
+    now: new Date(state.now),
+  });
+}
+
+let runner: BackupRunner | null = null;
+let started = false;
+let deviceId: string | null = null;
+let stopStorage: (() => void) | null = null;
+
+export async function refreshBackupStatus(): Promise<void> {
+  try {
+    const plugin = await cloudPlugin();
+    const facts = await plugin.status();
+    deviceId = facts.deviceId;
+    useCloudBackup.setState({ native: facts, now: Date.now() });
+  } catch {
+    useCloudBackup.setState({ native: null, now: Date.now() });
+  }
+}
+
+async function buildBackup() {
+  const { flushSpread } = await import("./store.ts");
+  flushSpread();
+  const payload = collectFullPayload(localStorage, new Date(), deviceId);
+  const hasData = payload.roster.length > 0 && Object.keys(payload.stores).length > 0;
+  // The signature ignores the timestamp, so an unchanged planner is never backed up twice.
+  const signature = JSON.stringify({ ...payload, createdAt: "" });
+  return { text: await fullBackupText(payload), signature, hasData };
+}
+
+/** Start (once) after the planner has opened. Safe to call repeatedly. */
+export async function startCloudBackup(): Promise<void> {
+  if (started || !backupAvailable()) return;
+  started = true;
+  useCloudBackup.setState({ enabled: readEnabled() });
+  await refreshBackupStatus();
+  const plugin = await cloudPlugin();
+  runner = createBackupRunner({
+    transport: { write: (text, pin) => plugin.backupWrite({ text, pin }) },
+    build: buildBackup,
+    onState: (state) => {
+      useCloudBackup.setState({ runner: state, now: Date.now() });
+      if (!state.busy) void refreshBackupStatus();
+    },
+  });
+  if (useCloudBackup.getState().enabled) attach();
+  void plugin.addListener("accountChanged", () => void refreshBackupStatus());
+  window.addEventListener("pagehide", () => void runner?.flush());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") void runner?.flush();
+    else void refreshBackupStatus();
+  });
+}
+
+function attach() {
+  if (!runner || stopStorage) return;
+  stopStorage = onStorageChanged(() => runner?.changed());
+  const last = useCloudBackup.getState().native?.lastBackupAt;
+  runner.launch(last ? Date.parse(last) : null);
+}
+
+export function setBackupEnabled(on: boolean) {
+  try {
+    if (on) localStorage.removeItem(BACKUP_PREF_KEY);
+    else localStorage.setItem(BACKUP_PREF_KEY, "off");
+  } catch {
+    /* the choice still applies for this run */
+  }
+  useCloudBackup.setState({ enabled: on });
+  if (on) {
+    attach();
+  } else {
+    stopStorage?.();
+    stopStorage = null;
+  }
+}
+
+/** A labelled copy before something risky (a restore). Resolves false if it could not be made. */
+export async function pinBackup(label: string): Promise<boolean> {
+  return runner ? runner.pin(label) : false;
+}
+
+export async function backupNow(): Promise<void> {
+  runner?.changed();
+  await runner?.flush();
+}
+
+export async function listBackups(): Promise<RemoteBackup[]> {
+  const plugin = await cloudPlugin();
+  const { backups } = await plugin.backupList({ ownOnly: false });
+  return backups;
+}
+
+export async function readBackupText(deviceIdValue: string, name: string): Promise<string> {
+  const plugin = await cloudPlugin();
+  const { text } = await plugin.backupRead({ deviceId: deviceIdValue, name });
+  return text;
+}
