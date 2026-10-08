@@ -15,6 +15,7 @@ import {
   cleanName,
   type Profile,
 } from "@/lib/spread/profiles";
+import { carryOpenTasks, type CarryPick } from "@/lib/spread/task-rollover";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
 import { create } from "zustand";
@@ -105,6 +106,8 @@ type Store = {
   changeWeek: (direction: -1 | 1 | "today") => void;
   removeAllocation: (allocationId: string) => void;
   /** Put a task on a day (an allocation of its own role), or take it off every day with null. */
+  /** Move the chosen unfinished tasks to next week (ids kept). Returns how many moved. Safe to repeat. */
+  carryOver: (picks: CarryPick[]) => number;
   /** Run one change and remember it so it can be undone. Returns an edit id, or null when nothing changed. */
   undoable: (run: () => void) => string | null;
   /** Reverse that change. False when the week has changed since, so newer work is never overwritten. */
@@ -788,6 +791,12 @@ export const useSpread = create<Store>((set, get) => ({
   },
   changeWeek: (direction) => {
     get().moveWeek(direction);
+  },
+  carryOver: (picks) => {
+    const data = ensureWeek(get().data);
+    const result = carryOpenTasks(data, picks);
+    if (result.data !== data) commit(set, result.data);
+    return result.moved;
   },
   undoable: (run) => {
     const before = get().data;

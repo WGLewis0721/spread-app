@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { showUndoToast } from "@/spread/ui/undo-toast";
 import { clampHours, isoDate, remainingHours, weekDays, type Allocation, type Task } from "@/lib/spread/model";
 import { useSpread } from "@/lib/spread/store";
+import { suggestFreeTime, type Suggestion } from "@/lib/spread/free-time";
 import { assignFailureText, eligibleAllocations, tasksOnAllocation, unscheduledTasks } from "@/lib/spread/task-schedule";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { highlightedDay, resolveDrop, TRAY_ID } from "@/spread/gestures/resolve-drop";
@@ -144,6 +145,7 @@ export function WeeklyView({
     setMoving(null);
   }
   const toPlace = unscheduledTasks(week);
+  const freeTime = suggestFreeTime(data, today);
   const anyTasks = (week?.boxes ?? []).some((box) => box.tasks.length > 0);
   const announcements: Announcements = {
     onDragStart: ({ active }) => `Picked up ${labelOf(active.data.current as ActiveDrag | undefined, hatsById)}.`,
@@ -188,6 +190,23 @@ export function WeeklyView({
             );
           })}
         </div>
+        {freeTime.kind === "suggestions" && (
+          <section aria-label="Free time" className="mt-3 rounded-3xl bg-elevated px-3 py-3">
+            <h2 className="px-1 text-base font-semibold">Free time</h2>
+            <p className="px-1 pt-1 text-xs text-secondary">Hours not on a day yet. Tap to add one.</p>
+            <ul className="mt-2 flex flex-col gap-1">
+              {freeTime.items.map((item) => (
+                <FreeTimeRow
+                  key={`${item.hatId}:${item.day}`}
+                  item={item}
+                  name={hatsById.get(item.hatId)?.name ?? ""}
+                  color={hatsById.get(item.hatId)?.color ?? "#8E8E93"}
+                  onAdd={() => withUndo(`Added to ${item.dayLabel}.`, () => moveSpreadToDay(item.hatId, item.day, item.hours))}
+                />
+              ))}
+            </ul>
+          </section>
+        )}
         {anyTasks && (
           <ToPlaceTray
             tasks={toPlace}
@@ -622,6 +641,21 @@ function TaskChip({
           )}
         </ul>
       )}
+    </li>
+  );
+}
+
+function FreeTimeRow({ item, name, color, onAdd }: { item: Suggestion; name: string; color: string; onAdd: () => void }) {
+  return (
+    <li>
+      <button type="button" className="flex h-11 w-full items-center gap-2 rounded-xl bg-canvas px-3 text-start text-sm font-medium" onClick={onAdd}>
+        <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
+        <span className="min-w-0 flex-1 truncate">
+          {name} on {item.dayLabel}
+        </span>
+        <span className="tabular-nums text-secondary">{item.hours}h</span>
+        <Plus className="size-4 text-accent" strokeWidth={2.7} />
+      </button>
     </li>
   );
 }

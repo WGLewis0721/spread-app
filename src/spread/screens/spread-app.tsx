@@ -25,6 +25,9 @@ import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
+import { openTasksOf } from "@/lib/spread/task-rollover";
+import { completionHaptic } from "@/lib/spread/haptics";
+import { readViewContext, writeViewContext } from "@/lib/spread/view-context";
 import { showUndoToast } from "@/spread/ui/undo-toast";
 import { WeeklyView, SpreadBubbleStrip } from "@/spread/components/weekly-view";
 import { MonthView } from "@/spread/components/month-view";
@@ -399,8 +402,20 @@ function WeekScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
-  const [view, setView] = useState<"spread" | "week">("spread");
-  const [plane, setPlane] = useState<"week" | "month">("week");
+  const profileId = useSpread((s) => s.activeId);
+  const [view, setView] = useState<"spread" | "week">(() => readViewContext(safeStorage(), useSpread.getState().activeId).view);
+  const [plane, setPlane] = useState<"week" | "month">(() => readViewContext(safeStorage(), useSpread.getState().activeId).plane);
+  const lastProfile = useRef(profileId);
+  useEffect(() => {
+    if (lastProfile.current === profileId) return;
+    lastProfile.current = profileId;
+    const remembered = readViewContext(safeStorage(), profileId);
+    setView(remembered.view);
+    setPlane(remembered.plane);
+  }, [profileId]);
+  useEffect(() => {
+    writeViewContext(safeStorage(), profileId, { view, plane });
+  }, [view, plane, profileId]);
   const [motion, setMotion] = useState<"to-month" | "to-week" | null>(null);
   const [monthCursor, setMonthCursor] = useState<MonthCursor>(() => dominantMonth(weekKey()));
   const [monthDir, setMonthDir] = useState<-1 | 1 | 0>(0);
@@ -423,6 +438,7 @@ function WeekScreen() {
   const [gears, setGears] = useState(false);
   const [openTask, setOpenTask] = useState<{ hatId: string; taskId: string } | null>(null);
   const [rolloverAsk, setRolloverAsk] = useState(false);
+  const [carryAsk, setCarryAsk] = useState(false);
   const [gesture, setGesture] = useState(0);
   const [shift, setShift] = useState(0);
   const [dir, setDir] = useState<-1 | 1 | 0>(0);
@@ -775,6 +791,11 @@ function WeekScreen() {
               <div className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}>
                 <NewLifeBox onClick={() => setSheet("new")} />
               </div>
+              {openTasksOf(data).length > 0 && (
+                <button type="button" className="mt-3 h-11 w-full rounded-full bg-fill text-sm font-semibold" onClick={() => setCarryAsk(true)}>
+                  Review open tasks
+                </button>
+              )}
             </div>
           )}
         </main>
@@ -848,6 +869,7 @@ function WeekScreen() {
           setRolloverAsk(false);
         }}
       />
+      <CarryOverSheet open={carryAsk} onClose={() => setCarryAsk(false)} />
       {openTask && (
         <TaskSheet hatId={openTask.hatId} taskId={openTask.taskId} onClose={() => setOpenTask(null)} />
       )}
@@ -1270,7 +1292,10 @@ function TaskRow({
           role="checkbox"
           aria-checked={task.done}
           aria-label={task.done ? `Mark not done: ${task.text}` : `Mark done: ${task.text}`}
-          onClick={() => toggleTask(hatId, task.id)}
+          onClick={() => {
+            if (!task.done) void completionHaptic();
+            toggleTask(hatId, task.id);
+          }}
           className="grid size-14 shrink-0 place-items-center"
         >
           {task.done ? (
@@ -2688,5 +2713,83 @@ function RemoveDialog({ hat, onClose }: { hat: Hat | null; onClose: () => void }
         </AlertDialog.Content>
       </AlertDialog.Portal>
     </AlertDialog.Root>
+  );
+}
+
+function safeStorage(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function CarryOverSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const data = useSpread((s) => s.data);
+  const carryOver = useSpread((s) => s.carryOver);
+  const items = openTasksOf(data);
+  const [off, setOff] = useState<Set<string>>(new Set());
+  const hats = new Map(data.hats.map((hat) => [hat.id, hat]));
+  const key = (hatId: string, taskId: string) => `${hatId}:${taskId}`;
+  const chosen = items.filter((item) => !off.has(key(item.hatId, item.task.id)));
+
+  function confirm() {
+    const moved = carryOver(chosen.map((item) => ({ hatId: item.hatId, taskId: item.task.id })));
+    toast(moved === 0 ? "Nothing to move." : `${moved} ${moved === 1 ? "task" : "tasks"} moved to next week.`);
+    setOff(new Set());
+    onClose();
+  }
+
+  return (
+    <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
+        <Dialog.Content className="sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none">
+          <Grabber />
+          <Dialog.Title className="text-lg font-semibold">Open tasks</Dialog.Title>
+          <Dialog.Description className="mt-1 text-sm text-secondary">
+            Pick what moves to next week. The rest stays here. Next week’s own tasks and days are not touched.
+          </Dialog.Description>
+          <ul className="mt-4 overflow-hidden rounded-3xl bg-canvas">
+            {items.map((item, index) => {
+              const id = key(item.hatId, item.task.id);
+              const on = !off.has(id);
+              return (
+                <li key={id} className={cn(index > 0 && "border-t border-line")}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    className="flex min-h-12 w-full items-center gap-3 px-4 text-left"
+                    onClick={() =>
+                      setOff((current) => {
+                        const next = new Set(current);
+                        if (on) next.add(id);
+                        else next.delete(id);
+                        return next;
+                      })
+                    }
+                  >
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full border-2" style={{ borderColor: on ? "var(--accent)" : "var(--tertiary)" }}>
+                      {on && <Check className="size-4 text-accent" aria-hidden="true" />}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-base">{item.task.text || "Untitled task"}</span>
+                    <span className="shrink-0 text-xs text-secondary">{hats.get(item.hatId)?.name}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-4 grid grid-cols-2 gap-2 pb-2">
+            <button type="button" className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={onClose}>
+              Not now
+            </button>
+            <button type="button" disabled={chosen.length === 0} className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-40" onClick={confirm}>
+              Move {chosen.length}
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
