@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {defaultData} from './spread-review/src/lib/spread/model.ts';
+import {flatten,assemble} from './spread-review/src/lib/spread/sync-model.ts';
+const {useSpread}=await import('./spread-review/src/lib/spread/store.ts');
+const memory=new Map();let failRoster=false;
+globalThis.localStorage={get length(){return memory.size},key:i=>[...memory.keys()][i]??null,getItem:k=>memory.get(k)??null,setItem(k,v){if(failRoster&&k==='spread.profiles')throw Error('quota');memory.set(k,v)},removeItem:k=>memory.delete(k)};
+globalThis.window={setTimeout,clearTimeout,addEventListener(){},matchMedia:()=>({matches:false})};
+globalThis.document={querySelector:()=>null,documentElement:{setAttribute(){},style:{setProperty(){},removeProperty(){}}}};
+const profile={id:'local',name:'Local',store:'spread.v1.local',theme:'light',accent:null};
+const d=defaultData(); d.weeks[d.currentWeek].boxes[0].tasks.push({id:'keep',text:'keep local',done:false});
+memory.set(profile.store,JSON.stringify(d));memory.set('spread.profiles',JSON.stringify([profile]));
+useSpread.setState({profiles:[profile],activeId:profile.id,data:d});
+const source={...profile,id:'remote',store:'spread.v1.remote',name:'Imported'};
+const payload={schemaVersion:2,createdAt:new Date().toISOString(),deviceId:null,activeProfileId:'remote',roster:[source],stores:{remote:JSON.stringify(d)},settings:{}};
+failRoster=true;
+const result=useSpread.getState().restoreAsNew(payload);
+assert.equal(result.ok,true);assert.equal(useSpread.getState().profiles.length,2);assert.equal(JSON.parse(memory.get('spread.profiles')).length,1);
+console.log('CONFIRMED actual restoreAsNew: reports success; UI roster=2; durable roster=1; restored profile disappears on reload');
+// A customization-only profile is overwritten by new empty-profile replacement with flags off.
+failRoster=false;const custom=defaultData();custom.weeks[custom.currentWeek].boxes[0].hours=29;custom.hats[0].color='#123456';
+memory.set(profile.store,JSON.stringify(custom));memory.set('spread.profiles',JSON.stringify([profile]));
+useSpread.setState({profiles:[profile],activeId:profile.id,data:custom});
+const replaced=useSpread.getState().restoreAsNew(payload);
+assert.equal(replaced.replacedEmpty,true);assert.notEqual(JSON.parse(memory.get(profile.store)).hats[0].color,'#123456');
+console.log('CONFIRMED actual restoreAsNew: customization-only profile replaced, custom hours/color lost');
+// The store action itself duplicates task IDs across weeks.
+const old=defaultData();const oldKey=old.currentWeek;const date=new Date(oldKey+'T12:00:00');date.setDate(date.getDate()+7);const nextKey=date.toISOString().slice(0,10);
+old.weeks[oldKey].boxes[0].tasks.push({id:'duplicate',text:'weekly task',done:false});old.currentWeek=nextKey;
+useSpread.setState({data:old});useSpread.getState().copyLastWeek();
+const copied=useSpread.getState().data;const rebuilt=assemble(flatten(copied,'Local'),copied.currentWeek).data;
+const count=x=>Object.values(x.weeks).flatMap(w=>w.boxes.flatMap(b=>b.tasks)).length;
+assert.equal(count(copied),2);assert.equal(count(rebuilt),1);
+console.log('CONFIRMED actual copyLastWeek: 2 task occurrences become 1 after sync reconstruction');

@@ -1,0 +1,461 @@
+diff --git a/package.json b/package.json
+index b6eddd2..d681081 100644
+--- a/package.json
++++ b/package.json
+@@ -15,7 +15,7 @@
+     "preview:restart": "node scripts/preview.mjs restart",
+     "preview:stop": "node scripts/preview.mjs stop",
+     "typecheck": "tsc --noEmit",
+-    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/spread/cloud-status.test.ts src/lib/spread/backup-runner.test.ts src/lib/spread/sync-model.test.ts src/lib/spread/sync-sim.test.ts src/lib/spread/sync-link.test.ts src/lib/spread/sync-session.test.ts src/lib/spread/sync-labels.test.ts",
++    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/spread/cloud-status.test.ts src/lib/spread/backup-runner.test.ts src/lib/spread/sync-model.test.ts src/lib/spread/sync-sim.test.ts src/lib/spread/sync-link.test.ts src/lib/spread/sync-session.test.ts src/lib/spread/sync-guard.test.ts src/lib/spread/sync-labels.test.ts",
+     "check:auth": "node scripts/check-auth-invariant.mjs",
+     "test": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/waitlist.test.ts && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
+     "lint": "eslint .",
+diff --git a/src/lib/spread/cloud-sync.ts b/src/lib/spread/cloud-sync.ts
+index 7e70f97..1605dbf 100644
+--- a/src/lib/spread/cloud-sync.ts
++++ b/src/lib/spread/cloud-sync.ts
+@@ -337,6 +337,10 @@ export async function syncNowAction(): Promise<void> {
+   await refreshNative();
+ }
+ 
++export async function resolveBlockedSync(choice: "restore" | "keep-deletion"): Promise<void> {
++  await session?.resolveBlocked(choice);
++}
++
+ export async function resolveSyncConflict(id: string, choice: Choice): Promise<void> {
+   await session?.resolveConflict(id, choice);
+ }
+diff --git a/src/lib/spread/sync-guard.test.ts b/src/lib/spread/sync-guard.test.ts
+new file mode 100644
+index 0000000..82867b7
+--- /dev/null
++++ b/src/lib/spread/sync-guard.test.ts
+@@ -0,0 +1,154 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { defaultData, normalizeData, type SpreadData } from "./model.ts";
++import { createSyncSession, type SyncRow, type SyncTransport } from "./sync-session.ts";
++import { assessDeletion, captureLocal, newSyncState } from "./sync-state.ts";
++
++function planner(tasks: number): SpreadData {
++  const data = defaultData();
++  const box = data.weeks[data.currentWeek].boxes[0];
++  for (let i = 0; i < tasks; i += 1) box.tasks.push({ id: `t${i}`, text: `Task ${i}`, done: false });
++  return normalizeData(data);
++}
++
++const populated = (tasks: number) => captureLocal(newSyncState("S", "phone"), planner(tasks), "Me", "t0").state;
++
++test("a planner that reads as completely empty is blocked and nothing is recorded", () => {
++  const state = populated(4);
++  const result = captureLocal(state, { hats: [], weeks: {}, currentWeek: "2026-10-05" }, "Me", "t1");
++  assert.ok(result.blocked, "blocked");
++  assert.equal(result.changed.length, 0);
++  assert.deepEqual(result.state, state, "state is returned untouched");
++  assert.equal(result.state.pending.length, state.pending.length);
++});
++
++test("every task vanishing at once is blocked even when the spreads are still there", () => {
++  const state = populated(4);
++  const result = captureLocal(state, planner(0), "Me", "t1");
++  assert.equal(result.blocked?.reason, "all-tasks");
++  assert.deepEqual(result.state, state);
++});
++
++test("deleting one task, or a few, is an ordinary edit", () => {
++  const state = populated(6);
++  const one = captureLocal(state, planner(5), "Me", "t1");
++  assert.equal(one.blocked, undefined);
++  assert.deepEqual(one.changed.filter((id) => id.startsWith("task:")), ["task:t5"]);
++  const some = captureLocal(state, planner(3), "Me", "t1");
++  assert.equal(some.blocked, undefined, "half of the tasks is a decision, not an accident");
++});
++
++test("losing more than half of a sizeable planner is blocked", () => {
++  const state = populated(12);
++  const vanished = Object.keys(state.items).filter((id) => id.startsWith("task:"))
++    .slice(0, 11);
++  assert.equal(assessDeletion(state, vanished)?.reason, "most");
++  assert.equal(assessDeletion(state, vanished.slice(0, 4)), null);
++});
++
++test("the person confirming lets the deletion through as real tombstones", () => {
++  const state = populated(4);
++  const result = captureLocal(state, planner(0), "Me", "t1", { allowMassDelete: true });
++  assert.equal(result.blocked, undefined);
++  assert.equal(result.changed.filter((id) => id.startsWith("task:")).length, 4);
++  assert.ok(Object.values(result.state.items).some((item) => item.deleted));
++});
++
++test("an empty state never blocks (first sync, nothing to protect)", () => {
++  const result = captureLocal(newSyncState("S", "phone"), planner(0), "Me", "t1");
++  assert.equal(result.blocked, undefined);
++});
++
++// --- Through the session ---------------------------------------------------------------------
++
++function harness(initial: SpreadData) {
++  const env = { data: initial, applied: 0, snapshots: [] as string[], queued: [] as SyncRow[] };
++  let saved = null as ReturnType<typeof newSyncState> | null;
++  const transport: SyncTransport = {
++    async start() {},
++    async stop() {},
++    async queue(rows) {
++      env.queued.push(...rows);
++    },
++    async inbox() {
++      return [];
++    },
++    async ack() {},
++    async outbox() {
++      return [];
++    },
++    async drop() {},
++    async syncNow() {},
++  };
++  const session = createSyncSession({
++    syncId: "S",
++    deviceId: "phone",
++    transport,
++    loadState: () => saved,
++    saveState: (s) => void (saved = s),
++    current: () => ({ data: env.data, name: "Me" }),
++    apply: (data) => {
++      env.data = normalizeData({ ...data, currentWeek: env.data.currentWeek });
++      env.applied += 1;
++    },
++    snapshot: (label) => void env.snapshots.push(label),
++    newId: () => "x",
++    now: () => "t",
++  });
++  return { env, session };
++}
++
++const taskCount = (data: SpreadData) => Object.values(data.weeks).reduce((n, w) => n + w.boxes.reduce((m, b) => m + b.tasks.length, 0), 0);
++
++test("session: an emptied planner pauses sync, sends nothing, and says so", async () => {
++  const h = harness(planner(4));
++  await h.session.start();
++  const sentBefore = h.env.queued.length;
++  h.env.data = planner(0);
++  await h.session.localChanged();
++  assert.ok(h.session.view().blocked);
++  assert.equal(h.env.queued.length, sentBefore, "no tombstones were queued");
++  assert.equal(h.env.applied, 0, "nothing was applied over the planner");
++});
++
++test("session: choosing restore puts the last synced planner back, with a snapshot", async () => {
++  const h = harness(planner(4));
++  await h.session.start();
++  h.env.data = planner(0);
++  await h.session.localChanged();
++  await h.session.resolveBlocked("restore");
++  assert.equal(taskCount(h.env.data), 4);
++  assert.ok(h.env.snapshots.includes("pre-restore-guard"));
++  assert.equal(h.session.view().blocked, null);
++});
++
++test("session: choosing keep-deletion sends the deletions", async () => {
++  const h = harness(planner(4));
++  await h.session.start();
++  h.env.data = planner(0);
++  await h.session.localChanged();
++  await h.session.resolveBlocked("keep-deletion");
++  assert.equal(h.session.view().blocked, null);
++  assert.equal(h.env.queued.filter((r) => r.deleted && r.itemId.startsWith("task:")).length, 4);
++});
++
++test("session: the pause lifts by itself if the planner comes back", async () => {
++  const h = harness(planner(4));
++  await h.session.start();
++  const original = h.env.data;
++  h.env.data = planner(0);
++  await h.session.localChanged();
++  assert.ok(h.session.view().blocked);
++  h.env.data = original;
++  await h.session.localChanged();
++  assert.equal(h.session.view().blocked, null);
++});
++
++test("session: a conflict is not settled on top of an emptied planner", async () => {
++  const h = harness(planner(4));
++  await h.session.start();
++  h.env.data = planner(0);
++  await h.session.resolveConflict("task:t0", "local");
++  assert.ok(h.session.view().blocked);
++  assert.equal(h.env.applied, 0);
++});
+diff --git a/src/lib/spread/sync-labels.test.ts b/src/lib/spread/sync-labels.test.ts
+index 98b3434..774b026 100644
+--- a/src/lib/spread/sync-labels.test.ts
++++ b/src/lib/spread/sync-labels.test.ts
+@@ -100,3 +100,11 @@ test("errors reassure that changes are safe on this device", () => {
+   assert.match(say({ lastError: "x" }).detail, /safe on this device/);
+   assert.match(say({ quotaExceeded: true }).detail, /safe on this device/);
+ });
++
++test("a planner that looks emptied says nothing was deleted and asks for a choice", () => {
++  const said = say({ blocked: true });
++  assert.equal(said.title, "Sync is paused: this profile looks empty");
++  assert.match(said.detail, /Nothing has been deleted/);
++  assert.equal(said.tone, "problem");
++  assert.notEqual(say({ blocked: true, waitingToSend: 0 }).title, "Synced with iCloud");
++});
+diff --git a/src/lib/spread/sync-labels.ts b/src/lib/spread/sync-labels.ts
+index 4ab39bd..188d58e 100644
+--- a/src/lib/spread/sync-labels.ts
++++ b/src/lib/spread/sync-labels.ts
+@@ -83,6 +83,8 @@ export type SyncDescribeInput = {
+   lastSyncAt: string | null;
+   lastError: string | null;
+   quotaExceeded: boolean;
++  /** The planner looks emptied by accident and sync is waiting for a choice. */
++  blocked?: boolean;
+   now: Date;
+ };
+ 
+@@ -93,6 +95,13 @@ export function describeSync(input: SyncDescribeInput): SyncDescription {
+   if (!input.linked) {
+     return { title: "iCloud Sync is off", detail: "This profile stays on this device until you turn sync on. Nothing is shared or combined.", tone: "off" };
+   }
++  if (input.blocked) {
++    return {
++      title: "Sync is paused: this profile looks empty",
++      detail: "Nothing has been deleted in iCloud or on your other devices. Put your last synced planner back, or confirm you meant to clear it.",
++      tone: "problem",
++    };
++  }
+   if (input.paused === "switchAccounts" || input.paused === "signOut") {
+     return {
+       title: "Sync is paused",
+diff --git a/src/lib/spread/sync-session.ts b/src/lib/spread/sync-session.ts
+index fe25ccf..398e123 100644
+--- a/src/lib/spread/sync-session.ts
++++ b/src/lib/spread/sync-session.ts
+@@ -18,6 +18,7 @@ import { toItems } from "./sync-link.ts";
+ import {
+   applyRemote,
+   captureLocal,
++  type CaptureBlock,
+   confirmQueued,
+   itemsToPush,
+   liveData,
+@@ -66,6 +67,8 @@ export type SessionView = {
+   waitingToSend: number;
+   conflicts: SyncState["conflicts"];
+   lastError: string | null;
++  /** The planner looks emptied by accident. Nothing is recorded or sent until the person chooses. */
++  blocked: CaptureBlock | null;
+ };
+ 
+ export type SyncSession = {
+@@ -78,6 +81,8 @@ export type SyncSession = {
+   /** Send and fetch now, then run a pass. */
+   syncNow(): Promise<void>;
+   resolveConflict(id: string, choice: Choice): Promise<void>;
++  /** "restore" puts the last synced planner back; "keep-deletion" confirms the deletion was meant. */
++  resolveBlocked(choice: "restore" | "keep-deletion"): Promise<void>;
+   view(): SessionView;
+   onChange(listener: (view: SessionView) => void): () => void;
+ };
+@@ -87,6 +92,8 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+   let running = false;
+   let busy = false;
+   let lastError: string | null = null;
++  let blocked: CaptureBlock | null = null;
++  let allowMassDelete = false;
+   let chain: Promise<void> = Promise.resolve();
+   const listeners = new Set<(view: SessionView) => void>();
+ 
+@@ -97,6 +104,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+     waitingToSend: state.pending.filter((id) => !state.conflicts.some((c) => c.id === id)).length,
+     conflicts: state.conflicts,
+     lastError,
++    blocked,
+   });
+   const publish = () => {
+     for (const listener of listeners) listener(view());
+@@ -115,7 +123,15 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+ 
+       // 1. capture
+       const here = deps.current();
+-      state = captureLocal(state, here.data, here.name, deps.now()).state;
++      const captured = captureLocal(state, here.data, here.name, deps.now(), { allowMassDelete });
++      allowMassDelete = false;
++      if (captured.blocked) {
++        // Likely an empty or failed read, not a decision. Record nothing, send nothing, apply nothing.
++        blocked = captured.blocked;
++        return;
++      }
++      blocked = null;
++      state = captured.state;
+ 
+       // 2. inbound, 3. apply
+       if (rows.length > 0) {
+@@ -200,7 +216,14 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+       await queue(async () => {
+         const here = deps.current();
+         // Capture first so an edit made a moment ago is not lost when the resolution is applied.
+-        state = captureLocal(state, here.data, here.name, deps.now()).state;
++        const captured = captureLocal(state, here.data, here.name, deps.now());
++        if (captured.blocked) {
++          // Do not settle a conflict on top of a planner that looks accidentally emptied.
++          blocked = captured.blocked;
++          publish();
++          return;
++        }
++        state = captured.state;
+         state = resolve(state, id, choice, deps.newId, deps.now());
+         const merged = liveData(state, here.data.currentWeek);
+         deps.snapshot("pre-resolve");
+@@ -210,6 +233,24 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+       });
+       await queue(pass);
+     },
++    async resolveBlocked(choice) {
++      await queue(async () => {
++        if (!blocked) return;
++        if (choice === "restore") {
++          // The state still holds the last synced items, because the blocked capture changed nothing.
++          const here = deps.current();
++          deps.snapshot("pre-restore-guard");
++          const back = liveData(state, here.data.currentWeek);
++          deps.apply(back.data, back.name);
++          blocked = null;
++        } else {
++          allowMassDelete = true;
++          blocked = null;
++        }
++        publish();
++      });
++      await queue(pass);
++    },
+     view,
+     onChange(listener) {
+       listeners.add(listener);
+diff --git a/src/lib/spread/sync-state.ts b/src/lib/spread/sync-state.ts
+index 3f7522d..2e03d56 100644
+--- a/src/lib/spread/sync-state.ts
++++ b/src/lib/spread/sync-state.ts
+@@ -40,30 +40,67 @@ function sameStored(a: StoredItem | undefined, b: StoredItem | undefined): boole
+   return !!a.deleted === !!b.deleted && compareVectors(a.v, b.v) === "equal" && (a.deleted || canonical(a.fields) === canonical(b.fields));
+ }
+ 
++export type CaptureBlock = { deleting: number; live: number; reason: "everything" | "most" | "all-tasks" };
++
++/** Thresholds for treating a capture as a likely accident rather than an edit. */
++const MASS_MIN = 5;
++const TASKS_MIN = 3;
++
++/**
++ * Would capturing this planner delete so much that it is more likely a failed or empty read than
++ * a decision? Deleting one task, or a handful, is an edit. Everything vanishing, more than half
++ * of a sizeable planner vanishing, or every task vanishing at once is not.
++ */
++export function assessDeletion(state: SyncState, vanished: string[]): CaptureBlock | null {
++  const live = Object.entries(state.items).filter(([, item]) => !item.deleted).map(([id]) => id);
++  if (vanished.length === 0 || live.length === 0) return null;
++  const liveTasks = live.filter((id) => id.startsWith("task:"));
++  const vanishedTasks = vanished.filter((id) => id.startsWith("task:"));
++  if (vanished.length >= live.length) return { deleting: vanished.length, live: live.length, reason: "everything" };
++  if (vanished.length >= MASS_MIN && vanished.length * 2 > live.length) return { deleting: vanished.length, live: live.length, reason: "most" };
++  if (liveTasks.length >= TASKS_MIN && vanishedTasks.length === liveTasks.length) return { deleting: vanished.length, live: live.length, reason: "all-tasks" };
++  return null;
++}
++
+ /**
+  * Record what the person changed on this device. Items whose content differs from what the state
+  * holds get a new version stamped by this device; items that vanished become tombstones.
++ *
++ * If the deletions look like an accident (see `assessDeletion`) nothing is recorded and `blocked`
++ * says why, unless the caller has been told the person confirmed it with `allowMassDelete`.
+  */
+-export function captureLocal(state: SyncState, data: SpreadData, name: string, now: string): { state: SyncState; changed: string[] } {
++export function captureLocal(
++  state: SyncState,
++  data: SpreadData,
++  name: string,
++  now: string,
++  options: { allowMassDelete?: boolean } = {},
++): { state: SyncState; changed: string[]; blocked?: CaptureBlock } {
++  const plain = flatten(data, name);
++  const seen = new Set(plain.map((item) => item.id));
++  const vanished = Object.entries(state.items).filter(([id, current]) => !seen.has(id) && !current.deleted).map(([id]) => id);
++  if (!options.allowMassDelete) {
++    const blocked = assessDeletion(state, vanished);
++    if (blocked) return { state, changed: [], blocked };
++  }
++
+   const items = { ...state.items };
+   const pending = new Set(state.pending);
+   const conflicts = state.conflicts.slice();
+   const changed: string[] = [];
+-  const seen = new Set<string>();
+-
+-  for (const plain of flatten(data, name)) {
+-    seen.add(plain.id);
+-    const current = items[plain.id];
+-    if (current && !current.deleted && canonical(current.fields) === canonical(plain.fields)) continue;
+-    const next: StoredItem = { fields: plain.fields, v: bump(current?.v ?? {}, state.deviceId), at: now };
+-    items[plain.id] = next;
+-    pending.add(plain.id);
+-    changed.push(plain.id);
+-    const at = conflicts.findIndex((c) => c.id === plain.id);
+-    if (at >= 0) conflicts[at] = { ...conflicts[at], local: toItem(plain.id, next) };
++
++  for (const item of plain) {
++    const current = items[item.id];
++    if (current && !current.deleted && canonical(current.fields) === canonical(item.fields)) continue;
++    const next: StoredItem = { fields: item.fields, v: bump(current?.v ?? {}, state.deviceId), at: now };
++    items[item.id] = next;
++    pending.add(item.id);
++    changed.push(item.id);
++    const at = conflicts.findIndex((c) => c.id === item.id);
++    if (at >= 0) conflicts[at] = { ...conflicts[at], local: toItem(item.id, next) };
+   }
+-  for (const [id, current] of Object.entries(items)) {
+-    if (seen.has(id) || current.deleted) continue;
++  for (const id of vanished) {
++    const current = items[id];
+     const next: StoredItem = { fields: {}, v: bump(current.v, state.deviceId), deleted: true, at: now };
+     items[id] = next;
+     pending.add(id);
+diff --git a/src/spread/screens/spread-app.tsx b/src/spread/screens/spread-app.tsx
+index 7b518f5..9551670 100644
+--- a/src/spread/screens/spread-app.tsx
++++ b/src/spread/screens/spread-app.tsx
+@@ -16,7 +16,7 @@ import { isNativeApp } from "@/lib/spread/native";
+ import { prepareNativeStorage } from "@/lib/spread/native-mirror";
+ import { backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
+ import type { RemoteBackup } from "@/lib/spread/cloud";
+-import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, useCloudSync } from "@/lib/spread/cloud-sync";
++import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, useCloudSync } from "@/lib/spread/cloud-sync";
+ import { describeConflict, describeSync } from "@/lib/spread/sync-labels";
+ import { canKeepBoth } from "@/lib/spread/sync-state";
+ import type { LinkChoice } from "@/lib/spread/sync-link";
+@@ -1922,6 +1922,7 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
+     lastSyncAt: state.view?.lastSyncAt ?? null,
+     lastError: state.view?.lastError ?? null,
+     quotaExceeded: state.native?.quotaExceeded ?? false,
++    blocked: Boolean(state.view?.blocked),
+     now: new Date(state.now),
+   });
+   const rowClass = "flex h-12 w-full items-center justify-between px-4 text-left text-base active:bg-fill disabled:text-tertiary";
+@@ -1940,6 +1941,16 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
+           </button>
+         ) : (
+           <>
++            {state.view?.blocked && (
++              <>
++                <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => void resolveBlockedSync("restore")}>
++                  Put my last synced planner back
++                </button>
++                <button type="button" className={cn(rowClass, "border-b border-line text-danger")} onClick={() => void resolveBlockedSync("keep-deletion")}>
++                  I cleared it on purpose
++                </button>
++              </>
++            )}
+             {(state.view?.conflicts.length ?? 0) > 0 && (
+               <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => go("conflicts")}>
+                 Review {state.view?.conflicts.length} {state.view?.conflicts.length === 1 ? "change" : "changes"}

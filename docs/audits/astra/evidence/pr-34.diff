@@ -1,0 +1,656 @@
+diff --git a/scripts/ios-bridge-sim/cloud_backup_e2e.py b/scripts/ios-bridge-sim/cloud_backup_e2e.py
+index 21c35e3..fb34e84 100644
+--- a/scripts/ios-bridge-sim/cloud_backup_e2e.py
++++ b/scripts/ios-bridge-sim/cloud_backup_e2e.py
+@@ -116,7 +116,7 @@ def open_cloud():
+     items = page.get_by_role('listitem')
+     check('the backups are listed', items.count() >= 2, str(items.count()))
+     items.first.click(); page.wait_for_timeout(1000)
+-    check('restore asks before adding, and says nothing is changed', page.get_by_text('Add these profiles?').count() > 0 and 'Nothing on this device changes' in page.inner_text('body'))
++    check('restore asks before adding, and says nothing is changed', page.get_by_text('Add these profiles?').count() > 0 and 'Nothing that has content on this device changes' in page.inner_text('body'))
+     page.get_by_role('button', name='Add', exact=True).click(); page.wait_for_timeout(1500)
+     roster_after = json.loads(page.evaluate("localStorage.getItem('spread.profiles')"))
+     check('a profile was added and the existing ones are unchanged', len(roster_after) == len(roster_before) + 1 and roster_after[:len(roster_before)] == roster_before)
+diff --git a/scripts/ios-bridge-sim/restore_e2e.py b/scripts/ios-bridge-sim/restore_e2e.py
+new file mode 100644
+index 0000000..4be26d3
+--- /dev/null
++++ b/scripts/ios-bridge-sim/restore_e2e.py
+@@ -0,0 +1,95 @@
++"""Restoring a full ten-profile backup onto a brand-new install, and choosing profiles when room is short.
++
++Uses the normal (flags off) bundle:
++  npm run export:ios
++  (cd dist-ios && python3 -m http.server 8097 --bind 127.0.0.1) &
++  python3 scripts/ios-bridge-sim/restore_e2e.py /tmp/shots
++"""
++import hashlib, json, os, sys
++from playwright.sync_api import sync_playwright
++
++SHOTS = sys.argv[1] if len(sys.argv) > 1 else '/tmp'
++INIT = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'native-init.js')).read()
++results = []
++def check(name, ok, detail=''):
++    results.append((name, bool(ok)))
++    print(('PASS ' if ok else 'FAIL ') + name + (f' [{detail}]' if detail else ''))
++
++def backup(count, damaged=()):
++    roster = [{'id': f'p{i}', 'name': f'Profile {i}', 'store': f'spread.v1.p{i}', 'theme': 'system', 'accent': None} for i in range(count)]
++    stores = {}
++    for i in range(count):
++        data = {'hats': [{'id': 'work', 'name': f'Hat {i}', 'defaultHours': 8, 'color': '#34C759'}],
++                'weeks': {'2026-10-05': {'boxes': [{'hatId': 'work', 'hours': 8, 'tasks': [{'id': f't{i}', 'text': f'Task of profile {i}', 'done': False}]}], 'allocations': []}},
++                'currentWeek': '2026-10-05'}
++        stores[f'p{i}'] = '{not json' if i in damaged else json.dumps(data)
++    payload = json.dumps({'schemaVersion': 2, 'createdAt': '2026-10-08T00:00:00Z', 'deviceId': None, 'activeProfileId': 'p0', 'roster': roster, 'stores': stores, 'settings': {}}, separators=(',', ':'))
++    return json.dumps({'kind': 'spread-backup', 'version': 2, 'checksum': hashlib.sha256(payload.encode()).hexdigest(), 'payloadText': payload})
++
++errors = []
++fs = {}
++with sync_playwright() as p:
++    launch = {'executable_path': os.environ['PW_CHROME']} if os.environ.get('PW_CHROME') else {}
++    b = p.chromium.launch(**launch)
++
++    def fresh():
++        ctx = b.new_context(viewport={'width': 393, 'height': 852})
++        ctx.add_init_script(INIT)
++        page = ctx.new_page()
++        store = {}
++        page.expose_function('__fsRead', lambda path: store.get(path))
++        page.expose_function('__fsWrite', lambda path, data, enc: store.__setitem__(path, data))
++        page.on('pageerror', lambda e: errors.append(str(e)))
++        page.goto('http://127.0.0.1:8097/'); page.wait_for_timeout(2500)
++        return page
++
++    def pick(page, text, name='b.spread'):
++        page.get_by_label('Settings').click(); page.wait_for_timeout(500)
++        page.set_input_files('input[type=file]', files=[{'name': name, 'mimeType': 'application/octet-stream', 'buffer': text.encode()}])
++        page.wait_for_timeout(700)
++
++    roster_of = lambda page: json.loads(page.evaluate("localStorage.getItem('spread.profiles')"))
++
++    # 1. A brand-new install has one empty profile. Ten profiles must all fit.
++    page = fresh()
++    check('a new install starts with exactly one profile', len(roster_of(page)) == 1)
++    pick(page, backup(10))
++    check('the ten-profile backup is offered without asking to remove anything', page.get_by_text('Add these profiles?').count() > 0, page.inner_text('body')[:300])
++    page.get_by_role('button', name='Add', exact=True).click(); page.wait_for_timeout(1200)
++    roster = roster_of(page)
++    check('all ten profiles are there (the empty one was filled)', len(roster) == 10, str(len(roster)))
++    check('the filled profile kept its place and took the first restored name', roster[0]['name'] == 'Profile 0', str([r['name'] for r in roster][:3]))
++    check('the open profile now shows restored content', 'Task of profile 0' in (page.evaluate("(k)=>localStorage.getItem(k)", roster[0]['store']) or ''))
++    check('the others are marked as restored', all('(restored' in r['name'] for r in roster[1:]), str([r['name'] for r in roster][1:4]))
++    page.screenshot(path=f'{SHOTS}/restore-ten.png')
++
++    # 2. A device that already has content and little room must let the person choose.
++    page2 = fresh()
++    page2.get_by_placeholder('What matters most here?').first.click(); page2.keyboard.type('Keep me'); page2.keyboard.press('Enter'); page2.wait_for_timeout(600)
++    pick(page2, backup(10))
++    text = page2.inner_text('body')
++    check('with content on the device, a profile picker is shown with the room that exists', 'Choose profiles to restore' in text and 'room for 9' in text, text[:300])
++    page2.screenshot(path=f'{SHOTS}/restore-pick.png')
++    boxes = page2.get_by_role('checkbox')
++    check('nine are pre-selected and the tenth cannot be added without removing one', boxes.count() == 10 and page2.get_by_role('checkbox', checked=True).count() == 9)
++    boxes.nth(0).click(); boxes.nth(1).click(); page2.wait_for_timeout(200)
++    page2.get_by_role('button', name='Restore 7', exact=True).click(); page2.wait_for_timeout(1200)
++    roster2 = roster_of(page2)
++    check('only the chosen profiles were added and the existing one is untouched', len(roster2) == 8 and roster2[0]['name'] == 'Me', str(len(roster2)))
++    check('the existing profile still has its own task', 'Keep me' in (page2.evaluate("(k)=>localStorage.getItem(k)", roster2[0]['store']) or ''))
++
++    # 3. A damaged profile is named, not silently dropped.
++    page3 = fresh()
++    pick(page3, backup(3, damaged=(1,)))
++    text3 = page3.inner_text('body')
++    check('the confirmation names the damaged profile', 'Profile 1' in text3 and 'damaged' in text3, text3[:300])
++    page3.get_by_role('button', name='Add', exact=True).click(); page3.wait_for_timeout(1200)
++    check('the readable ones were restored', len(roster_of(page3)) == 2)
++    check('the result says what was left out', page3.get_by_text('was damaged in the backup', exact=False).count() > 0)
++
++    check('no page errors', not errors, str(errors))
++    b.close()
++
++bad = [n for n, ok in results if not ok]
++print(f"\n{len(results) - len(bad)}/{len(results)} passed")
++sys.exit(1 if bad else 0)
+diff --git a/src/lib/spread/backup-full.test.ts b/src/lib/spread/backup-full.test.ts
+index 9860e7c..e41346e 100644
+--- a/src/lib/spread/backup-full.test.ts
++++ b/src/lib/spread/backup-full.test.ts
+@@ -123,5 +123,101 @@ test("a profile whose stored data is unreadable is skipped and counted", async (
+   const plan = planRestoreAsNew(payload, [], () => `q${(n += 1)}`);
+   assert.ok(plan.ok);
+   assert.equal(plan.profiles.length, 1);
+-  assert.equal(plan.skipped, 1);
++  assert.equal(plan.skipped.length, 1);
++});
++
++// --- Restore room (audit H3, M2, M3) ------------------------------------------------------------
++
++import { restoreCapacity } from "./backup.ts";
++
++function tenProfiles() {
++  const s = new Memory();
++  const roster = Array.from({ length: PROFILE_LIMIT }, (_, i) => profile(`p${i}`, `Profile ${i}`));
++  s.setItem(PROFILES_KEY, JSON.stringify(roster));
++  for (const p of roster) {
++    const d = defaultData();
++    d.hats[0].name = `Hat of ${p.id}`;
++    s.setItem(p.store, JSON.stringify(d));
++  }
++  return collectFullPayload(s, new Date(), null);
++}
++
++test("a full set of ten profiles restores onto a new install by filling its one empty profile", () => {
++  const payload = tenProfiles();
++  const empty = profile("fresh", "Me");
++  let n = 0;
++  const plan = planRestoreAsNew(payload, [empty], () => `n${(n += 1)}`, { replaceEmpty: "fresh" });
++  assert.ok(plan.ok);
++  assert.equal(plan.profiles.length, PROFILE_LIMIT);
++  assert.equal(plan.replacedId, "fresh");
++  assert.equal(plan.writes.length, PROFILE_LIMIT);
++  assert.equal(plan.profiles[0].id, "fresh", "the empty profile kept its place and its storage key");
++  assert.equal(plan.profiles[0].name, "Profile 0");
++  assert.equal(JSON.parse(plan.writes[0].value).hats[0].name, "Hat of p0");
++});
++
++test("without an empty profile to fill, ten onto one is still refused, but with the number that fits", () => {
++  const plan = planRestoreAsNew(tenProfiles(), [profile("mine", "Mine")], () => "x");
++  assert.deepEqual(plan, { ok: false, reason: "no-room", needed: 10, free: 9 });
++  assert.equal(restoreCapacity(1, false), 9);
++  assert.equal(restoreCapacity(1, true), 10);
++  assert.equal(restoreCapacity(10, false), 0);
++});
++
++test("choosing which profiles to restore fits any room", () => {
++  const payload = tenProfiles();
++  let n = 0;
++  const plan = planRestoreAsNew(payload, [profile("mine", "Mine")], () => `n${(n += 1)}`, { select: ["p0", "p3", "p7"] });
++  assert.ok(plan.ok);
++  assert.equal(plan.profiles.length, 4);
++  assert.deepEqual(plan.profiles.slice(1).map((p) => p.name), ["Profile 0 (restored)", "Profile 3 (restored)", "Profile 7 (restored)"]);
++  assert.equal(plan.replacedId, null);
++});
++
++test("an existing profile with content is never replaced, even if asked", () => {
++  const payload = tenProfiles();
++  const plan = planRestoreAsNew(payload, [profile("mine", "Mine")], () => "x", { select: ["p0"], replaceEmpty: null });
++  assert.ok(plan.ok);
++  assert.equal(plan.profiles[0].id, "mine");
++  assert.equal(plan.writes.every((w) => w.key !== profileStore("mine")), true);
++});
++
++test("unreadable profiles are named, not silently dropped", () => {
++  const s = twoProfilePlanner();
++  s.setItem(profileStore("p1"), "{not json");
++  const payload = collectFullPayload(s, new Date(), null);
++  let n = 0;
++  const plan = planRestoreAsNew(payload, [], () => `q${(n += 1)}`);
++  assert.ok(plan.ok);
++  assert.deepEqual(plan.skipped, ["Will"]);
++});
++
++test("the summary marks which profiles can be restored", async () => {
++  const s = twoProfilePlanner();
++  s.setItem(profileStore("p1"), "{not json");
++  const read = await parseFullBackup(await fullBackupText(collectFullPayload(s, new Date(), null)));
++  assert.ok(read);
++  assert.deepEqual(read.summary.profiles.map((p) => [p.id, p.readable]), [["p1", false], ["p2", true]]);
++});
++
++test("recovery copies are kept in the file, and files without them still read", async () => {
++  const s = twoProfilePlanner();
++  const payload = collectFullPayload(s, new Date(), null);
++  assert.deepEqual(payload.recovery, { "spread.recovery.spread.v1": "junk" });
++  const read = await parseFullBackup(await fullBackupText(payload));
++  assert.deepEqual(read?.payload.recovery, payload.recovery);
++  const old = { ...payload };
++  delete old.recovery;
++  const readOld = await parseFullBackup(await fullBackupText(old));
++  assert.ok(readOld);
++  assert.equal(readOld.payload.recovery, undefined);
++});
++
++test("device-local sync and backup state never goes into a backup file", () => {
++  const s = twoProfilePlanner();
++  s.setItem("spread.cloud.backup", "off");
++  s.setItem("spread.sync.account.S1", "_accountRecordName");
++  const payload = collectFullPayload(s, new Date(), null);
++  assert.deepEqual(Object.keys(payload.settings), ["spread-accent"]);
++  assert.ok(!JSON.stringify(payload).includes("_accountRecordName"));
+ });
+diff --git a/src/lib/spread/backup.ts b/src/lib/spread/backup.ts
+index 40b1895..de5a037 100644
+--- a/src/lib/spread/backup.ts
++++ b/src/lib/spread/backup.ts
+@@ -82,11 +82,19 @@ export type FullBackupPayload = {
+   roster: Profile[];
+   /** Raw stored text per profile, keyed by the profile's id. */
+   stores: Record<string, string>;
+-  /** Other `spread.*` settings worth keeping (not the license, schema marker or recovery copies). */
++  /**
++   * Other `spread.*` settings kept for completeness (not the license or the schema marker).
++   * Restoring a backup adds profiles; it does not apply these.
++   */
+   settings: Record<string, string>;
++  /**
++   * Copies of data that could not be read (`spread.recovery.*`), kept in the file for support.
++   * Optional so older files and older readers are unaffected. Not applied on restore.
++   */
++  recovery?: Record<string, string>;
+ };
+ 
+-export type FullBackupProfileSummary = { name: string; spreads: string[]; weeks: number; tasks: number; range: string };
++export type FullBackupProfileSummary = { id: string; readable: boolean; name: string; spreads: string[]; weeks: number; tasks: number; range: string };
+ 
+ export type FullBackup = { payload: FullBackupPayload; summary: { profiles: FullBackupProfileSummary[]; weeks: number; tasks: number } };
+ 
+@@ -110,8 +118,15 @@ export function collectFullPayload(storage: KeyStore, now: Date, deviceId: strin
+     if (typeof text === "string") stores[profile.id] = text;
+   }
+   const settings: Record<string, string> = {};
++  const recovery: Record<string, string> = {};
+   for (const [key, value] of Object.entries(collectEntries(storage))) {
+-    if (owned.has(key) || SKIPPED_SETTINGS.has(key) || isPlannerKey(key) || key.startsWith("spread.recovery.")) continue;
++    if (key.startsWith("spread.recovery.")) {
++      recovery[key] = value;
++      continue;
++    }
++    // Device-local state never goes into a file that can be shared or restored elsewhere: the
++    // backup preference and the iCloud account each synced profile was linked under.
++    if (owned.has(key) || SKIPPED_SETTINGS.has(key) || isPlannerKey(key) || key.startsWith("spread.cloud.") || key.startsWith("spread.sync.")) continue;
+     settings[key] = value;
+   }
+   const active = storage.getItem(ACTIVE_PROFILE_KEY);
+@@ -123,6 +138,7 @@ export function collectFullPayload(storage: KeyStore, now: Date, deviceId: strin
+     roster,
+     stores,
+     settings,
++    ...(Object.keys(recovery).length > 0 ? { recovery } : {}),
+   };
+ }
+ 
+@@ -179,6 +195,7 @@ export async function parseFullBackup(text: string): Promise<FullBackup | null>
+     roster,
+     stores: item.stores,
+     settings: item.settings,
++    ...(isRecordOfStrings(item.recovery) && Object.keys(item.recovery).length > 0 ? { recovery: item.recovery } : {}),
+   };
+   return { payload, summary: summarizeFull(payload) };
+ }
+@@ -186,13 +203,14 @@ export async function parseFullBackup(text: string): Promise<FullBackup | null>
+ export function summarizeFull(payload: FullBackupPayload): FullBackup["summary"] {
+   const profiles = payload.roster.map((profile) => {
+     let one: BackupSummary = { spreads: [], weeks: 0, tasks: 0, range: "No weeks" };
++    let readable = true;
+     try {
+       const stored = payload.stores[profile.id];
+       if (stored) one = summarize(normalizeData(JSON.parse(stored)));
+     } catch {
+-      /* an unreadable profile is listed as empty and skipped on restore */
++      readable = false; // listed, but it cannot be restored
+     }
+-    return { name: profile.name, ...one };
++    return { id: profile.id, readable, name: profile.name, ...one };
+   });
+   return {
+     profiles,
+@@ -210,9 +228,29 @@ export async function parseAnyBackup(text: string): Promise<ParsedBackup | null>
+ }
+ 
+ export type RestorePlan =
+-  | { ok: true; profiles: Profile[]; writes: { key: string; value: string }[]; skipped: number }
++  | {
++      ok: true;
++      profiles: Profile[];
++      writes: { key: string; value: string }[];
++      /** Names of profiles in the backup that could not be read and were not restored. */
++      skipped: string[];
++      /** An empty profile that took the place of the first restored one, if any. */
++      replacedId: string | null;
++    }
+   | { ok: false; reason: "no-room"; needed: number; free: number };
+ 
++export type RestoreOptions = {
++  /** Ids (from the backup's roster) to restore. Default: every readable profile. */
++  select?: string[];
++  /** An existing empty profile (never one with content) that may be filled by the first restored profile. */
++  replaceEmpty?: string | null;
++};
++
++/** How many profiles a restore can add: free slots, plus one if an empty profile can be filled. */
++export function restoreCapacity(existingCount: number, hasEmptyProfile: boolean): number {
++  return Math.max(0, PROFILE_LIMIT - existingCount) + (hasEmptyProfile ? 1 : 0);
++}
++
+ function restoredName(name: string, taken: Set<string>): string {
+   const suffix = " (restored)";
+   const base = cleanName(name) || "Me";
+@@ -225,42 +263,55 @@ function restoredName(name: string, taken: Set<string>): string {
+   return candidate;
+ }
+ 
++function readable(payload: FullBackupPayload, source: Profile): boolean {
++  try {
++    const text = payload.stores[source.id];
++    if (text === undefined) return true;
++    normalizeData(JSON.parse(text));
++    return true;
++  } catch {
++    return false;
++  }
++}
++
+ /**
+- * Add every profile in a full backup as a new profile. Nothing that is already on the device is
+- * changed or removed: new ids, new storage keys, and names that say they were restored.
++ * Add profiles from a full backup. Nothing on the device that has content is changed or removed:
++ * restored profiles get new ids, new storage keys, and names that say they were restored. The one
++ * exception is an *empty* profile (`replaceEmpty`), which the first restored profile may fill, so a
++ * brand-new install (which always has one empty profile) can take a full set of ten.
+  */
+-export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[], newId: () => string): RestorePlan {
+-  const free = PROFILE_LIMIT - existing.length;
+-  const usable = payload.roster.filter((profile) => {
+-    try {
+-      const text = payload.stores[profile.id];
+-      if (text === undefined) return true;
+-      normalizeData(JSON.parse(text));
+-      return true;
+-    } catch {
+-      return false;
+-    }
+-  });
+-  if (usable.length > free) return { ok: false, reason: "no-room", needed: usable.length, free: Math.max(free, 0) };
+-  const taken = new Set(existing.map((profile) => profile.name.toLowerCase()));
++export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[], newId: () => string, options: RestoreOptions = {}): RestorePlan {
++  const usable = payload.roster.filter((profile) => readable(payload, profile));
++  const skipped = payload.roster.filter((profile) => !readable(payload, profile)).map((profile) => profile.name);
++  const wanted = options.select ? new Set(options.select) : null;
++  const chosen = wanted ? usable.filter((profile) => wanted.has(profile.id)) : usable;
++  const replaceTarget = options.replaceEmpty ? (existing.find((profile) => profile.id === options.replaceEmpty) ?? null) : null;
++  const capacity = restoreCapacity(existing.length, replaceTarget !== null);
++  if (chosen.length > capacity) return { ok: false, reason: "no-room", needed: chosen.length, free: capacity };
++
++  const taken = new Set(existing.filter((profile) => profile.id !== replaceTarget?.id).map((profile) => profile.name.toLowerCase()));
+   const used = new Set(existing.map((profile) => profile.id));
+-  const profiles: Profile[] = [...existing];
++  let profiles: Profile[] = [...existing];
+   const writes: { key: string; value: string }[] = [];
+-  for (const source of usable) {
++  let replacedId: string | null = null;
++  chosen.forEach((source, index) => {
++    const text = payload.stores[source.id];
++    const data = JSON.stringify(text === undefined ? normalizeData(null) : normalizeData(JSON.parse(text)));
++    if (index === 0 && replaceTarget) {
++      const plainName = cleanName(source.name) || "Me";
++      const name = taken.has(plainName.toLowerCase()) ? restoredName(source.name, taken) : plainName;
++      taken.add(name.toLowerCase());
++      writes.push({ key: replaceTarget.store, value: data });
++      profiles = profiles.map((profile) => (profile.id === replaceTarget.id ? { id: profile.id, name, store: profile.store, theme: source.theme, accent: source.accent } : profile));
++      replacedId = replaceTarget.id;
++      return;
++    }
+     let id = newId();
+     while (!id || used.has(id)) id = newId();
+     used.add(id);
+     const store = profileStore(id);
+-    const text = payload.stores[source.id];
+-    const data = text === undefined ? normalizeData(null) : normalizeData(JSON.parse(text));
+-    writes.push({ key: store, value: JSON.stringify(data) });
+-    profiles.push({
+-      id,
+-      name: restoredName(source.name, taken),
+-      store,
+-      theme: source.theme,
+-      accent: source.accent,
+-    });
+-  }
+-  return { ok: true, profiles, writes, skipped: payload.roster.length - usable.length };
++    writes.push({ key: store, value: data });
++    profiles.push({ id, name: restoredName(source.name, taken), store, theme: source.theme, accent: source.accent });
++  });
++  return { ok: true, profiles, writes, skipped, replacedId };
+ }
+diff --git a/src/lib/spread/store.ts b/src/lib/spread/store.ts
+index ebf1a41..e64fc70 100644
+--- a/src/lib/spread/store.ts
++++ b/src/lib/spread/store.ts
+@@ -1,8 +1,9 @@
+-import { collectFullPayload, fullBackupText, planRestoreAsNew, type FullBackupPayload } from "@/lib/spread/backup";
++import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
+ import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
+ import { collectEntries, flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
+ import { pinBackup } from "@/lib/spread/cloud-backup";
+ import { runMigrations } from "@/lib/spread/schema";
++import { isPristine } from "@/lib/spread/sync-link";
+ import { saveFile, type SaveResult } from "@/lib/spread/save-file";
+ import {
+   ACTIVE_PROFILE_KEY,
+@@ -104,7 +105,9 @@ type Store = {
+   copyLastWeek: () => boolean;
+   /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
+   replaceData: (data: SpreadData) => boolean;
+-  restoreAsNew: (payload: FullBackupPayload) => RestoreResult;
++  restoreAsNew: (payload: FullBackupPayload, select?: string[]) => RestoreResult;
++  /** How many profiles a restore can add right now (free slots, plus an empty profile it may fill). */
++  restoreRoom: () => number;
+   /** Put a merged planner from iCloud Sync into the open profile. Keeps the week being viewed. */
+   applySynced: (data: SpreadData, name: string | null) => void;
+   setSyncId: (profileId: string, syncId: string | null) => void;
+@@ -113,7 +116,7 @@ type Store = {
+ };
+ 
+ export type RestoreResult =
+-  | { ok: true; added: number; skipped: number }
++  | { ok: true; added: number; replacedEmpty: boolean; skipped: string[] }
+   | { ok: false; reason: "no-room"; needed: number; free: number }
+   | { ok: false; reason: "write-failed" };
+ 
+@@ -270,6 +273,27 @@ const rosterStorage = {
+   removeItem: drop,
+ };
+ 
++/**
++ * An existing profile with nothing in it that is not linked to iCloud, which a restore may fill.
++ * The open profile is preferred. Content is judged from what is saved, never guessed.
++ */
++function emptyProfileId(state: { profiles: Profile[]; activeId: string | null }): string | null {
++  const candidates = [...state.profiles].sort((a, b) => Number(b.id === state.activeId) - Number(a.id === state.activeId));
++  for (const profile of candidates) {
++    if (profile.syncId) continue;
++    try {
++      // Judge what is saved (the caller has flushed pending edits). A profile whose saved text is
++      // unreadable is not empty: it holds something, so it is never overwritten.
++      const raw = localStorage.getItem(profile.store);
++      if (raw === null) return profile.id;
++      if (isPristine(normalizeData(JSON.parse(raw)))) return profile.id;
++    } catch {
++      /* unreadable: not treated as empty */
++    }
++  }
++  return null;
++}
++
+ function writeProfiles(profiles: Profile[]) {
+   put(PROFILES_KEY, JSON.stringify(profiles));
+ }
+@@ -823,9 +847,14 @@ export const useSpread = create<Store>((set, get) => ({
+     set({ profiles: next });
+     return id;
+   },
+-  restoreAsNew: (payload) => {
++  restoreRoom: () => {
++    flushSpread();
++    return restoreCapacity(get().profiles.length, emptyProfileId(get()) !== null);
++  },
++  restoreAsNew: (payload, select) => {
+     flushSpread();
+-    const plan = planRestoreAsNew(payload, get().profiles, uid);
++    const emptyId = emptyProfileId(get());
++    const plan = planRestoreAsNew(payload, get().profiles, uid, { select, replaceEmpty: emptyId });
+     if (!plan.ok) return plan;
+     if (isNativeApp()) {
+       pinSnapshot("pre-restore", collectEntries(localStorage));
+@@ -834,8 +863,16 @@ export const useSpread = create<Store>((set, get) => ({
+     // Profile data first and the roster last, so a failed write leaves the roster as it was.
+     for (const write of plan.writes) if (!put(write.key, write.value)) return { ok: false, reason: "write-failed" };
+     writeProfiles(plan.profiles);
++    if (plan.replacedId && plan.replacedId === get().activeId) {
++      const filled = plan.profiles.find((profile) => profile.id === plan.replacedId);
++      if (filled) {
++        const loaded = adopt(filled);
++        set({ profiles: plan.profiles, ...loaded });
++        return { ok: true, added: plan.writes.length, replacedEmpty: true, skipped: plan.skipped };
++      }
++    }
+     set({ profiles: plan.profiles });
+-    return { ok: true, added: plan.writes.length, skipped: plan.skipped };
++    return { ok: true, added: plan.writes.length, replacedEmpty: plan.replacedId !== null, skipped: plan.skipped };
+   },
+ }));
+ 
+diff --git a/src/spread/screens/spread-app.tsx b/src/spread/screens/spread-app.tsx
+index d3b804b..23ddc6d 100644
+--- a/src/spread/screens/spread-app.tsx
++++ b/src/spread/screens/spread-app.tsx
+@@ -1516,21 +1516,22 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
+ }
+ 
+ /** Apply a confirmed restore. Returns what to tell the person and whether the sheet can close. */
+-function applyRestore(backup: ParsedBackup): { ok: boolean; message: string } {
++function applyRestore(backup: ParsedBackup, select?: string[]): { ok: boolean; message: string } {
+   const state = useSpread.getState();
+   if (backup.kind === "full") {
+-    const result = state.restoreAsNew(backup.payload);
++    const result = state.restoreAsNew(backup.payload, select);
+     if (!result.ok) {
+-      const missing = result.reason === "no-room" ? result.needed - result.free : 0;
+       return {
+         ok: false,
+         message:
+           result.reason === "no-room"
+-            ? `Not enough room. Remove ${missing} profile${missing === 1 ? "" : "s"} first, then try again.`
++            ? `There is room for ${result.free} more. Choose fewer profiles to restore.`
+             : "Couldn’t add the profiles. Nothing was changed.",
+       };
+     }
+-    return { ok: true, message: result.added === 1 ? "Profile added." : `${result.added} profiles added.` };
++    const skipped = result.skipped.length > 0 ? ` ${result.skipped.length === 1 ? `“${result.skipped[0]}” was damaged in the backup and was not restored.` : `${result.skipped.length} profiles were damaged in the backup and were not restored.`}` : "";
++    const base = result.added === 1 ? "Profile restored." : `${result.added} profiles restored.`;
++    return { ok: true, message: `${base}${skipped}` };
+   }
+   if (!state.replaceData(backup.data)) {
+     return { ok: false, message: "This profile syncs with iCloud, so a restore would change your other devices too. Turn sync off for it first, or restore into a new profile." };
+@@ -1712,9 +1713,9 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
+       <RestoreDialog
+         backup={backup}
+         onClose={() => setBackup(null)}
+-        onConfirm={() => {
++        onConfirm={(selection) => {
+           if (!backup) return;
+-          const outcome = applyRestore(backup);
++          const outcome = applyRestore(backup, selection);
+           setBackup(null);
+           if (outcome.ok) setSheet(null);
+           toast(outcome.message);
+@@ -1732,7 +1733,7 @@ function RestoreDialog({
+ }: {
+   backup: ParsedBackup | null;
+   onClose: () => void;
+-  onConfirm: () => void;
++  onConfirm: (selection?: string[]) => void;
+ }) {
+   if (backup?.kind === "full") return <RestoreFullDialog backup={backup} onClose={onClose} onConfirm={onConfirm} />;
+   const names = backup?.summary.spreads ?? [];
+@@ -1749,7 +1750,7 @@ function RestoreDialog({
+           </AlertDialog.Description>
+           <div className="mt-5 grid grid-cols-2 gap-2">
+             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+-            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
++            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => onConfirm()}>
+               Restore
+             </AlertDialog.Action>
+           </div>
+@@ -1886,9 +1887,9 @@ function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "c
+       <RestoreDialog
+         backup={picked}
+         onClose={() => setPicked(null)}
+-        onConfirm={() => {
++        onConfirm={(selection) => {
+           if (!picked) return;
+-          const outcome = applyRestore(picked);
++          const outcome = applyRestore(picked, selection);
+           setPicked(null);
+           toast(outcome.message);
+           if (outcome.ok) onBack();
+@@ -2139,24 +2140,61 @@ function RestoreFullDialog({
+ }: {
+   backup: Extract<ParsedBackup, { kind: "full" }>;
+   onClose: () => void;
+-  onConfirm: () => void;
++  onConfirm: (selection?: string[]) => void;
+ }) {
+-  const names = backup.summary.profiles.map((item) => item.name);
++  const room = useSpread((st) => st.restoreRoom)();
++  const profiles = backup.summary.profiles;
++  const restorable = profiles.filter((item) => item.readable);
++  const damaged = profiles.filter((item) => !item.readable);
++  const mustChoose = restorable.length > room;
++  const [chosen, setChosen] = useState<string[]>(() => restorable.slice(0, room).map((item) => item.id));
++  const count = mustChoose ? chosen.length : restorable.length;
++  const names = restorable.map((item) => item.name);
+   const listed = names.length <= 3 ? names.join(", ") : `${names.slice(0, 2).join(", ")}, and ${names.length - 2} more`;
+   return (
+     <AlertDialog.Root open onOpenChange={(open) => !open && onClose()}>
+       <AlertDialog.Portal>
+         <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+-        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+-          <AlertDialog.Title className="text-center text-base font-semibold">Add these profiles?</AlertDialog.Title>
++        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-h-[80vh] max-w-xs -translate-y-1/2 overflow-y-auto rounded-3xl bg-elevated p-5 outline-none">
++          <AlertDialog.Title className="text-center text-base font-semibold">{mustChoose ? "Choose profiles to restore" : "Add these profiles?"}</AlertDialog.Title>
+           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+-            {listed}. {backup.summary.weeks} {backup.summary.weeks === 1 ? "week" : "weeks"}, {backup.summary.tasks}{" "}
+-            {backup.summary.tasks === 1 ? "task" : "tasks"}. Nothing on this device changes. Each profile is added with “restored” in its name.
++            {mustChoose
++              ? `This device has room for ${room}. Pick which of the ${restorable.length} to restore. The rest stay in the backup file.`
++              : `${listed}. ${backup.summary.weeks} ${backup.summary.weeks === 1 ? "week" : "weeks"}, ${backup.summary.tasks} ${backup.summary.tasks === 1 ? "task" : "tasks"}. Nothing that has content on this device changes. An empty profile may be filled; the others are added with “restored” in their names.`}
++            {damaged.length > 0 ? ` ${damaged.length === 1 ? `“${damaged[0].name}” is damaged and can’t be restored.` : `${damaged.length} profiles are damaged and can’t be restored.`}` : ""}
+           </AlertDialog.Description>
++          {mustChoose && (
++            <div className="mt-3 overflow-hidden rounded-2xl bg-canvas" role="group" aria-label="Profiles in the backup">
++              {restorable.map((item) => {
++                const on = chosen.includes(item.id);
++                return (
++                  <button
++                    key={item.id}
++                    type="button"
++                    role="checkbox"
++                    aria-checked={on}
++                    disabled={!on && chosen.length >= room}
++                    className="flex w-full items-center justify-between gap-3 border-b border-line px-3 py-2.5 text-left text-sm last:border-b-0 disabled:text-tertiary"
++                    onClick={() => setChosen((now) => (on ? now.filter((id) => id !== item.id) : [...now, item.id]))}
++                  >
++                    <span>
++                      {item.name}
++                      <span className="block text-xs text-secondary">{item.tasks} {item.tasks === 1 ? "task" : "tasks"}, {item.weeks} {item.weeks === 1 ? "week" : "weeks"}</span>
++                    </span>
++                    {on ? <Check className="size-4 text-accent" strokeWidth={3} /> : null}
++                  </button>
++                );
++              })}
++            </div>
++          )}
+           <div className="mt-5 grid grid-cols-2 gap-2">
+             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+-            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
+-              Add
++            <AlertDialog.Action
++              disabled={count === 0}
++              className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-50"
++              onClick={() => onConfirm(mustChoose ? chosen : undefined)}
++            >
++              {mustChoose ? `Restore ${chosen.length}` : "Add"}
+             </AlertDialog.Action>
+           </div>
+         </AlertDialog.Content>

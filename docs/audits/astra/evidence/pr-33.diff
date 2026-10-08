@@ -1,0 +1,227 @@
+diff --git a/scripts/ios-bridge-sim/sync_e2e.py b/scripts/ios-bridge-sim/sync_e2e.py
+index 8aacc53..9f7a102 100644
+--- a/scripts/ios-bridge-sim/sync_e2e.py
++++ b/scripts/ios-bridge-sim/sync_e2e.py
+@@ -127,6 +127,17 @@ def rename(page, old, new):
+     check('and the phone has nothing left to decide', 'need your choice' not in body(phone) and 'needs your choice' not in body(phone), body(phone)[:300])
+     close_sheet(phone)
+ 
++    # Restoring a file into a profile that syncs would delete on every device: it is refused.
++    legacy = json.dumps({'kind': 'spread-backup', 'version': 1, 'savedAt': '2026-10-01T00:00:00Z', 'data': {'hats': [{'id': 'work', 'name': 'Work', 'defaultHours': 8, 'color': '#34C759'}], 'weeks': {'2026-09-28': {'boxes': [{'hatId': 'work', 'hours': 8, 'tasks': [{'id': 't1', 'text': 'Old file task', 'done': False}]}]}}, 'currentWeek': '2026-09-28'}})
++    before_restore = tasks_on(phone)
++    phone.get_by_label('Settings').click(); phone.wait_for_timeout(500)
++    phone.set_input_files('input[type=file]', files=[{'name': 'old.spread', 'mimeType': 'application/octet-stream', 'buffer': legacy.encode()}])
++    phone.wait_for_timeout(500)
++    phone.get_by_role('button', name='Restore', exact=True).click(); phone.wait_for_timeout(800)
++    check('a file restore into a synced profile is refused with a reason', 'syncs with iCloud' in body(phone), body(phone)[:200])
++    check('and nothing in the profile changed', tasks_on(phone) == before_restore, str(tasks_on(phone)))
++    close_sheet(phone)
++
+     # Linking a profile that has content never merges it with iCloud.
+     pad.evaluate("window.__x = 1")
+     third = device('third')
+diff --git a/src/lib/spread/cloud-sync.ts b/src/lib/spread/cloud-sync.ts
+index 38932b4..6a0089d 100644
+--- a/src/lib/spread/cloud-sync.ts
++++ b/src/lib/spread/cloud-sync.ts
+@@ -15,7 +15,7 @@ import { weekKey } from "./model.ts";
+ import { flushSpread, useSpread } from "./store.ts";
+ import { collectEntries, onStorageChanged, pinSnapshot } from "./native-mirror.ts";
+ import { isNativeApp } from "./native.ts";
+-import { isPristine, planLink, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
++import { isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
+ import { createSyncSession, type SessionView, type SyncSession, type SyncTransport } from "./sync-session.ts";
+ import { adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
+ import { PROFILE_LIMIT } from "./profiles.ts";
+@@ -310,10 +310,17 @@ export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
+   const state = adoptRemote(cloud.syncId, await deviceId(), remote, new Date().toISOString());
+   writeStateFile(state);
+   await writeChain;
+-  const { data, name } = dataFromItems(remote, s.data.currentWeek);
+-  s.applySynced(data, name);
++  // The steps above took a while. Look again, in the same breath as the replacement, so nothing
++  // typed in the meantime is overwritten.
++  const latest = useSpread.getState();
++  if (!stillSafeToAdopt({ profileId: s.activeId }, { profileId: latest.activeId, data: latest.data })) {
++    await deleteStateFile(cloud.syncId);
++    return false;
++  }
++  const { data, name } = dataFromItems(remote, latest.data.currentWeek);
++  latest.applySynced(data, name);
+   await plugin.syncAck({ names: mine.map((row) => `${row.syncId}|${row.itemId}`) });
+-  s.setSyncId(s.activeId, cloud.syncId);
++  latest.setSyncId(latest.activeId as string, cloud.syncId);
+   return true;
+ }
+ 
+diff --git a/src/lib/spread/store.ts b/src/lib/spread/store.ts
+index 36d3b47..ebf1a41 100644
+--- a/src/lib/spread/store.ts
++++ b/src/lib/spread/store.ts
+@@ -102,7 +102,8 @@ type Store = {
+   removeAllocation: (allocationId: string) => void;
+   rollover: (force?: boolean) => "done" | "confirm" | "empty";
+   copyLastWeek: () => boolean;
+-  replaceData: (data: SpreadData) => void;
++  /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
++  replaceData: (data: SpreadData) => boolean;
+   restoreAsNew: (payload: FullBackupPayload) => RestoreResult;
+   /** Put a merged planner from iCloud Sync into the open profile. Keeps the week being viewed. */
+   applySynced: (data: SpreadData, name: string | null) => void;
+@@ -768,6 +769,8 @@ export const useSpread = create<Store>((set, get) => ({
+     return true;
+   },
+   replaceData: (incoming) => {
++    const open = get().profiles.find((profile) => profile.id === get().activeId);
++    if (open?.syncId) return false;
+     const data = normalizeData(incoming);
+     flushSpread();
+     if (isNativeApp()) {
+@@ -775,10 +778,20 @@ export const useSpread = create<Store>((set, get) => ({
+       void pinBackup("pre-restore");
+     }
+     commit(set, data);
++    return true;
+   },
+   applySynced: (incoming, name) => {
+     const data = normalizeData(incoming);
+-    commit(set, data);
++    // A merge that did not reach storage must not look applied: the sync state would then run
++    // ahead of the saved planner, and the next pass would read the old planner as an edit that
++    // undoes iCloud's change. Throwing lets the session put its state back.
++    pending = null;
++    if (persistTimer !== null) {
++      window.clearTimeout(persistTimer);
++      persistTimer = null;
++    }
++    if (!put(activeStore, JSON.stringify(data))) throw new Error("couldn't save the synced changes");
++    set({ data });
+     const { activeId, profiles } = get();
+     const label = name ? cleanName(name) : "";
+     if (label && activeId) {
+diff --git a/src/lib/spread/sync-link.test.ts b/src/lib/spread/sync-link.test.ts
+index 7254d20..639ac67 100644
+--- a/src/lib/spread/sync-link.test.ts
++++ b/src/lib/spread/sync-link.test.ts
+@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
+ import test from "node:test";
+ import { defaultData } from "./model.ts";
+ import { PROFILE_LIMIT } from "./profiles.ts";
+-import { isPristine, planLink, summarizeCloud, toItems } from "./sync-link.ts";
++import { isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems } from "./sync-link.ts";
+ 
+ const row = (syncId: string, itemId: string, fields: Record<string, unknown> = {}, deleted = false, at = "2026-10-08T10:00:00Z") => ({ syncId, itemId, deleted, at, fields });
+ 
+@@ -67,3 +67,13 @@ test("rows from the bridge that do not parse are skipped, not guessed at", () =>
+   ]);
+   assert.deepEqual(items.map((i) => i.id), ["task:a"]);
+ });
++
++test("adopting is refused if the planner changed or another profile opened since the check", () => {
++  const empty = defaultData();
++  assert.equal(stillSafeToAdopt({ profileId: "p1" }, { profileId: "p1", data: empty }), true);
++  const typed = defaultData();
++  typed.weeks[typed.currentWeek].boxes[0].tasks.push({ id: "t", text: "typed meanwhile", done: false });
++  assert.equal(stillSafeToAdopt({ profileId: "p1" }, { profileId: "p1", data: typed }), false);
++  assert.equal(stillSafeToAdopt({ profileId: "p1" }, { profileId: "p2", data: empty }), false);
++  assert.equal(stillSafeToAdopt({ profileId: null }, { profileId: null, data: empty }), false);
++});
+diff --git a/src/lib/spread/sync-link.ts b/src/lib/spread/sync-link.ts
+index ebbe9de..e9102b6 100644
+--- a/src/lib/spread/sync-link.ts
++++ b/src/lib/spread/sync-link.ts
+@@ -95,3 +95,12 @@ export function toItems(rows: { itemId: string; fields: string; v: string; delet
+   }
+   return out;
+ }
++
++/**
++ * Joining iCloud data in place replaces the planner, so it is only allowed while the planner is
++ * still the empty one the person was shown. Called again immediately before the replacement,
++ * because the checks and downloads before it take seconds and the person may have typed meanwhile.
++ */
++export function stillSafeToAdopt(started: { profileId: string | null }, now: { profileId: string | null; data: SpreadData }): boolean {
++  return started.profileId !== null && started.profileId === now.profileId && isPristine(now.data);
++}
+diff --git a/src/lib/spread/sync-session.test.ts b/src/lib/spread/sync-session.test.ts
+index 0470aca..088488c 100644
+--- a/src/lib/spread/sync-session.test.ts
++++ b/src/lib/spread/sync-session.test.ts
+@@ -108,8 +108,8 @@ function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S1") {
+     newId: () => `n${clock++}`,
+     now: () => `2026-10-08T12:${String(clock++ % 60).padStart(2, "0")}:00Z`,
+   };
+-  const session = createSyncSession(deps);
+-  return { env, native, session, get state() { return saved; } };
++  const session = createSyncSession({ ...deps, apply: (...args) => deps.apply(...args) });
++  return { env, native, session, deps, get state() { return saved; } };
+ }
+ 
+ const taskIds = (d: ReturnType<typeof device>) => Object.values(d.env.data.weeks).flatMap((w) => w.boxes.flatMap((b) => b.tasks.map((t) => t.id))).sort();
+@@ -388,3 +388,30 @@ test("the same session still syncs normally while its profile stays open", async
+   await h.session.start();
+   assert.ok(h.env.queued.some((row) => row.itemId === "task:a1"));
+ });
++
++test("if iCloud's changes cannot be saved to the planner, sync state does not run ahead of it", async () => {
++  const cloud = new Cloud();
++  const seed = normalizeData(structuredClone(defaultData()));
++  const a = device(cloud, "phone", normalizeData(structuredClone(seed)));
++  const b = device(cloud, "pad", normalizeData(structuredClone(seed)));
++  await a.session.start();
++  addTask(a, "t1", "From phone");
++  await a.session.localChanged();
++  await settle(a);
++  // The pad's storage refuses the write until told otherwise.
++  const realApply = b.deps.apply;
++  let refuse = true;
++  b.deps.apply = (next, nm) => {
++    if (refuse) throw new Error("storage full");
++    realApply(next, nm);
++  };
++  await b.session.start();
++  await b.session.syncNow();
++  assert.ok(b.session.view().lastError);
++  assert.deepEqual(taskIds(b), [], "the planner is unchanged");
++  refuse = false;
++  await settle(a, b);
++  assert.deepEqual(taskIds(b), ["t1"], "the change arrives once storage works");
++  assert.deepEqual(taskIds(a), ["t1"], "and was never undone on the other device");
++  assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
++});
+diff --git a/src/lib/spread/sync-session.ts b/src/lib/spread/sync-session.ts
+index 3ce900a..5dca3a4 100644
+--- a/src/lib/spread/sync-session.ts
++++ b/src/lib/spread/sync-session.ts
+@@ -149,12 +149,14 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+       // 2. inbound, 3. apply
+       if (rows.length > 0) {
+         const merged = applyRemote(state, toItems(rows), deps.now());
+-        state = merged.state;
+         if (merged.dataChanged) {
+           deps.snapshot("pre-sync");
+-          const next = liveData(state, here.data.currentWeek);
++          const next = liveData(merged.state, here.data.currentWeek);
++          // If the planner cannot be updated, sync state stays as it was. Advancing it anyway
++          // would make the next pass read the unchanged planner as an edit undoing iCloud's change.
+           deps.apply(next.data, next.name);
+         }
++        state = merged.state;
+         await deps.transport.ack(rows.map((row) => `${row.syncId}|${row.itemId}`));
+       }
+ 
+diff --git a/src/spread/screens/spread-app.tsx b/src/spread/screens/spread-app.tsx
+index 9551670..d3b804b 100644
+--- a/src/spread/screens/spread-app.tsx
++++ b/src/spread/screens/spread-app.tsx
+@@ -1532,7 +1532,9 @@ function applyRestore(backup: ParsedBackup): { ok: boolean; message: string } {
+     }
+     return { ok: true, message: result.added === 1 ? "Profile added." : `${result.added} profiles added.` };
+   }
+-  state.replaceData(backup.data);
++  if (!state.replaceData(backup.data)) {
++    return { ok: false, message: "This profile syncs with iCloud, so a restore would change your other devices too. Turn sync off for it first, or restore into a new profile." };
++  }
+   return { ok: true, message: "Backup restored." };
+ }
+ 

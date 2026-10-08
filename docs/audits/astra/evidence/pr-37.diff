@@ -1,0 +1,872 @@
+diff --git a/package.json b/package.json
+index 51ca1f6..7faab4c 100644
+--- a/package.json
++++ b/package.json
+@@ -15,7 +15,7 @@
+     "preview:restart": "node scripts/preview.mjs restart",
+     "preview:stop": "node scripts/preview.mjs stop",
+     "typecheck": "tsc --noEmit",
+-    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/spread/cloud-status.test.ts src/lib/spread/backup-runner.test.ts src/lib/spread/sync-model.test.ts src/lib/spread/sync-sim.test.ts src/lib/spread/sync-link.test.ts src/lib/spread/sync-session.test.ts src/lib/spread/sync-guard.test.ts src/lib/spread/serial.test.ts src/lib/spread/sync-labels.test.ts src/lib/spread/sync-integrity.test.ts",
++    "test:spread": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/spread/cloud-status.test.ts src/lib/spread/backup-runner.test.ts src/lib/spread/sync-model.test.ts src/lib/spread/sync-sim.test.ts src/lib/spread/sync-link.test.ts src/lib/spread/sync-session.test.ts src/lib/spread/sync-guard.test.ts src/lib/spread/serial.test.ts src/lib/spread/sync-labels.test.ts src/lib/spread/sync-integrity.test.ts src/lib/spread/sync-discard.test.ts",
+     "check:auth": "node scripts/check-auth-invariant.mjs",
+     "test": "node --experimental-strip-types --test src/spread/gestures/gestures.test.ts src/lib/spread/hours.test.ts src/lib/spread/share.test.ts src/lib/spread/profiles.test.ts src/lib/spread/month.test.ts src/lib/spread/native.test.ts src/lib/spread/native-mirror.test.ts src/lib/spread/upgrade.test.ts src/lib/spread/schema.test.ts src/lib/spread/clock.test.ts src/lib/spread/merge.test.ts src/lib/spread/backup-full.test.ts src/lib/waitlist.test.ts && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
+     "lint": "eslint .",
+diff --git a/scripts/ios-bridge-sim/cloud_backup_e2e.py b/scripts/ios-bridge-sim/cloud_backup_e2e.py
+index fb34e84..5ec096c 100644
+--- a/scripts/ios-bridge-sim/cloud_backup_e2e.py
++++ b/scripts/ios-bridge-sim/cloud_backup_e2e.py
+@@ -26,6 +26,8 @@ def check(name, ok, detail=''):
+     b = p.chromium.launch(**launch)
+     ctx = b.new_context(viewport={'width': 393, 'height': 852})
+     ctx.add_init_script(INIT)
++    # This run is of someone who already answered the first-run notice (tested separately below).
++    ctx.add_init_script("try { localStorage.setItem('spread.cloud.backup.ack', 'yes') } catch (e) {}")
+     page = ctx.new_page()
+     page.expose_function('__fsRead', lambda path: fs.get(path))
+     page.expose_function('__fsWrite', lambda path, data, enc: fs.__setitem__(path, data))
+@@ -122,6 +124,56 @@ def open_cloud():
+     check('a profile was added and the existing ones are unchanged', len(roster_after) == len(roster_before) + 1 and roster_after[:len(roster_before)] == roster_before)
+     check('a copy of the planner was kept before the restore', any(x['pin'] == 'pre-restore' for x in store()), str([x['pin'] for x in store()]))
+ 
++    check('a safety copy was written on this device with its own name', any(k.startswith('spread-pinned-') and k.endswith('-pre-restore.json') for k in fs), str([k for k in fs if 'pinned' in k]))
++    page.keyboard.press('Escape'); page.wait_for_timeout(400)
++    page.get_by_label('Settings').click(); page.wait_for_timeout(500)
++    page.get_by_text('Restore from a safety copy').click(); page.wait_for_timeout(700)
++    check('safety copies can be found and restored from More', page.get_by_label('Safety copies on this device').count() > 0 and 'Saved before restore' in page.inner_text('body'), page.inner_text('body')[-300:])
++    page.keyboard.press('Escape'); page.wait_for_timeout(400)
++
++    # Opting out stops every iCloud write, including the copy taken before a restore.
++    open_cloud()
++    page.get_by_role('switch').click(); page.wait_for_timeout(500)
++    page.keyboard.press('Escape'); page.wait_for_timeout(500)
++    page.evaluate("window.__cloudStore = window.__cloudStore || []")
++    n = len(page.evaluate("window.__cloudStore"))
++    page.get_by_label('Settings').click(); page.wait_for_timeout(500)
++    page.get_by_text('Restore from a safety copy').click(); page.wait_for_timeout(700)
++    page.get_by_role('listitem').first.click(); page.wait_for_timeout(900)
++    page.get_by_role('button', name='Add', exact=True).click(); page.wait_for_timeout(1500)
++    check('with backup off, a restore writes nothing to iCloud', len(page.evaluate("window.__cloudStore")) == n, str(len(page.evaluate("window.__cloudStore"))))
++
++    # First run: nothing is uploaded until the notice is answered.
++    fs2 = {}
++    fresh = b.new_context(viewport={'width': 393, 'height': 852})
++    fresh.add_init_script(INIT)
++    pg = fresh.new_page()
++    pg.expose_function('__fsRead', lambda path: fs2.get(path))
++    pg.expose_function('__fsWrite', lambda path, data, enc: fs2.__setitem__(path, data))
++    pg.goto('http://127.0.0.1:8097/'); pg.wait_for_timeout(4500)
++    check('first run asks before backing up', pg.get_by_text('Back up to iCloud?').count() > 0)
++    pg.get_by_role('button', name='Not now').click(); pg.wait_for_timeout(500)
++    pg.get_by_placeholder('What matters most here?').first.click()
++    pg.keyboard.type('Quiet'); pg.keyboard.press('Enter'); pg.wait_for_timeout(700)
++    pg.evaluate(hide); pg.wait_for_timeout(1500)
++    check('"Not now" uploads nothing', len(pg.evaluate("window.__cloudStore || []")) == 0)
++    pg.close(); fresh.close()
++    fs3 = {}
++    fresh2 = b.new_context(viewport={'width': 393, 'height': 852})
++    fresh2.add_init_script(INIT)
++    p2 = fresh2.new_page()
++    p2.expose_function('__fsRead', lambda path: fs3.get(path))
++    p2.expose_function('__fsWrite', lambda path, data, enc: fs3.__setitem__(path, data))
++    p2.goto('http://127.0.0.1:8097/'); p2.wait_for_timeout(4500)
++    p2.evaluate(hide); p2.wait_for_timeout(1500)
++    check('before the notice is answered nothing is uploaded', len(p2.evaluate("window.__cloudStore || []")) == 0)
++    p2.evaluate(show); p2.wait_for_timeout(300)
++    p2.get_by_role('button', name='Turn on').click(); p2.wait_for_timeout(1000)
++    p2.get_by_placeholder('What matters most here?').first.click()
++    p2.keyboard.type('After answering'); p2.keyboard.press('Enter'); p2.wait_for_timeout(700)
++    p2.evaluate(hide); p2.wait_for_timeout(1500)
++    check('after "Turn on" the planner is backed up', len(p2.evaluate("window.__cloudStore || []")) >= 1)
++
+     check('no request left the app', not external, str(external))
+     check('no page errors', not errors, str(errors))
+     b.close()
+diff --git a/scripts/ios-bridge-sim/native-init.js b/scripts/ios-bridge-sim/native-init.js
+index 2396597..d7def0d 100644
+--- a/scripts/ios-bridge-sim/native-init.js
++++ b/scripts/ios-bridge-sim/native-init.js
+@@ -3,7 +3,9 @@
+   const plugins = {
+     Filesystem: {
+       async readFile(o) { const v = await window.__fsRead(o.path); if (v === null) throw new Error('File does not exist.'); return { data: v }; },
+-      async writeFile(o) { await window.__fsWrite(o.path, o.data, o.encoding || 'base64'); return { uri: 'file:///fake/' + o.path }; },
++      async writeFile(o) { await window.__fsWrite(o.path, o.data, o.encoding || 'base64'); (window.__fsNames = window.__fsNames || new Set()).add(o.path); return { uri: 'file:///fake/' + o.path }; },
++      async readdir() { return { files: [...(window.__fsNames || [])].map((name) => ({ name })) }; },
++      async deleteFile(o) { (window.__fsNames || new Set()).delete(o.path); },
+       async rmdir() {},
+     },
+     Share: {
+diff --git a/scripts/ios-bridge-sim/sync_e2e.py b/scripts/ios-bridge-sim/sync_e2e.py
+index ef25bb6..ffb80a6 100644
+--- a/scripts/ios-bridge-sim/sync_e2e.py
++++ b/scripts/ios-bridge-sim/sync_e2e.py
+@@ -40,6 +40,7 @@ def cloud_changes(cursor):
+     def device(name):
+         ctx = b.new_context(viewport={'width': 393, 'height': 852})
+         ctx.add_init_script(INIT)
++        ctx.add_init_script("try { localStorage.setItem('spread.cloud.backup.ack', 'yes') } catch (e) {}")
+         page = ctx.new_page()
+         fs = {}
+         page.expose_function('__fsRead', lambda path: fs.get(path))
+diff --git a/src/lib/spread/cloud-backup.ts b/src/lib/spread/cloud-backup.ts
+index 23742e2..69dd501 100644
+--- a/src/lib/spread/cloud-backup.ts
++++ b/src/lib/spread/cloud-backup.ts
+@@ -13,9 +13,13 @@ import { isNativeApp } from "./native.ts";
+ import { onStorageChanged } from "./native-mirror.ts";
+ 
+ export const BACKUP_PREF_KEY = "spread.cloud.backup";
++/** Set once the person has been told what is uploaded and chose. Nothing is uploaded before it. */
++export const BACKUP_ACK_KEY = "spread.cloud.backup.ack";
+ 
+ type CloudStore = {
+   enabled: boolean;
++  /** The person has seen the disclosure and answered it. */
++  acknowledged: boolean;
+   native: NativeFacts | null;
+   runner: RunnerState;
+   now: number;
+@@ -23,6 +27,7 @@ type CloudStore = {
+ 
+ export const useCloudBackup = create<CloudStore>(() => ({
+   enabled: false,
++  acknowledged: false,
+   native: null,
+   runner: { busy: false, lastError: null, lastSuccessAt: null },
+   now: Date.now(),
+@@ -32,13 +37,41 @@ export function backupAvailable(): boolean {
+   return CLOUD_FLAGS.backup && isNativeApp();
+ }
+ 
+-/** On by default; the only way it is off is the person turning it off. */
++/**
++ * Backup is on unless the person turned it off. If the preference cannot be read it is treated
++ * as off: an unreadable opt-out must never become an opt-in.
++ */
+ function readEnabled(): boolean {
+   try {
+     return localStorage.getItem(BACKUP_PREF_KEY) !== "off";
+   } catch {
+-    return true;
++    return false;
++  }
++}
++
++function readAcknowledged(): boolean {
++  try {
++    return localStorage.getItem(BACKUP_ACK_KEY) === "yes";
++  } catch {
++    return false;
++  }
++}
++
++/** The one gate for writing anything to iCloud: the feature, the person's choice and their acknowledgement. */
++export function canWriteICloud(): boolean {
++  const state = useCloudBackup.getState();
++  return backupAvailable() && state.enabled && state.acknowledged;
++}
++
++/** The person answered the first-run notice. "Turn on" keeps backup on; "Not now" turns it off. */
++export function acknowledgeBackup(turnOn: boolean): void {
++  try {
++    localStorage.setItem(BACKUP_ACK_KEY, "yes");
++  } catch {
++    /* asked again next launch */
+   }
++  useCloudBackup.setState({ acknowledged: true });
++  setBackupEnabled(turnOn);
+ }
+ 
+ export function currentBackupStatus(state: CloudStore): BackupStatus {
+@@ -81,7 +114,9 @@ async function buildBackup() {
+ export async function startCloudBackup(): Promise<void> {
+   if (started || !backupAvailable()) return;
+   started = true;
+-  useCloudBackup.setState({ enabled: readEnabled() });
++  const acknowledged = readAcknowledged();
++  // Until the person has answered the first-run notice, backup shows as off and uploads nothing.
++  useCloudBackup.setState({ enabled: readEnabled() && acknowledged, acknowledged });
+   await refreshBackupStatus();
+   const plugin = await cloudPlugin();
+   runner = createBackupRunner({
+@@ -92,7 +127,7 @@ export async function startCloudBackup(): Promise<void> {
+       if (!state.busy) void refreshBackupStatus();
+     },
+   });
+-  if (useCloudBackup.getState().enabled) attach();
++  if (canWriteICloud()) attach();
+   void plugin.addListener("accountChanged", () => void refreshBackupStatus());
+   window.addEventListener("pagehide", () => void runner?.flush());
+   document.addEventListener("visibilitychange", () => {
+@@ -115,7 +150,15 @@ export function setBackupEnabled(on: boolean) {
+   } catch {
+     /* the choice still applies for this run */
+   }
+-  useCloudBackup.setState({ enabled: on });
++  // Turning it on from Settings is itself the person's consent.
++  if (on) {
++    try {
++      localStorage.setItem(BACKUP_ACK_KEY, "yes");
++    } catch {
++      /* the choice still applies for this run */
++    }
++  }
++  useCloudBackup.setState({ enabled: on, ...(on ? { acknowledged: true } : {}) });
+   if (on) {
+     attach();
+   } else {
+@@ -130,7 +173,7 @@ export function setBackupEnabled(on: boolean) {
+  * storage straight afterwards. Resolves false if the copy could not be made.
+  */
+ export async function pinBackup(label: string): Promise<boolean> {
+-  if (!backupAvailable() || !started) return false;
++  if (!canWriteICloud() || !started) return false;
+   try {
+     const payload = collectFullPayload(localStorage, new Date(), deviceId);
+     if (payload.roster.length === 0) return false;
+@@ -144,6 +187,7 @@ export async function pinBackup(label: string): Promise<boolean> {
+ }
+ 
+ export async function backupNow(): Promise<void> {
++  if (!canWriteICloud()) return;
+   runner?.changed();
+   await runner?.flush();
+ }
+diff --git a/src/lib/spread/cloud-sync.ts b/src/lib/spread/cloud-sync.ts
+index fe0c53c..3dd7e79 100644
+--- a/src/lib/spread/cloud-sync.ts
++++ b/src/lib/spread/cloud-sync.ts
+@@ -10,6 +10,7 @@ import { create } from "zustand";
+ import { CLOUD_FLAGS } from "./cloud-flags.ts";
+ import { cloudPlugin, type SyncNativeStatus } from "./cloud.ts";
+ import { pinBackup } from "./cloud-backup.ts";
++import { ensureSafetyCopy } from "./safety.ts";
+ import type { Choice } from "./merge.ts";
+ import { weekKey } from "./model.ts";
+ import { flushSpread, useSpread } from "./store.ts";
+@@ -168,7 +169,7 @@ async function startSessionFor(profileId: string, syncId: string, name: string)
+       useSpread.getState().applySynced(data, nextName);
+     },
+     snapshot: (label) => {
+-      pinSnapshot(label, collectEntries(localStorage));
++      void pinSnapshot(label, collectEntries(localStorage));
+       if (Date.now() - lastBackupPin > 6 * 3_600_000) {
+         lastBackupPin = Date.now();
+         void pinBackup(label);
+@@ -291,16 +292,15 @@ function newSyncId(): string {
+   return crypto.randomUUID();
+ }
+ 
+-async function takeSafetyCopies(label: string) {
+-  pinSnapshot(label, collectEntries(localStorage));
+-  await pinBackup(label);
++async function takeSafetyCopies(label: string): Promise<boolean> {
++  return ensureSafetyCopy(label);
+ }
+ 
+ /** Upload the open profile as a new iCloud profile. */
+ export async function linkUpload(): Promise<boolean> {
+   const s = useSpread.getState();
+   if (!s.activeId) return false;
+-  await takeSafetyCopies("pre-sync-link");
++  if (!(await takeSafetyCopies("pre-sync-link"))) return false;
+   const syncId = newSyncId();
+   s.setSyncId(s.activeId, syncId);
+   return true;
+@@ -310,7 +310,7 @@ export async function linkUpload(): Promise<boolean> {
+ export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
+   const s = useSpread.getState();
+   if (!s.activeId || !isPristine(s.data)) return false;
+-  await takeSafetyCopies("pre-sync-link");
++  if (!(await takeSafetyCopies("pre-sync-link"))) return false;
+   const plugin = await cloudPlugin();
+   const { items } = await plugin.syncInbox();
+   const mine = items.filter((row) => row.syncId === cloud.syncId);
+@@ -383,6 +383,10 @@ export async function resolveBlockedSync(choice: "restore" | "keep-deletion"): P
+   await session?.resolveBlocked(choice);
+ }
+ 
++export async function restoreDiscardedChange(index: number): Promise<void> {
++  await session?.restoreDiscarded(index);
++}
++
+ export async function resolveSyncConflict(id: string, choice: Choice): Promise<void> {
+   await session?.resolveConflict(id, choice);
+ }
+diff --git a/src/lib/spread/native-mirror.ts b/src/lib/spread/native-mirror.ts
+index 8917e91..30b8681 100644
+--- a/src/lib/spread/native-mirror.ts
++++ b/src/lib/spread/native-mirror.ts
+@@ -241,18 +241,73 @@ async function filesystemAdapter(): Promise<MirrorAdapter> {
+   };
+ }
+ 
++const PINNED_PREFIX = "spread-pinned-";
++const PINNED_KEEP = 15;
++
++export type PinnedCopy = { name: string; label: string; savedAt: string };
++
+ /**
+- * Keep a labelled copy of the planner that is never overwritten by the rolling snapshot, e.g.
+- * just before a migration. Best effort: a failure here never blocks the caller. `entries` must
+- * already be copied, because the write happens later.
++ * Keep a labelled copy of the planner that is never overwritten: every copy gets its own
++ * timestamped name, the 15 most recent are kept. Resolves true only once the file has been read
++ * back and matches, so a caller that is about to do something destructive can refuse when it is
++ * false. `entries` must already be copied, because the write happens later.
+  */
+-export function pinSnapshot(label: string, entries: Record<string, string>): void {
+-  const safe = label.replace(/[^a-z0-9-]/gi, "-");
+-  void (async () => {
++export async function pinSnapshot(label: string, entries: Record<string, string>): Promise<boolean> {
++  try {
++    const safe = label.replace(/[^a-z0-9-]/gi, "-");
+     const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
+-    const text = JSON.stringify({ kind: "spread-pinned", version: 1, label, savedAt: new Date().toISOString(), entries });
+-    await Filesystem.writeFile({ path: `spread-pinned-${safe}.json`, data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
+-  })().catch(() => undefined);
++    const savedAt = new Date().toISOString();
++    const text = JSON.stringify({ kind: "spread-pinned", version: 1, label, savedAt, entries });
++    const path = `${PINNED_PREFIX}${savedAt.replace(/[^0-9]/g, "")}-${safe}.json`;
++    await Filesystem.writeFile({ path, data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
++    const back = await Filesystem.readFile({ path, directory: Directory.Library, encoding: Encoding.UTF8 });
++    if (back.data !== text) return false;
++    await prunePinned().catch(() => undefined);
++    return true;
++  } catch {
++    return false;
++  }
++}
++
++async function pinnedFiles(): Promise<string[]> {
++  const { Filesystem, Directory } = await import("@capacitor/filesystem");
++  const { files } = await Filesystem.readdir({ path: "", directory: Directory.Library });
++  return files.map((file) => file.name).filter((name) => name.startsWith(PINNED_PREFIX) && name.endsWith(".json")).sort();
++}
++
++async function prunePinned(): Promise<void> {
++  const { Filesystem, Directory } = await import("@capacitor/filesystem");
++  const names = await pinnedFiles();
++  for (const name of names.slice(0, Math.max(0, names.length - PINNED_KEEP))) {
++    await Filesystem.deleteFile({ path: name, directory: Directory.Library }).catch(() => undefined);
++  }
++}
++
++/** Safety copies kept on this device, newest first. */
++export async function listPinned(): Promise<PinnedCopy[]> {
++  try {
++    const out: PinnedCopy[] = [];
++    for (const name of (await pinnedFiles()).reverse()) {
++      const read = await readPinned(name);
++      if (read) out.push({ name, label: read.label, savedAt: read.savedAt });
++    }
++    return out;
++  } catch {
++    return [];
++  }
++}
++
++export async function readPinned(name: string): Promise<{ label: string; savedAt: string; entries: Record<string, string> } | null> {
++  try {
++    if (!name.startsWith(PINNED_PREFIX) || name.includes("/")) return null;
++    const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
++    const read = await Filesystem.readFile({ path: name, directory: Directory.Library, encoding: Encoding.UTF8 });
++    const parsed = JSON.parse(String(read.data)) as { kind?: string; label?: string; savedAt?: string; entries?: Record<string, string> };
++    if (parsed.kind !== "spread-pinned" || !parsed.entries || typeof parsed.entries !== "object") return null;
++    return { label: String(parsed.label ?? ""), savedAt: String(parsed.savedAt ?? ""), entries: parsed.entries };
++  } catch {
++    return null;
++  }
+ }
+ 
+ function timeout<T>(work: Promise<T>, ms: number): Promise<T | "timeout"> {
+diff --git a/src/lib/spread/safety.ts b/src/lib/spread/safety.ts
+new file mode 100644
+index 0000000..da656bf
+--- /dev/null
++++ b/src/lib/spread/safety.ts
+@@ -0,0 +1,19 @@
++import { pinBackup } from "./cloud-backup.ts";
++import { isNativeApp } from "./native.ts";
++import { collectEntries, pinSnapshot } from "./native-mirror.ts";
++
++/**
++ * A copy of everything, written and read back, before something that replaces data. In the
++ * installed app the caller must not go ahead when this resolves false. The iCloud copy is extra
++ * and only made when the person has agreed to iCloud backup; the local copy is the one that counts.
++ * On the web there is no device storage to copy to, and restores work as they always did.
++ */
++export async function ensureSafetyCopy(label: string): Promise<boolean> {
++  if (!isNativeApp()) return true;
++  const { flushSpread } = await import("./store.ts");
++  flushSpread();
++  const saved = await pinSnapshot(label, collectEntries(localStorage));
++  if (!saved) return false;
++  void pinBackup(label);
++  return true;
++}
+diff --git a/src/lib/spread/store.ts b/src/lib/spread/store.ts
+index e64fc70..0bf850e 100644
+--- a/src/lib/spread/store.ts
++++ b/src/lib/spread/store.ts
+@@ -1,7 +1,6 @@
+ import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
+ import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
+-import { collectEntries, flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
+-import { pinBackup } from "@/lib/spread/cloud-backup";
++import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
+ import { runMigrations } from "@/lib/spread/schema";
+ import { isPristine } from "@/lib/spread/sync-link";
+ import { saveFile, type SaveResult } from "@/lib/spread/save-file";
+@@ -427,7 +426,7 @@ function readSession() {
+     bindFlush();
+     const migration = runMigrations(localStorage, {
+       snapshot: (label, entries) => {
+-        if (isNativeApp()) pinSnapshot(label, entries);
++        if (isNativeApp()) void pinSnapshot(label, entries);
+       },
+     });
+     schemaLocked = migration.status === "newer";
+@@ -797,10 +796,6 @@ export const useSpread = create<Store>((set, get) => ({
+     if (open?.syncId) return false;
+     const data = normalizeData(incoming);
+     flushSpread();
+-    if (isNativeApp()) {
+-      pinSnapshot("pre-restore", collectEntries(localStorage));
+-      void pinBackup("pre-restore");
+-    }
+     commit(set, data);
+     return true;
+   },
+@@ -856,10 +851,6 @@ export const useSpread = create<Store>((set, get) => ({
+     const emptyId = emptyProfileId(get());
+     const plan = planRestoreAsNew(payload, get().profiles, uid, { select, replaceEmpty: emptyId });
+     if (!plan.ok) return plan;
+-    if (isNativeApp()) {
+-      pinSnapshot("pre-restore", collectEntries(localStorage));
+-      void pinBackup("pre-restore");
+-    }
+     // Profile data first and the roster last, so a failed write leaves the roster as it was.
+     for (const write of plan.writes) if (!put(write.key, write.value)) return { ok: false, reason: "write-failed" };
+     writeProfiles(plan.profiles);
+diff --git a/src/lib/spread/sync-discard.test.ts b/src/lib/spread/sync-discard.test.ts
+new file mode 100644
+index 0000000..8b92ae2
+--- /dev/null
++++ b/src/lib/spread/sync-discard.test.ts
+@@ -0,0 +1,51 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { compareVectors } from "./clock.ts";
++import type { Conflict, SyncItem } from "./merge.ts";
++import { newSyncState, resolve, restoreDiscarded, type SyncState } from "./sync-state.ts";
++
++const local: SyncItem = { id: "task:a", fields: { text: "from phone", done: false, week: "w", hat: "h" }, v: { phone: 2 }, at: "t1" };
++const remote: SyncItem = { id: "task:a", fields: { text: "from iPad", done: false, week: "w", hat: "h" }, v: { pad: 2 }, at: "t2" };
++const conflict: Conflict = { id: "task:a", kind: "edit-edit", local, remote, base: null, fields: ["text"] } as Conflict;
++
++function withConflict(): SyncState {
++  const state = newSyncState("s", "phone");
++  state.items["task:a"] = { fields: local.fields, v: local.v, at: "t1" };
++  state.conflicts = [conflict];
++  return state;
++}
++const NOW = "2026-10-08T12:00:00.000Z";
++
++test("keeping this device's version sets the iCloud version aside", () => {
++  const next = resolve(withConflict(), "task:a", "local", () => "x", NOW);
++  assert.equal(next.items["task:a"].fields.text, "from phone");
++  assert.equal(next.discarded?.length, 1);
++  assert.equal(next.discarded?.[0].side, "icloud");
++  assert.equal(next.discarded?.[0].item.fields.text, "from iPad");
++});
++
++test("keeping the iCloud version sets this device's aside; keeping both discards nothing", () => {
++  assert.equal(resolve(withConflict(), "task:a", "remote", () => "x", NOW).discarded?.[0].item.fields.text, "from phone");
++  assert.equal(resolve(withConflict(), "task:a", "both", () => "x", NOW).discarded?.length ?? 0, 0);
++});
++
++test("a set-aside version can be put back, and wins over what is there", () => {
++  const settled = resolve(withConflict(), "task:a", "local", () => "x", NOW);
++  const back = restoreDiscarded(settled, 0, NOW);
++  assert.equal(back.items["task:a"].fields.text, "from iPad");
++  assert.equal(back.discarded?.length, 0);
++  assert.ok(back.pending.includes("task:a"));
++  assert.equal(compareVectors(back.items["task:a"].v, settled.items["task:a"].v), "after");
++});
++
++test("set-aside versions older than 30 days are dropped when the next conflict is settled", () => {
++  const old = resolve(withConflict(), "task:a", "local", () => "x", "2026-08-01T00:00:00.000Z");
++  const again = { ...withConflict(), discarded: old.discarded };
++  const next = resolve(again, "task:a", "local", () => "x", NOW);
++  assert.equal(next.discarded?.length, 1);
++});
++
++test("restoring an unknown entry changes nothing", () => {
++  const state = withConflict();
++  assert.equal(restoreDiscarded(state, 3, NOW), state);
++});
+diff --git a/src/lib/spread/sync-session.ts b/src/lib/spread/sync-session.ts
+index d1d2017..dcfd48b 100644
+--- a/src/lib/spread/sync-session.ts
++++ b/src/lib/spread/sync-session.ts
+@@ -18,6 +18,8 @@ import { isDamagedRow, toItems } from "./sync-link.ts";
+ import {
+   applyRemote,
+   captureLocal,
++  type Discarded,
++  restoreDiscarded,
+   type CaptureBlock,
+   confirmQueued,
+   itemsToPush,
+@@ -78,6 +80,7 @@ export type SessionView = {
+   blocked: CaptureBlock | null;
+   /** Records from iCloud that were unreadable or incomplete. They are kept aside, never merged. */
+   damaged: number;
++  discarded: Discarded[];
+ };
+ 
+ export type SyncSession = {
+@@ -90,6 +93,8 @@ export type SyncSession = {
+   /** Send and fetch now, then run a pass. */
+   syncNow(): Promise<void>;
+   resolveConflict(id: string, choice: Choice): Promise<void>;
++  /** Put back a version set aside when a conflict was settled. */
++  restoreDiscarded(index: number): Promise<void>;
+   /** "restore" puts the last synced planner back; "keep-deletion" confirms the deletion was meant. */
+   resolveBlocked(choice: "restore" | "keep-deletion"): Promise<void>;
+   view(): SessionView;
+@@ -118,6 +123,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+     lastError,
+     blocked,
+     damaged,
++    discarded: state.discarded ?? [],
+   });
+   const publish = () => {
+     for (const listener of listeners) listener(view());
+@@ -269,6 +275,25 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
+       });
+       await queue(pass);
+     },
++    async restoreDiscarded(index) {
++      await queue(async () => {
++        if (!running || !deps.isActive()) return;
++        const here = deps.current();
++        const captured = captureLocal(state, here.data, here.name, deps.now());
++        if (captured.blocked) {
++          blocked = captured.blocked;
++          publish();
++          return;
++        }
++        state = restoreDiscarded(captured.state, index, deps.now());
++        const merged = liveData(state, here.data.currentWeek);
++        deps.snapshot("pre-restore-discarded");
++        deps.apply(merged.data, merged.name);
++        save();
++        publish();
++      });
++      await queue(pass);
++    },
+     async resolveBlocked(choice) {
+       await queue(async () => {
+         if (!blocked || !running || !deps.isActive()) return;
+diff --git a/src/lib/spread/sync-state.ts b/src/lib/spread/sync-state.ts
+index 2e03d56..5b0e3d2 100644
+--- a/src/lib/spread/sync-state.ts
++++ b/src/lib/spread/sync-state.ts
+@@ -8,13 +8,17 @@
+  *   pending  items changed here that the cloud has not confirmed yet
+  *   conflicts items both devices changed in ways that cannot be combined, waiting for the person
+  */
+-import { bump, compareVectors, type VersionVector } from "./clock.ts";
++import { bump, compareVectors, mergeVectors, type VersionVector } from "./clock.ts";
+ import { canonical, mergeItems, resolveConflict, type Choice, type Conflict, type Json, type LogEntry, type SyncItem } from "./merge.ts";
+ import type { SpreadData } from "./model.ts";
+ import { assemble, flatten } from "./sync-model.ts";
+ 
+ export type StoredItem = { fields: Record<string, Json>; v: VersionVector; deleted?: boolean; at: string };
+ 
++/** The side a person chose not to keep, held so it can be put back. */
++export type Discarded = { id: string; item: SyncItem; side: "this-device" | "icloud"; at: string };
++export const DISCARD_KEEP_DAYS = 30;
++
+ export type SyncState = {
+   version: 1;
+   syncId: string;
+@@ -25,6 +29,8 @@ export type SyncState = {
+   /** Versions handed to the native sync engine and not yet confirmed by iCloud, by item id. */
+   queued: Record<string, VersionVector>;
+   conflicts: Conflict[];
++  /** Versions set aside when a conflict was settled. Kept for 30 days. Absent in older state files. */
++  discarded?: Discarded[];
+   lastSyncAt: string | null;
+ };
+ 
+@@ -214,7 +220,26 @@ export function resolve(state: SyncState, id: string, choice: Choice, newTaskId:
+     items[item.id] = toStored({ ...item, at: now }, now);
+     pending.add(item.id);
+   }
+-  return { ...state, items, pending: [...pending].sort(), conflicts: state.conflicts.filter((c) => c.id !== id) };
++  const kept = (state.discarded ?? []).filter((d) => Date.parse(now) - Date.parse(d.at) < DISCARD_KEEP_DAYS * 86_400_000);
++  if (effective === "local") kept.push({ id, item: conflict.remote, side: "icloud", at: now });
++  if (effective === "remote") kept.push({ id, item: conflict.local, side: "this-device", at: now });
++  return { ...state, items, pending: [...pending].sort(), conflicts: state.conflicts.filter((c) => c.id !== id), discarded: kept };
++}
++
++/** Put a set-aside version back. It becomes a new edit that dominates what is there now. */
++export function restoreDiscarded(state: SyncState, index: number, now: string): SyncState {
++  const list = state.discarded ?? [];
++  const entry = list[index];
++  if (!entry) return state;
++  const current = state.items[entry.id];
++  const v = bump(mergeVectors(current?.v ?? {}, entry.item.v), state.deviceId);
++  const items = { ...state.items, [entry.id]: toStored({ ...entry.item, v, at: now }, now) };
++  return {
++    ...state,
++    items,
++    pending: [...new Set([...state.pending, entry.id])].sort(),
++    discarded: list.filter((_, i) => i !== index),
++  };
+ }
+ 
+ export function liveData(state: SyncState, currentWeek: string): { data: SpreadData; name: string | null } {
+diff --git a/src/spread/screens/spread-app.tsx b/src/spread/screens/spread-app.tsx
+index ea38ba2..5f7788d 100644
+--- a/src/spread/screens/spread-app.tsx
++++ b/src/spread/screens/spread-app.tsx
+@@ -9,14 +9,15 @@ import { formatWeek, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, T
+ import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
+ import { ACCENTS, consumeArrival, onSaveFailure, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
+ import { PROFILE_LIMIT } from "@/lib/spread/profiles";
+-import { parseAnyBackup, type ParsedBackup } from "@/lib/spread/backup";
++import { collectFullPayload, fullBackupText, parseAnyBackup, parseFullBackup, type ParsedBackup } from "@/lib/spread/backup";
+ import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
+ import { saveFile, type SaveResult } from "@/lib/spread/save-file";
+ import { isNativeApp } from "@/lib/spread/native";
+-import { prepareNativeStorage } from "@/lib/spread/native-mirror";
+-import { backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
++import { listPinned, prepareNativeStorage, readPinned, type PinnedCopy } from "@/lib/spread/native-mirror";
++import { ensureSafetyCopy } from "@/lib/spread/safety";
++import { acknowledgeBackup, backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
+ import type { RemoteBackup } from "@/lib/spread/cloud";
+-import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, uploadAgain, useCloudSync } from "@/lib/spread/cloud-sync";
++import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, restoreDiscardedChange, startSyncManager, syncAvailable, syncNowAction, unlink, uploadAgain, useCloudSync } from "@/lib/spread/cloud-sync";
+ import { describeConflict, describeSync } from "@/lib/spread/sync-labels";
+ import { canKeepBoth } from "@/lib/spread/sync-state";
+ import type { LinkChoice } from "@/lib/spread/sync-link";
+@@ -88,6 +89,7 @@ export function SpreadApp() {
+ 
+   return (
+     <>
++      <BackupDisclosure />
+       <Toaster
+         position="top-center"
+         // Under the status bar and Dynamic Island on the phone; the web keeps the default.
+@@ -1516,7 +1518,10 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
+ }
+ 
+ /** Apply a confirmed restore. Returns what to tell the person and whether the sheet can close. */
+-function applyRestore(backup: ParsedBackup, select?: string[]): { ok: boolean; message: string } {
++async function applyRestore(backup: ParsedBackup, select?: string[]): Promise<{ ok: boolean; message: string }> {
++  if (!(await ensureSafetyCopy("pre-restore"))) {
++    return { ok: false, message: "Couldn’t save a safety copy first, so nothing was changed. Free some space and try again." };
++  }
+   const state = useSpread.getState();
+   if (backup.kind === "full") {
+     const result = state.restoreAsNew(backup.payload, select);
+@@ -1539,6 +1544,16 @@ function applyRestore(backup: ParsedBackup, select?: string[]): { ok: boolean; m
+   return { ok: true, message: "Backup restored." };
+ }
+ 
++function keyStoreOf(entries: Record<string, string>) {
++  const keys = Object.keys(entries);
++  return {
++    length: keys.length,
++    key: (index: number) => keys[index] ?? null,
++    getItem: (key: string) => (key in entries ? entries[key] : null),
++    setItem: () => undefined,
++  };
++}
++
+ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
+   const license = useSpread((s) => s.license);
+   const theme = useSpread((s) => s.theme);
+@@ -1549,6 +1564,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
+   const data = useSpread((s) => s.data);
+   const fileRef = useRef<HTMLInputElement>(null);
+   const [backup, setBackup] = useState<ParsedBackup | null>(null);
++  const [copies, setCopies] = useState<PinnedCopy[] | null>(null);
+   const week = buildWeekDocument(data);
+ 
+   const native = isNativeApp();
+@@ -1678,6 +1694,47 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
+           </button>
+         ))}
+       </div>
++      {native && (
++        <>
++          <button
++            type="button"
++            className="mt-3 flex h-12 w-full items-center justify-between rounded-3xl bg-canvas px-4 text-left text-base active:bg-fill"
++            onClick={() => void listPinned().then((found) => setCopies(copies === null ? found : null))}
++          >
++            Restore from a safety copy
++            <ChevronRight className={cn("size-4 text-tertiary", copies !== null && "rotate-90")} strokeWidth={2.7} />
++          </button>
++          {copies !== null && (
++            <div className="mt-2 overflow-hidden rounded-3xl bg-canvas" role="list" aria-label="Safety copies on this device">
++              {copies.length === 0 ? (
++                <p className="px-4 py-3 text-sm text-secondary">No safety copies yet. One is saved before anything is replaced.</p>
++              ) : (
++                copies.map((copy) => (
++                  <button
++                    key={copy.name}
++                    type="button"
++                    role="listitem"
++                    className="flex w-full items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-left active:bg-fill last:border-b-0"
++                    onClick={() =>
++                      void readPinned(copy.name).then(async (read) => {
++                        const shaped = read ? await parseFullBackup(await fullBackupText(collectFullPayload(keyStoreOf(read.entries), new Date(read.savedAt), null))) : null;
++                        if (!shaped) toast("That safety copy can’t be read.");
++                        else setBackup({ kind: "full", ...shaped });
++                      })
++                    }
++                  >
++                    <span>
++                      <span className="block text-base">{new Date(copy.savedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
++                      <span className="block text-xs text-secondary">Saved before {copy.label.replace(/^pre-/, "").replace(/-/g, " ")}</span>
++                    </span>
++                    <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
++                  </button>
++                ))
++              )}
++            </div>
++          )}
++        </>
++      )}
+       <div className="mt-5">
+         <Segmented value={theme} onChange={setTheme} />
+       </div>
+@@ -1715,10 +1772,11 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
+         onClose={() => setBackup(null)}
+         onConfirm={(selection) => {
+           if (!backup) return;
+-          const outcome = applyRestore(backup, selection);
+-          setBackup(null);
+-          if (outcome.ok) setSheet(null);
+-          toast(outcome.message);
++          void applyRestore(backup, selection).then((outcome) => {
++            setBackup(null);
++            if (outcome.ok) setSheet(null);
++            toast(outcome.message);
++          });
+         }}
+       />
+       <p className="mt-5 text-xs text-tertiary">Spread · Gray Matter. Data stays on this device.</p>
+@@ -1773,6 +1831,34 @@ function ICloudSheet({ onBack }: { onBack: () => void }) {
+   return <ICloudMain onBack={onBack} go={setView} />;
+ }
+ 
++/** First-run notice. Nothing is uploaded until the person answers it. */
++function BackupDisclosure() {
++  const ready = useCloudBackup((s) => s.native !== null);
++  const acknowledged = useCloudBackup((s) => s.acknowledged);
++  if (!backupAvailable() || !ready || acknowledged) return null;
++  return (
++    <AlertDialog.Root open>
++      <AlertDialog.Portal>
++        <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[70] bg-scrim" />
++        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[70] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
++          <AlertDialog.Title className="text-center text-base font-semibold">Back up to iCloud?</AlertDialog.Title>
++          <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
++            Spread can keep dated copies of all your profiles, tasks and photos in your iCloud Drive, so you can get them back on a new phone. Only you can see them. Nothing is uploaded until you choose. You can turn this off any time in Settings, and the copies stay in iCloud until you delete them.
++          </AlertDialog.Description>
++          <div className="mt-5 grid grid-cols-2 gap-2">
++            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={() => acknowledgeBackup(false)}>
++              Not now
++            </AlertDialog.Cancel>
++            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => acknowledgeBackup(true)}>
++              Turn on
++            </AlertDialog.Action>
++          </div>
++        </AlertDialog.Content>
++      </AlertDialog.Portal>
++    </AlertDialog.Root>
++  );
++}
++
+ function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "conflicts") => void }) {
+   const state = useCloudBackup();
+   const status = currentBackupStatus(state);
+@@ -1889,10 +1975,11 @@ function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "c
+         onClose={() => setPicked(null)}
+         onConfirm={(selection) => {
+           if (!picked) return;
+-          const outcome = applyRestore(picked, selection);
+-          setPicked(null);
+-          toast(outcome.message);
+-          if (outcome.ok) onBack();
++          void applyRestore(picked, selection).then((outcome) => {
++            setPicked(null);
++            toast(outcome.message);
++            if (outcome.ok) onBack();
++          });
+         }}
+       />
+     </>
+@@ -1956,9 +2043,11 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
+                 </button>
+               </>
+             )}
+-            {(state.view?.conflicts.length ?? 0) > 0 && (
++            {((state.view?.conflicts.length ?? 0) > 0 || (state.view?.discarded.length ?? 0) > 0) && (
+               <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => go("conflicts")}>
+-                Review {state.view?.conflicts.length} {state.view?.conflicts.length === 1 ? "change" : "changes"}
++                {(state.view?.conflicts.length ?? 0) > 0
++                  ? `Review ${state.view?.conflicts.length} ${state.view?.conflicts.length === 1 ? "change" : "changes"}`
++                  : `Set-aside changes (${state.view?.discarded.length})`}
+                 <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
+               </button>
+             )}
+@@ -2106,6 +2195,7 @@ function SyncLinkView({ onBack }: { onBack: () => void }) {
+ 
+ function SyncConflictsView({ onBack }: { onBack: () => void }) {
+   const conflicts = useCloudSync((s) => s.view?.conflicts ?? []);
++  const discarded = useCloudSync((s) => s.view?.discarded ?? []);
+   const hats = useSpread((s) => s.data.hats);
+   const [busy, setBusy] = useState(false);
+   const lookup = (id: string) => hats.find((hat) => hat.id === id)?.name ?? null;
+@@ -2119,7 +2209,7 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
+       <SubHeader onBack={onBack} />
+       <Dialog.Title className="text-2xl font-bold tracking-tight">Your choice</Dialog.Title>
+       <Dialog.Description className="mt-1 text-sm text-secondary">
+-        These were changed on two devices in ways Spread can’t combine. Nothing is lost whichever you pick, and what you don’t pick is saved in a copy.
++        These were changed on two devices in ways Spread can’t combine. Whichever you pick, the version you don’t pick is kept for 30 days below, so you can put it back.
+       </Dialog.Description>
+       {conflicts.length === 0 ? (
+         <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Nothing needs your choice.</p>
+@@ -2153,6 +2243,24 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
+           );
+         })
+       )}
++      {discarded.length > 0 && (
++        <>
++          <h3 className="mt-6 text-sm font-semibold text-secondary">Set aside (kept 30 days)</h3>
++          <div className="mt-2 overflow-hidden rounded-3xl bg-canvas">
++            {discarded.map((entry, index) => (
++              <div key={`${entry.id}-${entry.at}`} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 text-sm last:border-b-0">
++                <span className="min-w-0">
++                  <span className="block truncate">{entry.item.deleted ? "Deleted item" : String(entry.item.fields.text ?? entry.item.fields.name ?? "Change")}</span>
++                  <span className="block text-xs text-secondary">{entry.side === "icloud" ? "From the other device" : "From this device"}</span>
++                </span>
++                <button type="button" disabled={busy} className="h-9 shrink-0 rounded-full bg-fill px-4 text-sm font-semibold" onClick={() => void restoreDiscardedChange(index)}>
++                  Put back
++                </button>
++              </div>
++            ))}
++          </div>
++        </>
++      )}
+     </>
+   );
+ }

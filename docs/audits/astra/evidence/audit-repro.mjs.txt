@@ -1,0 +1,101 @@
+import assert from 'node:assert/strict';
+import {defaultData, normalizeData} from './spread-review/src/lib/spread/model.ts';
+import {flatten, assemble} from './spread-review/src/lib/spread/sync-model.ts';
+import {adoptRemote, captureLocal, itemsToPush} from './spread-review/src/lib/spread/sync-state.ts';
+import {createSyncSession} from './spread-review/src/lib/spread/sync-session.ts';
+import {isPristine, isDamagedRow} from './spread-review/src/lib/spread/sync-link.ts';
+import {fullBackupText, parseFullBackup, planRestoreAsNew} from './spread-review/src/lib/spread/backup.ts';
+import {createBackupRunner} from './spread-review/src/lib/spread/backup-runner.ts';
+const now=()=> '2026-10-08T18:00:00Z';
+const tasks=d=>Object.values(d.weeks).flatMap(w=>w.boxes.flatMap(b=>b.tasks));
+const initial=()=> { const d=defaultData(); d.weeks[d.currentWeek].boxes[0].tasks.push({id:'t1',text:'base',done:false}); return d; };
+const seed=d=>adoptRemote('S','phone',flatten(d,'Me').map(x=>({...x,v:{phone:1},at:now()})),now());
+const row=(text,v)=>({syncId:'S',itemId:'task:t1',fields:JSON.stringify({...flatten(initial(),'Me').find(x=>x.id==='task:t1').fields,text}),v:JSON.stringify(v),deleted:false,at:now()});
+function harness({data=initial(),state=seed(data),incoming=[],save=()=>true,apply,snapshot=()=>{},ack}={}) {
+ let saved=structuredClone(state), inbox=[...incoming], sent=[];
+ const env={data};
+ const session=createSyncSession({syncId:'S',deviceId:'phone',loadState:()=>saved,saveState:s=>{ if(save(s)!==false) saved=structuredClone(s); else return false; },isActive:()=>true,current:()=>({data:env.data,name:'Me'}),apply:d=>{apply?.(d);env.data=d;},snapshot,newId:()=> 'copy',now,
+ transport:{async start(){},async stop(){},async inbox(){return [...inbox]},async ack(names){ack?.(inbox);inbox=inbox.filter(x=>!names.includes(`${x.syncId}|${x.itemId}`));},async queue(rows){sent.push(...rows)},async outbox(){return sent.map(x=>`${x.syncId}|${x.itemId}`)},async drop(){},async syncNow(){}}});
+ return {session,env,get saved(){return saved},get inbox(){return inbox},get sent(){return sent}};
+}
+// A conflict is acked even when saving the only durable copy of its remote side fails.
+{
+ const d=initial(); tasks(d)[0].text='local offline edit';
+ const s=captureLocal(seed(initial()),d,'Me',now()).state;
+ const h=harness({data:d,state:s,incoming:[row('remote offline edit',{phone:1,pad:1})],save:()=>false});
+ await h.session.start();
+ assert.equal(h.session.view().conflicts.length,1);assert.equal(h.inbox.length,0);assert.equal(h.saved.conflicts.length,0);
+ console.log('CONFIRMED ack-before-durable-save: conflict visible=1, durable conflicts=0, inbox=0, error='+h.session.view().lastError);
+}
+// Failed resolution applies mutate the state before the save/apply succeeds.
+{
+ const d=initial(); tasks(d)[0].text='local'; const s=captureLocal(seed(initial()),d,'Me',now()).state;
+ const h=harness({data:d,state:s,incoming:[row('remote',{phone:1,pad:1})],apply:()=>{throw Error('disk full')}});
+ await h.session.start();assert.equal(h.session.view().conflicts.length,1);
+ await assert.rejects(h.session.resolveConflict('task:t1','remote'),/disk full/);
+ assert.equal(h.session.view().conflicts.length,0);
+ await h.session.localChanged();
+ assert.ok(h.sent.some(x=>x.itemId==='task:t1' && JSON.parse(x.fields).text==='local'));
+ console.log('CONFIRMED failed resolution: conflict removed; next pass queues old local text with resolution vector');
+}
+// Returning false asynchronously from a safety snapshot does not delay application.
+{
+ let copied=false; const h=harness({incoming:[row('new remote',{phone:1,pad:1})],snapshot:()=>Promise.resolve(false),apply:()=>{assert.equal(copied,false)}});
+ await h.session.start(); assert.equal(tasks(h.env.data)[0].text,'new remote');
+ console.log('CONFIRMED sync apply proceeds without successful safety snapshot');
+}
+// Same key updated in the native inbox between read and ack is deleted by name-only ack.
+{
+ const h=harness({incoming:[row('version 2',{phone:2})],ack:inbox=>{inbox.splice(0,inbox.length,row('version 3',{phone:3}))}});
+ await h.session.start(); assert.equal(h.inbox.length,0);assert.equal(tasks(h.env.data)[0].text,'version 2');
+ console.log('CONFIRMED name-only ack race: version 3 removed while planner only has version 2 (transport model mirrors Swift ackInbox)');
+}
+// Backup parser accepts missing and semantically invalid stores as readable and restores blank.
+{
+ const roster=['missing','badshape'].map(id=>({id,name:id,store:`spread.v1.${id}`,theme:'system',accent:null}));
+ const b=await parseFullBackup(await fullBackupText({schemaVersion:2,createdAt:now(),deviceId:null,activeProfileId:null,roster,stores:{badshape:'{"weeks":{"2026-10-05":{"boxes":"damaged"}}}'},settings:{}}));
+ assert.ok(b);assert.ok(b.summary.profiles.every(p=>p.readable));
+ let n=0;const p=planRestoreAsNew(b.payload,[],()=>`new${++n}`);assert.equal(p.skipped.length,0);assert.equal(p.writes.length,2);
+ console.log('CONFIRMED backup validation: missing/bad-shape stores labeled readable; 2 blank profiles restored, skipped=0');
+}
+{
+ const d=defaultData();d.weeks[d.currentWeek].boxes[0].hours=29;d.hats[0].color='#123456';
+ assert.equal(isPristine(d),true);console.log('CONFIRMED pristine classifier ignores custom weekly hours and color');
+ const damaged=row('base',{phone:2});damaged.fields=JSON.stringify({text:null,week:null,hat:null});damaged.v='[]';
+ assert.equal(isDamagedRow(damaged),false);console.log('CONFIRMED payload validator accepts null task fields and array vector');
+}
+// copyLastWeek uses structuredClone, keeping IDs, unlike rollover's cloneWeek.
+{
+ const d=initial();d.weeks['2026-10-12']=structuredClone(d.weeks[d.currentWeek]);
+ const after=assemble(flatten(d,'Me'),d.currentWeek).data;
+ assert.equal(tasks(d).length,2);assert.equal(tasks(after).length,1);
+ console.log('CONFIRMED copied-week roundtrip: 2 task occurrences flatten/assemble to 1 (duplicate task IDs)');
+}
+// Runner's transport is not consent gated. The manager only removes its changed listener.
+{
+ let writes=0, enabled=true;
+ const r=createBackupRunner({build:async()=>({text:'private data',signature:'a',hasData:true}),transport:{write:async()=>{assert.equal(enabled,false);writes++;return {name:'x',verified:true,inICloudContainer:true}}},setTimer:()=>1,clearTimer:()=>{}});
+ r.changed();enabled=false;await r.flush();assert.equal(writes,1);r.dispose();
+ console.log('CONFIRMED pending runner work uploads after disable (same flush path as manager pagehide)');
+}
+{
+ let writes=0;
+ const r=createBackupRunner({build:async()=>({text:'private',signature:'same',hasData:true}),transport:{write:async()=>{writes++;return {name:'local',verified:true,inICloudContainer:false}}},setTimer:()=>1,clearTimer:()=>{}});
+ r.changed();await r.flush();r.changed();await r.flush();assert.equal(writes,1);assert.equal(r.state().lastError,null);r.dispose();
+ console.log('CONFIRMED local-only backup: later explicit flush of unchanged data does not retry cloud handoff');
+}
+{
+ const d=initial();tasks(d)[0].text='important';
+ const result=captureLocal(seed(d),defaultData(),'Me',now());
+ assert.equal(result.blocked,undefined);assert.equal(result.state.items['task:t1'].deleted,true);
+ console.log('CONFIRMED small planner reset: sole task vanishes without mass-delete guard');
+}
+{
+ const damaged=row('base',{phone:2});damaged.fields=JSON.stringify({text:null,week:null,hat:null});
+ const h=harness({incoming:[damaged]});await h.session.start();assert.equal(tasks(h.env.data)[0].text,'');assert.equal(h.inbox.length,0);
+ console.log('CONFIRMED malformed task row: accepted, task text blanked in planner, inbound acked');
+}
+{
+ const h=harness();await h.session.start();assert.equal(h.sent.length,0);
+ console.log('CONFIRMED retained agreed state does not reseed an empty cloud: no outbound rows on restart');
+}

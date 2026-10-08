@@ -1,0 +1,10 @@
+import {existsSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+export async function resolve(specifier,context,next){
+ if(specifier.startsWith('@/')) specifier=new URL('./spread-review/src/'+specifier.slice(2),import.meta.url).href;
+ if(specifier.startsWith('file:')||specifier.startsWith('.')){
+  const url=new URL(specifier,context.parentURL);
+  if(!existsSync(fileURLToPath(url))&&existsSync(fileURLToPath(url)+'.ts'))return next(url.href+'.ts',context);
+ }
+ return next(specifier,context);
+}
