@@ -8,12 +8,16 @@
  *   pending  items changed here that the cloud has not confirmed yet
  *   conflicts items both devices changed in ways that cannot be combined, waiting for the person
  */
-import { bump, compareVectors, type VersionVector } from "./clock.ts";
+import { bump, compareVectors, mergeVectors, type VersionVector } from "./clock.ts";
 import { canonical, mergeItems, resolveConflict, type Choice, type Conflict, type Json, type LogEntry, type SyncItem } from "./merge.ts";
 import type { SpreadData } from "./model.ts";
 import { assemble, flatten } from "./sync-model.ts";
 
 export type StoredItem = { fields: Record<string, Json>; v: VersionVector; deleted?: boolean; at: string };
+
+/** The side a person chose not to keep, held so it can be put back. */
+export type Discarded = { id: string; item: SyncItem; side: "this-device" | "icloud"; at: string };
+export const DISCARD_KEEP_DAYS = 30;
 
 export type SyncState = {
   version: 1;
@@ -25,8 +29,20 @@ export type SyncState = {
   /** Versions handed to the native sync engine and not yet confirmed by iCloud, by item id. */
   queued: Record<string, VersionVector>;
   conflicts: Conflict[];
+  /** Versions set aside when a conflict was settled. Kept for 30 days. Absent in older state files. */
+  discarded?: Discarded[];
   lastSyncAt: string | null;
 };
+
+/**
+ * A saved state carries the id of the device that wrote it. If the file was restored onto a
+ * different device (from a phone backup), reusing that id would make two devices one actor in
+ * every version vector. The contents are kept; only the acting identity becomes this device's.
+ */
+export function adoptDeviceIdentity(state: SyncState, thisDevice: string): { state: SyncState; rebased: boolean } {
+  if (state.deviceId === thisDevice) return { state, rebased: false };
+  return { state: { ...state, deviceId: thisDevice }, rebased: true };
+}
 
 export function newSyncState(syncId: string, deviceId: string): SyncState {
   return { version: 1, syncId, deviceId, items: {}, base: {}, pending: [], queued: {}, conflicts: [], lastSyncAt: null };
@@ -40,30 +56,73 @@ function sameStored(a: StoredItem | undefined, b: StoredItem | undefined): boole
   return !!a.deleted === !!b.deleted && compareVectors(a.v, b.v) === "equal" && (a.deleted || canonical(a.fields) === canonical(b.fields));
 }
 
+export type CaptureBlock = { deleting: number; live: number; reason: "everything" | "most" | "all-tasks" | "unreadable" };
+
+/** Thresholds for treating a capture as a likely accident rather than an edit. */
+const MASS_MIN = 5;
+const TASKS_MIN = 3;
+
+/**
+ * Would capturing this planner delete so much that it is more likely a failed or empty read than
+ * a decision? Deleting one task, or a handful, is an edit. Everything vanishing, more than half
+ * of a sizeable planner vanishing, or every task vanishing at once is not.
+ */
+export function assessDeletion(state: SyncState, vanished: string[]): CaptureBlock | null {
+  const live = Object.entries(state.items).filter(([, item]) => !item.deleted).map(([id]) => id);
+  if (vanished.length === 0 || live.length === 0) return null;
+  const liveTasks = live.filter((id) => id.startsWith("task:"));
+  const vanishedTasks = vanished.filter((id) => id.startsWith("task:"));
+  if (vanished.length >= live.length) return { deleting: vanished.length, live: live.length, reason: "everything" };
+  if (vanished.length >= MASS_MIN && vanished.length * 2 > live.length) return { deleting: vanished.length, live: live.length, reason: "most" };
+  if (liveTasks.length >= TASKS_MIN && vanishedTasks.length === liveTasks.length) return { deleting: vanished.length, live: live.length, reason: "all-tasks" };
+  return null;
+}
+
 /**
  * Record what the person changed on this device. Items whose content differs from what the state
  * holds get a new version stamped by this device; items that vanished become tombstones.
+ *
+ * If the deletions look like an accident (see `assessDeletion`) nothing is recorded and `blocked`
+ * says why, unless the caller has been told the person confirmed it with `allowMassDelete`.
  */
-export function captureLocal(state: SyncState, data: SpreadData, name: string, now: string): { state: SyncState; changed: string[] } {
+export function captureLocal(
+  state: SyncState,
+  data: SpreadData,
+  name: string,
+  now: string,
+  options: { allowMassDelete?: boolean; healthy?: boolean } = {},
+): { state: SyncState; changed: string[]; blocked?: CaptureBlock } {
+  const plain = flatten(data, name);
+  const seen = new Set(plain.map((item) => item.id));
+  const vanished = Object.entries(state.items).filter(([id, current]) => !seen.has(id) && !current.deleted).map(([id]) => id);
+  if (!options.allowMassDelete) {
+    // The caller knows whether the planner was read properly. A read that failed (and came back as
+    // starting defaults) is never a decision to delete, however small the planner.
+    if (options.healthy === false && vanished.length > 0) {
+      const live = Object.values(state.items).filter((item) => !item.deleted).length;
+      return { state, changed: [], blocked: { deleting: vanished.length, live, reason: "unreadable" } };
+    }
+    const blocked = assessDeletion(state, vanished);
+    if (blocked) return { state, changed: [], blocked };
+  }
+
   const items = { ...state.items };
   const pending = new Set(state.pending);
   const conflicts = state.conflicts.slice();
   const changed: string[] = [];
-  const seen = new Set<string>();
 
-  for (const plain of flatten(data, name)) {
-    seen.add(plain.id);
-    const current = items[plain.id];
-    if (current && !current.deleted && canonical(current.fields) === canonical(plain.fields)) continue;
-    const next: StoredItem = { fields: plain.fields, v: bump(current?.v ?? {}, state.deviceId), at: now };
-    items[plain.id] = next;
-    pending.add(plain.id);
-    changed.push(plain.id);
-    const at = conflicts.findIndex((c) => c.id === plain.id);
-    if (at >= 0) conflicts[at] = { ...conflicts[at], local: toItem(plain.id, next) };
+  for (const item of plain) {
+    const current = items[item.id];
+    if (current && !current.deleted && canonical(current.fields) === canonical(item.fields)) continue;
+    const next: StoredItem = { fields: item.fields, v: bump(current?.v ?? {}, state.deviceId), at: now };
+    items[item.id] = next;
+    pending.add(item.id);
+    changed.push(item.id);
+    const at = conflicts.findIndex((c) => c.id === item.id);
+    if (at >= 0) conflicts[at] = { ...conflicts[at], local: toItem(item.id, next) };
   }
-  for (const [id, current] of Object.entries(items)) {
-    if (seen.has(id) || current.deleted) continue;
+  for (const id of vanished) {
+    const current = items[id];
     const next: StoredItem = { fields: {}, v: bump(current.v, state.deviceId), deleted: true, at: now };
     items[id] = next;
     pending.add(id);
@@ -177,7 +236,26 @@ export function resolve(state: SyncState, id: string, choice: Choice, newTaskId:
     items[item.id] = toStored({ ...item, at: now }, now);
     pending.add(item.id);
   }
-  return { ...state, items, pending: [...pending].sort(), conflicts: state.conflicts.filter((c) => c.id !== id) };
+  const kept = (state.discarded ?? []).filter((d) => Date.parse(now) - Date.parse(d.at) < DISCARD_KEEP_DAYS * 86_400_000);
+  if (effective === "local") kept.push({ id, item: conflict.remote, side: "icloud", at: now });
+  if (effective === "remote") kept.push({ id, item: conflict.local, side: "this-device", at: now });
+  return { ...state, items, pending: [...pending].sort(), conflicts: state.conflicts.filter((c) => c.id !== id), discarded: kept };
+}
+
+/** Put a set-aside version back. It becomes a new edit that dominates what is there now. */
+export function restoreDiscarded(state: SyncState, index: number, now: string): SyncState {
+  const list = state.discarded ?? [];
+  const entry = list[index];
+  if (!entry) return state;
+  const current = state.items[entry.id];
+  const v = bump(mergeVectors(current?.v ?? {}, entry.item.v), state.deviceId);
+  const items = { ...state.items, [entry.id]: toStored({ ...entry.item, v, at: now }, now) };
+  return {
+    ...state,
+    items,
+    pending: [...new Set([...state.pending, entry.id])].sort(),
+    discarded: list.filter((_, i) => i !== index),
+  };
 }
 
 export function liveData(state: SyncState, currentWeek: string): { data: SpreadData; name: string | null } {

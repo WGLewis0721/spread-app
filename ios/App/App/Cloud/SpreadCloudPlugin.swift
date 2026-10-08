@@ -17,6 +17,7 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "backupRead", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncStart", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncStop", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncExcludeFromBackup", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncQueue", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncInbox", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncOutbox", returnType: CAPPluginReturnPromise),
@@ -24,6 +25,9 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "syncAck", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncNow", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncResume", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncClearPause", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncBrowse", returnType: CAPPluginReturnPromise),
     ]
 
     private let io = DispatchQueue(label: "com.graymatter.spread.cloud.io", qos: .utility)
@@ -159,7 +163,46 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func syncStart(_ call: CAPPluginCall) {
-        sync.start()
+        Task {
+            await sync.start()
+            call.resolve()
+        }
+    }
+
+    /// Allows sending. Refused while sync is paused for any reason.
+    @objc func syncResume(_ call: CAPPluginCall) {
+        Task {
+            if await sync.resume() { call.resolve() } else { call.reject("Sync is paused", "paused") }
+        }
+    }
+
+    /// The person explicitly chose to upload to the current iCloud again.
+    @objc func syncClearPause(_ call: CAPPluginCall) {
+        sync.clearPause()
+        call.resolve()
+    }
+
+    /// Read-only: fetch and list. Never creates the zone or sends. Rejects when iCloud was not reached.
+    @objc func syncBrowse(_ call: CAPPluginCall) {
+        Task {
+            await sync.start()
+            if await sync.fetchNow() { call.resolve() } else { call.reject("Couldn't reach iCloud", "fetchFailed") }
+        }
+    }
+
+    /// Sync identity files live in Library (written by the web layer). They belong to this device only.
+    @objc func syncExcludeFromBackup(_ call: CAPPluginCall) {
+        let names = (call.getArray("names") as? [String]) ?? []
+        guard let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first else {
+            call.reject("No library folder", "unavailable")
+            return
+        }
+        for name in names where !name.isEmpty && !name.contains("/") && name.hasPrefix("spread-sync-") {
+            var url = library.appendingPathComponent(name)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? url.setResourceValues(values)
+        }
         call.resolve()
     }
 
@@ -173,7 +216,10 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("items are required", "invalidArguments")
             return
         }
-        sync.queue(items)
+        guard sync.queue(items) else {
+            call.reject("The changes could not be saved on this device", "queueWriteFailed")
+            return
+        }
         call.resolve()
     }
 
@@ -203,8 +249,15 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func syncAck(_ call: CAPPluginCall) {
-        let names = (call.getArray("names") as? [String]) ?? []
-        syncStorage.ackInbox(names)
+        guard let items = decode(call) else {
+            call.reject("items are required", "invalidArguments")
+            return
+        }
+        // Compare-and-remove: a newer version staged since the web app read the inbox stays.
+        guard syncStorage.ackInbox(items) else {
+            call.reject("The acknowledgment could not be saved", "inboxWriteFailed")
+            return
+        }
         call.resolve()
     }
 
@@ -215,6 +268,8 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
                 "running": current.running,
                 "zoneDeleted": current.zoneDeleted,
                 "quotaExceeded": current.quotaExceeded,
+                "damagedRecords": current.damagedRecords,
+                "needsRepair": current.needsRepair || syncStorage.needsRepair,
                 "outboxCount": syncStorage.outboxCount,
                 "inboxCount": syncStorage.inboxItems().count,
             ]
@@ -228,7 +283,7 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func syncNow(_ call: CAPPluginCall) {
         Task {
             await sync.sendNow()
-            await sync.fetchNow()
+            _ = await sync.fetchNow()
             call.resolve()
         }
     }

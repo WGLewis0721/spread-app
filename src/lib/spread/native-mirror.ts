@@ -241,18 +241,71 @@ async function filesystemAdapter(): Promise<MirrorAdapter> {
   };
 }
 
+import { PINNED_PREFIX, pinsToDelete } from "./pins.ts";
+
+export type PinnedCopy = { name: string; label: string; savedAt: string };
+
 /**
- * Keep a labelled copy of the planner that is never overwritten by the rolling snapshot, e.g.
- * just before a migration. Best effort: a failure here never blocks the caller. `entries` must
- * already be copied, because the write happens later.
+ * Keep a labelled copy of the planner that is never overwritten: every copy gets its own
+ * timestamped name, the 15 most recent are kept. Resolves true only once the file has been read
+ * back and matches, so a caller that is about to do something destructive can refuse when it is
+ * false. `entries` must already be copied, because the write happens later.
  */
-export function pinSnapshot(label: string, entries: Record<string, string>): void {
-  const safe = label.replace(/[^a-z0-9-]/gi, "-");
-  void (async () => {
+export async function pinSnapshot(label: string, entries: Record<string, string>): Promise<boolean> {
+  try {
+    const safe = label.replace(/[^a-z0-9-]/gi, "-");
     const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
-    const text = JSON.stringify({ kind: "spread-pinned", version: 1, label, savedAt: new Date().toISOString(), entries });
-    await Filesystem.writeFile({ path: `spread-pinned-${safe}.json`, data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
-  })().catch(() => undefined);
+    const savedAt = new Date().toISOString();
+    const text = JSON.stringify({ kind: "spread-pinned", version: 1, label, savedAt, entries });
+    const path = `${PINNED_PREFIX}${savedAt.replace(/[^0-9]/g, "")}-${safe}.json`;
+    await Filesystem.writeFile({ path, data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
+    const back = await Filesystem.readFile({ path, directory: Directory.Library, encoding: Encoding.UTF8 });
+    if (back.data !== text) return false;
+    await prunePinned().catch(() => undefined);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function pinnedFiles(): Promise<string[]> {
+  const { Filesystem, Directory } = await import("@capacitor/filesystem");
+  const { files } = await Filesystem.readdir({ path: "", directory: Directory.Library });
+  return files.map((file) => file.name).filter((name) => name.startsWith(PINNED_PREFIX) && name.endsWith(".json")).sort();
+}
+
+async function prunePinned(): Promise<void> {
+  const { Filesystem, Directory } = await import("@capacitor/filesystem");
+  for (const name of pinsToDelete(await pinnedFiles())) {
+    await Filesystem.deleteFile({ path: name, directory: Directory.Library }).catch(() => undefined);
+  }
+}
+
+/** Safety copies kept on this device, newest first. */
+export async function listPinned(): Promise<PinnedCopy[]> {
+  try {
+    const out: PinnedCopy[] = [];
+    for (const name of (await pinnedFiles()).reverse()) {
+      const read = await readPinned(name);
+      if (read) out.push({ name, label: read.label, savedAt: read.savedAt });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+export async function readPinned(name: string): Promise<{ label: string; savedAt: string; entries: Record<string, string> } | null> {
+  try {
+    if (!name.startsWith(PINNED_PREFIX) || name.includes("/")) return null;
+    const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
+    const read = await Filesystem.readFile({ path: name, directory: Directory.Library, encoding: Encoding.UTF8 });
+    const parsed = JSON.parse(String(read.data)) as { kind?: string; label?: string; savedAt?: string; entries?: Record<string, string> };
+    if (parsed.kind !== "spread-pinned" || !parsed.entries || typeof parsed.entries !== "object") return null;
+    return { label: String(parsed.label ?? ""), savedAt: String(parsed.savedAt ?? ""), entries: parsed.entries };
+  } catch {
+    return null;
+  }
 }
 
 function timeout<T>(work: Promise<T>, ms: number): Promise<T | "timeout"> {

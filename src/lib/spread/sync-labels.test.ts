@@ -100,3 +100,18 @@ test("errors reassure that changes are safe on this device", () => {
   assert.match(say({ lastError: "x" }).detail, /safe on this device/);
   assert.match(say({ quotaExceeded: true }).detail, /safe on this device/);
 });
+
+test("a planner that looks emptied says nothing was deleted and asks for a choice", () => {
+  const said = say({ blocked: true });
+  assert.equal(said.title, "Sync is paused: this profile looks empty");
+  assert.match(said.detail, /Nothing has been deleted/);
+  assert.equal(said.tone, "problem");
+  assert.notEqual(say({ blocked: true, waitingToSend: 0 }).title, "Synced with iCloud");
+});
+
+test("damaged records are reported plainly and nothing is claimed erased", () => {
+  const said = describeSync({ ...base, damaged: 2 });
+  assert.equal(said.title, "Some iCloud data couldn’t be read");
+  assert.equal(said.tone, "problem");
+  assert.match(said.detail, /2 items were left out/);
+});

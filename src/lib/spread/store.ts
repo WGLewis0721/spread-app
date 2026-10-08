@@ -1,8 +1,10 @@
-import { collectFullPayload, fullBackupText, planRestoreAsNew, type FullBackupPayload } from "@/lib/spread/backup";
+import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
-import { collectEntries, flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
-import { pinBackup } from "@/lib/spread/cloud-backup";
+import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
 import { runMigrations } from "@/lib/spread/schema";
+import { classifyStored } from "@/lib/spread/pristine";
+import { commitRestore, recoverRestore } from "@/lib/spread/restore-tx";
+import { planRollback } from "@/lib/spread/rollback";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import {
   ACTIVE_PROFILE_KEY,
@@ -102,19 +104,27 @@ type Store = {
   removeAllocation: (allocationId: string) => void;
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
   copyLastWeek: () => boolean;
-  replaceData: (data: SpreadData) => void;
-  restoreAsNew: (payload: FullBackupPayload) => RestoreResult;
+  /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
+  replaceData: (data: SpreadData) => boolean;
+  restoreAsNew: (payload: FullBackupPayload, select?: string[]) => RestoreResult;
+  /** Put the whole planner back from a safety copy's stored entries. Works with all ten slots in use. */
+  rollbackToCopy: (entries: Record<string, string>) => RollbackResult;
+  /** How many profiles a restore can add right now (free slots, plus an empty profile it may fill). */
+  restoreRoom: () => number;
   /** Put a merged planner from iCloud Sync into the open profile. Keeps the week being viewed. */
   applySynced: (data: SpreadData, name: string | null) => void;
-  setSyncId: (profileId: string, syncId: string | null) => void;
+  setSyncId: (profileId: string, syncId: string | null) => boolean;
   /** Add a profile that is already linked to iCloud. Does not switch to it. Null if there is no room. */
   addSyncedProfile: (name: string, syncId: string, data: SpreadData) => string | null;
 };
 
+export type RollbackResult = { ok: true; profiles: number } | { ok: false; reason: "no-profiles" | "damaged" | "write-failed" | "rollback-failed" };
+
 export type RestoreResult =
-  | { ok: true; added: number; skipped: number }
+  | { ok: true; added: number; replacedEmpty: boolean; skipped: string[] }
   | { ok: false; reason: "no-room"; needed: number; free: number }
-  | { ok: false; reason: "write-failed" };
+  | { ok: false; reason: "write-failed" }
+  | { ok: false; reason: "rollback-failed" };
 
 // The installed app has no sign-in step: whoever has the app has the planner. The license is
 // never written to storage there, so it can't go stale or be removed by a storage reset.
@@ -269,9 +279,43 @@ const rosterStorage = {
   removeItem: drop,
 };
 
-function writeProfiles(profiles: Profile[]) {
-  put(PROFILES_KEY, JSON.stringify(profiles));
+/**
+ * An existing profile with nothing in it that is not linked to iCloud, which a restore may fill.
+ * The open profile is preferred. Content is judged from what is saved, never guessed.
+ */
+function emptyProfileId(state: { profiles: Profile[]; activeId: string | null }): string | null {
+  const candidates = [...state.profiles].sort((a, b) => Number(b.id === state.activeId) - Number(a.id === state.activeId));
+  for (const profile of candidates) {
+    if (profile.syncId) continue;
+    try {
+      // Judge what is saved (the caller has flushed pending edits). A profile whose saved text is
+      // unreadable is not empty: it holds something, so it is never overwritten.
+      const kind = classifyStored(localStorage.getItem(profile.store)).kind;
+      if (kind === "absent" || kind === "pristine") return profile.id;
+    } catch {
+      /* unreadable: not treated as empty */
+    }
+  }
+  return null;
 }
+
+/** True only if the roster reached storage. Callers must not change what the screen shows when it did not. */
+function writeProfiles(profiles: Profile[]): boolean {
+  return put(PROFILES_KEY, JSON.stringify(profiles));
+}
+
+/** Storage as the restore transaction sees it: the same lock and failure rules as every other write. */
+const txStorage = {
+  getItem: (key: string) => localStorage.getItem(key),
+  setItem: (key: string, value: string) => {
+    if (schemaLocked) throw new Error("planner is locked");
+    localStorage.setItem(key, value);
+  },
+  removeItem: (key: string) => {
+    if (schemaLocked) throw new Error("planner is locked");
+    localStorage.removeItem(key);
+  },
+};
 
 function loadProfiles(license: License | null): Profile[] {
   const saved = migrateRoster(rosterStorage);
@@ -400,9 +444,11 @@ function readSession() {
   if (typeof window === "undefined") return null;
   try {
     bindFlush();
+    // Finish or undo a restore that was interrupted before it committed.
+    recoverRestore(txStorage);
     const migration = runMigrations(localStorage, {
       snapshot: (label, entries) => {
-        if (isNativeApp()) pinSnapshot(label, entries);
+        if (isNativeApp()) void pinSnapshot(label, entries);
       },
     });
     schemaLocked = migration.status === "newer";
@@ -477,14 +523,14 @@ export const useSpread = create<Store>((set, get) => ({
   setTheme: (theme) => {
     applyTheme(theme);
     const profiles = get().profiles.map((profile) => (profile.id === get().activeId ? { ...profile, theme } : profile));
-    if (profiles.length > 0) writeProfiles(profiles);
-    set({ theme, profiles: profiles.length > 0 ? profiles : get().profiles });
+    const saved = profiles.length > 0 ? writeProfiles(profiles) : true;
+    set({ theme, profiles: saved && profiles.length > 0 ? profiles : get().profiles });
   },
   setAccent: (accent) => {
     applyAccent(accent);
     const profiles = get().profiles.map((profile) => (profile.id === get().activeId ? { ...profile, accent } : profile));
-    if (profiles.length > 0) writeProfiles(profiles);
-    set({ accent, profiles: profiles.length > 0 ? profiles : get().profiles });
+    const saved = profiles.length > 0 ? writeProfiles(profiles) : true;
+    set({ accent, profiles: saved && profiles.length > 0 ? profiles : get().profiles });
   },
   addProfile: (name) => {
     if (!cleanName(name)) return false;
@@ -493,8 +539,11 @@ export const useSpread = create<Store>((set, get) => ({
     if (!next || !profile) return false;
     flushSpread();
     const data = defaultData();
-    put(profile.store, JSON.stringify(data));
-    writeProfiles(next);
+    if (!put(profile.store, JSON.stringify(data))) return false;
+    if (!writeProfiles(next)) {
+      drop(profile.store);
+      return false;
+    }
     put(ACTIVE_PROFILE_KEY, profile.id);
     activeStore = profile.store;
     applyTheme(profile.theme);
@@ -506,7 +555,7 @@ export const useSpread = create<Store>((set, get) => ({
     const label = cleanName(name);
     if (!label) return false;
     const profiles = get().profiles.map((profile) => (profile.id === id ? { ...profile, name: label } : profile));
-    writeProfiles(profiles);
+    if (!writeProfiles(profiles)) return false;
     set({ profiles });
     return true;
   },
@@ -521,13 +570,14 @@ export const useSpread = create<Store>((set, get) => ({
   },
   removeProfile: (id) => {
     const profiles = get().profiles;
-    if (profiles.length <= 1) return false;
+    if (profiles.length <= 1 || schemaLocked) return false;
     const profile = profiles.find((item) => item.id === id);
     if (!profile) return false;
     flushSpread();
     const next = profiles.filter((item) => item.id !== id);
+    // The roster goes first: if it cannot be written the profile stays listed, with its data.
+    if (!writeProfiles(next)) return false;
     drop(profile.store);
-    writeProfiles(next);
     if (get().activeId !== id) {
       set({ profiles: next });
       return true;
@@ -756,10 +806,9 @@ export const useSpread = create<Store>((set, get) => ({
     const data = ensureWeek(get().data);
     const previous = data.weeks[shiftWeek(data.currentWeek, -1)];
     if (!previous) return false;
-    const copy = structuredClone(previous);
-    for (const box of copy.boxes) {
-      for (const task of box.tasks) task.done = false;
-    }
+    // cloneWeek gives every task and allocation a new id (and re-points each task at its own
+    // allocation), so the copy can never share an identity with the week it came from.
+    const copy = cloneWeek(previous);
     const next = {
       ...data,
       weeks: { ...data.weeks, [data.currentWeek]: copy },
@@ -768,25 +817,30 @@ export const useSpread = create<Store>((set, get) => ({
     return true;
   },
   replaceData: (incoming) => {
+    const open = get().profiles.find((profile) => profile.id === get().activeId);
+    if (open?.syncId) return false;
     const data = normalizeData(incoming);
     flushSpread();
-    if (isNativeApp()) {
-      pinSnapshot("pre-restore", collectEntries(localStorage));
-      void pinBackup("pre-restore");
-    }
     commit(set, data);
+    return true;
   },
   applySynced: (incoming, name) => {
     const data = normalizeData(incoming);
-    commit(set, data);
+    // A merge that did not reach storage must not look applied: the sync state would then run
+    // ahead of the saved planner, and the next pass would read the old planner as an edit that
+    // undoes iCloud's change. Throwing lets the session put its state back.
+    pending = null;
+    if (persistTimer !== null) {
+      window.clearTimeout(persistTimer);
+      persistTimer = null;
+    }
+    if (!put(activeStore, JSON.stringify(data))) throw new Error("couldn't save the synced changes");
+    set({ data });
     const { activeId, profiles } = get();
     const label = name ? cleanName(name) : "";
     if (label && activeId) {
       const next = profiles.map((profile) => (profile.id === activeId && profile.name !== label ? { ...profile, name: label } : profile));
-      if (next.some((profile, i) => profile !== profiles[i])) {
-        writeProfiles(next);
-        set({ profiles: next });
-      }
+      if (next.some((profile, i) => profile !== profiles[i]) && writeProfiles(next)) set({ profiles: next });
     }
   },
   setSyncId: (profileId, syncId) => {
@@ -796,8 +850,9 @@ export const useSpread = create<Store>((set, get) => ({
       void _old;
       return syncId ? { ...rest, syncId } : rest;
     });
-    writeProfiles(next);
+    if (!writeProfiles(next)) return false;
     set({ profiles: next });
+    return true;
   },
   addSyncedProfile: (name, syncId, incoming) => {
     const id = uid();
@@ -806,23 +861,55 @@ export const useSpread = create<Store>((set, get) => ({
     if (!created || !profile) return null;
     if (!put(profile.store, JSON.stringify(normalizeData(incoming)))) return null;
     const next = created.map((item) => (item.id === id ? { ...item, syncId } : item));
-    writeProfiles(next);
+    if (!writeProfiles(next)) {
+      drop(profile.store);
+      return null;
+    }
     set({ profiles: next });
     return id;
   },
-  restoreAsNew: (payload) => {
+  restoreRoom: () => {
     flushSpread();
-    const plan = planRestoreAsNew(payload, get().profiles, uid);
+    return restoreCapacity(get().profiles.length, emptyProfileId(get()) !== null);
+  },
+  rollbackToCopy: (entries) => {
+    flushSpread();
+    const plan = planRollback(entries);
+    if (!plan.ok) return { ok: false, reason: plan.reason };
+    const committed = commitRestore(txStorage, { writes: plan.writes, rosterKey: PROFILES_KEY, rosterValue: plan.rosterValue });
+    if (!committed.ok) return { ok: false, reason: committed.rolledBack ? "write-failed" : "rollback-failed" };
+    // The roster is the commit point; bodies of profiles that are no longer listed are only leftovers.
+    const keep = new Set(plan.profiles.map((profile) => profile.store));
+    for (const old of get().profiles) if (!keep.has(old.store)) drop(old.store);
+    failureReported = false;
+    notifyStorageChanged();
+    const active = plan.profiles.find((profile) => profile.id === plan.activeId) ?? plan.profiles[0];
+    pending = null;
+    const loaded = adopt(active);
+    set({ profiles: plan.profiles, activeId: active.id, ...loaded });
+    return { ok: true, profiles: plan.profiles.length };
+  },
+  restoreAsNew: (payload, select) => {
+    flushSpread();
+    const emptyId = emptyProfileId(get());
+    const plan = planRestoreAsNew(payload, get().profiles, uid, { select, replaceEmpty: emptyId });
     if (!plan.ok) return plan;
-    if (isNativeApp()) {
-      pinSnapshot("pre-restore", collectEntries(localStorage));
-      void pinBackup("pre-restore");
+    // All or nothing: bodies, then the roster as the commit point, with every key journalled so a
+    // failure (or a kill part-way) puts everything back.
+    const committed = commitRestore(txStorage, { writes: plan.writes, rosterKey: PROFILES_KEY, rosterValue: JSON.stringify(plan.profiles) });
+    if (!committed.ok) return { ok: false, reason: committed.rolledBack ? "write-failed" : "rollback-failed" };
+    failureReported = false;
+    notifyStorageChanged();
+    if (plan.replacedId && plan.replacedId === get().activeId) {
+      const filled = plan.profiles.find((profile) => profile.id === plan.replacedId);
+      if (filled) {
+        const loaded = adopt(filled);
+        set({ profiles: plan.profiles, ...loaded });
+        return { ok: true, added: plan.writes.length, replacedEmpty: true, skipped: plan.skipped };
+      }
     }
-    // Profile data first and the roster last, so a failed write leaves the roster as it was.
-    for (const write of plan.writes) if (!put(write.key, write.value)) return { ok: false, reason: "write-failed" };
-    writeProfiles(plan.profiles);
     set({ profiles: plan.profiles });
-    return { ok: true, added: plan.writes.length, skipped: plan.skipped };
+    return { ok: true, added: plan.writes.length, replacedEmpty: plan.replacedId !== null, skipped: plan.skipped };
   },
 }));
 

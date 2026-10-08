@@ -83,6 +83,10 @@ export type SyncDescribeInput = {
   lastSyncAt: string | null;
   lastError: string | null;
   quotaExceeded: boolean;
+  /** Records from iCloud (or queue files here) that were unreadable and left out. */
+  damaged?: number;
+  /** The planner looks emptied by accident and sync is waiting for a choice. */
+  blocked?: boolean;
   now: Date;
 };
 
@@ -92,6 +96,13 @@ export type SyncDescription = { title: string; detail: string; tone: Tone };
 export function describeSync(input: SyncDescribeInput): SyncDescription {
   if (!input.linked) {
     return { title: "iCloud Sync is off", detail: "This profile stays on this device until you turn sync on. Nothing is shared or combined.", tone: "off" };
+  }
+  if (input.blocked) {
+    return {
+      title: "Sync is paused: this profile looks empty",
+      detail: "Nothing has been deleted in iCloud or on your other devices. Put your last synced planner back, or confirm you meant to clear it.",
+      tone: "problem",
+    };
   }
   if (input.paused === "switchAccounts" || input.paused === "signOut") {
     return {
@@ -112,6 +123,13 @@ export function describeSync(input: SyncDescribeInput): SyncDescription {
   }
   const needs = input.conflicts > 0 ? ` ${input.conflicts} ${input.conflicts === 1 ? "change needs" : "changes need"} your choice.` : "";
   if (input.quotaExceeded) return { title: "iCloud storage is full", detail: `Your changes are safe on this device and will send when there is room.${needs}`, tone: "problem" };
+  if (input.damaged && input.damaged > 0) {
+    return {
+      title: "Some iCloud data couldn’t be read",
+      detail: `${input.damaged === 1 ? "One item was" : `${input.damaged} items were`} left out so nothing here is erased. Everything on this device is unchanged.${needs}`,
+      tone: "problem",
+    };
+  }
   if (input.lastError) return { title: "Couldn’t sync", detail: `Your changes are safe on this device. Spread will try again.${needs}`, tone: "problem" };
   if (!input.started) return { title: "Starting sync…", detail: needs.trim(), tone: "wait" };
   if (input.busy || input.waitingToSend > 0) {

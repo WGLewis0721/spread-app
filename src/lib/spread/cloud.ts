@@ -25,6 +25,10 @@ export type SyncNativeStatus = {
   running: boolean;
   zoneDeleted: boolean;
   quotaExceeded: boolean;
+  /** Records iCloud sent that failed the integrity check and were not applied. */
+  damagedRecords?: number;
+  /** A local queue file was unreadable and has been set aside. */
+  needsRepair?: boolean;
   outboxCount: number;
   inboxCount: number;
   accountChanged?: "signOut" | "switchAccounts";
@@ -39,10 +43,19 @@ type SpreadCloudPlugin = {
   backupRead(options: { deviceId: string; name: string }): Promise<{ text: string }>;
   syncStart(): Promise<void>;
   syncStop(): Promise<void>;
+  /** Keep these Library files out of device backups (iCloud/iTunes), so they are never restored onto another device. */
+  syncExcludeFromBackup(options: { names: string[] }): Promise<void>;
+  /** Allow sending. Rejects ("paused") while sync is paused for any reason. */
+  syncResume(): Promise<void>;
+  /** The person explicitly chose to upload to the current iCloud again. */
+  syncClearPause(): Promise<void>;
+  /** Read-only fetch for the link screen: never creates or sends. Rejects when iCloud was not reached. */
+  syncBrowse(): Promise<void>;
   syncQueue(options: { items: SyncRowDTO[] }): Promise<void>;
   syncInbox(): Promise<{ items: SyncRowDTO[] }>;
   syncOutbox(): Promise<{ names: string[] }>;
-  syncAck(options: { names: string[] }): Promise<void>;
+  /** Remove exactly these rows from the native inbox. A newer version of the same item stays. */
+  syncAck(options: { items: SyncRowDTO[] }): Promise<void>;
   syncDrop(options: { names: string[] }): Promise<void>;
   syncStatus(): Promise<SyncNativeStatus>;
   syncNow(): Promise<void>;

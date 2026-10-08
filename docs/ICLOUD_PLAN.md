@@ -51,7 +51,7 @@ Key decisions (the ones that need your sign-off are in §10):
 
 - **Backup and sync are separate systems** with separate storage, so a sync bug can never corrupt backups.
   - **Backup → iCloud Documents (ubiquity container) `iCloud.com.graymatter.spread`.** File-based, so photos are not limited by the 1 MB record cap; no CloudKit schema to promote; recoverable even if sync is off; visible in Files/iCloud Drive for support. Layout: `Backups/<deviceId>/<ISO-timestamp>-<seq>.spreadbackup` + `manifest.json`.
-  - **Sync → CloudKit private database**, custom zone per synced profile. Week/profile/hats payloads as `CKAsset` (never exceed record limit); small metadata fields in **`encryptedValues`** (end-to-end encrypted regardless of Advanced Data Protection). Uses **`CKSyncEngine`**, which requires **iOS 17**.
+  - **Sync → CloudKit private database**, **one zone (`Spread`), one record per item** (named `<syncId>|<itemId>`). Each item's fields are a `CKAsset` file (never exceed the record limit) with a content hash; `syncId`, `itemId`, version vector and timestamp are plain record fields. Uses **`CKSyncEngine`**, which requires **iOS 17**.
 - **Merge brain stays in TypeScript** (pure, deterministic, unit-testable under `node --test`, shares `normalizeData`). Swift moves bytes and tokens; it never edits planner semantics. When the WebView is not alive, inbound changes are fetched and **staged** natively, then applied on next foreground.
 - **Live store stays `localStorage` + existing mirror for 1.0.** Moving the source of truth to a native DB is a larger, riskier change with no user-visible benefit; `StorageDriver` keeps the door open. The existing mirror is extended, not replaced.
 - **Sync granularity: one record per (profile, week)** plus one per profile "meta" (name, hats, theme, accent, order) and content-addressed **attachment assets** (`sha256`). This keeps edits to different weeks conflict-free and keeps payloads small.
@@ -60,7 +60,7 @@ Key decisions (the ones that need your sign-off are in §10):
 
 ### 3.1 Device isolation
 
-- `deviceId` = random UUID in **Keychain, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`**, so a device-to-device restore or iCloud Keychain cannot clone it. Regenerate if absent. A new `deviceId` after reinstall is correct: old backups stay attributed to the old id and remain restorable.
+- `deviceId` = random UUID in **Keychain, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`**, so a device-to-device restore or iCloud Keychain cannot clone it. Regenerate if absent. The Keychain item normally survives deleting and reinstalling the app, so a reinstall usually keeps the same `deviceId`; if it is absent a new one is made, and old backups stay attributed to the old id and remain restorable.
 - Sync state (change tokens, pending queue) is stored in `Application Support` with **`isExcludedFromBackup = true`**; restoring a phone from an iPhone backup must not inherit another device's tokens.
 - Backups live under `Backups/<deviceId>/`. A device only ever writes its own folder and only deletes its own (pruning). Other devices' folders are read-only candidates for "Restore from another device".
 
@@ -142,7 +142,7 @@ Required: all four orientations, resizable/multitasking windows (Split View/Slid
 - **App Review notes:** local-first, no account, iCloud backup automatic and sync opt-in, how to see backup status, how to test without iCloud.
 - **Privacy:** "Data Not Collected" stays valid because user data lives in the user's own iCloud and is not accessible to us; verify at upload. Update privacy policy and support pages to describe iCloud backup/sync, retention, and how to delete the iCloud copy. No tracking, no third-party SDKs.
 - **Account deletion (5.1.1(v))** does not apply (no Spread account); still provide in-app "Delete iCloud copy".
-- **Accuracy:** only advertise iPad and iCloud after accepted device QA (existing plan rule). Use Apple trademarks correctly ("iCloud", "iPad"). Do not claim "encrypted" beyond what we verify (encrypted fields + Apple's in-transit/at-rest).
+- **Accuracy:** only advertise iPad and iCloud after accepted device QA (existing plan rule). Use Apple trademarks correctly ("iCloud", "iPad"). Make **no** encryption claim beyond what Apple documents and we have verified. Do not say "end-to-end encrypted" for Spread's iCloud data; at most, say data is stored in the person's own iCloud account.
 - **iPad requirements:** 13-inch iPad screenshots, all orientations (or documented full-screen policy), launch screen, multitasking behavior verified. Latest-Xcode/SDK requirement checked at submission time.
 - **Export compliance:** unchanged (`ITSAppUsesNonExemptEncryption = NO`) because we add no custom crypto; re-confirm if we add any.
 - **Landing page:** per project rules the App Store CTA/claims go live only after the listing is public; landing work never touches planner code.
@@ -276,10 +276,12 @@ Updated 2026-10-08. "Merged" means on `main` with CI green. Nothing below has ru
 | 1d | Full backup v2 + restore as new profiles | Merged (#25) |
 | 2 | iPad family, all orientations, iOS 17 | Merged (#23). Layout on a physical iPad not yet verified |
 | 3a/3b | Native backup foundation: plugin, device id, backup store, retention | Merged (#24) |
-| 3c/3d | Backup runner, status, restore from iCloud (UI) | PR #26 |
-| 4a/4c-core | Merge, planner split, sync state machine, link planning, session | PR #27 |
-| 4b | Native `CKSyncEngine` transport | PR #28 |
-| 4c-ui | Link flow, conflict screens, status | Follows #26 to #28 |
+| 3c/3d | Backup runner, status, restore from iCloud (UI) | Merged (#26) |
+| 4a/4c-core | Merge, planner split, sync state machine, link planning, session | Merged (#27) |
+| 4b | Native `CKSyncEngine` transport | Merged (#28) |
+| 4c-ui | Link flow, conflict screens, status | Merged (#30) |
+| Audit | Independent audit found 2 critical, 7 high and 10 medium issues; fixes follow in stacked PRs, none merged yet | F1 #31 mass-delete guard, F2 #32 profile binding, F3 #33 adopt/replace, F6 #34 restore, F4 #35 payload integrity, F5 #36 durable pause, F7 #37 consent and safety copies, F8 hardening and docs |
+| Still owed | F0: CI running the Chromium simulators and Swift logic tests for the engine and storage (needs the logic moved into `SpreadCloudCore`); a fresh re-audit; the device gates below | Open |
 
 ### Where the build differs from the plan above
 
@@ -288,7 +290,12 @@ Updated 2026-10-08. "Merged" means on `main` with CI green. Nothing below has ru
 - **Only the open profile syncs.** Switching profiles stops one session and starts the next.
 - **No "delete the iCloud copy" action and no tombstone pruning.** Deleting the CloudKit zone would delete every profile's synced data, including other devices'. Turning sync off leaves the iCloud copy in place; removing it is done in Settings, iCloud, Manage Storage. Tombstones are kept (they are small).
 - **No background cadence.** Backups happen after changes, when the app is backgrounded, and at launch when the last one is over a day old. There is no background task, and the copy says so.
-- **Item fields are not end-to-end encrypted by Spread.** They are in the person's private CloudKit database, encrypted in transit and at rest by Apple (and end to end if Advanced Data Protection is on). The earlier plan to use `encryptedValues` was dropped so large and small items behave the same.
+- **No end-to-end encryption claim.** Item fields are plain CloudKit assets in the person's private database; `encryptedValues` is not used. Do not describe the data as end-to-end encrypted in the app, the listing or the privacy text. Evaluating `encryptedValues` for the payload is a 1.1 item, to be decided after reading Apple's current documentation.
+- **Backup is off until the person answers a first-run notice**, and an unreadable preference means off. Nothing is uploaded before then.
+- **Sync never re-uploads on its own after a pause.** An iCloud sign-out, account switch or deleted iCloud copy pauses sync durably; only an explicit, confirmed "Upload this profile to this iCloud again" lifts it.
+- **Conflict choices are reversible for 30 days:** the version not chosen is kept under "Set aside" with a "Put back" action.
+- **Safety copies:** restores and sync linking refuse to run if a verified local copy cannot be written first. Copies are timestamped, the 15 newest are kept, and "Restore from a safety copy" is in More.
+- **Backup retention** does not thin older iCloud copies until the newest has reached iCloud.
 - **Family Sharing is off.** Not confirmed available for paid apps.
 - **Retention** is 7 daily, about 5 weekly and about 4 monthly buckets, pinned copies for 30 days, a 200 MB per-device ceiling, and the newest regular backup is never removed.
 

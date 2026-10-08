@@ -1,121 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { canonical } from "./merge.ts";
-import { defaultData, normalizeData, type SpreadData } from "./model.ts";
-import { createSyncSession, type SessionDeps, type SyncRow, type SyncTransport } from "./sync-session.ts";
+import { defaultData, normalizeData } from "./model.ts";
+import { addTask, Cloud, device, settle, taskIds } from "../../test-support/sync-harness.ts";
+import { createSyncSession, type SyncRow } from "./sync-session.ts";
 import type { SyncState } from "./sync-state.ts";
-
-// A simulated iCloud plus the native engine in front of it, per device.
-class Cloud {
-  rows = new Map<string, { row: SyncRow; tag: number; seq: number }>();
-  seq = 0;
-}
-
-class FakeNative implements SyncTransport {
-  outboxRows = new Map<string, SyncRow>();
-  // Names the engine will try to send. A rejected write leaves the outbox but is not retried.
-  sending = new Set<string>();
-  inboxRows = new Map<string, SyncRow>();
-  tags = new Map<string, number>();
-  cursor = 0;
-  started = false;
-  online = true;
-  cloud: Cloud;
-  constructor(cloud: Cloud) {
-    this.cloud = cloud;
-  }
-  async start() {
-    this.started = true;
-  }
-  async stop() {
-    this.started = false;
-  }
-  async queue(rows: SyncRow[]) {
-    for (const row of rows) {
-      this.outboxRows.set(`${row.syncId}|${row.itemId}`, row);
-      this.sending.add(`${row.syncId}|${row.itemId}`);
-    }
-    this.flush();
-  }
-  async inbox() {
-    this.flush();
-    return [...this.inboxRows.values()];
-  }
-  async ack(names: string[]) {
-    for (const n of names) this.inboxRows.delete(n);
-  }
-  async outbox() {
-    return [...this.outboxRows.keys()];
-  }
-  async drop(names: string[]) {
-    for (const n of names) {
-      this.outboxRows.delete(n);
-      this.sending.delete(n);
-    }
-  }
-  async syncNow() {
-    this.flush();
-  }
-  // Like CKSyncEngine: send what is queued, refuse writes made on a stale version (and hand back the newer one), fetch what is new.
-  flush() {
-    if (!this.online || !this.started) return;
-    for (const [name, row] of [...this.outboxRows]) {
-      if (!this.sending.has(name)) continue;
-      const server = this.cloud.rows.get(name);
-      if (server && server.tag !== this.tags.get(name)) {
-        this.inboxRows.set(name, server.row);
-        this.tags.set(name, server.tag);
-        this.sending.delete(name);
-        continue;
-      }
-      this.cloud.seq += 1;
-      const tag = (server?.tag ?? 0) + 1;
-      this.cloud.rows.set(name, { row, tag, seq: this.cloud.seq });
-      this.tags.set(name, tag);
-      this.outboxRows.delete(name);
-      this.sending.delete(name);
-    }
-    for (const [name, entry] of this.cloud.rows) {
-      if (entry.seq > this.cursor && !this.outboxRows.has(name)) {
-        if (this.tags.get(name) !== entry.tag) {
-          this.inboxRows.set(name, entry.row);
-          this.tags.set(name, entry.tag);
-        }
-      }
-    }
-    this.cursor = this.cloud.seq;
-  }
-}
-
-let clock = 0;
-function device(cloud: Cloud, name: string, data: SpreadData, syncId = "S1") {
-  const native = new FakeNative(cloud);
-  let saved: SyncState | null = null;
-  const env = { data, name: "Me", snapshots: [] as string[] };
-  const deps: SessionDeps = {
-    syncId,
-    deviceId: name,
-    transport: native,
-    loadState: () => saved,
-    saveState: (s) => void (saved = s),
-    current: () => ({ data: env.data, name: env.name }),
-    apply: (next, nm) => {
-      env.data = normalizeData({ ...next, currentWeek: env.data.currentWeek });
-      if (nm) env.name = nm;
-    },
-    snapshot: (label) => void env.snapshots.push(label),
-    newId: () => `n${clock++}`,
-    now: () => `2026-10-08T12:${String(clock++ % 60).padStart(2, "0")}:00Z`,
-  };
-  const session = createSyncSession(deps);
-  return { env, native, session, get state() { return saved; } };
-}
-
-const taskIds = (d: ReturnType<typeof device>) => Object.values(d.env.data.weeks).flatMap((w) => w.boxes.flatMap((b) => b.tasks.map((t) => t.id))).sort();
-const addTask = (d: ReturnType<typeof device>, id: string, text: string) => d.env.data.weeks[d.env.data.currentWeek].boxes[0].tasks.push({ id, text, done: false });
-const settle = async (...ds: ReturnType<typeof device>[]) => {
-  for (let i = 0; i < 6; i += 1) for (const d of ds) await d.session.syncNow();
-};
 
 test("a change on one device reaches the other and the sender's queue empties", async () => {
   const cloud = new Cloud();
@@ -304,4 +193,134 @@ test("a queued change that iCloud's newer version replaced is dropped from the n
   await settle(a, b, a, b);
   assert.equal(b.native.outboxRows.size, 0, "nothing stale is left in the native outbox");
   assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
+});
+
+// --- Profile binding (audit C1) ---------------------------------------------------------------
+
+function boundHarness() {
+  const own = defaultData();
+  own.weeks[own.currentWeek].boxes[0].tasks.push({ id: "a1", text: "This profile", done: false });
+  const other = defaultData();
+  other.weeks[other.currentWeek].boxes[0].tasks.push({ id: "b1", text: "A different profile", done: false });
+  const env = { open: "mine" as "mine" | "other", applied: 0, queued: [] as SyncRow[], released: false };
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let saved: SyncState | null = null;
+  const session = createSyncSession({
+    syncId: "S",
+    deviceId: "phone",
+    transport: {
+      async start() {},
+      async stop() {},
+      async queue(rows) {
+        env.queued.push(...rows);
+      },
+      async inbox() {
+        if (!env.released) await gate;
+        return [];
+      },
+      async ack() {},
+      async outbox() {
+        return [];
+      },
+      async drop() {},
+      async syncNow() {},
+    },
+    loadState: () => saved,
+    saveState: (s) => void (saved = s),
+    isActive: () => env.open === "mine",
+    current: () => ({ data: env.open === "mine" ? own : other, name: "Me" }),
+    apply: () => void (env.applied += 1),
+    snapshot: () => {},
+    newId: () => "x",
+    now: () => "t",
+  });
+  return { env, session, release: () => ((env.released = true), release()) };
+}
+
+test("switching profiles while a pass waits on iCloud sends nothing from the other profile", async () => {
+  const h = boundHarness();
+  const starting = h.session.start();
+  await new Promise((r) => setTimeout(r, 20));
+  h.env.open = "other";
+  h.release();
+  await starting;
+  assert.deepEqual(h.env.queued, [], "the other profile's tasks were not queued into this profile's iCloud copy");
+  assert.equal(h.env.applied, 0);
+});
+
+test("stopping a session while a pass is waiting stops that pass from touching the planner", async () => {
+  const h = boundHarness();
+  const starting = h.session.start();
+  await new Promise((r) => setTimeout(r, 20));
+  await h.session.stop();
+  h.release();
+  await starting;
+  assert.deepEqual(h.env.queued, []);
+  assert.equal(h.env.applied, 0);
+});
+
+test("resolving a conflict or a pause is ignored when the session's profile is not open", async () => {
+  const h = boundHarness();
+  h.release();
+  await h.session.start();
+  h.env.open = "other";
+  await h.session.resolveConflict("task:a1", "local");
+  await h.session.resolveBlocked("restore");
+  assert.equal(h.env.applied, 0);
+});
+
+test("the same session still syncs normally while its profile stays open", async () => {
+  const h = boundHarness();
+  h.release();
+  await h.session.start();
+  assert.ok(h.env.queued.some((row) => row.itemId === "task:a1"));
+});
+
+test("if iCloud's changes cannot be saved to the planner, sync state does not run ahead of it", async () => {
+  const cloud = new Cloud();
+  const seed = normalizeData(structuredClone(defaultData()));
+  const a = device(cloud, "phone", normalizeData(structuredClone(seed)));
+  const b = device(cloud, "pad", normalizeData(structuredClone(seed)));
+  await a.session.start();
+  addTask(a, "t1", "From phone");
+  await a.session.localChanged();
+  await settle(a);
+  // The pad's storage refuses the write until told otherwise.
+  const realApply = b.deps.apply;
+  let refuse = true;
+  b.deps.apply = (next, nm) => {
+    if (refuse) throw new Error("storage full");
+    realApply(next, nm);
+  };
+  await b.session.start();
+  await b.session.syncNow();
+  assert.ok(b.session.view().lastError);
+  assert.deepEqual(taskIds(b), [], "the planner is unchanged");
+  refuse = false;
+  await settle(a, b);
+  assert.deepEqual(taskIds(b), ["t1"], "the change arrives once storage works");
+  assert.deepEqual(taskIds(a), ["t1"], "and was never undone on the other device");
+  assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
+});
+
+// Astra A12: a state file that came from another device must not make this device impersonate it.
+import { adoptDeviceIdentity, newSyncState as freshState } from "./sync-state.ts";
+
+test("A12: a state restored from another device is rebased onto this device's identity, keeping its contents", () => {
+  const old = freshState("S1", "old-phone");
+  old.items["task:a"] = { fields: { text: "kept" }, v: { "old-phone": 3 }, at: "t" };
+  old.pending = ["task:a"];
+  const { state, rebased } = adoptDeviceIdentity(old, "new-phone");
+  assert.equal(rebased, true);
+  assert.equal(state.deviceId, "new-phone");
+  assert.deepEqual(state.items["task:a"], old.items["task:a"], "nothing is lost or rewritten");
+  assert.deepEqual(state.pending, ["task:a"]);
+});
+
+test("A12: the same device keeps its state untouched", () => {
+  const s = freshState("S1", "phone");
+  const out = adoptDeviceIdentity(s, "phone");
+  assert.equal(out.rebased, false);
+  assert.equal(out.state, s);
 });

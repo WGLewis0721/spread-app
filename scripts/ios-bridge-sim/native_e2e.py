@@ -12,7 +12,7 @@ def check(name, ok, detail=''):
     print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail else ''))
 
 with sync_playwright() as p:
-    b = p.chromium.launch()
+    b = p.chromium.launch(**({'executable_path': os.environ['PW_CHROME']} if os.environ.get('PW_CHROME') else {}))
     ctx = b.new_context(viewport={'width': 393, 'height': 852}, device_scale_factor=2, is_mobile=True, has_touch=True)
     ctx.expose_function('__fsRead', lambda path: fs.get(path))
     ctx.expose_function('__fsWrite', lambda path, data, enc: fs.__setitem__(path, data))

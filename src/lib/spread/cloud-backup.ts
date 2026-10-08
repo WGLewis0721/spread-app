@@ -11,11 +11,12 @@ import { deriveBackupStatus, type BackupStatus, type NativeFacts } from "./cloud
 import { createBackupRunner, type BackupRunner, type RunnerState } from "./backup-runner.ts";
 import { isNativeApp } from "./native.ts";
 import { onStorageChanged } from "./native-mirror.ts";
-
-export const BACKUP_PREF_KEY = "spread.cloud.backup";
+import { readConsent, writeConsent } from "./consent.ts";
 
 type CloudStore = {
   enabled: boolean;
+  /** The person has seen the disclosure and answered it. */
+  acknowledged: boolean;
   native: NativeFacts | null;
   runner: RunnerState;
   now: number;
@@ -23,8 +24,9 @@ type CloudStore = {
 
 export const useCloudBackup = create<CloudStore>(() => ({
   enabled: false,
+  acknowledged: false,
   native: null,
-  runner: { busy: false, lastError: null, lastSuccessAt: null },
+  runner: { busy: false, lastError: null, lastSuccessAt: null, waitingForICloud: false },
   now: Date.now(),
 }));
 
@@ -32,13 +34,19 @@ export function backupAvailable(): boolean {
   return CLOUD_FLAGS.backup && isNativeApp();
 }
 
-/** On by default; the only way it is off is the person turning it off. */
-function readEnabled(): boolean {
-  try {
-    return localStorage.getItem(BACKUP_PREF_KEY) !== "off";
-  } catch {
-    return true;
-  }
+/** The one gate for writing anything to iCloud: the feature, the person's choice and their acknowledgement. */
+export function canWriteICloud(): boolean {
+  const state = useCloudBackup.getState();
+  return backupAvailable() && state.enabled && state.acknowledged;
+}
+
+/** The person answered the first-run notice. "Turn on" keeps backup on; "Not now" turns it off. */
+export function acknowledgeBackup(turnOn: boolean): void {
+  // One value, written once. If it cannot be written nothing is turned on, and the question comes back.
+  const saved = writeConsent(localStorage, turnOn ? "on" : "off");
+  useCloudBackup.setState({ acknowledged: true, enabled: turnOn && saved });
+  if (turnOn && saved) attach();
+  else detach();
 }
 
 export function currentBackupStatus(state: CloudStore): BackupStatus {
@@ -78,26 +86,46 @@ async function buildBackup() {
 }
 
 /** Start (once) after the planner has opened. Safe to call repeatedly. */
-export async function startCloudBackup(): Promise<void> {
-  if (started || !backupAvailable()) return;
-  started = true;
-  useCloudBackup.setState({ enabled: readEnabled() });
+let starting: Promise<void> | null = null;
+
+/** Rejects if the native side could not be reached; `started` stays false so a later call retries. */
+export function startCloudBackup(): Promise<void> {
+  if (started || !backupAvailable()) return Promise.resolve();
+  starting ??= begin()
+    .then(() => {
+      started = true;
+    })
+    .finally(() => {
+      starting = null;
+    });
+  return starting;
+}
+
+async function begin(): Promise<void> {
+  const consent = readConsent(localStorage);
+  // Until the person has answered the first-run notice, backup shows as off and uploads nothing.
+  useCloudBackup.setState({ enabled: consent === "on", acknowledged: consent !== "unanswered" });
   await refreshBackupStatus();
   const plugin = await cloudPlugin();
   runner = createBackupRunner({
     transport: { write: (text, pin) => plugin.backupWrite({ text, pin }) },
     build: buildBackup,
+    allowed: canWriteICloud,
     onState: (state) => {
       useCloudBackup.setState({ runner: state, now: Date.now() });
       if (!state.busy) void refreshBackupStatus();
     },
   });
-  if (useCloudBackup.getState().enabled) attach();
+  if (canWriteICloud()) attach();
   void plugin.addListener("accountChanged", () => void refreshBackupStatus());
   window.addEventListener("pagehide", () => void runner?.flush());
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") void runner?.flush();
-    else void refreshBackupStatus();
+    else {
+      void refreshBackupStatus();
+      // Coming back to the app is a good moment to hand an undelivered copy to iCloud again.
+      if (useCloudBackup.getState().runner.waitingForICloud) runner?.changed();
+    }
   });
 }
 
@@ -108,20 +136,21 @@ function attach() {
   runner.launch(last ? Date.parse(last) : null);
 }
 
-export function setBackupEnabled(on: boolean) {
-  try {
-    if (on) localStorage.removeItem(BACKUP_PREF_KEY);
-    else localStorage.setItem(BACKUP_PREF_KEY, "off");
-  } catch {
-    /* the choice still applies for this run */
-  }
-  useCloudBackup.setState({ enabled: on });
-  if (on) {
-    attach();
-  } else {
-    stopStorage?.();
-    stopStorage = null;
-  }
+function detach() {
+  stopStorage?.();
+  stopStorage = null;
+  // Anything waiting (a debounce, a retry, an undelivered copy) is dropped, not just un-listened.
+  runner?.cancel();
+}
+
+/** Returns false when turning it on could not be saved: it stays off. */
+export function setBackupEnabled(on: boolean): boolean {
+  const saved = writeConsent(localStorage, on ? "on" : "off");
+  if (on && !saved) return false;
+  useCloudBackup.setState({ enabled: on, acknowledged: true });
+  if (on) attach();
+  else detach();
+  return true;
 }
 
 /**
@@ -130,7 +159,7 @@ export function setBackupEnabled(on: boolean) {
  * storage straight afterwards. Resolves false if the copy could not be made.
  */
 export async function pinBackup(label: string): Promise<boolean> {
-  if (!backupAvailable() || !started) return false;
+  if (!canWriteICloud() || !started) return false;
   try {
     const payload = collectFullPayload(localStorage, new Date(), deviceId);
     if (payload.roster.length === 0) return false;
@@ -144,6 +173,7 @@ export async function pinBackup(label: string): Promise<boolean> {
 }
 
 export async function backupNow(): Promise<void> {
+  if (!canWriteICloud()) return;
   runner?.changed();
   await runner?.flush();
 }

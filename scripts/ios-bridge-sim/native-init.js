@@ -3,7 +3,9 @@
   const plugins = {
     Filesystem: {
       async readFile(o) { const v = await window.__fsRead(o.path); if (v === null) throw new Error('File does not exist.'); return { data: v }; },
-      async writeFile(o) { await window.__fsWrite(o.path, o.data, o.encoding || 'base64'); return { uri: 'file:///fake/' + o.path }; },
+      async writeFile(o) { await window.__fsWrite(o.path, o.data, o.encoding || 'base64'); (window.__fsNames = window.__fsNames || new Set()).add(o.path); return { uri: 'file:///fake/' + o.path }; },
+      async readdir() { return { files: [...(window.__fsNames || [])].map((name) => ({ name })) }; },
+      async deleteFile(o) { (window.__fsNames || new Set()).delete(o.path); },
       async rmdir() {},
     },
     Share: {
@@ -43,10 +45,14 @@
       // --- Sync: a fake CKSyncEngine in front of a cloud the test harness owns (window.__cloudSave / __cloudChanges).
       async syncStart() { engine().started = true; },
       async syncStop() { engine().started = false; },
+      async syncExcludeFromBackup(o) { (window.__excluded = window.__excluded || []).push(...o.names); },
+      async syncResume() { if (window.__syncStatus && (window.__syncStatus.zoneDeleted || window.__syncStatus.accountChanged)) throw new Error('paused'); window.__resumed = (window.__resumed || 0) + 1; },
+      async syncClearPause() { window.__syncStatus = {}; window.__clearedPause = (window.__clearedPause || 0) + 1; },
+      async syncBrowse() { if (window.__browseFails) throw new Error('fetchFailed'); engine().started = true; await flush(); },
       async syncQueue(o) { const e = engine(); for (const r of o.items) { const n = r.syncId + '|' + r.itemId; e.outbox[n] = r; e.sending.add(n); } await flush(); },
       async syncInbox() { await flush(); return { items: Object.values(engine().inbox) }; },
       async syncOutbox() { return { names: Object.keys(engine().outbox) }; },
-      async syncAck(o) { for (const n of o.names) delete engine().inbox[n]; },
+      async syncAck(o) { for (const r of o.items) { const n = r.syncId + '|' + r.itemId; const now = engine().inbox[n]; if (now && now.v === r.v && now.fields === r.fields && !!now.deleted === !!r.deleted && now.at === r.at) delete engine().inbox[n]; } },
       async syncNow() { await flush(); },
       async syncStatus() {
         const e = engine();

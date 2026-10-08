@@ -24,7 +24,6 @@
 		9A1C0000000000000000000A /* BackupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000009 /* BackupStore.swift */; };
 		9A1C0000000000000000000C /* SpreadCloudPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C0000000000000000000B /* SpreadCloudPlugin.swift */; };
 		9A1C00000000000000000011 /* SpreadCloudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1C00000000000000000010 /* SpreadCloudCore */; };
-		9A1C00000000000000000101 /* SyncStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000100 /* SyncStorage.swift */; };
 		9A1C00000000000000000103 /* SpreadSyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000102 /* SpreadSyncEngine.swift */; };
 /* End PBXBuildFile section */
 
@@ -48,7 +47,6 @@
 		9A1C00000000000000000009 /* BackupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupStore.swift; sourceTree = "<group>"; };
 		9A1C0000000000000000000B /* SpreadCloudPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadCloudPlugin.swift; sourceTree = "<group>"; };
 		9A1C0000000000000000000E /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
-		9A1C00000000000000000100 /* SyncStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStorage.swift; sourceTree = "<group>"; };
 		9A1C00000000000000000102 /* SpreadSyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadSyncEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -105,7 +103,6 @@
 		9A1C0000000000000000000D /* Cloud */ = {
 			isa = PBXGroup;
 			children = (
-				9A1C00000000000000000100 /* SyncStorage.swift */,
 				9A1C00000000000000000102 /* SpreadSyncEngine.swift */,
 				9A1C00000000000000000003 /* SpreadCloudConfig.swift */,
 				9A1C00000000000000000005 /* DeviceIdentity.swift */,
@@ -208,7 +205,6 @@
 				9A1C00000000000000000008 /* AccountMonitor.swift in Sources */,
 				9A1C0000000000000000000A /* BackupStore.swift in Sources */,
 				9A1C0000000000000000000C /* SpreadCloudPlugin.swift in Sources */,
-				9A1C00000000000000000101 /* SyncStorage.swift in Sources */,
 				9A1C00000000000000000103 /* SpreadSyncEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -18,6 +18,8 @@ export type RunnerState = {
   busy: boolean;
   lastError: "noSpace" | "failed" | null;
   lastSuccessAt: number | null;
+  /** The newest copy is saved on this device but has not been handed to iCloud. It is retried. */
+  waitingForICloud: boolean;
 };
 
 export type TimerHandle = unknown;
@@ -29,6 +31,8 @@ export type RunnerOptions = {
   setTimer?: (run: () => void, ms: number) => TimerHandle;
   clearTimer?: (handle: TimerHandle) => void;
   onState?: (state: RunnerState) => void;
+  /** Asked immediately before anything is built and again before every hand-off. False means the person has opted out. */
+  allowed?: () => boolean;
   debounceMs?: number;
   retryBaseMs?: number;
   retryMaxMs?: number;
@@ -41,6 +45,8 @@ export type BackupRunner = {
   changed(): void;
   /** The app is going to the background: back up now if anything changed. */
   flush(): Promise<void>;
+  /** Drop pending, retry and undelivered work. Used when backup is turned off. */
+  cancel(): void;
   /** App launch: back up soon if there is no recent backup. */
   launch(lastBackupAtMs: number | null): void;
   state(): RunnerState;
@@ -68,7 +74,9 @@ export function createBackupRunner(options: RunnerOptions): BackupRunner {
   let lastSignature: string | null = null;
   let failures = 0;
   let disposed = false;
-  let current: RunnerState = { busy: false, lastError: null, lastSuccessAt: null };
+  let pendingDelivery = false;
+  const allowed = options.allowed ?? (() => true);
+  let current: RunnerState = { busy: false, lastError: null, lastSuccessAt: null, waitingForICloud: false };
 
   function publish(next: Partial<RunnerState>) {
     current = { ...current, ...next };
@@ -91,12 +99,24 @@ export function createBackupRunner(options: RunnerOptions): BackupRunner {
       clearTimer(timer);
       timer = null;
     }
+    if (!allowed()) {
+      dirty = false;
+      pendingDelivery = false;
+      return Promise.resolve();
+    }
     if (!dirty) return Promise.resolve();
     inFlight = (async () => {
       publish({ busy: true });
       try {
         const built = await options.build();
-        if (!built.hasData || built.signature === lastSignature) {
+        // The build is slow. Re-check consent so nothing collected before an opt-out is handed over after it.
+        if (!allowed()) {
+          dirty = false;
+          pendingDelivery = false;
+          publish({ busy: false, waitingForICloud: false });
+          return;
+        }
+        if (!built.hasData || (built.signature === lastSignature && !pendingDelivery)) {
           dirty = false;
           publish({ busy: false });
           return;
@@ -104,9 +124,19 @@ export function createBackupRunner(options: RunnerOptions): BackupRunner {
         dirty = false;
         const result = await options.transport.write(built.text);
         if (!result.verified) throw Object.assign(new Error("not verified"), { code: "verificationFailed" });
+        if (!result.inICloudContainer) {
+          // Safe on this device, but iCloud never got the file. That is not delivery: keep trying.
+          pendingDelivery = true;
+          dirty = true;
+          failures += 1;
+          publish({ busy: false, lastError: null, lastSuccessAt: now(), waitingForICloud: true });
+          schedule(Math.min(retryMaxMs, retryBaseMs * 2 ** (failures - 1)));
+          return;
+        }
+        pendingDelivery = false;
         lastSignature = built.signature;
         failures = 0;
-        publish({ busy: false, lastError: null, lastSuccessAt: now() });
+        publish({ busy: false, lastError: null, lastSuccessAt: now(), waitingForICloud: false });
       } catch (error) {
         dirty = true;
         failures += 1;
@@ -116,7 +146,7 @@ export function createBackupRunner(options: RunnerOptions): BackupRunner {
         inFlight = null;
       }
       // Something changed while the write was running: go again after the debounce.
-      if (dirty && timer === null && current.lastError === null) schedule(debounceMs);
+      if (dirty && timer === null && current.lastError === null && !pendingDelivery) schedule(debounceMs);
     })();
     return inFlight;
   }
@@ -128,6 +158,14 @@ export function createBackupRunner(options: RunnerOptions): BackupRunner {
     },
     flush() {
       return run();
+    },
+    cancel() {
+      dirty = false;
+      pendingDelivery = false;
+      failures = 0;
+      if (timer !== null) clearTimer(timer);
+      timer = null;
+      publish({ lastError: null, waitingForICloud: false });
     },
     launch(lastBackupAtMs) {
       if (lastBackupAtMs === null || now() - lastBackupAtMs > staleMs) {

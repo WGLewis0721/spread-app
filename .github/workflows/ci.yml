@@ -23,6 +23,29 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:spread
+      - run: npm run test:scripts
+
+  bridge-sims:
+    # The installed-app logic against a fake native plugin, in Chromium: backup, restore, sync and
+    # the shipped (flags off) behavior. This is what makes a broken restore, conflict or link rule fail CI.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: pip install playwright && python3 -m playwright install --with-deps chromium
+      - run: sh scripts/ios-bridge-sim/run-all.sh
+        env:
+          SHOTS: ${{ runner.temp }}/shots
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: bridge-sim-shots
+          path: ${{ runner.temp }}/shots
 
   swift-core:
     runs-on: ubuntu-latest
@@ -30,7 +53,7 @@ jobs:
     container: swift:6.0-noble
     steps:
       - uses: actions/checkout@v4
-      - name: Test SpreadCloudCore (naming, path safety, retention)
+      - name: Test SpreadCloudCore (naming, path safety, retention, payload check, sync storage)
         run: swift test --package-path ios/App/SpreadCloudCore
 
   swift-cloudkit-typecheck:
@@ -47,4 +70,4 @@ jobs:
           -target arm64-apple-ios17.0-simulator -swift-version 5
           -Xfrontend -warn-long-expression-type-checking=300
           -Xfrontend -warn-long-function-bodies=600
-          SpreadCloudConfig.swift SyncStorage.swift SpreadSyncEngine.swift
+          SpreadCloudConfig.swift SpreadSyncEngine.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/SyncStorage.swift

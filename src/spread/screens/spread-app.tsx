@@ -9,14 +9,15 @@ import { formatWeek, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, T
 import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
 import { ACCENTS, consumeArrival, onSaveFailure, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
-import { parseAnyBackup, type ParsedBackup } from "@/lib/spread/backup";
+import { collectFullPayload, fullBackupText, parseAnyBackup, parseFullBackup, type ParsedBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import { isNativeApp } from "@/lib/spread/native";
-import { prepareNativeStorage } from "@/lib/spread/native-mirror";
-import { backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
+import { listPinned, prepareNativeStorage, readPinned, type PinnedCopy } from "@/lib/spread/native-mirror";
+import { ensureSafetyCopy } from "@/lib/spread/safety";
+import { acknowledgeBackup, backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
 import type { RemoteBackup } from "@/lib/spread/cloud";
-import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveSyncConflict, startSyncManager, syncAvailable, syncNowAction, unlink, useCloudSync } from "@/lib/spread/cloud-sync";
+import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, restoreDiscardedChange, startSyncManager, syncAvailable, syncNowAction, unlink, uploadAgain, useCloudSync } from "@/lib/spread/cloud-sync";
 import { describeConflict, describeSync } from "@/lib/spread/sync-labels";
 import { canKeepBoth } from "@/lib/spread/sync-state";
 import type { LinkChoice } from "@/lib/spread/sync-link";
@@ -64,7 +65,14 @@ export function SpreadApp() {
     void prepareNativeStorage().then(() => {
       if (!live) return;
       boot();
-      void startCloudBackup().then(() => startSyncManager());
+      const bring = () =>
+        startCloudBackup()
+          .then(() => startSyncManager())
+          .catch(() => {
+            // iCloud features are optional: the planner is unaffected. Try once more shortly.
+            if (live) window.setTimeout(() => void startCloudBackup().then(() => startSyncManager()).catch(() => undefined), 10_000);
+          });
+      void bring();
     });
     return () => {
       live = false;
@@ -88,6 +96,7 @@ export function SpreadApp() {
 
   return (
     <>
+      <BackupDisclosure />
       <Toaster
         position="top-center"
         // Under the status bar and Dynamic Island on the phone; the web keeps the default.
@@ -1516,24 +1525,42 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
 }
 
 /** Apply a confirmed restore. Returns what to tell the person and whether the sheet can close. */
-function applyRestore(backup: ParsedBackup): { ok: boolean; message: string } {
+async function applyRestore(backup: ParsedBackup, select?: string[]): Promise<{ ok: boolean; message: string }> {
+  if (!(await ensureSafetyCopy("pre-restore"))) {
+    return { ok: false, message: "Couldn’t save a safety copy first, so nothing was changed. Free some space and try again." };
+  }
   const state = useSpread.getState();
   if (backup.kind === "full") {
-    const result = state.restoreAsNew(backup.payload);
+    const result = state.restoreAsNew(backup.payload, select);
     if (!result.ok) {
-      const missing = result.reason === "no-room" ? result.needed - result.free : 0;
       return {
         ok: false,
         message:
           result.reason === "no-room"
-            ? `Not enough room. Remove ${missing} profile${missing === 1 ? "" : "s"} first, then try again.`
-            : "Couldn’t add the profiles. Nothing was changed.",
+            ? `There is room for ${result.free} more. Choose fewer profiles to restore.`
+            : result.reason === "rollback-failed"
+              ? "Couldn’t finish adding the profiles, and couldn’t fully undo it. Quit and reopen Spread, which will finish putting things back."
+              : "Couldn’t add the profiles. Nothing was changed.",
       };
     }
-    return { ok: true, message: result.added === 1 ? "Profile added." : `${result.added} profiles added.` };
+    const skipped = result.skipped.length > 0 ? ` ${result.skipped.length === 1 ? `“${result.skipped[0]}” was damaged in the backup and was not restored.` : `${result.skipped.length} profiles were damaged in the backup and were not restored.`}` : "";
+    const base = result.added === 1 ? "Profile restored." : `${result.added} profiles restored.`;
+    return { ok: true, message: `${base}${skipped}` };
   }
-  state.replaceData(backup.data);
+  if (!state.replaceData(backup.data)) {
+    return { ok: false, message: "This profile syncs with iCloud, so a restore would change your other devices too. Turn sync off for it first, or restore into a new profile." };
+  }
   return { ok: true, message: "Backup restored." };
+}
+
+function keyStoreOf(entries: Record<string, string>) {
+  const keys = Object.keys(entries);
+  return {
+    length: keys.length,
+    key: (index: number) => keys[index] ?? null,
+    getItem: (key: string) => (key in entries ? entries[key] : null),
+    setItem: () => undefined,
+  };
 }
 
 function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
@@ -1546,6 +1573,8 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const data = useSpread((s) => s.data);
   const fileRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<ParsedBackup | null>(null);
+  const [copies, setCopies] = useState<PinnedCopy[] | null>(null);
+  const [pickedCopy, setPickedCopy] = useState<{ copy: PinnedCopy; entries: Record<string, string> } | null>(null);
   const week = buildWeekDocument(data);
 
   const native = isNativeApp();
@@ -1675,6 +1704,46 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           </button>
         ))}
       </div>
+      {native && (
+        <>
+          <button
+            type="button"
+            className="mt-3 flex h-12 w-full items-center justify-between rounded-3xl bg-canvas px-4 text-left text-base active:bg-fill"
+            onClick={() => void listPinned().then((found) => setCopies(copies === null ? found : null))}
+          >
+            Restore from a safety copy
+            <ChevronRight className={cn("size-4 text-tertiary", copies !== null && "rotate-90")} strokeWidth={2.7} />
+          </button>
+          {copies !== null && (
+            <div className="mt-2 overflow-hidden rounded-3xl bg-canvas" role="list" aria-label="Safety copies on this device">
+              {copies.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-secondary">No safety copies yet. One is saved before anything is replaced.</p>
+              ) : (
+                copies.map((copy) => (
+                  <button
+                    key={copy.name}
+                    type="button"
+                    role="listitem"
+                    className="flex w-full items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-left active:bg-fill last:border-b-0"
+                    onClick={() =>
+                      void readPinned(copy.name).then((read) => {
+                        if (!read) toast("That safety copy can’t be read.");
+                        else setPickedCopy({ copy, entries: read.entries });
+                      })
+                    }
+                  >
+                    <span>
+                      <span className="block text-base">{new Date(copy.savedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                      <span className="block text-xs text-secondary">Saved before {copy.label.replace(/^pre-/, "").replace(/-/g, " ")}</span>
+                    </span>
+                    <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
       <div className="mt-5">
         <Segmented value={theme} onChange={setTheme} />
       </div>
@@ -1707,15 +1776,68 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           Log out
         </button>
       )}
+      <AlertDialog.Root open={pickedCopy !== null} onOpenChange={(open) => !open && setPickedCopy(null)}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+          <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+            <AlertDialog.Title className="text-center text-base font-semibold">Use this safety copy?</AlertDialog.Title>
+            <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+              “Put everything back” replaces all your profiles with the ones in this copy, even when all ten are in use. A new safety copy of what is here now is saved first. “Add as profiles” keeps what you have and adds the copy’s profiles beside it.
+            </AlertDialog.Description>
+            <div className="mt-5 grid gap-2">
+              <AlertDialog.Action
+                className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
+                onClick={() => {
+                  const chosen = pickedCopy;
+                  if (!chosen) return;
+                  void ensureSafetyCopy("pre-rollback").then((saved) => {
+                    if (!saved) {
+                      toast("Couldn’t save a safety copy first, so nothing was changed.");
+                      return;
+                    }
+                    const result = useSpread.getState().rollbackToCopy(chosen.entries);
+                    setPickedCopy(null);
+                    if (result.ok) {
+                      toast(`Put everything back (${result.profiles} ${result.profiles === 1 ? "profile" : "profiles"}).`);
+                      setSheet(null);
+                    } else {
+                      toast(result.reason === "rollback-failed" ? "Couldn’t finish, and couldn’t fully undo it. Quit and reopen Spread, which will finish putting things back." : "Couldn’t put it back. Nothing was changed.");
+                    }
+                  });
+                }}
+              >
+                Put everything back
+              </AlertDialog.Action>
+              <AlertDialog.Action
+                className="h-11 rounded-full bg-fill text-sm font-semibold"
+                onClick={() => {
+                  const chosen = pickedCopy;
+                  if (!chosen) return;
+                  void (async () => {
+                    const shaped = await parseFullBackup(await fullBackupText(collectFullPayload(keyStoreOf(chosen.entries), new Date(chosen.copy.savedAt), null)));
+                    if (!shaped) toast("That safety copy can’t be read.");
+                    else setBackup({ kind: "full", ...shaped });
+                    setPickedCopy(null);
+                  })();
+                }}
+              >
+                Add as profiles
+              </AlertDialog.Action>
+              <AlertDialog.Cancel className="h-11 rounded-full text-sm font-semibold text-secondary">Cancel</AlertDialog.Cancel>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
       <RestoreDialog
         backup={backup}
         onClose={() => setBackup(null)}
-        onConfirm={() => {
+        onConfirm={(selection) => {
           if (!backup) return;
-          const outcome = applyRestore(backup);
-          setBackup(null);
-          if (outcome.ok) setSheet(null);
-          toast(outcome.message);
+          void applyRestore(backup, selection).then((outcome) => {
+            setBackup(null);
+            if (outcome.ok) setSheet(null);
+            toast(outcome.message);
+          });
         }}
       />
       <p className="mt-5 text-xs text-tertiary">Spread · Gray Matter. Data stays on this device.</p>
@@ -1730,7 +1852,7 @@ function RestoreDialog({
 }: {
   backup: ParsedBackup | null;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (selection?: string[]) => void;
 }) {
   if (backup?.kind === "full") return <RestoreFullDialog backup={backup} onClose={onClose} onConfirm={onConfirm} />;
   const names = backup?.summary.spreads ?? [];
@@ -1747,7 +1869,7 @@ function RestoreDialog({
           </AlertDialog.Description>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
-            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
+            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => onConfirm()}>
               Restore
             </AlertDialog.Action>
           </div>
@@ -1768,6 +1890,34 @@ function ICloudSheet({ onBack }: { onBack: () => void }) {
   if (view === "link") return <SyncLinkView onBack={() => setView("main")} />;
   if (view === "conflicts") return <SyncConflictsView onBack={() => setView("main")} />;
   return <ICloudMain onBack={onBack} go={setView} />;
+}
+
+/** First-run notice. Nothing is uploaded until the person answers it. */
+function BackupDisclosure() {
+  const ready = useCloudBackup((s) => s.native !== null);
+  const acknowledged = useCloudBackup((s) => s.acknowledged);
+  if (!backupAvailable() || !ready || acknowledged) return null;
+  return (
+    <AlertDialog.Root open>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[70] bg-scrim" />
+        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[70] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+          <AlertDialog.Title className="text-center text-base font-semibold">Back up to iCloud?</AlertDialog.Title>
+          <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+            Spread can keep dated copies of all your profiles, tasks and photos in your iCloud Drive, so you can get them back on a new phone. Only you can see them. Nothing is uploaded until you choose. You can turn this off any time in Settings, and the copies stay in iCloud until you delete them.
+          </AlertDialog.Description>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={() => acknowledgeBackup(false)}>
+              Not now
+            </AlertDialog.Cancel>
+            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => acknowledgeBackup(true)}>
+              Turn on
+            </AlertDialog.Action>
+          </div>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
+  );
 }
 
 function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "conflicts") => void }) {
@@ -1884,12 +2034,13 @@ function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "c
       <RestoreDialog
         backup={picked}
         onClose={() => setPicked(null)}
-        onConfirm={() => {
+        onConfirm={(selection) => {
           if (!picked) return;
-          const outcome = applyRestore(picked);
-          setPicked(null);
-          toast(outcome.message);
-          if (outcome.ok) onBack();
+          void applyRestore(picked, selection).then((outcome) => {
+            setPicked(null);
+            toast(outcome.message);
+            if (outcome.ok) onBack();
+          });
         }}
       />
     </>
@@ -1912,6 +2063,7 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
   const state = useCloudSync();
   const profileName = useSpread((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? "this profile");
   const [confirmOff, setConfirmOff] = useState(false);
+  const [confirmAgain, setConfirmAgain] = useState(false);
   const said = describeSync({
     linked: state.linked,
     paused: state.paused,
@@ -1922,6 +2074,8 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
     lastSyncAt: state.view?.lastSyncAt ?? null,
     lastError: state.view?.lastError ?? null,
     quotaExceeded: state.native?.quotaExceeded ?? false,
+    damaged: (state.view?.damaged ?? 0) + (state.native?.damagedRecords ?? 0) + (state.native?.needsRepair ? 1 : 0),
+    blocked: Boolean(state.view?.blocked),
     now: new Date(state.now),
   });
   const rowClass = "flex h-12 w-full items-center justify-between px-4 text-left text-base active:bg-fill disabled:text-tertiary";
@@ -1940,21 +2094,55 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
           </button>
         ) : (
           <>
-            {(state.view?.conflicts.length ?? 0) > 0 && (
+            {state.view?.blocked && (
+              <>
+                <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => void resolveBlockedSync("restore")}>
+                  Put my last synced planner back
+                </button>
+                <button type="button" className={cn(rowClass, "border-b border-line text-danger")} onClick={() => void resolveBlockedSync("keep-deletion")}>
+                  I cleared it on purpose
+                </button>
+              </>
+            )}
+            {((state.view?.conflicts.length ?? 0) > 0 || (state.view?.discarded.length ?? 0) > 0) && (
               <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => go("conflicts")}>
-                Review {state.view?.conflicts.length} {state.view?.conflicts.length === 1 ? "change" : "changes"}
+                {(state.view?.conflicts.length ?? 0) > 0
+                  ? `Review ${state.view?.conflicts.length} ${state.view?.conflicts.length === 1 ? "change" : "changes"}`
+                  : `Set-aside changes (${state.view?.discarded.length})`}
                 <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
               </button>
             )}
             <button type="button" disabled={Boolean(state.paused)} className={cn(rowClass, "border-b border-line")} onClick={() => void syncNowAction()}>
               Sync now
             </button>
+            {state.paused && (
+              <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => setConfirmAgain(true)}>
+                Upload this profile to this iCloud again
+              </button>
+            )}
             <button type="button" className={cn(rowClass, "text-danger")} onClick={() => setConfirmOff(true)}>
               Turn off sync for this profile
             </button>
           </>
         )}
       </div>
+      <AlertDialog.Root open={confirmAgain} onOpenChange={setConfirmAgain}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+          <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+            <AlertDialog.Title className="text-center text-base font-semibold">Upload {profileName} again?</AlertDialog.Title>
+            <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+              This sends {profileName} from this device to the iCloud account that is signed in now. Nothing on this device changes.
+            </AlertDialog.Description>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+              <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => void uploadAgain()}>
+                Upload
+              </AlertDialog.Action>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
       <AlertDialog.Root open={confirmOff} onOpenChange={setConfirmOff}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
@@ -2068,6 +2256,7 @@ function SyncLinkView({ onBack }: { onBack: () => void }) {
 
 function SyncConflictsView({ onBack }: { onBack: () => void }) {
   const conflicts = useCloudSync((s) => s.view?.conflicts ?? []);
+  const discarded = useCloudSync((s) => s.view?.discarded ?? []);
   const hats = useSpread((s) => s.data.hats);
   const [busy, setBusy] = useState(false);
   const lookup = (id: string) => hats.find((hat) => hat.id === id)?.name ?? null;
@@ -2081,7 +2270,7 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
       <SubHeader onBack={onBack} />
       <Dialog.Title className="text-2xl font-bold tracking-tight">Your choice</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        These were changed on two devices in ways Spread can’t combine. Nothing is lost whichever you pick, and what you don’t pick is saved in a copy.
+        These were changed on two devices in ways Spread can’t combine. Whichever you pick, the version you don’t pick is kept for 30 days below, so you can put it back.
       </Dialog.Description>
       {conflicts.length === 0 ? (
         <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Nothing needs your choice.</p>
@@ -2115,6 +2304,24 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
           );
         })
       )}
+      {discarded.length > 0 && (
+        <>
+          <h3 className="mt-6 text-sm font-semibold text-secondary">Set aside (kept 30 days)</h3>
+          <div className="mt-2 overflow-hidden rounded-3xl bg-canvas">
+            {discarded.map((entry, index) => (
+              <div key={`${entry.id}-${entry.at}`} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 text-sm last:border-b-0">
+                <span className="min-w-0">
+                  <span className="block truncate">{entry.item.deleted ? "Deleted item" : String(entry.item.fields.text ?? entry.item.fields.name ?? "Change")}</span>
+                  <span className="block text-xs text-secondary">{entry.side === "icloud" ? "From the other device" : "From this device"}</span>
+                </span>
+                <button type="button" disabled={busy} className="h-9 shrink-0 rounded-full bg-fill px-4 text-sm font-semibold" onClick={() => void restoreDiscardedChange(index)}>
+                  Put back
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -2126,24 +2333,61 @@ function RestoreFullDialog({
 }: {
   backup: Extract<ParsedBackup, { kind: "full" }>;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (selection?: string[]) => void;
 }) {
-  const names = backup.summary.profiles.map((item) => item.name);
+  const room = useSpread((st) => st.restoreRoom)();
+  const profiles = backup.summary.profiles;
+  const restorable = profiles.filter((item) => item.readable);
+  const damaged = profiles.filter((item) => !item.readable);
+  const mustChoose = restorable.length > room;
+  const [chosen, setChosen] = useState<string[]>(() => restorable.slice(0, room).map((item) => item.id));
+  const count = mustChoose ? chosen.length : restorable.length;
+  const names = restorable.map((item) => item.name);
   const listed = names.length <= 3 ? names.join(", ") : `${names.slice(0, 2).join(", ")}, and ${names.length - 2} more`;
   return (
     <AlertDialog.Root open onOpenChange={(open) => !open && onClose()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
-        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-          <AlertDialog.Title className="text-center text-base font-semibold">Add these profiles?</AlertDialog.Title>
+        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-h-[80vh] max-w-xs -translate-y-1/2 overflow-y-auto rounded-3xl bg-elevated p-5 outline-none">
+          <AlertDialog.Title className="text-center text-base font-semibold">{mustChoose ? "Choose profiles to restore" : "Add these profiles?"}</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-            {listed}. {backup.summary.weeks} {backup.summary.weeks === 1 ? "week" : "weeks"}, {backup.summary.tasks}{" "}
-            {backup.summary.tasks === 1 ? "task" : "tasks"}. Nothing on this device changes. Each profile is added with “restored” in its name.
+            {mustChoose
+              ? `This device has room for ${room}. Pick which of the ${restorable.length} to restore. The rest stay in the backup file.`
+              : `${listed}. ${backup.summary.weeks} ${backup.summary.weeks === 1 ? "week" : "weeks"}, ${backup.summary.tasks} ${backup.summary.tasks === 1 ? "task" : "tasks"}. Nothing that has content on this device changes. An empty profile may be filled; the others are added with “restored” in their names.`}
+            {damaged.length > 0 ? ` ${damaged.length === 1 ? `“${damaged[0].name}” is damaged and can’t be restored.` : `${damaged.length} profiles are damaged and can’t be restored.`}` : ""}
           </AlertDialog.Description>
+          {mustChoose && (
+            <div className="mt-3 overflow-hidden rounded-2xl bg-canvas" role="group" aria-label="Profiles in the backup">
+              {restorable.map((item) => {
+                const on = chosen.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    disabled={!on && chosen.length >= room}
+                    className="flex w-full items-center justify-between gap-3 border-b border-line px-3 py-2.5 text-left text-sm last:border-b-0 disabled:text-tertiary"
+                    onClick={() => setChosen((now) => (on ? now.filter((id) => id !== item.id) : [...now, item.id]))}
+                  >
+                    <span>
+                      {item.name}
+                      <span className="block text-xs text-secondary">{item.tasks} {item.tasks === 1 ? "task" : "tasks"}, {item.weeks} {item.weeks === 1 ? "week" : "weeks"}</span>
+                    </span>
+                    {on ? <Check className="size-4 text-accent" strokeWidth={3} /> : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="mt-5 grid grid-cols-2 gap-2">
             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
-            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
-              Add
+            <AlertDialog.Action
+              disabled={count === 0}
+              className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-50"
+              onClick={() => onConfirm(mustChoose ? chosen : undefined)}
+            >
+              {mustChoose ? `Restore ${chosen.length}` : "Add"}
             </AlertDialog.Action>
           </div>
         </AlertDialog.Content>

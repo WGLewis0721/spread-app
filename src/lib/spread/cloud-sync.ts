@@ -10,15 +10,18 @@ import { create } from "zustand";
 import { CLOUD_FLAGS } from "./cloud-flags.ts";
 import { cloudPlugin, type SyncNativeStatus } from "./cloud.ts";
 import { pinBackup } from "./cloud-backup.ts";
+import { classifyStored } from "./pristine.ts";
+import { ensureSafetyCopy, localSafetyCopy } from "./safety.ts";
 import type { Choice } from "./merge.ts";
 import { weekKey } from "./model.ts";
 import { flushSpread, useSpread } from "./store.ts";
-import { collectEntries, onStorageChanged, pinSnapshot } from "./native-mirror.ts";
+import { onStorageChanged } from "./native-mirror.ts";
 import { isNativeApp } from "./native.ts";
-import { isPristine, planLink, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
+import { isDamagedRow, isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
 import { createSyncSession, type SessionView, type SyncSession, type SyncTransport } from "./sync-session.ts";
-import { adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
+import { adoptDeviceIdentity, adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
 import { PROFILE_LIMIT } from "./profiles.ts";
+import { createSerial } from "./serial.ts";
 
 export type SyncPhase = "off" | "starting" | "syncing" | "synced" | "paused" | "problem";
 
@@ -58,16 +61,21 @@ async function readStateFile(syncId: string): Promise<SyncState | null> {
 }
 
 let writeChain: Promise<void> = Promise.resolve();
-function writeStateFile(state: SyncState) {
+function writeStateFile(state: SyncState): Promise<boolean> {
   const text = JSON.stringify(state);
-  writeChain = writeChain.then(async () => {
+  const done = writeChain.then(async () => {
     try {
       const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
       await Filesystem.writeFile({ path: stateFile(state.syncId), data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
+      // Device-local: a phone backup must not carry this device's sync identity to another phone.
+      void cloudPlugin().then((plugin) => plugin.syncExcludeFromBackup({ names: [stateFile(state.syncId)] })).catch(() => undefined);
+      return true;
     } catch {
-      /* the next pass writes it again */
+      return false; // reported by the session; the next pass writes it again
     }
   });
+  writeChain = done.then(() => undefined);
+  return done;
 }
 
 async function deleteStateFile(syncId: string) {
@@ -90,7 +98,7 @@ async function transport(): Promise<SyncTransport> {
     stop: () => plugin.syncStop(),
     queue: (rows) => plugin.syncQueue({ items: rows }),
     inbox: async () => (await plugin.syncInbox()).items,
-    ack: (names) => plugin.syncAck({ names }),
+    ack: (rows) => plugin.syncAck({ items: rows }),
     drop: (names) => plugin.syncDrop({ names }),
     outbox: async () => (await plugin.syncOutbox()).names,
     syncNow: () => plugin.syncNow(),
@@ -140,8 +148,13 @@ async function stopSession() {
 }
 
 async function startSessionFor(profileId: string, syncId: string, name: string) {
-  const state = (await readStateFile(syncId)) ?? newSyncState(syncId, await deviceId());
+  const thisDevice = await deviceId();
+  const found = await readStateFile(syncId);
+  // A state file restored from another device keeps its contents but never its identity.
+  const rebase = found ? adoptDeviceIdentity(found, thisDevice) : null;
+  const state = rebase?.state ?? newSyncState(syncId, thisDevice);
   let saved: SyncState | null = state;
+  if (rebase?.rebased) void writeStateFile(state);
   const created = createSyncSession({
     syncId,
     deviceId: state.deviceId,
@@ -149,7 +162,15 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
     loadState: () => saved,
     saveState: (next) => {
       saved = next;
-      writeStateFile(next);
+      return writeStateFile(next);
+    },
+    isActive: () => useSpread.getState().activeId === profileId,
+    readHealthy: () => {
+      const profile = useSpread.getState().profiles.find((p) => p.id === profileId);
+      if (!profile) return false;
+      // Judged on what is saved: a missing or unusable body means the planner on screen may be defaults.
+      const kind = classifyStored(localStorage.getItem(profile.store)).kind;
+      return kind === "content" || kind === "pristine";
     },
     current: () => {
       flushSpread();
@@ -157,13 +178,19 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
       const profile = s.profiles.find((p) => p.id === s.activeId);
       return { data: s.data, name: profile?.name ?? name };
     },
-    apply: (data, nextName) => useSpread.getState().applySynced(data, nextName),
-    snapshot: (label) => {
-      pinSnapshot(label, collectEntries(localStorage));
+    apply: (data, nextName) => {
+      // applySynced writes into whichever profile is open, so refuse if it is not this one.
+      if (useSpread.getState().activeId !== profileId) throw new Error("another profile is open");
+      useSpread.getState().applySynced(data, nextName);
+    },
+    // Resolves false when the copy was not written and verified; the session then changes nothing.
+    snapshot: async (label) => {
+      if (!(await localSafetyCopy(label))) return false;
       if (Date.now() - lastBackupPin > 6 * 3_600_000) {
         lastBackupPin = Date.now();
         void pinBackup(label);
       }
+      return true;
     },
     newId: () => Math.random().toString(36).slice(2, 10),
     now: () => new Date().toISOString(),
@@ -178,9 +205,21 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
   useCloudSync.setState({ linked: true, view: created.view(), paused: null });
   await refreshNative();
   if (useCloudSync.getState().paused) return;
+  // Profile switched while this was starting: leave it to the next alignment.
+  if (useSpread.getState().activeId !== profileId) {
+    await stopSession();
+    return;
+  }
   const native = useCloudSync.getState().native;
   if (native?.accountKey && !localStorage.getItem(accountKeyKey(syncId))) localStorage.setItem(accountKeyKey(syncId), native.accountKey);
   await created.start();
+  // Only now may native send: the engine is up, the account matches and nothing is paused.
+  try {
+    await (await cloudPlugin()).syncResume();
+  } catch {
+    await refreshNative();
+    return;
+  }
   void profileId;
 }
 
@@ -193,7 +232,8 @@ async function deviceId(): Promise<string> {
 export async function startSyncManager(): Promise<void> {
   if (!syncAvailable() || listening) return;
   listening = true;
-  const align = async () => {
+  const serially = createSerial();
+  const alignOnce = async () => {
     const s = useSpread.getState();
     const profile = s.profiles.find((p) => p.id === s.activeId);
     const wanted = profile?.syncId ?? null;
@@ -201,7 +241,8 @@ export async function startSyncManager(): Promise<void> {
     await stopSession();
     if (profile && wanted) await startSessionFor(profile.id, wanted, profile.name);
   };
-  useSpread.subscribe(() => void align());
+  const align = () => serially(alignOnce);
+  useSpread.subscribe(() => void align().catch(() => undefined));
   const plugin = await cloudPlugin();
   const wake = () => {
     void refreshNative();
@@ -233,8 +274,8 @@ export async function loadCloudProfiles(): Promise<CloudProfileSummary[]> {
   const plugin = await cloudPlugin();
   useCloudSync.setState({ linking: true });
   try {
-    await plugin.syncStart();
-    await plugin.syncNow();
+    // Read-only: nothing is created or sent in iCloud while the person is only looking.
+    await plugin.syncBrowse();
     const { items } = await plugin.syncInbox();
     const parsed = items.map((row) => ({ syncId: row.syncId, itemId: row.itemId, deleted: row.deleted, at: row.at, fields: safeParse(row.fields) }));
     const cloud = summarizeCloud(parsed);
@@ -268,48 +309,58 @@ function newSyncId(): string {
   return crypto.randomUUID();
 }
 
-async function takeSafetyCopies(label: string) {
-  pinSnapshot(label, collectEntries(localStorage));
-  await pinBackup(label);
+async function takeSafetyCopies(label: string): Promise<boolean> {
+  return ensureSafetyCopy(label);
 }
 
 /** Upload the open profile as a new iCloud profile. */
 export async function linkUpload(): Promise<boolean> {
   const s = useSpread.getState();
   if (!s.activeId) return false;
-  await takeSafetyCopies("pre-sync-link");
+  if (!(await takeSafetyCopies("pre-sync-link"))) return false;
   const syncId = newSyncId();
-  s.setSyncId(s.activeId, syncId);
-  return true;
+  return s.setSyncId(s.activeId, syncId);
 }
 
 /** The open profile is empty: it becomes the iCloud profile in place. */
 export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
   const s = useSpread.getState();
   if (!s.activeId || !isPristine(s.data)) return false;
-  await takeSafetyCopies("pre-sync-link");
+  if (!(await takeSafetyCopies("pre-sync-link"))) return false;
   const plugin = await cloudPlugin();
   const { items } = await plugin.syncInbox();
   const mine = items.filter((row) => row.syncId === cloud.syncId);
+  // One damaged row means the iCloud copy is not trustworthy as a whole: change nothing.
+  if (mine.some((row) => isDamagedRow(row))) return false;
   const remote = toItems(mine);
   if (remote.length === 0) return false;
   // Start from iCloud's version of everything, so an empty profile can never disagree with it.
   const state = adoptRemote(cloud.syncId, await deviceId(), remote, new Date().toISOString());
   writeStateFile(state);
   await writeChain;
-  const { data, name } = dataFromItems(remote, s.data.currentWeek);
-  s.applySynced(data, name);
-  await plugin.syncAck({ names: mine.map((row) => `${row.syncId}|${row.itemId}`) });
-  s.setSyncId(s.activeId, cloud.syncId);
+  // The steps above took a while. Look again, in the same breath as the replacement, so nothing
+  // typed in the meantime is overwritten.
+  const latest = useSpread.getState();
+  if (!stillSafeToAdopt({ profileId: s.activeId }, { profileId: latest.activeId, data: latest.data })) {
+    await deleteStateFile(cloud.syncId);
+    return false;
+  }
+  const { data, name } = dataFromItems(remote, latest.data.currentWeek);
+  latest.applySynced(data, name);
+  // Link first; only a link that reached storage lets the inbox rows go.
+  if (!latest.setSyncId(latest.activeId as string, cloud.syncId)) return false;
+  await plugin.syncAck({ items: mine });
   return true;
 }
 
 /** Add the iCloud profile to this device as a new profile and leave the open one alone. */
 export async function linkAddCopy(cloud: CloudProfileSummary): Promise<string | null> {
   if (useSpread.getState().profiles.length >= PROFILE_LIMIT) return null;
+  if (!(await takeSafetyCopies("pre-sync-link"))) return null;
   const plugin = await cloudPlugin();
   const { items } = await plugin.syncInbox();
   const mine = items.filter((row) => row.syncId === cloud.syncId);
+  if (mine.some((row) => isDamagedRow(row))) return null;
   const remote = toItems(mine);
   if (remote.length === 0) return null;
   const { data, name } = dataFromItems(remote, weekKey());
@@ -317,15 +368,28 @@ export async function linkAddCopy(cloud: CloudProfileSummary): Promise<string | 
   if (!id) return null;
   writeStateFile(adoptRemote(cloud.syncId, await deviceId(), remote, new Date().toISOString()));
   await writeChain;
-  await plugin.syncAck({ names: mine.map((row) => `${row.syncId}|${row.itemId}`) });
+  await plugin.syncAck({ items: mine });
   return id;
+}
+
+/** The person confirmed: lift the pause and upload this profile to the iCloud that is signed in now. */
+export async function uploadAgain(): Promise<void> {
+  const plugin = await cloudPlugin();
+  const id = activeSyncId;
+  await plugin.syncClearPause();
+  if (id) localStorage.removeItem(accountKeyKey(id));
+  const s = useSpread.getState();
+  const profile = s.profiles.find((p) => p.id === s.activeId);
+  await stopSession();
+  if (profile?.syncId) await startSessionFor(profile.id, profile.syncId, profile.name);
 }
 
 export async function unlink(): Promise<void> {
   const s = useSpread.getState();
   if (!s.activeId) return;
   const id = activeSyncId;
-  s.setSyncId(s.activeId, null);
+  // If the roster cannot be written the profile stays linked and its sync state is kept.
+  if (!s.setSyncId(s.activeId, null)) return;
   if (id) {
     localStorage.removeItem(accountKeyKey(id));
     await deleteStateFile(id);
@@ -335,6 +399,14 @@ export async function unlink(): Promise<void> {
 export async function syncNowAction(): Promise<void> {
   await session?.syncNow();
   await refreshNative();
+}
+
+export async function resolveBlockedSync(choice: "restore" | "keep-deletion"): Promise<void> {
+  await session?.resolveBlocked(choice);
+}
+
+export async function restoreDiscardedChange(index: number): Promise<void> {
+  await session?.restoreDiscarded(index);
 }
 
 export async function resolveSyncConflict(id: string, choice: Choice): Promise<void> {

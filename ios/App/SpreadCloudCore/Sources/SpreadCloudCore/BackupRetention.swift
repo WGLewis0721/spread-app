@@ -28,7 +28,10 @@ public struct RetentionPolicy {
 /// Decides which of one device's backups may be deleted. It only ever answers for the device's
 /// own folder: callers pass the device's entries and never another device's.
 public enum BackupRetention {
-    public static func namesToDelete(entries: [BackupEntry], now: Date, policy: RetentionPolicy = RetentionPolicy()) -> Set<String> {
+    /// `newestUploaded` is false while the newest regular backup has not reached iCloud. Older
+    /// copies are then the only ones that did, so nothing is thinned until it has.
+    public static func namesToDelete(entries: [BackupEntry], now: Date, policy: RetentionPolicy = RetentionPolicy(), newestUploaded: Bool = true) -> Set<String> {
+        if !newestUploaded { return [] }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
         let ordered = entries.sorted { $0.createdAt > $1.createdAt }
