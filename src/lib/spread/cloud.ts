@@ -43,6 +43,7 @@ type SpreadCloudPlugin = {
   syncInbox(): Promise<{ items: SyncRowDTO[] }>;
   syncOutbox(): Promise<{ names: string[] }>;
   syncAck(options: { names: string[] }): Promise<void>;
+  syncDrop(options: { names: string[] }): Promise<void>;
   syncStatus(): Promise<SyncNativeStatus>;
   syncNow(): Promise<void>;
   addListener(event: "accountChanged" | "syncInbound" | "syncStatus", handler: () => void): Promise<{ remove(): Promise<void> }>;
