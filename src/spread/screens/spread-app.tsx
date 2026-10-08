@@ -9,7 +9,7 @@ import { formatWeek, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, T
 import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
 import { ACCENTS, consumeArrival, onSaveFailure, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
-import { parseBackup, type SpreadBackup } from "@/lib/spread/backup";
+import { parseAnyBackup, type ParsedBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import { isNativeApp } from "@/lib/spread/native";
@@ -1514,9 +1514,10 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const setAccent = useSpread((s) => s.setAccent);
   const copyLastWeek = useSpread((s) => s.copyLastWeek);
   const replaceData = useSpread((s) => s.replaceData);
+  const restoreAsNew = useSpread((s) => s.restoreAsNew);
   const data = useSpread((s) => s.data);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [backup, setBackup] = useState<SpreadBackup | null>(null);
+  const [backup, setBackup] = useState<ParsedBackup | null>(null);
   const week = buildWeekDocument(data);
 
   const native = isNativeApp();
@@ -1617,14 +1618,16 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           const file = event.target.files?.[0];
           event.target.value = "";
           if (!file) return;
-          void file.text().then((text) => {
-            const next = parseBackup(text);
-            if (!next) {
-              toast("That file isn’t a Spread backup.");
-              return;
-            }
-            setBackup(next);
-          });
+          void file
+            .text()
+            .then((text) => parseAnyBackup(text))
+            .then((next) => {
+              if (!next) {
+                toast("That file isn’t a Spread backup, or it is damaged.");
+                return;
+              }
+              setBackup(next);
+            });
         }}
       />
       <div className="stack-rows mt-4 overflow-hidden rounded-3xl bg-canvas">
@@ -1680,6 +1683,22 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
         onClose={() => setBackup(null)}
         onConfirm={() => {
           if (!backup) return;
+          if (backup.kind === "full") {
+            const result = restoreAsNew(backup.payload);
+            if (!result.ok) {
+              toast(
+                result.reason === "no-room"
+                  ? `Not enough room. Remove ${result.needed - result.free} profile${result.needed - result.free === 1 ? "" : "s"} first, then try again.`
+                  : "Couldn’t add the profiles. Nothing was changed.",
+              );
+              setBackup(null);
+              return;
+            }
+            setBackup(null);
+            setSheet(null);
+            toast(result.added === 1 ? "Profile added." : `${result.added} profiles added.`);
+            return;
+          }
           replaceData(backup.data);
           setBackup(null);
           setSheet(null);
@@ -1696,10 +1715,11 @@ function RestoreDialog({
   onClose,
   onConfirm,
 }: {
-  backup: SpreadBackup | null;
+  backup: ParsedBackup | null;
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  if (backup?.kind === "full") return <RestoreFullDialog backup={backup} onClose={onClose} onConfirm={onConfirm} />;
   const names = backup?.summary.spreads ?? [];
   const listed = names.length === 0 ? "No spreads" : names.length <= 4 ? names.join(", ") : `${names.slice(0, 3).join(", ")}, and ${names.length - 3} more`;
   return (
@@ -1716,6 +1736,39 @@ function RestoreDialog({
             <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
             <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
               Restore
+            </AlertDialog.Action>
+          </div>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
+  );
+}
+
+function RestoreFullDialog({
+  backup,
+  onClose,
+  onConfirm,
+}: {
+  backup: Extract<ParsedBackup, { kind: "full" }>;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const names = backup.summary.profiles.map((item) => item.name);
+  const listed = names.length <= 3 ? names.join(", ") : `${names.slice(0, 2).join(", ")}, and ${names.length - 2} more`;
+  return (
+    <AlertDialog.Root open onOpenChange={(open) => !open && onClose()}>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
+        <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
+          <AlertDialog.Title className="text-center text-base font-semibold">Add these profiles?</AlertDialog.Title>
+          <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
+            {listed}. {backup.summary.weeks} {backup.summary.weeks === 1 ? "week" : "weeks"}, {backup.summary.tasks}{" "}
+            {backup.summary.tasks === 1 ? "task" : "tasks"}. Nothing on this device changes. Each profile is added with “restored” in its name.
+          </AlertDialog.Description>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={onConfirm}>
+              Add
             </AlertDialog.Action>
           </div>
         </AlertDialog.Content>

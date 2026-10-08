@@ -64,7 +64,9 @@ with sync_playwright() as p:
     if files:
         import base64
         doc = json.loads(base64.b64decode(fs[files[0]]))
-        check('the exported file is a restorable Spread backup containing the task', doc['kind'] == 'spread-backup' and 'Sunday review' in json.dumps(doc['data']))
+        body = json.loads(doc['payloadText']) if doc.get('version') == 2 else {}
+        check('the exported file is a full (version 2) Spread backup with a checksum containing the task', doc['kind'] == 'spread-backup' and doc.get('version') == 2 and len(doc.get('checksum', '')) == 64 and 'Sunday review' in doc['payloadText'] and len(body.get('roster', [])) >= 1)
+        check('the full backup leaves out the license and the schema marker', 'spread.license' not in body.get('settings', {}) and 'spread.schema' not in body.get('settings', {}))
         backup_text = base64.b64decode(fs[files[0]]).decode()
     check('Backup success toast is shown and the sheet closed', page.get_by_text('Backup exported.').count() > 0)
 
@@ -95,13 +97,33 @@ with sync_playwright() as p:
     check('unreadable data is kept under a recovery key', rec == '{not json', str(rec))
     check('the planner still opens after unreadable data', page.get_by_placeholder('What matters most here?').count() > 0)
 
-    # Restore a backup through the picker.
+    # Restore a full backup through the picker: it is added as a new profile, nothing is replaced.
+    roster_before = json.loads(page.evaluate("localStorage.getItem('spread.profiles')"))
     page.get_by_label('Settings').click(); page.wait_for_timeout(500)
     page.set_input_files('input[type=file]', files=[{'name': 'Spread-restore.spread', 'mimeType': 'application/octet-stream', 'buffer': backup_text.encode()}])
     page.wait_for_timeout(500)
-    check('Restore shows the confirmation for a .spread file', page.get_by_text('Restore this backup?').count() > 0)
+    check('Restore shows the add-profiles confirmation for a full backup', page.get_by_text('Add these profiles?').count() > 0)
+    page.get_by_role('button', name='Add', exact=True).click(); page.wait_for_timeout(800)
+    roster_after = json.loads(page.evaluate("localStorage.getItem('spread.profiles')"))
+    check('Restore added a profile and kept the existing ones', len(roster_after) == len(roster_before) + 1 and roster_after[:len(roster_before)] == roster_before, str(roster_after))
+    added = roster_after[-1]
+    check('the added profile is named as restored and holds the task', 'restored' in added['name'] and 'Sunday review' in (page.evaluate("(k)=>localStorage.getItem(k)", added['store']) or ''), added['name'])
+
+    # A damaged full backup is refused.
+    page.get_by_label('Settings').click(); page.wait_for_timeout(500)
+    page.set_input_files('input[type=file]', files=[{'name': 'bad.spread', 'mimeType': 'application/octet-stream', 'buffer': backup_text.replace('Sunday review', 'Sunday EDITED').encode()}])
+    page.wait_for_timeout(500)
+    check('A damaged backup is refused', page.get_by_text('damaged').count() > 0 and page.get_by_text('Add these profiles?').count() == 0)
+    page.keyboard.press('Escape'); page.wait_for_timeout(400)
+
+    # A week backup from an earlier build still restores into the open profile.
+    legacy = json.dumps({'kind': 'spread-backup', 'version': 1, 'savedAt': '2026-10-01T00:00:00Z', 'data': {'hats': [{'id': 'work', 'name': 'Work', 'defaultHours': 8, 'color': '#34C759'}], 'weeks': {'2026-09-28': {'boxes': [{'hatId': 'work', 'hours': 8, 'tasks': [{'id': 't1', 'text': 'Legacy task', 'done': False}]}]}}, 'currentWeek': '2026-09-28'}})
+    page.get_by_label('Settings').click(); page.wait_for_timeout(500)
+    page.set_input_files('input[type=file]', files=[{'name': 'old.spread', 'mimeType': 'application/octet-stream', 'buffer': legacy.encode()}])
+    page.wait_for_timeout(500)
+    check('A version 1 backup still shows the replace confirmation', page.get_by_text('Restore this backup?').count() > 0)
     page.get_by_role('button', name='Restore', exact=True).click(); page.wait_for_timeout(800)
-    check('Restore brings the task back', 'Sunday review' in (page.evaluate("(k)=>localStorage.getItem(k)", store_key()) or ''))
+    check('A version 1 backup restores its task', 'Legacy task' in (page.evaluate("(k)=>localStorage.getItem(k)", store_key()) or ''))
 
     # A full device: writes fail, the planner stays usable and says so once.
     page.evaluate("""() => {

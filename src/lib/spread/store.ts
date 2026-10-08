@@ -1,6 +1,6 @@
-import { backupFile } from "@/lib/spread/backup";
+import { collectFullPayload, fullBackupText, planRestoreAsNew, type FullBackupPayload } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
-import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
+import { collectEntries, flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
 import { runMigrations } from "@/lib/spread/schema";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import {
@@ -102,7 +102,13 @@ type Store = {
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
   copyLastWeek: () => boolean;
   replaceData: (data: SpreadData) => void;
+  restoreAsNew: (payload: FullBackupPayload) => RestoreResult;
 };
+
+export type RestoreResult =
+  | { ok: true; added: number; skipped: number }
+  | { ok: false; reason: "no-room"; needed: number; free: number }
+  | { ok: false; reason: "write-failed" };
 
 // The installed app has no sign-in step: whoever has the app has the planner. The license is
 // never written to storage there, so it can't go stale or be removed by a storage reset.
@@ -757,12 +763,32 @@ export const useSpread = create<Store>((set, get) => ({
   },
   replaceData: (incoming) => {
     const data = normalizeData(incoming);
+    flushSpread();
+    if (isNativeApp()) pinSnapshot("pre-restore", collectEntries(localStorage));
     commit(set, data);
+  },
+  restoreAsNew: (payload) => {
+    flushSpread();
+    const plan = planRestoreAsNew(payload, get().profiles, uid);
+    if (!plan.ok) return plan;
+    if (isNativeApp()) pinSnapshot("pre-restore", collectEntries(localStorage));
+    // Profile data first and the roster last, so a failed write leaves the roster as it was.
+    for (const write of plan.writes) if (!put(write.key, write.value)) return { ok: false, reason: "write-failed" };
+    writeProfiles(plan.profiles);
+    set({ profiles: plan.profiles });
+    return { ok: true, added: plan.writes.length, skipped: plan.skipped };
   },
 }));
 
-export function saveBackup(data: SpreadData): Promise<SaveResult> {
-  const file = backupFile(data);
-  const blob = new Blob([JSON.stringify(file)], { type: "application/octet-stream" });
+/**
+ * Back up the whole planner: every profile, the roster and the settings. The active profile is
+ * taken from memory, so a change that has not reached storage yet is still in the file.
+ */
+export async function saveBackup(data: SpreadData): Promise<SaveResult> {
+  flushSpread();
+  const payload = collectFullPayload(localStorage, new Date(), null);
+  const activeId = useSpread.getState().activeId;
+  if (activeId) payload.stores[activeId] = JSON.stringify(data);
+  const blob = new Blob([await fullBackupText(payload)], { type: "application/octet-stream" });
   return saveFile(blob, `Spread-${data.currentWeek}.spread`);
 }
