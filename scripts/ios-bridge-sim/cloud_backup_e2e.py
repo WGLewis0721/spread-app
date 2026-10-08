@@ -140,6 +140,8 @@ with sync_playwright() as p:
     page.get_by_label('Settings').click(); page.wait_for_timeout(500)
     page.get_by_text('Restore from a safety copy').click(); page.wait_for_timeout(700)
     page.get_by_role('listitem').first.click(); page.wait_for_timeout(900)
+    # Picking a safety copy asks "Use this safety copy?" first; "Add as profiles" leads to the Add confirm.
+    page.get_by_role('button', name='Add as profiles').click(); page.wait_for_timeout(900)
     page.get_by_role('button', name='Add', exact=True).click(); page.wait_for_timeout(1500)
     check('with backup off, a restore writes nothing to iCloud', len(page.evaluate("window.__cloudStore")) == n, str(len(page.evaluate("window.__cloudStore"))))
 
