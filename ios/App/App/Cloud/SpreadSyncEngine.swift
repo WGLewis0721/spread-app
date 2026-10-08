@@ -77,7 +77,9 @@ final class SpreadSyncEngine: NSObject, CKSyncEngineDelegate {
     func queue(_ items: [SyncItemDTO]) {
         storage.putOutbox(items)
         guard let engine else { return }
-        engine.state.add(pendingRecordZoneChanges: items.map { .saveRecord(recordID(for: $0.recordName)) })
+        var changes: [CKSyncEngine.PendingRecordZoneChange] = []
+        for item in items { changes.append(.saveRecord(recordID(for: item.recordName))) }
+        engine.state.add(pendingRecordZoneChanges: changes)
     }
 
     func fetchNow() async {

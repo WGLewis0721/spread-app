@@ -174,8 +174,16 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func syncInbox(_ call: CAPPluginCall) {
-        let rows: [[String: Any]] = syncStorage.inboxItems().map {
-            ["syncId": $0.syncId, "itemId": $0.itemId, "fields": $0.fields, "v": $0.v, "deleted": $0.deleted, "at": $0.at]
+        var rows: [[String: Any]] = []
+        for item in syncStorage.inboxItems() {
+            var row: [String: Any] = [:]
+            row["syncId"] = item.syncId
+            row["itemId"] = item.itemId
+            row["fields"] = item.fields
+            row["v"] = item.v
+            row["deleted"] = item.deleted
+            row["at"] = item.at
+            rows.append(row)
         }
         call.resolve(["items": rows])
     }
