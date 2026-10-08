@@ -53,7 +53,7 @@ test("the week document keeps the hour bank and Sunday-through-Monday order", ()
   assert.match(text, /Bring the schema/);
   assert.match(text, /Indexes/);
   assert.match(text, /Schema/);
-  assert.match(text, /\n  Photo\n/);
+  assert.match(text, /\n {2}Photo\n/);
   assert.doesNotMatch(text, /base64/);
   assert.match(text, /## Daily schedule/);
 });

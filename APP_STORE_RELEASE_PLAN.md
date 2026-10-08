@@ -46,9 +46,18 @@ Required before release:
 - backup/export/restore works from the installed iOS app;
 - native storage behavior is tested under low-storage/interruption conditions.
 
-**iCloud / CloudKit sync is post-1.0 unless it is explicitly promised in the App Store listing.**
+**Direction revised 2026-10-08.** Spread 1.0 is a **$2.99 one-time paid universal app (iPhone and iPad)**
+with **automatic iCloud Backup** and **optional iCloud Sync**. Full design, risks, PR boundaries and
+gates: [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md). The rules below are binding:
 
-When sync is added later, it must preserve offline-first behavior and define conflict resolution before multi-device editing ships.
+- Local-first and fully offline. iCloud is the operating system's account; Spread adds no account.
+- **Backup** is automatic when iCloud is available, one-way, versioned, and isolated per device.
+  It ships behind the `cloud.backup` flag, which stays off until Gate 3 (hardware proof) passes.
+- **Sync** is off by default and enabled only by an explicit, per-profile user action. Independent
+  device data is never silently combined, overwritten or deleted; every link, merge and restore
+  takes a safety snapshot first. It ships behind `cloud.sync` and may slip to 1.1 without blocking 1.0.
+- Minimum iOS is 17 (`CKSyncEngine`). iPad supports all orientations and resizable windows.
+- Advertise iCloud or iPad only after each has accepted physical-device QA.
 
 ## Commerce
 
@@ -133,7 +142,12 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 - [ ] Advertise only the device families with accepted physical-device QA
       and an approved store build; do not imply iPad/macOS/Watch availability
       from the web layout alone.
-- [ ] Pricing, territories, and availability.
+- [ ] Price $2.99 (one-time, no IAP), territories, and availability. One app record, one bundle ID,
+      iPhone and iPad in one binary, so one purchase covers both (universal purchase). Leave Family
+      Sharing off unless App Store Connect shows it for paid apps and it is verified.
+- [ ] 13-inch iPad screenshots (2064x2752 or 2752x2064) in addition to iPhone sizes.
+- [ ] CloudKit schema deployed from Development to Production **before** the first TestFlight build
+      that enables sync (production schema is additive-only).
 - [ ] Paid Apps Agreement, banking, and tax setup.
 - [ ] App Review notes describing the local-first/no-account behavior.
 
@@ -144,6 +158,22 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 - [ ] Release the approved build.
 - [ ] Update the landing page App Store CTA only after the public listing is live.
 
+## iCloud release gates (added 2026-10-08)
+
+A build goes to external TestFlight or App Review only when all of these hold. Details in
+[docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md) section 11.
+
+1. `typecheck`, `lint`, `test:spread`, `test:cloud` and the Swift tests are green.
+2. Golden comparison is clean on iPhone widths; the iPad matrix passes (820/1024/1366, light/dark, Reduce Motion).
+3. The migration suite passes on every legacy and golden fixture, including interruption and newer-version cases.
+4. Backup: kill-during-write, corrupt-latest, retention and per-device isolation proven; reinstall and new-device restore proven on hardware.
+5. Sync (if shipping): no-loss property tests green; two-device offline matrix passed on a real iPhone and a real iPad; account switch and deleted zone handled; CloudKit Production schema deployed and verified from a TestFlight build.
+6. The full planner loop works offline with iCloud signed out, disabled, and full.
+7. No network requests when iCloud features are off.
+8. Privacy manifest, App Privacy answers, policy, support page and review notes match the binary.
+9. Paid Apps Agreement, banking and tax complete; $2.99 set; universal purchase verified.
+10. Rollback rehearsed on a TestFlight build.
+
 ## 1.0 exit condition
 
-Spread is App Store ready when a customer can buy it from the App Store, install it, complete the full Responsibilities → Hours → Week → Tasks loop offline, close/reopen/update the app without losing data, back up and restore their planner, and get support without the planner depending on Vercel or an account service.
+Spread is App Store ready when a customer can buy it once from the App Store, install it on an iPhone and/or an iPad, complete the full Responsibilities → Hours → Week → Tasks loop offline, close/reopen/update the app without losing data, restore their planner from an iCloud backup or a file, and get support without the planner depending on Vercel or an account service. Sync, if shipped, adds nothing to this bar and removes nothing from it.
