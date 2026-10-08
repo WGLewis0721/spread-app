@@ -267,3 +267,25 @@ test("A10: a profile that was never written is saved as an untouched planner, so
   const payload = collectFullPayload(s, new Date(), null);
   assert.equal(JSON.parse(payload.stores.p1).hats.length > 0, true);
 });
+
+// Regression for A10's side effect: collectFullPayload now writes a default body for never-started
+// profiles, so "has stores" no longer means "has data". The backup runner must not back up an empty planner.
+import { plannerHasSavedData } from "./backup.ts";
+
+test("an untouched install is not a planner worth backing up, even though its backup lists a default body", () => {
+  const s = new Memory();
+  s.setItem(PROFILES_KEY, JSON.stringify([profile("p1", "Me")]));
+  assert.equal(plannerHasSavedData(s), false);
+  assert.ok(Object.keys(collectFullPayload(s, new Date(), null).stores).length > 0);
+});
+
+test("once any profile has been written, it is backed up", () => {
+  const s = new Memory();
+  s.setItem(PROFILES_KEY, JSON.stringify([profile("p1", "Me"), profile("p2", "Work")]));
+  s.setItem(profileStore("p2"), JSON.stringify(defaultData()));
+  assert.equal(plannerHasSavedData(s), true);
+});
+
+test("no profiles means nothing to back up", () => {
+  assert.equal(plannerHasSavedData(new Memory()), false);
+});

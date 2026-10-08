@@ -4,7 +4,7 @@
  * Nothing here runs unless `CLOUD_FLAGS.backup` is on inside the installed app.
  */
 import { create } from "zustand";
-import { collectFullPayload, fullBackupText } from "./backup.ts";
+import { collectFullPayload, fullBackupText, plannerHasSavedData } from "./backup.ts";
 import { CLOUD_FLAGS } from "./cloud-flags.ts";
 import { cloudPlugin, type RemoteBackup } from "./cloud.ts";
 import { deriveBackupStatus, type BackupStatus, type NativeFacts } from "./cloud-status.ts";
@@ -79,7 +79,7 @@ async function buildBackup() {
   const { flushSpread } = await import("./store.ts");
   flushSpread();
   const payload = collectFullPayload(localStorage, new Date(), deviceId);
-  const hasData = payload.roster.length > 0 && Object.keys(payload.stores).length > 0;
+  const hasData = plannerHasSavedData(localStorage);
   // The signature ignores the timestamp, so an unchanged planner is never backed up twice.
   const signature = JSON.stringify({ ...payload, createdAt: "" });
   return { text: await fullBackupText(payload), signature, hasData };
