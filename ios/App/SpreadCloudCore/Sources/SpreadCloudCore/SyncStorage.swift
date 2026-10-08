@@ -31,10 +31,38 @@ public struct SyncPause: Codable, Equatable {
     public var accountChanged: String?
     /// The iCloud account this device's sync was set up with.
     public var boundAccount: String?
+    /// The pause file existed but could not be read. Sending is refused until the person decides:
+    /// a damaged "do not send" must never read as "send".
+    public var damaged = false
 
     public init() {}
 
-    public var isPaused: Bool { zoneDeleted || accountChanged != nil }
+    public var isPaused: Bool { zoneDeleted || accountChanged != nil || damaged }
+
+    enum CodingKeys: String, CodingKey { case zoneDeleted, accountChanged, boundAccount, damaged }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        zoneDeleted = try c.decodeIfPresent(Bool.self, forKey: .zoneDeleted) ?? false
+        accountChanged = try c.decodeIfPresent(String.self, forKey: .accountChanged)
+        boundAccount = try c.decodeIfPresent(String.self, forKey: .boundAccount)
+        damaged = try c.decodeIfPresent(Bool.self, forKey: .damaged) ?? false
+    }
+}
+
+/// What is known about a queued change besides its content.
+public struct OutboxMeta: Codable, Equatable {
+    /// The iCloud account that was bound when the change was queued. A change is only ever sent to that account.
+    public var account: String?
+    /// iCloud's version of this record arrived after the change was queued. The queued content was
+    /// made without it, so it must not be sent (with iCloud's new tag) until the web app has merged
+    /// and queued a replacement.
+    public var stale: Bool
+
+    public init(account: String?, stale: Bool = false) {
+        self.account = account
+        self.stale = stale
+    }
 }
 
 /// Everything the sync engine must not lose across a relaunch, as small JSON files in
@@ -47,6 +75,7 @@ public final class SyncStorage {
     private var inbox: [String: SyncItemDTO]
     private var systemFields: [String: Data]
     private var pauseState: SyncPause
+    private var outboxMeta: [String: OutboxMeta]
     /// Set when a queue file was unreadable (moved aside) or a write failed. The web app is told.
     public private(set) var needsRepair = false
 
@@ -71,8 +100,17 @@ public final class SyncStorage {
         outbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("outbox.json"), repair: &repair) ?? [:]
         inbox = SyncStorage.load([String: SyncItemDTO].self, from: folder.appendingPathComponent("inbox.json"), repair: &repair) ?? [:]
         systemFields = SyncStorage.load([String: Data].self, from: folder.appendingPathComponent("system-fields.json"), repair: &repair) ?? [:]
-        pauseState = SyncStorage.load(SyncPause.self, from: folder.appendingPathComponent("pause.json"), repair: &repair) ?? SyncPause()
-        needsRepair = repair
+        outboxMeta = SyncStorage.load([String: OutboxMeta].self, from: folder.appendingPathComponent("outbox-meta.json"), repair: &repair) ?? [:]
+        var pauseRepair = false
+        var loadedPause = SyncStorage.load(SyncPause.self, from: folder.appendingPathComponent("pause.json"), repair: &pauseRepair) ?? SyncPause()
+        if pauseRepair {
+            // The file that says whether sending is allowed is unreadable: fail closed, and keep it closed.
+            loadedPause = SyncPause()
+            loadedPause.damaged = true
+        }
+        pauseState = loadedPause
+        needsRepair = repair || pauseRepair
+        if pauseRepair { save(pauseState, as: "pause.json") }
     }
 
     /// A missing file is normal (first run). A file that exists but cannot be read or decoded is set
@@ -118,7 +156,18 @@ public final class SyncStorage {
 
     public func loadEngineState() -> Data? { try? Data(contentsOf: engineStateURL) }
 
-    public func saveEngineState(_ data: Data) { try? data.write(to: engineStateURL, options: .atomic) }
+    /// False when the engine state could not be written. Callers must then not treat the fetched
+    /// position as saved.
+    @discardableResult
+    public func saveEngineState(_ data: Data) -> Bool {
+        do {
+            try data.write(to: engineStateURL, options: .atomic)
+            return true
+        } catch {
+            needsRepair = true
+            return false
+        }
+    }
 
     public func clearEngineState() {
         lock.lock(); defer { lock.unlock() }
@@ -131,10 +180,76 @@ public final class SyncStorage {
 
     /// False when the queue could not be written; the caller must report that, not assume it is queued.
     @discardableResult
-    public func putOutbox(_ items: [SyncItemDTO]) -> Bool {
+    public func putOutbox(_ items: [SyncItemDTO], account: String? = nil) -> Bool {
         lock.lock(); defer { lock.unlock() }
-        for item in items { outbox[item.recordName] = item }
-        return save(outbox, as: "outbox.json")
+        for item in items {
+            outbox[item.recordName] = item
+            // A freshly queued change is a new payload made from what the web app knows now: it is
+            // no longer stale, and it belongs to the account that is bound now.
+            outboxMeta[item.recordName] = OutboxMeta(account: account)
+        }
+        let saved = save(outbox, as: "outbox.json")
+        return save(outboxMeta, as: "outbox-meta.json") && saved
+    }
+
+    public func meta(for recordName: String) -> OutboxMeta? {
+        lock.lock(); defer { lock.unlock() }
+        return outboxMeta[recordName]
+    }
+
+    /// iCloud's version of these records arrived: queued content for them was made without it.
+    @discardableResult
+    public func markStale(_ names: [String]) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        var changed = false
+        for name in names where outbox[name] != nil {
+            var meta = outboxMeta[name] ?? OutboxMeta(account: nil)
+            if !meta.stale {
+                meta.stale = true
+                outboxMeta[name] = meta
+                changed = true
+            }
+        }
+        return changed ? save(outboxMeta, as: "outbox-meta.json") : true
+    }
+
+    /// Queued changes of one profile (record names are `<syncId>|<itemId>`).
+    public func outboxNames(forSyncId syncId: String) -> [String] {
+        lock.lock(); defer { lock.unlock() }
+        return outbox.keys.filter { $0.hasPrefix("\(syncId)|") }.sorted()
+    }
+
+    /// Changes queued before an account was bound belong to the profile being linked now; they take that account.
+    @discardableResult
+    public func stampUnstamped(syncId: String, account: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        var changed = false
+        for name in outbox.keys where name.hasPrefix("\(syncId)|") {
+            var meta = outboxMeta[name] ?? OutboxMeta(account: nil)
+            if meta.account == nil {
+                meta.account = account
+                outboxMeta[name] = meta
+                changed = true
+            }
+        }
+        return changed ? save(outboxMeta, as: "outbox-meta.json") : true
+    }
+
+    /// Remove everything held for one profile: queued changes, unmerged inbound changes, record tags.
+    /// Used when the profile stops syncing, so its residue can never be sent later.
+    @discardableResult
+    public func forget(syncId: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        let prefix = "\(syncId)|"
+        for name in outbox.keys where name.hasPrefix(prefix) { outbox.removeValue(forKey: name) }
+        for name in inbox.keys where name.hasPrefix(prefix) { inbox.removeValue(forKey: name) }
+        for name in outboxMeta.keys where name.hasPrefix(prefix) { outboxMeta.removeValue(forKey: name) }
+        for name in systemFields.keys where name.hasPrefix(prefix) { systemFields.removeValue(forKey: name) }
+        let a = save(outbox, as: "outbox.json")
+        let b = save(inbox, as: "inbox.json")
+        let c = save(outboxMeta, as: "outbox-meta.json")
+        let d = save(systemFields, as: "system-fields.json")
+        return a && b && c && d
     }
 
     public func outboxItem(_ recordName: String) -> SyncItemDTO? {
@@ -147,14 +262,20 @@ public final class SyncStorage {
         lock.lock(); defer { lock.unlock() }
         if outbox[sent.recordName] == sent {
             outbox.removeValue(forKey: sent.recordName)
+            outboxMeta.removeValue(forKey: sent.recordName)
             save(outbox, as: "outbox.json")
+            save(outboxMeta, as: "outbox-meta.json")
         }
     }
 
     public func dropOutbox(_ names: [String]) {
         lock.lock(); defer { lock.unlock() }
-        for name in names { outbox.removeValue(forKey: name) }
+        for name in names {
+            outbox.removeValue(forKey: name)
+            outboxMeta.removeValue(forKey: name)
+        }
         save(outbox, as: "outbox.json")
+        save(outboxMeta, as: "outbox-meta.json")
     }
 
     public var outboxNames: [String] {
