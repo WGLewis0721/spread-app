@@ -47,6 +47,12 @@ class FakeNative implements SyncTransport {
   async outbox() {
     return [...this.outboxRows.keys()];
   }
+  async drop(names: string[]) {
+    for (const n of names) {
+      this.outboxRows.delete(n);
+      this.sending.delete(n);
+    }
+  }
   async syncNow() {
     this.flush();
   }
@@ -268,4 +274,34 @@ test("an edit typed while iCloud's side is being read is not overwritten by what
   assert.deepEqual(taskIds(b), ["from-phone", "typed-meanwhile"]);
   await settle(a, b);
   assert.deepEqual(taskIds(a), ["from-phone", "typed-meanwhile"]);
+});
+
+test("a queued change that iCloud's newer version replaced is dropped from the native outbox", async () => {
+  const cloud = new Cloud();
+  const seed = normalizeData(structuredClone(defaultData()));
+  const a = device(cloud, "phone", normalizeData(structuredClone(seed)));
+  const b = device(cloud, "pad", normalizeData(structuredClone(seed)));
+  await a.session.start();
+  addTask(a, "t", "Original");
+  await a.session.localChanged();
+  await settle(a);
+  await b.session.start();
+  await settle(a, b);
+  // The pad goes offline and queues a change to the task; meanwhile the phone changes it and
+  // syncs. The pad had changed nothing else, so when it reconnects it could not just be dropped:
+  // here it has really edited, and the merge keeps its edit as a conflict. Then the pad undoes
+  // its own edit back to the original, which makes iCloud's version the only one that matters.
+  b.native.online = false;
+  b.env.data.weeks[b.env.data.currentWeek].boxes[0].tasks[0].text = "Pad edit";
+  await b.session.localChanged();
+  a.env.data.weeks[a.env.data.currentWeek].boxes[0].tasks[0].text = "Phone edit";
+  await a.session.localChanged();
+  await settle(a);
+  b.native.online = true;
+  await b.session.syncNow();
+  assert.ok(b.session.view().conflicts.length > 0);
+  await b.session.resolveConflict("task:t", "remote");
+  await settle(a, b, a, b);
+  assert.equal(b.native.outboxRows.size, 0, "nothing stale is left in the native outbox");
+  assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
 });

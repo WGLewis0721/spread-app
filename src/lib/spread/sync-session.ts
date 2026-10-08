@@ -37,6 +37,8 @@ export type SyncTransport = {
   ack(names: string[]): Promise<void>;
   /** Names (`<syncId>|<itemId>`) the native engine has not finished sending. */
   outbox(): Promise<string[]>;
+  /** Stop trying to send these: the merge made them unnecessary. */
+  drop(names: string[]): Promise<void>;
   /** Ask the native engine to send and fetch now. */
   syncNow(): Promise<void>;
 };
@@ -125,6 +127,15 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
           deps.apply(next.data, next.name);
         }
         await deps.transport.ack(rows.map((row) => `${row.syncId}|${row.itemId}`));
+      }
+
+      // A queued version that the merge replaced with iCloud's own newer one no longer needs sending.
+      const superseded = Object.keys(state.queued).filter((id) => !state.pending.includes(id));
+      if (superseded.length > 0) {
+        await deps.transport.drop(superseded.map((id) => `${deps.syncId}|${id}`));
+        const queued = { ...state.queued };
+        for (const id of superseded) delete queued[id];
+        state = { ...state, queued };
       }
 
       // 4. outbound
