@@ -29,7 +29,7 @@ export const useCloudBackup = create<CloudStore>(() => ({
   enabled: false,
   acknowledged: false,
   native: null,
-  runner: { busy: false, lastError: null, lastSuccessAt: null },
+  runner: { busy: false, lastError: null, lastSuccessAt: null, waitingForICloud: false },
   now: Date.now(),
 }));
 
