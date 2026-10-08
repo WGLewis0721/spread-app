@@ -221,3 +221,14 @@ test("device-local sync and backup state never goes into a backup file", () => {
   assert.deepEqual(Object.keys(payload.settings), ["spread-accent"]);
   assert.ok(!JSON.stringify(payload).includes("_accountRecordName"));
 });
+
+test("a restored profile never keeps the iCloud sync link of the one it came from", () => {
+  const s = twoProfilePlanner();
+  const roster = [{ ...profile("p1", "Will"), syncId: "sync-1" }, profile("p2", "Work")];
+  s.setItem(PROFILES_KEY, JSON.stringify(roster));
+  const payload = collectFullPayload(s, new Date(), null);
+  let n = 0;
+  const plan = planRestoreAsNew(payload, [], () => `new${(n += 1)}`);
+  assert.ok(plan.ok);
+  assert.ok(plan.profiles.every((p) => p.syncId === undefined));
+});

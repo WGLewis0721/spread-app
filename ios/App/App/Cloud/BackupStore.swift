@@ -216,7 +216,14 @@ final class BackupStore {
             for name in BackupRetention.namesToDelete(entries: pinned, now: now) { try? fileManager.removeItem(at: local.appendingPathComponent(name)) }
         }
         if let folder = ubiquityFolder(for: deviceId, create: false) {
-            for name in BackupRetention.namesToDelete(entries: entries(in: folder), now: now) {
+            let remote = entries(in: folder)
+            // Older uploaded copies stay until the newest one has really reached iCloud.
+            var newestUploaded = true
+            if let newest = remote.filter({ $0.pin == nil }).max(by: { $0.createdAt < $1.createdAt }) {
+                let values = try? folder.appendingPathComponent(newest.name).resourceValues(forKeys: [.ubiquitousItemIsUploadedKey])
+                newestUploaded = values?.ubiquitousItemIsUploaded ?? false
+            }
+            for name in BackupRetention.namesToDelete(entries: remote, now: now, newestUploaded: newestUploaded) {
                 let url = folder.appendingPathComponent(name)
                 var coordinationError: NSError?
                 NSFileCoordinator(filePresenter: nil).coordinate(writingItemAt: url, options: .forDeleting, error: &coordinationError) { target in

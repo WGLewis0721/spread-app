@@ -97,4 +97,12 @@ final class BackupRetentionTests: XCTestCase {
         let names = Set(entries.map(\.name))
         XCTAssertTrue(BackupRetention.namesToDelete(entries: entries, now: now).isSubset(of: names))
     }
+
+    func testNothingIsThinnedWhileTheNewestBackupIsNotUploaded() {
+        let now = Date()
+        let old = BackupEntry(name: "old", createdAt: now.addingTimeInterval(-200 * 86_400), pin: nil, bytes: 10)
+        let newest = BackupEntry(name: "new", createdAt: now, pin: nil, bytes: 10)
+        XCTAssertEqual(BackupRetention.namesToDelete(entries: [old, newest], now: now, newestUploaded: false), [])
+        XCTAssertEqual(BackupRetention.namesToDelete(entries: [old, newest], now: now, newestUploaded: true), ["old"])
+    }
 }

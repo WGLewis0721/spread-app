@@ -545,7 +545,7 @@ export const useSpread = create<Store>((set, get) => ({
   },
   removeProfile: (id) => {
     const profiles = get().profiles;
-    if (profiles.length <= 1) return false;
+    if (profiles.length <= 1 || schemaLocked) return false;
     const profile = profiles.find((item) => item.id === id);
     if (!profile) return false;
     flushSpread();

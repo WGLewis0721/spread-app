@@ -65,7 +65,14 @@ export function SpreadApp() {
     void prepareNativeStorage().then(() => {
       if (!live) return;
       boot();
-      void startCloudBackup().then(() => startSyncManager());
+      const bring = () =>
+        startCloudBackup()
+          .then(() => startSyncManager())
+          .catch(() => {
+            // iCloud features are optional: the planner is unaffected. Try once more shortly.
+            if (live) window.setTimeout(() => void startCloudBackup().then(() => startSyncManager()).catch(() => undefined), 10_000);
+          });
+      void bring();
     });
     return () => {
       live = false;

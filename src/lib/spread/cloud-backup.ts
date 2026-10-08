@@ -111,9 +111,22 @@ async function buildBackup() {
 }
 
 /** Start (once) after the planner has opened. Safe to call repeatedly. */
-export async function startCloudBackup(): Promise<void> {
-  if (started || !backupAvailable()) return;
-  started = true;
+let starting: Promise<void> | null = null;
+
+/** Rejects if the native side could not be reached; `started` stays false so a later call retries. */
+export function startCloudBackup(): Promise<void> {
+  if (started || !backupAvailable()) return Promise.resolve();
+  starting ??= begin()
+    .then(() => {
+      started = true;
+    })
+    .finally(() => {
+      starting = null;
+    });
+  return starting;
+}
+
+async function begin(): Promise<void> {
   const acknowledged = readAcknowledged();
   // Until the person has answered the first-run notice, backup shows as off and uploads nothing.
   useCloudBackup.setState({ enabled: readEnabled() && acknowledged, acknowledged });
