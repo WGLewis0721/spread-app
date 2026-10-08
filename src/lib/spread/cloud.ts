@@ -43,6 +43,8 @@ type SpreadCloudPlugin = {
   backupRead(options: { deviceId: string; name: string }): Promise<{ text: string }>;
   syncStart(): Promise<void>;
   syncStop(): Promise<void>;
+  /** Keep these Library files out of device backups (iCloud/iTunes), so they are never restored onto another device. */
+  syncExcludeFromBackup(options: { names: string[] }): Promise<void>;
   /** Allow sending. Rejects ("paused") while sync is paused for any reason. */
   syncResume(): Promise<void>;
   /** The person explicitly chose to upload to the current iCloud again. */

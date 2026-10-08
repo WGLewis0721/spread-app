@@ -303,3 +303,24 @@ test("if iCloud's changes cannot be saved to the planner, sync state does not ru
   assert.deepEqual(taskIds(a), ["t1"], "and was never undone on the other device");
   assert.equal(b.session.view().conflicts.length + a.session.view().conflicts.length, 0);
 });
+
+// Astra A12: a state file that came from another device must not make this device impersonate it.
+import { adoptDeviceIdentity, newSyncState as freshState } from "./sync-state.ts";
+
+test("A12: a state restored from another device is rebased onto this device's identity, keeping its contents", () => {
+  const old = freshState("S1", "old-phone");
+  old.items["task:a"] = { fields: { text: "kept" }, v: { "old-phone": 3 }, at: "t" };
+  old.pending = ["task:a"];
+  const { state, rebased } = adoptDeviceIdentity(old, "new-phone");
+  assert.equal(rebased, true);
+  assert.equal(state.deviceId, "new-phone");
+  assert.deepEqual(state.items["task:a"], old.items["task:a"], "nothing is lost or rewritten");
+  assert.deepEqual(state.pending, ["task:a"]);
+});
+
+test("A12: the same device keeps its state untouched", () => {
+  const s = freshState("S1", "phone");
+  const out = adoptDeviceIdentity(s, "phone");
+  assert.equal(out.rebased, false);
+  assert.equal(out.state, s);
+});

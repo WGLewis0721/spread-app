@@ -153,3 +153,37 @@ test("session: a conflict is not settled on top of an emptied planner", async ()
   assert.ok(h.session.view().blocked);
   assert.equal(h.env.applied, 0);
 });
+
+// Astra A14: whether the planner was READ properly is passed in; it is not guessed from item counts.
+test("A14: a failed read that came back as defaults cannot erase a one-task planner", () => {
+  const state = populated(1);
+  const result = captureLocal(state, planner(0), "Me", "t1", { healthy: false });
+  assert.equal(result.blocked?.reason, "unreadable");
+  assert.deepEqual(result.state, state);
+  assert.equal(result.changed.length, 0);
+});
+
+test("A14: two tasks and a small reset are covered the same way", () => {
+  for (const n of [1, 2]) {
+    const result = captureLocal(populated(n), planner(0), "Me", "t1", { healthy: false });
+    assert.equal(result.blocked?.reason, "unreadable", `${n} tasks`);
+  }
+});
+
+test("A14: an ordinary single-task delete on a healthy read still goes through", () => {
+  const state = populated(1);
+  const result = captureLocal(state, planner(0), "Me", "t1", { healthy: true });
+  assert.equal(result.blocked, undefined);
+  assert.equal(result.changed.length > 0, true);
+});
+
+test("A14: an unhealthy read with nothing missing records nothing and blocks nothing", () => {
+  const state = populated(2);
+  const result = captureLocal(state, planner(2), "Me", "t1", { healthy: false });
+  assert.equal(result.blocked, undefined);
+});
+
+test("A14: after the person confirms, an unhealthy read may delete", () => {
+  const result = captureLocal(populated(1), planner(0), "Me", "t1", { healthy: false, allowMassDelete: true });
+  assert.equal(result.blocked, undefined);
+});

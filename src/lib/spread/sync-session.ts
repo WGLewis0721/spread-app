@@ -60,6 +60,8 @@ export type SessionDeps = {
    * session must never read or write another profile's planner.
    */
   isActive(): boolean;
+  /** False when the open planner's saved data could not be read properly (so what `current()` shows may be starting defaults). */
+  readHealthy?(): boolean;
   /** The planner as it is right now, with any debounced edit already written. */
   current(): { data: SpreadData; name: string };
   /** Put a merged planner into the app. Must not touch the view (which week is open). */
@@ -185,7 +187,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
     if (!running || !deps.isActive()) return false;
     const here = deps.current();
     // Capture first so an edit made a moment ago is not lost when the resolution is applied.
-    const captured = captureLocal(state, here.data, here.name, deps.now());
+    const captured = captureLocal(state, here.data, here.name, deps.now(), { healthy: deps.readHealthy?.() ?? true });
     if (captured.blocked) {
       // Do not settle a conflict on top of a planner that looks accidentally emptied.
       blocked = captured.blocked;
@@ -231,7 +233,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
 
       // 1. capture
       const here = deps.current();
-      const captured = captureLocal(state, here.data, here.name, deps.now(), { allowMassDelete });
+      const captured = captureLocal(state, here.data, here.name, deps.now(), { allowMassDelete, healthy: deps.readHealthy?.() ?? true });
       allowMassDelete = false;
       if (captured.blocked) {
         // Likely an empty or failed read, not a decision. Record nothing, send nothing, apply nothing.
@@ -341,7 +343,7 @@ export function createSyncSession(deps: SessionDeps): SyncSession {
       await queue(async () => {
         if (!running || !deps.isActive()) return;
         const here = deps.current();
-        const captured = captureLocal(state, here.data, here.name, deps.now());
+        const captured = captureLocal(state, here.data, here.name, deps.now(), { healthy: deps.readHealthy?.() ?? true });
         if (captured.blocked) {
           blocked = captured.blocked;
           publish();

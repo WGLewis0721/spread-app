@@ -10,15 +10,16 @@ import { create } from "zustand";
 import { CLOUD_FLAGS } from "./cloud-flags.ts";
 import { cloudPlugin, type SyncNativeStatus } from "./cloud.ts";
 import { pinBackup } from "./cloud-backup.ts";
+import { classifyStored } from "./pristine.ts";
 import { ensureSafetyCopy, localSafetyCopy } from "./safety.ts";
 import type { Choice } from "./merge.ts";
 import { weekKey } from "./model.ts";
 import { flushSpread, useSpread } from "./store.ts";
 import { onStorageChanged } from "./native-mirror.ts";
 import { isNativeApp } from "./native.ts";
-import { isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
+import { isDamagedRow, isPristine, planLink, stillSafeToAdopt, summarizeCloud, toItems, type CloudProfileSummary, type LinkChoice } from "./sync-link.ts";
 import { createSyncSession, type SessionView, type SyncSession, type SyncTransport } from "./sync-session.ts";
-import { adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
+import { adoptDeviceIdentity, adoptRemote, dataFromItems, newSyncState, type SyncState } from "./sync-state.ts";
 import { PROFILE_LIMIT } from "./profiles.ts";
 import { createSerial } from "./serial.ts";
 
@@ -66,6 +67,8 @@ function writeStateFile(state: SyncState): Promise<boolean> {
     try {
       const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
       await Filesystem.writeFile({ path: stateFile(state.syncId), data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
+      // Device-local: a phone backup must not carry this device's sync identity to another phone.
+      void cloudPlugin().then((plugin) => plugin.syncExcludeFromBackup({ names: [stateFile(state.syncId)] })).catch(() => undefined);
       return true;
     } catch {
       return false; // reported by the session; the next pass writes it again
@@ -145,8 +148,13 @@ async function stopSession() {
 }
 
 async function startSessionFor(profileId: string, syncId: string, name: string) {
-  const state = (await readStateFile(syncId)) ?? newSyncState(syncId, await deviceId());
+  const thisDevice = await deviceId();
+  const found = await readStateFile(syncId);
+  // A state file restored from another device keeps its contents but never its identity.
+  const rebase = found ? adoptDeviceIdentity(found, thisDevice) : null;
+  const state = rebase?.state ?? newSyncState(syncId, thisDevice);
   let saved: SyncState | null = state;
+  if (rebase?.rebased) void writeStateFile(state);
   const created = createSyncSession({
     syncId,
     deviceId: state.deviceId,
@@ -157,6 +165,13 @@ async function startSessionFor(profileId: string, syncId: string, name: string) 
       return writeStateFile(next);
     },
     isActive: () => useSpread.getState().activeId === profileId,
+    readHealthy: () => {
+      const profile = useSpread.getState().profiles.find((p) => p.id === profileId);
+      if (!profile) return false;
+      // Judged on what is saved: a missing or unusable body means the planner on screen may be defaults.
+      const kind = classifyStored(localStorage.getItem(profile.store)).kind;
+      return kind === "content" || kind === "pristine";
+    },
     current: () => {
       flushSpread();
       const s = useSpread.getState();
@@ -315,6 +330,8 @@ export async function linkAdopt(cloud: CloudProfileSummary): Promise<boolean> {
   const plugin = await cloudPlugin();
   const { items } = await plugin.syncInbox();
   const mine = items.filter((row) => row.syncId === cloud.syncId);
+  // One damaged row means the iCloud copy is not trustworthy as a whole: change nothing.
+  if (mine.some((row) => isDamagedRow(row))) return false;
   const remote = toItems(mine);
   if (remote.length === 0) return false;
   // Start from iCloud's version of everything, so an empty profile can never disagree with it.
@@ -343,6 +360,7 @@ export async function linkAddCopy(cloud: CloudProfileSummary): Promise<string | 
   const plugin = await cloudPlugin();
   const { items } = await plugin.syncInbox();
   const mine = items.filter((row) => row.syncId === cloud.syncId);
+  if (mine.some((row) => isDamagedRow(row))) return null;
   const remote = toItems(mine);
   if (remote.length === 0) return null;
   const { data, name } = dataFromItems(remote, weekKey());

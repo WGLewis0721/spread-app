@@ -17,6 +17,7 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "backupRead", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncStart", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncStop", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncExcludeFromBackup", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncQueue", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncInbox", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncOutbox", returnType: CAPPluginReturnPromise),
@@ -187,6 +188,22 @@ public class SpreadCloudPlugin: CAPPlugin, CAPBridgedPlugin {
             await sync.start()
             if await sync.fetchNow() { call.resolve() } else { call.reject("Couldn't reach iCloud", "fetchFailed") }
         }
+    }
+
+    /// Sync identity files live in Library (written by the web layer). They belong to this device only.
+    @objc func syncExcludeFromBackup(_ call: CAPPluginCall) {
+        let names = (call.getArray("names") as? [String]) ?? []
+        guard let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first else {
+            call.reject("No library folder", "unavailable")
+            return
+        }
+        for name in names where !name.isEmpty && !name.contains("/") && name.hasPrefix("spread-sync-") {
+            var url = library.appendingPathComponent(name)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? url.setResourceValues(values)
+        }
+        call.resolve()
     }
 
     @objc func syncStop(_ call: CAPPluginCall) {

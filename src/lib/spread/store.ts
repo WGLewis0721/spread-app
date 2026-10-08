@@ -806,10 +806,9 @@ export const useSpread = create<Store>((set, get) => ({
     const data = ensureWeek(get().data);
     const previous = data.weeks[shiftWeek(data.currentWeek, -1)];
     if (!previous) return false;
-    const copy = structuredClone(previous);
-    for (const box of copy.boxes) {
-      for (const task of box.tasks) task.done = false;
-    }
+    // cloneWeek gives every task and allocation a new id (and re-points each task at its own
+    // allocation), so the copy can never share an identity with the week it came from.
+    const copy = cloneWeek(previous);
     const next = {
       ...data,
       weeks: { ...data.weeks, [data.currentWeek]: copy },

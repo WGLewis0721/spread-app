@@ -70,26 +70,35 @@ export function rosterWithSyncId(profiles: Profile[], profileId: string, syncId:
   return profiles.map((profile) => (profile.id === profileId ? { ...profile, syncId } : profile));
 }
 
-/** Keys a live item of each kind always carries. An item without them is damaged, not empty. */
-const REQUIRED: [string, string[]][] = [
-  ["hat:", ["name"]],
-  ["task:", ["text", "week", "hat"]],
-  ["alloc:", ["hatId", "day", "week"]],
-  ["box:", ["hours"]],
-  ["profile", ["name"]],
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
+const str = (x: unknown) => typeof x === "string";
+const num = (x: unknown) => typeof x === "number" && Number.isFinite(x);
+const optStr = (x: unknown) => x === undefined || typeof x === "string";
+const strList = (x: unknown) => Array.isArray(x) && x.every((item) => typeof item === "string");
+
+/** Per kind: the fields it must have and their types. An item that fails is damaged, never "empty". */
+const SHAPES: [prefix: string, check: (f: Record<string, unknown>) => boolean][] = [
+  ["hat:", (f) => str(f.name) && num(f.defaultHours) && optStr(f.color) && optStr(f.category)],
+  ["task:", (f) => str(f.text) && str(f.week) && str(f.hat) && (f.done === undefined || typeof f.done === "boolean") && optStr(f.allocationId) && (f.content === undefined || isObj(f.content))],
+  ["alloc:", (f) => str(f.hatId) && str(f.day) && str(f.week) && (f.hours === undefined || num(f.hours)) && (f.order === undefined || num(f.order))],
+  ["box:", (f) => num(f.hours) && (f["tasks$ids"] === undefined || strList(f["tasks$ids"]))],
+  ["week:", (f) => strList(f["boxes$ids"]) && strList(f["allocations$ids"])],
 ];
+
+function validVector(v: unknown): boolean {
+  return isObj(v) && Object.values(v).every((n) => typeof n === "number" && Number.isInteger(n) && n >= 0);
+}
 
 export function isDamagedRow(row: { itemId: string; fields: string; v: string; deleted: boolean }): boolean {
   try {
-    const v = JSON.parse(row.v || "{}") as unknown;
-    if (!v || typeof v !== "object") return true;
+    if (!validVector(JSON.parse(row.v || "{}"))) return true;
     const fields = JSON.parse(row.fields || "{}") as unknown;
-    if (!fields || typeof fields !== "object" || Array.isArray(fields)) return true;
+    if (!isObj(fields)) return true;
     if (row.deleted) return false;
-    const need = REQUIRED.find(([prefix]) => row.itemId.startsWith(prefix))?.[1];
-    if (need) return need.some((key) => !(key in (fields as object)));
-    if (row.itemId.startsWith("week:")) return Object.keys(fields as object).length === 0;
-    return false;
+    if (row.itemId === "profile") return !(str(fields.name) && (fields["hats$ids"] === undefined || strList(fields["hats$ids"])));
+    const shape = SHAPES.find(([prefix]) => row.itemId.startsWith(prefix));
+    // A kind this version does not know cannot be merged safely: hold it back.
+    return shape ? !shape[1](fields) : true;
   } catch {
     return true;
   }

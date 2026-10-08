@@ -282,7 +282,60 @@ export function normalizeData(raw: unknown): SpreadData {
     }
   }
   const currentWeek = typeof value.currentWeek === "string" ? value.currentWeek : weekKey();
-  return ensureWeek({ hats, weeks, currentWeek });
+  return ensureWeek({ hats, weeks: repairDuplicateIds(weeks), currentWeek });
+}
+
+/**
+ * A task or allocation id must name exactly one thing: sync addresses them by id alone. Older
+ * versions of "copy last week" reused ids across weeks. The first occurrence (oldest week first)
+ * keeps its id; later ones get `<id>~<week>`, and a task keeps pointing at the allocation in its
+ * own week. Deterministic, so two devices repair the same planner to the same ids, and a planner
+ * with unique ids is returned untouched.
+ */
+export function repairDuplicateIds(weeks: Record<string, WeekData>): Record<string, WeekData> {
+  const seenTasks = new Set<string>();
+  const seenAllocs = new Set<string>();
+  const taken = new Set<string>();
+  for (const week of Object.values(weeks)) {
+    for (const a of week.allocations) taken.add(a.id);
+    for (const box of week.boxes) for (const t of box.tasks) taken.add(t.id);
+  }
+  const fresh = (id: string, key: string) => {
+    let candidate = `${id}~${key}`;
+    for (let n = 2; taken.has(candidate); n += 1) candidate = `${id}~${key}~${n}`;
+    taken.add(candidate);
+    return candidate;
+  };
+  let changed = false;
+  const out: Record<string, WeekData> = {};
+  for (const key of Object.keys(weeks).sort()) {
+    const week = weeks[key];
+    const renamed = new Map<string, string>();
+    const allocations = week.allocations.map((a) => {
+      if (!seenAllocs.has(a.id)) {
+        seenAllocs.add(a.id);
+        return a;
+      }
+      const id = fresh(a.id, key);
+      renamed.set(a.id, id);
+      changed = true;
+      return { ...a, id };
+    });
+    const boxes = week.boxes.map((box) => ({
+      ...box,
+      tasks: box.tasks.map((t) => {
+        const allocationId = t.allocationId !== undefined && renamed.has(t.allocationId) ? renamed.get(t.allocationId) : t.allocationId;
+        if (!seenTasks.has(t.id)) {
+          seenTasks.add(t.id);
+          return allocationId === t.allocationId ? t : { ...t, allocationId };
+        }
+        changed = true;
+        return { ...t, id: fresh(t.id, key), allocationId };
+      }),
+    }));
+    out[key] = { allocations, boxes };
+  }
+  return changed ? out : weeks;
 }
 
 function normalizeHat(hat: Hat): Hat {

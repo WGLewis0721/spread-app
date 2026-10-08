@@ -1,4 +1,5 @@
-import { formatWeek, LICENSE_KEY, normalizeData, type SpreadData } from "./model.ts";
+import { defaultData, formatWeek, LICENSE_KEY, normalizeData, type SpreadData } from "./model.ts";
+import { classifyStored } from "./pristine.ts";
 import { collectEntries, isPlannerKey, type KeyStore } from "./native-mirror.ts";
 import { ACTIVE_PROFILE_KEY, cleanName, parseProfiles, PROFILE_LIMIT, PROFILES_KEY, profileStore, type Profile } from "./profiles.ts";
 import { CURRENT_SCHEMA, SCHEMA_KEY } from "./schema.ts";
@@ -115,7 +116,9 @@ export function collectFullPayload(storage: KeyStore, now: Date, deviceId: strin
   for (const profile of roster) {
     owned.add(profile.store);
     const text = storage.getItem(profile.store);
-    if (typeof text === "string") stores[profile.id] = text;
+    // A profile that was never written is an untouched new planner. Say so explicitly, so a body
+    // that is missing from a file can always be told apart from one that was never started.
+    stores[profile.id] = typeof text === "string" ? text : JSON.stringify(defaultData());
   }
   const settings: Record<string, string> = {};
   const recovery: Record<string, string> = {};
@@ -203,13 +206,10 @@ export async function parseFullBackup(text: string): Promise<FullBackup | null> 
 export function summarizeFull(payload: FullBackupPayload): FullBackup["summary"] {
   const profiles = payload.roster.map((profile) => {
     let one: BackupSummary = { spreads: [], weeks: 0, tasks: 0, range: "No weeks" };
-    let readable = true;
-    try {
-      const stored = payload.stores[profile.id];
-      if (stored) one = summarize(normalizeData(JSON.parse(stored)));
-    } catch {
-      readable = false; // listed, but it cannot be restored
-    }
+    const stored = payload.stores[profile.id];
+    const kind = classifyStored(stored ?? null).kind;
+    const readable = kind === "pristine" || kind === "content"; // otherwise listed, but it cannot be restored
+    if (readable && stored) one = summarize(normalizeData(JSON.parse(stored)));
     return { id: profile.id, readable, name: profile.name, ...one };
   });
   return {
@@ -263,15 +263,14 @@ function restoredName(name: string, taken: Set<string>): string {
   return candidate;
 }
 
+/**
+ * A profile can be restored only if its saved text is a real planner. A missing body, `null`, a
+ * string, or a planner with the wrong types is damaged: restoring it would quietly produce an empty
+ * profile, so it is skipped and reported by name instead.
+ */
 function readable(payload: FullBackupPayload, source: Profile): boolean {
-  try {
-    const text = payload.stores[source.id];
-    if (text === undefined) return true;
-    normalizeData(JSON.parse(text));
-    return true;
-  } catch {
-    return false;
-  }
+  const kind = classifyStored(payload.stores[source.id] ?? null).kind;
+  return kind === "pristine" || kind === "content";
 }
 
 /**
@@ -296,7 +295,7 @@ export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[]
   let replacedId: string | null = null;
   chosen.forEach((source, index) => {
     const text = payload.stores[source.id];
-    const data = JSON.stringify(text === undefined ? normalizeData(null) : normalizeData(JSON.parse(text)));
+    const data = JSON.stringify(normalizeData(JSON.parse(text)));
     if (index === 0 && replaceTarget) {
       const plainName = cleanName(source.name) || "Me";
       const name = taken.has(plainName.toLowerCase()) ? restoredName(source.name, taken) : plainName;

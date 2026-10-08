@@ -232,3 +232,38 @@ test("a restored profile never keeps the iCloud sync link of the one it came fro
   assert.ok(plan.ok);
   assert.ok(plan.profiles.every((p) => p.syncId === undefined));
 });
+
+// Astra A10: damage that is valid JSON must not become a blank "successful" profile.
+function payloadWith(stores: Record<string, string>) {
+  const roster = [profile("p1", "Will"), profile("p2", "Work")];
+  return { schemaVersion: 2, createdAt: "2026-10-08T00:00:00Z", deviceId: null, activeProfileId: "p1", roster, stores, settings: {} };
+}
+const good = JSON.stringify(defaultData());
+
+test("A10: a profile whose body is missing from the file is skipped and named, not restored blank", () => {
+  const plan = planRestoreAsNew(payloadWith({ p1: good }), [], () => "n" + Math.random().toString(36).slice(2, 8));
+  assert.ok(plan.ok);
+  assert.deepEqual(plan.skipped, ["Work"]);
+  assert.equal(plan.writes.length, 1);
+});
+
+test("A10: bodies that parse but are not planners are skipped and named", () => {
+  for (const bad of ["null", "[]", '"x"', "{}", JSON.stringify({ ...defaultData(), weeks: { "2026-01-05": { boxes: "oops", allocations: [] } } })]) {
+    const plan = planRestoreAsNew(payloadWith({ p1: good, p2: bad }), [], () => "n" + Math.random().toString(36).slice(2, 8));
+    assert.ok(plan.ok, bad);
+    assert.deepEqual(plan.skipped, ["Work"], bad);
+    assert.equal(plan.writes.length, 1, bad);
+  }
+});
+
+test("A10: the summary marks those profiles unreadable so the dialog warns before restoring", async () => {
+  const summary = (await import("./backup.ts")).summarizeFull(payloadWith({ p1: good, p2: "null" }));
+  assert.deepEqual(summary.profiles.map((p) => p.readable), [true, false]);
+});
+
+test("A10: a profile that was never written is saved as an untouched planner, so a missing body always means damage", () => {
+  const s = new Memory();
+  s.setItem(PROFILES_KEY, JSON.stringify([profile("p1", "Will")]));
+  const payload = collectFullPayload(s, new Date(), null);
+  assert.equal(JSON.parse(payload.stores.p1).hats.length > 0, true);
+});

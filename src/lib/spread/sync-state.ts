@@ -34,6 +34,16 @@ export type SyncState = {
   lastSyncAt: string | null;
 };
 
+/**
+ * A saved state carries the id of the device that wrote it. If the file was restored onto a
+ * different device (from a phone backup), reusing that id would make two devices one actor in
+ * every version vector. The contents are kept; only the acting identity becomes this device's.
+ */
+export function adoptDeviceIdentity(state: SyncState, thisDevice: string): { state: SyncState; rebased: boolean } {
+  if (state.deviceId === thisDevice) return { state, rebased: false };
+  return { state: { ...state, deviceId: thisDevice }, rebased: true };
+}
+
 export function newSyncState(syncId: string, deviceId: string): SyncState {
   return { version: 1, syncId, deviceId, items: {}, base: {}, pending: [], queued: {}, conflicts: [], lastSyncAt: null };
 }
@@ -46,7 +56,7 @@ function sameStored(a: StoredItem | undefined, b: StoredItem | undefined): boole
   return !!a.deleted === !!b.deleted && compareVectors(a.v, b.v) === "equal" && (a.deleted || canonical(a.fields) === canonical(b.fields));
 }
 
-export type CaptureBlock = { deleting: number; live: number; reason: "everything" | "most" | "all-tasks" };
+export type CaptureBlock = { deleting: number; live: number; reason: "everything" | "most" | "all-tasks" | "unreadable" };
 
 /** Thresholds for treating a capture as a likely accident rather than an edit. */
 const MASS_MIN = 5;
@@ -80,12 +90,18 @@ export function captureLocal(
   data: SpreadData,
   name: string,
   now: string,
-  options: { allowMassDelete?: boolean } = {},
+  options: { allowMassDelete?: boolean; healthy?: boolean } = {},
 ): { state: SyncState; changed: string[]; blocked?: CaptureBlock } {
   const plain = flatten(data, name);
   const seen = new Set(plain.map((item) => item.id));
   const vanished = Object.entries(state.items).filter(([id, current]) => !seen.has(id) && !current.deleted).map(([id]) => id);
   if (!options.allowMassDelete) {
+    // The caller knows whether the planner was read properly. A read that failed (and came back as
+    // starting defaults) is never a decision to delete, however small the planner.
+    if (options.healthy === false && vanished.length > 0) {
+      const live = Object.values(state.items).filter((item) => !item.deleted).length;
+      return { state, changed: [], blocked: { deleting: vanished.length, live, reason: "unreadable" } };
+    }
     const blocked = assessDeletion(state, vanished);
     if (blocked) return { state, changed: [], blocked };
   }
