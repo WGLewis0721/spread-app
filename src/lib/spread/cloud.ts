@@ -19,12 +19,34 @@ export type RemoteBackup = {
 
 export type WriteResult = { name: string; bytes: number; createdAt: string; verified: boolean; inICloudContainer: boolean };
 
+export type SyncRowDTO = { syncId: string; itemId: string; fields: string; v: string; deleted: boolean; at: string };
+
+export type SyncNativeStatus = {
+  running: boolean;
+  zoneDeleted: boolean;
+  quotaExceeded: boolean;
+  outboxCount: number;
+  inboxCount: number;
+  accountChanged?: "signOut" | "switchAccounts";
+  accountKey?: string;
+  lastError?: string;
+};
+
 type SpreadCloudPlugin = {
   status(): Promise<NativeFacts>;
   backupWrite(options: { text: string; pin?: string }): Promise<WriteResult>;
   backupList(options: { ownOnly?: boolean }): Promise<{ backups: RemoteBackup[] }>;
   backupRead(options: { deviceId: string; name: string }): Promise<{ text: string }>;
-  addListener(event: "accountChanged", handler: () => void): Promise<{ remove(): Promise<void> }>;
+  syncStart(): Promise<void>;
+  syncStop(): Promise<void>;
+  syncQueue(options: { items: SyncRowDTO[] }): Promise<void>;
+  syncInbox(): Promise<{ items: SyncRowDTO[] }>;
+  syncOutbox(): Promise<{ names: string[] }>;
+  syncAck(options: { names: string[] }): Promise<void>;
+  syncDrop(options: { names: string[] }): Promise<void>;
+  syncStatus(): Promise<SyncNativeStatus>;
+  syncNow(): Promise<void>;
+  addListener(event: "accountChanged" | "syncInbound" | "syncStatus", handler: () => void): Promise<{ remove(): Promise<void> }>;
 };
 
 let plugin: Promise<SpreadCloudPlugin> | null = null;
