@@ -17,6 +17,13 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9582B6842FE993A70072D4E8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9582B6852FE993A70072D4E8 /* PrivacyInfo.xcprivacy */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		9A1C00000000000000000002 /* SpreadBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000001 /* SpreadBridgeViewController.swift */; };
+		9A1C00000000000000000004 /* SpreadCloudConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000003 /* SpreadCloudConfig.swift */; };
+		9A1C00000000000000000006 /* DeviceIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000005 /* DeviceIdentity.swift */; };
+		9A1C00000000000000000008 /* AccountMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000007 /* AccountMonitor.swift */; };
+		9A1C0000000000000000000A /* BackupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000009 /* BackupStore.swift */; };
+		9A1C0000000000000000000C /* SpreadCloudPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C0000000000000000000B /* SpreadCloudPlugin.swift */; };
+		9A1C00000000000000000011 /* SpreadCloudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1C00000000000000000010 /* SpreadCloudCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +39,13 @@
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		9582B6852FE993A70072D4E8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		9A1C00000000000000000001 /* SpreadBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadBridgeViewController.swift; sourceTree = "<group>"; };
+		9A1C00000000000000000003 /* SpreadCloudConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadCloudConfig.swift; sourceTree = "<group>"; };
+		9A1C00000000000000000005 /* DeviceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIdentity.swift; sourceTree = "<group>"; };
+		9A1C00000000000000000007 /* AccountMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountMonitor.swift; sourceTree = "<group>"; };
+		9A1C00000000000000000009 /* BackupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupStore.swift; sourceTree = "<group>"; };
+		9A1C0000000000000000000B /* SpreadCloudPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadCloudPlugin.swift; sourceTree = "<group>"; };
+		9A1C0000000000000000000E /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -40,6 +54,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+				9A1C00000000000000000011 /* SpreadCloudCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +82,9 @@
 			isa = PBXGroup;
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
+				9A1C00000000000000000001 /* SpreadBridgeViewController.swift */,
+				9A1C0000000000000000000D /* Cloud */,
+				9A1C0000000000000000000E /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -78,6 +96,18 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		9A1C0000000000000000000D /* Cloud */ = {
+			isa = PBXGroup;
+			children = (
+				9A1C00000000000000000003 /* SpreadCloudConfig.swift */,
+				9A1C00000000000000000005 /* DeviceIdentity.swift */,
+				9A1C00000000000000000007 /* AccountMonitor.swift */,
+				9A1C00000000000000000009 /* BackupStore.swift */,
+				9A1C0000000000000000000B /* SpreadCloudPlugin.swift */,
+			);
+			path = Cloud;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -98,6 +128,7 @@
 			name = App;
 			packageProductDependencies = (
 				4D22ABE82AF431CB00220026 /* CapApp-SPM */,
+				9A1C00000000000000000010 /* SpreadCloudCore */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
@@ -130,6 +161,7 @@
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
 				D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */,
+				9A1C0000000000000000000F /* XCLocalSwiftPackageReference "SpreadCloudCore" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -164,6 +196,12 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				9A1C00000000000000000002 /* SpreadBridgeViewController.swift in Sources */,
+				9A1C00000000000000000004 /* SpreadCloudConfig.swift in Sources */,
+				9A1C00000000000000000006 /* DeviceIdentity.swift in Sources */,
+				9A1C00000000000000000008 /* AccountMonitor.swift in Sources */,
+				9A1C0000000000000000000A /* BackupStore.swift in Sources */,
+				9A1C0000000000000000000C /* SpreadCloudPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,7 +276,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -289,7 +327,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -303,10 +341,11 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -317,7 +356,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -325,10 +364,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -338,7 +378,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -370,6 +410,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "CapApp-SPM";
 		};
+		9A1C0000000000000000000F /* XCLocalSwiftPackageReference "SpreadCloudCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = SpreadCloudCore;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -377,6 +421,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */;
 			productName = "CapApp-SPM";
+		};
+		9A1C00000000000000000010 /* SpreadCloudCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9A1C0000000000000000000F /* XCLocalSwiftPackageReference "SpreadCloudCore" */;
+			productName = SpreadCloudCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
