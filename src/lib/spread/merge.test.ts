@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { bump, compareVectors, type VersionVector } from "./clock.ts";
-import { canonical, mergeItems, resolveConflict, type Json, type SyncItem } from "./merge.ts";
+import { canonical, mergeIdList, mergeItems, resolveConflict, type Json, type SyncItem } from "./merge.ts";
 
 const item = (id: string, fields: Record<string, Json>, v: VersionVector, deleted = false): SyncItem => ({ id, fields, v, ...(deleted ? { deleted } : {}) });
 const edit = (it: SyncItem, device: string, fields: Record<string, Json>): SyncItem => ({ ...it, fields: { ...it.fields, ...fields }, v: bump(it.v, device) });
@@ -195,4 +195,87 @@ test("property: a delete racing an edit of the same item is never merged silentl
     assert.equal(result.conflicts.length, 1);
     assert.equal(result.merged.length, 0);
   }
+});
+
+// --- Ordered id lists -------------------------------------------------------------------------
+
+
+test("lists: additions on both sides are all kept, in a stable order that does not depend on the side", () => {
+  const base = ["a", "b"];
+  const l = mergeIdList(base, ["a", "x", "b"], ["a", "b", "y"]);
+  const r = mergeIdList(base, ["a", "b", "y"], ["a", "x", "b"]);
+  assert.ok(l.ok && r.ok);
+  assert.deepEqual(l.value, ["a", "x", "b", "y"]);
+  assert.deepEqual(r.value, l.value);
+});
+
+test("lists: two additions at the same spot are ordered by id on both sides", () => {
+  const l = mergeIdList(["a"], ["a", "z"], ["a", "m"]);
+  const r = mergeIdList(["a"], ["a", "m"], ["a", "z"]);
+  assert.ok(l.ok && r.ok);
+  assert.deepEqual(l.value, ["a", "m", "z"]);
+  assert.deepEqual(r.value, l.value);
+});
+
+test("lists: a delete on one side and an addition on the other both happen", () => {
+  const out = mergeIdList(["a", "b", "c"], ["a", "c"], ["a", "b", "c", "d"]);
+  assert.ok(out.ok);
+  assert.deepEqual(out.value, ["a", "c", "d"]);
+});
+
+test("lists: a reorder on one side wins when the other side did not reorder", () => {
+  const out = mergeIdList(["a", "b", "c"], ["a", "b", "c"], ["c", "a", "b"]);
+  assert.ok(out.ok);
+  assert.deepEqual(out.value, ["c", "a", "b"]);
+});
+
+test("lists: two different reorders are a conflict, not a guess", () => {
+  assert.equal(mergeIdList(["a", "b", "c"], ["c", "b", "a"], ["b", "c", "a"]).ok, false);
+});
+
+test("lists: an id deleted on one side and kept on the other is removed (the kept side only did not touch it)", () => {
+  const out = mergeIdList(["a", "b"], ["a"], ["a", "b"]);
+  assert.ok(out.ok);
+  assert.deepEqual(out.value, ["a"]);
+});
+
+test("property: list merge never duplicates, never invents, and is symmetric", () => {
+  for (let seed = 1; seed <= 500; seed += 1) {
+    const next = rng(seed * 31);
+    const base = ["a", "b", "c", "d", "e"].filter(() => next() < 0.8);
+    const mutate = (tag: string) => {
+      const out = [...base];
+      for (let step = 0; step < 3; step += 1) {
+        const roll = next();
+        if (roll < 0.3 && out.length) out.splice(Math.floor(next() * out.length), 1);
+        else if (roll < 0.8) out.splice(Math.floor(next() * (out.length + 1)), 0, `${tag}${Math.floor(next() * 4)}`.replace(/(.)\1+$/, "$1"));
+        else if (out.length > 1) out.reverse();
+      }
+      return [...new Set(out)];
+    };
+    const l = mutate("p");
+    const r = mutate("q");
+    const ab = mergeIdList(base, l, r);
+    const ba = mergeIdList(base, r, l);
+    assert.equal(ab.ok, ba.ok, `seed ${seed}`);
+    if (!ab.ok || !ba.ok) continue;
+    assert.deepEqual(ab.value, ba.value, `seed ${seed}: depends on side`);
+    assert.equal(new Set(ab.value).size, ab.value.length, `seed ${seed}: duplicate`);
+    const allowed = new Set([...l, ...r]);
+    assert.ok(ab.value.every((id) => allowed.has(id)), `seed ${seed}: invented`);
+    for (const id of l.filter((x) => !base.includes(x))) assert.ok(ab.value.includes(id), `seed ${seed}: lost local addition ${id}`);
+    for (const id of r.filter((x) => !base.includes(x))) assert.ok(ab.value.includes(id), `seed ${seed}: lost remote addition ${id}`);
+  }
+});
+
+test("item merge: an id-list field merges as a list, so adds in the same box do not conflict", () => {
+  const box = item("box", { "tasks$ids": ["a", "b"] }, { origin: 1 });
+  const result = mergeItems({
+    base: [box],
+    local: [edit(box, "phone", { "tasks$ids": ["a", "p", "b"] })],
+    remote: [edit(box, "pad", { "tasks$ids": ["a", "b", "q"] })],
+    device: "phone",
+  });
+  assert.equal(result.conflicts.length, 0);
+  assert.deepEqual(result.merged[0].fields["tasks$ids"], ["a", "p", "b", "q"]);
 });
