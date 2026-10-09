@@ -1,0 +1,111 @@
+name: iOS internal TestFlight (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Bootstrap signing once, or upload an internal TestFlight build"
+        required: true
+        type: choice
+        options:
+          - bootstrap_signing
+          - upload_internal_testflight
+      approved_commit:
+        description: "Exact 40-character SHA of the reviewed main commit"
+        required: true
+        type: string
+      confirm_internal_only:
+        description: "I authorize this signing action / internal TestFlight upload only"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spread-ios-signing-and-testflight
+  cancel-in-progress: false
+
+jobs:
+  approve-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require exact approved main commit and manual authorization
+        env:
+          APPROVED_COMMIT: \${{ inputs.approved_commit }}
+          CONFIRM_INTERNAL: \${{ inputs.confirm_internal_only }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "::error::Only main can use this workflow"; exit 1; }
+          test "$CONFIRM_INTERNAL" = "true" || { echo "::error::Explicit authorization required"; exit 1; }
+          test "$APPROVED_COMMIT" = "$GITHUB_SHA" || { echo "::error::Commit must match the current main SHA"; exit 1; }
+          [[ "$APPROVED_COMMIT" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          echo "Authorized exact commit $GITHUB_SHA for \${{ inputs.operation }}"
+
+  sign-or-upload:
+    needs: approve-source
+    runs-on: macos-26
+    timeout-minutes: 65
+    environment:
+      name: ios-internal-testflight
+    env:
+      APPLE_TEAM_ID: \${{ vars.APPLE_TEAM_ID }}
+      MATCH_GIT_URL: \${{ vars.MATCH_GIT_URL }}
+      MATCH_GIT_BASIC_AUTHORIZATION: \${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      MATCH_PASSWORD: \${{ secrets.MATCH_PASSWORD }}
+      ASC_KEY_ID: \${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: \${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8_BASE64: \${{ secrets.ASC_KEY_P8_BASE64 }}
+      # Never enable cloud features in an unreviewed distribution build.
+      VITE_SPREAD_CLOUD_BACKUP: "0"
+      VITE_SPREAD_CLOUD_SYNC: "0"
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      FASTLANE_DISABLE_COLORS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require protected signing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in APPLE_TEAM_ID MATCH_GIT_URL MATCH_GIT_BASIC_AUTHORIZATION MATCH_PASSWORD ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64; do
+            if [[ -z "\${!name:-}" ]]; then
+              echo "::error::Missing required signing variable/secret: $name"
+              exit 1
+            fi
+          done
+          [[ "$MATCH_GIT_URL" == https://github.com/* ]] || { echo "::error::Match signing repository must be GitHub HTTPS"; exit 1; }
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: false
+      - name: Install pinned Fastlane
+        run: bundle install --jobs 4 --retry 3
+      - name: One-time signing bootstrap (private certificate repo)
+        if: inputs.operation == 'bootstrap_signing'
+        run: bundle exec fastlane ios bootstrap_signing
+      - uses: actions/setup-node@v4
+        if: inputs.operation == 'upload_internal_testflight'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify planner before packaging
+        if: inputs.operation == 'upload_internal_testflight'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:spread
+          swift test --package-path ios/App/SpreadCloudCore
+      - name: Export local-only iOS assets and synchronize Capacitor
+        if: inputs.operation == 'upload_internal_testflight'
+        run: npm run ios:sync
+      - name: Sign and upload to INTERNAL TestFlight (not App Review)
+        if: inputs.operation == 'upload_internal_testflight'
+        run: bundle exec fastlane ios internal_testflight
