@@ -1,5 +1,7 @@
 # Spread for iPhone: release candidate runbook
 
+**Release automation (proposed, not yet executed):** The manual GitHub Actions + Fastlane internal-TestFlight pipeline and owner configuration are in [IOS_AUTOMATION.md](IOS_AUTOMATION.md). Existing security, physical-device and cloud release gates remain open.
+
 Spread 1.0 is the existing planner packaged with Capacitor for iPhone and iPad. It is local-first, has
 no Spread account, no subscription and no backend, and does not depend on Vercel once installed.
 iCloud Backup (automatic) and iCloud Sync (opt-in) are being added; see
