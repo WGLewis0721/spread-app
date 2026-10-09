@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const DETENT = 64;
 
@@ -24,6 +24,29 @@ export function WeekCrown({
   const carry = useRef(0);
   const [local, setLocal] = useState(0);
   const [live, setLive] = useState(false);
+  const [hintVisible, setHintVisible] = useState(true);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("spread-crown-used") === "1") setHintVisible(false);
+    } catch {
+      // The crown stays usable when browser storage is unavailable.
+    }
+  }, []);
+
+  const move = useCallback(
+    (direction: -1 | 1) => {
+      setHintVisible(false);
+      try {
+        window.localStorage.setItem("spread-crown-used", "1");
+      } catch {
+        // Hint dismissal must not prevent navigation.
+      }
+      onMove(direction);
+    },
+    [onMove],
+  );
+
   const shown = turn !== 0 ? turn : local;
 
   useEffect(() => {
@@ -48,12 +71,12 @@ export function WeekCrown({
         steps -= 1;
       }
       setLocal(carry.current);
-      if (steps < 0) for (let i = 0; i > steps; i -= 1) onMove(-1);
-      if (steps > 0) for (let i = 0; i < steps; i += 1) onMove(1);
+      if (steps < 0) for (let i = 0; i > steps; i -= 1) move(-1);
+      if (steps > 0) for (let i = 0; i < steps; i += 1) move(1);
     }
     node.addEventListener("wheel", onWheel, { passive: false });
     return () => node.removeEventListener("wheel", onWheel);
-  }, [onMove]);
+  }, [move]);
 
   function release() {
     drag.current = null;
@@ -68,7 +91,20 @@ export function WeekCrown({
     <div className="crown">
       <div
         ref={wheelRef}
-        className="crown-wheel"
+        className="crown-wheel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        tabIndex={0}
+        role="group"
+        aria-label={`${title}. Use left and right arrow keys to change ${unit}s.`}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            move(-1);
+          } else if (event.key === "ArrowRight") {
+            event.preventDefault();
+            move(1);
+          }
+        }}
         style={{ touchAction: "none" }}
         onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest("button")) return;
@@ -94,8 +130,8 @@ export function WeekCrown({
             start.x = event.clientX;
             start.origin = rest;
           }
-          if (steps < 0) for (let i = 0; i > steps; i -= 1) onMove(-1);
-          if (steps > 0) for (let i = 0; i < steps; i += 1) onMove(1);
+          if (steps < 0) for (let i = 0; i > steps; i -= 1) move(-1);
+          if (steps > 0) for (let i = 0; i < steps; i += 1) move(1);
           carry.current = rest;
           setLocal(rest);
         }}
@@ -134,10 +170,14 @@ export function WeekCrown({
             detail && <p className="truncate text-xs text-secondary tabular-nums">{detail}</p>
           )}
         </div>
-        <button type="button" className="crown-cap crown-cap-left" aria-label={`Previous ${unit}`} onClick={() => onMove(-1)} />
-        <button type="button" className="crown-cap crown-cap-right" aria-label={`Next ${unit}`} onClick={() => onMove(1)} />
+        <button type="button" className="crown-cap crown-cap-left" aria-label={`Previous ${unit}`} onClick={() => move(-1)} />
+        <button type="button" className="crown-cap crown-cap-right" aria-label={`Next ${unit}`} onClick={() => move(1)} />
       </div>
-      <p className="mt-2 text-center text-xs text-secondary">Scroll left or right to change {unit}s.</p>
+      {hintVisible && (
+        <p className="mt-2 text-center text-xs text-secondary" role="status">
+          Swipe, scroll, or use arrow keys to change {unit}s.
+        </p>
+      )}
     </div>
   );
 }
