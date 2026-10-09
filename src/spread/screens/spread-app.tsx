@@ -644,7 +644,7 @@ function WeekScreen() {
               <button
                 type="button"
                 className={cn(
-                  "ml-auto h-8 max-w-[46%] truncate rounded-full bg-fill px-3 text-sm font-medium",
+                  "ml-auto min-h-11 max-w-[46%] truncate rounded-full bg-fill px-3 text-sm font-medium",
                   profilePlay && "descend-in",
                 )}
                 aria-label={`${activeName}, profiles`}
@@ -694,7 +694,7 @@ function WeekScreen() {
                 aria-label={label}
                 aria-selected={view === key}
                 className={cn(
-                  "flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
+                  "flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
                   view === key ? "bg-segment text-ink shadow-sm" : "text-secondary",
                 )}
                 onClick={() => {
@@ -923,7 +923,7 @@ function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () =
       </p>
       {totalHours > 0 && (
         <div
-          className="mt-1 flex min-h-11 items-center gap-1"
+          className="mt-1 flex min-h-11 items-center gap-1 overflow-x-auto"
           role="group"
           aria-label={`${formatHourLabel(totalHours)} across responsibilities. Choose a color to jump to its responsibility.`}
         >
@@ -931,7 +931,7 @@ function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () =
             <button
               key={row.hat.id}
               type="button"
-              className="flex h-11 min-w-3 items-center rounded-full focus-visible:outline-offset-1"
+              className="flex h-11 min-w-11 shrink-0 items-center rounded-full focus-visible:outline-offset-1"
               style={{ flexGrow: row.box.hours, flexBasis: 0 }}
               aria-label={`Jump to ${row.hat.name}, ${formatHourLabel(row.box.hours)}`}
               onClick={() => {
