@@ -39,6 +39,10 @@ platform :ios do
     sync_code_signing(**signing_options, readonly: true)
 
     # Change only the runner's temporary Xcode copy. The repository stays untouched.
+    # The checked-in entitlement is for development; App Store profiles use production APNs.
+    # Change only the temporary CI checkout, never the golden baseline.
+    sh("/usr/libexec/PlistBuddy", "-c", "Set :aps-environment production", "ios/App/App/App.entitlements")
+
     update_code_signing_settings(
       path: "ios/App/App.xcodeproj",
       targets: ["App"],
