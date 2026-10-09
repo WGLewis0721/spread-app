@@ -68,7 +68,20 @@ export function WeekCrown({
     <div className="crown">
       <div
         ref={wheelRef}
-        className="crown-wheel"
+        className="crown-wheel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        tabIndex={0}
+        role="group"
+        aria-label={`${title}. Use left and right arrow keys to change ${unit}s.`}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            onMove(-1);
+          } else if (event.key === "ArrowRight") {
+            event.preventDefault();
+            onMove(1);
+          }
+        }}
         style={{ touchAction: "none" }}
         onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest("button")) return;
@@ -137,7 +150,7 @@ export function WeekCrown({
         <button type="button" className="crown-cap crown-cap-left" aria-label={`Previous ${unit}`} onClick={() => onMove(-1)} />
         <button type="button" className="crown-cap crown-cap-right" aria-label={`Next ${unit}`} onClick={() => onMove(1)} />
       </div>
-      <p className="mt-2 text-center text-xs text-secondary">Scroll left or right to change {unit}s.</p>
+      <p className="mt-2 text-center text-xs text-secondary">Swipe, scroll, or use arrow keys to change {unit}s.</p>
     </div>
   );
 }
