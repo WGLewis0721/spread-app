@@ -1,0 +1,88 @@
+default_platform(:ios)
+
+platform :ios do
+  private_lane :apple_api_key do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_P8_BASE64"),
+      is_key_content_base64: true,
+      in_house: false
+    )
+  end
+
+  private_lane :signing_options do
+    {
+      type: "appstore",
+      app_identifier: "com.graymatter.spread",
+      team_id: ENV.fetch("APPLE_TEAM_ID"),
+      git_url: ENV.fetch("MATCH_GIT_URL"),
+      api_key: apple_api_key
+    }
+  end
+
+  desc "One-time owner-approved bootstrap of encrypted signing assets in a PRIVATE repository"
+  lane :bootstrap_signing do
+    UI.user_error!("Only run from the manual GitHub Actions workflow") unless ENV["GITHUB_ACTIONS"] == "true"
+    setup_ci
+    # setup_ci defaults match to readonly. Only this explicitly named bootstrap may write.
+    ENV["MATCH_READONLY"] = "false"
+    sync_code_signing(**signing_options, readonly: false)
+    UI.success("Signing assets initialized in the private Match repository")
+  end
+
+  desc "Build and upload to INTERNAL TestFlight only; never submit for App Review"
+  lane :internal_testflight do
+    UI.user_error!("Only run from the manual GitHub Actions workflow") unless ENV["GITHUB_ACTIONS"] == "true"
+    UI.user_error!("Only main may be distributed") unless ENV["GITHUB_REF"] == "refs/heads/main"
+    setup_ci
+    sync_code_signing(**signing_options, readonly: true)
+
+    # Change only the runner's temporary Xcode copy. The repository stays untouched.
+    # The checked-in entitlement is for development; App Store profiles use production APNs.
+    # Change only the temporary CI checkout, never the golden baseline.
+    sh("/usr/libexec/PlistBuddy", "-c", "Set :aps-environment production", "ios/App/App/App.entitlements")
+
+    update_code_signing_settings(
+      path: "ios/App/App.xcodeproj",
+      targets: ["App"],
+      use_automatic_signing: false,
+      team_id: ENV.fetch("APPLE_TEAM_ID"),
+      code_sign_identity: "Apple Distribution",
+      profile_name: "match AppStore com.graymatter.spread"
+    )
+
+    run_number = Integer(ENV.fetch("GITHUB_RUN_NUMBER"))
+    attempt = Integer(ENV.fetch("GITHUB_RUN_ATTEMPT"))
+    UI.user_error!("Run attempt exceeds supported build sequence") if attempt > 99
+    increment_build_number(
+      build_number: (run_number * 100 + attempt).to_s,
+      xcodeproj: "ios/App/App.xcodeproj"
+    )
+
+    ipa = build_app(
+      project: "ios/App/App.xcodeproj",
+      scheme: "App",
+      configuration: "Release",
+      clean: true,
+      export_method: "app-store",
+      export_options: {
+        signingStyle: "manual",
+        provisioningProfiles: {
+          "com.graymatter.spread" => "match AppStore com.graymatter.spread"
+        }
+      },
+      xcargs: "DEVELOPMENT_TEAM=#{ENV.fetch("APPLE_TEAM_ID")}",
+      output_directory: "artifacts/testflight",
+      output_name: "Spread.ipa"
+    )
+
+    upload_to_testflight(
+      api_key: apple_api_key,
+      ipa: ipa,
+      distribute_external: false,
+      skip_waiting_for_build_processing: true
+    )
+    UI.success("Uploaded to App Store Connect. Assign to INTERNAL testers after processing.")
+  end
+end

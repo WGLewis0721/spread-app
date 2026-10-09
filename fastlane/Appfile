@@ -1,0 +1,2 @@
+app_identifier("com.graymatter.spread")
+# Team ID and credentials are supplied by protected GitHub Actions environment variables.
