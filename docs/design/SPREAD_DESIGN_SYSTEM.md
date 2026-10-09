@@ -66,7 +66,7 @@ Applies to the **planner** only. The landing page remains governed by `DESIGN.md
 | --- | --- | --- |
 | Crown | Existing metallic wheel remains; focused arrow-key navigation plus 44 px previous/next targets; interaction hint dismisses after first successful turn | Recognizable design with discoverable, non-gesture navigation and progressively quieter chrome |
 | Spread summary | Segmented responsibility-hours bar is now a set of labeled controls that scroll/focus the corresponding responsibility | Color has a usable, named interaction rather than remaining a legend the user must interpret |
-| Responsibility editing | Remove control replaces the chevron in an equally sized trailing slot, rather than shifting the whole row | Stable geometry; destructive action remains explicitly labeled and requires the existing removal dialog |
+| Responsibility editing | Edit mode reveals a labeled Remove action below each responsibility while keeping the header (including its collapse chevron) in place | Stable geometry; destructive action remains explicitly labeled and requires the existing removal dialog |
 | Week day cards | Empty days retain their label/date and selected Add action, but omit repeating visual "Nothing this day" text | Less visual repetition; screen readers retain an empty-day description |
 | Month | Today marker uses the existing accent and on-accent tokens; spoken labels identify Today and task-free days | Selected/current date clearer in both appearances; no meaning conveyed only through a color dot |
 | Global arrows | Header-wide week navigation yields to focused controls and the crown's own keyboard handling | Respects keyboard expectations and prevents double navigation |
