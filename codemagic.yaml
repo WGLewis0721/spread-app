@@ -42,7 +42,7 @@ workflows:
           import re
           from pathlib import Path
 
-          number = os.environ["CM_BUILD_NUMBER"]
+          number = os.environ["BUILD_NUMBER"]
           if not number.isdecimal() or int(number) < 1:
               raise SystemExit("Codemagic must supply a positive numeric build number")
           path = Path("ios/App/App.xcodeproj/project.pbxproj")
