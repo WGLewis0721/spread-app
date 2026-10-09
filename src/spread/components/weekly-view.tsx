@@ -6,18 +6,33 @@ import {
   useDroppable,
   useSensor,
   useSensors,
+  type Announcements,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Minus, Plus } from "lucide-react";
-import { clampHours, remainingHours, weekDays } from "@/lib/spread/model";
+import { ChevronDown, Clock, GripVertical, Inbox, Minus, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { showUndoToast } from "@/spread/ui/undo-toast";
+import { clampHours, isoDate, remainingHours, weekDays, type Allocation, type Task } from "@/lib/spread/model";
 import { useSpread } from "@/lib/spread/store";
+import { suggestFreeTime, type Suggestion } from "@/lib/spread/free-time";
+import { assignFailureText, eligibleAllocations, tasksOnAllocation, unscheduledTasks } from "@/lib/spread/task-schedule";
 import { SpreadIcon } from "@/spread/components/spread-icon";
-import { highlightedDay, resolveDrop } from "@/spread/gestures/resolve-drop";
-import { FastPointerSensor, HoldPointerSensor, mouseActivation, touchActivation } from "@/spread/gestures/sensors";
+import { highlightedDay, resolveDrop, TRAY_ID } from "@/spread/gestures/resolve-drop";
+import {
+  FastPointerSensor,
+  HoldPointerSensor,
+  mouseActivation,
+  TaskKeyboardSensor,
+  touchActivation,
+  zoneKeyboardCoordinates,
+} from "@/spread/gestures/sensors";
 import { useWeekSwipe } from "@/spread/gestures/use-week-swipe";
 
-type ActiveDrag = { kind: "spread"; hatId: string } | { kind: "allocation"; allocationId: string; hatId: string };
+type ActiveDrag =
+  | { kind: "spread"; hatId: string }
+  | { kind: "allocation"; allocationId: string; hatId: string }
+  | { kind: "task"; hatId: string; taskId: string; text: string };
 
 export function WeeklyView({
   onTurn,
@@ -40,6 +55,9 @@ export function WeeklyView({
   const reorderAllocation = useSpread((s) => s.reorderAllocation);
   const setAllocationHours = useSpread((s) => s.setAllocationHours);
   const removeAllocation = useSpread((s) => s.removeAllocation);
+  const assignTask = useSpread((s) => s.assignTask);
+  const undoable = useSpread((s) => s.undoable);
+  const undoEdit = useSpread((s) => s.undoEdit);
   const changeWeek = useSpread((s) => s.changeWeek);
   const days = weekDays(data.currentWeek);
   const week = data.weeks[data.currentWeek];
@@ -55,7 +73,10 @@ export function WeeklyView({
   const sensors = useSensors(
     useSensor(FastPointerSensor, { activationConstraint: mouseActivation }),
     useSensor(HoldPointerSensor, { activationConstraint: touchActivation }),
+    useSensor(TaskKeyboardSensor, { coordinateGetter: zoneKeyboardCoordinates }),
   );
+  const [moving, setMoving] = useState<string | null>(null);
+  const today = isoDate(new Date());
   const swipe = useWeekSwipe({
     dragActive: () => dragging.current,
     onShift: onTurn,
@@ -87,7 +108,7 @@ export function WeeklyView({
     if (leaving) return;
     setLeaving(id);
     window.setTimeout(() => {
-      removeAllocation(id);
+      withUndo("Took it off the day.", () => removeAllocation(id));
       setLeaving(null);
     }, 340);
   }
@@ -104,12 +125,42 @@ export function WeeklyView({
     if (!event?.over || !event.active.data.current) return;
     const decision = resolveDrop(event.active.data.current as ActiveDrag, String(event.over.id), allocations);
     if (!decision) return;
-    if (decision.action === "moveSpreadToDay") moveSpreadToDay(decision.hatId, decision.day);
-    if (decision.action === "moveAllocation") moveAllocation(decision.allocationId, decision.day);
-    if (decision.action === "reorderAllocation") reorderAllocation(decision.allocationId, decision.beforeId);
+    if (decision.action === "assignTask") placeTask(decision.hatId, decision.taskId, decision.allocationId);
+    if (decision.action === "refuseTask") {
+      const roleName = hatsById.get(decision.hatId)?.name;
+      const dayLabel = days.find((day) => day.date === decision.day)?.label;
+      toast(assignFailureText(decision.reason, roleName, dayLabel));
+    }
+    if (decision.action === "moveSpreadToDay") withUndo("Added to the day.", () => moveSpreadToDay(decision.hatId, decision.day));
+    if (decision.action === "moveAllocation") withUndo("Moved.", () => moveAllocation(decision.allocationId, decision.day));
+    if (decision.action === "reorderAllocation") withUndo("Reordered.", () => reorderAllocation(decision.allocationId, decision.beforeId));
   }
 
   const hatsById = new Map(data.hats.map((hat) => [hat.id, hat]));
+  function withUndo(message: string, run: () => void) {
+    const id = undoable(run);
+    if (id) showUndoToast(message, () => undoEdit(id));
+  }
+  function placeTask(hatId: string, taskId: string, allocationId: string | null) {
+    let failure: string | null = null;
+    withUndo(allocationId === null ? "Taken off the day." : "Task placed.", () => {
+      const result = assignTask(hatId, taskId, allocationId);
+      if (!result.ok) failure = assignFailureText(result.reason);
+    });
+    if (failure) toast(failure);
+    setMoving(null);
+  }
+  const toPlace = unscheduledTasks(week);
+  const freeTime = suggestFreeTime(data, today);
+  const anyTasks = (week?.boxes ?? []).some((box) => box.tasks.length > 0);
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${labelOf(active.data.current as ActiveDrag | undefined, hatsById)}.`,
+    onDragOver: ({ active, over }) =>
+      over ? `${labelOf(active.data.current as ActiveDrag | undefined, hatsById)} is over ${overLabel(String(over.id), days, allocations, hatsById)}.` : "Not over a place to drop.",
+    onDragEnd: ({ active, over }) =>
+      over ? `Dropped ${labelOf(active.data.current as ActiveDrag | undefined, hatsById)} on ${overLabel(String(over.id), days, allocations, hatsById)}.` : "Dropped nowhere. Nothing changed.",
+    onDragCancel: () => "Cancelled. Nothing changed.",
+  };
   const boxesByHat = new Map(week?.boxes.map((box) => [box.hatId, box]) ?? []);
 
   return (
@@ -120,6 +171,7 @@ export function WeeklyView({
       onDragOver={({ over }) => setOverId(over ? String(over.id) : null)}
       onDragEnd={finish}
       onDragCancel={() => finish()}
+      accessibility={{ announcements }}
     >
       <div className="enter" style={{ touchAction: "pan-y" }} {...swipe}>
         <p className="px-1 pt-4 text-xs text-secondary">Drag a spread onto a day, or tap one, then add it.</p>
@@ -144,7 +196,39 @@ export function WeeklyView({
             );
           })}
         </div>
-        <div className="mt-4 flex flex-col gap-3">
+        {freeTime.kind === "suggestions" && (
+          <section aria-label="Free time" className="mt-4">
+            <h2 className="flex items-center gap-1.5 px-1 text-sm font-semibold text-accent">
+              <Clock className="size-4" strokeWidth={2.4} aria-hidden="true" />
+              Free time
+            </h2>
+            <p className="px-1 pt-0.5 text-xs text-secondary">Tap to add an hour on the lightest day ahead.</p>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {freeTime.items.map((item) => (
+                <FreeTimeChip
+                  key={`${item.hatId}:${item.day}`}
+                  item={item}
+                  name={hatsById.get(item.hatId)?.name ?? ""}
+                  color={hatsById.get(item.hatId)?.color ?? "var(--tertiary)"}
+                  onAdd={() => withUndo(`Added to ${item.dayLabel}.`, () => moveSpreadToDay(item.hatId, item.day, item.hours))}
+                />
+              ))}
+            </ul>
+          </section>
+        )}
+        {anyTasks && (
+          <ToPlaceTray
+            tasks={toPlace}
+            hatsById={hatsById}
+            hot={overId === TRAY_ID}
+            open={moving}
+            onOpen={setMoving}
+            choices={(hatId) => eligibleAllocations(week, hatId)}
+            days={days}
+            onPlace={placeTask}
+          />
+        )}
+        <div className="mt-6 flex flex-col gap-3">
           {days.map((day, index) => {
             const items = allocations.filter((item) => item.day === day.date).sort((a, b) => a.order - b.order);
             return (
@@ -153,6 +237,7 @@ export function WeeklyView({
                 date={day.date}
                 label={day.label}
                 hot={hotDay === day.date}
+                today={day.date === today}
                 delay={`${index * 45}ms`}
                 empty={items.length === 0}
                 selectedName={selected ? hatsById.get(selected)?.name : undefined}
@@ -174,6 +259,12 @@ export function WeeklyView({
                       onRemove={() => takeOff(item.id)}
                       entering={item.id === fresh}
                       leaving={item.id === leaving}
+                      tasks={tasksOnAllocation(week, item.id)}
+                      open={moving}
+                      onOpen={setMoving}
+                      choices={eligibleAllocations(week, hat.id)}
+                      days={days}
+                      onPlace={placeTask}
                     />
                   );
                 })}
@@ -183,7 +274,12 @@ export function WeeklyView({
         </div>
       </div>
       <DragOverlay dropAnimation={null}>
-        {active ? <DragCard name={hatsById.get(active.hatId)?.name ?? ""} color={hatsById.get(active.hatId)?.color ?? "#8E8E93"} /> : null}
+        {active ? (
+          <DragCard
+            name={active.kind === "task" ? active.text : (hatsById.get(active.hatId)?.name ?? "")}
+            color={hatsById.get(active.hatId)?.color ?? "var(--tertiary)"}
+          />
+        ) : null}
       </DragOverlay>
     </DndContext>
   );
@@ -259,6 +355,7 @@ function DayCard({
   date,
   label,
   hot,
+  today,
   delay,
   empty,
   selectedName,
@@ -268,6 +365,7 @@ function DayCard({
   date: string;
   label: string;
   hot: boolean;
+  today: boolean;
   delay: string;
   empty: boolean;
   selectedName?: string;
@@ -299,7 +397,10 @@ function DayCard({
       style={{ animationDelay: delay, outline: hot ? "2px solid var(--accent)" : undefined }}
     >
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-base font-semibold">{label}</h2>
+        <h2 className="text-base font-semibold" aria-current={today ? "date" : undefined}>
+          {label}
+          {today && <span className="ms-2 align-middle text-xs font-semibold text-accent">Today</span>}
+        </h2>
         <span className="text-xs text-secondary tabular-nums">{date.slice(5).replace("-", "/")}</span>
       </div>
       {empty && <p className="px-1 pt-2 text-sm text-tertiary">Nothing this day.</p>}
@@ -329,6 +430,12 @@ function AllocationRow({
   onRemove,
   entering,
   leaving,
+  tasks,
+  open,
+  onOpen,
+  choices,
+  days,
+  onPlace,
 }: {
   id: string;
   hatId: string;
@@ -340,11 +447,21 @@ function AllocationRow({
   onRemove: () => void;
   entering?: boolean;
   leaving?: boolean;
+  tasks: Task[];
+  open: string | null;
+  onOpen: (id: string | null) => void;
+  choices: Allocation[];
+  days: Day[];
+  onPlace: (hatId: string, taskId: string, allocationId: string | null) => void;
 }) {
   const drag = useDraggable({ id: `move:${id}`, data: { kind: "allocation", allocationId: id, hatId } });
   const drop = useDroppable({ id: `alloc:${id}` });
+  // A day's tasks stay folded under their role until asked for, so a busy week stays scannable.
+  const [showTasks, setShowTasks] = useState(false);
+  const listId = `tasks-${id}`;
   return (
-    <li ref={drop.setNodeRef} className={`flex items-center gap-1 rounded-2xl bg-canvas ps-2${entering ? " descend-in" : ""}${leaving ? " ascend-out" : ""}`}>
+    <li ref={drop.setNodeRef} className={`rounded-2xl bg-canvas${entering ? " descend-in" : ""}${leaving ? " ascend-out" : ""}`}>
+      <div className="flex items-center gap-1 ps-2">
       <button
         ref={drag.setNodeRef}
         type="button"
@@ -356,11 +473,35 @@ function AllocationRow({
       >
         <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
       </button>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+      {tasks.length > 0 ? (
+        <button
+          type="button"
+          className="flex min-h-11 min-w-0 flex-1 flex-col items-start justify-center text-start"
+          aria-expanded={showTasks}
+          aria-controls={listId}
+          onClick={() => setShowTasks(!showTasks)}
+        >
+          <span className="w-full truncate text-sm font-medium">{name}</span>
+          <span className="flex items-center gap-0.5 text-xs text-secondary">
+            {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+            <ChevronDown className={`size-3.5 transition-transform${showTasks ? " rotate-180" : ""}`} strokeWidth={2.6} aria-hidden="true" />
+          </span>
+        </button>
+      ) : (
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+      )}
       <DayHours value={hours} label={`${name} on ${day}`} onChange={onHours} />
       <button type="button" aria-label={`Remove ${name} from ${day}`} className="grid size-11 place-items-center text-tertiary" onClick={onRemove}>
         <Minus className="size-4" />
       </button>
+      </div>
+      {tasks.length > 0 && showTasks && (
+        <ul id={listId} className="mx-2 mb-2 overflow-hidden rounded-xl bg-elevated" aria-label={`${name} tasks on ${day}`}>
+          {tasks.map((task) => (
+            <TaskLine key={task.id} task={task} hatId={hatId} open={open} onOpen={onOpen} choices={choices} days={days} onPlace={onPlace} current={id} />
+          ))}
+        </ul>
+      )}
     </li>
   );
 }
@@ -377,5 +518,229 @@ function DayHours({ value, label, onChange }: { value: number; label: string; on
         <Plus className="size-4" />
       </button>
     </div>
+  );
+}
+
+type Day = { label: string; date: string };
+
+/** Up to this many unplaced tasks, the tray's role groups start open. */
+const TRAY_OPEN_ALL = 5;
+/** Tasks an open group shows before "Show N more". */
+const GROUP_PREVIEW = 6;
+
+function labelOf(active: ActiveDrag | undefined, hats: Map<string, { name: string }>): string {
+  if (!active) return "item";
+  if (active.kind === "task") return `task ${active.text}`;
+  return hats.get(active.hatId)?.name ?? "spread";
+}
+
+function overLabel(id: string, days: Day[], allocations: Allocation[], hats: Map<string, { name: string }>): string {
+  if (id === TRAY_ID) return "To place";
+  if (id.startsWith("day:")) return days.find((day) => day.date === id.slice(4))?.label ?? "a day";
+  if (id.startsWith("alloc:")) {
+    const found = allocations.find((item) => item.id === id.slice(6));
+    if (!found) return "a spread";
+    return `${hats.get(found.hatId)?.name ?? "a spread"} on ${days.find((day) => day.date === found.day)?.label ?? "a day"}`;
+  }
+  return "a place";
+}
+
+function ToPlaceTray({
+  tasks,
+  hatsById,
+  hot,
+  open,
+  onOpen,
+  choices,
+  days,
+  onPlace,
+}: {
+  tasks: { hatId: string; task: Task }[];
+  hatsById: Map<string, { name: string; color: string }>;
+  hot: boolean;
+  open: string | null;
+  onOpen: (id: string | null) => void;
+  choices: (hatId: string) => Allocation[];
+  days: Day[];
+  onPlace: (hatId: string, taskId: string, allocationId: string | null) => void;
+}) {
+  const { setNodeRef } = useDroppable({ id: TRAY_ID });
+  // A task can only go on its own role's days, so the tray is grouped by role. Every task a person
+  // already has starts here: past a handful, the groups start folded and open one at a time.
+  const groups: { hatId: string; tasks: Task[] }[] = [];
+  for (const { hatId, task } of tasks) {
+    const group = groups.find((item) => item.hatId === hatId);
+    if (group) group.tasks.push(task);
+    else groups.push({ hatId, tasks: [task] });
+  }
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  const [full, setFull] = useState<Record<string, boolean>>({});
+  const isOpen = (hatId: string) => toggled[hatId] ?? tasks.length <= TRAY_OPEN_ALL;
+  return (
+    <section
+      ref={setNodeRef}
+      aria-label="To place"
+      className={`mt-4 rounded-3xl border-2 border-dashed px-3 transition-colors ${
+        hot ? "border-accent bg-accent/10" : "border-tertiary/50"
+      } ${tasks.length === 0 ? "py-2" : "py-3"}`}
+    >
+      <div className="flex min-h-7 items-center gap-2 px-1">
+        <Inbox className="size-4 text-secondary" strokeWidth={2.4} aria-hidden="true" />
+        <h2 className="flex-1 text-sm font-semibold">To place</h2>
+        {tasks.length === 0 ? (
+          <span className="text-xs text-secondary">Drop a task here to take it off its day.</span>
+        ) : (
+          <span className="grid h-6 min-w-6 place-items-center rounded-full bg-fill px-2 text-xs font-semibold tabular-nums" aria-label={`${tasks.length} to place`}>
+            {tasks.length}
+          </span>
+        )}
+      </div>
+      {groups.length > 0 && (
+        <ul className="mt-2 overflow-hidden rounded-2xl bg-elevated">
+          {groups.map((group, index) => {
+            const hat = hatsById.get(group.hatId);
+            const name = hat?.name ?? "";
+            const opened = isOpen(group.hatId);
+            const listId = `to-place-${group.hatId}`;
+            const count = group.tasks.length;
+            const showAll = full[group.hatId] || count <= GROUP_PREVIEW;
+            const shown = showAll ? group.tasks : group.tasks.slice(0, GROUP_PREVIEW);
+            return (
+              <li key={group.hatId} className={index > 0 ? "border-t border-line" : undefined}>
+                <button
+                  type="button"
+                  className="flex h-12 w-full items-center gap-3 px-4 text-start"
+                  aria-expanded={opened}
+                  aria-controls={listId}
+                  onClick={() => setToggled((current) => ({ ...current, [group.hatId]: !opened }))}
+                >
+                  <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: hat?.color ?? "var(--tertiary)" }} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{name}</span>
+                  <span className="text-xs text-secondary tabular-nums">
+                    {count} {count === 1 ? "task" : "tasks"}
+                  </span>
+                  <ChevronDown className={`size-4 text-tertiary transition-transform${opened ? " rotate-180" : ""}`} strokeWidth={2.6} aria-hidden="true" />
+                </button>
+                {opened && (
+                  <ul id={listId} className="border-t border-line" aria-label={`${name} tasks to place`}>
+                    {shown.map((task) => (
+                      <TaskLine key={task.id} task={task} hatId={group.hatId} open={open} onOpen={onOpen} choices={choices(group.hatId)} days={days} onPlace={onPlace} current={null} />
+                    ))}
+                    {!showAll && (
+                      <li className="border-t border-line">
+                        <button type="button" className="h-11 w-full text-sm font-semibold text-accent" onClick={() => setFull((current) => ({ ...current, [group.hatId]: true }))}>
+                          Show {count - GROUP_PREVIEW} more
+                        </button>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * One task in a list: a grip to drag it, its text, and Place (or Move to). The days it can go on
+ * open as a row of small chips under it.
+ */
+function TaskLine({
+  task,
+  hatId,
+  open,
+  onOpen,
+  choices,
+  days,
+  onPlace,
+  current,
+}: {
+  task: Task;
+  hatId: string;
+  open: string | null;
+  onOpen: (id: string | null) => void;
+  choices: Allocation[];
+  days: Day[];
+  onPlace: (hatId: string, taskId: string, allocationId: string | null) => void;
+  current: string | null;
+}) {
+  const drag = useDraggable({ id: `task:${task.id}`, data: { kind: "task", hatId, taskId: task.id, text: task.text } });
+  const expanded = open === task.id;
+  const text = task.text || "Untitled task";
+  return (
+    <li className="border-t border-line first:border-t-0">
+      <div className="flex items-center">
+        <button
+          ref={drag.setNodeRef}
+          type="button"
+          data-drag="task"
+          aria-label={`Move task ${task.text}`}
+          className="grid size-11 shrink-0 touch-none place-items-center text-tertiary"
+          {...drag.listeners}
+          {...drag.attributes}
+        >
+          <GripVertical className="size-4" aria-hidden="true" />
+        </button>
+        <span className={`min-w-0 flex-1 truncate text-sm${task.done ? " text-tertiary line-through" : ""}`}>{text}</span>
+        {!task.done && (
+          <button
+            type="button"
+            className="h-11 shrink-0 px-4 text-sm font-semibold text-accent"
+            aria-expanded={expanded}
+            onClick={() => onOpen(expanded ? null : task.id)}
+          >
+            {current ? "Move to" : "Place"}
+          </button>
+        )}
+      </div>
+      {expanded && (
+        <ul className="flex flex-wrap gap-2 pe-3 pb-3 ps-11" aria-label={`Days for ${task.text}`}>
+          {choices.length === 0 && <li className="py-2 text-sm text-tertiary">This role isn’t on a day yet. Add it to a day first.</li>}
+          {choices.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                disabled={item.id === current}
+                aria-current={item.id === current ? "true" : undefined}
+                className="flex h-11 items-center gap-1.5 rounded-full bg-fill px-4 text-sm font-semibold disabled:opacity-40"
+                onClick={() => onPlace(hatId, task.id, item.id)}
+              >
+                {days.find((day) => day.date === item.day)?.label ?? item.day}
+                <span className="font-normal tabular-nums text-secondary">{item.hours}h</span>
+              </button>
+            </li>
+          ))}
+          {current && (
+            <li>
+              <button type="button" className="h-11 rounded-full bg-fill px-4 text-sm font-semibold text-danger" onClick={() => onPlace(hatId, task.id, null)}>
+                Take off this day
+              </button>
+            </li>
+          )}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+function FreeTimeChip({ item, name, color, onAdd }: { item: Suggestion; name: string; color: string; onAdd: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        className="flex h-11 items-center gap-2 rounded-full bg-accent/10 ps-3 pe-4 text-sm font-semibold text-accent"
+        aria-label={`Add ${item.hours} ${item.hours === 1 ? "hour" : "hours"} of ${name} on ${item.dayLabel}`}
+        onClick={onAdd}
+      >
+        <Plus className="size-4" strokeWidth={2.7} aria-hidden="true" />
+        <span className="size-2 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
+        <span className="text-ink">{name}</span>
+        <span>{item.dayLabel.slice(0, 3)}</span>
+        <span className="tabular-nums opacity-70">{item.hours}h</span>
+      </button>
+    </li>
   );
 }

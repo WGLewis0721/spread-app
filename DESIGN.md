@@ -198,3 +198,5 @@ This direction was built in passes: a foundation pass, a refinement pass, a hero
 - one radius and border language across buttons, cards and badges
 
 Their palettes, fonts and content were not used.
+
+The planner screens (not the landing page) follow `docs/design/SPREAD_DESIGN_SYSTEM.md`.

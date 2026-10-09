@@ -5,7 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import { formatWeek, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
+import { formatWeek, isoDate, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
 import { ACCENTS, consumeArrival, onSaveFailure, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
@@ -25,6 +25,12 @@ import { WeekPaper } from "@/spread/components/week-paper";
 import { SpreadIcon } from "@/spread/components/spread-icon";
 import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
+import { deriveLocalStatus, getSaveFacts, subscribeSaveFacts } from "@/lib/spread/local-status";
+import { openTasksOf } from "@/lib/spread/task-rollover";
+import { placedDay } from "@/lib/spread/task-schedule";
+import { completionHaptic } from "@/lib/spread/haptics";
+import { readViewContext, writeViewContext } from "@/lib/spread/view-context";
+import { showUndoToast } from "@/spread/ui/undo-toast";
 import { WeeklyView, SpreadBubbleStrip } from "@/spread/components/weekly-view";
 import { MonthView } from "@/spread/components/month-view";
 import { WeekCrown } from "@/spread/components/week-crown";
@@ -398,8 +404,23 @@ function WeekScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
-  const [view, setView] = useState<"spread" | "week">("spread");
-  const [plane, setPlane] = useState<"week" | "month">("week");
+  const profileId = useSpread((s) => s.activeId);
+  const [view, setView] = useState<"spread" | "week">(() => readViewContext(safeStorage(), useSpread.getState().activeId).view);
+  const [plane, setPlane] = useState<"week" | "month">(() => readViewContext(safeStorage(), useSpread.getState().activeId).plane);
+  // Which profile `view` and `plane` belong to. Until a newly opened profile's place is loaded, its
+  // key is not written, so one profile's view can never be saved under another's.
+  const [viewOwner, setViewOwner] = useState(profileId);
+  useEffect(() => {
+    if (viewOwner === profileId) return;
+    const remembered = readViewContext(safeStorage(), profileId);
+    setView(remembered.view);
+    setPlane(remembered.plane);
+    setViewOwner(profileId);
+  }, [profileId, viewOwner]);
+  useEffect(() => {
+    if (viewOwner !== profileId) return;
+    writeViewContext(safeStorage(), profileId, { view, plane });
+  }, [view, plane, profileId, viewOwner]);
   const [motion, setMotion] = useState<"to-month" | "to-week" | null>(null);
   const [monthCursor, setMonthCursor] = useState<MonthCursor>(() => dominantMonth(weekKey()));
   const [monthDir, setMonthDir] = useState<-1 | 1 | 0>(0);
@@ -422,6 +443,7 @@ function WeekScreen() {
   const [gears, setGears] = useState(false);
   const [openTask, setOpenTask] = useState<{ hatId: string; taskId: string } | null>(null);
   const [rolloverAsk, setRolloverAsk] = useState(false);
+  const [carryAsk, setCarryAsk] = useState(false);
   const [gesture, setGesture] = useState(0);
   const [shift, setShift] = useState(0);
   const [dir, setDir] = useState<-1 | 1 | 0>(0);
@@ -667,6 +689,7 @@ function WeekScreen() {
                 key={key}
                 type="button"
                 role="tab"
+                aria-label={label}
                 aria-selected={view === key}
                 className={cn(
                   "flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
@@ -752,9 +775,13 @@ function WeekScreen() {
           ) : (
             <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : arrive ? "enter" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(-1) : followStyle(shift)}>
               <div className={cn("week-seq-item", profilePlay && "cascade-item")}>
-                <Summary rows={rows} onRollover={() => {
-                  if (rollover(false) === "confirm") setRolloverAsk(true);
-                }} />
+                <Summary
+                  rows={rows}
+                  onRollover={() => {
+                    if (rollover(false) === "confirm") setRolloverAsk(true);
+                  }}
+                  onReview={openTasksOf(data).length > 0 ? () => setCarryAsk(true) : undefined}
+                />
               </div>
               <div className="mt-6 overflow-hidden rounded-[22px] bg-elevated">
                 {rows.map(({ hat, box }, index) => (
@@ -847,6 +874,7 @@ function WeekScreen() {
           setRolloverAsk(false);
         }}
       />
+      <CarryOverSheet open={carryAsk} onClose={() => setCarryAsk(false)} />
       {openTask && (
         <TaskSheet hatId={openTask.hatId} taskId={openTask.taskId} onClose={() => setOpenTask(null)} />
       )}
@@ -877,7 +905,7 @@ type Row = {
   box: { hours: number; tasks: { done: boolean }[] };
 };
 
-function Summary({ rows, onRollover }: { rows: Row[]; onRollover: () => void }) {
+function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () => void; onReview?: () => void }) {
   const totalHours = rows.reduce((sum, row) => sum + Number(row.box.hours || 0), 0);
   const taskCount = rows.reduce((sum, row) => sum + row.box.tasks.length, 0);
   const done = rows.reduce((sum, row) => sum + row.box.tasks.filter((task) => task.done).length, 0);
@@ -912,10 +940,17 @@ function Summary({ rows, onRollover }: { rows: Row[]; onRollover: () => void }) 
       {totalHours > 45 && (
         <p className="mt-1 text-xs text-caution">If the hours don’t fit, something is lying.</p>
       )}
-      <button type="button" className="mt-3 flex items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
-        <SpreadIcon name="icon-rollover.svg" size={24} />
-        Rollover
-      </button>
+      <div className="mt-1 flex flex-wrap items-center gap-x-6">
+        <button type="button" className="flex min-h-11 items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
+          <SpreadIcon name="icon-rollover.svg" size={24} />
+          Rollover
+        </button>
+        {onReview && (
+          <button type="button" className="flex min-h-11 items-center text-sm font-semibold text-accent" onClick={onReview}>
+            Review open tasks
+          </button>
+        )}
+      </div>
     </section>
   );
 }
@@ -1240,11 +1275,26 @@ function TaskRow({
   onOpen,
 }: {
   hatId: string;
-  task: { id: string; text: string; done: boolean };
+  task: { id: string; text: string; done: boolean; allocationId?: string };
   delay?: string;
   onOpen: () => void;
 }) {
   const toggleTask = useSpread((s) => s.toggleTask);
+  // Select a plain string, never a fresh object: a new object on every read makes React re-render
+  // forever ("Maximum update depth exceeded").
+  const placedOn = useSpread((s) => placedDay(s.data.weeks[s.data.currentWeek], task));
+  const currentWeek = useSpread((s) => s.data.currentWeek);
+  const assignTask = useSpread((s) => s.assignTask);
+  const undoable = useSpread((s) => s.undoable);
+  const undoEdit = useSpread((s) => s.undoEdit);
+  const day = placedOn && !task.done ? weekDays(currentWeek).find((item) => item.date === placedOn) : undefined;
+  const isToday = day?.date === isoDate(new Date());
+  function notToday() {
+    const id = undoable(() => {
+      assignTask(hatId, task.id, null);
+    });
+    if (id) showUndoToast("Not today. It’s back in To place.", () => undoEdit(id));
+  }
   return (
     <li className={delay ? "cascade-item" : undefined} style={delay ? { animationDelay: delay } : undefined}>
       <div className="ms-[4.75rem] border-t border-line" />
@@ -1254,7 +1304,10 @@ function TaskRow({
           role="checkbox"
           aria-checked={task.done}
           aria-label={task.done ? `Mark not done: ${task.text}` : `Mark done: ${task.text}`}
-          onClick={() => toggleTask(hatId, task.id)}
+          onClick={() => {
+            if (!task.done) void completionHaptic();
+            toggleTask(hatId, task.id);
+          }}
           className="grid size-14 shrink-0 place-items-center"
         >
           {task.done ? (
@@ -1272,8 +1325,19 @@ function TaskRow({
           )}
         >
           <span className="min-w-0 flex-1 truncate">{task.text}</span>
+          {day && !isToday && (
+            <span className="ms-2 shrink-0 text-xs font-semibold text-secondary">
+              <span aria-hidden="true">{day.label.slice(0, 3)}</span>
+              <span className="sr-only">, on {day.label}</span>
+            </span>
+          )}
           <ChevronRight className="size-5 shrink-0 text-tertiary" />
         </button>
+        {isToday && (
+          <button type="button" className="h-14 shrink-0 pe-4 ps-1 text-sm font-semibold text-accent" aria-label={`Not today: ${task.text}`} onClick={notToday}>
+            Not today
+          </button>
+        )}
       </div>
     </li>
   );
@@ -1660,6 +1724,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       <Dialog.Description className="mt-1 text-sm text-secondary">
         {native ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
       </Dialog.Description>
+      <LocalStatusRow />
       <ProfilesSection
         onSwitched={(who) => {
           toast(`Switched to ${who}.`);
@@ -2666,5 +2731,98 @@ function RemoveDialog({ hat, onClose }: { hat: Hat | null; onClose: () => void }
         </AlertDialog.Content>
       </AlertDialog.Portal>
     </AlertDialog.Root>
+  );
+}
+
+function safeStorage(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function CarryOverSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const data = useSpread((s) => s.data);
+  const carryOver = useSpread((s) => s.carryOver);
+  const items = openTasksOf(data);
+  const [off, setOff] = useState<Set<string>>(new Set());
+  // Every review starts with everything chosen, whatever was unticked last time.
+  useEffect(() => {
+    if (open) setOff(new Set());
+  }, [open]);
+  const hats = new Map(data.hats.map((hat) => [hat.id, hat]));
+  const key = (hatId: string, taskId: string) => `${hatId}:${taskId}`;
+  const chosen = items.filter((item) => !off.has(key(item.hatId, item.task.id)));
+
+  function confirm() {
+    const moved = carryOver(chosen.map((item) => ({ hatId: item.hatId, taskId: item.task.id })));
+    toast(moved === 0 ? "Nothing to move." : `${moved} ${moved === 1 ? "task" : "tasks"} moved to next week.`);
+    setOff(new Set());
+    onClose();
+  }
+
+  return (
+    <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
+        <Dialog.Content className="sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none">
+          <Grabber />
+          <Dialog.Title className="text-lg font-semibold">Open tasks</Dialog.Title>
+          <Dialog.Description className="mt-1 text-sm text-secondary">
+            Pick what moves to next week. The rest stays here. Next week’s own tasks and days are not touched.
+          </Dialog.Description>
+          <ul className="mt-4 overflow-hidden rounded-3xl bg-canvas">
+            {items.map((item, index) => {
+              const id = key(item.hatId, item.task.id);
+              const on = !off.has(id);
+              return (
+                <li key={id} className={cn(index > 0 && "border-t border-line")}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    className="flex min-h-12 w-full items-center gap-3 px-4 text-left"
+                    onClick={() =>
+                      setOff((current) => {
+                        const next = new Set(current);
+                        if (on) next.add(id);
+                        else next.delete(id);
+                        return next;
+                      })
+                    }
+                  >
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full border-2" style={{ borderColor: on ? "var(--accent)" : "var(--tertiary)" }}>
+                      {on && <Check className="size-4 text-accent" aria-hidden="true" />}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-base">{item.task.text || "Untitled task"}</span>
+                    <span className="shrink-0 text-xs text-secondary">{hats.get(item.hatId)?.name}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-4 grid grid-cols-2 gap-2 pb-2">
+            <button type="button" className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={onClose}>
+              Not now
+            </button>
+            <button type="button" disabled={chosen.length === 0} className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-40" onClick={confirm}>
+              Move {chosen.length}
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function LocalStatusRow() {
+  const facts = useSyncExternalStore(subscribeSaveFacts, getSaveFacts, getSaveFacts);
+  const status = deriveLocalStatus(facts, new Date());
+  return (
+    <div className="mt-3 rounded-2xl bg-canvas px-4 py-3" role="status">
+      <p className={cn("text-sm font-semibold", status.tone === "problem" && "text-danger")}>{status.title}</p>
+      <p className="mt-0.5 text-xs text-secondary">{status.detail}</p>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import json, sys
+import json, re, sys
 from playwright.sync_api import sync_playwright
 
 fs = {}
@@ -47,6 +47,27 @@ with sync_playwright() as p:
     mirrored = [json.loads(v) for k, v in fs.items() if k.startswith('spread-mirror-')]
     newest = max(mirrored, key=lambda d: d['seq'])
     check('the snapshot file follows the change', 'Sunday review' in newest['entries'].get(store_key(), ''), f"seq {newest['seq']}")
+
+    # Put the task on today with the tap path. A placed task once crashed the whole planner
+    # (Spread view re-rendered forever), so the Spread view must still render it, and Not today and
+    # Undo must round-trip through storage.
+    task_of = lambda: next((t for b in json.loads(page.evaluate("(k)=>localStorage.getItem(k)", store_key()))['weeks'].values() for x in b['boxes'] for t in x['tasks'] if t['text'] == 'Sunday review'), {})
+    today = page.evaluate("(() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; })()")
+    page.get_by_role('tab', name='Week').click(); page.wait_for_timeout(800)
+    page.locator('button[data-drag="spread"]').first.click(); page.wait_for_timeout(500)
+    page.locator(f'section[data-day="{today}"]').get_by_role('button', name=re.compile('^Add ')).click(); page.wait_for_timeout(500)
+    page.locator('section[aria-label="To place"] li', has_text='Sunday review').get_by_role('button', name='Place').click(); page.wait_for_timeout(300)
+    page.locator('ul[aria-label="Days for Sunday review"] button').first.click(); page.wait_for_timeout(500)
+    placed = task_of().get('allocationId')
+    check('a task is placed on today from To place', bool(placed), str(task_of()))
+    page.get_by_role('tab', name='Spread').click(); page.wait_for_timeout(800)
+    check('the Spread view still renders a placed task', page.get_by_text('Something went wrong').count() == 0 and page.get_by_role('button', name='Not today: Sunday review').count() == 1)
+    page.get_by_role('button', name='Not today: Sunday review').click(); page.wait_for_timeout(400)
+    check('Not today takes it off the day and keeps it', task_of().get('allocationId') is None and task_of().get('text') == 'Sunday review')
+    check('only the latest change offers Undo', page.get_by_role('button', name='Undo').count() == 1)
+    page.get_by_role('button', name='Undo').click(); page.wait_for_timeout(400)
+    check('Undo puts it back on the same day', task_of().get('allocationId') == placed)
+    page.screenshot(path=f'{SHOTS}/e2e-placed.png')
 
     # More sheet content on the phone.
     page.get_by_label('Settings').click(); page.wait_for_timeout(500)

@@ -15,6 +15,10 @@ import {
   cleanName,
   type Profile,
 } from "@/lib/spread/profiles";
+import { carryOpenTasks, type CarryPick } from "@/lib/spread/task-rollover";
+import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
+import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
+import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
 import { create } from "zustand";
 import {
   cloneWeek,
@@ -102,6 +106,14 @@ type Store = {
   moveSpreadToDay: (hatId: string, day: string, hours?: number) => void;
   changeWeek: (direction: -1 | 1 | "today") => void;
   removeAllocation: (allocationId: string) => void;
+  /** Move the chosen unfinished tasks to next week (ids kept). Returns how many moved. Safe to repeat. */
+  carryOver: (picks: CarryPick[]) => number;
+  /** Run one change and remember it so it can be undone. Returns an edit id, or null when nothing changed. */
+  undoable: (run: () => void) => string | null;
+  /** Reverse that change. False when the week has changed since, so newer work is never overwritten. */
+  undoEdit: (editId: string) => boolean;
+  /** Put a task on a day (an allocation of its own role), or take it off every day with null. */
+  assignTask: (hatId: string, taskId: string, allocationId: string | null) => { ok: true; changed: boolean } | { ok: false; reason: AssignFailure };
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
   copyLastWeek: () => boolean;
   /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
@@ -247,15 +259,19 @@ let schemaLocked = false;
  */
 function put(key: string, value: string): boolean {
   if (schemaLocked) {
+    noteSaveFailed("newer");
     reportFailure("newer");
     return false;
   }
   try {
     localStorage.setItem(key, value);
   } catch (error) {
-    reportFailure(isFullError(error) ? "full" : "unavailable");
+    const kind = isFullError(error) ? "full" : "unavailable";
+    noteSaveFailed(kind);
+    reportFailure(kind);
     return false;
   }
+  noteSaved();
   failureReported = false;
   notifyStorageChanged();
   return true;
@@ -375,6 +391,8 @@ function bindFlush() {
 function persist(data: SpreadData) {
   put(activeStore, JSON.stringify(data));
 }
+
+let editStack: WeekEdit[] = [];
 
 let pending: SpreadData | null = null;
 let persistTimer: number | null = null;
@@ -739,6 +757,10 @@ export const useSpread = create<Store>((set, get) => ({
       allocations = allocations.map((item) =>
         item.id === sameDay.id ? { ...item, hours: clampHours(item.hours + current.hours) } : item,
       );
+      // Tasks on the folded allocation follow the one that survives.
+      const next = writeWeek(data, repointTasks({ ...week, allocations }, current.id, sameDay.id));
+      commit(set, next);
+      return;
     } else {
       const siblings = allocations.filter((item) => item.day === day);
       const nextOrder = order ?? siblings.reduce((max, item) => Math.max(max, item.order), -1) + 1;
@@ -774,6 +796,35 @@ export const useSpread = create<Store>((set, get) => ({
   },
   changeWeek: (direction) => {
     get().moveWeek(direction);
+  },
+  carryOver: (picks) => {
+    const data = ensureWeek(get().data);
+    const result = carryOpenTasks(data, picks);
+    if (result.data !== data) commit(set, result.data);
+    return result.moved;
+  },
+  undoable: (run) => {
+    const before = get().data;
+    run();
+    const edit = makeEdit(uid(), get().activeId ?? "", before, get().data);
+    if (!edit) return null;
+    editStack = pushEdit(editStack, edit);
+    return edit.id;
+  },
+  undoEdit: (editId) => {
+    const edit = editStack.find((item) => item.id === editId);
+    if (!edit) return false;
+    const state = get();
+    if (!canUndo(edit, state.activeId ?? "", state.data)) return false;
+    editStack = editStack.filter((item) => item.id !== editId);
+    commit(set, applyUndo(edit, state.data));
+    return true;
+  },
+  assignTask: (hatId, taskId, allocationId) => {
+    const data = ensureWeek(get().data);
+    const result = assignTaskTo(data, hatId, taskId, allocationId);
+    if (result.ok && result.changed) commit(set, result.data);
+    return result.ok ? { ok: true, changed: result.changed } : result;
   },
   removeAllocation: (allocationId) => {
     const data = ensureWeek(get().data);

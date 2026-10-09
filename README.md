@@ -40,15 +40,24 @@ src/lib/spread            week data and actions
 src/styles.css            app styles, then the landing block ("Landing page only")
 ```
 
+Planner UI rules: [docs/design/SPREAD_DESIGN_SYSTEM.md](docs/design/SPREAD_DESIGN_SYSTEM.md).
+
 Gestures call actions. They do not write week data themselves.
 
 - `changeWeek()`
 - `moveSpreadToDay()`
 - `moveAllocation()`
 - `reorderAllocation()`
+- `assignTask()` (put a task on a day of its own role, or take it off)
+- `undoable()` and `undoEdit()` (one reversible change to the open week)
+- `carryOver()` (move chosen open tasks to next week)
 
 A touch holds briefly before a drag. A mouse or pen starts after a short move. A week swipe stays separate and waits while a drag is active.
 
+- Tasks can be placed on a day. In Week, **To place** lists open tasks with no day, grouped by role; drag one onto its role on a day, or tap **Place** and pick the day. A task on today shows **Not today** in Spread, which puts it back. Drags, placements and Not today offer **Undo** for six seconds (the latest change only).
+- **Free time** in Week suggests up to three roles that still have hours not on a day, each on the lightest day ahead. Nothing is added until you tap one.
+- **Review open tasks** moves the tasks you pick to next week, keeping them as they are. It does not touch next week's own tasks and is safe to repeat.
+- Spread reopens on the view (Spread or Week, week or month) you left, per profile.
 - Rollover copies this week into next week. The week you leave stays as history. If next week already has tasks or days, Spread asks before replacing it.
 - Open a task and add only what you need: Notes, Outline, Table, or Photo. In Notes, a line that starts with I. or A. continues like a Word outline.
 - Tap a spread’s color dot to pick another color.

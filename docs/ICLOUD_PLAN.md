@@ -280,7 +280,7 @@ Updated 2026-10-08. "Merged" means on `main` with CI green. Nothing below has ru
 | 4a/4c-core | Merge, planner split, sync state machine, link planning, session | Merged (#27) |
 | 4b | Native `CKSyncEngine` transport | Merged (#28) |
 | 4c-ui | Link flow, conflict screens, status | Merged (#30) |
-| Audit | Independent audit found 2 critical, 7 high and 10 medium issues; fixes follow in stacked PRs, none merged yet | F1 #31 mass-delete guard, F2 #32 profile binding, F3 #33 adopt/replace, F6 #34 restore, F4 #35 payload integrity, F5 #36 durable pause, F7 #37 consent and safety copies, F8 hardening and docs |
+| Audit | Independent audit (Astra A01-A15) found 2 critical, 7 high and 10 medium issues. The fixes are merged (35761a9). A fresh re-audit of the fixed code has not been done | See `docs/audits/astra/` for the findings and the fix map |
 | Still owed | F0: CI running the Chromium simulators and Swift logic tests for the engine and storage (needs the logic moved into `SpreadCloudCore`); a fresh re-audit; the device gates below | Open |
 
 ### Where the build differs from the plan above

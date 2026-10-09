@@ -106,6 +106,17 @@ Apple-ready screenshots + still assets
 - [ ] macOS experience using the shared data model.
 - [ ] Focused Apple Watch companion rather than duplicating the full planner.
 
+## Planner UX pass (Unified UX)
+
+See `docs/SPREAD_UNIFIED_UX_IMPLEMENTATION.md` for the result matrix.
+
+- [x] Place tasks on days (drag, tap, keyboard), To place tray, Not today.
+- [x] Undo after drag, placement and Not today.
+- [x] Remember the view per profile; completion haptic on iPhone; free-time suggestions; open-task review.
+- [x] Truthful save status on this device; offline proof tests.
+- [ ] iPhone and iPad hardware pass for touch drag and haptics (not possible from CI).
+- [ ] App Intents, widgets, on-device suggestions: deferred until the data model gains task durations.
+
 ## Achievement 8 — Branded Landing Page
 
 The design direction is in [DESIGN.md](DESIGN.md). The full page is frozen as `golden/2026-09-28-full-landing-modes`.

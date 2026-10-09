@@ -174,6 +174,10 @@ A build goes to external TestFlight or App Review only when all of these hold. D
 9. Paid Apps Agreement, banking and tax complete; $2.99 set; universal purchase verified.
 10. Rollback rehearsed on a TestFlight build.
 
+## Planner UX pass checks (added 2026-10-08)
+
+Before the next TestFlight build, on a real iPhone and iPad: touch-hold drag of a task onto a day, Undo toast clears above the home indicator, the completion haptic fires once, Reduce Motion removes movement, and Airplane Mode planning loses nothing. `@capacitor/haptics` is the only new native plugin; it is a no-op on the web.
+
 ## 1.0 exit condition
 
 Spread is App Store ready when a customer can buy it once from the App Store, install it on an iPhone and/or an iPad, complete the full Responsibilities → Hours → Week → Tasks loop offline, close/reopen/update the app without losing data, restore their planner from an iCloud backup or a file, and get support without the planner depending on Vercel or an account service. Sync, if shipped, adds nothing to this bar and removes nothing from it.
