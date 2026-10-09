@@ -1130,29 +1130,31 @@ function RoleBlock({
             {hourChip(hours)}h
           </button>
         )}
-        {editing ? (
-          <button
-            type="button"
-            aria-label={`Remove ${hat.name}`}
-            className="grid size-11 shrink-0 place-items-center rounded-full text-danger"
-            onClick={onRemove}
-          >
-            <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger">
-              <Minus className="size-4" strokeWidth={3.6} />
-            </span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            aria-expanded={tasksOpen && taskMotion !== "out"}
-            aria-label={tasksOpen && taskMotion !== "out" ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
-            className="grid size-11 shrink-0 place-items-center text-secondary"
-            onClick={toggleTasks}
-          >
-            <ChevronRight className={cn("size-5 transition-transform duration-300", tasksOpen && taskMotion !== "out" && "rotate-90")} />
-          </button>
-        )}
+        <button
+          type="button"
+          aria-expanded={tasksOpen && taskMotion !== "out"}
+          aria-label={tasksOpen && taskMotion !== "out" ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
+          className="grid size-11 shrink-0 place-items-center text-secondary"
+          onClick={toggleTasks}
+        >
+          <ChevronRight className={cn("size-5 transition-transform duration-300", tasksOpen && taskMotion !== "out" && "rotate-90")} />
+        </button>
         </div>
+        {editing && (
+          <div className="border-t border-line px-4">
+            <button
+              type="button"
+              aria-label={`Remove ${hat.name}`}
+              className="flex min-h-11 w-full items-center gap-2 text-left text-sm font-medium text-danger"
+              onClick={onRemove}
+            >
+              <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger" aria-hidden="true">
+                <Minus className="size-4" strokeWidth={3} />
+              </span>
+              Remove {hat.name}
+            </button>
+          </div>
+        )}
       </div>
       {paletteOn && (
         <div className={cn("border-t border-line px-4 py-3", palettePhase === "out" ? "cascade cascade-out" : "cascade")}>
