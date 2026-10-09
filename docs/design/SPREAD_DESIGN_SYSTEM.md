@@ -37,6 +37,7 @@ Status is never colour alone: every state also has words.
 - **Drop highlight**: a 2 px `--accent` outline on the target. Refused drops explain themselves in a toast instead of doing something else.
 - **Status row**: a title, one quiet line of detail, `role="status"`. Problem state uses `--danger` on the title.
 - **Today**: the word "Today" in `--accent` beside the day name, with `aria-current="date"`.
+- **Spread/Week segmented tabs**: the selected tab is the Tab-stop; Left/Right or Home/End moves focus and changes the view. Each tab names the current panel. The global week-navigation keys yield when a control has focus.
 
 ## Motion
 

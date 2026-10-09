@@ -36,6 +36,20 @@ with sync_playwright() as p:
     check('no license is written to storage', page.evaluate("localStorage.getItem('spread.license')") is None)
     check('status bar style is synced on boot', page.evaluate("(window.__status||[]).length") >= 1, str(page.evaluate("window.__status")))
 
+    # The Spread/Week segmented tabs must work with only the keyboard, keep
+    # focus on the selected tab and expose its associated panel.
+    page.get_by_role('tab', name='Spread').focus()
+    page.keyboard.press('ArrowRight')
+    check('view tabs: Right switches to Week without changing focus context',
+          page.get_by_role('tab', name='Week').get_attribute('aria-selected') == 'true'
+          and page.get_by_role('tab', name='Week').evaluate('(e) => e === document.activeElement')
+          and page.get_by_role('tabpanel').get_attribute('aria-labelledby') == 'planner-tab-week')
+    page.keyboard.press('ArrowLeft')
+    check('view tabs: Left returns to Spread and panel is labeled',
+          page.get_by_role('tab', name='Spread').get_attribute('aria-selected') == 'true'
+          and page.get_by_role('tab', name='Spread').evaluate('(e) => e === document.activeElement')
+          and page.get_by_role('tabpanel').get_attribute('aria-labelledby') == 'planner-tab-spread')
+
     # Add a task through the UI.
     page.get_by_placeholder('What matters most here?').first.click()
     page.keyboard.type('Sunday review')
