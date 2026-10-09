@@ -295,15 +295,15 @@ function DayCard({
     <section
       ref={setNodeRef}
       data-day={date}
-      className="week-seq-item rounded-3xl bg-elevated px-3 py-3"
+      className={`week-seq-item rounded-3xl bg-elevated px-3 ${empty && !shown ? "py-2.5" : "py-3"}`}
       style={{ animationDelay: delay, outline: hot ? "2px solid var(--accent)" : undefined }}
     >
       <div className="flex items-center justify-between px-1">
         <h2 className="text-base font-semibold">{label}</h2>
         <span className="text-xs text-secondary tabular-nums">{date.slice(5).replace("-", "/")}</span>
       </div>
-      {empty && <p className="px-1 pt-2 text-sm text-tertiary">Nothing this day.</p>}
-      <ul className="mt-2 flex flex-col gap-2">{children}</ul>
+      {empty && <span className="sr-only">No responsibilities scheduled for {label}.</span>}
+      <ul className={`${empty ? "" : "mt-2 "}flex flex-col gap-2`}>{children}</ul>
       {shown && (
         <button
           type="button"
