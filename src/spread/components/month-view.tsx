@@ -39,12 +39,12 @@ export function MonthView({
               type="button"
               className="flex min-h-14 flex-col items-center rounded-2xl bg-elevated px-0.5 py-1.5 active:opacity-70"
               onClick={() => onPick(cell.date)}
-              aria-label={count === 0 ? `${label}. Nothing this day.` : `${label}. ${count} ${count === 1 ? "spread" : "spreads"}.`}
+              aria-label={`${todayCell ? "Today, " : ""}${label}. ${count === 0 ? "No responsibilities scheduled." : `${count} ${count === 1 ? "responsibility" : "responsibilities"} scheduled.`}`}
               aria-current={todayCell ? "date" : undefined}
             >
               <span
                 className={`grid size-7 place-items-center text-sm font-semibold tabular-nums ${
-                  todayCell ? "rounded-full bg-fill" : ""
+                  todayCell ? "rounded-full bg-accent text-on-accent" : ""
                 } ${cell.inMonth ? "" : "text-tertiary"}`}
               >
                 {cell.day}
