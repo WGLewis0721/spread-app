@@ -24,15 +24,15 @@ export function WeekCrown({
   const carry = useRef(0);
   const [local, setLocal] = useState(0);
   const [live, setLive] = useState(false);
-  const [hintVisible, setHintVisible] = useState(true);
-
-  useEffect(() => {
+  const [hintVisible, setHintVisible] = useState(() => {
+    if (typeof window === "undefined") return true;
     try {
-      if (window.localStorage.getItem("spread-crown-used") === "1") setHintVisible(false);
+      return window.localStorage.getItem("spread-crown-used") !== "1";
     } catch {
-      // The crown stays usable when browser storage is unavailable.
+      // Navigation remains available even without persistent browser storage.
+      return true;
     }
-  }, []);
+  });
 
   const move = useCallback(
     (direction: -1 | 1) => {
