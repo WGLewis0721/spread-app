@@ -680,7 +680,20 @@ function WeekScreen() {
             onMove={monthChrome ? goMonth : goWeek}
             onShift={monthChrome ? setMonthShift : setShift}
           />
-          <div className="mx-auto mt-3 grid w-fit grid-cols-2 rounded-full bg-fill p-1" role="tablist" aria-label="View">
+          <div
+            className="mx-auto mt-3 grid w-fit grid-cols-2 rounded-full bg-fill p-1"
+            role="tablist"
+            aria-label="View"
+            onKeyDown={(event) => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+              const tabs = event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+              const next = event.key === "ArrowLeft" || event.key === "Home" ? tabs[0] : tabs[1];
+              if (!next) return;
+              event.preventDefault();
+              next.focus();
+              next.click();
+            }}
+          >
             {(
               [
                 ["spread", "Spread", "icon-spread-list.svg"],
@@ -691,8 +704,11 @@ function WeekScreen() {
                 key={key}
                 type="button"
                 role="tab"
+                id={`planner-tab-${key}`}
+                aria-controls="planner-view-panel"
                 aria-label={label}
                 aria-selected={view === key}
+                tabIndex={view === key ? 0 : -1}
                 className={cn(
                   "flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
                   view === key ? "bg-segment text-ink shadow-sm" : "text-secondary",
@@ -725,7 +741,14 @@ function WeekScreen() {
           </div>
         </header>
 
-        <main key={activeId ?? "solo"} className="px-4 pt-2 pb-dock">
+        <main
+          key={activeId ?? "solo"}
+          id="planner-view-panel"
+          role="tabpanel"
+          aria-labelledby={`planner-tab-${view}`}
+          tabIndex={0}
+          className="px-4 pt-2 pb-dock"
+        >
           <h1 className="hidden print:block px-1 pt-4 text-2xl font-bold">Spread · {range}</h1>
           {view === "week" ? (
             <div className="layer-stack">
