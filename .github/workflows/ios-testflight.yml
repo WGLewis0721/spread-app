@@ -34,8 +34,8 @@ jobs:
     steps:
       - name: Require exact approved main commit and manual authorization
         env:
-          APPROVED_COMMIT: \${{ inputs.approved_commit }}
-          CONFIRM_INTERNAL: \${{ inputs.confirm_internal_only }}
+          APPROVED_COMMIT: ${{ inputs.approved_commit }}
+          CONFIRM_INTERNAL: ${{ inputs.confirm_internal_only }}
         shell: bash
         run: |
           set -euo pipefail
@@ -43,7 +43,7 @@ jobs:
           test "$CONFIRM_INTERNAL" = "true" || { echo "::error::Explicit authorization required"; exit 1; }
           test "$APPROVED_COMMIT" = "$GITHUB_SHA" || { echo "::error::Commit must match the current main SHA"; exit 1; }
           [[ "$APPROVED_COMMIT" =~ ^[0-9a-f]{40}$ ]] || exit 1
-          echo "Authorized exact commit $GITHUB_SHA for \${{ inputs.operation }}"
+          echo "Authorized exact commit $GITHUB_SHA for ${{ inputs.operation }}"
 
   sign-or-upload:
     needs: approve-source
@@ -52,13 +52,13 @@ jobs:
     environment:
       name: ios-internal-testflight
     env:
-      APPLE_TEAM_ID: \${{ vars.APPLE_TEAM_ID }}
-      MATCH_GIT_URL: \${{ vars.MATCH_GIT_URL }}
-      MATCH_GIT_BASIC_AUTHORIZATION: \${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-      MATCH_PASSWORD: \${{ secrets.MATCH_PASSWORD }}
-      ASC_KEY_ID: \${{ secrets.ASC_KEY_ID }}
-      ASC_ISSUER_ID: \${{ secrets.ASC_ISSUER_ID }}
-      ASC_KEY_P8_BASE64: \${{ secrets.ASC_KEY_P8_BASE64 }}
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
       # Never enable cloud features in an unreviewed distribution build.
       VITE_SPREAD_CLOUD_BACKUP: "0"
       VITE_SPREAD_CLOUD_SYNC: "0"
