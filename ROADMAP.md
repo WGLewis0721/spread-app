@@ -117,6 +117,17 @@ See `docs/SPREAD_UNIFIED_UX_IMPLEMENTATION.md` for the result matrix.
 - [ ] iPhone and iPad hardware pass for touch drag and haptics (not possible from CI).
 - [ ] App Intents, widgets, on-device suggestions: deferred until the data model gains task durations.
 
+## HIG planner refinement (2026-10-08)
+
+The refined controls and reference decisions are documented in [docs/design/SPREAD_DESIGN_SYSTEM.md](docs/design/SPREAD_DESIGN_SYSTEM.md). Scope is confined to existing planner presentation; the design PR does not touch the local/cloud data model.
+
+- [x] Crown supports focused keyboard arrows and wider navigation hit areas.
+- [x] Edit mode retains stable responsibility-row geometry instead of shifting the row.
+- [x] Capacity segments navigate to labeled responsibilities.
+- [x] Empty-day messages are quieter; Today has a clear marker in Month.
+- [ ] Review before/after screenshots at 390, 820, and 1024 px, in light/dark and reduced motion.
+- [ ] Verify crown, edit mode, month selection, and VoiceOver on physical iPhone/iPad. Do not equate CI with this device gate.
+
 ## Achievement 8 — Branded Landing Page
 
 The design direction is in [DESIGN.md](DESIGN.md). The full page is frozen as `golden/2026-09-28-full-landing-modes`.
