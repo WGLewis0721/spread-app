@@ -57,3 +57,37 @@ Every drag has a tap equivalent and a keyboard equivalent:
 3. Stored planner data is not migrated for UI work. New UI reads existing fields.
 4. Convenience state (last view) lives under a key that does not start with `spread.`, so backups never treat it as planner data.
 5. Select plain values from the store (strings, numbers, ids), never objects built in the selector: a new object on every read re-renders forever and takes the whole planner down.
+
+## Human Interface Guidelines polish — 2026-10-08
+
+Applies to the **planner** only. The landing page remains governed by `DESIGN.md`, and no new palette, typeface, component framework, or storage mechanism is introduced.
+
+| Surface | Refinement | Reason |
+| --- | --- | --- |
+| Crown | Existing metallic wheel remains; focused arrow-key navigation plus 44 px previous/next targets; interaction hint dismisses after first successful turn | Recognizable design with discoverable, non-gesture navigation and progressively quieter chrome |
+| Spread summary | Segmented responsibility-hours bar is now a set of labeled controls that scroll/focus the corresponding responsibility | Color has a usable, named interaction rather than remaining a legend the user must interpret |
+| Responsibility editing | Edit mode reveals a labeled Remove action below each responsibility while keeping the header (including its collapse chevron) in place | Stable geometry; destructive action remains explicitly labeled and requires the existing removal dialog |
+| Week day cards | Empty days retain their label/date and selected Add action, but omit repeating visual "Nothing this day" text | Less visual repetition; screen readers retain an empty-day description |
+| Month | Today marker uses the existing accent and on-accent tokens; spoken labels identify Today and task-free days | Selected/current date clearer in both appearances; no meaning conveyed only through a color dot |
+| Global arrows | Header-wide week navigation yields to focused controls and the crown's own keyboard handling | Respects keyboard expectations and prevents double navigation |
+
+### Reference decisions
+
+**Primary authority:** current Spread screenshots, `src/styles.css`, the frozen golden version, and the [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) (interaction affordance, focus, layout, accessibility and progressive disclosure).
+
+**Supplemental patterns only:**
+
+- [Refero / Linear changelog](https://linear.app/changelog) — calm dark-surface hierarchy and restrained control contrast; **do not** import Linear's colors, typography, or brand treatment.
+- [Refero / Cron calendar screen](https://refero.design/screens/13c5824c-344e-46c2-ade9-16931dfd69a4) — date-selection hierarchy; not a replacement calendar.
+- [Refero / Exoplan drag workflow](https://refero.design/flows/7349) — direct manipulation and visible drop guidance; existing Spread drag and Undo are preserved.
+- [Refero / Daylish rescheduling flow](https://refero.design/flows/8014) — clear change/confirmation feedback; avoid extra steps for simple moves.
+- [21st.dev calendar components](https://21st.dev) — implementation patterns and state variants, not runtime dependencies; individual licensing must be reviewed before copying code.
+- [Pinterest weekly planner search](https://www.pinterest.com/search/pins/?q=minimal%20weekly%20planner%20app%20ui) — spacing inspiration only, not licensed product assets.
+
+**Reference lock:** Keep the crown, Spread/Week/Month semantics, responsibility colors, hour bank, round surfaces, and the quiet palette. Reject unrelated navigation, invented brand colors, extra icon libraries, and decorative animation.
+
+### Verification gates
+
+Before the refinements are accepted for release, verify the full Responsibilities → Hours → Week → Tasks path; watch for unexpected row reflow when changing edit mode; exercise crown arrows, caps, wheel and touch; confirm accessibility of capacity-bar actions and Today labels; inspect 390/820/1024 px in both modes with Reduce Motion.
+
+Automated typecheck/lint/CI are necessary but **not substitutes for device and visual checks**. Existing PR #49 core-planner improvements are not redesigned here. iCloud and native release gates are unchanged.

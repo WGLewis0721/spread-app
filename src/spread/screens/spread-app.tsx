@@ -524,8 +524,10 @@ function WeekScreen() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      const tag = (event.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || sheet || motion) return;
+      if (event.defaultPrevented || event.metaKey || event.altKey || event.ctrlKey || sheet || motion) return;
+      // Arrow keys belong to whichever control has focus, not global week navigation.
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("button, input, textarea, select, [role='tab'], [role='group'], [contenteditable='true']")) return;
       if (monthChrome) {
         if (event.key === "ArrowLeft") goMonth(-1);
         if (event.key === "ArrowRight") goMonth(1);
@@ -642,7 +644,7 @@ function WeekScreen() {
               <button
                 type="button"
                 className={cn(
-                  "ml-auto h-8 max-w-[46%] truncate rounded-full bg-fill px-3 text-sm font-medium",
+                  "ml-auto min-h-11 max-w-[46%] truncate rounded-full bg-fill px-3 text-sm font-medium",
                   profilePlay && "descend-in",
                 )}
                 aria-label={`${activeName}, profiles`}
@@ -692,7 +694,7 @@ function WeekScreen() {
                 aria-label={label}
                 aria-selected={view === key}
                 className={cn(
-                  "flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
+                  "flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
                   view === key ? "bg-segment text-ink shadow-sm" : "text-secondary",
                 )}
                 onClick={() => {
@@ -921,16 +923,29 @@ function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () =
       </p>
       {totalHours > 0 && (
         <div
-          className="mt-3 flex h-2 gap-0.5"
-          role="img"
-          aria-label={`${formatHourLabel(totalHours)} boxed this week`}
+          className="mt-1 flex min-h-11 items-center gap-1 overflow-x-auto"
+          role="group"
+          aria-label={`${formatHourLabel(totalHours)} across responsibilities. Choose a color to jump to its responsibility.`}
         >
           {active.map((row) => (
-            <div
+            <button
               key={row.hat.id}
-              className="h-full min-w-1 rounded-full"
-              style={{ flexGrow: row.box.hours, flexBasis: 0, backgroundColor: row.hat.color }}
-            />
+              type="button"
+              className="flex h-11 min-w-11 shrink-0 items-center rounded-full focus-visible:outline-offset-1"
+              style={{ flexGrow: row.box.hours, flexBasis: 0 }}
+              aria-label={`Jump to ${row.hat.name}, ${formatHourLabel(row.box.hours)}`}
+              onClick={() => {
+                const target = document.getElementById(`spread-role-${row.hat.id}`);
+                if (!target) return;
+                target.scrollIntoView({
+                  block: "center",
+                  behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                });
+                target.focus({ preventScroll: true });
+              }}
+            >
+              <span className="block h-2 w-full rounded-full" style={{ backgroundColor: row.hat.color }} aria-hidden="true" />
+            </button>
           ))}
         </div>
       )}
@@ -1058,25 +1073,10 @@ function RoleBlock({
   }
 
   return (
-    <section className="print:break-inside-avoid">
+    <section id={`spread-role-${hat.id}`} tabIndex={-1} className="scroll-mt-48 print:break-inside-avoid">
       {!first && <div className="ms-16 border-t border-line" />}
       <div className="relative overflow-hidden">
-        <button
-          type="button"
-          aria-label={`Remove ${hat.name}`}
-          aria-hidden={!editing}
-          tabIndex={editing ? 0 : -1}
-          className={cn(
-            "edit-minus absolute start-1 top-2 grid size-11 place-items-center",
-            editing ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-2 opacity-0",
-          )}
-          onClick={onRemove}
-        >
-          <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger">
-            <Minus className="size-4" strokeWidth={3.6} />
-          </span>
-        </button>
-        <div className={cn("edit-shift flex min-h-16 items-center gap-3 px-4 py-2", editing && "edit-shift-on")}>
+        <div className="flex min-h-16 items-center gap-3 px-4 py-2">
         <button
           type="button"
           aria-label={`Color for ${hat.name}`}
@@ -1134,12 +1134,27 @@ function RoleBlock({
           type="button"
           aria-expanded={tasksOpen && taskMotion !== "out"}
           aria-label={tasksOpen && taskMotion !== "out" ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
-          className="grid size-8 shrink-0 place-items-center text-tertiary"
+          className="grid size-11 shrink-0 place-items-center text-secondary"
           onClick={toggleTasks}
         >
           <ChevronRight className={cn("size-5 transition-transform duration-300", tasksOpen && taskMotion !== "out" && "rotate-90")} />
         </button>
         </div>
+        {editing && (
+          <div className="border-t border-line px-4">
+            <button
+              type="button"
+              aria-label={`Remove ${hat.name}`}
+              className="flex min-h-11 w-full items-center gap-2 text-left text-sm font-medium text-danger"
+              onClick={onRemove}
+            >
+              <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger" aria-hidden="true">
+                <Minus className="size-4" strokeWidth={3} />
+              </span>
+              Remove {hat.name}
+            </button>
+          </div>
+        )}
       </div>
       {paletteOn && (
         <div className={cn("border-t border-line px-4 py-3", palettePhase === "out" ? "cascade cascade-out" : "cascade")}>

@@ -395,18 +395,6 @@ button:not(.crown-cap):active {
   animation: descend-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
-.edit-shift {
-  transition: transform 340ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.edit-shift-on {
-  transform: translateX(2.75rem);
-}
-
-.edit-minus {
-  transition: transform 340ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms ease;
-}
-
 .format-row {
   transition: transform 340ms cubic-bezier(0.32, 0.72, 0, 1), opacity 280ms ease, background-color 120ms ease;
 }
@@ -638,26 +626,44 @@ button:not(.crown-cap):active {
   backdrop-filter: blur(8px);
 }
 
+/* Keep the crown's narrow metal edge, but give navigation a full 44px hit area. */
 .crown-cap {
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 2;
+  width: 2.75rem;
+  background: transparent;
+  touch-action: manipulation;
+}
+
+.crown-cap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
   width: 0.72rem;
+  pointer-events: none;
+}
+
+.crown-cap-left { left: 0; }
+.crown-cap-left::after {
+  left: 0;
+  border-radius: 1.15rem 0 0 1.15rem;
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.38), rgba(255, 255, 255, 0.38) 55%, transparent);
   box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.55);
 }
 
-.crown-cap-left {
-  left: 0;
-  border-radius: 1.15rem 0 0 1.15rem;
-}
-
-.crown-cap-right {
+.crown-cap-right { right: 0; }
+.crown-cap-right::after {
   right: 0;
   border-radius: 0 1.15rem 1.15rem 0;
   background: linear-gradient(270deg, rgba(0, 0, 0, 0.38), rgba(255, 255, 255, 0.38) 55%, transparent);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.55);
+}
+.crown-cap:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
 }
 
 :root[data-theme="dark"] .crown-wheel {
