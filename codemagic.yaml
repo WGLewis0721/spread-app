@@ -1,0 +1,76 @@
+# Spread: existing React / Capacitor iOS application.
+# Manual only. Builds and uploads to App Store Connect, but never requests App Review.
+# Configure the Codemagic Developer Portal integration with the name "codemagic".
+workflows:
+  spread-ios-upload:
+    name: Spread - signed iOS upload
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.graymatter.spread
+      vars:
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 26.5
+    scripts:
+      - name: Require main and local-only release settings
+        script: |
+          set -eu
+          test "$CM_BRANCH" = main || { echo "Build must use main" >&2; exit 1; }
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
+          test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
+      - name: Install and check the planner
+        script: |
+          set -eu
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:spread
+          swift test --package-path ios/App/SpreadCloudCore
+      - name: Bundle Spread and synchronize the Capacitor app
+        script: npm run ios:sync
+      - name: Set unique build number and production push entitlement
+        script: |
+          set -eu
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          number = os.environ["BUILD_NUMBER"]
+          if not number.isdecimal() or int(number) < 1:
+              raise SystemExit("Codemagic must supply a positive numeric build number")
+          path = Path("ios/App/App.xcodeproj/project.pbxproj")
+          original = path.read_text()
+          modified, count = re.subn(
+              r"CURRENT_PROJECT_VERSION = [0-9]+;",
+              f"CURRENT_PROJECT_VERSION = {number};",
+              original,
+          )
+          if count != 2:
+              raise SystemExit(f"Expected 2 App build-number settings, found {count}")
+          path.write_text(modified)
+          print(f"Set App build number to {number} in temporary CI checkout")
+          PY
+          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
+      - name: Apply App Store distribution signing
+        script: xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
+            --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
