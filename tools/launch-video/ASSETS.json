@@ -140,8 +140,8 @@
     },
     {
       "path": "evidence/export-verification.json",
-      "sha256": "46E4DB1126012DE097421D5C6D6A44337A2F3A00F017573ECED5CB989BDA17B0",
-      "bytes": 1010
+      "sha256": "13CC5C10A40FDB66690305AA2B71F1DB642BF0EC28A1B2696DE08F27FE1B6CE4",
+      "bytes": 980
     },
     {
       "path": "evidence/female-v6-edit.json",
@@ -155,8 +155,8 @@
     },
     {
       "path": "evidence/male-edit.json",
-      "sha256": "864BAE1C811543DFD61C8ECB06367DD442613D983CB574D03DB0B7EDDD906394",
-      "bytes": 804
+      "sha256": "0EB7E91D5077CC3C88EA2DAF4A16A35687F002F4EB2E60E8D0E84C27DF9181B6",
+      "bytes": 758
     },
     {
       "path": "evidence/male-final-transcription-check.json",
@@ -255,8 +255,8 @@
     },
     {
       "path": "scripts/rebuild-audio.py",
-      "sha256": "B38CD6215937D20F5E8E465CAFFD809850C29A369AFA8A365B1AF55751757516",
-      "bytes": 5747
+      "sha256": "5F76EBD08A81ABEF95DAB8A1661FFD9680423090942AD126F012D7AB04896732",
+      "bytes": 5761
     },
     {
       "path": "scripts/smoke.mjs",
@@ -265,8 +265,8 @@
     },
     {
       "path": "scripts/verify-exports.py",
-      "sha256": "1ED1B7931CEC9736B99AAAE67DC6AE8BE37BD5058D4AF92DFD49FB1B18F44EA5",
-      "bytes": 3316
+      "sha256": "B3D8A8AD6029C955214139E97A8C1AC967BC49F9219140B7AD84A0D670F33BBC",
+      "bytes": 3330
     },
     {
       "path": "scripts/verify.mjs",

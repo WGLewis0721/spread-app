@@ -114,7 +114,7 @@ def build_male():
               "continuationRange": [10.29, 11.60], "pauseBeforeContinuationSeconds": .35,
               "pivotTargetStart": 8.7, "taglineSourceRange": [.60, 2.10], "taglineTargetStart": 27.90,
               "originalContinuousRanges": [[0, 8.7], [12, 27.35]], "peak": max(abs(v) for v in track) / 32768}
-    (ROOT / "evidence/male-edit.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    (ROOT / "evidence/male-edit.json").write_text(json.dumps(report, indent=2), encoding="utf-8", newline="\n")
     return report
 
 

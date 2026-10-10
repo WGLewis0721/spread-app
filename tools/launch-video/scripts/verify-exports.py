@@ -64,5 +64,5 @@ for cut in manifest["cuts"]:
                     "bytes": media.stat().st_size, "durationSeconds": float(probe["format"]["duration"]),
                     "decodedFrames": 900, "allStreamsDecoded": True, "video": "H.264 1080p30 yuv420p BT.709 limited",
                     "audio": "AAC stereo 48kHz", "audioPeak": peak, "audioRms": rms, "passed": True})
-(ROOT / "evidence/export-verification.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+(ROOT / "evidence/export-verification.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8", newline="\n")
 print(json.dumps(results, indent=2))
