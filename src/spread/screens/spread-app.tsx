@@ -297,7 +297,7 @@ function UnlockScreen() {
       </section>
 
       <LandingWaitlist />
-      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><span>Made by Gray Matter</span></footer>
+      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><a href="https://spread-app-teal.vercel.app/privacy">Privacy policy</a><span>Made by Gray Matter</span></footer>
     </main>
   );
 }
