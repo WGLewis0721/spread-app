@@ -14,6 +14,10 @@ Spread is a local-first weekly planner. You name the responsibilities in your li
 
 Work goes on a branch, through a pull request, into `main`.
 
+## Launch videos
+
+The [standalone launch-video workspace](tools/launch-video/README.md) preserves the approved version 7 Hallie film and a Grady male companion. It includes two editable Remotion compositions, source recordings, local assets, verified MP4s and reproducible build commands. Its dependencies and output are separate from the planner.
+
 ## The site
 
 The first screen is the public landing page and the way into the planner. Its design direction is written down in **[DESIGN.md](DESIGN.md)**: warm paper becoming a polished digital product, one focal object per section built from real product parts, the brand board, the type scale, motion rules and guardrails. Read it before changing the landing page.

@@ -1,0 +1,9 @@
+{
+  "composition": "SpreadGrady",
+  "narrationSha256": "0D90F06B17D92440C3B7D7CD0A13CE1D80D2AF7B164D2052B9E0C4ED8A88D73A",
+  "method": "Higgsfield automatic speech recognition of the assembled final narration, inspected during packaging on 2026-10-10",
+  "normalizedWordingMatches": true,
+  "transcript": "You wear a lot of hats. And somehow, one thing takes the whole week. Leaving too little for family. For yourself. So you pause. Write down what matters. Give each responsibility an hour or two. Draw a box. Give it a purpose. Add the tasks. That little plan becomes Spread. Responsibilities, hours, your week, your tasks. Make the hours count.",
+  "checks": ["Draw a box", "Spread", "Make the hours count"],
+  "limitation": "Transcription verifies wording; voice personality and creative approval remain a listening judgment."
+}

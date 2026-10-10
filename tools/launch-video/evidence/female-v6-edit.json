@@ -1,0 +1,175 @@
+{
+  "version": 6,
+  "durationSeconds": 30,
+  "sampleRate": 24000,
+  "channels": 1,
+  "voiceVolume": 0.6,
+  "commonActiveRms": 0.13443427409124253,
+  "peak": 0.89996337890625,
+  "rms": 0.10172102393798,
+  "cues": [
+    {
+      "index": 1,
+      "source": "take1.wav",
+      "sourceStart": 0,
+      "sourceEnd": 12.48,
+      "targetStart": 0.0,
+      "targetEnd": 9.59,
+      "text": "You wear a lot of hats. And somehow, one thing takes the whole week. Leaving too little for family. For yourself.",
+      "gain": 0.9471432700645535,
+      "retainedFrames": 230160,
+      "sourceSpeechSpeedUnchanged": true
+    },
+    {
+      "index": 2,
+      "source": "take2.wav",
+      "sourceStart": 0,
+      "sourceEnd": 4.32,
+      "targetStart": 9.59,
+      "targetEnd": 13.07,
+      "text": "So you pause. Write down what matters.",
+      "gain": 1.0501728691178644,
+      "retainedFrames": 83520,
+      "sourceSpeechSpeedUnchanged": true
+    },
+    {
+      "index": 3,
+      "source": "take3.wav",
+      "sourceStart": 0,
+      "sourceEnd": 10.56,
+      "targetStart": 13.07,
+      "targetEnd": 20.78,
+      "text": "Give each responsibility an hour or two. Draw a box. Give it a purpose. Add the tasks.",
+      "gain": 0.9017273141015387,
+      "retainedFrames": 185040,
+      "sourceSpeechSpeedUnchanged": true
+    },
+    {
+      "index": 4,
+      "source": "approved-audition.wav",
+      "sourceStart": 7.5,
+      "sourceEnd": 10.5,
+      "targetStart": 20.78,
+      "targetEnd": 23.78,
+      "text": "That little plan becomes Spread.",
+      "gain": 1.0573499366811838,
+      "retainedFrames": 72000,
+      "sourceSpeechSpeedUnchanged": true
+    },
+    {
+      "index": 5,
+      "source": "take5.wav",
+      "sourceStart": 0,
+      "sourceEnd": 4.16,
+      "targetStart": 23.78,
+      "targetEnd": 27.94,
+      "text": "Responsibilities, hours, your week, your tasks!",
+      "gain": 0.7537580691792252,
+      "retainedFrames": 99840,
+      "sourceSpeechSpeedUnchanged": true
+    },
+    {
+      "index": 6,
+      "source": "approved-audition.wav",
+      "sourceStart": 10.5,
+      "sourceEnd": 12.56,
+      "targetStart": 27.94,
+      "targetEnd": 30.0,
+      "text": "Make the hours count.",
+      "gain": 1.0573499366811838,
+      "retainedFrames": 49440,
+      "sourceSpeechSpeedUnchanged": true
+    }
+  ],
+  "removedSilence": [
+    {
+      "source": "take1.wav",
+      "start": 1.73,
+      "end": 2.6,
+      "rms": 0.0001420533224624569,
+      "peak": 0.0006103515625,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    },
+    {
+      "source": "take1.wav",
+      "start": 7.075,
+      "end": 7.955,
+      "rms": 0.00019109518522164397,
+      "peak": 0.00091552734375,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    },
+    {
+      "source": "take1.wav",
+      "start": 10.265,
+      "end": 10.845,
+      "rms": 0.00017780660828844817,
+      "peak": 0.000732421875,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    },
+    {
+      "source": "take1.wav",
+      "start": 11.02,
+      "end": 11.58,
+      "rms": 0.0001716855955448021,
+      "peak": 0.000885009765625,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    },
+    {
+      "source": "take2.wav",
+      "start": 1.39,
+      "end": 2.23,
+      "rms": 0.0001713878733505878,
+      "peak": 0.000885009765625,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    },
+    {
+      "source": "take3.wav",
+      "start": 3.03,
+      "end": 4.11,
+      "rms": 0.0001784517190966629,
+      "peak": 0.000823974609375,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    },
+    {
+      "source": "take3.wav",
+      "start": 4.32,
+      "end": 4.44,
+      "rms": 0.0001615599228062908,
+      "peak": 0.00054931640625,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    },
+    {
+      "source": "take3.wav",
+      "start": 5.845,
+      "end": 6.605,
+      "rms": 0.00014235930426955692,
+      "peak": 0.000640869140625,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    },
+    {
+      "source": "take3.wav",
+      "start": 8.05,
+      "end": 8.94,
+      "rms": 0.0001454418027755982,
+      "peak": 0.0006103515625,
+      "reason": "Excess quiet core of requested sentence pause; consonant tails and non-silent samples retained."
+    }
+  ],
+  "editing": "No speech speed or pitch changes. Full speech and phrase tails retained. Only verified near-silent cores of overlong provider pauses shortened. Existing reveal, workflow and tagline retained at natural speed.",
+  "pauseTargetsSeconds": {
+    "opening": [
+      0.55,
+      0.6,
+      0.4
+    ],
+    "pivot": [
+      0.5
+    ],
+    "advice": [
+      0.5,
+      0.4,
+      0.45
+    ]
+  },
+  "promptReference": "https://elevenlabs.io/docs/help-center/product/core-capabilities/text-to-speech/how-can-i-add-pauses"
+}

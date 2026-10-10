@@ -17,6 +17,7 @@ export default tseslint.config(
       ".vercel/**",
       ".nitro/**",
       "node_modules/**",
+      "tools/launch-video/**", // Standalone Remotion workspace has its own lint/typecheck.
       "src/routeTree.gen.ts",
     ],
   },

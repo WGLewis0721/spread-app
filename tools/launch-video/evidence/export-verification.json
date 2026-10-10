@@ -1,0 +1,30 @@
+[
+  {
+    "composition": "SpreadHalliePivot",
+    "path": "deliverables/Spread-Make-the-Hours-Count-Hallie-Pivot-v7.mp4",
+    "sha256": "ABF16A41C6786A6187786D0B833FBD88A9329940918D9E6D22B9FB9BA83A94AB",
+    "bytes": 4763488,
+    "durationSeconds": 30.016,
+    "decodedFrames": 900,
+    "allStreamsDecoded": true,
+    "video": "H.264 1080p30 yuv420p BT.709 limited",
+    "audio": "AAC stereo 48kHz",
+    "audioPeak": 0.549041748046875,
+    "audioRms": 0.06332610266789208,
+    "passed": true
+  },
+  {
+    "composition": "SpreadGrady",
+    "path": "deliverables/Spread-Make-the-Hours-Count-Grady-v7.mp4",
+    "sha256": "C0AD5AAC1194DFF77B622BEC7F7F3CC418B95248FA1D7EC1E0324C475268659C",
+    "bytes": 4810227,
+    "durationSeconds": 30.016,
+    "decodedFrames": 900,
+    "allStreamsDecoded": true,
+    "video": "H.264 1080p30 yuv420p BT.709 limited",
+    "audio": "AAC stereo 48kHz",
+    "audioPeak": 0.494415283203125,
+    "audioRms": 0.05590341221846139,
+    "passed": true
+  }
+]
