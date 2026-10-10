@@ -46,7 +46,7 @@ def save(path, samples, expected=None):
 
 
 def build_female():
-    report = json.loads((ROOT / "evidence/female-v6-edit.json").read_text())
+    report = json.loads((ROOT / "evidence/female-v6-edit.json").read_text(encoding="utf-8"))
     sources = {}
     for cue in report["cues"]:
         name = cue["source"]
@@ -65,14 +65,14 @@ def build_female():
         start, end = frame(cue["sourceStart"]), frame(cue["sourceEnd"])
         track.extend(v for v, retained in zip(normalized[start:end], keep[start:end]) if retained)
     assert len(track) == RATE * 30
-    v7 = json.loads((ROOT / "evidence/female-v7-edit.json").read_text())
+    v7 = json.loads((ROOT / "evidence/female-v7-edit.json").read_text(encoding="utf-8"))
     pivot = read(ROOT / "source-audio/female/pivot.wav")
     lead = scale(pivot[:frame(.90)] + pivot[frame(1.89):frame(2.83)], v7["newSourceGain"])
     old_pivot = track[frame(9.59):frame(13.07)]
     revised = lead + old_pivot[frame(1.40):frame(3.04)]
     assert len(revised) == frame(13.07 - 9.59)
     track[frame(9.59):frame(13.07)] = revised
-    manifest = json.loads((ROOT / "ASSETS.json").read_text())
+    manifest = json.loads((ROOT / "ASSETS.json").read_text(encoding="utf-8"))
     expected = next(a["sha256"] for a in manifest["files"] if a["path"] == "public/assets/hallie-pivot/narration-hallie.wav")
     digest = save(ROOT / "public/assets/hallie-pivot/narration-hallie.wav", track, expected)
     return {"voice": "Hallie", "sha256": digest, "approvedAudioByteIdentical": True}

@@ -31,7 +31,7 @@ def run(name, *args):
     return result.stdout
 
 
-manifest = json.loads((ROOT / "ASSETS.json").read_text())
+manifest = json.loads((ROOT / "ASSETS.json").read_text(encoding="utf-8"))
 results = []
 for cut in manifest["cuts"]:
     media = ROOT / cut["export"]
