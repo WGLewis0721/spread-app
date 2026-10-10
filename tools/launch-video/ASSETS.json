@@ -1,0 +1,412 @@
+{
+  "version": 7,
+  "title": "Spread \u2014 Make the Hours Count",
+  "durationSeconds": 30,
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "approvedFemaleExportSha256": "ABF16A41C6786A6187786D0B833FBD88A9329940918D9E6D22B9FB9BA83A94AB",
+  "approval": {
+    "female": "User approved version 7 with PERFECT on 2026-10-10. Immutable creative baseline.",
+    "male": "User requested a companion male version on 2026-10-10; Grady is the original user-selected voice. New pivot and tagline; voice identity retained.",
+    "merge": "User explicitly requested merge to main. Film publication is separate."
+  },
+  "cuts": [
+    {
+      "id": "SpreadHalliePivot",
+      "voice": "Hallie",
+      "gender": "female",
+      "narration": "public/assets/hallie-pivot/narration-hallie.wav",
+      "captionsJson": "public/assets/hallie-pivot/captions.json",
+      "captions": "public/assets/hallie-pivot/captions.vtt",
+      "export": "deliverables/Spread-Make-the-Hours-Count-Hallie-Pivot-v7.mp4",
+      "sceneStartsFrames": [
+        0,
+        288,
+        392,
+        623,
+        713,
+        838
+      ]
+    },
+    {
+      "id": "SpreadGrady",
+      "voice": "Grady",
+      "gender": "male",
+      "narration": "public/assets/grady-v7/narration-grady.wav",
+      "captionsJson": "public/assets/grady-v7/captions.json",
+      "captions": "public/assets/grady-v7/captions.vtt",
+      "export": "deliverables/Spread-Make-the-Hours-Count-Grady-v7.mp4",
+      "sceneStartsFrames": [
+        0,
+        261,
+        360,
+        573,
+        653,
+        825
+      ]
+    }
+  ],
+  "music": "public/assets/hallie-pivot/score-116bpm.wav",
+  "provenance": {
+    "femaleVoice": {
+      "engine": "ElevenLabs through Higgsfield",
+      "voiceId": "10274bf1-fb93-554f-b59f-d620a920fd36",
+      "voiceType": "preset",
+      "jobIds": [
+        "adb4e27b-dee5-478d-87c0-d32a60dc33eb",
+        "d29008d1-ab0c-492a-8511-ef50326bb1d6",
+        "68aa2012-3e79-4ec0-8b88-172cf054c662",
+        "bcd7bdf7-a7fb-46fd-9c19-564dac2f2b41",
+        "c0f79b39-1cb1-4990-b85d-0b30c59142d8",
+        "60063482-8b77-468a-bf0a-807b36ee2e70"
+      ],
+      "rights": "User-selected preset generated in the connected workspace; provider terms apply."
+    },
+    "maleVoice": {
+      "engine": "Seed Audio through Higgsfield",
+      "voiceId": "e2a2d2e6-9ed2-59cd-82af-feaa27f8a678",
+      "voiceType": "preset",
+      "jobIds": [
+        "aa780bc2-38cf-4fc5-be90-6a102541c350",
+        "c79c7b65-3652-4925-aeb1-f5d7eaf2e426",
+        "ef31f426-7b32-400f-be2c-8d801d998e2c"
+      ],
+      "newPrompts": [
+        "So... you pause. Write down what matters.",
+        "Make the hours count."
+      ],
+      "rights": "User-selected preset; generation credits authorized earlier in the conversation; provider terms apply."
+    },
+    "texture": {
+      "model": "Recraft V4.1 through Higgsfield",
+      "jobId": "ec6bbbd4-c0a6-42c1-9b1b-64cb404335d3",
+      "rights": "Generated decorative asset, provider terms apply."
+    },
+    "productImages": {
+      "source": "Actual Spread web application captures with fictional planner data",
+      "rights": "User Spread product assets. No native testing claim."
+    },
+    "font": {
+      "source": "Existing Spread Inter font",
+      "license": "public/assets/INTER-LICENSE.txt"
+    },
+    "appStoreBadge": {
+      "source": "Official Apple Download on the App Store SVG",
+      "rights": "Apple marketing guidelines apply. Verify actual listing before public launch distribution."
+    },
+    "score": {
+      "source": "Original procedural instrumental, 116 BPM, preserved from approved v7",
+      "rights": "Original synthesis for this film; no sampled reference music."
+    }
+  },
+  "reconstruction": "python scripts/rebuild-audio.py uses only committed local PCM sources and exact edit data; no accounts, network or credits required.",
+  "earlierIterations": "Preserved in the existing separate local launch-video workspace; intentionally excluded from the two-cut repository package.",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "00C1CE73144AC9B35B2BD52B42FD564267157D0FA259E793CDA9D20D21DE3A94",
+      "bytes": 253
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "669F04727D6C9CC0A854C41E7C11CACEFCC3FB0182140A27A84BBF41CD64E807",
+      "bytes": 52
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "DDE5CCCC90C18D514135BE613BD03A98B5396E2A9AC15E4BB43DD0CF7818B037",
+      "bytes": 1004
+    },
+    {
+      "path": "README.md",
+      "sha256": "E327A8BC96ED6A01E8748F1D29202A7F011D4A4E6DB9117F246F47307AC1D8A4",
+      "bytes": 3966
+    },
+    {
+      "path": "deliverables/Spread-Make-the-Hours-Count-Grady-v7.mp4",
+      "sha256": "C0AD5AAC1194DFF77B622BEC7F7F3CC418B95248FA1D7EC1E0324C475268659C",
+      "bytes": 4810227
+    },
+    {
+      "path": "deliverables/Spread-Make-the-Hours-Count-Hallie-Pivot-v7.mp4",
+      "sha256": "ABF16A41C6786A6187786D0B833FBD88A9329940918D9E6D22B9FB9BA83A94AB",
+      "bytes": 4763488
+    },
+    {
+      "path": "eslint.config.mjs",
+      "sha256": "7F2CA640409FD597965BEDF929073B9A74F143643E1711150C4CAC3B6EC5C80D",
+      "bytes": 79
+    },
+    {
+      "path": "evidence/export-verification.json",
+      "sha256": "46E4DB1126012DE097421D5C6D6A44337A2F3A00F017573ECED5CB989BDA17B0",
+      "bytes": 1010
+    },
+    {
+      "path": "evidence/female-v6-edit.json",
+      "sha256": "3BD549603D5E9AC8D3F8B39B6F0C24753E57C4904842BEC5ECC99EB826F77D84",
+      "bytes": 5420
+    },
+    {
+      "path": "evidence/female-v7-edit.json",
+      "sha256": "528F51FCD9683DB54D92ACC421127EDE3D6DD4AB757682BE25D0D499E50375DF",
+      "bytes": 1206
+    },
+    {
+      "path": "evidence/male-edit.json",
+      "sha256": "864BAE1C811543DFD61C8ECB06367DD442613D983CB574D03DB0B7EDDD906394",
+      "bytes": 804
+    },
+    {
+      "path": "evidence/male-final-transcription-check.json",
+      "sha256": "67C819603891FB3549E7116D3BD7AEE74EFBA71BABBEF0A2DEBF69EF14569AF7",
+      "bytes": 834
+    },
+    {
+      "path": "evidence/male-source-transcription.json",
+      "sha256": "4DA29B95C743D8ABCC1A295F952963E84A20ECE5E65AF8593DC9CC16BFC494F7",
+      "bytes": 9494
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "D8EF42E515A3E4D2C91A9C105CA1627CD509DEFBD0C2A4847F950290D137EC8B",
+      "bytes": 197346
+    },
+    {
+      "path": "package.json",
+      "sha256": "C9DC498F8C9F95077DD71D0A09575B6C1F44F3EDABFD6A7CD83003736B9587F1",
+      "bytes": 1435
+    },
+    {
+      "path": "public/assets/INTER-LICENSE.txt",
+      "sha256": "3B0A5FCA3D17942CDE889069889DEDBBBD075E9B599968C82A95F4D944E9B345",
+      "bytes": 4477
+    },
+    {
+      "path": "public/assets/app-icon-spread-cards-square.svg",
+      "sha256": "78A5DE95674D8C8AE975FFF901A38AF7A74B21273C5A2B48204BB645D6515EA1",
+      "bytes": 566
+    },
+    {
+      "path": "public/assets/app-store-badge.svg",
+      "sha256": "A26FC5B38380272C92E9019A2EB8B45542A66814B3E2B203772DB8904B9FB99F",
+      "bytes": 10804
+    },
+    {
+      "path": "public/assets/grady-v7/captions.json",
+      "sha256": "51FB4DCE0ADEC18595DF5A1C23D1F12A92E4AA53222F28A335861DA4AF0064B1",
+      "bytes": 2392
+    },
+    {
+      "path": "public/assets/grady-v7/captions.vtt",
+      "sha256": "9D60A03E7F3F5C864A841C29BA70C93E528C03C83677B048A7702F23C0B93561",
+      "bytes": 930
+    },
+    {
+      "path": "public/assets/grady-v7/narration-grady.wav",
+      "sha256": "0D90F06B17D92440C3B7D7CD0A13CE1D80D2AF7B164D2052B9E0C4ED8A88D73A",
+      "bytes": 1440044
+    },
+    {
+      "path": "public/assets/hallie-pivot/captions.json",
+      "sha256": "ACA37A12949392C656855F28EF079909B99D363B8A85511F7E207EE1E6F245DB",
+      "bytes": 7928
+    },
+    {
+      "path": "public/assets/hallie-pivot/captions.vtt",
+      "sha256": "93A633C176C4B9090A45C3D556FCA084BCEF4CA86C806FCB2E02C25B64DDF6BD",
+      "bytes": 624
+    },
+    {
+      "path": "public/assets/hallie-pivot/narration-hallie.wav",
+      "sha256": "C0A31017A14E327F5866C2E7A55A2080D4AA9224969116755CD3980AD07B6670",
+      "bytes": 1440044
+    },
+    {
+      "path": "public/assets/hallie-pivot/score-116bpm.wav",
+      "sha256": "8D55F5D585190A85C75A2BB7CC4420E4720453B0516AB4D00513C0FAACF3347F",
+      "bytes": 5760044
+    },
+    {
+      "path": "public/assets/inter.woff2",
+      "sha256": "3100E775E8616CD2611BEECFA23A4263D7037586789B43F035236A2E6FBD4C62",
+      "bytes": 48256
+    },
+    {
+      "path": "public/assets/paper-texture.png",
+      "sha256": "CD10DF3DE7FEEAB58B19B9F717A6CD7417E16E54BD22E64A12A0F58DFDFC4992",
+      "bytes": 5265728
+    },
+    {
+      "path": "public/assets/product-list.png",
+      "sha256": "FFC3F9E6DE81789FDD568C3B9FF4A3247C678D5C650F4EC9609C7FA4C0BD1772",
+      "bytes": 130363
+    },
+    {
+      "path": "public/assets/product-week.png",
+      "sha256": "09BD4ECEA37BB6DF9A2759DF2E5704D84C4B7E4FB823588F08010BF085FD8E2D",
+      "bytes": 138138
+    },
+    {
+      "path": "remotion.config.ts",
+      "sha256": "3F724C14E7FC328FAB366562F932F785F1971BF13048906466319077558AEBAA",
+      "bytes": 140
+    },
+    {
+      "path": "scripts/rebuild-audio.py",
+      "sha256": "B38CD6215937D20F5E8E465CAFFD809850C29A369AFA8A365B1AF55751757516",
+      "bytes": 5747
+    },
+    {
+      "path": "scripts/smoke.mjs",
+      "sha256": "9C99F24628F8009E7D5FD360D1464AE66C9E39A32C4BF8A39D814FA7BDB35572",
+      "bytes": 810
+    },
+    {
+      "path": "scripts/verify-exports.py",
+      "sha256": "1ED1B7931CEC9736B99AAAE67DC6AE8BE37BD5058D4AF92DFD49FB1B18F44EA5",
+      "bytes": 3316
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "sha256": "FA974616C0EA318185F5800C785CC758CEE2A73812E186B391ECCB1B6D238579",
+      "bytes": 4197
+    },
+    {
+      "path": "source-audio/female/approved-audition.wav",
+      "sha256": "1FA68254B43F80671D797796DF7BD1BFD09535ECE798FC15BB7ABE4EE0338900",
+      "bytes": 602924
+    },
+    {
+      "path": "source-audio/female/pivot.wav",
+      "sha256": "BD1CC4FFB5024C9429155574A9690239971C859169A80CD51B2D69BA2CCB3867",
+      "bytes": 295758
+    },
+    {
+      "path": "source-audio/female/take1.wav",
+      "sha256": "A3F12C843A8787AB1E491ABA2B16C231FDD0F40AFD92DCBC35B0E88AADE922E6",
+      "bytes": 599118
+    },
+    {
+      "path": "source-audio/female/take2.wav",
+      "sha256": "C32BB6A9F7977188036940640CC649C6BF50135826D827F01E3B648302266EA8",
+      "bytes": 207438
+    },
+    {
+      "path": "source-audio/female/take3.wav",
+      "sha256": "BD259E059B4535D965634EDE25D09D3E48774FE1579B5765A4E20188C47E4019",
+      "bytes": 506958
+    },
+    {
+      "path": "source-audio/female/take5.wav",
+      "sha256": "38A2CD9E94B5C24FEC490A8091A499AFF9011AB3537CD3A33A0A7E49D462980D",
+      "bytes": 199758
+    },
+    {
+      "path": "source-audio/male/grady-original.wav",
+      "sha256": "D377F78ACBADDD10AF95F19262A4ACBDB538C8BB49CA9EC08AC0BA9EE687ACBA",
+      "bytes": 1384782
+    },
+    {
+      "path": "source-audio/male/pivot.wav",
+      "sha256": "07F16E86F09F2B91BAAC03CAA4D311296747D5BA6AA1279FD9B2CFBA50342417",
+      "bytes": 235278
+    },
+    {
+      "path": "source-audio/male/tagline.wav",
+      "sha256": "2E592A81C3204921F41F50467C1747A4D3B6890A0FC5FFB805CDEB010A244044",
+      "bytes": 153678
+    },
+    {
+      "path": "src/Composition.tsx",
+      "sha256": "268473F608CF18E3ACE77CDAB65AEC2C116A7F903F61A0AF823C3CF48BABD1CB",
+      "bytes": 434
+    },
+    {
+      "path": "src/GradyFilm.tsx",
+      "sha256": "9D14937F62BD140E63990DDE18A55696533D2551BEF4A387E9E0571B422EF01C",
+      "bytes": 1877
+    },
+    {
+      "path": "src/HalliePivotFilm.tsx",
+      "sha256": "61822673DBA2B6B635A2B5FB68B6D7C23E2DE8675E2AD2747E47435753F49969",
+      "bytes": 2009
+    },
+    {
+      "path": "src/Planner.tsx",
+      "sha256": "C0F6F5126A23DC58FDB58297D08A896491FACDC0C4E03F7476855B786584E446",
+      "bytes": 509
+    },
+    {
+      "path": "src/Root.tsx",
+      "sha256": "7989669DE8801AC90F2B40B57BBF4494C775A4FA15E556BCB4949D98FCBD6BBE",
+      "bytes": 152
+    },
+    {
+      "path": "src/design.tsx",
+      "sha256": "21599C87EB0CF15F49638E4787C735F0169D1B21CBE6D285D669257875E138A4",
+      "bytes": 3254
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "957E481DD33A29B4A55AE0E95DBF763B7E48C37C427CA4BD1275FAF34BC07A74",
+      "bytes": 109
+    },
+    {
+      "path": "src/scenes/Ending.tsx",
+      "sha256": "60EF948AC8EAF5CB75FF217FEBF1D305DACAA471A9AF0C785CBE256A359C9E7D",
+      "bytes": 1311
+    },
+    {
+      "path": "src/scenes/GradyPaper.tsx",
+      "sha256": "5F6530B7B9867A8572A82EE917A4826FA60B927EA7AB467DE717A9525C6E3336",
+      "bytes": 547
+    },
+    {
+      "path": "src/scenes/GradyProduct.tsx",
+      "sha256": "7DB2300BB8039217E12576E9522BE99424603CEED5694F3E1516EB590040032D",
+      "bytes": 427
+    },
+    {
+      "path": "src/scenes/HallieCadencePaper.tsx",
+      "sha256": "9492072782839CBCEB6F7C71DB09E6306B6A919C4F748813E5FCE47775DFC2B5",
+      "bytes": 607
+    },
+    {
+      "path": "src/scenes/HallieCadenceProduct.tsx",
+      "sha256": "9784961FE61A9653949F17AEA3C8B2D1C51501C63E523F2FB1CEDD923BCBE9E3",
+      "bytes": 457
+    },
+    {
+      "path": "src/scenes/Morph.tsx",
+      "sha256": "F8823F3E94DD2EEA8F85A6CB8C0409CE1865F275B2610898B9D23A9238F0CB1F",
+      "bytes": 4069
+    },
+    {
+      "path": "src/scenes/Paper.tsx",
+      "sha256": "D7E7F55E599FF30145320E4EB548F9F662D3C8A5570F7C182C7DEBF2BB1862F6",
+      "bytes": 6281
+    },
+    {
+      "path": "src/scenes/Pause.tsx",
+      "sha256": "5BE7165D48F05F273BFEE51F212A80AEAFEAFB914BDC14E4D5D5AEAF29571B88",
+      "bytes": 1063
+    },
+    {
+      "path": "src/scenes/Pressure.tsx",
+      "sha256": "48A6EFFAA4D8603E2B1DB78514B7F6D940950EDF02A323303E1E51C24B698DF9",
+      "bytes": 3024
+    },
+    {
+      "path": "src/scenes/Product.tsx",
+      "sha256": "CC668F6A21542D0078E1EAE14FDF1D562AAAA8543448321A36B445C8CB259B81",
+      "bytes": 2095
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "A6FBCF514DBFD3D116C3F7F78B72949C8C2FF45BDBE17AEFF4C97E16BC1327FA",
+      "bytes": 368
+    }
+  ]
+}

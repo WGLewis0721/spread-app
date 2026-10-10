@@ -1,0 +1,37 @@
+{
+  "name": "spread-launch-video",
+  "version": "1.0.0",
+  "description": "Spread launch film v7 \u2014 Hallie and Grady, standalone Remotion workspace",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "@remotion/fonts": "4.0.534",
+    "@remotion/media": "4.0.534",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.534",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "9.39.5",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio --no-open",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "verify": "node scripts/verify.mjs",
+    "check": "npm run verify && npm run lint && npm run build",
+    "smoke": "node scripts/smoke.mjs",
+    "render:female": "remotion render src/index.ts SpreadHalliePivot out/Spread-Make-the-Hours-Count-Hallie-Pivot-v7.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-bitrate=192k --image-format=png --color-space=bt709",
+    "render:male": "remotion render src/index.ts SpreadGrady out/Spread-Make-the-Hours-Count-Grady-v7.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-bitrate=192k --image-format=png --color-space=bt709"
+  },
+  "engines": {
+    "node": ">=22 <23"
+  }
+}

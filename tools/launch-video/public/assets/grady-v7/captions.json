@@ -1,0 +1,121 @@
+[
+  {
+    "text": "You wear a lot of hats.",
+    "startMs": 340,
+    "endMs": 1800,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "And somehow, one thing takes the whole week.",
+    "startMs": 1800,
+    "endMs": 4700,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Leaving too little for family.",
+    "startMs": 5020,
+    "endMs": 6900,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "For yourself.",
+    "startMs": 7420,
+    "endMs": 8500,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "So,",
+    "startMs": 8740,
+    "endMs": 9090,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "you pause.",
+    "startMs": 9545,
+    "endMs": 10215,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Write down what matters.",
+    "startMs": 10685,
+    "endMs": 11845,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Give each responsibility an hour or two.",
+    "startMs": 12060,
+    "endMs": 14400,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Draw a box.",
+    "startMs": 14720,
+    "endMs": 15850,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Give it a purpose.",
+    "startMs": 16180,
+    "endMs": 17250,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Add the tasks.",
+    "startMs": 17560,
+    "endMs": 18800,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "That little plan becomes Spread.",
+    "startMs": 19100,
+    "endMs": 21300,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Responsibilities.",
+    "startMs": 21760,
+    "endMs": 23100,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Hours.",
+    "startMs": 23560,
+    "endMs": 24400,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Your week.",
+    "startMs": 24780,
+    "endMs": 25600,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Your tasks.",
+    "startMs": 25980,
+    "endMs": 27150,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": "Make the hours count.",
+    "startMs": 27960,
+    "endMs": 29400,
+    "timestampMs": null,
+    "confidence": null
+  }
+]

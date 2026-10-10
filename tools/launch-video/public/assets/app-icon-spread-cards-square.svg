@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <rect width="1024" height="1024" fill="#007AFF"/>
+  <!-- Blue stroke matches the field so overlaps read as a gap -->
+  <g fill="#FFFFFF" stroke="#007AFF" stroke-width="32" stroke-linejoin="round">
+    <rect x="438" y="211" width="348" height="238" rx="46" transform="rotate(20 612 330)"/>
+    <rect x="352" y="334" width="356" height="242" rx="46" transform="rotate(5 530 455)"/>
+    <rect x="256" y="469" width="384" height="262" rx="50" transform="rotate(-12 448 600)"/>
+  </g>
+</svg>

@@ -1,0 +1,47 @@
+{
+  "voice": "Grady",
+  "sha256": "0D90F06B17D92440C3B7D7CD0A13CE1D80D2AF7B164D2052B9E0C4ED8A88D73A",
+  "durationSeconds": 30,
+  "gains": {
+    "original": 1.4968808498411523,
+    "pivot": 1.2405621457880909,
+    "tagline": 1.335562598956546
+  },
+  "speechSpeedAndPitchUnchanged": true,
+  "pivotRanges": [
+    [
+      0.36,
+      0.85
+    ],
+    [
+      1.365,
+      2.45
+    ]
+  ],
+  "removedPivotQuiet": [
+    0.85,
+    1.365
+  ],
+  "continuationRange": [
+    10.29,
+    11.6
+  ],
+  "pauseBeforeContinuationSeconds": 0.35,
+  "pivotTargetStart": 8.7,
+  "taglineSourceRange": [
+    0.6,
+    2.1
+  ],
+  "taglineTargetStart": 27.9,
+  "originalContinuousRanges": [
+    [
+      0,
+      8.7
+    ],
+    [
+      12,
+      27.35
+    ]
+  ],
+  "peak": 0.83056640625
+}

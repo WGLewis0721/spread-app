@@ -1,0 +1,422 @@
+[
+  {
+    "text": " You",
+    "startMs": 0,
+    "endMs": 160,
+    "timestampMs": null,
+    "confidence": 0.68701
+  },
+  {
+    "text": " wear",
+    "startMs": 160,
+    "endMs": 360,
+    "timestampMs": null,
+    "confidence": 0.99689
+  },
+  {
+    "text": " a",
+    "startMs": 360,
+    "endMs": 500,
+    "timestampMs": null,
+    "confidence": 0.9965
+  },
+  {
+    "text": " lot",
+    "startMs": 500,
+    "endMs": 660,
+    "timestampMs": null,
+    "confidence": 0.99925
+  },
+  {
+    "text": " of",
+    "startMs": 660,
+    "endMs": 780,
+    "timestampMs": null,
+    "confidence": 0.99739
+  },
+  {
+    "text": " hats,",
+    "startMs": 780,
+    "endMs": 1060,
+    "timestampMs": null,
+    "confidence": 0.99791
+  },
+  {
+    "text": " and",
+    "startMs": 1730,
+    "endMs": 1990,
+    "timestampMs": null,
+    "confidence": 0.97922
+  },
+  {
+    "text": " somehow",
+    "startMs": 1990,
+    "endMs": 2650,
+    "timestampMs": null,
+    "confidence": 0.97992
+  },
+  {
+    "text": " one",
+    "startMs": 2650,
+    "endMs": 3370,
+    "timestampMs": null,
+    "confidence": 0.73813
+  },
+  {
+    "text": " thing",
+    "startMs": 3370,
+    "endMs": 3790,
+    "timestampMs": null,
+    "confidence": 0.99836
+  },
+  {
+    "text": " takes",
+    "startMs": 3790,
+    "endMs": 4470,
+    "timestampMs": null,
+    "confidence": 0.98593
+  },
+  {
+    "text": " the",
+    "startMs": 4470,
+    "endMs": 4770,
+    "timestampMs": null,
+    "confidence": 0.99719
+  },
+  {
+    "text": " whole",
+    "startMs": 4770,
+    "endMs": 5070,
+    "timestampMs": null,
+    "confidence": 0.98455
+  },
+  {
+    "text": " week,",
+    "startMs": 5070,
+    "endMs": 5690,
+    "timestampMs": null,
+    "confidence": 0.99569
+  },
+  {
+    "text": " leaving",
+    "startMs": 6270,
+    "endMs": 6650,
+    "timestampMs": null,
+    "confidence": 0.99565
+  },
+  {
+    "text": " too",
+    "startMs": 6650,
+    "endMs": 6990,
+    "timestampMs": null,
+    "confidence": 0.98394
+  },
+  {
+    "text": " little",
+    "startMs": 6990,
+    "endMs": 7350,
+    "timestampMs": null,
+    "confidence": 0.99907
+  },
+  {
+    "text": " for",
+    "startMs": 7350,
+    "endMs": 7790,
+    "timestampMs": null,
+    "confidence": 0.99504
+  },
+  {
+    "text": " family,",
+    "startMs": 7790,
+    "endMs": 8170,
+    "timestampMs": null,
+    "confidence": 0.99076
+  },
+  {
+    "text": " for",
+    "startMs": 8515,
+    "endMs": 8850,
+    "timestampMs": null,
+    "confidence": 0.99351
+  },
+  {
+    "text": " yourself.",
+    "startMs": 8850,
+    "endMs": 9230,
+    "timestampMs": null,
+    "confidence": 0.99685
+  },
+  {
+    "text": " So,",
+    "startMs": 9590,
+    "endMs": 10090,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": " you",
+    "startMs": 10545,
+    "endMs": 10645,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": " pause.",
+    "startMs": 10645,
+    "endMs": 11260,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": " Write",
+    "startMs": 11500,
+    "endMs": 11640,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": " down",
+    "startMs": 11640,
+    "endMs": 11980,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": " what",
+    "startMs": 11980,
+    "endMs": 12220,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": " matters.",
+    "startMs": 12220,
+    "endMs": 12995,
+    "timestampMs": null,
+    "confidence": null
+  },
+  {
+    "text": " give",
+    "startMs": 13070,
+    "endMs": 13250,
+    "timestampMs": null,
+    "confidence": 0.2613
+  },
+  {
+    "text": " each",
+    "startMs": 13250,
+    "endMs": 13590,
+    "timestampMs": null,
+    "confidence": 0.99893
+  },
+  {
+    "text": " responsibility",
+    "startMs": 13590,
+    "endMs": 14270,
+    "timestampMs": null,
+    "confidence": 0.97397
+  },
+  {
+    "text": " an",
+    "startMs": 14270,
+    "endMs": 14850,
+    "timestampMs": null,
+    "confidence": 0.97888
+  },
+  {
+    "text": " hour",
+    "startMs": 14850,
+    "endMs": 15250,
+    "timestampMs": null,
+    "confidence": 0.99885
+  },
+  {
+    "text": " or",
+    "startMs": 15250,
+    "endMs": 15490,
+    "timestampMs": null,
+    "confidence": 0.9923
+  },
+  {
+    "text": " two.",
+    "startMs": 15490,
+    "endMs": 15810,
+    "timestampMs": null,
+    "confidence": 0.97794
+  },
+  {
+    "text": " Draw",
+    "startMs": 16190,
+    "endMs": 16570,
+    "timestampMs": null,
+    "confidence": 0.98531
+  },
+  {
+    "text": " a",
+    "startMs": 16570,
+    "endMs": 16770,
+    "timestampMs": null,
+    "confidence": 0.99765
+  },
+  {
+    "text": " box,",
+    "startMs": 16770,
+    "endMs": 17090,
+    "timestampMs": null,
+    "confidence": 0.99586
+  },
+  {
+    "text": " give",
+    "startMs": 17715,
+    "endMs": 17950,
+    "timestampMs": null,
+    "confidence": 0.99645
+  },
+  {
+    "text": " it",
+    "startMs": 17950,
+    "endMs": 18110,
+    "timestampMs": null,
+    "confidence": 0.99805
+  },
+  {
+    "text": " a",
+    "startMs": 18110,
+    "endMs": 18150,
+    "timestampMs": null,
+    "confidence": 0.99647
+  },
+  {
+    "text": " purpose,",
+    "startMs": 18150,
+    "endMs": 18590,
+    "timestampMs": null,
+    "confidence": 0.9972
+  },
+  {
+    "text": " add",
+    "startMs": 19160,
+    "endMs": 19600,
+    "timestampMs": null,
+    "confidence": 0.97458
+  },
+  {
+    "text": " the",
+    "startMs": 19600,
+    "endMs": 19940,
+    "timestampMs": null,
+    "confidence": 0.99458
+  },
+  {
+    "text": " tasks.",
+    "startMs": 19940,
+    "endMs": 20200,
+    "timestampMs": null,
+    "confidence": 0.91036
+  },
+  {
+    "text": " That",
+    "startMs": 21120,
+    "endMs": 21260,
+    "timestampMs": null,
+    "confidence": 0.9669130444526672
+  },
+  {
+    "text": " little",
+    "startMs": 21260,
+    "endMs": 21500,
+    "timestampMs": null,
+    "confidence": 0.9970273375511169
+  },
+  {
+    "text": " plan",
+    "startMs": 21500,
+    "endMs": 21860,
+    "timestampMs": null,
+    "confidence": 0.9973872303962708
+  },
+  {
+    "text": " becomes",
+    "startMs": 21860,
+    "endMs": 22560,
+    "timestampMs": null,
+    "confidence": 0.9971025586128235
+  },
+  {
+    "text": " Spread.",
+    "startMs": 22560,
+    "endMs": 23180,
+    "timestampMs": null,
+    "confidence": 0.8325191736221313
+  },
+  {
+    "text": " responsibilities,",
+    "startMs": 23780,
+    "endMs": 24620,
+    "timestampMs": null,
+    "confidence": 0.8716385960578918
+  },
+  {
+    "text": " hours,",
+    "startMs": 25140,
+    "endMs": 25540,
+    "timestampMs": null,
+    "confidence": 0.9928683638572693
+  },
+  {
+    "text": " your",
+    "startMs": 26080,
+    "endMs": 26200,
+    "timestampMs": null,
+    "confidence": 0.9639317393302917
+  },
+  {
+    "text": " week,",
+    "startMs": 26200,
+    "endMs": 26520,
+    "timestampMs": null,
+    "confidence": 0.9243748784065247
+  },
+  {
+    "text": " your",
+    "startMs": 26980,
+    "endMs": 27080,
+    "timestampMs": null,
+    "confidence": 0.9907163977622986
+  },
+  {
+    "text": " tasks,",
+    "startMs": 27080,
+    "endMs": 27440,
+    "timestampMs": null,
+    "confidence": 0.9835605621337891
+  },
+  {
+    "text": " Make",
+    "startMs": 28360,
+    "endMs": 28640,
+    "timestampMs": null,
+    "confidence": 0.98655766248703
+  },
+  {
+    "text": " the",
+    "startMs": 28640,
+    "endMs": 28840,
+    "timestampMs": null,
+    "confidence": 0.9984835982322693
+  },
+  {
+    "text": " hours",
+    "startMs": 28840,
+    "endMs": 29140,
+    "timestampMs": null,
+    "confidence": 0.9487422108650208
+  },
+  {
+    "text": " count.",
+    "startMs": 29140,
+    "endMs": 29640,
+    "timestampMs": null,
+    "confidence": 0.9990449547767639
+  }
+]

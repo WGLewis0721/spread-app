@@ -1,0 +1,53 @@
+{
+  "version": 7,
+  "pivotWindow": [
+    9.59,
+    13.07
+  ],
+  "durationSeconds": 30,
+  "jobId": "60063482-8b77-468a-bf0a-807b36ee2e70",
+  "newPerformance": "So. You pause.",
+  "preservedPerformance": "Write down what matters.",
+  "newSourceRanges": [
+    [
+      0,
+      0.9
+    ],
+    [
+      1.89,
+      2.83
+    ]
+  ],
+  "newSourceGain": 0.7312935666678645,
+  "continuationV6PivotRange": [
+    1.4,
+    3.04
+  ],
+  "removedQuiet": {
+    "start": 0.9,
+    "end": 1.89,
+    "rms": 0.00025421017189809395,
+    "peak": 0.001434326171875
+  },
+  "waveformSpeechRuns": [
+    [
+      0.0,
+      0.5
+    ],
+    [
+      0.9550000000000001,
+      1.67
+    ],
+    [
+      1.9100000000000001,
+      3.4050000000000002
+    ]
+  ],
+  "measuredBeatAfterSoSeconds": 0.455,
+  "measurement": "5ms windows, RMS gate 0.005, merging internal gaps up to 60ms. Speech onset/tail threshold is approximate; inserted edit length is sample-exact.",
+  "outsidePivotPcmIdenticalToV6": true,
+  "musicByteIdenticalToV6": true,
+  "speechSpeedAndPitchUnchanged": true,
+  "peak": 0.89996337890625,
+  "sourceSha256": "BD1CC4FFB5024C9429155574A9690239971C859169A80CD51B2D69BA2CCB3867"
+}
