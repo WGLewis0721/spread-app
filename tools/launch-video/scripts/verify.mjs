@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import console from 'node:console';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertBaseline } from './update-inventory.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const preservedInputs = assertBaseline(root);
 const manifest = JSON.parse(readFileSync(resolve(root, 'ASSETS.json'), 'utf8'));
 assert.equal(manifest.version, 7);
 assert.deepEqual(manifest.cuts.map(cut => cut.id), ['SpreadHalliePivot', 'SpreadGrady']);
@@ -72,4 +75,4 @@ assert.equal((registration.match(/fps=\{30\}/g) || []).length, 2);
 assert.equal(manifest.approvedFemaleExportSha256, 'ABF16A41C6786A6187786D0B833FBD88A9329940918D9E6D22B9FB9BA83A94AB');
 const approved = readFileSync(resolve(root, 'deliverables/Spread-Make-the-Hours-Count-Hallie-Pivot-v7.mp4'));
 assert.equal(createHash('sha256').update(approved).digest('hex').toUpperCase(), manifest.approvedFemaleExportSha256);
-console.log(JSON.stringify({passed: true, inventoriedFiles: paths.size, compositions: 2, narration: results, scorePeak: score.peak}, null, 2));
+console.log(JSON.stringify({passed: true, preservedInputs, inventoriedFiles: paths.size, compositions: 2, narration: results, scorePeak: score.peak}, null, 2));

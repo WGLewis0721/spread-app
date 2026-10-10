@@ -1,0 +1,90 @@
+{
+  "status": "Historical requests inspected on 2026-10-10, not instructions to submit new jobs.",
+  "use": "Exact reproduction uses committed WAVs and rebuild-audio.py. New generation is stochastic and needs its own audition, ledger and authorization.",
+  "omitted": "Account/destination identifiers, provider URLs and payment-choice fields; resolve these through the current authorized tool session.",
+  "recipes": [
+    {
+      "name": "hallie-selected-audition",
+      "source": "source-audio/female/approved-audition.wav",
+      "params": {
+        "model": "text2speech_v2",
+        "variant": "elevenlabs",
+        "voice_id": "10274bf1-fb93-554f-b59f-d620a920fd36",
+        "voice_type": "preset",
+        "prompt": "[confident] Give each responsibility an hour or two. Draw a BOX. Give it a purpose, add the tasks. [animated] That little plan becomes Spread. [confident] Make the hours COUNT!",
+        "count": 1
+      }
+    },
+    {
+      "name": "hallie-cadence-opening",
+      "source": "source-audio/female/take1.wav",
+      "params": {
+        "model": "text2speech_v2",
+        "variant": "elevenlabs",
+        "voice_id": "10274bf1-fb93-554f-b59f-d620a920fd36",
+        "voice_type": "preset",
+        "prompt": "[confident] You wear a lot of hats.\n[short pause] And somehow, one thing takes the whole week.\n[short pause] Leaving too little for family.\n[short pause] For yourself.",
+        "count": 1
+      }
+    },
+    {
+      "name": "hallie-cadence-planning",
+      "source": "source-audio/female/take3.wav",
+      "params": {
+        "model": "text2speech_v2",
+        "variant": "elevenlabs",
+        "voice_id": "10274bf1-fb93-554f-b59f-d620a920fd36",
+        "voice_type": "preset",
+        "prompt": "[confident] Give each responsibility an hour or two.\n[short pause] Draw a box.\n[short pause] Give it a purpose.\n[short pause] Add the tasks.",
+        "count": 1
+      }
+    },
+    {
+      "name": "hallie-workflow",
+      "source": "source-audio/female/take5.wav",
+      "params": {
+        "model": "text2speech_v2",
+        "variant": "elevenlabs",
+        "voice_id": "10274bf1-fb93-554f-b59f-d620a920fd36",
+        "voice_type": "preset",
+        "prompt": "[confident] Responsibilities, hours, your week, your tasks!",
+        "count": 1
+      }
+    },
+    {
+      "name": "hallie-v7-pivot",
+      "source": "source-audio/female/pivot.wav",
+      "params": {
+        "model": "text2speech_v2",
+        "variant": "elevenlabs",
+        "voice_id": "10274bf1-fb93-554f-b59f-d620a920fd36",
+        "voice_type": "preset",
+        "prompt": "[confident] SO.\n[short pause] You pause.\n[short pause] Write down what matters.",
+        "count": 1
+      },
+      "note": "The final edit uses the new So/You pause performance and preserves the previous Write down what matters. See female-v7-edit.json."
+    },
+    {
+      "name": "grady-v7-pivot",
+      "source": "source-audio/male/pivot.wav",
+      "params": {
+        "model": "seed_audio",
+        "voice_id": "e2a2d2e6-9ed2-59cd-82af-feaa27f8a678",
+        "voice_type": "preset",
+        "prompt": "So... you pause. Write down what matters.",
+        "count": 1
+      }
+    },
+    {
+      "name": "grady-v7-tagline",
+      "source": "source-audio/male/tagline.wav",
+      "params": {
+        "model": "seed_audio",
+        "voice_id": "e2a2d2e6-9ed2-59cd-82af-feaa27f8a678",
+        "voice_type": "preset",
+        "prompt": "Make the hours count.",
+        "count": 1
+      }
+    }
+  ]
+}

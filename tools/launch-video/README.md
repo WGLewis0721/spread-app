@@ -9,6 +9,28 @@ Two 30-second landscape motion-graphics films, 1920×1080 at 30fps. Productivity
 
 Hallie's inviting “So” has the approved measured 0.455-second beat. Grady uses the same story and visual art, with a short beat after “So.” The male scene clocks follow his read; both finish at 900 frames. Earlier experiments remain in the original local workspace and are not registered here.
 
+## Start here for repeatable production
+
+| Need | Read |
+| --- | --- |
+| Recreate this quality or plan a revision | [Six-step production playbook](docs/PRODUCTION.md) |
+| Understand the approved story, voice and visual rules | [Creative direction](docs/CREATIVE.md) and [reference gallery](docs/REFERENCE.md) |
+| Avoid repeated mistakes | [Lessons learned](docs/LESSONS_LEARNED.md) |
+| Give another developer or AI tool access | [Tooling guide](docs/TOOLING.md) and [copyable AI handoff](docs/AI_HANDOFF.md) |
+| Recover the exact successful generation requests | [Historical voice recipes](docs/voice-recipes.json) |
+| Specify and evaluate a change | [Revision brief](docs/templates/REVISION.md) and [review sheet](docs/templates/REVIEW.md) |
+
+Follow the process and review gates to maintain consistency. A model or tool installation alone cannot guarantee expression, pacing or creative approval.
+
+| Location | Contents |
+| --- | --- |
+| `deliverables/` | Preserved female and male MP4s |
+| `src/`, `public/assets/` | Canonical v7 motion, product imagery, fonts, music and narration |
+| `source-audio/`, `evidence/` | Original recordings, exact edits and export/transcription evidence |
+| `docs/` | Production process, creative reference, lessons, access guide and handoff/templates |
+| `revisions/<version>/` | Recommended location for future draft source and review records; no draft is created by this handoff |
+| `out/`, `qa/`, `build/` | Ignored render, verification and bundle output |
+
 ## Fresh checkout
 
 Install Node 22, then run these commands from this directory:
@@ -44,6 +66,8 @@ python scripts/verify-exports.py
 Python reconstruction uses its standard library and the committed original PCM recordings. Hallie's output must match the approved audio hash before it can be written. No voice is regenerated. Smoke rendering covers the opening, paper, product and ending for both cuts; CI runs reconstruction, inventory checks, lint/typecheck, bundle and these renders on Linux. Export verification uses FFmpeg/ffprobe from the installed Remotion compositor package, or from PATH. It decodes both delivered films and checks their streams and audio headroom.
 
 `ASSETS.json` inventories runtime source, fonts, images, audio, source recordings and delivered MP4s with SHA256. It records casting, generation job IDs and asset rights. `evidence/` holds exact edit instructions and media verification. The user-approved Hallie MP4 SHA256 is `ABF16A41C6786A6187786D0B833FBD88A9329940918D9E6D22B9FB9BA83A94AB`.
+
+For intended documentation or curated package changes, run `npm run inventory:update`, then `npm run check`. The updater first validates the independent [frozen v7 inputs](docs/BASELINE.json), and refuses to rewrite hashes if they have changed. `check` also validates local documentation links and tests that an accidental golden edit cannot be blessed by inventory refresh. This does not approve a new creative revision; keep its files and review record separate.
 
 ## Ownership and release
 

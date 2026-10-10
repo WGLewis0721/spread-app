@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "title": "Spread \u2014 Make the Hours Count",
+  "title": "Spread — Make the Hours Count",
   "durationSeconds": 30,
   "width": 1920,
   "height": 1080,
@@ -115,13 +115,13 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "DDE5CCCC90C18D514135BE613BD03A98B5396E2A9AC15E4BB43DD0CF7818B037",
-      "bytes": 1004
+      "sha256": "249D5063BEC81F3DD28CD9B34DAF089574F0F4F11C033E028C024D9F67C8DE4C",
+      "bytes": 1869
     },
     {
       "path": "README.md",
-      "sha256": "E327A8BC96ED6A01E8748F1D29202A7F011D4A4E6DB9117F246F47307AC1D8A4",
-      "bytes": 3966
+      "sha256": "84002DC3EEE5682C222B024106D4B5D511E80EFCB9D8005D824428B8E67DE96F",
+      "bytes": 5926
     },
     {
       "path": "deliverables/Spread-Make-the-Hours-Count-Grady-v7.mp4",
@@ -132,6 +132,76 @@
       "path": "deliverables/Spread-Make-the-Hours-Count-Hallie-Pivot-v7.mp4",
       "sha256": "ABF16A41C6786A6187786D0B833FBD88A9329940918D9E6D22B9FB9BA83A94AB",
       "bytes": 4763488
+    },
+    {
+      "path": "docs/AI_HANDOFF.md",
+      "sha256": "F22035ADB8C988E6CE683FBABCB4918FF82DE95012F86983365D04B7BC28B1EE",
+      "bytes": 3055
+    },
+    {
+      "path": "docs/BASELINE.json",
+      "sha256": "1E041CA5770249FB3514A48B2517BF42F4A17B75AA54F934544D2A8B45C3AFE8",
+      "bytes": 7671
+    },
+    {
+      "path": "docs/CREATIVE.md",
+      "sha256": "5B8E0EBB6BBB08FFEEF03CC672CD87C9AEEC3C982ED45F9DD4B81A2015298014",
+      "bytes": 4230
+    },
+    {
+      "path": "docs/LESSONS_LEARNED.md",
+      "sha256": "E816FA7348EFA2E3F2E1633662803012163A6327652942DD2590C783AC1DA10E",
+      "bytes": 4518
+    },
+    {
+      "path": "docs/PRODUCTION.md",
+      "sha256": "C89739B2171482BCFEE1DC304CC8522A65E7562F9FB7314ECDE2C7EF49ACEE66",
+      "bytes": 7609
+    },
+    {
+      "path": "docs/REFERENCE.md",
+      "sha256": "86AAAC2B5A563DC50F7992E46023A88722DD8522A2D8772C27977AF070E662C8",
+      "bytes": 1892
+    },
+    {
+      "path": "docs/TOOLING.md",
+      "sha256": "E8D909217013B03D22129D0223CCCD03A3F1FB3811E2D003E394AEF17EF92F47",
+      "bytes": 4895
+    },
+    {
+      "path": "docs/references/approved-ending.png",
+      "sha256": "550A7DBD02BD68046D86F8D61F2525C19DD4AC1DCC157A0B802348F0152013E2",
+      "bytes": 1213250
+    },
+    {
+      "path": "docs/references/approved-opening.png",
+      "sha256": "B16516F7BBBD345D4EF8B0BFDB937C6B338E05B2B32C02984F7F3E1291238B58",
+      "bytes": 1031456
+    },
+    {
+      "path": "docs/references/approved-paper.png",
+      "sha256": "472056B82AFA1EF81585484E9C8622A5817EA78DAAF9902AB007565CD40BCFF6",
+      "bytes": 769911
+    },
+    {
+      "path": "docs/references/approved-product.png",
+      "sha256": "4D8B653C2B362741CA30E5CEDB768100832060AB1F6D69F22BAB3E3C63C9AD5C",
+      "bytes": 1160388
+    },
+    {
+      "path": "docs/templates/REVIEW.md",
+      "sha256": "CFF862AD75E322B91DFAB816D2E570A72FE3A68E5B8A05681450CE99A45D628F",
+      "bytes": 1876
+    },
+    {
+      "path": "docs/templates/REVISION.md",
+      "sha256": "58807F154E032C673784AD326BA74887CF3DAB4BBBFFB518FD34ECC704A9FD75",
+      "bytes": 1192
+    },
+    {
+      "path": "docs/voice-recipes.json",
+      "sha256": "5FA9394320B1C463F5F27E4F755354373C2604857685EE1E83A7265F2F187947",
+      "bytes": 3476
     },
     {
       "path": "eslint.config.mjs",
@@ -175,8 +245,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "C9DC498F8C9F95077DD71D0A09575B6C1F44F3EDABFD6A7CD83003736B9587F1",
-      "bytes": 1435
+      "sha256": "0FFF2D6DFDF7DA247FB60ECD18AD94E42984A4385FD4D9A6ECD1E30B02637AF3",
+      "bytes": 1678
     },
     {
       "path": "public/assets/INTER-LICENSE.txt",
@@ -254,9 +324,14 @@
       "bytes": 140
     },
     {
+      "path": "scripts/preservation.test.mjs",
+      "sha256": "A611CAD383403693FF916FDBA34FF93D2574172DCB22E585C450DF68CA90D6D7",
+      "bytes": 2371
+    },
+    {
       "path": "scripts/rebuild-audio.py",
-      "sha256": "5F76EBD08A81ABEF95DAB8A1661FFD9680423090942AD126F012D7AB04896732",
-      "bytes": 5761
+      "sha256": "B2165FFFE335CA652E84E56C9C136D347FAD5AC561F51175F9991DAB516DB2B7",
+      "bytes": 5809
     },
     {
       "path": "scripts/smoke.mjs",
@@ -264,14 +339,24 @@
       "bytes": 810
     },
     {
+      "path": "scripts/update-inventory.mjs",
+      "sha256": "C1836C8BA0C7E7F8AD0692A25240DD262167758972149FD7C308EC6E49E991BD",
+      "bytes": 3558
+    },
+    {
+      "path": "scripts/verify-docs.mjs",
+      "sha256": "5EA077D16607A348269106188000F6ECAB8F91A7387AF2C23DD3B64020EE7A85",
+      "bytes": 1774
+    },
+    {
       "path": "scripts/verify-exports.py",
-      "sha256": "B3D8A8AD6029C955214139E97A8C1AC967BC49F9219140B7AD84A0D670F33BBC",
-      "bytes": 3330
+      "sha256": "0B48F555B5180A925867A43A40DD906AD4B2D3C446FD0727AFE43F32C3767919",
+      "bytes": 3346
     },
     {
       "path": "scripts/verify.mjs",
-      "sha256": "FA974616C0EA318185F5800C785CC758CEE2A73812E186B391ECCB1B6D238579",
-      "bytes": 4197
+      "sha256": "C1BCD62F5EC40806FBBB443B24E64D2D1F7D4133443373AF38637FB7D1C90349",
+      "bytes": 4353
     },
     {
       "path": "source-audio/female/approved-audition.wav",
