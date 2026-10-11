@@ -5,6 +5,9 @@ appId: com.graymatter.spread
 - waitForAnimationToEnd:
     timeout: 8000
 - takeScreenshot: out/01-spreads
+- scrollUntilVisible:
+    element: "New Spread"
+    timeout: 20000
 - tapOn: "New Spread"
 - waitForAnimationToEnd
 - tapOn: "Parent, shop, study"
@@ -16,9 +19,14 @@ appId: com.graymatter.spread
 - takeScreenshot: out/02-new-spread
 - tapOn: "Save spreads"
 - waitForAnimationToEnd
+- scrollUntilVisible:
+    element: "Add a task|What matters most here\?"
+    timeout: 20000
+- scroll
+- scroll
 - tapOn:
     text: "What matters most here?"
-    index: 3
+    below: "Study"
 - inputText: "Read chapter 4"
 - pressKey: Enter
 - inputText: "Practice problem set"
@@ -27,26 +35,41 @@ appId: com.graymatter.spread
 - pressKey: Enter
 - hideKeyboard
 - takeScreenshot: out/03-tasks
+- scrollUntilVisible:
+    element: "Week"
+    direction: UP
+    timeout: 20000
 - tapOn: "Week"
 - waitForAnimationToEnd
 - takeScreenshot: out/04-week-to-place
 - tapOn:
     text: "Study"
     index: 0
+- scrollUntilVisible:
+    element: "Friday"
+    timeout: 20000
 - tapOn:
     text: "Add Study"
-    index: 0
+    below: "Friday"
+- scrollUntilVisible:
+    element: "Thursday"
 - tapOn:
     text: "Add Study"
-    index: 1
+    below: "Thursday"
+- scrollUntilVisible:
+    element: "Wednesday"
 - tapOn:
     text: "Add Study"
-    index: 2
+    below: "Wednesday"
+- scrollUntilVisible:
+    element: "Tuesday"
 - tapOn:
     text: "Add Study"
-    index: 3
+    below: "Tuesday"
+- scrollUntilVisible:
+    element: "Monday"
 - tapOn:
     text: "Add Study"
-    index: 4
+    below: "Monday"
 - waitForAnimationToEnd
 - takeScreenshot: out/05-week-spread
