@@ -8,7 +8,7 @@ let handler: ReturnType<typeof waitlistHandlerFromEnv> | undefined;
 const handle = (request: Request) =>
   (handler ??= waitlistHandlerFromEnv(process.env, {
     product: "Spread",
-    siteUrl: "https://spread-app-teal.vercel.app/",
+    siteUrl: "https://thespreadapp.com/",
     allowedOrigins: ["https://wglewis0721.github.io"],
   }))(request);
 
