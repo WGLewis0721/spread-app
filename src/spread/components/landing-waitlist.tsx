@@ -11,7 +11,7 @@ export function LandingWaitlist() {
     const values = new FormData(form);
     setState("sending");
     try {
-      const response = await fetch(window.location.hostname === "wglewis0721.github.io" ? "https://spread-app-teal.vercel.app/api/waitlist" : "/api/waitlist", {
+      const response = await fetch(window.location.hostname === "wglewis0721.github.io" ? "https://thespreadapp.com/api/waitlist" : "/api/waitlist", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: String(values.get("name") || "").trim(), email: String(values.get("email") || "").trim(), website: String(values.get("website") || ""), consent: values.get("consent") === "on" }),
       });

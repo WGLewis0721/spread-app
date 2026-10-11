@@ -8,9 +8,11 @@ Implementation: `src/routes/api/waitlist.ts` (server-only route), `src/lib/waitl
 
 The waitlist is the only thing that leaves the visitor's device, and only when they submit the form. It never reads or writes the local-first planner, profiles, licensing or backups.
 
+**Production domain:** `https://thespreadapp.com` is the official public address. The legacy `https://spread-app-teal.vercel.app` address remains an alternate Vercel hostname; it is not the canonical link.
+
 ## Frontend contract
 
-Same-origin `fetch` on Vercel. The GitHub Pages mirror is static and has no server, so a form there must post to `https://spread-app-teal.vercel.app/api/waitlist`; `https://wglewis0721.github.io` is allowed by default for that.
+Same-origin `fetch` on Vercel. The GitHub Pages mirror is static and has no server, so a form there must post to `https://thespreadapp.com/api/waitlist`; `https://wglewis0721.github.io` is allowed by default for that.
 
 ```ts
 const response = await fetch(`/api/waitlist`, {
@@ -102,7 +104,7 @@ if (result.ok) {
 ```
 
 - The sheet is the record; the alert is a convenience. A blocked or failed alert loses nothing.
-- **One-time activation:** FormSubmit holds the first message from a new site and emails an **Activate Form** link to the inbox. Click it once per site (`spread-app-teal.vercel.app`, plus `wglewis0721.github.io` for the Pages mirror).
+- **One-time activation:** FormSubmit holds the first message from a new site and emails an **Activate Form** link to the inbox. Click it once per site (`thespreadapp.com`, plus `wglewis0721.github.io` for the Pages mirror). **Before promoting this change to production, verify that browser-origin alerts from `thespreadapp.com` are activated.** The Google Sheet remains the source of truth if alert delivery is blocked.
 - The server-side alert in the waitlist module stays available but is switched off with `WAITLIST_NOTIFY_EMAIL=off` in this project's Vercel env vars.
 
 ## Setup
@@ -126,7 +128,7 @@ One Google service account (`waitlist@waitlist-graymattertechllc.iam.gserviceacc
 5. Check it:
 
 ```sh
-curl -sS -X POST https://spread-app-teal.vercel.app/api/waitlist \
+curl -sS -X POST https://thespreadapp.com/api/waitlist \
   -H 'content-type: application/json' \
   -d '{"email":"you@example.com","consent":true,"source":"setup-check"}'
 ```

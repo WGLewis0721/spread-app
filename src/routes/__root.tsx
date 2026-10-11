@@ -15,6 +15,7 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#000000" },
     ],
     links: [
+      { rel: "canonical", href: "https://thespreadapp.com/" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },

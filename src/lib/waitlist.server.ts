@@ -602,7 +602,7 @@ export type WaitlistEnv = Record<string, string | undefined>;
 export interface WaitlistProduct {
   /** Product name used in alert subjects, e.g. "Spread". */
   product: string;
-  /** Stable production URL, e.g. "https://spread-app-teal.vercel.app/". */
+  /** Stable production URL, e.g. "https://thespreadapp.com/". */
   siteUrl: string;
   /** Browser origins allowed besides the app's own host. */
   allowedOrigins?: readonly string[];

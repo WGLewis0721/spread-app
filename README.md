@@ -1,4 +1,4 @@
-[Live site](https://spread-app-teal.vercel.app/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design direction](DESIGN.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md)
+[Live site](https://thespreadapp.com/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design direction](DESIGN.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md)
 
 # Spread
 
@@ -8,7 +8,7 @@ Spread is a local-first weekly planner. You name the responsibilities in your li
 
 ## Where it runs
 
-- **Vercel** builds every push to `main` and serves production at [spread-app-teal.vercel.app](https://spread-app-teal.vercel.app/). Branches get preview deployments.
+- **Vercel** builds every push to `main` and serves production at [thespreadapp.com](https://thespreadapp.com/). The previous `spread-app-teal.vercel.app` address remains an alternate production hostname. Branches get preview deployments.
 - **GitHub Pages** builds `dist-pages` from `main` with `scripts/export-pages.mjs` and serves [wglewis0721.github.io/spread-app](https://wglewis0721.github.io/spread-app/). Do not edit the compiled files by hand.
 - **iPhone/App Store (planned):** package the same proven Vite/React planner with Capacitor. Spread 1.0 stays local-first, requires no account, and is sold as a complete paid App Store app. See [APP_STORE_RELEASE_PLAN.md](APP_STORE_RELEASE_PLAN.md).
 
