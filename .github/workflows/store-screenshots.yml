@@ -1,0 +1,70 @@
+name: Store screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [store-screenshots]
+    paths:
+      - ".maestro/**"
+      - ".github/workflows/store-screenshots.yml"
+
+jobs:
+  shots:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Build simulator app
+        run: >
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath artifacts/DerivedData
+          CODE_SIGNING_ALLOWED=NO
+          build
+      - name: Install Maestro
+        run: |
+          brew tap mobile-dev-inc/tap
+          brew install mobile-dev-inc/tap/maestro
+          maestro --version
+      - name: Capture iPhone and iPad screenshots
+        shell: bash
+        run: |
+          set -uo pipefail
+          APP=artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app
+          RUNTIME=$(xcrun simctl list runtimes -j | python3 -c "import json,sys; print([r['identifier'] for r in json.load(sys.stdin)['runtimes'] if '.iOS-' in r['identifier'] and r.get('isAvailable',True)][-1])")
+          pick() { xcrun simctl list devicetypes -j | python3 -c "import json,re,sys; n=[d for d in json.load(sys.stdin)['devicetypes'] if re.match(sys.argv[1], d['name'])]; print(n[-1]['identifier'])" "$1"; }
+          mkdir -p artifacts/store
+          capture() {
+            label=$1; type=$2
+            udid=$(xcrun simctl create "Shots $label" "$type" "$RUNTIME")
+            xcrun simctl bootstatus "$udid" -b
+            xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
+            xcrun simctl install "$udid" "$APP"
+            rm -rf out && mkdir out
+            maestro --device "$udid" test .maestro/store-flow.yaml --debug-output "artifacts/store/$label-debug" || echo "::warning::maestro flow failed for $label"
+            for f in out/*.png; do
+              [ -f "$f" ] || continue
+              sips -s format jpeg -s formatOptions 95 "$f" --out "artifacts/store/$label-$(basename "${f%.png}").jpg" >/dev/null
+            done
+            xcrun simctl io "$udid" screenshot "artifacts/store/$label-final-raw.png" || true
+            xcrun simctl shutdown "$udid" || true
+          }
+          capture iphone "$(pick '^iPhone 1[7-9] Pro$|^iPhone [2-9][0-9] Pro$')"
+          capture ipad "$(pick '^iPad Pro 13-inch')"
+          ls -la artifacts/store
+          for f in artifacts/store/*.jpg; do [ -f "$f" ] && sips -g pixelWidth -g pixelHeight "$f"; done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: store-screenshots
+          path: artifacts/store

@@ -1,0 +1,52 @@
+appId: com.graymatter.spread
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: out/01-spreads
+- tapOn: "New Spread"
+- waitForAnimationToEnd
+- tapOn: "Parent, shop, study"
+- inputText: "Study"
+- hideKeyboard
+- tapOn: "Increase Hours for spread 1"
+- tapOn: "Increase Hours for spread 1"
+- tapOn: "Increase Hours for spread 1"
+- takeScreenshot: out/02-new-spread
+- tapOn: "Save spreads"
+- waitForAnimationToEnd
+- tapOn:
+    text: "What matters most here?"
+    index: 3
+- inputText: "Read chapter 4"
+- pressKey: Enter
+- inputText: "Practice problem set"
+- pressKey: Enter
+- inputText: "Review lecture notes"
+- pressKey: Enter
+- hideKeyboard
+- takeScreenshot: out/03-tasks
+- tapOn: "Week"
+- waitForAnimationToEnd
+- takeScreenshot: out/04-week-to-place
+- tapOn:
+    text: "Study"
+    index: 0
+- tapOn:
+    text: "Add Study"
+    index: 0
+- tapOn:
+    text: "Add Study"
+    index: 1
+- tapOn:
+    text: "Add Study"
+    index: 2
+- tapOn:
+    text: "Add Study"
+    index: 3
+- tapOn:
+    text: "Add Study"
+    index: 4
+- waitForAnimationToEnd
+- takeScreenshot: out/05-week-spread
