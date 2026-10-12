@@ -5,26 +5,28 @@ import {
   type KeyboardCoordinateGetter,
   type KeyboardSensorOptions,
   type PointerSensorOptions,
+  type PointerSensorProps,
 } from "@dnd-kit/core";
 import type { KeyboardEvent, PointerEvent } from "react";
-import { acceptsPointer, mouseActivation, touchActivation } from "@/spread/gestures/activation";
+import { acceptsPointer, activationFor } from "@/spread/gestures/activation";
 import { arrowDirection, stepZone, type Zone } from "@/spread/gestures/keyboard-zones";
 import { TRAY_ID } from "@/spread/gestures/resolve-drop";
 
-export class FastPointerSensor extends PointerSensor {
-  static activators = [
-    {
-      eventName: "onPointerDown" as const,
-      handler: (event: PointerEvent, _options: PointerSensorOptions) => acceptsPointer(event.nativeEvent, false),
-    },
-  ];
-}
+/**
+ * One pointer sensor for mouse, pen and touch. dnd-kit keeps a single handler per event name, so
+ * two sensors that both listen to pointer down cannot split the work: the later one silently wins.
+ * The pointer type picks the activation instead.
+ */
+export class SpreadPointerSensor extends PointerSensor {
+  constructor(props: PointerSensorProps) {
+    const { pointerType } = props.event as globalThis.PointerEvent;
+    super({ ...props, options: { ...props.options, activationConstraint: activationFor(pointerType) } });
+  }
 
-export class HoldPointerSensor extends PointerSensor {
   static activators = [
     {
       eventName: "onPointerDown" as const,
-      handler: (event: PointerEvent, _options: PointerSensorOptions) => acceptsPointer(event.nativeEvent, true),
+      handler: ({ nativeEvent }: PointerEvent, _options: PointerSensorOptions) => acceptsPointer(nativeEvent, nativeEvent.pointerType === "touch"),
     },
   ];
 }
@@ -43,7 +45,7 @@ export class TaskKeyboardSensor extends KeyboardSensor {
   ];
 }
 
-/** Arrow keys step a held task from one drop place to the next (the tray, then each day). */
+/** Arrow keys step a held task from one drop place to the next: each day in the strip, then the sheet. */
 export const zoneKeyboardCoordinates: KeyboardCoordinateGetter = (event, { context, currentCoordinates }) => {
   const direction = arrowDirection(event.code);
   if (direction === 0) return undefined;
@@ -55,8 +57,8 @@ export const zoneKeyboardCoordinates: KeyboardCoordinateGetter = (event, { conte
     const rect = context.droppableRects.get(container.id);
     if (rect) zones.push({ id, top: rect.top, left: rect.left });
   }
-  const target = stepZone(zones, currentCoordinates.y, direction);
+  // The held item sits 12 px inside the zone it was last stepped to.
+  const target = stepZone(zones, { top: currentCoordinates.y - 12, left: currentCoordinates.x - 12 }, direction);
   return target ? { x: target.left + 12, y: target.top + 12 } : undefined;
 };
 
-export { mouseActivation, touchActivation };

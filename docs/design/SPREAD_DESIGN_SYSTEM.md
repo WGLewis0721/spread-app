@@ -28,13 +28,16 @@ Status is never colour alone: every state also has words.
 - **Sheet**: Radix Dialog with the `sheet` class and a Grabber. Used for "More", new spread and Open tasks.
 - **Dialog**: Radix AlertDialog for questions that need a yes or no.
 - **Toast and Undo**: one themed toast. Anything the person did with a drag, a tap on a day or "Not today" offers Undo through `showUndoToast` (`src/spread/ui/undo-toast.tsx`) for six seconds. Only the latest change shows Undo. It runs if that week is exactly as the change left it, even after turning to another week; otherwise it says so and changes nothing.
-- **Task line**: a 44 px grip to drag, the task text, and one text button ("Place" or "Move to"), in a plain list with hairline dividers (never a pill per task). Its days open beneath it as a row of small chips ("Friday 1h"). Used in To place and under a role on a day.
+- **Week strip**: seven day cells in a row, Monday to Sunday (`bg-elevated`, the open day `bg-accent`). Each shows its initial, its date and a 4 px bar of its planned hours in role colours, scaled to the busiest day (at least 8 h). The strip is always on screen, so it is where everything is dropped. Below it, one day at a time: its roles in one card, then **Add to <day>**.
+- **Role on a day**: the role's dot is its drag handle (move to another day), its name folds its tasks, a stepper sets its hours. Under its tasks: **Place a task (N)** when that role has tasks waiting, and **Remove from <day>** in `--danger`.
+- **Add chips**: tinted pills (`bg-accent/10`, a plus, the role dot, "7h left"). Tap adds an hour to the open day; hold and drag drops it on any day. They suggest rather than hold, so they never look like a day.
+- **To place sheet**: a bottom sheet opened from the dock button (inbox icon, accent count badge). It is not modal: the strip stays usable above it. While a task is held it drops to a 7 rem peek with one line ("Drop it here to take it off its day.") and becomes the drop target; it wins over anything it covers.
 - **To place is grouped by role**: one row per role ("Health · 11 tasks" with a chevron), because a task only goes on its own role's days. Up to five tasks the groups start open; past that they start folded, and an open group shows six before "Show N more". Every task a person already has starts here, so it must stay short.
-- **Three kinds of thing in Week, three looks**: days are solid cards (`bg-elevated`); **To place** is a dashed tray (`border-dashed`, no fill: it holds what has no day yet and is the drop target to take a task off its day; one line when empty); **Free time** is a row of tinted suggestion chips (`bg-accent/10`, accent text, a plus), not a card, because it suggests rather than holds. Nothing that is not a day may look like a day.
-- **Tasks on a day fold**: a role row on a day shows "N tasks" with a chevron under its name; its tasks open below it only when tapped, so a busy week stays scannable.
+- **Task line**: a 44 px grip to drag, the task text, and one text button ("Place" or "Move", "Done" while open), in a plain list with hairline dividers (never a pill per task). Its days open beneath it as a row of small chips ("Fri 1h"), then "Add Health to Thu" when the role is not on the open day yet, then "Back to To place" for a placed task.
+- **Drag card**: what follows the finger is a small card (grip, role dot, text) tilted 2°, sized to its text. While a task is held, the days its role is on get a faint accent ring, the others dim, and the day header says where it would land or why not ("Health isn't on Wednesday").
 - **Quiet links**: secondary week actions (Rollover, Review open tasks) are accent text links side by side in the summary, not full-width buttons.
-- **Not today**: only on a task placed on today. Other placed tasks show their day as a small tag; Move to in Week takes them off.
-- **Drop highlight**: a 2 px `--accent` outline on the target. Refused drops explain themselves in a toast instead of doing something else.
+- **Not today**: only on a task placed on today. Other placed tasks show their day as a small tag; Move in Week takes them off.
+- **Drop highlight**: the day under the pointer grows slightly with a 2 px `--accent` outline. Refused drops explain themselves in a toast instead of doing something else.
 - **Status row**: a title, one quiet line of detail, `role="status"`. Problem state uses `--danger` on the title.
 - **Today**: the word "Today" in `--accent` beside the day name, with `aria-current="date"`.
 - **Spread/Week segmented tabs**: the selected tab is the Tab-stop; Left/Right or Home/End moves focus and changes the view. Each tab names the current panel. The global week-navigation keys yield when a control has focus.
@@ -47,9 +50,9 @@ Existing classes only (`descend-in`, `ascend-out`, `cascade`, `week-seq`). Reduc
 
 Every drag has a tap equivalent and a keyboard equivalent:
 
-- a task: **Place** / **Move to** lists the days its role is on; **Take off this day** and **Not today** put it back in To place
-- a role on a day: tap the role, then **Add**; or tap a Free time suggestion
-- keyboard: focus a task's handle, Space to pick up, arrow keys to step to the next day or the tray, Space to drop, Escape to cancel; the moves are announced. Only tasks are moved by keyboard: spreads and day rows keep Enter and Space for their own actions (select, add)
+- a task: **Place** / **Move** lists the days its role is on (and offers to add the role to the open day); **Back to To place** and **Not today** put it back
+- a role on a day: tap a day in the strip, then tap an **Add** chip; the stepper changes its hours, **Remove from <day>** takes it off
+- keyboard: left and right arrows walk the strip. Focus a task's grip, Space to pick up, arrow keys to step day by day through the strip and then to the To place sheet, Space to drop, Escape to cancel; the moves are announced. Only tasks are moved by keyboard: spreads and day cells keep Enter and Space for their own actions (select, add)
 
 ## Rules a change must keep
 
@@ -58,6 +61,7 @@ Every drag has a tap equivalent and a keyboard equivalent:
 3. Stored planner data is not migrated for UI work. New UI reads existing fields.
 4. Convenience state (last view) lives under a key that does not start with `spread.`, so backups never treat it as planner data.
 5. Select plain values from the store (strings, numbers, ids), never objects built in the selector: a new object on every read re-renders forever and takes the whole planner down.
+6. One pointer sensor per drag surface. dnd-kit keeps one handler per event name, so a second sensor on pointer down silently replaces the first; mouse versus touch is decided inside the sensor from the pointer type (`SpreadPointerSensor`).
 
 ## Human Interface Guidelines polish — 2026-10-08
 
@@ -68,7 +72,7 @@ Applies to the **planner** only. The landing page remains governed by `DESIGN.md
 | Crown | Existing metallic wheel remains; focused arrow-key navigation plus 44 px previous/next targets; interaction hint dismisses after first successful turn | Recognizable design with discoverable, non-gesture navigation and progressively quieter chrome |
 | Spread summary | Segmented responsibility-hours bar is now a set of labeled controls that scroll/focus the corresponding responsibility | Color has a usable, named interaction rather than remaining a legend the user must interpret |
 | Responsibility editing | Edit mode reveals a labeled Remove action below each responsibility while keeping the header (including its collapse chevron) in place | Stable geometry; destructive action remains explicitly labeled and requires the existing removal dialog |
-| Week day cards | Empty days retain their label/date and selected Add action, but omit repeating visual "Nothing this day" text | Less visual repetition; screen readers retain an empty-day description |
+| Week day cards | Since replaced by the week strip (see Patterns): only the open day shows below the strip, and an empty one says so once | Less visual repetition; every day cell keeps a spoken label with its planned hours |
 | Month | Today marker uses the existing accent and on-accent tokens; spoken labels identify Today and task-free days | Selected/current date clearer in both appearances; no meaning conveyed only through a color dot |
 | Global arrows | Header-wide week navigation yields to focused controls and the crown's own keyboard handling | Respects keyboard expectations and prevents double navigation |
 

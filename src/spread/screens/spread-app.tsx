@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createPortal, flushSync } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
+import { ChevronRight, Check, Inbox, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, isoDate, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
@@ -27,7 +27,7 @@ import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { deriveLocalStatus, getSaveFacts, subscribeSaveFacts } from "@/lib/spread/local-status";
 import { openTasksOf } from "@/lib/spread/task-rollover";
-import { placedDay } from "@/lib/spread/task-schedule";
+import { placedDay, unscheduledTasks } from "@/lib/spread/task-schedule";
 import { completionHaptic } from "@/lib/spread/haptics";
 import { readViewContext, writeViewContext } from "@/lib/spread/view-context";
 import { showUndoToast } from "@/spread/ui/undo-toast";
@@ -426,7 +426,9 @@ function WeekScreen() {
   const [monthDir, setMonthDir] = useState<-1 | 1 | 0>(0);
   const [monthShift, setMonthShift] = useState(0);
   const [focusDate, setFocusDate] = useState<string | null>(null);
-  const [picked, setPicked] = useState<string | null>(null);
+  // The To place sheet in Week, opened from the dock.
+  const [placing, setPlacing] = useState(false);
+  const placeButton = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [headerH, setHeaderH] = useState(0);
   useLayoutEffect(() => {
@@ -485,6 +487,7 @@ function WeekScreen() {
     setMonthCursor((cursor) => shiftMonth(cursor.year, cursor.month, direction));
   }, []);
   const monthChrome = view === "week" && ((plane === "month" && motion !== "to-week") || motion === "to-month");
+  const toPlaceCount = unscheduledTasks(data.weeks[data.currentWeek]).length;
   const showWeekLayer = plane === "week" || motion !== null;
   const showMonthLayer = plane === "month" || motion !== null;
 
@@ -501,7 +504,7 @@ function WeekScreen() {
 
   function openMonth() {
     if (motion) return;
-    setPicked(null);
+    setPlacing(false);
     setMonthCursor(dominantMonth(data.currentWeek));
     setMonthDir(0);
     setMonthShift(0);
@@ -619,7 +622,7 @@ function WeekScreen() {
     motionTimer.current = null;
     setPlane("week");
     setMotion(null);
-    setPicked(null);
+    setPlacing(false);
     if (view === "spread") return;
     setViewPlay(true);
     setView("spread");
@@ -720,7 +723,7 @@ function WeekScreen() {
                     motionTimer.current = null;
                     setPlane("week");
                     setMotion(null);
-                    setPicked(null);
+                    setPlacing(false);
                   }
                   if (key === "week") setEditing(false);
                   setViewPlay(true);
@@ -761,8 +764,12 @@ function WeekScreen() {
                         onCommit={goWeek}
                         focusDate={focusDate}
                         onFocused={() => setFocusDate(null)}
-                        selectedId={picked}
-                        onSelected={setPicked}
+                        trayOpen={placing}
+                        onTrayOpen={(open) => {
+                          setPlacing(open);
+                          // Closing the sheet hands focus back to the button that opens it.
+                          if (!open) placeButton.current?.focus();
+                        }}
                       />
                     </div>
                   </div>
@@ -833,16 +840,23 @@ function WeekScreen() {
 
       <div className="app-dock no-print pointer-events-none fixed inset-x-0 z-30 flex justify-center px-4 pb-safe">
         <div className={cn("glass pointer-events-auto flex items-center rounded-full p-1.5", view === "week" ? "" : "gap-1")}>
-          {view === "week" && !monthChrome && picked && (
+          {view === "week" && !monthChrome && toPlaceCount > 0 && (
             <button
+              ref={placeButton}
               type="button"
-              className="h-11 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent"
-              onClick={() => setPicked(null)}
+              className="flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold active:opacity-70"
+              aria-label={`To place, ${toPlaceCount} ${toPlaceCount === 1 ? "task" : "tasks"}`}
+              aria-expanded={placing}
+              onClick={() => setPlacing(!placing)}
             >
-              Done
+              <Inbox className="size-5" strokeWidth={2.2} aria-hidden="true" />
+              To place
+              <span className="grid h-[22px] min-w-[22px] place-items-center rounded-full bg-accent px-1.5 text-xs font-bold text-on-accent tabular-nums" aria-hidden="true">
+                {toPlaceCount}
+              </span>
             </button>
           )}
-          {view === "week" && !monthChrome && picked && <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />}
+          {view === "week" && !monthChrome && toPlaceCount > 0 && <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />}
           {view === "week" && (
             <button
               type="button"

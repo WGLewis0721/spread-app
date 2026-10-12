@@ -1,14 +1,22 @@
 /**
  * Where an arrow key takes a task that is being moved with the keyboard: to the next place it can
- * be dropped (the To place tray or a whole day) below or above it, instead of nudging it a few
- * pixels at a time. Pure, so it can be tested without a browser.
+ * be dropped (a day in the week strip, or the To place sheet), in reading order: along a row, then
+ * down. Pure, so it can be tested without a browser.
  */
 export type Zone = { id: string; top: number; left: number };
 
-export function stepZone(zones: Zone[], top: number, direction: 1 | -1): Zone | null {
-  const ordered = zones.slice().sort((a, b) => a.top - b.top);
-  if (direction === 1) return ordered.find((zone) => zone.top > top + 1) ?? null;
-  return ordered.reverse().find((zone) => zone.top < top - 1) ?? null;
+/** Zones on the same row when their tops are this close. */
+const ROW = 8;
+
+function before(a: { top: number; left: number }, b: { top: number; left: number }) {
+  if (Math.abs(a.top - b.top) <= ROW) return a.left < b.left - 1;
+  return a.top < b.top;
+}
+
+export function stepZone(zones: Zone[], at: { top: number; left: number }, direction: 1 | -1): Zone | null {
+  const ordered = zones.slice().sort((a, b) => (Math.abs(a.top - b.top) <= ROW ? a.left - b.left : a.top - b.top));
+  if (direction === 1) return ordered.find((zone) => before(at, zone)) ?? null;
+  return ordered.reverse().find((zone) => before(zone, at)) ?? null;
 }
 
 export function arrowDirection(code: string): 1 | -1 | 0 {

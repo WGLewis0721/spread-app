@@ -58,14 +58,14 @@ Gestures call actions. They do not write week data themselves.
 
 A touch holds briefly before a drag. A mouse or pen starts after a short move. A week swipe stays separate and waits while a drag is active.
 
-- Tasks can be placed on a day. In Week, **To place** lists open tasks with no day, grouped by role; drag one onto its role on a day, or tap **Place** and pick the day. A task on today shows **Not today** in Spread, which puts it back. Drags, placements and Not today offer **Undo** for six seconds (the latest change only).
-- **Free time** in Week suggests up to three roles that still have hours not on a day, each on the lightest day ahead. Nothing is added until you tap one.
+- Tasks can be placed on a day. In Week, **To place** in the dock opens a sheet of the open tasks with no day, grouped by role; drag one onto a day in the strip, or tap **Place** and pick the day. A task on today shows **Not today** in Spread, which puts it back. Drags, placements and Not today offer **Undo** for six seconds (the latest change only).
+- **Add to <day>** in Week lists the roles that still have hours not on a day; a tap adds an hour to the open day, a hold drags it onto any day. **Lightest day ahead** opens the day with the least planned. Nothing is added until you tap.
 - **Review open tasks** moves the tasks you pick to next week, keeping them as they are. It does not touch next week's own tasks and is safe to repeat.
 - Spread reopens on the view (Spread or Week, week or month) you left, per profile.
 - Rollover copies this week into next week. The week you leave stays as history. If next week already has tasks or days, Spread asks before replacing it.
 - Open a task and add only what you need: Notes, Outline, Table, or Photo. In Notes, a line that starts with I. or A. continues like a Word outline.
 - Tap a spread’s color dot to pick another color.
-- Week shows Sunday at the top through Monday at the bottom. Turn the crown, or swipe the week, to move.
+- Week shows the seven days as a strip, Monday to Sunday, each with a bar of its planned hours in role colours, and one day open below it. Tap a day, or use the arrow keys, to open it. Turn the crown, or swipe the week, to change weeks.
 - The hours on a spread are a bank. The week bubble shows what is left. Adding hours to a day takes from that bank. Taking them off a day puts them back.
 - More → Profiles holds up to ten profiles. Each profile has its own spreads and weeks. The open one is marked. Choosing another closes the menu, says which profile opened, and brings that profile’s spreads in.
 - More can copy this week as text, save a Word document, or print a plain page you can keep as a PDF. Back Up Spread saves a `.spread` file. Restore Spread shows what is in the file and asks before it replaces the open profile.
