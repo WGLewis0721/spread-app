@@ -38,15 +38,15 @@ export function LandingWaitlist() {
     <div className="site-waitlist-copy">
       <p className="site-kicker">Spread for iPhone</p>
       <h2 id="spread-waitlist-title">A little room for what matters. <em>Wherever you are.</em></h2>
-      <p>Spread began on a Sunday sheet of paper. Join the iPhone beta list and we'll send an invitation when the planner is ready to carry with you.</p>
+      <p>Spread began on a Sunday sheet of paper. Join the beta list and we'll send your invitation: a TestFlight link on iPhone, or sign-in details for the web planner on Android and desktop.</p>
       <form className="site-waitlist-form" onSubmit={submit}>
         <label htmlFor="spread-beta-name">Your name</label>
         <input className="site-waitlist-name" id="spread-beta-name" type="text" name="name" autoComplete="name" placeholder="Your name" maxLength={100} required disabled={state === "sending"}/>
         <label htmlFor="spread-beta-email">Email for your beta invitation</label>
         <input className="site-waitlist-trap" name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true"/>
         <div className="site-waitlist-fields"><input id="spread-beta-email" type="email" name="email" autoComplete="email" placeholder="you@example.com" required disabled={state === "sending"}/><button className="site-button" type="submit" disabled={state === "sending"}>{state === "sending" ? "Joining…" : "Join the iPhone beta"}</button></div>
-        <label className="site-waitlist-consent"><input type="checkbox" name="consent" required disabled={state === "sending"}/> Email me about the Spread iPhone beta and my invitation. I can unsubscribe at any time.</label>
-        <p className="site-waitlist-feedback" role="status" aria-live="polite">{state === "success" ? "You're on the list. We'll email your invitation when it's ready." : state === "error" ? "We couldn't add you yet. Please try again later." : "You can use Spread on the web now. Your planner stays on your device; this form only asks for your name and email."}</p>
+        <label className="site-waitlist-consent"><input type="checkbox" name="consent" required disabled={state === "sending"}/> Email me about the Spread beta and my invitation. I can unsubscribe at any time.</label>
+        <p className="site-waitlist-feedback" role="status" aria-live="polite">{state === "success" ? "You're on the list. We'll email your invitation when it's ready." : state === "error" ? "We couldn't add you yet. Please try again later." : "Beta access is by invitation. Your planner stays on your device; this form only asks for your name and email."}</p>
       </form>
     </div>
   </section>;

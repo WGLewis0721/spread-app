@@ -1956,3 +1956,24 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
   padding-inline: 1rem;
   background: var(--canvas);
 }
+
+/* Beta sign-in card (landing "Start" section) */
+.site-auth { display: grid; gap: 0; }
+.site-auth .site-card-label { margin: 16px 0 8px; }
+.site-auth .site-input[aria-invalid="true"] { border-color: #b42318; }
+.site-auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid var(--site-line); border-radius: 14px; background: #eee8dc; }
+.site-auth-tabs button { min-height: 44px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--site-muted); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; transition: background .2s ease, color .2s ease; }
+.site-auth-tabs button[aria-selected="true"] { background: #fff; color: var(--site-ink); box-shadow: 0 1px 2px #3b352524; }
+.site-auth > .site-button { margin-top: 20px; }
+.site-auth > .site-button:disabled { opacity: .6; cursor: default; }
+.site-auth-note { margin: 14px 0 0; color: var(--site-muted); font-size: .75rem; line-height: 1.5; text-align: center; }
+.spread-site[data-site-theme="dark"] .site-auth-tabs { background: #26241f; border-color: #3b3833; }
+.spread-site[data-site-theme="dark"] .site-auth-tabs button[aria-selected="true"] { background: #121110; box-shadow: none; }
+.site-auth-heading { margin: 18px 0 0; font-size: 1.15rem; font-weight: 600; letter-spacing: -.02em; }
+.site-auth-note-left { margin: 10px 0 0; text-align: left; }
+.site-auth-link { margin: 14px auto 0; padding: 6px 8px; border: 0; background: transparent; color: var(--site-blue); font: inherit; font-size: .875rem; font-weight: 560; cursor: pointer; }
+.site-reset-code { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-top: 12px; }
+.site-reset-code code { display: block; padding: 12px 14px; border: 1px dashed #c9bfa9; border-radius: 12px; background: #fff; font-size: 1.35rem; font-weight: 650; letter-spacing: .12em; text-align: center; font-variant-numeric: tabular-nums; }
+.site-reset-code button { min-height: 50px; padding: 0 16px; border: 1px solid #d9d2c4; border-radius: 12px; background: #eee8dc; color: var(--site-ink); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; }
+.spread-site[data-site-theme="dark"] .site-reset-code code { background: #121110; border-color: #4a463f; }
+.spread-site[data-site-theme="dark"] .site-reset-code button { background: #26241f; border-color: #3b3833; }

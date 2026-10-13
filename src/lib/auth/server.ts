@@ -30,11 +30,14 @@
  * a verified id via `@/lib/auth/middleware`.
  */
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { bearer, genericOAuth } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
+import { ACCESS_MESSAGES, normalizeEmail, PASSWORD_MAX, PASSWORD_MIN } from "../beta-access";
+import { betaAccess, betaAuthConfigured } from "../beta-access.server";
 import { ensureDbReady, getPglite } from "../db";
 import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
@@ -72,7 +75,11 @@ const env = (key: string): string | undefined => {
 
 // Explicit off-switch. The deployer sets `VITE_AUTH_ENABLED=true` when it
 // provisions auth; set it to "false" to force auth off everywhere (dev user).
-const authDisabled = env("VITE_AUTH_ENABLED") === "false";
+// Spread's web beta signs in with email + password only, against the beta allowlist. The Grok
+// broker (Google/X sign-in) is never enabled: it would be a second door around that allowlist,
+// and at runtime on Vercel this variable is NOT set (only the build wrapper sets it), so the
+// template's check below would otherwise switch the broker on in production.
+const authDisabled = true;
 
 // Broker federation creds: the deployer injects a per-app client when deployed;
 // otherwise fall back to the shared live-preview client, which the broker accepts
@@ -211,7 +218,73 @@ export const auth = betterAuth({
   session: { cookieCache: { enabled: true, maxAge: 300 } },
 
   // Local email/password — toggled only via `./email-password` (not a plugin).
-  ...(emailAndPasswordEnabled ? { emailAndPassword: { enabled: true } } : {}),
+  ...(emailAndPasswordEnabled
+    ? {
+        emailAndPassword: {
+          enabled: true,
+          minPasswordLength: PASSWORD_MIN,
+          maxPasswordLength: PASSWORD_MAX,
+          // New sessions on password reset/changes are signed out everywhere else.
+          revokeSessionsOnPasswordReset: true,
+        },
+      }
+    : {}),
+
+  // Web beta gate. Account creation and sign-in are open ONLY to emails whose row in
+  // the Spread Beta Waitlist Sheet says `approved` (src/lib/beta-access.ts). Runs on
+  // every route into these endpoints, including direct calls to /api/auth/*.
+  //  - sign-up: an unapproved email gets the "not yet" wording (spelling hint included).
+  //  - sign-in: an unapproved email gets the SAME error as a wrong password, so the
+  //    form can't be used to find out who is on the list.
+  //  - the Sheet unreachable, or the deployment missing its database/secret: refuse.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-up/email" && ctx.path !== "/sign-in/email") return;
+      if (!betaAuthConfigured()) {
+        throw new APIError("SERVICE_UNAVAILABLE", { message: ACCESS_MESSAGES.notConfigured });
+      }
+      const body = (ctx.body ?? {}) as { email?: unknown };
+      const access = await betaAccess.check(normalizeEmail(body.email));
+      if (access === "unavailable") {
+        throw new APIError("SERVICE_UNAVAILABLE", { message: ACCESS_MESSAGES.unavailable });
+      }
+      if (access === "denied") {
+        throw ctx.path === "/sign-up/email"
+          ? new APIError("FORBIDDEN", { message: ACCESS_MESSAGES.notApproved })
+          : // Byte-for-byte what Better Auth returns for a wrong password.
+            new APIError("UNAUTHORIZED", { message: "Invalid email or password", code: "INVALID_EMAIL_OR_PASSWORD" });
+      }
+    }),
+  },
+
+  // Belt and braces: whatever route creates a user (email, a future provider, a platform
+  // identity), the new account's email must be approved in the Sheet.
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          const access = await betaAccess.check(normalizeEmail((user as { email?: unknown }).email));
+          if (access === "unavailable") {
+            throw new APIError("SERVICE_UNAVAILABLE", { message: ACCESS_MESSAGES.unavailable });
+          }
+          if (access === "denied") {
+            throw new APIError("FORBIDDEN", { message: ACCESS_MESSAGES.notApproved });
+          }
+        },
+      },
+    },
+  },
+
+  // Rate limits for the two doors into the beta (per client IP, per warm instance).
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 120,
+    customRules: {
+      "/sign-up/email": { window: 600, max: 8 },
+      "/sign-in/email": { window: 600, max: 12 },
+    },
+  },
 
   // `__Host-` prefixed cookies: the browser REFUSES any same-named cookie that
   // carries a `Domain` attribute, so a sibling `*.grok.me` app cannot "toss" a
@@ -221,6 +294,9 @@ export const auth = betterAuth({
   // Secure + the names ourselves. (Browsers allow Secure cookies on
   // `http://localhost`, so local dev still works.)
   advanced: {
+    // Vercel sets these to the real client address (a caller can't supply their own), which is
+    // what the sign-in/sign-up rate limits are keyed on.
+    ipAddress: { ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"] },
     useSecureCookies: false,
     defaultCookieAttributes: { secure: true, sameSite: "lax", path: "/" },
     cookies: {

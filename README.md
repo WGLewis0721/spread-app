@@ -70,7 +70,7 @@ A touch holds briefly before a drag. A mouse or pen starts after a short move. A
 - More → Profiles holds up to ten profiles. Each profile has its own spreads and weeks. The open one is marked. Choosing another closes the menu, says which profile opened, and brings that profile’s spreads in.
 - More can copy this week as text, save a Word document, or print a plain page you can keep as a PDF. Back Up Spread saves a `.spread` file. Restore Spread shows what is in the file and asks before it replaces the open profile.
 
-Trial key: `SPR-DEMO-2026`
+The web planner is a private beta: only emails approved in the beta Sheet can create an account or sign in. See [docs/BETA_ACCESS.md](docs/BETA_ACCESS.md). The installed iPhone app has no sign-in.
 
 ## iOS release direction
 
