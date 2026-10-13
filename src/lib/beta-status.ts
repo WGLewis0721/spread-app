@@ -22,7 +22,11 @@ export const getBetaStatus = createServerFn({ method: "GET" }).handler(async ():
     import("@/lib/auth/server"),
   ]);
   const headers = getRequestHeaders();
-  const session = await auth.api.getSession({ headers: new Headers(headers as HeadersInit) }).catch(() => null);
+  // Bypass Better Auth's 5-minute signed-cookie cache so the database decides: a session ended by a
+  // password reset or a sign-out elsewhere must stop opening the planner at the next check.
+  const session = await auth.api
+    .getSession({ headers: new Headers(headers as HeadersInit), query: { disableCookieCache: true } })
+    .catch(() => null);
   const email = session?.user?.email;
   if (!session || !email) return { state: "signed-out" };
   const access = await betaAccess.check(email);

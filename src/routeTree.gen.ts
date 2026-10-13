@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPasswordResetRouteImport } from './routes/api/password-reset'
 import { Route as ApiWaitlistRouteImport } from './routes/api/waitlist'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPasswordResetRoute = ApiPasswordResetRouteImport.update({
+  id: '/api/password-reset',
+  path: '/api/password-reset',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWaitlistRoute = ApiWaitlistRouteImport.update({
@@ -31,30 +37,34 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/password-reset': typeof ApiPasswordResetRoute
   '/api/waitlist': typeof ApiWaitlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/password-reset': typeof ApiPasswordResetRoute
   '/api/waitlist': typeof ApiWaitlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/password-reset': typeof ApiPasswordResetRoute
   '/api/waitlist': typeof ApiWaitlistRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/waitlist' | '/api/auth/$'
+  fullPaths: '/' | '/api/password-reset' | '/api/waitlist' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/waitlist' | '/api/auth/$'
-  id: '__root__' | '/' | '/api/waitlist' | '/api/auth/$'
+  to: '/' | '/api/password-reset' | '/api/waitlist' | '/api/auth/$'
+  id: '__root__' | '/' | '/api/password-reset' | '/api/waitlist' | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPasswordResetRoute: typeof ApiPasswordResetRoute
   ApiWaitlistRoute: typeof ApiWaitlistRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/password-reset': {
+      id: '/api/password-reset'
+      path: '/api/password-reset'
+      fullPath: '/api/password-reset'
+      preLoaderRoute: typeof ApiPasswordResetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/waitlist': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPasswordResetRoute: ApiPasswordResetRoute,
   ApiWaitlistRoute: ApiWaitlistRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

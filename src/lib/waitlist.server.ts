@@ -322,7 +322,7 @@ export function createWaitlistHandler({
   };
 }
 
-async function readJson(request: Request): Promise<unknown> {
+export async function readJson(request: Request): Promise<unknown> {
   const declared = Number(request.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES)
     throw new WaitlistError("REQUEST_TOO_LARGE", "Request is too large.", 413);
@@ -429,6 +429,10 @@ const range = (tab: string, cells: string) =>
 export interface SheetsStore extends WaitlistStore {
   /** Row for this (normalized) email: `status` is column E, optional `access_until` column F. Null when unlisted. */
   lookupAccess(email: string): Promise<AccessRecord | null>;
+  /** Generic access to another tab (the password-reset requests). `tab` must exist; `cells` is A1 notation like "A2:E". */
+  readValues(tab: string, cells: string): Promise<string[][]>;
+  appendValues(tab: string, cells: string, row: string[]): Promise<void>;
+  writeValue(tab: string, cell: string, value: string): Promise<void>;
 }
 
 export interface SheetsStoreOptions {
@@ -519,6 +523,36 @@ export function createSheetsStore({
         return { status: String(row[3] ?? ""), accessUntil: String(row[4] ?? "") };
       }
       return null;
+    },
+    async readValues(otherTab, cells) {
+      const json = (await call(
+        `${base}/${range(otherTab, cells)}`,
+        await authed({ method: "GET" }),
+        "Sheets read",
+      )) as { values?: unknown[][] };
+      return (json.values ?? []).map((row) => row.map((value) => String(value ?? "")));
+    },
+    async appendValues(otherTab, cells, row) {
+      await call(
+        `${base}/${range(otherTab, cells)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+        await authed({
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ values: [row] }),
+        }),
+        "Sheets append",
+      );
+    },
+    async writeValue(otherTab, cell, value) {
+      await call(
+        `${base}/${range(otherTab, cell)}?valueInputOption=RAW`,
+        await authed({
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ values: [[value]] }),
+        }),
+        "Sheets write",
+      );
     },
     async appendRow(row) {
       // RAW stores every value as typed text, so nothing is evaluated as a formula.

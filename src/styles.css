@@ -1969,3 +1969,11 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 .site-auth-note { margin: 14px 0 0; color: var(--site-muted); font-size: .75rem; line-height: 1.5; text-align: center; }
 .spread-site[data-site-theme="dark"] .site-auth-tabs { background: #26241f; border-color: #3b3833; }
 .spread-site[data-site-theme="dark"] .site-auth-tabs button[aria-selected="true"] { background: #121110; box-shadow: none; }
+.site-auth-heading { margin: 18px 0 0; font-size: 1.15rem; font-weight: 600; letter-spacing: -.02em; }
+.site-auth-note-left { margin: 10px 0 0; text-align: left; }
+.site-auth-link { margin: 14px auto 0; padding: 6px 8px; border: 0; background: transparent; color: var(--site-blue); font: inherit; font-size: .875rem; font-weight: 560; cursor: pointer; }
+.site-reset-code { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-top: 12px; }
+.site-reset-code code { display: block; padding: 12px 14px; border: 1px dashed #c9bfa9; border-radius: 12px; background: #fff; font-size: 1.35rem; font-weight: 650; letter-spacing: .12em; text-align: center; font-variant-numeric: tabular-nums; }
+.site-reset-code button { min-height: 50px; padding: 0 16px; border: 1px solid #d9d2c4; border-radius: 12px; background: #eee8dc; color: var(--site-ink); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; }
+.spread-site[data-site-theme="dark"] .site-reset-code code { background: #121110; border-color: #4a463f; }
+.spread-site[data-site-theme="dark"] .site-reset-code button { background: #26241f; border-color: #3b3833; }
