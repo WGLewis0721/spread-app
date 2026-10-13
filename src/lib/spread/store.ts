@@ -27,7 +27,6 @@ import {
   depositHours,
   bankedHours,
   ensureWeek,
-  LICENSE_KEY,
   normalizeData,
   ROLE_COLORS,
   SPREAD_CATEGORIES,
@@ -36,7 +35,6 @@ import {
   syncAllocationHours,
   THEME_KEY,
   uid,
-  validateLicense,
   weekIsPopulated,
   weekKey,
   type Allocation,
@@ -77,8 +75,7 @@ type Store = {
   theme: ThemeChoice;
   accent: AccentId | null;
   boot: () => void;
-  beginTrial: (name?: string) => void;
-  unlock: (code: string, name?: string) => boolean;
+  enterBeta: (name?: string) => void;
   logout: () => void;
   setTheme: (theme: ThemeChoice) => void;
   setAccent: (accent: AccentId) => void;
@@ -142,19 +139,11 @@ export type RestoreResult =
 // never written to storage there, so it can't go stale or be removed by a storage reset.
 const NATIVE_LICENSE: License = { ok: true, plan: "personal" };
 
+// On the web the planner opens only for a verified beta session (see enterBeta and
+// src/lib/beta-status.ts). Nothing in browser storage can open it, so the old stored
+// license key and the public trial key no longer unlock anything.
 function readLicense(): License | null {
-  if (isNativeApp()) return NATIVE_LICENSE;
-  try {
-    const raw = localStorage.getItem(LICENSE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as License;
-    if (parsed && parsed.ok === true && (parsed.plan === "demo" || parsed.plan === "personal")) {
-      return parsed;
-    }
-  } catch {
-    /* ignore broken storage */
-  }
-  return null;
+  return isNativeApp() ? NATIVE_LICENSE : null;
 }
 
 function readData(): SpreadData {
@@ -513,28 +502,16 @@ export const useSpread = create<Store>((set, get) => ({
     if (!session) return;
     set(session);
   },
-  beginTrial: (name) => {
+  enterBeta: (name) => {
     ensureProfile(set, get, name);
-    const license: License = { ok: true, plan: "demo" };
-    put(LICENSE_KEY, JSON.stringify(license));
+    const license: License = { ok: true, plan: "personal" };
     document.documentElement.setAttribute("data-spread", "in");
-    arriving = true;
+    if (!get().license) arriving = true;
     set({ license });
-  },
-  unlock: (code, name) => {
-    const license = validateLicense(code);
-    if (!license) return false;
-    ensureProfile(set, get, name);
-    put(LICENSE_KEY, JSON.stringify(license));
-    document.documentElement.setAttribute("data-spread", "in");
-    arriving = true;
-    set({ license });
-    return true;
   },
   logout: () => {
     if (isNativeApp()) return;
     flushSpread();
-    drop(LICENSE_KEY);
     document.documentElement.removeAttribute("data-spread");
     set({ license: null });
   },

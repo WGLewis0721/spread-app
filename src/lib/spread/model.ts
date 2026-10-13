@@ -218,19 +218,6 @@ export function defaultData(): SpreadData {
   };
 }
 
-export function validateLicense(code: string): License | null {
-  const c = (code || "").trim().toUpperCase().replace(/\s+/g, "");
-  if (c === "SPR-DEMO-2026") return { ok: true, plan: "demo" };
-  const match = /^SPR-([A-Z0-9]{4})-([A-Z0-9]{4})$/.exec(c);
-  if (!match) return null;
-  const body = match[1] + match[2];
-  if (match[1] === "0000") return null;
-  let sum = 0;
-  for (const ch of body) sum += ch.charCodeAt(0);
-  if (sum % 7 === 0) return { ok: true, plan: "personal" };
-  return null;
-}
-
 export function ensureWeek(data: SpreadData): SpreadData {
   const key = data.currentWeek || weekKey();
   const existing = data.weeks[key];

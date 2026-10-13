@@ -38,9 +38,12 @@ import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-brow
 import { PaperToProduct } from "@/spread/components/landing-preview";
 import { SpreadStack } from "@/spread/components/landing-stack";
 import { LandingWaitlist } from "@/spread/components/landing-waitlist";
+import { BetaAccessCard } from "@/spread/components/beta-access";
+import { useBetaGate, type BetaGate } from "@/spread/components/use-beta-gate";
+import { signOut } from "@/lib/auth/client";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 
-type Sheet = "more" | "new" | "license" | "icloud" | null;
+type Sheet = "more" | "new" | "icloud" | null;
 
 const useClientLayout = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -58,6 +61,7 @@ export function SpreadApp() {
   const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
   const boot = useSpread((s) => s.boot);
+  const gate = useBetaGate();
   useBrowserFrame();
 
   useClientLayout(() => {
@@ -117,7 +121,7 @@ export function SpreadApp() {
           },
         }}
       />
-      {hydrated && ready && (license ? <WeekScreen /> : <UnlockScreen />)}
+      {hydrated && ready && (license ? <WeekScreen /> : gate.checking ? null : <UnlockScreen gate={gate} />)}
     </>
   );
 }
@@ -134,19 +138,12 @@ function useSystemDark() {
   );
 }
 
-function UnlockScreen() {
-  const beginTrialRaw = useSpread((s) => s.beginTrial);
-  const unlockRaw = useSpread((s) => s.unlock);
+function UnlockScreen({ gate }: { gate: BetaGate }) {
   const theme = useSpread((s) => s.theme);
   const setTheme = useSpread((s) => s.setTheme);
   const systemDark = useSystemDark();
   const dark = theme === "dark" || (theme === "system" && systemDark);
   const profiles = useSpread((s) => s.profiles);
-  const activeId = useSpread((s) => s.activeId);
-  const switchProfile = useSpread((s) => s.switchProfile);
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
-  const [name, setName] = useState("");
   const known = profiles.length > 0;
 
   // The site and the planner share one appearance setting. A visitor without a profile keeps
@@ -166,21 +163,6 @@ function UnlockScreen() {
   }
   function keepTheme() {
     if (!known && theme !== "system") setTheme(theme);
-  }
-  function beginTrial(nameForProfile?: string) {
-    beginTrialRaw(nameForProfile);
-    keepTheme();
-  }
-  function unlock(key: string, nameForProfile?: string) {
-    const ok = unlockRaw(key, nameForProfile);
-    if (ok) keepTheme();
-    return ok;
-  }
-  const activeName = profiles.find((profile) => profile.id === activeId)?.name ?? profiles[0]?.name ?? "Me";
-
-  function unlockWithKey(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!unlock(code, known ? undefined : name)) setError("That key isn’t valid.");
   }
 
   return (
@@ -210,7 +192,7 @@ function UnlockScreen() {
             <a href="#start" className="site-button">Start this week <ChevronRight size={17} aria-hidden="true" /></a>
             <a href="#how" className="site-text-link">See how it works <span aria-hidden="true">↗</span></a>
           </div>
-          <p className="site-hero-note">No account. On your device. At your pace.</p>
+          <p className="site-hero-note">Private beta. On your device. At your pace.</p>
         </div>
 
         <SpreadStack />
@@ -257,7 +239,7 @@ function UnlockScreen() {
 
       <section className="site-privacy">
         <div><span className="privacy-mark"><LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" /></span></div>
-        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>No account is required. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
+        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>Beta testers sign in once to open the web planner; the iPhone app needs no account. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
         <PrivacyFacts />
       </section>
 
@@ -265,34 +247,11 @@ function UnlockScreen() {
         <div className="site-start-copy">
           <p className="site-kicker">Start where you are</p>
           <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
-          <p>Try the planner right here. No account required.</p>
+          <p>Spread is in private beta. Approved testers sign in below to open the planner. Everything you plan stays on your device.</p>
           <HourGrid />
         </div>
         <div className="site-start-card">
-          {known ? (
-            <>
-              <p className="site-card-label">Continue as</p>
-              {profiles.length > 1 ? (
-                <div className="site-profile-list">
-                  {profiles.map((profile) => <button key={profile.id} type="button" onClick={() => switchProfile(profile.id)} className={profile.id === activeId ? "is-active" : ""}>{profile.name}{profile.id === activeId && <Check size={16} />}</button>)}
-                </div>
-              ) : <p className="site-active-name">{activeName}</p>}
-              <button type="button" onClick={() => beginTrial()} className="site-button site-button-full">Continue to this week</button>
-            </>
-          ) : (
-            <>
-              <label className="site-card-label" htmlFor="trial-name">What should we call you?</label>
-              <input id="trial-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="site-input" />
-              <button type="button" onClick={() => beginTrial(name)} className="site-button site-button-full">Begin this week</button>
-            </>
-          )}
-          <div className="site-key-divider"><span>or use a friend test key</span></div>
-          <form onSubmit={unlockWithKey} className="site-key-form">
-            <input value={code} onChange={(e) => { setCode(e.target.value); setError(""); }} placeholder="SPR-XXXX-XXXX" aria-label="License key" className="site-input" />
-            <button type="submit">Unlock</button>
-          </form>
-          {error && <p className="site-error" role="alert">{error}</p>}
-          <p className="site-demo-key">Friend test key: SPR-DEMO-2026</p>
+          <BetaAccessCard gate={gate} askName={!known} onEntered={keepTheme} />
         </div>
       </section>
 
@@ -1440,7 +1399,6 @@ function AppSheet({ sheet, setSheet, onPrint }: { sheet: Sheet; setSheet: (sheet
         <Dialog.Content className={cn("sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none", sheet === "more" && "sheet-stack")}>
           {sheet === "more" && <MoreSheet setSheet={go} onPrint={onPrint} />}
           {sheet === "new" && <NewLifeSheet onClose={close} />}
-          {sheet === "license" && <LicenseSheet onClose={close} />}
           {sheet === "icloud" && <ICloudSheet onBack={() => go("more")} />}
         </Dialog.Content>
       </Dialog.Portal>
@@ -1739,10 +1697,9 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
     },
     { label: "Restore Spread", icon: "icon-restore.svg", run: () => fileRef.current?.click() },
     ...(backupAvailable() || syncAvailable() ? [{ label: syncAvailable() ? "iCloud" : "iCloud Backup", run: () => setSheet("icloud") }] : []),
-    { label: "License key", run: () => setSheet("license") },
   ];
-  // WKWebView can't print, and the installed app has no license step.
-  const actions = native ? allActions.filter((action) => action.label !== "Print / Save PDF" && action.label !== "License key") : allActions;
+  // WKWebView can't print.
+  const actions = native ? allActions.filter((action) => action.label !== "Print / Save PDF") : allActions;
 
   return (
     <>
@@ -1760,7 +1717,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        {native ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license?.plan === "personal" ? "Personal license on this device." : "Trial on this device."}
+        {native ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license ? "Signed in to the Spread beta." : "Not signed in."}
       </Dialog.Description>
       <LocalStatusRow />
       <ProfilesSection
@@ -1872,11 +1829,11 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           type="button"
           className="mt-4 h-12 w-full rounded-full text-base font-semibold text-danger"
           onClick={() => {
-            useSpread.getState().logout();
-            setSheet(null);
+            // The session is a server cookie, so ask the server to end it; this reloads the page.
+            signOut("/").catch(() => toast.error("Couldn't sign out. Check your connection and try again."));
           }}
         >
-          Log out
+          Sign out
         </button>
       )}
       <AlertDialog.Root open={pickedCopy !== null} onOpenChange={(open) => !open && setPickedCopy(null)}>
@@ -2648,56 +2605,6 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
         className="mt-2 h-12 w-full rounded-full bg-accent text-base font-semibold text-on-accent disabled:opacity-40"
       >
         Save spreads
-      </button>
-    </form>
-  );
-}
-
-function LicenseSheet({ onClose }: { onClose: () => void }) {
-  const unlock = useSpread((s) => s.unlock);
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!unlock(code)) {
-          setError("That key isn’t valid.");
-          return;
-        }
-        toast(code.trim().toUpperCase() === "SPR-DEMO-2026" ? "Trial is on." : "License saved.");
-        onClose();
-      }}
-    >
-      <Grabber />
-      <Dialog.Title className="text-2xl font-bold tracking-tight">License key</Dialog.Title>
-      <Dialog.Description className="mt-1 text-sm text-secondary">
-        One key for this device. Nothing is sent away.
-      </Dialog.Description>
-      <input
-        autoFocus
-        value={code}
-        autoCapitalize="characters"
-        autoCorrect="off"
-        spellCheck={false}
-        placeholder="SPR-XXXX-XXXX"
-        aria-label="License key"
-        onChange={(event) => {
-          setCode(event.target.value);
-          setError("");
-        }}
-        className="mt-5 h-12 w-full rounded-2xl bg-fill px-4 text-center text-base outline-none placeholder:text-tertiary"
-      />
-      {error && (
-        <p className="mt-2 text-sm text-danger" role="alert">
-          {error}
-        </p>
-      )}
-      <button
-        type="submit"
-        className="mt-4 h-12 w-full rounded-full bg-accent text-base font-semibold text-on-accent"
-      >
-        Save key
       </button>
     </form>
   );

@@ -4,6 +4,8 @@
 // runs on Node, Next.js, Nitro/h3, Bun and Deno. The request/response contract
 // matches PoryGen's /api/waitlist; see docs/WAITLIST_API.md.
 
+import type { AccessRecord } from "./beta-access.ts";
+
 export const WAITLIST_CONSENT_VERSION = "2026-10-03-v1";
 export const MAX_BODY_BYTES = 8 * 1024;
 /** Columns A:E of the sheet, in order. Row 1 must hold these headers. */
@@ -423,6 +425,12 @@ export async function signServiceAccountJwt({
 const range = (tab: string, cells: string) =>
   encodeURIComponent(tab ? `'${tab.replace(/'/g, "''")}'!${cells}` : cells);
 
+/** The waitlist store, plus the read the beta sign-in uses to look a person up. */
+export interface SheetsStore extends WaitlistStore {
+  /** Row for this (normalized) email: `status` is column E, optional `access_until` column F. Null when unlisted. */
+  lookupAccess(email: string): Promise<AccessRecord | null>;
+}
+
 export interface SheetsStoreOptions {
   clientEmail: string;
   privateKey: string;
@@ -439,7 +447,7 @@ export function createSheetsStore({
   tab = "",
   fetch: fetchImpl = (...args) => fetch(...args),
   now = Date.now,
-}: SheetsStoreOptions): WaitlistStore {
+}: SheetsStoreOptions): SheetsStore {
   let cached: { token: string; expiresAt: number } | null = null; // per warm instance
 
   async function call(url: string, init: RequestInit, what: string) {
@@ -497,6 +505,20 @@ export function createSheetsStore({
       const column = json.values?.[0] ?? [];
       // Accepted emails never start with a formula character, so they are stored verbatim.
       return column.some((value) => String(value).trim().toLowerCase() === email);
+    },
+    // Columns B:F of every row: email, name, consent_version, status, access_until.
+    // The first matching row decides; the signup path keeps emails unique.
+    async lookupAccess(email) {
+      const json = (await call(
+        `${base}/${range(tab, "B2:F")}`,
+        await authed({ method: "GET" }),
+        "Sheets read",
+      )) as { values?: unknown[][] };
+      for (const row of json.values ?? []) {
+        if (String(row[0] ?? "").trim().toLowerCase() !== email) continue;
+        return { status: String(row[3] ?? ""), accessUntil: String(row[4] ?? "") };
+      }
+      return null;
     },
     async appendRow(row) {
       // RAW stores every value as typed text, so nothing is evaluated as a formula.
@@ -614,21 +636,25 @@ export interface WaitlistProduct {
  * goes to DEFAULT_NOTIFY_EMAIL unless WAITLIST_NOTIFY_EMAIL names another
  * address or is "off".
  */
+/** The Sheet store, or null when the three Google variables aren't all set. */
+export function sheetsStoreFromEnv(env: WaitlistEnv): SheetsStore | null {
+  return env["GOOGLE_SERVICE_ACCOUNT_EMAIL"] &&
+    env["GOOGLE_PRIVATE_KEY"] &&
+    env["WAITLIST_SPREADSHEET_ID"]
+    ? createSheetsStore({
+        clientEmail: env["GOOGLE_SERVICE_ACCOUNT_EMAIL"],
+        privateKey: env["GOOGLE_PRIVATE_KEY"],
+        spreadsheetId: env["WAITLIST_SPREADSHEET_ID"],
+        tab: env["WAITLIST_SHEET_TAB"] ?? "",
+      })
+    : null;
+}
+
 export function waitlistHandlerFromEnv(
   env: WaitlistEnv,
   { product, siteUrl, allowedOrigins: extraOrigins = [] }: WaitlistProduct,
 ) {
-  const store =
-    env["GOOGLE_SERVICE_ACCOUNT_EMAIL"] &&
-    env["GOOGLE_PRIVATE_KEY"] &&
-    env["WAITLIST_SPREADSHEET_ID"]
-      ? createSheetsStore({
-          clientEmail: env["GOOGLE_SERVICE_ACCOUNT_EMAIL"],
-          privateKey: env["GOOGLE_PRIVATE_KEY"],
-          spreadsheetId: env["WAITLIST_SPREADSHEET_ID"],
-          tab: env["WAITLIST_SHEET_TAB"] ?? "",
-        })
-      : null;
+  const store = sheetsStoreFromEnv(env);
   const notifyTo = (env["WAITLIST_NOTIFY_EMAIL"] ?? "").trim() || DEFAULT_NOTIFY_EMAIL;
   const notifier =
     notifyTo.toLowerCase() === "off"

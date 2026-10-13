@@ -1956,3 +1956,16 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
   padding-inline: 1rem;
   background: var(--canvas);
 }
+
+/* Beta sign-in card (landing "Start" section) */
+.site-auth { display: grid; gap: 0; }
+.site-auth .site-card-label { margin: 16px 0 8px; }
+.site-auth .site-input[aria-invalid="true"] { border-color: #b42318; }
+.site-auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid var(--site-line); border-radius: 14px; background: #eee8dc; }
+.site-auth-tabs button { min-height: 44px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--site-muted); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; transition: background .2s ease, color .2s ease; }
+.site-auth-tabs button[aria-selected="true"] { background: #fff; color: var(--site-ink); box-shadow: 0 1px 2px #3b352524; }
+.site-auth > .site-button { margin-top: 20px; }
+.site-auth > .site-button:disabled { opacity: .6; cursor: default; }
+.site-auth-note { margin: 14px 0 0; color: var(--site-muted); font-size: .75rem; line-height: 1.5; text-align: center; }
+.spread-site[data-site-theme="dark"] .site-auth-tabs { background: #26241f; border-color: #3b3833; }
+.spread-site[data-site-theme="dark"] .site-auth-tabs button[aria-selected="true"] { background: #121110; box-shadow: none; }
