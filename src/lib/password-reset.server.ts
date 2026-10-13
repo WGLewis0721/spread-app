@@ -71,7 +71,9 @@ export function resetServiceFromEnv(env: Record<string, string | undefined> = pr
   if (devAllowlist(env) && env["BETA_DEV_RESET_FILE"]) {
     store = fileResetStore(env["BETA_DEV_RESET_FILE"]);
   } else {
-    const sheets = sheetsStoreFromEnv(env);
+    // RESET_SPREADSHEET_ID points at a separate spreadsheet for requests; unset, they go on a tab
+    // of the waitlist spreadsheet. RESET_SHEET_TAB names the tab either way.
+    const sheets = sheetsStoreFromEnv(env, { spreadsheetId: env["RESET_SPREADSHEET_ID"] });
     const tab = (env["RESET_SHEET_TAB"] ?? "").trim() || RESET_TAB_DEFAULT;
     // No Sheet configured: every call fails as "unavailable"; nothing is ever approved by default.
     store = sheets

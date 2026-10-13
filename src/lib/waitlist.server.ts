@@ -670,16 +670,21 @@ export interface WaitlistProduct {
  * goes to DEFAULT_NOTIFY_EMAIL unless WAITLIST_NOTIFY_EMAIL names another
  * address or is "off".
  */
-/** The Sheet store, or null when the three Google variables aren't all set. */
-export function sheetsStoreFromEnv(env: WaitlistEnv): SheetsStore | null {
-  return env["GOOGLE_SERVICE_ACCOUNT_EMAIL"] &&
-    env["GOOGLE_PRIVATE_KEY"] &&
-    env["WAITLIST_SPREADSHEET_ID"]
+/**
+ * The Sheet store, or null when the three Google variables aren't all set. `spreadsheetId` and `tab`
+ * override the waitlist's, for a separate spreadsheet (the password-reset requests).
+ */
+export function sheetsStoreFromEnv(
+  env: WaitlistEnv,
+  override: { spreadsheetId?: string; tab?: string } = {},
+): SheetsStore | null {
+  const spreadsheetId = override.spreadsheetId?.trim() || env["WAITLIST_SPREADSHEET_ID"];
+  return env["GOOGLE_SERVICE_ACCOUNT_EMAIL"] && env["GOOGLE_PRIVATE_KEY"] && spreadsheetId
     ? createSheetsStore({
         clientEmail: env["GOOGLE_SERVICE_ACCOUNT_EMAIL"],
         privateKey: env["GOOGLE_PRIVATE_KEY"],
-        spreadsheetId: env["WAITLIST_SPREADSHEET_ID"],
-        tab: env["WAITLIST_SHEET_TAB"] ?? "",
+        spreadsheetId,
+        tab: override.tab ?? env["WAITLIST_SHEET_TAB"] ?? "",
       })
     : null;
 }

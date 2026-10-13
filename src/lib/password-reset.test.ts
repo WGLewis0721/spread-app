@@ -14,7 +14,7 @@ import {
 } from "./password-reset.ts";
 import type { AccessResult } from "./beta-access.ts";
 import { sheetsResetStore } from "./password-reset.server.ts";
-import type { SheetsStore } from "./waitlist.server.ts";
+import { sheetsStoreFromEnv, type SheetsStore } from "./waitlist.server.ts";
 
 const NOW = Date.parse("2026-10-13T12:00:00Z");
 const GOOD = "brand-new-pass-1";
@@ -284,4 +284,16 @@ test("the Sheet tab maps columns A:E, and statuses are written to the row's own 
 test("messages tell people what to do", () => {
   assert.match(RESET_MESSAGES.waiting, /Send us your code/);
   assert.match(RESET_MESSAGES.expired, /Request a new code/);
+});
+
+test("a separate reset spreadsheet can be named; otherwise the waitlist's is used", async () => {
+  const base = { GOOGLE_SERVICE_ACCOUNT_EMAIL: "bot@x", GOOGLE_PRIVATE_KEY: "k", WAITLIST_SPREADSHEET_ID: "waitlist-id" };
+  assert.ok(sheetsStoreFromEnv(base));
+  assert.ok(sheetsStoreFromEnv(base, { spreadsheetId: "reset-id" }));
+  assert.ok(sheetsStoreFromEnv(base, { spreadsheetId: "  " }), "blank override falls back to the waitlist's sheet");
+  // Without a waitlist sheet, a reset sheet alone is enough; without Google credentials, neither is.
+  const noWaitlist = { GOOGLE_SERVICE_ACCOUNT_EMAIL: "bot@x", GOOGLE_PRIVATE_KEY: "k" };
+  assert.equal(sheetsStoreFromEnv(noWaitlist), null);
+  assert.ok(sheetsStoreFromEnv(noWaitlist, { spreadsheetId: "reset-id" }));
+  assert.equal(sheetsStoreFromEnv({ WAITLIST_SPREADSHEET_ID: "w" }, { spreadsheetId: "r" }), null);
 });
