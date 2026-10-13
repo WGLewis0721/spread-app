@@ -38,8 +38,9 @@ submitted_at | email | name | consent_version | status | access_until
 
 No email service is needed. You are the approval step.
 
-**One-time setup:** in the *Spread Beta Waitlist* spreadsheet add a tab named **Reset requests** (or set
-`RESET_SHEET_TAB`) with this header row in A1:E1:
+**One-time setup:** create the requests sheet either as a tab named **Reset requests** in the *Spread Beta Waitlist*
+spreadsheet, or as its own spreadsheet (set `RESET_SPREADSHEET_ID` to its ID, and `RESET_SHEET_TAB` to the tab's name if it
+isn't `Reset requests`; tab names must match exactly). Share it with the service account as Editor. Header row in A1:E1:
 
 ```
 requested_at | email | code | token_hash | status
@@ -82,7 +83,8 @@ accounts that vanish. Production and Preview:
 | `BETTER_AUTH_SECRET` | A long random string, e.g. `openssl rand -base64 32`. Keep it stable; changing it signs everyone out. |
 | `BETTER_AUTH_URL` | `https://thespreadapp.com` |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `WAITLIST_SPREADSHEET_ID`, `WAITLIST_SHEET_TAB` | As already set for the waitlist. The service account reads the Sheet for access and **writes to the Reset requests tab**; it already has Editor on the folder. |
-| `RESET_SHEET_TAB` | Optional. Defaults to `Reset requests`. |
+| `RESET_SPREADSHEET_ID` | Optional. A separate spreadsheet for reset requests. Unset: the waitlist spreadsheet is used. |
+| `RESET_SHEET_TAB` | Optional. Tab name for reset requests. Defaults to `Reset requests`. |
 
 Then redeploy. Check: create an account for an approved test email, sign out, sign in, then set the
 row to `revoked` and confirm the next sign-in fails.
