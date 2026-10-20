@@ -94,12 +94,11 @@ def select_and_place(page, name, task, day_index):
     ).click()
     day = page.locator("section[data-day]").nth(day_index)
     day.get_by_role("button", name=f"Add {name}").click()
-    required(day.get_by_role("button", name=f"Move {name}").count() == 1,
-             f"{name}: no placed allocation on selected day")
+    day.get_by_role("button", name=re.compile(r"^Remove " + re.escape(name) + r" from ")).wait_for()
     item = page.locator(f'ul[aria-label="{name} tasks to place"] > li').filter(has_text=task)
     item.get_by_role("button", name="Place").click()
     page.get_by_role("list", name=f"Days for {task}").get_by_role("button").first.click()
-    required(item.count() == 0, f"{task}: still in To place after placing")
+    item.wait_for(state="detached")
 
 def check_persona(browser, persona):
     name, spreads, complete_task, open_task, day, weeks_ahead, stress = persona
@@ -164,8 +163,7 @@ def check_persona(browser, persona):
         page.get_by_role("button", name="Rollover").click()
         if page.get_by_text("Replace next week?").count():
             page.get_by_role("alertdialog").get_by_role("button", name="Replace").click()
-        required(page.get_by_role("checkbox", name=f"Mark done: {complete_task}").count() == 1,
-                 "Rollover did not reopen completed task in following week")
+        page.get_by_role("checkbox", name=f"Mark done: {complete_task}").wait_for()
 
         # Test longer navigation without relying on week identifiers or store internals.
         page.get_by_role("tab", name="Week").click()
