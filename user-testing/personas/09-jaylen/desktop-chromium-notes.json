@@ -1,0 +1,37 @@
+{
+  "persona": "Jaylen Carter",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "bug",
+      "text": "Wednesday now holds 54 planned hours across spreads (a day has 24).",
+      "severity": "major"
+    },
+    {
+      "kind": "missing",
+      "text": "No per-day total on the day card, so a 24h+ day isn't flagged anywhere."
+    },
+    {
+      "kind": "info",
+      "text": "Self time (hoops) is still Self (hoops) 3h unplaced. Nothing warns that none of it is on a day."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Classes 24h = 24 placed + 0 left, Chapter 14h = 14 placed + 0 left, Self (hoops) 3h = 0 placed + 3 left, Social 16h = 16 placed + 0 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/09-jaylen/desktop-chromium-01-overbooked-plan.png",
+      "label": "overbooked plan"
+    },
+    {
+      "file": "artifacts/personas/09-jaylen/desktop-chromium-02-wednesday-24h-plus.png",
+      "label": "wednesday 24h plus"
+    }
+  ]
+}

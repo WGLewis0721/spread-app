@@ -1,0 +1,64 @@
+{
+  "persona": "Elena Voss",
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "confusing",
+      "text": "Got stuck: lab emergency: add 4h Lab Runs on Wednesday (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/05-elena/mobile-webkit-04-stuck-lab-emergency-add-4h-lab-runs-on-wednesday.png"
+    },
+    {
+      "kind": "confusing",
+      "text": "Lab emergency on Wednesday: Lab Runs got 0h. Thesis Wednesday 3h stayed."
+    },
+    {
+      "kind": "missing",
+      "text": "No way to mark thesis hours as protected, or see that the lab emergency came out of free time."
+    },
+    {
+      "kind": "bug",
+      "text": "12 tap targets under 44pt in Spread: Spread, home (34x34); Jump to Coursework, 4 hours (44x44); Lab Runs name (170x26); Lab Runs, 8 hours. Adjust (32x44); Coursework name (170x26); Coursework, 4 hours. Adjust (32x44)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Lab Runs 8h = 8 placed + 0 left, Coursework 4h = 0 placed + 4 left, Self (climbing) 3h = 3 placed + 0 left, Thesis Writing 12h = 9 placed + 3 left, Housework 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/05-elena/mobile-webkit-01-five-spreads.png",
+      "label": "five spreads"
+    },
+    {
+      "file": "artifacts/personas/05-elena/mobile-webkit-02-twelve-small-tasks.png",
+      "label": "twelve small tasks"
+    },
+    {
+      "file": "artifacts/personas/05-elena/mobile-webkit-03-week-with-five-spreads.png",
+      "label": "week with five spreads"
+    },
+    {
+      "file": "artifacts/personas/05-elena/mobile-webkit-04-stuck-lab-emergency-add-4h-lab-runs-on-wednesday.png",
+      "label": "stuck-lab emergency: add 4h Lab Runs on Wednesday"
+    },
+    {
+      "file": "artifacts/personas/05-elena/mobile-webkit-05-after-the-lab-emergency.png",
+      "label": "after the lab emergency"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "persona": "Coach Tyrone Reeves",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "After Rollover the screen shows Mar 9 – Mar 15 Back to this week."
+    },
+    {
+      "kind": "confusing",
+      "text": "Rollover copied tasks and hours but left every day empty, so the whole week layout has to be placed again. Tyrone would rebuild a normal week by hand just to take out one practice.",
+      "severity": "major"
+    },
+    {
+      "kind": "worked",
+      "text": "This week kept its Friday practice after editing next week."
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: rollover again onto a week that already has content (locator.innerText: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/04-tyrone/desktop-chromium-03-stuck-rollover-again-onto-a-week-that-already-has-content.png"
+    },
+    {
+      "kind": "info",
+      "text": "final audit failed: locator.click: Timeout 6000ms exceeded."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/04-tyrone/desktop-chromium-01-normal-week.png",
+      "label": "normal week"
+    },
+    {
+      "file": "artifacts/personas/04-tyrone/desktop-chromium-02-bye-week.png",
+      "label": "bye week"
+    },
+    {
+      "file": "artifacts/personas/04-tyrone/desktop-chromium-03-stuck-rollover-again-onto-a-week-that-already-has-content.png",
+      "label": "stuck-rollover again onto a week that already has content"
+    }
+  ]
+}

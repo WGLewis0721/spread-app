@@ -1,0 +1,68 @@
+{
+  "persona": "Dana Whitfield",
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "confusing",
+      "text": "Got stuck: try to push grading past 2h on Monday (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/01-dana/mobile-webkit-03-stuck-try-to-push-grading-past-2h-on-monday.png"
+    },
+    {
+      "kind": "worked",
+      "text": "Dana wanted grading capped at 2h on Monday. The + button kept going to 0h, with no cap and no warning."
+    },
+    {
+      "kind": "info",
+      "text": "Review open tasks offered: Grade lab reports Work | Grade quizzes Work | Post grades Work | Order servo parts Robotics Club"
+    },
+    {
+      "kind": "info",
+      "text": "Next week now holds: Grade lab reports, Grade quizzes, Post grades, Order servo parts; 23 hours across 4 spreads"
+    },
+    {
+      "kind": "bug",
+      "text": "9 tap targets under 44pt in Spread: Spread, home (34x34); Work name (170x26); Work, 10 hours. Adjust (32x44); Family name (170x26); Family, 6 hours. Adjust (32x44); Self (cello) name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 10h = 10 placed + 0 left, Family 6h = 3 placed + 3 left, Self (cello) 4h = 1 placed + 3 left, Robotics Club 3h = 2 placed + 1 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/01-dana/mobile-webkit-01-setup.png",
+      "label": "setup"
+    },
+    {
+      "file": "artifacts/personas/01-dana/mobile-webkit-02-week-planned.png",
+      "label": "week planned"
+    },
+    {
+      "file": "artifacts/personas/01-dana/mobile-webkit-03-stuck-try-to-push-grading-past-2h-on-monday.png",
+      "label": "stuck-try to push grading past 2h on Monday"
+    },
+    {
+      "file": "artifacts/personas/01-dana/mobile-webkit-04-monday-grading-uncapped.png",
+      "label": "Monday grading uncapped"
+    },
+    {
+      "file": "artifacts/personas/01-dana/mobile-webkit-05-next-week-after-rollover.png",
+      "label": "next week after rollover"
+    }
+  ]
+}

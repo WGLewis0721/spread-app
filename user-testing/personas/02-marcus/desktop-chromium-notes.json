@@ -1,0 +1,44 @@
+{
+  "persona": "Marcus Bell",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "After Production 32h: 39 hours across 3 spreads"
+    },
+    {
+      "kind": "info",
+      "text": "Self can be set to 0h with no prompt or warning."
+    },
+    {
+      "kind": "info",
+      "text": "Week chips: Home 4h, Self 0h, Production 0h"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Home 4h = 0 placed + 4 left, Self 0h = 0 placed + 0 left, Production 32h = 32 placed + 0 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/02-marcus/desktop-chromium-01-normal-week.png",
+      "label": "normal week"
+    },
+    {
+      "file": "artifacts/personas/02-marcus/desktop-chromium-02-production-32h.png",
+      "label": "production 32h"
+    },
+    {
+      "file": "artifacts/personas/02-marcus/desktop-chromium-03-self-zero.png",
+      "label": "self zero"
+    },
+    {
+      "file": "artifacts/personas/02-marcus/desktop-chromium-04-week-swallowed-by-production.png",
+      "label": "week swallowed by production"
+    }
+  ]
+}

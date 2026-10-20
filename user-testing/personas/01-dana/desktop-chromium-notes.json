@@ -1,0 +1,45 @@
+{
+  "persona": "Dana Whitfield",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "bug",
+      "text": "Dana wanted grading capped at 2h on Monday. The + button kept going to 9h, with no cap and no warning.",
+      "severity": "major"
+    },
+    {
+      "kind": "info",
+      "text": "Review open tasks offered: Grade lab reports Work | Grade quizzes Work | Post grades Work | Order servo parts Robotics Club"
+    },
+    {
+      "kind": "info",
+      "text": "Next week now holds: Grade lab reports, Grade quizzes, Post grades, Order servo parts; 23 hours across 4 spreads"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 10h = 10 placed + 0 left, Family 6h = 3 placed + 3 left, Self (cello) 4h = 1 placed + 3 left, Robotics Club 3h = 2 placed + 1 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/01-dana/desktop-chromium-01-setup.png",
+      "label": "setup"
+    },
+    {
+      "file": "artifacts/personas/01-dana/desktop-chromium-02-week-planned.png",
+      "label": "week planned"
+    },
+    {
+      "file": "artifacts/personas/01-dana/desktop-chromium-03-monday-grading-uncapped.png",
+      "label": "Monday grading uncapped"
+    },
+    {
+      "file": "artifacts/personas/01-dana/desktop-chromium-04-next-week-after-rollover.png",
+      "label": "next week after rollover"
+    }
+  ]
+}

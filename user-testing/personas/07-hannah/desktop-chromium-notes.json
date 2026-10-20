@@ -1,0 +1,36 @@
+{
+  "persona": "Hannah Lindqvist",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "missing",
+      "text": "No way to make a task repeat. Milk goats every morning has to be typed again every week."
+    },
+    {
+      "kind": "info",
+      "text": "Next week after Rollover carries 16 tasks (including the finished 'Milk goats')."
+    },
+    {
+      "kind": "worked",
+      "text": "Finished recurring chores carry over after Rollover, which works as a poor man's repeat."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Homeschool 8h = 0 placed + 8 left, Homestead 4h = 0 placed + 4 left, Self (quiet hour) 3h = 1 placed + 2 left, Family 6h = 0 placed + 6 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/07-hannah/desktop-chromium-01-sixteen-tasks.png",
+      "label": "sixteen tasks"
+    },
+    {
+      "file": "artifacts/personas/07-hannah/desktop-chromium-02-next-week-after-rollover.png",
+      "label": "next week after rollover"
+    }
+  ]
+}
