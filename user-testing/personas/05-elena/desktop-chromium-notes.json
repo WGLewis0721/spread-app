@@ -1,0 +1,49 @@
+{
+  "persona": "Elena Voss",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "confusing",
+      "text": "Got stuck: lab emergency: add 4h Lab Runs on Wednesday (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/05-elena/desktop-chromium-04-stuck-lab-emergency-add-4h-lab-runs-on-wednesday.png"
+    },
+    {
+      "kind": "confusing",
+      "text": "Lab emergency on Wednesday: Lab Runs got 0h. Thesis Wednesday 3h stayed."
+    },
+    {
+      "kind": "missing",
+      "text": "No way to mark thesis hours as protected, or see that the lab emergency came out of free time."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Lab Runs 8h = 8 placed + 0 left, Coursework 4h = 0 placed + 4 left, Self (climbing) 3h = 3 placed + 0 left, Thesis Writing 12h = 9 placed + 3 left, Housework 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/05-elena/desktop-chromium-01-five-spreads.png",
+      "label": "five spreads"
+    },
+    {
+      "file": "artifacts/personas/05-elena/desktop-chromium-02-twelve-small-tasks.png",
+      "label": "twelve small tasks"
+    },
+    {
+      "file": "artifacts/personas/05-elena/desktop-chromium-03-week-with-five-spreads.png",
+      "label": "week with five spreads"
+    },
+    {
+      "file": "artifacts/personas/05-elena/desktop-chromium-04-stuck-lab-emergency-add-4h-lab-runs-on-wednesday.png",
+      "label": "stuck-lab emergency: add 4h Lab Runs on Wednesday"
+    },
+    {
+      "file": "artifacts/personas/05-elena/desktop-chromium-05-after-the-lab-emergency.png",
+      "label": "after the lab emergency"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "persona": "Coach Tyrone Reeves",
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "confusing",
+      "text": "Got stuck: Family Saturday (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/04-tyrone/mobile-webkit-01-stuck-family-saturday.png"
+    },
+    {
+      "kind": "info",
+      "text": "After Rollover the screen shows Mar 9 – Mar 15 Back to this week."
+    },
+    {
+      "kind": "confusing",
+      "text": "Rollover copied tasks and hours but left every day empty, so the whole week layout has to be placed again. Tyrone would rebuild a normal week by hand just to take out one practice.",
+      "severity": "major"
+    },
+    {
+      "kind": "worked",
+      "text": "This week kept its Friday practice after editing next week."
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: rollover again onto a week that already has content (locator.innerText: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/04-tyrone/mobile-webkit-04-stuck-rollover-again-onto-a-week-that-already-has-content.png"
+    },
+    {
+      "kind": "info",
+      "text": "final audit failed: locator.click: Timeout 6000ms exceeded."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/04-tyrone/mobile-webkit-01-stuck-family-saturday.png",
+      "label": "stuck-Family Saturday"
+    },
+    {
+      "file": "artifacts/personas/04-tyrone/mobile-webkit-02-normal-week.png",
+      "label": "normal week"
+    },
+    {
+      "file": "artifacts/personas/04-tyrone/mobile-webkit-03-bye-week.png",
+      "label": "bye week"
+    },
+    {
+      "file": "artifacts/personas/04-tyrone/mobile-webkit-04-stuck-rollover-again-onto-a-week-that-already-has-content.png",
+      "label": "stuck-rollover again onto a week that already has content"
+    }
+  ]
+}

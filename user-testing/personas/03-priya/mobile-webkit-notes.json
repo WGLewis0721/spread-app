@@ -1,0 +1,48 @@
+{
+  "persona": "Priya Nair",
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "bug",
+      "text": "Drag Tuesday to Thursday: Tuesday Work 4h, Thursday Work 0h.",
+      "severity": "major"
+    },
+    {
+      "kind": "info",
+      "text": "Undo visible after the last change: false"
+    },
+    {
+      "kind": "bug",
+      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Work name (170x26); Work, 20 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44); Self (running) name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 20h = 12 placed + 8 left, Home 4h = 0 placed + 4 left, Self (running) 3h = 2 placed + 1 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/03-priya/mobile-webkit-01-before-the-plans-change.png",
+      "label": "before the plans change"
+    },
+    {
+      "file": "artifacts/personas/03-priya/mobile-webkit-02-after-rearranging.png",
+      "label": "after rearranging"
+    }
+  ]
+}

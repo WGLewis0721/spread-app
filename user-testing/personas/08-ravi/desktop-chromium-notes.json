@@ -1,0 +1,36 @@
+{
+  "persona": "Ravi Menon",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Planned hours: this week 17 hours across 4 spreads; week +1 20 hours across 4 spreads; week +2 24 hours across 4 spreads"
+    },
+    {
+      "kind": "info",
+      "text": "Back on this week: Hack Team shows 2h."
+    },
+    {
+      "kind": "info",
+      "text": "Month view text: March 2026 Work 8h Home 4h Self (D&D) 3h Hack Team 0h Sun Mon Tue Wed Thu Fri Sat 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 "
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Self (D&D) 3h = 0 placed + 3 left, Hack Team 2h = 2 placed + 0 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/08-ravi/desktop-chromium-01-week-plus-two.png",
+      "label": "week plus two"
+    },
+    {
+      "file": "artifacts/personas/08-ravi/desktop-chromium-02-month-view.png",
+      "label": "month view"
+    }
+  ]
+}

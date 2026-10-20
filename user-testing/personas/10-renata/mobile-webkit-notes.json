@@ -1,0 +1,55 @@
+{
+  "persona": "Renata Alvarez",
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "worked",
+      "text": "Placing the filing on Friday offered Undo."
+    },
+    {
+      "kind": "worked",
+      "text": "After jumping between weeks, the no-kids week still shows Family 2h."
+    },
+    {
+      "kind": "worked",
+      "text": "Kids week Family hours: 20h."
+    },
+    {
+      "kind": "missing",
+      "text": "No alternating-week template: she would rebuild the kids-week and no-kids-week split by hand every two weeks."
+    },
+    {
+      "kind": "bug",
+      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Work name (170x26); Work, 30 hours. Adjust (32x44); Family name (170x26); Family, 20 hours. Adjust (32x44); Self (garden) name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 30h = 2 placed + 28 left, Family 20h = 0 placed + 20 left, Self (garden) 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/10-renata/mobile-webkit-01-kids-week.png",
+      "label": "kids week"
+    },
+    {
+      "file": "artifacts/personas/10-renata/mobile-webkit-02-no-kids-week.png",
+      "label": "no-kids week"
+    }
+  ]
+}

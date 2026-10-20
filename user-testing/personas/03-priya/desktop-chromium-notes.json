@@ -1,0 +1,33 @@
+{
+  "persona": "Priya Nair",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "bug",
+      "text": "Drag Tuesday to Thursday: Tuesday Work 4h, Thursday Work 0h.",
+      "severity": "major"
+    },
+    {
+      "kind": "info",
+      "text": "Undo visible after the last change: true"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 20h = 12 placed + 8 left, Home 4h = 0 placed + 4 left, Self (running) 3h = 2 placed + 1 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/03-priya/desktop-chromium-01-before-the-plans-change.png",
+      "label": "before the plans change"
+    },
+    {
+      "file": "artifacts/personas/03-priya/desktop-chromium-02-after-rearranging.png",
+      "label": "after rearranging"
+    }
+  ]
+}

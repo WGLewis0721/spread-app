@@ -1,0 +1,49 @@
+{
+  "persona": "Walt Henderson",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Moving forward ten weeks took 203ms, 230ms, 177ms, 204ms, 264ms, 553ms, 542ms, 629ms, 227ms, 270ms. Now at May 11 – May 17 Back to this week."
+    },
+    {
+      "kind": "info",
+      "text": "Return to this week: March 2026."
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: reload and check the trip persisted (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/12-walt/desktop-chromium-04-stuck-reload-and-check-the-trip-persisted.png"
+    },
+    {
+      "kind": "worked",
+      "text": "Nothing left the device: the fixture records any outbound request and the test fails if one appears."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Self (golf) 3h = 0 placed + 3 left, Anniversary Trip 2h = 1 placed + 1 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/12-walt/desktop-chromium-01-five-weeks-out.png",
+      "label": "five weeks out"
+    },
+    {
+      "file": "artifacts/personas/12-walt/desktop-chromium-02-ten-weeks-out.png",
+      "label": "ten weeks out"
+    },
+    {
+      "file": "artifacts/personas/12-walt/desktop-chromium-03-month-view.png",
+      "label": "month view"
+    },
+    {
+      "file": "artifacts/personas/12-walt/desktop-chromium-04-stuck-reload-and-check-the-trip-persisted.png",
+      "label": "stuck-reload and check the trip persisted"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "persona": "Dr. Naomi Feld",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "After work grew, Self (pottery) is 8h. Growing work never touches it, and nothing stops Clients landing on her Friday pottery day."
+    },
+    {
+      "kind": "missing",
+      "text": "No way to lock a day or an hours block as protected. Self time is protected only by her own discipline."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Clients 40h = 24 placed + 16 left, Home 4h = 0 placed + 4 left, Self (pottery) 8h = 6 placed + 2 left, Admin 8h = 8 placed + 0 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/11-naomi/desktop-chromium-01-protected-week.png",
+      "label": "protected week"
+    },
+    {
+      "file": "artifacts/personas/11-naomi/desktop-chromium-02-work-grew-self-intact.png",
+      "label": "work grew, self intact"
+    }
+  ]
+}

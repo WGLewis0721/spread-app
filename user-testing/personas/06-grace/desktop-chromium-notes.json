@@ -1,0 +1,76 @@
+{
+  "persona": "Grace Okafor",
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Typing 12 small tasks took 4s of automation time."
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: first try placing a task before Work is on any day (locator.getAttribute: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/06-grace/desktop-chromium-02-stuck-first-try-placing-a-task-before-work-is-on-any-day.png"
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: place conference 1 on a day (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/06-grace/desktop-chromium-04-stuck-place-conference-1-on-a-day.png"
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: place conference 2 on a day (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/06-grace/desktop-chromium-05-stuck-place-conference-2-on-a-day.png"
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: place conference 3 on a day (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "artifacts/personas/06-grace/desktop-chromium-06-stuck-place-conference-3-on-a-day.png"
+    },
+    {
+      "kind": "info",
+      "text": "Placing 3 short tasks took 0 taps (about 0 per task)."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 14h = 6 placed + 8 left, Wedding planning 4h = 0 placed + 4 left, Self 3h = 0 placed + 3 left, Bakery 5h = 3 placed + 2 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/06-grace/desktop-chromium-01-twelve-conference-tasks.png",
+      "label": "twelve conference tasks"
+    },
+    {
+      "file": "artifacts/personas/06-grace/desktop-chromium-02-stuck-first-try-placing-a-task-before-work-is-on-any-day.png",
+      "label": "stuck-first try placing a task before Work is on any day"
+    },
+    {
+      "file": "artifacts/personas/06-grace/desktop-chromium-03-to-place-list.png",
+      "label": "to place list"
+    },
+    {
+      "file": "artifacts/personas/06-grace/desktop-chromium-04-stuck-place-conference-1-on-a-day.png",
+      "label": "stuck-place conference 1 on a day"
+    },
+    {
+      "file": "artifacts/personas/06-grace/desktop-chromium-05-stuck-place-conference-2-on-a-day.png",
+      "label": "stuck-place conference 2 on a day"
+    },
+    {
+      "file": "artifacts/personas/06-grace/desktop-chromium-06-stuck-place-conference-3-on-a-day.png",
+      "label": "stuck-place conference 3 on a day"
+    },
+    {
+      "file": "artifacts/personas/06-grace/desktop-chromium-07-after-placing-three.png",
+      "label": "after placing three"
+    },
+    {
+      "file": "artifacts/personas/06-grace/desktop-chromium-08-end-of-conference-week.png",
+      "label": "end of conference week"
+    }
+  ]
+}

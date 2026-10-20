@@ -1,0 +1,52 @@
+{
+  "persona": "Jaylen Carter",
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "bug",
+      "text": "Wednesday now holds 54 planned hours across spreads (a day has 24).",
+      "severity": "major"
+    },
+    {
+      "kind": "missing",
+      "text": "No per-day total on the day card, so a 24h+ day isn't flagged anywhere."
+    },
+    {
+      "kind": "info",
+      "text": "Self time (hoops) is still Self (hoops) 3h unplaced. Nothing warns that none of it is on a day."
+    },
+    {
+      "kind": "bug",
+      "text": "9 tap targets under 44pt in Spread: Spread, home (34x34); Classes name (170x26); Classes, 24 hours. Adjust (32x44); Chapter name (170x26); Chapter, 14 hours. Adjust (32x44); Self (hoops) name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Classes 24h = 24 placed + 0 left, Chapter 14h = 14 placed + 0 left, Self (hoops) 3h = 0 placed + 3 left, Social 16h = 16 placed + 0 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "artifacts/personas/09-jaylen/mobile-webkit-01-overbooked-plan.png",
+      "label": "overbooked plan"
+    },
+    {
+      "file": "artifacts/personas/09-jaylen/mobile-webkit-02-wednesday-24h-plus.png",
+      "label": "wednesday 24h plus"
+    }
+  ]
+}

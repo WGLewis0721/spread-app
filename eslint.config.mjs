@@ -46,6 +46,11 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  // Playwright fixtures name their continuation `use` and destructure an empty fixture object.
+  {
+    files: ["e2e/**/*.ts"],
+    rules: { "react-hooks/rules-of-hooks": "off", "no-empty-pattern": "off" },
+  },
   // Disable rules that conflict with Prettier formatting.
   prettier,
 );
