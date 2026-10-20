@@ -1,0 +1,51 @@
+{
+  "persona": "Lucia Ferrante",
+  "behavior": "unfinished",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Copy last week said: Last week copied. Tasks are open again.."
+    },
+    {
+      "kind": "info",
+      "text": "Next week tasks: Edit Alvarez gallery, Deliver Chen album, Backup cards; 27 hours across 3 spreads."
+    },
+    {
+      "kind": "info",
+      "text": "Day layout copied: false."
+    },
+    {
+      "kind": "info",
+      "text": "Copy week said: Week copied. Last week copied. Tasks are open again.."
+    },
+    {
+      "kind": "info",
+      "text": "Word export: Word document exported. Week copied.; files written: export/Spread-2026-03-09.docx."
+    },
+    {
+      "kind": "info",
+      "text": "Print / Save PDF is not offered in the installed app's Settings (it is a web-only action), so a photographer who wants a PDF must use Word document or Copy week."
+    },
+    {
+      "kind": "bug",
+      "text": "Hours don't add up for Shoots: 20h planned, 0h on days, 10h left (10h).",
+      "severity": "major"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Shoots 20h = 0 placed + 10 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/19-lucia/desktop-chromium-01-after-copy-last-week.png",
+      "label": "after Copy last week"
+    }
+  ]
+}

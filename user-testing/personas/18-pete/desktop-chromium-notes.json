@@ -1,0 +1,52 @@
+{
+  "persona": "Pete Janssen",
+  "behavior": "unfinished",
+  "variations": [
+    "future-weeks"
+  ],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Open tasks sheet lists 5 tasks, all ticked by default."
+    },
+    {
+      "kind": "info",
+      "text": "With two unticked the button reads \"Move 3\"."
+    },
+    {
+      "kind": "info",
+      "text": "Next week holds: Permit follow-up, Final walkthrough, Return rental."
+    },
+    {
+      "kind": "info",
+      "text": "This week still holds: Frame garage, Order trusses, Quote Hendricks, Pour pad, Invoice Lee."
+    },
+    {
+      "kind": "info",
+      "text": "Rollover asked before replacing: true."
+    },
+    {
+      "kind": "info",
+      "text": "After Replace next week holds: Frame garage, Order trusses, Quote Hendricks, Pour pad, Invoice Lee."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Jobs 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/18-pete/desktop-chromium-01-open-tasks-sheet.png",
+      "label": "open tasks sheet"
+    },
+    {
+      "file": "user-testing/personas/18-pete/desktop-chromium-02-replace-next-week-prompt.png",
+      "label": "replace next week prompt"
+    }
+  ]
+}

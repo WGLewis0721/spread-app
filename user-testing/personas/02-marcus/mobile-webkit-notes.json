@@ -1,5 +1,9 @@
 {
   "persona": "Marcus Bell",
+  "behavior": "allocate",
+  "variations": [
+    "overcommitment"
+  ],
   "project": "mobile-webkit",
   "notes": [
     {
@@ -11,13 +15,8 @@
       "text": "Self can be set to 0h with no prompt or warning."
     },
     {
-      "kind": "confusing",
-      "text": "Got stuck: Production Wednesday 8h (locator.click: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/02-marcus/mobile-webkit-04-stuck-production-wednesday-8h.png"
-    },
-    {
       "kind": "info",
-      "text": "Week chips: Home 4h, Self 0h, Production 7h"
+      "text": "Week chips: Home 4h, Self 0h, Production 0h"
     },
     {
       "kind": "bug",
@@ -26,7 +25,7 @@
     },
     {
       "kind": "info",
-      "text": "Hours audit: Home 4h = 0 placed + 4 left, Self 0h = 0 placed + 0 left, Production 32h = 25 placed + 7 left"
+      "text": "Hours audit: Home 4h = 0 placed + 4 left, Self 0h = 0 placed + 0 left, Production 32h = 32 placed + 0 left"
     },
     {
       "kind": "bug",
@@ -45,23 +44,19 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/02-marcus/mobile-webkit-01-normal-week.png",
+      "file": "user-testing/personas/02-marcus/mobile-webkit-01-normal-week.png",
       "label": "normal week"
     },
     {
-      "file": "artifacts/personas/02-marcus/mobile-webkit-02-production-32h.png",
+      "file": "user-testing/personas/02-marcus/mobile-webkit-02-production-32h.png",
       "label": "production 32h"
     },
     {
-      "file": "artifacts/personas/02-marcus/mobile-webkit-03-self-zero.png",
+      "file": "user-testing/personas/02-marcus/mobile-webkit-03-self-zero.png",
       "label": "self zero"
     },
     {
-      "file": "artifacts/personas/02-marcus/mobile-webkit-04-stuck-production-wednesday-8h.png",
-      "label": "stuck-Production Wednesday 8h"
-    },
-    {
-      "file": "artifacts/personas/02-marcus/mobile-webkit-05-week-swallowed-by-production.png",
+      "file": "user-testing/personas/02-marcus/mobile-webkit-04-week-swallowed-by-production.png",
       "label": "week swallowed by production"
     }
   ]

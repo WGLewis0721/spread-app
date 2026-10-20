@@ -1,15 +1,12 @@
 {
   "persona": "Hannah Lindqvist",
+  "behavior": "create",
+  "variations": [],
   "project": "mobile-webkit",
   "notes": [
     {
       "kind": "missing",
       "text": "No way to make a task repeat. Milk goats every morning has to be typed again every week."
-    },
-    {
-      "kind": "confusing",
-      "text": "Got stuck: quiet hour Sunday (locator.click: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/07-hannah/mobile-webkit-02-stuck-quiet-hour-sunday.png"
     },
     {
       "kind": "info",
@@ -21,12 +18,12 @@
     },
     {
       "kind": "bug",
-      "text": "9 tap targets under 44pt in Spread: Spread, home (34x34); Homeschool name (170x26); Homeschool, 8 hours. Adjust (32x44); Homestead name (170x26); Homestead, 4 hours. Adjust (32x44); Self (quiet hour) name (170x26)",
+      "text": "10 tap targets under 44pt in Spread: Spread, home (34x34); Spread (47x43); Homeschool name (170x26); Homeschool, 8 hours. Adjust (32x44); Homestead name (170x26); Homestead, 4 hours. Adjust (32x44)",
       "severity": "minor"
     },
     {
       "kind": "info",
-      "text": "Hours audit: Homeschool 8h = 0 placed + 8 left, Homestead 4h = 0 placed + 4 left, Self (quiet hour) 3h = 0 placed + 3 left, Family 6h = 0 placed + 6 left"
+      "text": "Hours audit: Homeschool 8h = 0 placed + 8 left, Homestead 4h = 0 placed + 4 left, Self (quiet hour) 3h = 1 placed + 2 left, Family 6h = 0 placed + 6 left"
     },
     {
       "kind": "bug",
@@ -45,15 +42,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/07-hannah/mobile-webkit-01-sixteen-tasks.png",
+      "file": "user-testing/personas/07-hannah/mobile-webkit-01-sixteen-tasks.png",
       "label": "sixteen tasks"
     },
     {
-      "file": "artifacts/personas/07-hannah/mobile-webkit-02-stuck-quiet-hour-sunday.png",
-      "label": "stuck-quiet hour Sunday"
-    },
-    {
-      "file": "artifacts/personas/07-hannah/mobile-webkit-03-next-week-after-rollover.png",
+      "file": "user-testing/personas/07-hannah/mobile-webkit-02-next-week-after-rollover.png",
       "label": "next week after rollover"
     }
   ]

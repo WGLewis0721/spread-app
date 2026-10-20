@@ -1,0 +1,60 @@
+{
+  "persona": "Kenji Watanabe",
+  "behavior": "recover",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "confusing",
+      "text": "Got stuck: make one backup before boarding (also loads the export code, which the installed app has on disk but this web simulation fetches lazily) (locator.click: Timeout 6000ms exceeded.)",
+      "shot": "user-testing/personas/24-kenji/desktop-chromium-01-stuck-make-one-backup-before-boarding-also-loads-the-export-code-which-the-installed-app-has-on-disk-but-this-web-simulation-fetches-lazily-.png"
+    },
+    {
+      "kind": "info",
+      "text": "Airplane mode on."
+    },
+    {
+      "kind": "worked",
+      "text": "Settings status offline: Saved on this device Last saved just now. Works with no connection."
+    },
+    {
+      "kind": "info",
+      "text": "Offline backup produced a 1774-character file; toast: Backup exported.."
+    },
+    {
+      "kind": "worked",
+      "text": "After landing and reloading: Workshop slides, Expense report."
+    },
+    {
+      "kind": "info",
+      "text": "Thursday Client site after reload: 8h."
+    },
+    {
+      "kind": "info",
+      "text": "Next week after reload: Follow-up call."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Client site 25h = 8 placed + 17 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: net::ERR_INTERNET_DISCONNECTED | Failed to load resource: net::ERR_INTERNET_DISCONNECTED | Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/24-kenji/desktop-chromium-01-stuck-make-one-backup-before-boarding-also-loads-the-export-code-which-the-installed-app-has-on-disk-but-this-web-simulation-fetches-lazily-.png",
+      "label": "stuck-make one backup before boarding (also loads the export code, which the installed app has on disk but this web simulation fetches lazily)"
+    },
+    {
+      "file": "user-testing/personas/24-kenji/desktop-chromium-02-offline-settings.png",
+      "label": "offline settings"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import { test as base, expect, type Page } from "@playwright/test";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const NATIVE_INIT = readFileSync(join(here, "..", "scripts", "ios-bridge-sim", "native-init.js"), "utf8");
+const HIT_RECORDER = readFileSync(join(here, "hit-recorder.js"), "utf8");
 
 /** Wednesday 4 March 2026, so the visible week is always Mar 2 – Mar 8 and no test depends on the day it runs. */
 export const FIXED_NOW = new Date(2026, 2, 4, 10, 0, 0);
@@ -23,6 +24,8 @@ type Fixtures = {
   planner: Page;
   /** The raw device-files map behind the fake native bridge (what the iPhone app would persist). */
   deviceFiles: Map<string, string>;
+  /** Every click, edit, key, drag and swipe the page saw, as "kind|element name". Feeds the coverage matrix. */
+  hits: string[];
 };
 
 /**
@@ -36,6 +39,10 @@ export const test = base.extend<Fixtures>({
     await use(new Map());
   },
 
+  hits: async ({}, use) => {
+    await use([]);
+  },
+
   diagnostics: async ({}, use, testInfo) => {
     const d: Diagnostics = { consoleErrors: [], pageErrors: [], failedRequests: [], externalRequests: [] };
     await use(d);
@@ -44,10 +51,12 @@ export const test = base.extend<Fixtures>({
     }
   },
 
-  context: async ({ context, deviceFiles }, use) => {
+  context: async ({ context, deviceFiles, hits }, use) => {
     await context.exposeFunction("__fsRead", (path: string) => deviceFiles.get(path) ?? null);
     await context.exposeFunction("__fsWrite", (path: string, data: string) => void deviceFiles.set(path, data));
+    await context.exposeFunction("__hit", (kind: string, name: string) => void hits.push(`${kind}|${name}`));
     await context.addInitScript(NATIVE_INIT);
+    await context.addInitScript(HIT_RECORDER);
     await use(context);
   },
 

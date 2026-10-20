@@ -1,0 +1,34 @@
+{
+  "persona": "Maya Okonkwo",
+  "behavior": "create",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Color picker offers 11 colors."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: School 8h = 0 placed + 8 left, Home 3h = 0 placed + 3 left, Health 3h = 0 placed + 3 left, Study group 2h = 0 placed + 2 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/13-maya/desktop-chromium-01-explored-setup.png",
+      "label": "explored setup"
+    },
+    {
+      "file": "user-testing/personas/13-maya/desktop-chromium-02-dark-mode.png",
+      "label": "dark mode"
+    },
+    {
+      "file": "user-testing/personas/13-maya/desktop-chromium-03-brown-accent.png",
+      "label": "brown accent"
+    }
+  ]
+}

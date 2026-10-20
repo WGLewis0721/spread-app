@@ -1,0 +1,54 @@
+{
+  "persona": "Nadia Haddad",
+  "behavior": "recover",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Backup toast: Backup exported.. File is 1445 characters and starts {\"kind\":\"spread-backup\",\"version\":2,\"che."
+    },
+    {
+      "kind": "info",
+      "text": "New device starts with 15 hours across 3 spreads and 0 tasks."
+    },
+    {
+      "kind": "info",
+      "text": "Restore dialog said: Add these profiles? Me. 1 week, 2 tasks. Nothing that has content on this device changes. An empty profile may be filled; the others are added with “restored” in their names. Cancel Add"
+    },
+    {
+      "kind": "info",
+      "text": "After Cancel nothing changed: 15 hours across 3 spreads."
+    },
+    {
+      "kind": "info",
+      "text": "Second pick, same summary: true."
+    },
+    {
+      "kind": "info",
+      "text": "After restore: 31 hours across 3 spreads; tasks: Reconcile narcotics log, Renew licence; toast: Profile restored.."
+    },
+    {
+      "kind": "info",
+      "text": "Tuesday Pharmacy after restore: 8h."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Pharmacy 24h = 8 placed + 16 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/21-nadia/desktop-chromium-01-new-phone-empty.png",
+      "label": "new phone empty"
+    },
+    {
+      "file": "user-testing/personas/21-nadia/desktop-chromium-02-restored-on-the-new-phone.png",
+      "label": "restored on the new phone"
+    }
+  ]
+}

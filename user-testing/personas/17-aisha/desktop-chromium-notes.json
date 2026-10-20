@@ -1,0 +1,30 @@
+{
+  "persona": "Aisha Rahman",
+  "behavior": "rearrange",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Not today put the task back; Undo offered: false."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Shifts 36h = 24 placed + 12 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/17-aisha/desktop-chromium-01-after-dragging-a-task.png",
+      "label": "after dragging a task"
+    },
+    {
+      "file": "user-testing/personas/17-aisha/desktop-chromium-02-shift-swap.png",
+      "label": "shift swap"
+    }
+  ]
+}

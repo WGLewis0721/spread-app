@@ -1,5 +1,9 @@
 {
   "persona": "Jaylen Carter",
+  "behavior": "allocate",
+  "variations": [
+    "overcommitment"
+  ],
   "project": "desktop-chromium",
   "notes": [
     {
@@ -26,11 +30,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/09-jaylen/desktop-chromium-01-overbooked-plan.png",
+      "file": "user-testing/personas/09-jaylen/desktop-chromium-01-overbooked-plan.png",
       "label": "overbooked plan"
     },
     {
-      "file": "artifacts/personas/09-jaylen/desktop-chromium-02-wednesday-24h-plus.png",
+      "file": "user-testing/personas/09-jaylen/desktop-chromium-02-wednesday-24h-plus.png",
       "label": "wednesday 24h plus"
     }
   ]

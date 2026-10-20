@@ -1,0 +1,65 @@
+{
+  "persona": "Owen Gallagher",
+  "behavior": "recover",
+  "variations": [],
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "worked",
+      "text": "The task and its done tick survived a reload."
+    },
+    {
+      "kind": "info",
+      "text": "Settings status: Saved on this device Works with no connection."
+    },
+    {
+      "kind": "info",
+      "text": "Restore dialog said: Add these profiles? Me. 1 week, 1 task. Nothing that has content on this device changes. An empty profile may be filled; the others are added with “restored” in their names. Cancel Add"
+    },
+    {
+      "kind": "info",
+      "text": "After restoring a backup onto a device that already has content: profiles are Me, Me (restored); the open one shows tasks Quarterly filings, Task added after the backup."
+    },
+    {
+      "kind": "worked",
+      "text": "1 safety copy/copies listed after a restore."
+    },
+    {
+      "kind": "info",
+      "text": "Safety copy dialog said: Use this safety copy? “Put everything back” replaces all your profiles with the ones in this copy, even when all ten are in use. A new safety copy of what is here now is saved first. “Add as profiles” keeps what you have and adds the copy’s profiles beside it. Put everything back Add as profiles Cancel"
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: find the safety copy and restore from it (locator.click: Timeout 10000ms exceeded.)",
+      "shot": "user-testing/personas/22-owen/mobile-webkit-02-stuck-find-the-safety-copy-and-restore-from-it.png"
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: storage full: edit when the device refuses to save (locator.click: Timeout 10000ms exceeded.)",
+      "shot": "user-testing/personas/22-owen/mobile-webkit-03-stuck-storage-full-edit-when-the-device-refuses-to-save.png"
+    },
+    {
+      "kind": "info",
+      "text": "final audit failed: locator.click: Timeout 10000ms exceeded."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found) | Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/22-owen/mobile-webkit-01-safety-copies.png",
+      "label": "safety copies"
+    },
+    {
+      "file": "user-testing/personas/22-owen/mobile-webkit-02-stuck-find-the-safety-copy-and-restore-from-it.png",
+      "label": "stuck-find the safety copy and restore from it"
+    },
+    {
+      "file": "user-testing/personas/22-owen/mobile-webkit-03-stuck-storage-full-edit-when-the-device-refuses-to-save.png",
+      "label": "stuck-storage full: edit when the device refuses to save"
+    }
+  ]
+}

@@ -1,5 +1,9 @@
 {
   "persona": "Marcus Bell",
+  "behavior": "allocate",
+  "variations": [
+    "overcommitment"
+  ],
   "project": "desktop-chromium",
   "notes": [
     {
@@ -25,19 +29,19 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/02-marcus/desktop-chromium-01-normal-week.png",
+      "file": "user-testing/personas/02-marcus/desktop-chromium-01-normal-week.png",
       "label": "normal week"
     },
     {
-      "file": "artifacts/personas/02-marcus/desktop-chromium-02-production-32h.png",
+      "file": "user-testing/personas/02-marcus/desktop-chromium-02-production-32h.png",
       "label": "production 32h"
     },
     {
-      "file": "artifacts/personas/02-marcus/desktop-chromium-03-self-zero.png",
+      "file": "user-testing/personas/02-marcus/desktop-chromium-03-self-zero.png",
       "label": "self zero"
     },
     {
-      "file": "artifacts/personas/02-marcus/desktop-chromium-04-week-swallowed-by-production.png",
+      "file": "user-testing/personas/02-marcus/desktop-chromium-04-week-swallowed-by-production.png",
       "label": "week swallowed by production"
     }
   ]

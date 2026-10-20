@@ -1,19 +1,26 @@
 {
   "persona": "Walt Henderson",
+  "behavior": "create",
+  "variations": [
+    "future-weeks"
+  ],
   "project": "mobile-webkit",
   "notes": [
     {
       "kind": "info",
-      "text": "Moving forward ten weeks took 657ms, 2330ms, 1407ms, 1812ms, 1218ms, 2049ms, 1291ms, 3128ms, 1340ms, 1076ms. Now at May 11 – May 17 Back to this week."
+      "text": "Moving forward ten weeks took 1574ms, 2852ms, 3022ms, 2905ms, 2745ms, 1752ms, 3561ms, 2608ms, 3228ms, 3239ms. Now at May 11 – May 17 Back to this week."
     },
     {
       "kind": "info",
       "text": "Return to this week: March 2026."
     },
     {
-      "kind": "confusing",
-      "text": "Got stuck: reload and check the trip persisted (locator.click: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/12-walt/mobile-webkit-04-stuck-reload-and-check-the-trip-persisted.png"
+      "kind": "info",
+      "text": "After a reload Spread reopens on the Month view he left it on."
+    },
+    {
+      "kind": "worked",
+      "text": "After a reload, week +2 (Mar 16 – Mar 22 Back to this week) holds: Book flights."
     },
     {
       "kind": "worked",
@@ -21,16 +28,16 @@
     },
     {
       "kind": "bug",
-      "text": "10 tap targets under 44pt in Spread: Spread, home (34x34); Back to this week (94x16); Work name (170x26); Work, 8 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44)",
+      "text": "9 tap targets under 44pt in Spread: Spread, home (34x34); Work name (170x26); Work, 8 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44); Self (golf) name (170x26)",
       "severity": "minor"
     },
     {
       "kind": "info",
-      "text": "Hours audit: Work 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Self (golf) 3h = 0 placed + 3 left, Anniversary Trip 2h = 1 placed + 1 left"
+      "text": "Hours audit: Work 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Self (golf) 3h = 0 placed + 3 left, Anniversary Trip 2h = 0 placed + 2 left"
     },
     {
       "kind": "bug",
-      "text": "2 tap targets under 44pt in Week: Spread, home (34x34); Back to this week (94x16)",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
       "severity": "minor"
     },
     {
@@ -45,20 +52,16 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/12-walt/mobile-webkit-01-five-weeks-out.png",
+      "file": "user-testing/personas/12-walt/mobile-webkit-01-five-weeks-out.png",
       "label": "five weeks out"
     },
     {
-      "file": "artifacts/personas/12-walt/mobile-webkit-02-ten-weeks-out.png",
+      "file": "user-testing/personas/12-walt/mobile-webkit-02-ten-weeks-out.png",
       "label": "ten weeks out"
     },
     {
-      "file": "artifacts/personas/12-walt/mobile-webkit-03-month-view.png",
+      "file": "user-testing/personas/12-walt/mobile-webkit-03-month-view.png",
       "label": "month view"
-    },
-    {
-      "file": "artifacts/personas/12-walt/mobile-webkit-04-stuck-reload-and-check-the-trip-persisted.png",
-      "label": "stuck-reload and check the trip persisted"
     }
   ]
 }

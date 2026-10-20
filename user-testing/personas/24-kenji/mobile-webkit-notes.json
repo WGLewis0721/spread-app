@@ -1,0 +1,75 @@
+{
+  "persona": "Kenji Watanabe",
+  "behavior": "recover",
+  "variations": [],
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "confusing",
+      "text": "Got stuck: make one backup before boarding (also loads the export code, which the installed app has on disk but this web simulation fetches lazily) (locator.click: Timeout 10000ms exceeded.)",
+      "shot": "user-testing/personas/24-kenji/mobile-webkit-01-stuck-make-one-backup-before-boarding-also-loads-the-export-code-which-the-installed-app-has-on-disk-but-this-web-simulation-fetches-lazily-.png"
+    },
+    {
+      "kind": "info",
+      "text": "Airplane mode on."
+    },
+    {
+      "kind": "worked",
+      "text": "Settings status offline: Saved on this device Last saved just now. Works with no connection."
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: Back up while offline (\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m)",
+      "shot": "user-testing/personas/24-kenji/mobile-webkit-03-stuck-back-up-while-offline.png"
+    },
+    {
+      "kind": "worked",
+      "text": "After landing and reloading: Workshop slides, Expense report."
+    },
+    {
+      "kind": "info",
+      "text": "Thursday Client site after reload: 8h."
+    },
+    {
+      "kind": "info",
+      "text": "Next week after reload: Follow-up call."
+    },
+    {
+      "kind": "bug",
+      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Client site name (170x26); Client site, 25 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44); Health name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Client site 25h = 8 placed + 17 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found) | Failed to load resource: WebKit encountered an internal error | Failed to load resource: WebKit encountered an internal error",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/24-kenji/mobile-webkit-01-stuck-make-one-backup-before-boarding-also-loads-the-export-code-which-the-installed-app-has-on-disk-but-this-web-simulation-fetches-lazily-.png",
+      "label": "stuck-make one backup before boarding (also loads the export code, which the installed app has on disk but this web simulation fetches lazily)"
+    },
+    {
+      "file": "user-testing/personas/24-kenji/mobile-webkit-02-offline-settings.png",
+      "label": "offline settings"
+    },
+    {
+      "file": "user-testing/personas/24-kenji/mobile-webkit-03-stuck-back-up-while-offline.png",
+      "label": "stuck-Back up while offline"
+    }
+  ]
+}

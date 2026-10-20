@@ -1,7 +1,13 @@
 {
   "persona": "Dr. Naomi Feld",
+  "behavior": "allocate",
+  "variations": [],
   "project": "desktop-chromium",
   "notes": [
+    {
+      "kind": "info",
+      "text": "Free time offered \"Add 1 hour of Clients on Saturday\" and added it with one tap."
+    },
     {
       "kind": "info",
       "text": "After work grew, Self (pottery) is 8h. Growing work never touches it, and nothing stops Clients landing on her Friday pottery day."
@@ -12,7 +18,7 @@
     },
     {
       "kind": "info",
-      "text": "Hours audit: Clients 40h = 24 placed + 16 left, Home 4h = 0 placed + 4 left, Self (pottery) 8h = 6 placed + 2 left, Admin 8h = 8 placed + 0 left"
+      "text": "Hours audit: Clients 40h = 25 placed + 15 left, Home 4h = 0 placed + 4 left, Self (pottery) 8h = 6 placed + 2 left, Admin 8h = 8 placed + 0 left"
     },
     {
       "kind": "info",
@@ -21,11 +27,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/11-naomi/desktop-chromium-01-protected-week.png",
+      "file": "user-testing/personas/11-naomi/desktop-chromium-01-protected-week.png",
       "label": "protected week"
     },
     {
-      "file": "artifacts/personas/11-naomi/desktop-chromium-02-work-grew-self-intact.png",
+      "file": "user-testing/personas/11-naomi/desktop-chromium-02-work-grew-self-intact.png",
       "label": "work grew, self intact"
     }
   ]

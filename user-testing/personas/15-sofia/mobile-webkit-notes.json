@@ -1,0 +1,45 @@
+{
+  "persona": "Sofia Marin",
+  "behavior": "create",
+  "variations": [],
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Reopened task shows 4 blocks."
+    },
+    {
+      "kind": "bug",
+      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Work name (170x26); Work, 8 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44); Health name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/15-sofia/mobile-webkit-01-notes-expanded.png",
+      "label": "notes expanded"
+    },
+    {
+      "file": "user-testing/personas/15-sofia/mobile-webkit-02-task-with-four-blocks.png",
+      "label": "task with four blocks"
+    }
+  ]
+}
