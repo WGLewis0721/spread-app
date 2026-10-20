@@ -1,44 +1,39 @@
 # Reusable QA standard — v1
 
-Apply this to all apps, substituting project configuration and applicable platforms.
+This is a **testing standard**, not a requirement to install any particular product. Spread uses existing Playwright infrastructure in the first phase.
 
-## Order of operations
+## Workflow
 
-1. Read the repository's authoritative requirements, baseline branch, existing tests, and privacy/release rules.
-2. Define an independently checkable **oracle** before scripting: expected visible behavior, data invariants and negative conditions.
-3. Build a risk-based test matrix: happy path, boundaries, invalid inputs, state transitions, persistence, navigation, accessibility, offline/recovery and platform-specific behavior.
-4. Reuse project test fixtures. Keep tests independent; clean or synthetic state only. Do not touch production or personal data.
-5. Execute the narrowest reliable tests first, then cross-screen E2E, then exploratory and native checks.
-6. Investigate each failure: application defect, test defect, environment defect, requirement gap or unverified risk.
-7. Report outcomes using `REPORT_TEMPLATE.md`, including tests **not run** and exact commands.
+1. Read authoritative requirements, the current verified baseline, existing tests, privacy expectations, and release constraints.
+2. Write an independent **test oracle** before coding: expected visible result, relevant state/data invariants, and explicit failure cases.
+3. Choose risk-based coverage: happy path, boundaries, invalid states, transitions, persistence, offline behavior, recovery, accessibility and layouts.
+4. Reuse synthetic/isolated fixtures; never use authentic personal data or silently change production.
+5. Run focused unit/integration checks and deterministic Playwright flows first. If exploring, convert important observations into reproducible browser assertions.
+6. Investigate a failure before labeling it: application defect, automation defect, environment failure, undefined requirement or unverified risk.
+7. Publish results with `REPORT_TEMPLATE.md`, exact commands and what **did not run**.
 
 ## Acceptance criteria
 
-Write each requirement as: **Given** initial data/state; **When** observable action; **Then** user-visible and stored result; **And** invariants, persistence, reversibility and expected failures. Label invented expectations as proposals rather than current facts.
+Write each requirement as **Given** initial state, **When** user action, **Then** observable outcome, **And** stored result, invariants, persistence, reversibility, and expected error handling. Proposals must be labeled rather than silently treated as implemented requirements.
 
-## Evidence
+## Evidence and honesty
 
-A finding is **verified** only with a repeatable path plus captured evidence or a source-code/test reproduction. Attach screenshots, Playwright traces, Maestro recordings, logs, failing assertion and relevant commit/build. Cite code paths when diagnosing implementation causes.
+Verified findings require a repeatable procedure with a failing assertion, source-code reproduction or captured evidence (screenshots, Playwright traces, logs, exact build/commit). Distinguish proven cause from suspected cause.
 
-A test passing means *its assertions passed*, not that the entire feature or app is validated. Never report fictional persona utterances as actual user research.
+**Passing means only that the asserted cases passed**. Browser WebKit emulation is not a native iOS WKWebView test. Scripted personas are not actual human customers, and invented quotes must never be used as user testimonials.
 
-## Severity versus confidence
+## Severity and confidence
 
-- **Blocker** — severe data integrity/security failure or critical journey inaccessible.
-- **Major** — central workflow broken or materially incorrect.
-- **Minor** — degraded workflow with practical workaround.
-- **Polish** — visual or small interaction problem.
-- **Unknown requirement** — not a defect until product behavior is defined.
+- **Blocker** — data loss, security failure or the central workflow cannot be used.
+- **Major** — core behavior produces materially wrong results or consistently fails.
+- **Minor** — degraded functionality with a feasible workaround.
+- **Polish** — small interaction or visual mismatch.
+- **Requirement gap** — not a defect until expected behavior is decided.
 
-Also report confidence: **confirmed**, **reproduced once**, **suspected**, or **untested**. Rank remediation by impact, prevalence, recoverability and user exposure, not by persona count.
+Also report **confirmed**, **reproduced once**, **suspected** or **not tested** separately from severity.
 
-## Separation of duties
+## Independence and release gates
 
-- The QA agent may propose tests and write isolated test-only code on a branch.
-- Application fixes need explicit approval; proposed code changes and confirmed failures must remain distinguishable.
-- Automated repairs may update broken test locators/waits, but must not alter product requirements or weaken expected results to force green.
-- Real UAT uses representative human participants with task goals, not click scripts. Synthetic-agent runs support exploration and hypotheses only.
+QA may write or update isolated test-only code on a branch. Product fixes, merges, deployments and real-data testing require explicit authorization. Test changes may fix broken locators or timing, but never weaken an assertion to force green. Actual human usability evaluation remains a separate activity.
 
-## Release gates
-
-Release requires the repository's project-specific gates, including critical test passes, no unresolved release-blocking defects, representative physical-device checks where applicable and explicit release authorization. If a layer could not run, report **NOT TESTED**, never PASS.
+A release recommendation must account for the project's own requirements, known defects, device-specific tests and outstanding risks. Missing coverage is **NOT TESTED**, never PASS.
