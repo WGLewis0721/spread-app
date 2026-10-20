@@ -40,7 +40,7 @@ maestro test .maestro/01-launch-smoke.yaml
 # See UXAGENT.md before running. Runs cost money and may transmit test page content to a model.
 ```
 
-The GitHub Actions workflow `.github/workflows/qa-browser.yml` provides a **manual** Playwright run with trace/screenshots on failure. It is intentionally not a required release gate until a full successful baseline run is documented.
+The GitHub Actions workflow `.github/workflows/qa-browser.yml` runs a **targeted Playwright suite on relevant pull requests** and supports manual dispatch. It preserves traces/screenshots on failure. Passing this focused suite does not mean all behavior or native iOS is validated.
 
 ## Guardrails
 
