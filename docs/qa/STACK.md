@@ -16,7 +16,7 @@
 
 ## Automation and cost
 
-- [Manual Playwright workflow](../../.github/workflows/qa-browser.yml) installs browsers and runs a focused existing browser suite; artifacts retained. It is not automatically release-blocking.
+- [Targeted PR + manual Playwright workflow](../../.github/workflows/qa-browser.yml) installs browsers and runs a focused existing browser suite; artifacts retained. It does not replace the full release checklist.
 - Maestro runs locally for now; don't introduce macOS CI minutes or cloud service without approval.
 - UXAgent never runs in CI; synthetic scenarios can incur model fees and expose the rendered test content to the model provider. API keys stay outside version control.
 
