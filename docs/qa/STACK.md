@@ -1,35 +1,48 @@
-# QA tool stack — reusable decision matrix
+# QA stack — Playwright-only project profile
 
-| Tool | Role | Spread installation status | What it cannot prove |
-| --- | --- | --- | --- |
-| **Playwright Test** | Reproducible browser E2E, cross-browser and responsive checks, traces | **Existing**: `@playwright/test`, `playwright.config.ts`, `e2e/`, `.mcp.json`, and Claude planner/generator/healer agent definitions | Native WKWebView behavior or human usability |
-| **Maestro** | Real iOS Simulator UI flows and screenshots against installed Capacitor app | **Prepared** YAML at `.maestro/01-launch-smoke.yaml`; requires macOS/Xcode/Simulator/Java/Maestro CLI; not run here | App Store signing, physical iPhone behavior, CloudKit correctness |
-| **neuhai/UXAgent** | LLM-driven synthetic exploratory journeys and candidate UX friction | **Optional integration**: guarded launcher; external checkout, `uv`, Chromium and Anthropic key required; not run here | Genuine user sentiment, deterministic correctness, release evidence |
-| **Actual people** | Task success, comprehension, cognitive effort, preferences | Not automated; recruit participants and observe goals without teaching button sequences | Code/data invariants not measured |
+## Tool
 
-## Selection rules
+**Playwright Test** is the only automated UI framework in this first phase. Spread already has `@playwright/test`, `playwright.config.ts`, `e2e/`, `.mcp.json`, and Playwright-specific Claude planner, generator, and healer instructions. No extra dependencies or accounts are required.
 
-1. **Feature correctness:** written oracle → unit/integration → Playwright. Failures need a reproducible assertion.
-2. **Native-specific issue:** dedicated Mac Simulator → Maestro. Never substitute browser emulation and call it an iPhone test.
-3. **Unknown UI friction:** manual exploration or bounded UXAgent. Treat findings as hypotheses until independently verified. Conduct human UAT if user comprehension is the real question.
-4. **Release:** aggregate evidence from independent layers; missing platform coverage is NOT TESTED.
+### Existing setup
 
-## Automation and cost
+| Capability | Where | Notes |
+| --- | --- | --- |
+| Browser projects | `playwright.config.ts` | Desktop Chromium and simulated iPhone 14 WebKit |
+| Synthetic isolation | `e2e/fixtures.ts` | Fake Capacitor bridge, fixed clock (2026-03-04), fresh state, outbound requests blocked |
+| Browser tests | `e2e/*.spec.ts` | Responsibilities and persona journeys, among others |
+| Playwright agents | `.claude/agents/playwright-test-*.md`, `.mcp.json` | Plan → generate → investigate failing tests; no additional installation in repo |
+| CI | `.github/workflows/qa-browser.yml` | Relevant PR changes + manual dispatch, focused scenarios, failure artifacts |
 
-- [Targeted PR + manual Playwright workflow](../../.github/workflows/qa-browser.yml) installs browsers and runs a focused existing browser suite; artifacts retained. It does not replace the full release checklist.
-- Maestro runs locally for now; don't introduce macOS CI minutes or cloud service without approval.
-- UXAgent never runs in CI; synthetic scenarios can incur model fees and expose the rendered test content to the model provider. API keys stay outside version control.
+### Running it
 
-## Project profile (Spread)
+```sh
+npm ci
+npm run export:ios
+npx playwright install chromium webkit
+npx playwright test e2e/responsibilities.spec.ts
+# or: npx playwright test
+```
 
-- Source of truth: verified `main`, golden branches untouched.
-- Local-first React app inside Capacitor; no mandatory account.
-- Installed app bundle: `npm run export:ios` → `dist-ios`; web bundle alone is not native iOS.
-- Native app ID: `com.graymatter.spread` (from `capacitor.config.json`).
-- Existing browser fixtures: `e2e/fixtures.ts` freeze 2026-03-04, use a fake Capacitor bridge, block non-local requests, and create fresh synthetic devices.
-- Highest-risk flows: responsibilities/hours consistency, week/date identity, tasks/rollover, local storage, restore, profiles, offline behavior.
-- Refer to `AGENTS.project.md`, `README.md`, `docs/IOS_RELEASE.md`, and `APP_STORE_RELEASE_PLAN.md` before affecting the product or release gates.
+The browser run tests the installed-app **web bundle with a fake native bridge**. It does not test a signed iPhone binary or native system APIs.
 
-## Reuse beyond Spread
+## Test routing
 
-Copy `QA_STANDARD.md`, `REPORT_TEMPLATE.md`, and the short QA command into another repository. Rewrite only this project's identity, entry URL, build/test commands, app ID, platforms, fixtures, and release gates. Do not copy Spread assumptions into another app.
+1. **Feature:** identify the independent expected outcome (test oracle), inspect source and existing tests, run unit/integration tests as appropriate and use Playwright for user-visible end-to-end assertions.
+2. **Regression:** test affected journeys, boundary inputs, persistence and prior defect reproductions.
+3. **Exploration:** drive browser interactions using Playwright, collect hypotheses, and confirm defects with deterministic assertions and reproducible evidence.
+4. **Release review:** aggregate test status while explicitly marking native iOS and human usability coverage **NOT TESTED** unless separate evidence exists.
+
+The QA agent must not alter production behavior, merge or deploy without authorization. An agent is not a substitute for genuine user testing.
+
+## Spread project specifics
+
+- Source of truth: verified `main`; preserve `golden/*`.
+- Local-first React app packaged through Capacitor, no mandatory account.
+- Browser-tested installed-app bundle: `npm run export:ios` → `dist-ios`.
+- Critical workflows: responsibilities → hours → week → tasks; allocation math, date identity and rollover; profiles, undo, offline, storage, backup/restore.
+- Read `AGENTS.project.md`, `README.md` and applicable release documentation before making claims or changing tests.
+
+## Portable pattern
+
+Copy `QA_STANDARD.md`, `REPORT_TEMPLATE.md` and the short QA command into another repository. Replace this profile with that project's technologies, test fixtures, build commands, requirements, privacy boundaries and release gates.
