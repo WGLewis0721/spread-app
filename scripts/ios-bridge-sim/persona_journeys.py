@@ -90,7 +90,7 @@ def set_hours(page, name, target):
 def select_and_place(page, name, task, day_index):
     page.get_by_role("tab", name="Week").click()
     page.locator('button[data-drag="spread"]').filter(
-        has_text=re.compile(r"^" + re.escape(name) + r"\s")
+        has_text=re.compile(r"^" + re.escape(name))
     ).click()
     day = page.locator("section[data-day]").nth(day_index)
     day.get_by_role("button", name=f"Add {name}").click()
@@ -119,6 +119,7 @@ def check_persona(browser, persona):
     context.expose_function("__fsWrite", lambda path, data, enc: fs.__setitem__(path, data))
     context.add_init_script(INIT)
     page = context.new_page()
+    page.set_default_timeout(10000)
     page.on("pageerror", lambda error: errors.append(str(error)))
     def gate(route):
         if route.request.url.startswith((URL, "data:", "blob:")):
