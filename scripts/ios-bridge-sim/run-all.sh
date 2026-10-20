@@ -17,7 +17,7 @@ run() { # name, env..., script
 build() { env "$@" npm run export:ios >/dev/null || { echo "bundle build failed"; exit 1; }; }
 
 build VITE_SPREAD_CLOUD_BACKUP= VITE_SPREAD_CLOUD_SYNC=
-serve; run "flags off: installed app" native_e2e.py; run "flags off: restore" restore_e2e.py; kill $SERVER 2>/dev/null
+serve; run "flags off: installed app" native_e2e.py; run "flags off: persona journeys" persona_journeys.py; run "flags off: restore" restore_e2e.py; kill $SERVER 2>/dev/null
 
 build VITE_SPREAD_CLOUD_BACKUP=1 VITE_SPREAD_CLOUD_SYNC=
 serve; run "backup only" cloud_backup_e2e.py; kill $SERVER 2>/dev/null
