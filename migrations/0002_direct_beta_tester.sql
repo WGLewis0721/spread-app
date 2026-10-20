@@ -25,7 +25,7 @@ INSERT INTO "account" ("id", "accountId", "providerId", "userId", "password", "c
 VALUES ('1d52cfd1-8d82-452b-98bc-cdc4a41c7d21',
         '4d46bad5-06da-41e9-bb4f-57b58a826665', 'credential',
         '4d46bad5-06da-41e9-bb4f-57b58a826665',
-        '74fcf5cd9de58e5ae0690e8a4a62ca5d:f0266647ef2d7ded3fbc58cbefa8524fb64e3efe611c29abb01a715bbed9dba09b1a6ce34108f4cb4400fcd10079deba2acbd73453dd958bf48a7b4994b6d50b',
+        '9c7eee336ae7c942962e61f10c9ecd16:0853767d986eb3c9509961711baafbd16d45dba856b0887fc95d4ccf6b92d77a3d8a96a5c8f7e6e66c46de023cac31de9ffbead222f9621ac06f0ead142e9f72',
         now(), now());
 
 INSERT INTO beta_direct_access (email, status)
