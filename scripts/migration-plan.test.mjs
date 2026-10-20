@@ -58,10 +58,10 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
 
 test("the auth schema ships outside the globbed directory", () => {
   const migrationsDir = join(projectRoot(), "migrations");
-  // Sign-in off: nothing is copied up. Sign-in on (the web beta): the only top-level file is the
-  // verbatim auth copy, which the byte-identical test below guards.
+  // Sign-in on (web beta) ships the verbatim auth schema plus ordered,
+  // independent migrations. Auth schema immutability is checked below.
   const pending = pendingMigrations(readdirSync(migrationsDir), []).map((m) => m.name);
-  assert.deepEqual(pending.filter((name) => name !== AUTH_MIGRATION), []);
+  assert.deepEqual(pending, [AUTH_MIGRATION, "0002_direct_beta_tester.sql"]);
   assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
 });
 

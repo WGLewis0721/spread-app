@@ -5,6 +5,7 @@ import {
   createAccessChecker,
   devAllowlist,
   isAccessActive,
+  lookupAccessWithDirect,
   normalizeEmail,
   PASSWORD_MAX,
   PASSWORD_MIN,
@@ -168,4 +169,37 @@ test("a failing Sheet read surfaces as an error (so the checker can fail closed)
   await assert.rejects(() => store.lookupAccess("ada@example.com"));
   const c = createAccessChecker({ lookup: (email) => store.lookupAccess(email) });
   assert.equal(await c.check("ada@example.com"), "unavailable");
+});
+
+test("direct database approval overrides an absent Sheet record", async () => {
+  let sheetReads = 0;
+  const result = await lookupAccessWithDirect(
+    "spread.beta.01@thespreadapp.com",
+    async () => ({ status: "approved" }),
+    async () => { sheetReads += 1; throw new Error("Sheet not configured"); },
+  );
+  assert.deepEqual(result, { status: "approved" });
+  assert.equal(sheetReads, 0);
+});
+
+test("direct database revocation cannot be overridden by the Sheet", async () => {
+  const result = await lookupAccessWithDirect(
+    "spread.beta.01@thespreadapp.com",
+    async () => ({ status: "revoked" }),
+    async () => ({ status: "approved" }),
+  );
+  assert.equal(isAccessActive(result), false);
+});
+
+test("other emails still require Sheet approval and database failures fail closed", async () => {
+  let sheetReads = 0;
+  const sheet = async () => { sheetReads += 1; return { status: "approved" }; };
+  const result = await lookupAccessWithDirect("visitor@example.com", async () => null, sheet);
+  assert.deepEqual(result, { status: "approved" });
+  assert.equal(sheetReads, 1);
+  await assert.rejects(
+    () => lookupAccessWithDirect("visitor@example.com", async () => { throw new Error("DB down"); }, sheet),
+    /DB down/,
+  );
+  assert.equal(sheetReads, 1);
 });

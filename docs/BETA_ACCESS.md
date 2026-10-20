@@ -108,3 +108,23 @@ row to `revoked` and confirm the next sign-in fails.
   `BETA_DEV_RESET_FILE=/path/to/reset.json` (a JSON file standing in for the tab; edit a row's `status` to approve it).
   All are ignored on Vercel and in production.
 - The old public trial key (`SPR-DEMO-2026`) and license keys no longer open the web planner.
+
+## One directly provisioned beta tester
+
+The production-owned database can also approve the single seeded tester
+`spread.beta.01@thespreadapp.com` without the Google Sheet.
+
+- `migrations/0002_direct_beta_tester.sql` creates its Better Auth user,
+  `credential` account with a salted scrypt password hash, and an approved
+  record in `beta_direct_access`.
+- The server checks `beta_direct_access` first; if absent, it checks the
+  original Sheet unchanged. An explicit `paused` or `revoked` database record
+  takes precedence. An unavailable lookup never grants access.
+- **Never commit or paste the plaintext tester password into the public repo.**
+  The owner receives it out of band. Password rotation must use Better Auth's
+  password-update mechanism rather than modifying a migration.
+- To revoke the tester, the application database owner can run:
+  `UPDATE beta_direct_access SET status = 'revoked' WHERE email = 'spread.beta.01@thespreadapp.com';`
+  The next access check rejects it. Do not edit an already-applied migration.
+- This test account is for the **web** beta only; TestFlight remains the gate for
+  the iOS application.

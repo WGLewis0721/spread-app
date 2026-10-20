@@ -2,8 +2,10 @@
 // Sheet. Imported by the Better Auth hooks (src/lib/auth/server.ts) and by the
 // session check (src/lib/beta-status.ts). Never import from client code.
 import { readFileSync } from "node:fs";
+import { Pool } from "pg";
 import {
   createAccessChecker,
+  lookupAccessWithDirect,
   devAllowlist,
   normalizeEmail,
   type AccessChecker,
@@ -27,12 +29,33 @@ function build(): AccessChecker {
     });
   }
   const store = sheetsStoreFromEnv(process.env);
+  const databaseUrl = process.env["DATABASE_URL"]?.trim();
+  // Owned by the same server-only database role as Better Auth. The one-off
+  // tester is approved directly in Postgres; all other emails use the Sheet.
+  const directDb = databaseUrl
+    ? new Pool({ connectionString: databaseUrl, max: 2, connectionTimeoutMillis: 3_000 })
+    : null;
   return createAccessChecker({
-    // No Sheet configured: every check is "unavailable" (fail closed), never "allowed".
-    lookup: async (email) => {
-      if (!store) throw new Error("Beta Sheet is not configured.");
-      return store.lookupAccess(email);
-    },
+    lookup: async (email) =>
+      lookupAccessWithDirect(
+        email,
+        async (candidate) => {
+          if (!directDb) return null;
+          const { rows } = await directDb.query<{ status: string; access_until: Date | null }>(
+            "SELECT status, access_until FROM beta_direct_access WHERE email = $1 LIMIT 1",
+            [candidate],
+          );
+          const direct = rows[0];
+          return direct
+            ? { status: direct.status, accessUntil: direct.access_until?.toISOString() ?? "" }
+            : null;
+        },
+        async (candidate) => {
+          // No Sheet configured: all unlisted emails fail closed.
+          if (!store) throw new Error("Beta Sheet is not configured.");
+          return store.lookupAccess(candidate);
+        },
+      ),
   });
 }
 
