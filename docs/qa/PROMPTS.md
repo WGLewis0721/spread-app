@@ -1,24 +1,31 @@
-# QA prompt library
+# Playwright QA prompts — short and reusable
 
-**Claude Code:** `/qa <request>`
+You do **not** have to remember a script.
 
-**Codex or any coding agent:** `QA: <request>` (read repository QA routing in `AGENTS.project.md`).
+**Claude Code:** `/qa weekly rollover`
 
-### One-line prompts
+**ChatGPT / Codex:** `QA: test weekly rollover`
 
-- `QA: feature — weekly rollover; verify weekday/date changes, task assignments, persistence, and destination-week conflicts`
-- `QA: browser — responsibilities and hours across desktop and mobile WebKit`
-- `QA: native — smoke test the installed iOS Simulator app and inspect safe areas`
-- `QA: explore — can a new user plan a week with two responsibilities without guidance?`
-- `QA: usability — design a 5-participant real-user study; don't fabricate outcomes`
-- `QA: release — assess the current branch for TestFlight promotion, listing what is still untested`
+Both should route through the permanent instructions in `AGENTS.project.md` and the QA standard.
 
-### Always-on execution contract
+## Examples
 
-1. Inspect source, build, test fixtures and requirements.
-2. State the expected outcome and test data before execution.
-3. Run only suitable layers; don't confuse browser WebKit emulation with WKWebView.
-4. Preserve evidence; differentiate confirmed bugs, test defects, UX hypotheses and feature requests.
-5. Issue a QA report using `REPORT_TEMPLATE.md`. Fixes, merges and deployments are separately authorized.
+| Say | Test intent |
+| --- | --- |
+| `QA: test weekly rollover` | Expected behavior, destination dates, copied allocations/tasks, save/reload and conflicts |
+| `QA: test the hours math` | Boundaries, allocations, remaining hours, invalid values and persistence |
+| `QA: test task placement on mobile` | WebKit touch emulation, placement, removal, Undo, responsive clipping |
+| `QA: explore first-time onboarding` | Automated browser exploration; flag UX hypotheses and reproducible defects |
+| `QA: regression-check this PR` | Changed paths, impacted journeys, Playwright tests and evidence |
+| `QA: is this ready for TestFlight?` | Browser test report **plus explicit native/manual evidence gaps**, not an unsupported launch approval |
 
-**If a tool isn't installed or funded**, say NOT RUN and provide the next concrete setup step instead of declaring success.
+## Agent execution contract
+
+1. Inspect current code, relevant requirements and tests; define Given/When/Then criteria.
+2. Reuse `e2e/fixtures.ts` and existing test helpers; do not create duplicate frameworks.
+3. Run appropriate deterministic tests in Chromium and WebKit against synthetic local test data.
+4. Capture screenshot/trace/error evidence for failures; independently distinguish bugs from automation problems or undefined behavior.
+5. Report test counts, exact commands, acceptance criteria, limitations, severity and confidence using `REPORT_TEMPLATE.md`.
+6. Product fixes, merges, deployment and any testing against real accounts or data require separate permission.
+
+No Maestro, UXAgent, vendor integration, API key or paid model configuration is part of this setup.
