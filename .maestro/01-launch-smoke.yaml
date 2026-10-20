@@ -1,0 +1,12 @@
+# Non-destructive native app smoke test.
+# Run ONLY after building and installing com.graymatter.spread onto a disposable iOS Simulator.
+# This flow deliberately does not clear device/app state or alter a planner.
+appId: com.graymatter.spread
+name: Spread installed-app launch smoke
+tags:
+  - smoke
+---
+- launchApp
+- assertVisible: "Spread"
+- assertVisible: "Week"
+- takeScreenshot: "spread-native-launch-smoke"
