@@ -1,0 +1,54 @@
+{
+  "persona": "Imani Brooks",
+  "behavior": "recover",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "After adding Jordan the toast says: Switched to Jordan.."
+    },
+    {
+      "kind": "info",
+      "text": "Jordan sees 15 hours across 3 spreads and tasks: none."
+    },
+    {
+      "kind": "worked",
+      "text": "Imani's tasks after switching: Clinic charts."
+    },
+    {
+      "kind": "info",
+      "text": "Imani's total: 27 hours across 3 spreads."
+    },
+    {
+      "kind": "info",
+      "text": "Imani's Tuesday Work: 6h."
+    },
+    {
+      "kind": "info",
+      "text": "After Cancel the profiles are still: Imani, Jordan."
+    },
+    {
+      "kind": "info",
+      "text": "After Remove the profiles are: Imani."
+    },
+    {
+      "kind": "info",
+      "text": "After reload tasks: Clinic charts."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 20h = 6 placed + 14 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/23-imani/desktop-chromium-01-jordan-profile.png",
+      "label": "Jordan profile"
+    }
+  ]
+}

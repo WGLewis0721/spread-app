@@ -1,5 +1,9 @@
 {
   "persona": "Dana Whitfield",
+  "behavior": "unfinished",
+  "variations": [
+    "overcommitment"
+  ],
   "project": "desktop-chromium",
   "notes": [
     {
@@ -26,19 +30,19 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/01-dana/desktop-chromium-01-setup.png",
+      "file": "user-testing/personas/01-dana/desktop-chromium-01-setup.png",
       "label": "setup"
     },
     {
-      "file": "artifacts/personas/01-dana/desktop-chromium-02-week-planned.png",
+      "file": "user-testing/personas/01-dana/desktop-chromium-02-week-planned.png",
       "label": "week planned"
     },
     {
-      "file": "artifacts/personas/01-dana/desktop-chromium-03-monday-grading-uncapped.png",
+      "file": "user-testing/personas/01-dana/desktop-chromium-03-monday-grading-uncapped.png",
       "label": "Monday grading uncapped"
     },
     {
-      "file": "artifacts/personas/01-dana/desktop-chromium-04-next-week-after-rollover.png",
+      "file": "user-testing/personas/01-dana/desktop-chromium-04-next-week-after-rollover.png",
       "label": "next week after rollover"
     }
   ]

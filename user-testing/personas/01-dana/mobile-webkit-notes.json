@@ -1,15 +1,15 @@
 {
   "persona": "Dana Whitfield",
+  "behavior": "unfinished",
+  "variations": [
+    "overcommitment"
+  ],
   "project": "mobile-webkit",
   "notes": [
     {
-      "kind": "confusing",
-      "text": "Got stuck: try to push grading past 2h on Monday (locator.click: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/01-dana/mobile-webkit-03-stuck-try-to-push-grading-past-2h-on-monday.png"
-    },
-    {
-      "kind": "worked",
-      "text": "Dana wanted grading capped at 2h on Monday. The + button kept going to 0h, with no cap and no warning."
+      "kind": "bug",
+      "text": "Dana wanted grading capped at 2h on Monday. The + button kept going to 9h, with no cap and no warning.",
+      "severity": "major"
     },
     {
       "kind": "info",
@@ -45,23 +45,19 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/01-dana/mobile-webkit-01-setup.png",
+      "file": "user-testing/personas/01-dana/mobile-webkit-01-setup.png",
       "label": "setup"
     },
     {
-      "file": "artifacts/personas/01-dana/mobile-webkit-02-week-planned.png",
+      "file": "user-testing/personas/01-dana/mobile-webkit-02-week-planned.png",
       "label": "week planned"
     },
     {
-      "file": "artifacts/personas/01-dana/mobile-webkit-03-stuck-try-to-push-grading-past-2h-on-monday.png",
-      "label": "stuck-try to push grading past 2h on Monday"
-    },
-    {
-      "file": "artifacts/personas/01-dana/mobile-webkit-04-monday-grading-uncapped.png",
+      "file": "user-testing/personas/01-dana/mobile-webkit-03-monday-grading-uncapped.png",
       "label": "Monday grading uncapped"
     },
     {
-      "file": "artifacts/personas/01-dana/mobile-webkit-05-next-week-after-rollover.png",
+      "file": "user-testing/personas/01-dana/mobile-webkit-04-next-week-after-rollover.png",
       "label": "next week after rollover"
     }
   ]

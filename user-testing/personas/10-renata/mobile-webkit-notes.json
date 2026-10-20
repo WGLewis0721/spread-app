@@ -1,5 +1,9 @@
 {
   "persona": "Renata Alvarez",
+  "behavior": "rearrange",
+  "variations": [
+    "future-weeks"
+  ],
   "project": "mobile-webkit",
   "notes": [
     {
@@ -20,7 +24,7 @@
     },
     {
       "kind": "bug",
-      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Work name (170x26); Work, 30 hours. Adjust (32x44); Family name (170x26); Family, 20 hours. Adjust (32x44); Self (garden) name (170x26)",
+      "text": "8 tap targets under 44pt in Spread: Spread, home (34x34); Spread (48x44); Work name (170x26); Work, 30 hours. Adjust (32x44); Family name (170x26); Family, 20 hours. Adjust (32x44)",
       "severity": "minor"
     },
     {
@@ -44,11 +48,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/10-renata/mobile-webkit-01-kids-week.png",
+      "file": "user-testing/personas/10-renata/mobile-webkit-01-kids-week.png",
       "label": "kids week"
     },
     {
-      "file": "artifacts/personas/10-renata/mobile-webkit-02-no-kids-week.png",
+      "file": "user-testing/personas/10-renata/mobile-webkit-02-no-kids-week.png",
       "label": "no-kids week"
     }
   ]

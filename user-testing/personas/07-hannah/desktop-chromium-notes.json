@@ -1,5 +1,7 @@
 {
   "persona": "Hannah Lindqvist",
+  "behavior": "create",
+  "variations": [],
   "project": "desktop-chromium",
   "notes": [
     {
@@ -25,11 +27,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/07-hannah/desktop-chromium-01-sixteen-tasks.png",
+      "file": "user-testing/personas/07-hannah/desktop-chromium-01-sixteen-tasks.png",
       "label": "sixteen tasks"
     },
     {
-      "file": "artifacts/personas/07-hannah/desktop-chromium-02-next-week-after-rollover.png",
+      "file": "user-testing/personas/07-hannah/desktop-chromium-02-next-week-after-rollover.png",
       "label": "next week after rollover"
     }
   ]

@@ -1,0 +1,15 @@
+[
+ "change|input|Choose a Spread backup|ctx=More",
+ "change|input|What matters most here?|ctx=",
+ "click|button[tab]|Spread|ctx=",
+ "click|button[tab]|Week|ctx=",
+ "click|button|Add|ctx=Add these profiles?",
+ "click|button|Back Up Spread|ctx=More",
+ "click|button|Close|ctx=More",
+ "click|button|Restore Spread|ctx=More",
+ "click|button|Settings|ctx=",
+ "click|input|Choose a Spread backup|ctx=More",
+ "input|input|Add a task|ctx=",
+ "input|input|Choose a Spread backup|ctx=More",
+ "key|Enter|input|What matters most here?|ctx="
+]

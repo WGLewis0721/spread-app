@@ -1,5 +1,7 @@
 {
   "persona": "Priya Nair",
+  "behavior": "rearrange",
+  "variations": [],
   "project": "desktop-chromium",
   "notes": [
     {
@@ -22,11 +24,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/03-priya/desktop-chromium-01-before-the-plans-change.png",
+      "file": "user-testing/personas/03-priya/desktop-chromium-01-before-the-plans-change.png",
       "label": "before the plans change"
     },
     {
-      "file": "artifacts/personas/03-priya/desktop-chromium-02-after-rearranging.png",
+      "file": "user-testing/personas/03-priya/desktop-chromium-02-after-rearranging.png",
       "label": "after rearranging"
     }
   ]

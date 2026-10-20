@@ -1,34 +1,26 @@
 {
   "persona": "Grace Okafor",
+  "behavior": "rearrange",
+  "variations": [],
   "project": "mobile-webkit",
   "notes": [
     {
       "kind": "info",
-      "text": "Typing 12 small tasks took 23s of automation time."
+      "text": "Typing 12 small tasks took 58s of automation time."
     },
     {
       "kind": "confusing",
-      "text": "Got stuck: first try placing a task before Work is on any day (locator.getAttribute: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/06-grace/mobile-webkit-02-stuck-first-try-placing-a-task-before-work-is-on-any-day.png"
+      "text": "With 12 tasks the Work group in To place starts collapsed, so each Place button is hidden until the group is opened. One extra tap before the first placement.",
+      "severity": "polish"
     },
     {
       "kind": "confusing",
-      "text": "Got stuck: place conference 1 on a day (locator.click: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/06-grace/mobile-webkit-04-stuck-place-conference-1-on-a-day.png"
-    },
-    {
-      "kind": "confusing",
-      "text": "Got stuck: place conference 2 on a day (locator.click: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/06-grace/mobile-webkit-05-stuck-place-conference-2-on-a-day.png"
-    },
-    {
-      "kind": "confusing",
-      "text": "Got stuck: place conference 3 on a day (locator.click: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/06-grace/mobile-webkit-06-stuck-place-conference-3-on-a-day.png"
+      "text": "Tapping Place on a task before its spread is on a day only says 'Add it to a day first.' The order (days, then tasks) is not obvious on first use.",
+      "severity": "polish"
     },
     {
       "kind": "info",
-      "text": "Placing 3 short tasks took 0 taps (about 0 per task)."
+      "text": "Placing 3 short tasks took 6 taps (about 2 per task)."
     },
     {
       "kind": "bug",
@@ -56,35 +48,19 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/06-grace/mobile-webkit-01-twelve-conference-tasks.png",
+      "file": "user-testing/personas/06-grace/mobile-webkit-01-twelve-conference-tasks.png",
       "label": "twelve conference tasks"
     },
     {
-      "file": "artifacts/personas/06-grace/mobile-webkit-02-stuck-first-try-placing-a-task-before-work-is-on-any-day.png",
-      "label": "stuck-first try placing a task before Work is on any day"
-    },
-    {
-      "file": "artifacts/personas/06-grace/mobile-webkit-03-to-place-list.png",
+      "file": "user-testing/personas/06-grace/mobile-webkit-02-to-place-list.png",
       "label": "to place list"
     },
     {
-      "file": "artifacts/personas/06-grace/mobile-webkit-04-stuck-place-conference-1-on-a-day.png",
-      "label": "stuck-place conference 1 on a day"
-    },
-    {
-      "file": "artifacts/personas/06-grace/mobile-webkit-05-stuck-place-conference-2-on-a-day.png",
-      "label": "stuck-place conference 2 on a day"
-    },
-    {
-      "file": "artifacts/personas/06-grace/mobile-webkit-06-stuck-place-conference-3-on-a-day.png",
-      "label": "stuck-place conference 3 on a day"
-    },
-    {
-      "file": "artifacts/personas/06-grace/mobile-webkit-07-after-placing-three.png",
+      "file": "user-testing/personas/06-grace/mobile-webkit-03-after-placing-three.png",
       "label": "after placing three"
     },
     {
-      "file": "artifacts/personas/06-grace/mobile-webkit-08-end-of-conference-week.png",
+      "file": "user-testing/personas/06-grace/mobile-webkit-04-end-of-conference-week.png",
       "label": "end of conference week"
     }
   ]

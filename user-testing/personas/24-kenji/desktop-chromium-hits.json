@@ -1,0 +1,23 @@
+[
+ "change|input|Add a task|ctx=",
+ "change|input|What matters most here?|ctx=",
+ "change|input|Work name|ctx=",
+ "click|button[button]|Client site 25h|ctx=",
+ "click|button[checkbox]|Mark done: Expense report|ctx=",
+ "click|button[tab]|Spread|ctx=",
+ "click|button[tab]|Week|ctx=",
+ "click|button|Add Client site|ctx=",
+ "click|button|Back Up Spread|ctx=More",
+ "click|button|Back to this week|ctx=Mar 9 – Mar 15. Use left and right arrow keys to change weeks.",
+ "click|button|Client site, 8 hours. Adjust|ctx=",
+ "click|button|Done adjusting hours|ctx=Client site hours",
+ "click|button|Increase Client site hours|ctx=Client site hours",
+ "click|button|Increase Client site on Thursday|ctx=Client site on Thursday",
+ "click|button|Next week|ctx=This week. Use left and right arrow keys to change weeks.",
+ "click|button|Settings|ctx=",
+ "input|input|Add a task|ctx=",
+ "input|input|Client site name|ctx=",
+ "key|Enter|input|Add a task|ctx=",
+ "key|Enter|input|What matters most here?|ctx=",
+ "key|Enter|input|Work name|ctx="
+]

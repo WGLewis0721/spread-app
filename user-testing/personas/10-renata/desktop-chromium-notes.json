@@ -1,5 +1,9 @@
 {
   "persona": "Renata Alvarez",
+  "behavior": "rearrange",
+  "variations": [
+    "future-weeks"
+  ],
   "project": "desktop-chromium",
   "notes": [
     {
@@ -29,11 +33,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/10-renata/desktop-chromium-01-kids-week.png",
+      "file": "user-testing/personas/10-renata/desktop-chromium-01-kids-week.png",
       "label": "kids week"
     },
     {
-      "file": "artifacts/personas/10-renata/desktop-chromium-02-no-kids-week.png",
+      "file": "user-testing/personas/10-renata/desktop-chromium-02-no-kids-week.png",
       "label": "no-kids week"
     }
   ]

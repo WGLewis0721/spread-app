@@ -1,0 +1,69 @@
+{
+  "persona": "Imani Brooks",
+  "behavior": "recover",
+  "variations": [],
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "After adding Jordan the toast says: Switched to Jordan.."
+    },
+    {
+      "kind": "info",
+      "text": "Jordan sees 15 hours across 3 spreads and tasks: none."
+    },
+    {
+      "kind": "worked",
+      "text": "Imani's tasks after switching: Clinic charts."
+    },
+    {
+      "kind": "info",
+      "text": "Imani's total: 27 hours across 3 spreads."
+    },
+    {
+      "kind": "info",
+      "text": "Imani's Tuesday Work: 6h."
+    },
+    {
+      "kind": "info",
+      "text": "After Cancel the profiles are still: Imani, Jordan."
+    },
+    {
+      "kind": "info",
+      "text": "After Remove the profiles are: Imani."
+    },
+    {
+      "kind": "info",
+      "text": "After reload tasks: Clinic charts."
+    },
+    {
+      "kind": "bug",
+      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Work name (170x26); Work, 20 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44); Health name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 20h = 6 placed + 14 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found) | Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/23-imani/mobile-webkit-01-jordan-profile.png",
+      "label": "Jordan profile"
+    }
+  ]
+}

@@ -1,5 +1,9 @@
 {
   "persona": "Coach Tyrone Reeves",
+  "behavior": "unfinished",
+  "variations": [
+    "future-weeks"
+  ],
   "project": "desktop-chromium",
   "notes": [
     {
@@ -16,27 +20,26 @@
       "text": "This week kept its Friday practice after editing next week."
     },
     {
-      "kind": "confusing",
-      "text": "Got stuck: rollover again onto a week that already has content (locator.innerText: Timeout 6000ms exceeded.)",
-      "shot": "artifacts/personas/04-tyrone/desktop-chromium-03-stuck-rollover-again-onto-a-week-that-already-has-content.png"
+      "kind": "info",
+      "text": "Rolling over again onto the bye week he had already edited asked 'Replace next week?' before overwriting it."
     },
     {
       "kind": "info",
-      "text": "final audit failed: locator.click: Timeout 6000ms exceeded."
+      "text": "Hours audit: Film 8h = 6 placed + 2 left, Family 4h = 3 placed + 1 left, Self 3h = 0 placed + 3 left, Practice 10h = 6 placed + 4 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
     }
   ],
   "shots": [
     {
-      "file": "artifacts/personas/04-tyrone/desktop-chromium-01-normal-week.png",
+      "file": "user-testing/personas/04-tyrone/desktop-chromium-01-normal-week.png",
       "label": "normal week"
     },
     {
-      "file": "artifacts/personas/04-tyrone/desktop-chromium-02-bye-week.png",
+      "file": "user-testing/personas/04-tyrone/desktop-chromium-02-bye-week.png",
       "label": "bye week"
-    },
-    {
-      "file": "artifacts/personas/04-tyrone/desktop-chromium-03-stuck-rollover-again-onto-a-week-that-already-has-content.png",
-      "label": "stuck-rollover again onto a week that already has content"
     }
   ]
 }

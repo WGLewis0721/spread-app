@@ -1,0 +1,67 @@
+{
+  "persona": "Pete Janssen",
+  "behavior": "unfinished",
+  "variations": [
+    "future-weeks"
+  ],
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Open tasks sheet lists 5 tasks, all ticked by default."
+    },
+    {
+      "kind": "info",
+      "text": "With two unticked the button reads \"Move 3\"."
+    },
+    {
+      "kind": "info",
+      "text": "Next week holds: Permit follow-up, Final walkthrough, Return rental."
+    },
+    {
+      "kind": "info",
+      "text": "This week still holds: Frame garage, Order trusses, Quote Hendricks, Pour pad, Invoice Lee."
+    },
+    {
+      "kind": "info",
+      "text": "Rollover asked before replacing: true."
+    },
+    {
+      "kind": "info",
+      "text": "After Replace next week holds: Frame garage, Order trusses, Quote Hendricks, Pour pad, Invoice Lee."
+    },
+    {
+      "kind": "bug",
+      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Jobs name (170x26); Jobs, 8 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44); Health name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Jobs 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/18-pete/mobile-webkit-01-open-tasks-sheet.png",
+      "label": "open tasks sheet"
+    },
+    {
+      "file": "user-testing/personas/18-pete/mobile-webkit-02-replace-next-week-prompt.png",
+      "label": "replace next week prompt"
+    }
+  ]
+}

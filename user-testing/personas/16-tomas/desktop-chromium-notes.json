@@ -1,0 +1,40 @@
+{
+  "persona": "Tomás Reyes",
+  "behavior": "rearrange",
+  "variations": [
+    "future-weeks"
+  ],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "confusing",
+      "text": "After dragging Monday to Wednesday: Wednesday Restaurant 0h, Monday 6h."
+    },
+    {
+      "kind": "info",
+      "text": "After a swipe and a scroll on the crown: Apr 13 – Apr 19 Back to this week."
+    },
+    {
+      "kind": "info",
+      "text": "Picking April 11 in Month opened: Apr 6 – Apr 12 Back to this week"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Restaurant 30h = 17 placed + 13 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/16-tomas/desktop-chromium-01-month-ahead.png",
+      "label": "month ahead"
+    },
+    {
+      "file": "user-testing/personas/16-tomas/desktop-chromium-02-rearranged-week.png",
+      "label": "rearranged week"
+    }
+  ]
+}

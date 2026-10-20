@@ -1,0 +1,23 @@
+[
+ "change|input|Add a task|ctx=",
+ "change|input|What matters most here?|ctx=",
+ "change|input|Work name|ctx=",
+ "click|button[checkbox]|Mark done: Draft essay|ctx=",
+ "click|button[checkbox]|Mark done: Invoice Acme|ctx=",
+ "click|button[checkbox]|Mark done: Pitch to Wired|ctx=",
+ "click|button[checkbox]|Mark not done: Pitch to Wired|ctx=",
+ "click|button[tab]|Spread|ctx=",
+ "click|button[tab]|Week|ctx=",
+ "click|button|Back to this week|ctx=Mar 30 – Apr 5. Use left and right arrow keys to change weeks.",
+ "click|button|Delete task|ctx=Task",
+ "click|button|Hide tasks for Writing|ctx=",
+ "click|button|Newsletter|ctx=",
+ "click|button|Rollover|ctx=",
+ "click|button|Show tasks for Writing|ctx=",
+ "input|input|Add a task|ctx=",
+ "input|input|What matters most here?|ctx=",
+ "input|input|Writing name|ctx=",
+ "key|Enter|input|Add a task|ctx=",
+ "key|Enter|input|What matters most here?|ctx=",
+ "key|Enter|input|Work name|ctx="
+]

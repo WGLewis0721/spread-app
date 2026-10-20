@@ -1,0 +1,55 @@
+{
+  "persona": "Tomás Reyes",
+  "behavior": "rearrange",
+  "variations": [
+    "future-weeks"
+  ],
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "confusing",
+      "text": "After dragging Monday to Wednesday: Wednesday Restaurant 0h, Monday 6h."
+    },
+    {
+      "kind": "info",
+      "text": "After a swipe and a scroll on the crown: Mar 23 – Mar 29 Back to this week."
+    },
+    {
+      "kind": "info",
+      "text": "Picking April 11 in Month opened: Apr 6 – Apr 12 Back to this week"
+    },
+    {
+      "kind": "bug",
+      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Restaurant name (170x26); Restaurant, 30 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44); Health name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Restaurant 30h = 17 placed + 13 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/16-tomas/mobile-webkit-01-month-ahead.png",
+      "label": "month ahead"
+    },
+    {
+      "file": "user-testing/personas/16-tomas/mobile-webkit-02-rearranged-week.png",
+      "label": "rearranged week"
+    }
+  ]
+}

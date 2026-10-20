@@ -1,11 +1,19 @@
 {
   "persona": "Jaylen Carter",
+  "behavior": "allocate",
+  "variations": [
+    "overcommitment"
+  ],
   "project": "mobile-webkit",
   "notes": [
     {
-      "kind": "bug",
-      "text": "Wednesday now holds 54 planned hours across spreads (a day has 24).",
-      "severity": "major"
+      "kind": "confusing",
+      "text": "Got stuck: pile everything on Wednesday (locator.click: Timeout 10000ms exceeded.)",
+      "shot": "user-testing/personas/09-jaylen/mobile-webkit-02-stuck-pile-everything-on-wednesday.png"
+    },
+    {
+      "kind": "info",
+      "text": "Wednesday now holds 0 planned hours across spreads (a day has 24)."
     },
     {
       "kind": "missing",
@@ -22,7 +30,7 @@
     },
     {
       "kind": "info",
-      "text": "Hours audit: Classes 24h = 24 placed + 0 left, Chapter 14h = 14 placed + 0 left, Self (hoops) 3h = 0 placed + 3 left, Social 16h = 16 placed + 0 left"
+      "text": "Hours audit: Classes 24h = 20 placed + 4 left, Chapter 14h = 1 placed + 13 left, Self (hoops) 3h = 0 placed + 3 left, Social 16h = 1 placed + 15 left"
     },
     {
       "kind": "bug",
@@ -41,11 +49,15 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/09-jaylen/mobile-webkit-01-overbooked-plan.png",
+      "file": "user-testing/personas/09-jaylen/mobile-webkit-01-overbooked-plan.png",
       "label": "overbooked plan"
     },
     {
-      "file": "artifacts/personas/09-jaylen/mobile-webkit-02-wednesday-24h-plus.png",
+      "file": "user-testing/personas/09-jaylen/mobile-webkit-02-stuck-pile-everything-on-wednesday.png",
+      "label": "stuck-pile everything on Wednesday"
+    },
+    {
+      "file": "user-testing/personas/09-jaylen/mobile-webkit-03-wednesday-24h-plus.png",
       "label": "wednesday 24h plus"
     }
   ]

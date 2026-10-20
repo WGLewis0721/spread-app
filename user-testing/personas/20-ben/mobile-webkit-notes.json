@@ -1,0 +1,47 @@
+{
+  "persona": "Ben Ashworth",
+  "behavior": "unfinished",
+  "variations": [
+    "future-weeks"
+  ],
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Rollover chain: week +1: 4 tasks, 0 ticked | week +2: 4 tasks, 0 ticked | week +3: 4 tasks, 0 ticked | week +4: 4 tasks, 0 ticked."
+    },
+    {
+      "kind": "info",
+      "text": "This week afterwards: Pitch to Wired, Draft essay, Invoice Acme, Fact-check piece; 1 ticked."
+    },
+    {
+      "kind": "bug",
+      "text": "7 tap targets under 44pt in Spread: Spread, home (34x34); Writing name (170x26); Writing, 8 hours. Adjust (32x44); Home name (170x26); Home, 4 hours. Adjust (32x44); Health name (170x26)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Writing 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "bug",
+      "text": "1 tap targets under 44pt in Week: Spread, home (34x34)",
+      "severity": "minor"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/20-ben/mobile-webkit-01-four-rollovers-out.png",
+      "label": "four rollovers out"
+    }
+  ]
+}

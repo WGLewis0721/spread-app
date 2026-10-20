@@ -1,0 +1,52 @@
+{
+  "persona": "Dorothy Kessler",
+  "behavior": "recover",
+  "variations": [],
+  "project": "mobile-webkit",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Picking a random text file: refused. Message: That file isn’t a Spread backup, or it is damaged. Backup exported."
+    },
+    {
+      "kind": "info",
+      "text": "Picking an empty file: refused. Message: That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "info",
+      "text": "Picking JSON that isn't a Spread backup: refused. Message: That file isn’t a Spread backup, or it is damaged. That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "info",
+      "text": "Picking a backup from a future version: refused. Message: That file isn’t a Spread backup, or it is damaged. That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "info",
+      "text": "Picking a backup edited by hand (checksum no longer matches): refused. Message: That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "info",
+      "text": "Good backup dialog: That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "confusing",
+      "text": "Got stuck: finally pick the good backup and restore it (locator.click: Timeout 10000ms exceeded.)",
+      "shot": "user-testing/personas/25-dorothy/mobile-webkit-01-stuck-finally-pick-the-good-backup-and-restore-it.png"
+    },
+    {
+      "kind": "info",
+      "text": "final audit failed: locator.click: Timeout 10000ms exceeded."
+    },
+    {
+      "kind": "bug",
+      "text": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "severity": "minor"
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/25-dorothy/mobile-webkit-01-stuck-finally-pick-the-good-backup-and-restore-it.png",
+      "label": "stuck-finally pick the good backup and restore it"
+    }
+  ]
+}

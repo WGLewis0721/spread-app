@@ -1,5 +1,7 @@
 {
   "persona": "Priya Nair",
+  "behavior": "rearrange",
+  "variations": [],
   "project": "mobile-webkit",
   "notes": [
     {
@@ -37,11 +39,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/03-priya/mobile-webkit-01-before-the-plans-change.png",
+      "file": "user-testing/personas/03-priya/mobile-webkit-01-before-the-plans-change.png",
       "label": "before the plans change"
     },
     {
-      "file": "artifacts/personas/03-priya/mobile-webkit-02-after-rearranging.png",
+      "file": "user-testing/personas/03-priya/mobile-webkit-02-after-rearranging.png",
       "label": "after rearranging"
     }
   ]

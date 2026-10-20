@@ -1,0 +1,54 @@
+{
+  "persona": "Greg Paulsen",
+  "behavior": "create",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "worked",
+      "text": "Arrow keys move between the Spread and Week tabs (Spread selected after Right then Left: true)."
+    },
+    {
+      "kind": "info",
+      "text": "Tasks typed from the keyboard: Plan the garden beds, Order mulch."
+    },
+    {
+      "kind": "info",
+      "text": "After pressing Right the header reads: Mar 9 – Mar 15 Back to this week."
+    },
+    {
+      "kind": "info",
+      "text": "After pressing Left the header reads: This week Mar 2 – Mar 8."
+    },
+    {
+      "kind": "worked",
+      "text": "Escape closes the New Spread dialog."
+    },
+    {
+      "kind": "worked",
+      "text": "Escape closes Settings."
+    },
+    {
+      "kind": "info",
+      "text": "First 12 Tab stops: This week. Use left and right arrow keys to change weeks. > Previous week > Next week > Spread > 15 hours across 3 spread > Jump to Work, 8 hours > Jump to Home, 4 hours > Jump to Health, 3 hours > Rollover > Review open tasks > Color for Work > Work name"
+    },
+    {
+      "kind": "info",
+      "text": "Work reads 10h after two keyboard presses on +."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 10h = 0 placed + 10 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/14-greg/desktop-chromium-01-keyboard-only-plan.png",
+      "label": "keyboard-only plan"
+    }
+  ]
+}

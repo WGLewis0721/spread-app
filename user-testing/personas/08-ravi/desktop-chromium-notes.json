@@ -1,5 +1,9 @@
 {
   "persona": "Ravi Menon",
+  "behavior": "allocate",
+  "variations": [
+    "future-weeks"
+  ],
   "project": "desktop-chromium",
   "notes": [
     {
@@ -25,11 +29,11 @@
   ],
   "shots": [
     {
-      "file": "artifacts/personas/08-ravi/desktop-chromium-01-week-plus-two.png",
+      "file": "user-testing/personas/08-ravi/desktop-chromium-01-week-plus-two.png",
       "label": "week plus two"
     },
     {
-      "file": "artifacts/personas/08-ravi/desktop-chromium-02-month-view.png",
+      "file": "user-testing/personas/08-ravi/desktop-chromium-02-month-view.png",
       "label": "month view"
     }
   ]

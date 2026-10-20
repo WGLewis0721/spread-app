@@ -1,0 +1,50 @@
+{
+  "persona": "Dorothy Kessler",
+  "behavior": "recover",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Picking a random text file: refused. Message: That file isn’t a Spread backup, or it is damaged. Backup exported."
+    },
+    {
+      "kind": "info",
+      "text": "Picking an empty file: refused. Message: That file isn’t a Spread backup, or it is damaged. That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "info",
+      "text": "Picking JSON that isn't a Spread backup: refused. Message: That file isn’t a Spread backup, or it is damaged. That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "info",
+      "text": "Picking a backup from a future version: refused. Message: That file isn’t a Spread backup, or it is damaged. That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "info",
+      "text": "Picking a backup edited by hand (checksum no longer matches): refused. Message: That file isn’t a Spread backup, or it is damaged. That file isn’t a Spread backup, or it is damaged."
+    },
+    {
+      "kind": "info",
+      "text": "Good backup dialog: Add these profiles? Me. 1 week, 1 task. Nothing that has content on this device changes. An empty profile may be filled; the others are added with “restored” in their names. Cancel Add"
+    },
+    {
+      "kind": "info",
+      "text": "Tasks after the good restore: Library board minutes."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/25-dorothy/desktop-chromium-01-after-good-restore.png",
+      "label": "after good restore"
+    }
+  ]
+}

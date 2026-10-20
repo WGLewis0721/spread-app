@@ -1,0 +1,30 @@
+{
+  "persona": "Sofia Marin",
+  "behavior": "create",
+  "variations": [],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Reopened task shows 4 blocks."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Work 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/15-sofia/desktop-chromium-01-notes-expanded.png",
+      "label": "notes expanded"
+    },
+    {
+      "file": "user-testing/personas/15-sofia/desktop-chromium-02-task-with-four-blocks.png",
+      "label": "task with four blocks"
+    }
+  ]
+}

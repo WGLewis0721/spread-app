@@ -1,0 +1,23 @@
+[
+ "change|input|Add a task|ctx=",
+ "change|input|Choose a Spread backup|ctx=More",
+ "change|input|Home name|ctx=",
+ "change|input|What matters most here?|ctx=",
+ "click|button[checkbox]|Mark done: Quarterly filings|ctx=",
+ "click|button[listitem]|Mar 4, 10:00 AM Saved before restore|ctx=More",
+ "click|button[tab]|Spread|ctx=",
+ "click|button|Add as profiles|ctx=Use this safety copy?",
+ "click|button|Add|ctx=Add these profiles?",
+ "click|button|Back Up Spread|ctx=More",
+ "click|button|Close|ctx=More",
+ "click|button|Restore Spread|ctx=More",
+ "click|button|Restore from a safety copy|ctx=More",
+ "click|button|Settings|ctx=",
+ "click|input|Choose a Spread backup|ctx=More",
+ "input|input|Add a task|ctx=",
+ "input|input|Choose a Spread backup|ctx=More",
+ "input|input|House name|ctx=",
+ "key|Enter|input|Add a task|ctx=",
+ "key|Enter|input|Home name|ctx=",
+ "key|Enter|input|What matters most here?|ctx="
+]

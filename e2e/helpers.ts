@@ -47,13 +47,19 @@ export async function setHours(page: Page, spread: string, hours: number) {
 }
 
 /** Puts `hours` hours of a spread on a weekday by selecting its chip in Week and using that day's "Add" button. */
+/** Scrolls a control to the middle of the screen first, clear of the pinned header and the floating dock, then taps it. */
+export async function tap(locator: Locator) {
+  await locator.evaluate((el) => el.scrollIntoView({ block: "center", inline: "center" }));
+  await locator.click();
+}
+
 export async function placeHours(page: Page, spread: string, dayName: string, hours = 1) {
   await openWeekTab(page);
   const chip = page.getByRole("button", { name: new RegExp(`^${esc(spread)} \\d+h$`) });
   if ((await chip.getAttribute("aria-pressed")) !== "true") await chip.click();
-  await dayCard(page, dayName).getByRole("button", { name: `Add ${spread}` }).click();
+  await tap(dayCard(page, dayName).getByRole("button", { name: `Add ${spread}` }));
   for (let i = 1; i < hours; i++) {
-    await dayCard(page, dayName).getByRole("button", { name: `Increase ${spread} on ${dayName}` }).click();
+    await tap(dayCard(page, dayName).getByRole("button", { name: `Increase ${spread} on ${dayName}` }));
   }
 }
 

@@ -1,0 +1,32 @@
+{
+  "persona": "Ben Ashworth",
+  "behavior": "unfinished",
+  "variations": [
+    "future-weeks"
+  ],
+  "project": "desktop-chromium",
+  "notes": [
+    {
+      "kind": "info",
+      "text": "Rollover chain: week +1: 4 tasks, 0 ticked | week +2: 4 tasks, 0 ticked | week +3: 4 tasks, 0 ticked | week +4: 4 tasks, 0 ticked."
+    },
+    {
+      "kind": "info",
+      "text": "This week afterwards: Pitch to Wired, Draft essay, Invoice Acme, Fact-check piece; 1 ticked."
+    },
+    {
+      "kind": "info",
+      "text": "Hours audit: Writing 8h = 0 placed + 8 left, Home 4h = 0 placed + 4 left, Health 3h = 0 placed + 3 left"
+    },
+    {
+      "kind": "info",
+      "text": "The app never showed an overbooking or over-capacity message."
+    }
+  ],
+  "shots": [
+    {
+      "file": "user-testing/personas/20-ben/desktop-chromium-01-four-rollovers-out.png",
+      "label": "four rollovers out"
+    }
+  ]
+}
