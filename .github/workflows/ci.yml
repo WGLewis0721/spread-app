@@ -42,7 +42,7 @@ jobs:
         env:
           SHOTS: ${{ runner.temp }}/shots
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: bridge-sim-shots
           path: ${{ runner.temp }}/shots
