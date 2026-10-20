@@ -1,0 +1,35 @@
+name: Playwright QA (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Export the installed-app web bundle
+        run: npm run export:ios
+      - name: Install browser binaries
+        run: npx playwright install --with-deps chromium webkit
+      - name: Critical responsibility journeys
+        run: npx playwright test e2e/responsibilities.spec.ts --project=desktop-chromium --project=mobile-webkit
+      - name: Preserve traces, screenshots and HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-qa-report
+          retention-days: 14
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
