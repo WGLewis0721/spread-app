@@ -1,52 +1,45 @@
-# Spread QA — start here
+# Spread QA — Playwright only
 
-This is the **project adapter** for a reusable QA process. The instructions and test-report format can be copied to other repositories by changing the project profile, not the testing principles.
+This is the **project adapter** for a reusable testing process. The test design rules and report template can be reused in other repositories by replacing the project-specific test commands and requirements.
 
-## Ask in ordinary language
+## Ask normally, or use one command
 
-| Say | Route to |
+| Request | What the QA agent should do |
 | --- | --- |
-| **QA: feature — [feature]** | Acceptance criteria → unit/integration checks → browser E2E → evidence |
-| **QA: explore — [goal]** | Synthetic exploratory session, bounded to a test build; investigate findings independently |
-| **QA: native — [flow]** | Maestro on a real iOS Simulator; report native-only findings |
-| **QA: release — [target]** | Evidence from all required layers, outstanding risks and a release recommendation |
+| `QA: feature — [feature]` | Define acceptance criteria; inspect existing tests; add focused Playwright coverage and run it |
+| `QA: explore — [user goal]` | Use Playwright browser tools to explore a disposable build, record friction, and verify candidate defects |
+| `QA: regression — [changed feature]` | Identify affected behaviors, run relevant automated tests, and report gaps |
+| `QA: release — [target]` | Summarize browser evidence and explicitly name the release gates Playwright cannot verify |
 
-For each request, the agent must read [QA_STANDARD.md](QA_STANDARD.md) and [STACK.md](STACK.md), inspect the current code and existing tests, write expected behavior **before** execution, and produce a report using [REPORT_TEMPLATE.md](REPORT_TEMPLATE.md).
+**Claude Code:** `/qa [your request]`. **Codex or ChatGPT:** write `QA: [your request]`. The agent must read [QA_STANDARD.md](QA_STANDARD.md), [STACK.md](STACK.md), and [REPORT_TEMPLATE.md](REPORT_TEMPLATE.md) before testing.
 
-**Approval gate:** Testing and reporting are authorized. Fixing product code, merging, deploying, enabling paid cloud infrastructure or using real personal data require separate authorization.
+**Approval gate:** You may inspect and test on a separate branch. Fixing application code, merging, deploying or using real user data require separate authorization.
 
-## Current tool status
+## What's already available
 
-- **Playwright:** already configured in this repository (`playwright.config.ts`, `e2e/`, `.claude/agents/playwright-test-*.md`, and `.mcp.json`). The Playwright stack is executable where Node dependencies and browser binaries are installed. No new Playwright package is needed.
-- **Maestro:** native iOS Simulator smoke flow at [`.maestro/01-launch-smoke.yaml`](../../.maestro/01-launch-smoke.yaml); **not device-verified**. See [MAESTRO.md](MAESTRO.md). The CLI/Xcode/simulator must be installed on a Mac before it can run.
-- **UXAgent:** optional external research framework with a bounded launcher at [`scripts/qa/run-uxagent.sh`](../../scripts/qa/run-uxagent.sh). **Not installed, not run, and never a CI/release gate.** See [UXAGENT.md](UXAGENT.md); needs an explicit API key and opt-in.
+- `@playwright/test` and `playwright.config.ts` (desktop Chromium and mobile WebKit emulation).
+- `e2e/` contains isolated synthetic fixtures, existing browser tests and persona simulations.
+- `.claude/agents/playwright-test-*.md` and `.mcp.json` already provide Playwright planner, generator and healer support.
+- [GitHub Actions QA workflow](../../.github/workflows/qa-browser.yml) runs a focused Playwright suite for relevant pull requests and allows manual runs; HTML reports and failure artifacts are uploaded.
+- No other testing service, API key, account or paid model setup is needed.
 
-## Fast commands
+## How to run Playwright locally (optional)
+
+You do **not** need to run these commands when asking an agent to test the repository.
 
 ```sh
-# Browser QA: build the installed-app web bundle, then run existing deterministic tests
 npm ci
 npm run export:ios
 npx playwright install chromium webkit
 npx playwright test e2e/responsibilities.spec.ts
-
-# Check prerequisites without starting or paying for agents
-bash scripts/qa/check-stack.sh
-
-# Native simulator (Mac only, after installing and launching the actual iOS app)
-maestro test .maestro/01-launch-smoke.yaml
-
-# AI exploratory agent (opt-in, local test build ONLY)
-# See UXAGENT.md before running. Runs cost money and may transmit test page content to a model.
 ```
 
-The GitHub Actions workflow `.github/workflows/qa-browser.yml` runs a **targeted Playwright suite on relevant pull requests** and supports manual dispatch. It preserves traces/screenshots on failure. Passing this focused suite does not mean all behavior or native iOS is validated.
+For the existing full E2E suite, after exporting the bundle: `npx playwright test`. This is more extensive than the focused pull-request job and its status must be reported separately.
 
-## Guardrails
+## Important limits
 
-- All personas, accounts and test data must be synthetic; no marketing quotes attributed to real customers.
-- Use Playwright or other deterministic assertions for correctness; UXAgent's simulated preferences are hypotheses, not usability evidence.
-- Maestro never uses `clearState` by default because this is a local-first app; resetting the app can permanently erase the test device's planner.
-- Do not run the optional UXAgent against the production URL or anything containing authentic user data.
-- Do not weaken failing assertions, silently skip failures, or misclassify test harness defects as app defects.
-- Every failed behavior requires reproduction steps, expected/actual result, evidence, severity and affected environment.
+- Browser WebKit emulation **is not** native iOS WKWebView, and cannot establish physical-device keyboard, safe-area, share sheet, haptics or CloudKit behavior.
+- Scripted personas and AI-led exploratory testing are **not** real human usability or acceptance testing.
+- Passing tests prove only their explicit assertions; report uncovered requirements and untested cases.
+- Never change or weaken a failing assertion merely to produce a pass.
+- Preserve reproducible steps, expected/actual results, screenshots/traces, device/browser, severity and confidence for findings.
