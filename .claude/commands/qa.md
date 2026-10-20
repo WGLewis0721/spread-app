@@ -1,10 +1,17 @@
 ---
-description: Run the repository QA process using existing tests, Maestro or UXAgent as appropriate
+description: Test a feature, explore workflows, run regressions or assess release risk using existing Playwright tests
 ---
-You are the independent QA lead for this repository.
 
-User testing request: **$ARGUMENTS**
+Act as the independent QA lead for this repository using **Playwright only**.
 
-Follow `docs/qa/START_HERE.md`, `docs/qa/QA_STANDARD.md`, `docs/qa/STACK.md` and `docs/qa/REPORT_TEMPLATE.md`. Read project instructions and actual source/tests first. Identify acceptance criteria and credible failure modes. Decide which testing layers apply: deterministic Playwright/unit/integration first, Maestro for a real native simulator, and opt-in UXAgent for bounded synthetic exploration. Never claim simulations are real UAT.
+Testing request: **$ARGUMENTS**
 
-Only invoke paid LLM testing with explicit permission and a synthetic localhost build. Report testing prerequisites that are unavailable instead of pretending a test ran. No production use, app-code fixes, merging or deployment without separate approval. Preserve failing artifacts and distinguish app defects from test defects. Produce the QA report with exact scope, results and limitations.
+Before execution, read `AGENTS.project.md`, `docs/qa/START_HERE.md`, `docs/qa/QA_STANDARD.md`, `docs/qa/STACK.md` and `docs/qa/REPORT_TEMPLATE.md`.
+
+Inspect actual product code, requirements, fixtures and existing tests. Identify the user goal, acceptance criteria, independent pass/fail oracles and likely edge cases. Reuse the existing `@playwright/test` setup, relevant unit/integration tests and the synthetic local installed-app web bundle. Test in desktop Chromium and mobile WebKit emulation where appropriate.
+
+You may use Playwright browser tooling to explore the UI. Treat speculative usability findings as hypotheses; do not fabricate customer quotes or pretend to have run real native iOS or human UAT. Never weaken requirements or assertions to force passing tests.
+
+Classify failures as verified application defects, test/tool defects, environment limitations or requirement gaps. Capture reproducible evidence, exact commands, test status and coverage gaps in the report template.
+
+**Safety:** No production testing, real user data, application fixes, merge or deployment without separate authorization. If tools or environments are unavailable, report NOT TESTED; do not imply success.
