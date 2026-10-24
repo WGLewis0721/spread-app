@@ -8,6 +8,7 @@ These apply to any agent or tool working in this repository, alongside `AGENTS.m
 - Read `DESIGN.md` before touching the landing page (`UnlockScreen` in `src/spread/screens/spread-app.tsx`, the `landing-*` components, and the "Landing page only" block of `src/styles.css`). It holds the brand board, type scale, section map, motion rules, modes and guardrails.
 - Read `APP_STORE_RELEASE_PLAN.md` before any iOS packaging, TestFlight, App Store, native storage/share, pricing, or CloudKit work. It fixes the 1.0 direction as Capacitor + the existing React app, local-first, no account required, paid-app commerce. For iCloud backup/sync, migrations, attachments, iPad and the related release gates read `docs/ICLOUD_PLAN.md` too, and never ship a cloud feature outside its `cloud.*` flag until its gate has passed.
 
+- Read `docs/platforms/SPREAD_IPHONE_BUILD_GUIDE.md` (shared baseline), `SPREAD_IPAD_BUILD_GUIDE.md` or `SPREAD_IPHONE_DUO_BUILD_GUIDE.md` before device-specific layout, safe-area, multitasking, fold or App Store screenshot work. They are research notes with evidence tags; section 6a of the iPhone guide proposes dark palette values that are not yet adopted, so the "no new colours" rule below still applies until they are.
 - Read `docs/design/SPREAD_DESIGN_SYSTEM.md` before changing planner screens (Week, Spread, sheets, toasts). It lists the tokens and patterns to reuse; do not add new colours or styles.
 
 ## Rules
