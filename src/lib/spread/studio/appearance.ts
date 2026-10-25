@@ -24,6 +24,7 @@ import {
   contrastingInk,
   contrastRatioHex,
   enforceContrast,
+  worstCaseContrast,
   hexToRgb,
   hslToRgb,
   liftBackground,
@@ -353,6 +354,77 @@ function resolveWallpaper(
   return handle.url;
 }
 
+/** Loose text on a wallpaper. Surface text uses the stronger mode floor. */
+const LOOSE_TEXT_FLOOR = 4.5;
+
+function plateClears(plate: string, colors: readonly string[], floor: number): boolean {
+  return colors.every((color) => (contrastRatioHex(color, plate) ?? 1) + 1e-6 >= floor);
+}
+
+/**
+ * Keep the canvas shift only while the ink that is actually drawn still clears
+ * `floor` on it. The check is that rendered ink against the canvas, not a
+ * provisional ink against the surface.
+ */
+function canvasForRenderedInk(shifted: string, surface: string, ink: string, floor: number): string {
+  if ((contrastRatioHex(ink, shifted) ?? 1) + 1e-6 >= floor) return shifted;
+  const from = hexToRgb(surface);
+  const to = hexToRgb(shifted);
+  if (!from || !to) return surface;
+  let lo = 0;
+  let hi = 1;
+  let best = surface;
+  for (let step = 0; step < 18; step += 1) {
+    const mid = (lo + hi) / 2;
+    const color = rgbToHex(mixRgb(from, to, mid));
+    if ((contrastRatioHex(ink, color) ?? 1) + 1e-6 >= floor) {
+      best = color;
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  if ((contrastRatioHex(ink, best) ?? 1) + 1e-6 < floor) return surface;
+  return best;
+}
+
+/**
+ * Veil color for text that sits on the wallpaper. Starts at the canvas color
+ * and, when that misses the loose-text floor, moves toward the surface the
+ * ink was solved against.
+ */
+function looseVeil(canvas: string, surface: string, colors: readonly string[], floor: number): string {
+  if (plateClears(canvas, colors, floor)) return canvas;
+  const from = hexToRgb(canvas);
+  const to = hexToRgb(surface);
+  if (!from || !to) return surface;
+  let lo = 0;
+  let hi = 1;
+  let best = surface;
+  for (let step = 0; step < 18; step += 1) {
+    const mid = (lo + hi) / 2;
+    const color = rgbToHex(mixRgb(from, to, mid));
+    if (plateClears(color, colors, floor)) {
+      best = color;
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+  return plateClears(best, colors, floor) ? best : surface;
+}
+
+/** Smallest veil alpha that clears `floor` over both a black and a white pixel. */
+function minimumScrimAlpha(veil: string, colors: readonly string[], floor: number): number {
+  let show = 1;
+  for (const color of colors) show = Math.min(show, clampTransparency(veil, color, 1, floor));
+  let alpha = round4(1 - show);
+  const clears = (amount: number) =>
+    colors.every((color) => worstCaseContrast(veil, color, round4(Math.max(0, 1 - amount))) + 1e-6 >= floor);
+  while (alpha < 1 && !clears(alpha)) alpha = round4(Math.min(1, alpha + 0.0001));
+  return alpha;
+}
+
 function materialLabel(treatment: MaterialTreatment): string {
   if (treatment === "glass") return "Glass";
   if (treatment === "matte") return "Matte";
@@ -397,16 +469,11 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const textFix = enforceContrast(appearance.palette.text, surface, floors.text);
   const secondaryFix = enforceContrast(appearance.palette.secondaryText, surface, floors.text);
   const accentFit = fitAccent(appearance.palette.accent, surface, floors.text);
-  const ink = textFix.color;
+  const text = textFix.color;
   const secondary = secondaryFix.color;
   const lum = relativeLuminance(hexToRgb(surface) ?? { r: 255, g: 255, b: 255 });
-  let canvas = mixHex(surface, lum > 0.45 ? "#000000" : "#ffffff", 0.08);
-  const inkOnCanvas = enforceContrast(ink, canvas, floors.text);
-  const canvasInk = inkOnCanvas.color;
-  if ((contrastRatioHex(canvasInk, surface) ?? 1) + 1e-6 < floors.text) {
-    canvas = surface;
-  }
-  const text = enforceContrast(canvasInk, surface, floors.text).color;
+  const shiftedCanvas = mixHex(surface, lum > 0.45 ? "#000000" : "#ffffff", 0.08);
+  const canvas = canvasForRenderedInk(shiftedCanvas, surface, text, floors.text);
   const tertiary = enforceContrast(mixHex(secondary, surface, 0.35), surface, floors.ui).color;
   const dangerSeed = scheme === "dark" ? SHIPPED_DARK.danger : SHIPPED_LIGHT.danger;
   const cautionSeed = scheme === "dark" ? SHIPPED_DARK.caution : SHIPPED_LIGHT.caution;
@@ -429,7 +496,16 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const motionMs = reducedMotion ? 0 : Math.round(appearance.effects.animationIntensity * MOTION_MAX_MS);
   const blur = material === "glass" ? Math.min(STUDIO_LIMITS.blurMax, round4(6 + depth * 18)) : 0;
   const wallpaperBlur = wallpaper && !reducedTransparency ? appearance.wallpaper.blur : 0;
-  const dim = wallpaper ? appearance.wallpaper.dim : 0;
+  const userDim = wallpaper ? appearance.wallpaper.dim : 0;
+  const loose = [text, secondary, accentFit.accent];
+  let scrimColor = "#000000";
+  let scrimAlpha = userDim;
+  if (wallpaper) {
+    scrimColor = looseVeil(canvas, surface, loose, LOOSE_TEXT_FLOOR);
+    const floorAlpha = minimumScrimAlpha(scrimColor, loose, LOOSE_TEXT_FLOOR);
+    scrimAlpha = round4(Math.max(userDim, floorAlpha));
+    if (scrimAlpha > userDim + 0.0001) warnings.push("Wallpaper dim was raised so text on it stays readable.");
+  }
   const metalAmount = depth * 0.35;
   const metalHi = mixHex(surface, "#ffffff", metalAmount);
   const metalLo = mixHex(surface, "#000000", metalAmount);
@@ -481,7 +557,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--studio-wallpaper-size": appearance.wallpaper.fit,
     "--studio-wallpaper-position": `${formatCssNumber(appearance.wallpaper.positionX)}% ${formatCssNumber(appearance.wallpaper.positionY)}%`,
     "--studio-wallpaper-blur": `${formatCssNumber(wallpaperBlur)}px`,
-    "--studio-scrim": rgba("#000000", dim),
+    "--studio-scrim": rgba(scrimColor, scrimAlpha),
     "--studio-metal-hi": metalHi,
     "--studio-metal-lo": metalLo,
     "--studio-matte-line": rgba(text, depth * 0.08),
