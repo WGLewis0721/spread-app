@@ -1,0 +1,169 @@
+{
+  "title": "Spread Studio retrieval-first source index",
+  "status": "Research discovery index; re-fetch source documents and repo files before implementation. Not a runtime RAG integration.",
+  "reviewed_at": "2026-10-25",
+  "main_commit_at_review": "d6fb09cbd609e3f9a5a8aea8f0faf60a1ec63012",
+  "precedence": [
+    "Checked current main code and tests",
+    "Repository design/release rules",
+    "Apple primary developer/support documentation",
+    "Capacitor version-matched docs",
+    "Independent Grok/Perplexity analyses and third-party discussions"
+  ],
+  "repository": [
+    {
+      "id": "code:model",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/src/lib/spread/model.ts",
+      "use": "Existing responsibilities, weeks and task semantics"
+    },
+    {
+      "id": "code:profiles",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/src/lib/spread/profiles.ts",
+      "use": "Current profile fields and parsing"
+    },
+    {
+      "id": "code:store",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/src/lib/spread/store.ts",
+      "use": "Zustand actions and appearance application"
+    },
+    {
+      "id": "code:styles",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/src/styles.css",
+      "use": "Existing theme tokens and patterns"
+    },
+    {
+      "id": "code:native-mirror",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/src/lib/spread/native-mirror.ts",
+      "use": "Native recovery snapshots, not shared database"
+    },
+    {
+      "id": "code:backup",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/src/lib/spread/backup.ts",
+      "use": "Backup and restoration contract"
+    },
+    {
+      "id": "code:schema",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/src/lib/spread/schema.ts",
+      "use": "Storage schema and migrations"
+    },
+    {
+      "id": "rules:project",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/AGENTS.project.md",
+      "use": "Binding coding-agent project rules"
+    },
+    {
+      "id": "rules:design",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/docs/design/SPREAD_DESIGN_SYSTEM.md",
+      "use": "Current approved planner design system"
+    },
+    {
+      "id": "rules:cloud",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/docs/ICLOUD_PLAN.md",
+      "use": "iCloud status, backup/sync gates"
+    },
+    {
+      "id": "rules:release",
+      "url": "https://github.com/WGLewis0721/spread-app/blob/main/APP_STORE_RELEASE_PLAN.md",
+      "use": "iOS/App Store release direction"
+    }
+  ],
+  "platform": [
+    {
+      "id": "apple:foundation-models",
+      "url": "https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel",
+      "use": "On-device language-model selection and availability; verify SDK signatures",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:foundation-models-wwdc25",
+      "url": "https://developer.apple.com/videos/play/wwdc2025/286/",
+      "use": "Initial Foundation Models API and structured generation",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:foundation-models-wwdc26",
+      "url": "https://developer.apple.com/videos/play/wwdc2026/241/",
+      "use": "New local and hosted model options; must select local for offline guarantee",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:app-intents",
+      "url": "https://developer.apple.com/documentation/appintents/appintent",
+      "use": "App Intent execution and parameter semantics",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:siri-schemas",
+      "url": "https://developer.apple.com/videos/play/wwdc2026/240/",
+      "use": "App Schemas, Siri entity resolution and testing",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:siri-availability",
+      "url": "https://support.apple.com/en-us/127893",
+      "use": "Siri AI beta availability; confirm language/region",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:ai-device-availability",
+      "url": "https://support.apple.com/en-us/121115",
+      "use": "Current Apple Intelligence devices/languages/regions",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:photos-picker",
+      "url": "https://developer.apple.com/documentation/photosui/photospicker",
+      "use": "User-selected photos without broad photo-library access",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:focus",
+      "url": "https://developer.apple.com/documentation/appintents/defining-your-app-s-focus-filter",
+      "use": "Opt-in Focus filters",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:widgets",
+      "url": "https://developer.apple.com/documentation/widgetkit/developing-a-widgetkit-strategy",
+      "use": "Native widget constraints and snapshots",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:alternate-icon",
+      "url": "https://developer.apple.com/documentation/uikit/uiapplication/setalternateiconname(_:completionhandler:)",
+      "use": "Bundled alternate icons only",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:design-materials",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/materials",
+      "use": "Material and accessibility guidance",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:image-playground-wwdc26",
+      "url": "https://developer.apple.com/videos/play/wwdc2026/375/",
+      "use": "Cloud-based artwork generation boundary; outside offline Studio",
+      "authority": "Apple"
+    },
+    {
+      "id": "apple:review",
+      "url": "https://developer.apple.com/app-store/review/guidelines/",
+      "use": "IP, third-party content, code and privacy review",
+      "authority": "Apple"
+    },
+    {
+      "id": "capacitor:ios-plugin",
+      "url": "https://capacitorjs.com/docs/plugins/ios",
+      "use": "Capacitor v8 Swift bridge",
+      "authority": "Capacitor"
+    },
+    {
+      "id": "capacitor:filesystem",
+      "url": "https://capacitorjs.com/docs/apis/filesystem",
+      "use": "Native file lifecycle and storage APIs",
+      "authority": "Capacitor"
+    }
+  ],
+  "usage": "Verify with live source retrieval; distinguish official information, checked code, and proposed behavior. A listed source is not proof of an implemented feature."
+}
