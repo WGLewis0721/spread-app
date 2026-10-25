@@ -1,4 +1,4 @@
-[Live site](https://thespreadapp.com/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design direction](DESIGN.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md)
+[Live site](https://thespreadapp.com/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design direction](DESIGN.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md) · [Spread Studio proposal](docs/spread-studio/README.md)
 
 # Spread
 
