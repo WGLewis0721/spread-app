@@ -27,3 +27,8 @@ Run the typecheck, focused tests, and build commands in
 [`README.md` → Checks](README.md#checks).
 
 Then look at the page yourself at 1440, 820 and 390 wide, in light and dark, and with reduced motion on. For the hero, confirm that no orbiting task ever draws over a card, and that tap → tray → drag works on a phone-sized touch screen.
+
+
+## Spread Studio (proposed personalization; not implemented)
+
+For any Spread Studio appearance, user-wallpaper, Apple Foundation Models, Siri, or App Intents task, first read `docs/spread-studio/README.md` and `docs/spread-studio/RETRIEVAL_PROTOCOL.md`, then retrieve the relevant current repository source and Apple/Capacitor primary documentation indexed in `docs/spread-studio/source-index.json`. Clearly distinguish checked code, accepted product intent, and proposed/unverified implementation. The user wants **user-created appearance customization**, not premade occupational, franchise, or sports themes. No Studio proposal in these docs overrides the current approved design system, iOS release gates, or the rule against unapproved merge/deployment. Seek explicit design-system approval before implementing new colors, fonts, materials, or other appearance variants.
