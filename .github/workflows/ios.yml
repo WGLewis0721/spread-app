@@ -310,9 +310,74 @@ jobs:
               note("No LocalStorage folder was found to wipe, so the restore path was not exercised. Files:%0A" + listing())
           run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios-restored.png"], timeout=60)
           PY
+      - name: Capture 13-inch iPad Simulator screenshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import time
+
+          def run(args, timeout=120):
+              result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+              if result.returncode:
+                  raise RuntimeError(
+                      f"Command failed ({result.returncode}): {' '.join(args)}\n"
+                      f"{result.stdout}\n{result.stderr}"
+                  )
+              return result.stdout.strip()
+
+          runtimes = json.loads(run(["xcrun", "simctl", "list", "runtimes", "-j"]))["runtimes"]
+          runtime = next(
+              r["identifier"] for r in reversed(runtimes)
+              if ".iOS-" in r["identifier"] and r.get("isAvailable", True)
+          )
+          types = json.loads(run(["xcrun", "simctl", "list", "devicetypes", "-j"]))["devicetypes"]
+          ipads = [d for d in types if d["name"].startswith("iPad Pro 13-inch")]
+          if not ipads:
+              raise RuntimeError("No 13-inch iPad Pro simulator device type is available")
+          ipad = ipads[-1]
+          app = "artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
+          if not os.path.isdir(app):
+              raise RuntimeError("Simulator build was not found")
+          udid = run(["xcrun", "simctl", "create", "Spread App Store iPad", ipad["identifier"], runtime])
+          print(f"Capturing {ipad['name']} on {runtime} ({udid})", flush=True)
+          run(["xcrun", "simctl", "boot", udid])
+          run(["xcrun", "simctl", "bootstatus", udid, "-b"], timeout=600)
+          run(["xcrun", "simctl", "install", udid, app])
+          launched = subprocess.Popen(
+              ["xcrun", "simctl", "launch", udid, "com.graymatter.spread"],
+              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+          )
+          try:
+              time.sleep(25)
+              path = "artifacts/spread-ipad-13.png"
+              run(["xcrun", "simctl", "io", udid, "screenshot", path])
+              size = run(["sips", "-g", "pixelWidth", "-g", "pixelHeight", path])
+              print(size, flush=True)
+              width = re.search(r"pixelWidth:\s*(\d+)", size)
+              height = re.search(r"pixelHeight:\s*(\d+)", size)
+              if not width or not height or (int(width.group(1)), int(height.group(1))) not in (
+                  (2064, 2752), (2048, 2732)
+              ):
+                  raise RuntimeError("iPad screenshot is not an Apple-approved 13-inch pixel size")
+              # JPEG has no alpha channel: acceptable for App Store Connect.
+              run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "95",
+                   path, "--out", "artifacts/spread-ipad-13.jpg"])
+              print("13-inch iPad App Store screenshot captured", flush=True)
+          finally:
+              if launched.poll() is None:
+                  launched.terminate()
+              run(["xcrun", "simctl", "shutdown", udid])
+          PY
       - name: Upload simulator smoke screenshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: spread-ios-smoke
-          path: artifacts/spread-ios*.png
+          path: |
+            artifacts/spread-ios*.png
+            artifacts/spread-ipad-13.jpg
