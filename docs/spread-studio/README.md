@@ -10,6 +10,10 @@ Spread Studio gives people iOS-like/Android-launcher-level creative control **in
 
 An optional on-device Apple Foundation Models assistant translates a request into editable appearance settings; Siri/App Intents can invoke supported actions where available. **The on-device language model cannot create arbitrary app UI or official intellectual-property artwork on demand.** Spread's deterministic appearance renderer does the work. AI never writes planning data or executes generated code.
 
+## Canonical shared contract decision
+
+**2026-10-25:** [Draft PR #81](https://github.com/WGLewis0721/spread-app/pull/81) is the **single Gate 0 contract candidate** (`src/lib/spread/studio/contract.ts`, `StudioAppearanceV1`). [PR #80](https://github.com/WGLewis0721/spread-app/pull/80) was closed as a redundant alternative and **must not be imported or merged**. PR #81 has not merged; agent branches must coordinate use of that proposal before coding against it. Claude reviews #81 independently. No merge/deployment approval.
+
 ## Active implementation sprint (2026-10-25)
 
 - [Launch the five Grok agents and Claude reviewer](AGENT_LAUNCH.md) — ready-to-paste messages, branch names and links.
