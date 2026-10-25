@@ -26,6 +26,20 @@ export const ACCESS_MESSAGES = {
   notConfigured: "Beta sign-in isn't available yet. Try again later.",
 } as const;
 
+/**
+ * A provisioned database record takes precedence over the Google Sheet,
+ * including paused/revoked statuses. Everybody else keeps the normal Sheet gate.
+ * A database lookup failure must fail closed, never silently approve a login.
+ */
+export async function lookupAccessWithDirect(
+  email: string,
+  lookupDirect: (email: string) => Promise<AccessRecord | null>,
+  lookupSheet: (email: string) => Promise<AccessRecord | null>,
+): Promise<AccessRecord | null> {
+  const direct = await lookupDirect(email);
+  return direct ?? lookupSheet(email);
+}
+
 export const normalizeEmail = (email: unknown) =>
   typeof email === "string" ? email.trim().toLowerCase() : "";
 
