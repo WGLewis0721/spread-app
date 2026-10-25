@@ -46,18 +46,18 @@ const num = (v: unknown, min: number, max: number): boolean =>
 function shape(value: unknown, path: string, keys: readonly string[], errors: string[]): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value) ||
       ![Object.prototype, null].includes(Object.getPrototypeOf(value))) {
-    errors.push(\`\${path}: expected a plain object\`);
+    errors.push(`${path}: expected a plain object`);
     return null;
   }
   const row = value as Record<string, unknown>;
   for (const key of Object.keys(row)) {
-    if (!keys.includes(key)) errors.push(\`\${path}.\${key}: unsupported field\`);
+    if (!keys.includes(key)) errors.push(`${path}.${key}: unsupported field`);
   }
   return row;
 }
 
 function check(condition: boolean, path: string, message: string, errors: string[]): void {
-  if (!condition) errors.push(\`\${path}: \${message}\`);
+  if (!condition) errors.push(`${path}: ${message}`);
 }
 
 function text(value: unknown, max: number): value is string {
@@ -81,19 +81,19 @@ export function validateAppearance(input: unknown): Validation<AppearanceV1> {
   const wallpaper = shape(root.wallpaper, "wallpaper", ["fit", "positionX", "positionY", "dim", "blur"], errors);
   if (wallpaper) {
     check(has(wallpaper.fit, ["cover", "contain"]), "wallpaper.fit", "unsupported fit", errors);
-    for (const k of ["positionX", "positionY", "dim"] as const) check(num(wallpaper[k], 0, 1), \`wallpaper.\${k}\`, "expected 0–1", errors);
+    for (const k of ["positionX", "positionY", "dim"] as const) check(num(wallpaper[k], 0, 1), `wallpaper.${k}`, "expected 0–1", errors);
     check(num(wallpaper.blur, 0, 24), "wallpaper.blur", "expected 0–24", errors);
   }
   const palette = shape(root.palette, "palette", ["accent", "surface", "text", "secondaryText"], errors);
   if (palette) {
     for (const k of ["accent", "surface", "text", "secondaryText"] as const) {
-      check(typeof palette[k] === "string" && HEX.test(palette[k]), \`palette.\${k}\`, "expected #RRGGBB", errors);
+      check(typeof palette[k] === "string" && HEX.test(palette[k]), `palette.${k}`, "expected #RRGGBB", errors);
     }
   }
   const material = shape(root.material, "material", ["treatment", "transparency", "depth"], errors);
   if (material) {
     check(has(material.treatment, ["flat", "glass", "matte", "metal"]), "material.treatment", "unsupported material", errors);
-    for (const k of ["transparency", "depth"] as const) check(num(material[k], 0, 1), \`material.\${k}\`, "expected 0–1", errors);
+    for (const k of ["transparency", "depth"] as const) check(num(material[k], 0, 1), `material.${k}`, "expected 0–1", errors);
   }
   const typography = shape(root.typography, "typography", ["presetId", "scale", "numeralEmphasis"], errors);
   if (typography) {
@@ -108,7 +108,7 @@ export function validateAppearance(input: unknown): Validation<AppearanceV1> {
   }
   const effects = shape(root.effects, "effects", ["decorationIntensity", "animationIntensity"], errors);
   if (effects) {
-    for (const k of ["decorationIntensity", "animationIntensity"] as const) check(num(effects[k], 0, 1), \`effects.\${k}\`, "expected 0–1", errors);
+    for (const k of ["decorationIntensity", "animationIntensity"] as const) check(num(effects[k], 0, 1), `effects.${k}`, "expected 0–1", errors);
   }
   if (errors.length) return { ok: false, errors };
   // Rebuild an allowlisted JSON value; never pass an untrusted object through to the renderer.
@@ -136,7 +136,7 @@ export function validateStudioDraft(input: unknown): Validation<StudioDraft> {
   if (root.explanation !== undefined) check(typeof root.explanation === "string" && root.explanation.length <= 400 && !/[\u0000-\u001f\u007f]/.test(root.explanation), "draft.explanation", "too long or contains controls", errors);
   check(Array.isArray(root.warnings) && root.warnings.length <= 8 && root.warnings.every((x: unknown) => typeof x === "string" && x.length <= 180 && !/[\u0000-\u001f\u007f]/.test(x)), "draft.warnings", "invalid warning list", errors);
   const proposal = validateAppearance(root.proposed);
-  if (!proposal.ok) errors.push(...proposal.errors.map(x => \`draft.proposed.\${x}\`));
+  if (!proposal.ok) errors.push(...proposal.errors.map(x => `draft.proposed.${x}`));
   if (errors.length || !proposal.ok) return { ok: false, errors };
   return { ok: true, value: {
     ...(root.baseAppearanceId === undefined ? {} : { baseAppearanceId: root.baseAppearanceId as string }),
