@@ -37,6 +37,8 @@ User: photo/controls/typed request/Siri
 [Later optional] Widget/Focus/icon adapters; not dependencies of Studio.
 ~~~
 
+**Canonical code decision (2026-10-25):** The single proposed Gate 0 code contract is [draft PR #81](https://github.com/WGLewis0721/spread-app/pull/81), `src/lib/spread/studio/contract.ts`, type `StudioAppearanceV1`. [PR #80](https://github.com/WGLewis0721/spread-app/pull/80) and its plural `contracts.ts` were superseded and closed. The earlier sketch in this document is historical and is **not an implementation schema**: #81 uses a different validated range for wallpaper positions, more restrictive typography/control identifiers, and distinct typed asset/AI/Siri structures. Follow #81's actual code after review, not the sketch. #81 is unmerged and awaits review/approval. Expand limited appearance primitives in its single contract through reviewed subsequent PRs; never create a second schema.
+
 ## 3. Appearance contract, not premade theme packs
 
 Model **user-created** settings over a bounded renderer. The following is illustrative TypeScript, not an implemented API:
