@@ -18,6 +18,23 @@ for (let i = 0; i < args.length; i += 1) {
   else if (a === "--find") {
     const dir = args[++i];
     const suffix = args[++i];
+    if (!dir || !suffix) {
+      console.error("run-tests: --find needs a directory and a suffix.");
+      process.exit(2);
+    }
+    let info;
+    try {
+      info = statSync(dir);
+    } catch (error) {
+      // A not-yet-created suite directory (Studio component tests) adds nothing.
+      // A directory that exists but cannot be read still fails the run.
+      if (error && error.code === "ENOENT") continue;
+      throw error;
+    }
+    if (!info.isDirectory()) {
+      console.error(`run-tests: --find path is not a directory: ${dir}`);
+      process.exit(2);
+    }
     const walk = (d) => readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : n.endsWith(suffix) ? [join(d, n)] : []));
     files.push(...walk(dir).sort());
   } else if (a.startsWith("--node-arg=")) nodeArgs.push(a.slice("--node-arg=".length));
