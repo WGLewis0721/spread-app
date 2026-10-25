@@ -27,3 +27,7 @@ Run the typecheck, focused tests, and build commands in
 [`README.md` → Checks](README.md#checks).
 
 Then look at the page yourself at 1440, 820 and 390 wide, in light and dark, and with reduced motion on. For the hero, confirm that no orbiting task ever draws over a card, and that tap → tray → drag works on a phone-sized touch screen.
+
+## QA requests — Playwright only
+
+When asked `QA:`, `test this feature`, `regression test`, `exploratory testing` or `release QA`, read `docs/qa/START_HERE.md`, `docs/qa/STACK.md` and `docs/qa/QA_STANDARD.md` first. Define objective pass/fail criteria, inspect source and existing tests, and use the repository's current Playwright setup (desktop Chromium and mobile WebKit emulation) with synthetic data. Use `docs/qa/REPORT_TEMPLATE.md` for findings and evidence. Playwright simulations are not genuine human usability testing or native iOS tests. Testing work does not authorize application fixes, merging or deployment.
