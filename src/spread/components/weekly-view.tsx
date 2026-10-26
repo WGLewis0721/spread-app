@@ -399,7 +399,7 @@ function DayCard({
       <div className="flex items-center justify-between px-1">
         <h2 className="text-base font-semibold" aria-current={today ? "date" : undefined}>
           {label}
-          {today && <span className="ms-2 align-middle text-xs font-semibold text-accent">Today</span>}
+          {today && <span className="studio-readable-note ms-2 align-middle text-xs font-semibold text-accent">Today</span>}
         </h2>
         <span className="text-xs text-secondary tabular-nums">{date.slice(5).replace("-", "/")}</span>
       </div>
