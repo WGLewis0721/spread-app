@@ -22,7 +22,7 @@ export async function auditStudioContrast(page: Page): Promise<StudioContrastVio
       const m = /^rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)(?:\s*,\s*(\d+(?:\.\d+)?))?\s*\)$/.exec(input);
       if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: m[4] === undefined ? 1 : Number(m[4]) };
       // Chromium resolves CSS color-mix() to modern color(srgb ...) notation.
-      const modern = /^color\\(srgb\\s+([0-9.]+)\\s+([0-9.]+)\\s+([0-9.]+)(?:\\s*\\/\\s*([0-9.]+))?\\)$/.exec(input);
+      const modern = /^color\(srgb\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)(?:\s*\/\s*([0-9.]+))?\)$/.exec(input);
       if (!modern) return null;
       return { r: 255 * Number(modern[1]), g: 255 * Number(modern[2]), b: 255 * Number(modern[3]), a: modern[4] === undefined ? 1 : Number(modern[4]) };
     }
