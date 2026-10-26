@@ -96,6 +96,8 @@ workflows:
         script: |
           set -eu
           test "$CM_BRANCH" = spread-studio || { echo "Studio build must use spread-studio" >&2; exit 1; }
+          test -n "${STUDIO_APPROVED_SHA:-}" || { echo "Missing approved commit" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$STUDIO_APPROVED_SHA" || { echo "Staging branch moved since approval" >&2; exit 1; }
           test "$VITE_SPREAD_STUDIO" = 1 || exit 1
           test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
           test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
