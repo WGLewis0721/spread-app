@@ -206,6 +206,7 @@ async function main() {
     });
     await setScheme(page, "light");
     await seed(page);
+    if (process.env.STUDIO_AUDIT_ONLY !== "1") {
     for (const scheme of SAMPLE_SCHEMES) {
       await setScheme(page, scheme);
       for (const width of SAMPLE_WIDTHS) {
@@ -236,6 +237,8 @@ async function main() {
         }
       }
     }
+    }
+
     // Release-blocking browser audit: real Spread and Week with busy image, no
     // global scrim, both schemes and all supported preview widths.
     const contrastAudit: Record<string, Awaited<ReturnType<typeof auditStudioContrast>>> = {};
