@@ -8,6 +8,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { auditStudioContrast } from "./contrast-audit.ts";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const dir = join(root, "screenshots", "studio-editor");
 const nativeInit = readFileSync(join(root, "scripts", "ios-bridge-sim", "native-init.js"), "utf8");
@@ -101,9 +102,19 @@ try {
       return !!scope && getComputedStyle(scope).getPropertyValue("--studio-wallpaper-image").includes("blob:");
     }, null, { timeout: 15_000 });
     await page.getByRole("tab", { name: "Week" }).click();
-    const actual = `live-week-${scheme}-saved-photo.png`;
-    await page.screenshot({ path: join(dir, actual) });
-    shots.push(actual);
+    await page.waitForTimeout(600); // Settled transition; avoid misleading half-opacity capture.
+    for (const size of sizes) {
+      await page.setViewportSize(size);
+      const actual = `live-week-${scheme}-${size.width}-saved-photo.png`;
+      await page.screenshot({ path: join(dir, actual) });
+      shots.push(actual);
+      const issues = await auditStudioContrast(page);
+      console.log(`live-scope-contrast ${scheme}-${size.width}: ${issues.length}`);
+      if (issues.length) {
+        console.error(JSON.stringify(issues.slice(0, 30), null, 2));
+        throw new Error(`live saved wallpaper contrast audit failed: ${scheme} ${size.width} ${issues.length} violations`);
+      }
+    }
   }
   writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, status: "captured mounted Customize and validated Apply on live Week" }, null, 2));
   if (errors.length) throw Error(errors.join("\n"));
