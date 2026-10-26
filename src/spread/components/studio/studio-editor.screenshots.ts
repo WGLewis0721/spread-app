@@ -42,6 +42,7 @@ try {
     await entry.click();
     const editor = page.locator(".studio-sheet");
     await editor.getByRole("heading", { name: "Customize Spread" }).waitFor();
+    await page.waitForTimeout(530); // capture the settled sheet, not its entrance animation
     const apply = editor.getByRole("button", { name: "Apply", exact: true });
     if (await apply.isEnabled()) throw Error("unedited session unexpectedly enabled Apply");
     for (const size of sizes) {
@@ -87,9 +88,21 @@ try {
       await page.screenshot({ path: join(dir, file) });
       shots.push(file);
     }
-    await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-    await editor.waitFor({ state: "hidden" });
+    // Apply a personal photo in this isolated browser context and prove the
+    // REAL live planner (not merely a preview) adopts the saved appearance.
+    await editor.getByRole("button", { name: "Apply", exact: true }).click();
+    await editor.waitFor({ state: "hidden", timeout: 15_000 });
     await page.keyboard.press("Escape");
+    await page.getByRole("heading", { name: "More" }).waitFor({ state: "hidden" });
+    await page.waitForFunction(() => {
+      const scope = document.querySelector<HTMLElement>("[data-studio-appearance]");
+      return !!scope && getComputedStyle(scope).getPropertyValue("--studio-wallpaper-image").includes("blob:");
+    }, null, { timeout: 15_000 });
+    await page.getByRole("tab", { name: "Week" }).click();
+    const actual = `live-week-${scheme}-saved-photo.png`;
+    await page.screenshot({ path: join(dir, actual) });
+    shots.push(actual);
+    await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("heading", { name: "More" }).waitFor({ state: "hidden" });
   }
   writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, status: "captured mounted Customize, no Apply" }, null, 2));
