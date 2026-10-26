@@ -86,6 +86,16 @@
   background-color: var(--elevated);
 }
 
+/* Small day indicators used to be intentionally faint; on personalized photography
+   they need semantic ink contrast. Bold + underline still distinguishes selected days. */
+[data-studio-appearance] .studio-day-mark { color: var(--secondary) !important; }
+[data-studio-appearance] .studio-day-mark-on {
+  color: var(--ink) !important;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.2em;
+}
+
 /* Native CSS prefers-contrast support is unchanged by the wallpaper dim slider. */
 
 /* treatment flat */
