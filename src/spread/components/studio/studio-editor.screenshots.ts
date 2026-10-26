@@ -30,7 +30,7 @@ try {
   await context.addInitScript(nativeInit);
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(String(error)));
-  page.on("console", (message) => { if ((message.text().startsWith("[Studio import]") || message.text().startsWith("[Studio IndexedDB]"))) console.log(message.text()); });
+
   await page.goto(url, { waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: "Spread" }).waitFor({ timeout: 30_000 });
   for (const scheme of ["light", "dark"] as const) {
