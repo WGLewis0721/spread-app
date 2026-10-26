@@ -643,14 +643,21 @@ export async function importStudioImage(input: {
   if (!ref.ok) return fail("save-failed", STUDIO_ASSET_MESSAGES.saveFailed);
 
   debugStage("store-start");
-  const stored = await input.store.put({
+  let stored: "ok" | "full" | "failed";
+  try {
+    stored = await input.store.put({
     id: ref.value.id,
     profileId: input.profileId,
     format,
     width: size.width,
     height: size.height,
     bytes: new Uint8Array(encoded),
-  });
+    });
+  } catch {
+    // Native plugins and storage adapters can throw instead of returning "failed".
+    // The editor must recover without hanging on its import spinner.
+    return fail("save-failed", STUDIO_ASSET_MESSAGES.saveFailed);
+  }
   debugStage("store-end");
   if (stored === "full") return fail("storage-full", STUDIO_ASSET_MESSAGES.storageFull);
   if (stored !== "ok") return fail("save-failed", STUDIO_ASSET_MESSAGES.saveFailed);
