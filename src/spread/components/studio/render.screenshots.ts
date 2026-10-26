@@ -235,11 +235,28 @@ async function main() {
         }
       }
     }
+    await page.setViewportSize(viewports[390]);
+    for (const scheme of SAMPLE_SCHEMES) {
+      await setScheme(page, scheme);
+      const appearance = sampleAppearance("glass", scheme);
+      appearance.wallpaper = { ...appearance.wallpaper, dim: 0 };
+      const scope = resolveStudioScope({
+        enabled: true,
+        appearance,
+        systemScheme: scheme,
+        wallpaper: wallpaperUrl ? { assetId: SAMPLE_WALLPAPER_ID, url: wallpaperUrl } : null,
+      });
+      await paint(page, scope);
+      await openWeek(page);
+      const name = `week-${scheme}-390-glass-dim0`;
+      files.push(await save(page, name, true));
+      process.stdout.write(`saved ${name}\n`);
+    }
     const manifest = {
       baseURL,
       files,
       pageErrors,
-      note: "Harness applied resolver output on body because the shared planner shell is not wrapped. Flag off has no data-studio-appearance. Spread frames include hour banks and a completed task. Week frames include the crown, day cards, hour chips, To place, and task rows.",
+      note: "Harness applied resolver output on body because the shared planner shell is not wrapped. Flag off has no data-studio-appearance. Spread frames include hour banks and a completed task. Week frames include the crown, day cards, hour chips, To place, and task rows. week-*-390-glass-dim0 uses glass with wallpaper dim 0.",
     };
     writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2));
     writeFileSync(join(artifactDir, "manifest.json"), JSON.stringify(manifest, null, 2));
