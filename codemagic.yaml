@@ -125,9 +125,7 @@ workflows:
           set -eu
           test "$VITE_SPREAD_STUDIO" = 1
           npm run ios:sync
-          grep -R -l 'spread:studio-appearance-saved' ios/App/App/public/assets >/dev/null || {
-            echo "Studio marker absent from bundled iOS JavaScript" >&2; exit 1;
-          }
+          node scripts/check-studio-ios-assets.mjs
       - name: Use next available TestFlight build number
         script: |
           set -eu
