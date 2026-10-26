@@ -435,8 +435,11 @@ test("appearance: more contrast keeps the rendered ink at 7:1 on the canvas", ()
         }),
       );
       const onCanvas = contrastRatioHex(style["--ink"], style["--canvas"]);
+      const secondaryOnCanvas = contrastRatioHex(style["--secondary"], style["--canvas"]);
       const onSurface = contrastRatioHex(style["--ink"], style["--elevated"]);
       assert.ok(onCanvas !== null && onCanvas + 1e-6 >= 7, `${surface} on ${text} canvas ${onCanvas}`);
+      assert.ok(secondaryOnCanvas !== null && secondaryOnCanvas + 1e-6 >= 7,
+        `${surface} on ${text} secondary/canvas ${secondaryOnCanvas}`);
       assert.ok(onSurface !== null && onSurface + 1e-6 >= 7, `${surface} on ${text} surface ${onSurface}`);
     }
   }
