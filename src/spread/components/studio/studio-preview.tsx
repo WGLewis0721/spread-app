@@ -74,11 +74,11 @@ function SpreadReadout() {
   const data = useSpread((s) => s.data);
   const week = data.weeks[data.currentWeek];
   if (data.hats.length === 0) {
-    return <p className="px-4 py-6 text-sm text-secondary">Nothing on this week yet.</p>;
+    return <p className="studio-readable-note px-4 py-6 text-sm text-secondary">Nothing on this week yet.</p>;
   }
   return (
     <div className="px-3 py-3">
-      <p className="px-1 pb-2 text-xs text-secondary">{formatWeek(data.currentWeek)}</p>
+      <p className="studio-readable-note px-1 pb-2 text-xs text-secondary">{formatWeek(data.currentWeek)}</p>
       <div className="overflow-hidden rounded-[22px] bg-elevated">
         {data.hats.map((hat, index) => {
           const box = week?.boxes.find((item) => item.hatId === hat.id);
@@ -116,7 +116,7 @@ function WeekReadout() {
   const currentWeek = useSpread((s) => s.data.currentWeek);
   return (
     <div className="px-3 pb-4">
-      <WeekCrown title={formatWeek(currentWeek)} turn={0} onMove={() => undefined} />
+      <div className="studio-readable-panel"><WeekCrown title={formatWeek(currentWeek)} turn={0} onMove={() => undefined} /></div>
       <WeeklyView onCommit={() => undefined} onTurn={() => undefined} />
     </div>
   );
