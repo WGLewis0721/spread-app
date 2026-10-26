@@ -1,0 +1,42 @@
+name: Spread Studio TestFlight (approval required)
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type UPLOAD-STUDIO to authorize signing and App Store Connect upload'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: studio-testflight-release
+  cancel-in-progress: false
+jobs:
+  request-build:
+    if: github.ref == 'refs/heads/spread-studio' && inputs.confirm == 'UPLOAD-STUDIO'
+    runs-on: ubuntu-latest
+    environment: studio-testflight
+    timeout-minutes: 10
+    steps:
+      - name: Trigger the existing Codemagic signing and upload workflow
+        env:
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          CODEMAGIC_APP_ID: ${{ secrets.CODEMAGIC_APP_ID }}
+          APPROVED_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CODEMAGIC_API_TOKEN" || { echo "Missing CODEMAGIC_API_TOKEN secret" >&2; exit 1; }
+          test -n "$CODEMAGIC_APP_ID" || { echo "Missing CODEMAGIC_APP_ID secret" >&2; exit 1; }
+          payload=$(jq -nc --arg app "$CODEMAGIC_APP_ID" --arg sha "$APPROVED_SHA" '{appId:$app,workflowId:"spread-studio-testflight",branch:"spread-studio",environment:{variables:{STUDIO_APPROVED_SHA:$sha}}}')
+          response=$(curl --fail-with-body --silent --show-error --retry 2 \
+            --request POST 'https://api.codemagic.io/builds' \
+            --header "x-auth-token: $CODEMAGIC_API_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data "$payload")
+          build_id=$(jq -er '.buildId // .build._id // ._id' <<<"$response")
+          echo "Requested Codemagic Studio build: $build_id"
+          echo "Approved staging commit: $APPROVED_SHA"
+          echo "Codemagic will enforce approved SHA after checkout."
+          echo "The Codemagic build guard must verify its checked-out commit against the approved SHA."
+          echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
