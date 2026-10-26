@@ -978,7 +978,7 @@ function DayMarks({ hatId, name, color }: { hatId: string; name: string; color: 
         return (
           <span
             key={day.date}
-            className={on ? "text-xs font-semibold leading-none" : "text-xs font-medium leading-none text-tertiary"}
+            className={on ? "studio-day-mark studio-day-mark-on text-xs font-semibold leading-none" : "studio-day-mark text-xs font-medium leading-none text-tertiary"}
             style={on ? { color } : undefined}
           >
             {DAY_MARKS[index]}
