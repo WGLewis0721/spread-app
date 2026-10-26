@@ -79,16 +79,52 @@ jobs:
           npm run export:ios
           test -f dist-ios/index.html
           tar -czf golden/Spread-pre-Studio-ios-web.tar.gz -C dist-ios .
-      - name: Hash all portable assets
+      - name: Hash assets and split large Git history into Drive-safe parts
         shell: bash
         run: |
+          set -euo pipefail
           cd golden
+          echo "Archive sizes before splitting:"
+          du -h Spread-pre-Studio-source.tar.gz Spread-pre-Studio-history.bundle Spread-pre-Studio-ios-web.tar.gz
           sha256sum Spread-pre-Studio-source.tar.gz Spread-pre-Studio-history.bundle Spread-pre-Studio-ios-web.tar.gz README-RESTORE.txt > SHA256SUMS
+          split -b 60m -d -a 2 Spread-pre-Studio-history.bundle Spread-pre-Studio-history.part-
+          test ! -f Spread-pre-Studio-history.part-02
+          sha256sum Spread-pre-Studio-history.part-* >> SHA256SUMS
+          rm Spread-pre-Studio-history.bundle
+          cat >> README-RESTORE.txt <<'EOF'
+
+          OFFSITE TRANSFER
+          The Git bundle is divided into history.part-00 and possibly part-01
+          to satisfy Drive connector transfer limits. Keep all uploaded parts
+          together. To reassemble BEFORE running SHA256SUMS verification:
+            cat Spread-pre-Studio-history.part-* > Spread-pre-Studio-history.bundle
+          All three archive payloads can be downloaded into the same folder.
+          EOF
+          echo "Uploaded parts:"
+          du -h Spread-pre-Studio-history.part-* Spread-pre-Studio-source.tar.gz Spread-pre-Studio-ios-web.tar.gz
           cat SHA256SUMS
-      - name: Publish external-backup transfer package
+      - name: Upload offline source and compiled iOS web snapshot
         uses: actions/upload-artifact@v4
         with:
-          name: Spread-GOLDEN-2026-10-26-pre-Studio-d6fb09c
-          path: golden/
+          name: Spread-GOLDEN-2026-10-26-SOURCE-AND-IOS
+          path: |
+            golden/README-RESTORE.txt
+            golden/SHA256SUMS
+            golden/Spread-pre-Studio-source.tar.gz
+            golden/Spread-pre-Studio-ios-web.tar.gz
           retention-days: 90
           if-no-files-found: error
+      - name: Upload history part 00
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spread-GOLDEN-2026-10-26-HISTORY-00
+          path: golden/Spread-pre-Studio-history.part-00
+          retention-days: 90
+          if-no-files-found: error
+      - name: Upload history part 01 (if needed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spread-GOLDEN-2026-10-26-HISTORY-01
+          path: golden/Spread-pre-Studio-history.part-01
+          retention-days: 90
+          if-no-files-found: ignore
