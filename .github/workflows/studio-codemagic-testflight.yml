@@ -1,0 +1,99 @@
+name: Spread Studio - approved Codemagic TestFlight
+
+# Manual only. GitHub requires this file on default branch for workflow_dispatch.
+# No Studio application changes are required on main for dispatcher activation.
+on:
+  workflow_dispatch:
+    inputs:
+      approved_sha:
+        description: "Exact current 40-character SHA of spread-studio"
+        required: true
+        type: string
+      confirm_upload:
+        description: "I authorize one internal TestFlight upload from this SHA"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spread-studio-codemagic-testflight
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      approved_sha: ${{ steps.verify.outputs.sha }}
+    steps:
+      - name: Require explicit authorization and exact staging tip
+        id: verify
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+          CONFIRM_UPLOAD: ${{ inputs.confirm_upload }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "::error::Dispatcher must run from trusted main workflow"; exit 1; }
+          test "$CONFIRM_UPLOAD" = "true" || { echo "::error::TestFlight upload authorization required"; exit 1; }
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::A full lowercase SHA is required"; exit 1; }
+          HEAD="$(git ls-remote https://github.com/WGLewis0721/spread-app.git refs/heads/spread-studio | cut -f1)"
+          test -n "$HEAD" && test "$HEAD" = "$APPROVED_SHA" || {
+            echo "::error::Staging tip changed; approval is stale"
+            exit 1
+          }
+          echo "sha=$APPROVED_SHA" >> "$GITHUB_OUTPUT"
+          echo "Approved staging tip: $APPROVED_SHA"
+
+  publish:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 145
+    # Configure required reviewers in Settings > Environments separately.
+    environment:
+      name: ios-studio-testflight
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Trusted dispatcher script from main; avoid running stage-controlled
+          # code with the Codemagic API token.
+          ref: main
+          persist-credentials: false
+      - name: Validate Codemagic credentials and CLI tests
+        env:
+          CODEMAGIC_APP_ID: ${{ vars.CODEMAGIC_APP_ID }}
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$CODEMAGIC_APP_ID" || { echo "::error::Missing environment variable CODEMAGIC_APP_ID"; exit 1; }
+          test -n "$CODEMAGIC_API_TOKEN" || { echo "::error::Missing environment secret CODEMAGIC_API_TOKEN"; exit 1; }
+          python3 -m unittest discover -s scripts -p test_studio_codemagic.py -v
+      - name: Start pinned Codemagic Studio upload
+        id: trigger
+        env:
+          CODEMAGIC_APP_ID: ${{ vars.CODEMAGIC_APP_ID }}
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          APPROVED_SHA: ${{ needs.preflight.outputs.approved_sha }}
+        run: |
+          python3 scripts/studio_codemagic.py trigger --app-id "$CODEMAGIC_APP_ID" --sha "$APPROVED_SHA"
+      - name: Monitor Codemagic build through publishing
+        env:
+          CODEMAGIC_APP_ID: ${{ vars.CODEMAGIC_APP_ID }}
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          BUILD_ID: ${{ steps.trigger.outputs.build_id }}
+        run: |
+          python3 scripts/studio_codemagic.py watch --app-id "$CODEMAGIC_APP_ID" --build-id "$BUILD_ID"
+      - name: Record Codemagic build link
+        if: always()
+        env:
+          BUILD_URL: ${{ steps.trigger.outputs.build_url }}
+          SOURCE_SHA: ${{ needs.preflight.outputs.approved_sha }}
+        run: |
+          {
+            echo "## Studio internal TestFlight candidate"
+            echo "Approved source: $SOURCE_SHA"
+            echo "Codemagic build: $BUILD_URL"
+            echo "Apple processing and internal tester assignment must be verified separately."
+          } >> "$GITHUB_STEP_SUMMARY"
