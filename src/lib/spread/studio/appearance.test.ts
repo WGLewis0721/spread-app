@@ -392,7 +392,7 @@ function parseScrim(value: string): { r: number; g: number; b: number; a: number
 }
 
 test("appearance: user-selected wallpaper dim stays unchanged and ink is safe on local plates", () => {
-  const css = readFileSync(new URL("../../spread/components/studio/render.css", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../../../spread/components/studio/render.css", import.meta.url), "utf8");
   assert.match(css, /\.studio-readable-panel/);
   assert.match(css, /\.studio-readable-note/);
   assert.match(css, /background-color:\s*var\(--elevated\)/);
