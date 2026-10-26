@@ -24,6 +24,15 @@ jobs:
       - run: npm run lint
       - run: npm run test:spread
       - run: npm run test:scripts
+      - name: Verify compiled Studio-enabled offline iOS assets
+        if: github.event_name == 'pull_request' && github.base_ref == 'spread-studio'
+        env:
+          VITE_SPREAD_STUDIO: "1"
+          VITE_SPREAD_CLOUD_BACKUP: "0"
+          VITE_SPREAD_CLOUD_SYNC: "0"
+        run: |
+          npm run export:ios
+          node scripts/check-studio-ios-assets.mjs
       - name: Test manual Studio Codemagic API orchestration (offline)
         run: python3 -m unittest discover -s scripts -p test_studio_codemagic.py -v
 
