@@ -83,6 +83,8 @@ workflows:
     integrations:
       app_store_connect: Spread
     environment:
+      groups:
+        - studio_release
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.graymatter.spread
