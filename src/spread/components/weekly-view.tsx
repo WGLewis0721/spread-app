@@ -731,7 +731,7 @@ function FreeTimeChip({ item, name, color, onAdd }: { item: Suggestion; name: st
     <li>
       <button
         type="button"
-        className="flex h-11 items-center gap-2 rounded-full bg-accent/10 ps-3 pe-4 text-sm font-semibold text-accent"
+        className="studio-readable-note flex h-11 items-center gap-2 rounded-full bg-accent/10 ps-3 pe-4 text-sm font-semibold text-accent"
         aria-label={`Add ${item.hours} ${item.hours === 1 ? "hour" : "hours"} of ${name} on ${item.dayLabel}`}
         onClick={onAdd}
       >
