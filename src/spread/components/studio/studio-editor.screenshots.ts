@@ -60,10 +60,22 @@ try {
     await editor.locator("input[type='file']").setInputFiles({
       name: "contrast-fixture.png", mimeType: "image/png", buffer: Buffer.from(base64, "base64"),
     });
-    await apply.waitFor({ state: "visible" });
+    // Import errors should be diagnosable from CI without losing the screenshot.
+    await page.screenshot({ path: join(dir, `editor-${scheme}-after-import.png`) });
+    console.log("editor-after-import", JSON.stringify(await page.evaluate(() => ({
+      sheetCount: document.querySelectorAll(".studio-sheet").length,
+      dialogCount: document.querySelectorAll("[role='dialog']").length,
+      bodyEnd: document.body.innerText.slice(-900),
+      applyButtons: Array.from(document.querySelectorAll(".studio-sheet button")).filter((button) =>
+        button.textContent?.includes("Apply") || button.textContent?.includes("Saving")
+      ).map((button) => ({ text: button.textContent, disabled: (button as HTMLButtonElement).disabled })),
+    }))));
+    if (!(await editor.isVisible())) throw Error("Customize sheet disappeared after photo import: " + errors.join(" | "));
     await page.waitForFunction(() => {
-      const button = document.querySelector(".studio-sheet button.bg-accent");
-      return button && !(button as HTMLButtonElement).disabled;
+      const button = Array.from(document.querySelectorAll(".studio-sheet button")).find((item) =>
+        item.textContent?.trim() === "Apply"
+      ) as HTMLButtonElement | undefined;
+      return button && !button.disabled;
     }, null, { timeout: 30_000 });
     for (const size of sizes) {
       await page.setViewportSize(size);
