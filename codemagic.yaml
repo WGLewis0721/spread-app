@@ -74,3 +74,72 @@ workflows:
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
+
+  spread-studio-testflight:
+    name: Spread Studio - manual TestFlight candidate
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.graymatter.spread
+      vars:
+        VITE_SPREAD_STUDIO: "1"
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 26.5
+    scripts:
+      - name: Require approved staging branch and feature flags
+        script: |
+          set -eu
+          test "$CM_BRANCH" = spread-studio || { echo "Studio build must use spread-studio" >&2; exit 1; }
+          test "$VITE_SPREAD_STUDIO" = 1 || exit 1
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
+          test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
+      - name: Verify Studio planner
+        script: |
+          set -eu
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:spread
+          swift test --package-path ios/App/SpreadCloudCore
+      - name: Build Studio assets and sync Capacitor
+        script: npm run ios:sync
+      - name: Set build number and production push entitlement
+        script: |
+          set -eu
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+          number = os.environ["BUILD_NUMBER"]
+          if not number.isdecimal() or int(number) < 1:
+              raise SystemExit("Expected positive Codemagic BUILD_NUMBER")
+          path = Path("ios/App/App.xcodeproj/project.pbxproj")
+          modified, count = re.subn(r"CURRENT_PROJECT_VERSION = [0-9]+;", f"CURRENT_PROJECT_VERSION = {number};", path.read_text())
+          if count != 2:
+              raise SystemExit(f"Expected two build-number settings, got {count}")
+          path.write_text(modified)
+          print(f"Studio build number {number}")
+          PY
+          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
+      - name: Apply App Store distribution signing
+        script: xcode-project use-profiles
+      - name: Build signed Studio IPA
+        script: |
+          xcode-project build-ipa \\
+            --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \\
+            --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
