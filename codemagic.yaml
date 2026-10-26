@@ -132,7 +132,7 @@ workflows:
         script: |
           set -eu
           # Codemagic workflow-local BUILD_NUMBER can restart at 1; query Apple.
-          latest="$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --app-store-version=1.0)"
+          latest="$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --pre-release-version=1.0)"
           case "$latest" in *[!0-9]*|"") echo "Cannot read latest TestFlight build number" >&2; exit 1 ;; esac
           next="$((latest + 1))"
           test "$next" -ge 8 || { echo "Unexpectedly low TestFlight build number" >&2; exit 1; }
