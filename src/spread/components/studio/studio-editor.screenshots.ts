@@ -1,0 +1,156 @@
+/**
+ * Gate-50 proof of the actual mounted Customize editor, not a mock or body-only style hack.
+ * Run with VITE_SPREAD_STUDIO=1 npm run dev and Playwright Chromium installed:
+ *   node --experimental-strip-types src/spread/components/studio/studio-editor.screenshots.ts
+ * Generated evidence is stored in screenshots/studio-editor and uploaded by CI.
+ */
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
+import { auditStudioContrast } from "./contrast-audit.ts";
+const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const dir = join(root, "screenshots", "studio-editor");
+const nativeInit = readFileSync(join(root, "scripts", "ios-bridge-sim", "native-init.js"), "utf8");
+const url = process.env.SCREENSHOT_BASE_URL ?? "http://127.0.0.1:8080";
+const sizes = [{ width: 390, height: 844 }, { width: 820, height: 1180 }, { width: 1440, height: 900 }];
+mkdirSync(dir, { recursive: true });
+const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH ?? chromium.executablePath() });
+const shots: string[] = [];
+const errors: string[] = [];
+try {
+  const context = await browser.newContext();
+  // The native simulator must retain file bytes just like Capacitor Filesystem.
+  // Without this backing map a Studio import cannot be read back into its preview.
+  const fakeNativeFiles = new Map<string, string>();
+  await context.exposeFunction("__fsRead", async (path: string) => fakeNativeFiles.get(path) ?? null);
+  await context.exposeFunction("__fsWrite", async (path: string, data: string) => { fakeNativeFiles.set(path, data); });
+  await context.exposeFunction("__cloudSave", async () => ({ ok: true, tag: "shot" }));
+  await context.exposeFunction("__cloudChanges", async () => ({ rows: [], seq: 0 }));
+  await context.addInitScript(nativeInit);
+  const page = await context.newPage();
+  // Deliberately keep the OS light while testing BOTH Spread Settings choices.
+  // If Studio uses OS media instead of Spread Settings, the dark case must fail.
+  await page.emulateMedia({ colorScheme: "light" });
+  page.on("pageerror", (error) => errors.push(String(error)));
+
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: "Spread" }).waitFor({ timeout: 30_000 });
+  for (const scheme of ["light", "dark"] as const) {
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("heading", { name: "More" }).waitFor();
+    await page.getByRole("radio", { name: scheme === "light" ? "Light" : "Dark" }).click();
+    const plannerSetting = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+    if (plannerSetting !== scheme) throw new Error(`Expected Spread Settings ${scheme}, got ${plannerSetting}`);
+    const entry = page.getByRole("button", { name: "Customize Spread" });
+    await entry.waitFor();
+    await entry.click();
+    const editor = page.locator(".studio-sheet");
+    await editor.getByRole("heading", { name: "Customize Spread" }).waitFor();
+    await page.waitForTimeout(530); // capture the settled sheet, not its entrance animation
+    const apply = editor.getByRole("button", { name: "Apply", exact: true });
+    if (await apply.isEnabled()) throw Error("unedited session unexpectedly enabled Apply");
+    for (const size of sizes) {
+      await page.setViewportSize(size);
+      const file = `editor-${scheme}-${size.width}-original.png`;
+      await page.screenshot({ path: join(dir, file) });
+      shots.push(file);
+    }
+    // Import a small high-contrast procedural image; no uploaded/third-party copyrighted art.
+    const base64 = await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 160; canvas.height = 160;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw Error("2D canvas unavailable");
+      ctx.fillStyle = "#1d4e89"; ctx.fillRect(0, 0, 160, 160);
+      ctx.strokeStyle = "#fff6d6"; ctx.lineWidth = 13;
+      for (let x = -60; x < 200; x += 24) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 60, 160); ctx.stroke(); }
+      return canvas.toDataURL("image/png").split(",")[1];
+    });
+    await editor.locator("input[type='file']").setInputFiles({
+      name: "contrast-fixture.png", mimeType: "image/png", buffer: Buffer.from(base64, "base64"),
+    });
+    // Import errors should be diagnosable from CI without losing the screenshot.
+    await page.screenshot({ path: join(dir, `editor-${scheme}-after-import.png`) });
+    console.log("editor-after-import", JSON.stringify(await page.evaluate(() => ({
+      sheetCount: document.querySelectorAll(".studio-sheet").length,
+      dialogCount: document.querySelectorAll("[role='dialog']").length,
+      bodyEnd: document.body.innerText.slice(-900),
+      applyButtons: Array.from(document.querySelectorAll(".studio-sheet button")).filter((button) =>
+        button.textContent?.includes("Apply") || button.textContent?.includes("Saving")
+      ).map((button) => ({ text: button.textContent, disabled: (button as HTMLButtonElement).disabled })),
+    }))));
+    if (!(await editor.isVisible())) throw Error("Customize sheet disappeared after photo import: " + errors.join(" | "));
+    await page.waitForFunction(() => {
+      const button = Array.from(document.querySelectorAll(".studio-sheet button")).find((item) =>
+        item.textContent?.trim() === "Apply"
+      ) as HTMLButtonElement | undefined;
+      return button && !button.disabled;
+    }, null, { timeout: 30_000 });
+    const draftScheme = await editor.locator("[data-studio-scheme]").first().getAttribute("data-studio-scheme");
+    if (draftScheme !== scheme) throw new Error(`N3: editor preview scheme ${draftScheme}, expected ${scheme} with light OS`);
+    for (const size of sizes) {
+      await page.setViewportSize(size);
+      const file = `editor-${scheme}-${size.width}-wallpaper-draft.png`;
+      await page.screenshot({ path: join(dir, file) });
+      shots.push(file);
+    }
+    // Apply a personal photo in this isolated browser context and prove the
+    // REAL live planner (not merely a preview) adopts the saved appearance.
+    await editor.getByRole("button", { name: "Apply", exact: true }).click();
+    await editor.waitFor({ state: "hidden", timeout: 15_000 });
+    // Closing the nested Customize portal returns to More. Explicitly close the
+    // underlying More sheet, since Escape is consumed by Radix during unmount.
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByRole("heading", { name: "More" }).waitFor({ state: "hidden" });
+    await page.waitForFunction(() => {
+      const scope = document.querySelector<HTMLElement>("[data-studio-appearance]");
+      return !!scope && getComputedStyle(scope).getPropertyValue("--studio-wallpaper-image").includes("blob:");
+    }, null, { timeout: 15_000 });
+    await page.getByRole("tab", { name: "Week" }).click();
+    await page.waitForFunction((expected) => document.querySelector("[data-studio-appearance]")?.getAttribute("data-studio-scheme") === expected, scheme);
+    const actualScheme = await page.locator("[data-studio-appearance]").getAttribute("data-studio-scheme");
+    if (actualScheme !== scheme) throw new Error(`N3: saved Week scheme ${actualScheme}, expected ${scheme} with light OS`);
+    // Attribute alone is not proof: catch light cards incorrectly rendered in dark mode.
+    const elevated = await page.locator("[data-studio-appearance]").first().evaluate((el) =>
+      getComputedStyle(el).getPropertyValue("--elevated").trim()
+    );
+    if (!/^#[0-9a-fA-F]{6}$/.test(elevated)) throw Error(`Missing solid elevated surface: ${elevated}`);
+    const channels = [1, 3, 5].map((offset) => Number.parseInt(elevated.slice(offset, offset + 2), 16));
+    const surfaceBrightness = channels.reduce((sum, value) => sum + value, 0) / 3;
+    if ((scheme === "dark" && surfaceBrightness >= 100) || (scheme === "light" && surfaceBrightness <= 140)) {
+      throw Error(`N3: visual ${scheme} palette incorrect: surface=${elevated}, brightness=${surfaceBrightness}`);
+    }
+    console.log(`N3 planner-theme light-OS/${scheme}-Settings -> live Week ${actualScheme}, card ${elevated}`);
+    await page.waitForTimeout(600); // Settled transition; avoid misleading half-opacity capture.
+    for (const size of sizes) {
+      await page.setViewportSize(size);
+      const actual = `live-week-${scheme}-${size.width}-saved-photo.png`;
+      await page.screenshot({ path: join(dir, actual) });
+      shots.push(actual);
+      const issues = await auditStudioContrast(page);
+      console.log(`live-scope-contrast ${scheme}-${size.width}: ${issues.length}`);
+      if (issues.length) {
+        console.error(JSON.stringify(issues.slice(0, 30), null, 2));
+        throw new Error(`live saved wallpaper contrast audit failed: ${scheme} ${size.width} ${issues.length} violations`);
+      }
+    }
+  }
+  // When Spread Settings is System, follow changes to the OS as well.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("heading", { name: "More" }).waitFor();
+  await page.getByRole("radio", { name: "System" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  for (const os of ["dark", "light"] as const) {
+    await page.emulateMedia({ colorScheme: os });
+    await page.waitForFunction((expected) => document.querySelector("[data-studio-appearance]")?.getAttribute("data-studio-scheme") === expected, os);
+    console.log(`N3 planner-theme system / OS ${os} -> live Week ${os}`);
+  }
+
+  writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, osThemeOverrideChecked: true, status: "N3 passed: Studio System inherits Spread Settings, or OS when Spread Settings is System" }, null, 2));
+  if (errors.length) throw Error(errors.join("\n"));
+  console.log(`Captured ${shots.length} real Customize editor screenshots`);
+} finally {
+  await browser.close();
+}

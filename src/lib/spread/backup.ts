@@ -4,6 +4,7 @@ import { collectEntries, isPlannerKey, type KeyStore } from "./native-mirror.ts"
 import { ACTIVE_PROFILE_KEY, cleanName, parseProfiles, PROFILE_LIMIT, PROFILES_KEY, profileStore, type Profile } from "./profiles.ts";
 import { CURRENT_SCHEMA, SCHEMA_KEY } from "./schema.ts";
 import { formatDocDay } from "./week-document.ts";
+import { collectStudioBackupEntries } from "./studio/persistence.ts";
 
 export type BackupSummary = {
   spreads: string[];
@@ -93,6 +94,8 @@ export type FullBackupPayload = {
    * Optional so older files and older readers are unaffected. Not applied on restore.
    */
   recovery?: Record<string, string>;
+  /** Per-profile validated appearance JSON only. Wallpaper bytes are device-local. */
+  studio?: Record<string, string>;
 };
 
 export type FullBackupProfileSummary = { id: string; readable: boolean; name: string; spreads: string[]; weeks: number; tasks: number; range: string };
@@ -141,6 +144,24 @@ export function collectFullPayload(storage: KeyStore, now: Date, deviceId: strin
     if (owned.has(key) || SKIPPED_SETTINGS.has(key) || isPlannerKey(key) || key.startsWith("spread.cloud.") || key.startsWith("spread.sync.")) continue;
     settings[key] = value;
   }
+  // `spread-studio.*` keys intentionally stay outside the planner mirror and generic settings.
+  // Copy only looks belonging to profiles actually present in this backup.
+  const studio: Record<string, string> = {};
+  const knownIds = new Set(roster.map((profile) => profile.id));
+  const keys: string[] = [];
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (key) keys.push(key);
+  }
+  const studioStorage = {
+    getItem: (key: string) => storage.getItem(key),
+    setItem: (_key: string, _value: string) => undefined,
+    removeItem: (_key: string) => undefined,
+    keys: () => keys,
+  };
+  for (const entry of collectStudioBackupEntries(studioStorage)) {
+    if (knownIds.has(entry.profileId)) studio[entry.profileId] = entry.json;
+  }
   const active = storage.getItem(ACTIVE_PROFILE_KEY);
   return {
     schemaVersion: CURRENT_SCHEMA,
@@ -151,6 +172,7 @@ export function collectFullPayload(storage: KeyStore, now: Date, deviceId: strin
     stores,
     settings,
     ...(Object.keys(recovery).length > 0 ? { recovery } : {}),
+    ...(Object.keys(studio).length > 0 ? { studio } : {}),
   };
 }
 
@@ -208,6 +230,7 @@ export async function parseFullBackup(text: string): Promise<FullBackup | null> 
     stores: item.stores,
     settings: item.settings,
     ...(isRecordOfStrings(item.recovery) && Object.keys(item.recovery).length > 0 ? { recovery: item.recovery } : {}),
+    ...(isRecordOfStrings(item.studio) && Object.keys(item.studio).length > 0 ? { studio: item.studio } : {}),
   };
   return { payload, summary: summarizeFull(payload) };
 }
@@ -245,6 +268,8 @@ export type RestorePlan =
       skipped: string[];
       /** An empty profile that took the place of the first restored one, if any. */
       replacedId: string | null;
+      /** Map backup profile IDs to their new/restored local IDs for safe related settings restore. */
+      idMap: Record<string, string>;
     }
   | { ok: false; reason: "no-room"; needed: number; free: number };
 
@@ -301,6 +326,7 @@ export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[]
   const used = new Set(existing.map((profile) => profile.id));
   let profiles: Profile[] = [...existing];
   const writes: { key: string; value: string }[] = [];
+  const idMap: Record<string, string> = {};
   let replacedId: string | null = null;
   chosen.forEach((source, index) => {
     const text = payload.stores[source.id];
@@ -312,14 +338,16 @@ export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[]
       writes.push({ key: replaceTarget.store, value: data });
       profiles = profiles.map((profile) => (profile.id === replaceTarget.id ? { id: profile.id, name, store: profile.store, theme: source.theme, accent: source.accent } : profile));
       replacedId = replaceTarget.id;
+      idMap[source.id] = replaceTarget.id;
       return;
     }
     let id = newId();
     while (!id || used.has(id)) id = newId();
     used.add(id);
+    idMap[source.id] = id;
     const store = profileStore(id);
     writes.push({ key: store, value: data });
     profiles.push({ id, name: restoredName(source.name, taken), store, theme: source.theme, accent: source.accent });
   });
-  return { ok: true, profiles, writes, skipped, replacedId };
+  return { ok: true, profiles, writes, skipped, replacedId, idMap };
 }

@@ -18,6 +18,22 @@ for (let i = 0; i < args.length; i += 1) {
   else if (a === "--find") {
     const dir = args[++i];
     const suffix = args[++i];
+    if (!dir || !suffix) {
+      console.error("run-tests: --find needs a directory and a suffix.");
+      process.exit(2);
+    }
+    let info;
+    try {
+      info = statSync(dir);
+    } catch (error) {
+      console.error(`run-tests: required suite directory is missing or unreadable: ${dir}`);
+      console.error(error);
+      process.exit(2);
+    }
+    if (!info.isDirectory()) {
+      console.error(`run-tests: --find path is not a directory: ${dir}`);
+      process.exit(2);
+    }
     const walk = (d) => readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : n.endsWith(suffix) ? [join(d, n)] : []));
     files.push(...walk(dir).sort());
   } else if (a.startsWith("--node-arg=")) nodeArgs.push(a.slice("--node-arg=".length));

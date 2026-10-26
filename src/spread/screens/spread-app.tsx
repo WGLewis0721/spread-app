@@ -42,6 +42,9 @@ import { BetaAccessCard } from "@/spread/components/beta-access";
 import { useBetaGate, type BetaGate } from "@/spread/components/use-beta-gate";
 import { signOut } from "@/lib/auth/client";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
+import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
+import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
+import { StudioLivePlanner } from "@/spread/components/studio/live-planner";
 
 type Sheet = "more" | "new" | "icloud" | null;
 
@@ -586,7 +589,8 @@ function WeekScreen() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <StudioLivePlanner profileId={profileId}>
+      <div className="min-h-dvh">
       {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
       <div className="mx-auto w-full max-w-xl" style={{ "--spread-header": `${headerH}px` } as CSSProperties}>
         <header ref={headerRef} className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
@@ -824,7 +828,7 @@ function WeekScreen() {
           ) : (
             <button
               type="button"
-              className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
+              className="studio-readable-note flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
               onClick={() => setEditing(true)}
             >
               <SpreadIcon name="icon-edit.svg" size={24} />
@@ -862,7 +866,8 @@ function WeekScreen() {
       {openTask && (
         <TaskSheet hatId={openTask.hatId} taskId={openTask.taskId} onClose={() => setOpenTask(null)} />
       )}
-    </div>
+      </div>
+    </StudioLivePlanner>
   );
 }
 
@@ -895,7 +900,7 @@ function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () =
   const done = rows.reduce((sum, row) => sum + row.box.tasks.filter((task) => task.done).length, 0);
   const active = rows.filter((row) => row.box.hours > 0);
   return (
-    <section className="px-1 pt-5">
+    <section className="studio-readable-panel px-1 pt-5">
       <p className="text-base">
         <span className="font-semibold tabular-nums">{formatHourLabel(totalHours)}</span>
         <span className="text-secondary">
@@ -973,7 +978,7 @@ function DayMarks({ hatId, name, color }: { hatId: string; name: string; color: 
         return (
           <span
             key={day.date}
-            className={on ? "text-xs font-semibold leading-none" : "text-xs font-medium leading-none text-tertiary"}
+            className={on ? "studio-day-mark studio-day-mark-on text-xs font-semibold leading-none" : "studio-day-mark text-xs font-medium leading-none text-tertiary"}
             style={on ? { color } : undefined}
           >
             {DAY_MARKS[index]}
@@ -1824,6 +1829,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           />
         ))}
       </div>
+      {STUDIO_FLAG ? <StudioCustomizeEntry /> : null}
       {native ? null : (
         <button
           type="button"

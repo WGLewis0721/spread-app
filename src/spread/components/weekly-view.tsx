@@ -174,7 +174,7 @@ export function WeeklyView({
       accessibility={{ announcements }}
     >
       <div className="enter" style={{ touchAction: "pan-y" }} {...swipe}>
-        <p className="px-1 pt-4 text-xs text-secondary">Drag a spread onto a day, or tap one, then add it.</p>
+        <p className="studio-readable-note px-1 pt-4 text-xs text-secondary">Drag a spread onto a day, or tap one, then add it.</p>
         <div className="spread-bubbles mt-3 flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain py-2">
           {data.hats.map((hat) => {
             const bank = boxesByHat.get(hat.id)?.hours ?? hat.defaultHours;
@@ -198,11 +198,11 @@ export function WeeklyView({
         </div>
         {freeTime.kind === "suggestions" && (
           <section aria-label="Free time" className="mt-4">
-            <h2 className="flex items-center gap-1.5 px-1 text-sm font-semibold text-accent">
+            <h2 className="studio-readable-note flex items-center gap-1.5 px-1 text-sm font-semibold text-accent">
               <Clock className="size-4" strokeWidth={2.4} aria-hidden="true" />
               Free time
             </h2>
-            <p className="px-1 pt-0.5 text-xs text-secondary">Tap to add an hour on the lightest day ahead.</p>
+            <p className="studio-readable-note px-1 pt-0.5 text-xs text-secondary">Tap to add an hour on the lightest day ahead.</p>
             <ul className="mt-2 flex flex-wrap gap-2">
               {freeTime.items.map((item) => (
                 <FreeTimeChip
@@ -399,7 +399,7 @@ function DayCard({
       <div className="flex items-center justify-between px-1">
         <h2 className="text-base font-semibold" aria-current={today ? "date" : undefined}>
           {label}
-          {today && <span className="ms-2 align-middle text-xs font-semibold text-accent">Today</span>}
+          {today && <span className="studio-readable-note ms-2 align-middle text-xs font-semibold text-accent">Today</span>}
         </h2>
         <span className="text-xs text-secondary tabular-nums">{date.slice(5).replace("-", "/")}</span>
       </div>
@@ -580,7 +580,7 @@ function ToPlaceTray({
     <section
       ref={setNodeRef}
       aria-label="To place"
-      className={`mt-4 rounded-3xl border-2 border-dashed px-3 transition-colors ${
+      className={`studio-readable-panel mt-4 rounded-3xl border-2 border-dashed px-3 transition-colors ${
         hot ? "border-accent bg-accent/10" : "border-tertiary/50"
       } ${tasks.length === 0 ? "py-2" : "py-3"}`}
     >
@@ -731,7 +731,7 @@ function FreeTimeChip({ item, name, color, onAdd }: { item: Suggestion; name: st
     <li>
       <button
         type="button"
-        className="flex h-11 items-center gap-2 rounded-full bg-accent/10 ps-3 pe-4 text-sm font-semibold text-accent"
+        className="studio-readable-note flex h-11 items-center gap-2 rounded-full bg-accent/10 ps-3 pe-4 text-sm font-semibold text-accent"
         aria-label={`Add ${item.hours} ${item.hours === 1 ? "hour" : "hours"} of ${name} on ${item.dayLabel}`}
         onClick={onAdd}
       >

@@ -47,6 +47,69 @@ jobs:
           name: bridge-sim-shots
           path: ${{ runner.temp }}/shots
 
+  studio-browser-contrast:
+    # Studio remains off in production. Run the actual React planner in Chromium
+    # and audit every visible text node against a solid backdrop or worst-case photo.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run dim-zero contrast audit and capture actual Spread/Week
+        env:
+          VITE_SPREAD_STUDIO: "0"
+          STUDIO_AUDIT_ONLY: "1"
+        run: |
+          npm run dev > /tmp/studio-audit-vite.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS http://127.0.0.1:8080 >/dev/null; then break; fi
+            sleep 1
+          done
+          node --experimental-strip-types src/spread/components/studio/render.screenshots.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-contrast-evidence
+          path: screenshots/studio-g3/
+          retention-days: 14
+
+  studio-editor-screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Capture real Customize editor and photo draft
+        env:
+          VITE_SPREAD_STUDIO: "1"
+        run: |
+          npm run dev > /tmp/studio-editor-vite.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS http://127.0.0.1:8080 >/dev/null; then break; fi
+            sleep 1
+          done
+          node --experimental-strip-types src/spread/components/studio/studio-editor.screenshots.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-editor-evidence
+          path: screenshots/studio-editor/
+          retention-days: 14
+
   swift-core:
     runs-on: ubuntu-latest
     timeout-minutes: 15
