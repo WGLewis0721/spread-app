@@ -7,7 +7,7 @@ import {
   originalStudioAppearance,
   type StudioAppearanceV1,
 } from "./contract.ts";
-import { contrastRatioHex } from "./contrast.ts";
+import { contrastRatio, contrastRatioHex, hexToRgb, mixRgb } from "./contrast.ts";
 import {
   STUDIO_STYLE_KEYS,
   appearanceForId,
@@ -383,6 +383,110 @@ test("appearance: density and type stay on the system stack and the 44px target"
   assert.match(css, /--secondary:\s*#6e6e73;/);
   assert.match(css, /--elevated:\s*#1c1c1e;/);
   assert.match(css, /--accent:\s*#0a84ff;/);
+});
+
+function parseScrim(value: string): { r: number; g: number; b: number; a: number } {
+  const match = /^rgba\((\d+), (\d+), (\d+), ([0-9.]+)\)$/.exec(value);
+  assert.ok(match, value);
+  return { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]), a: Number(match[4]) };
+}
+
+/** Contrast of `text` on the scrim composited over pure black and pure white. */
+function worstWallpaperContrast(text: string, scrim: string): number {
+  const veil = parseScrim(scrim);
+  const ink = hexToRgb(text);
+  assert.ok(ink);
+  const plate = { r: veil.r, g: veil.g, b: veil.b };
+  const overBlack = contrastRatio(ink, mixRgb({ r: 0, g: 0, b: 0 }, plate, veil.a));
+  const overWhite = contrastRatio(ink, mixRgb({ r: 255, g: 255, b: 255 }, plate, veil.a));
+  return Math.min(overBlack, overWhite);
+}
+
+test("appearance: a wallpaper scrim keeps loose text at 4.5:1 even when dim is 0", () => {
+  const fixtures = SAMPLE_SCHEMES.map((scheme) => {
+    const appearance = sampleAppearance("glass", scheme);
+    appearance.wallpaper = { ...appearance.wallpaper, dim: 0 };
+    return { label: `glass ${scheme}`, appearance, scheme };
+  });
+  const harsh = custom({
+    id: "scrim-harsh",
+    name: "Harsh",
+    mode: "dark",
+    palette: { accent: "#000000", surface: "#555555", text: "#000000", secondaryText: "#777777" },
+    wallpaperAssetId: "wall-1",
+    wallpaper: { fit: "cover", positionX: 50, positionY: 50, dim: 0, blur: 0 },
+    material: { treatment: "glass", transparency: 0.42, depth: 0.55 },
+  });
+  fixtures.push({ label: "harsh", appearance: harsh, scheme: "dark" });
+  for (const fixture of fixtures) {
+    const scope = resolveStudioScope({
+      enabled: true,
+      appearance: fixture.appearance,
+      systemScheme: fixture.scheme,
+      wallpaper: { assetId: "wall-1", url: BLOB_A },
+    });
+    const style = applied(scope);
+    const scrim = parseScrim(style["--studio-scrim"]);
+    assert.ok(scrim.a > 0, `${fixture.label} alpha ${scrim.a}`);
+    for (const key of ["--ink", "--secondary", "--accent"] as const) {
+      const ratio = worstWallpaperContrast(style[key], style["--studio-scrim"]);
+      assert.ok(ratio + 1e-6 >= 4.5, `${fixture.label} ${key} ${ratio}`);
+    }
+    assert.ok(scope.warnings.includes("Wallpaper dim was raised so text on it stays readable."), fixture.label);
+  }
+  const light = sampleAppearance("glass", "light");
+  light.wallpaper = { ...light.wallpaper, dim: 0 };
+  const dim0 = parseScrim(
+    applied(
+      resolveStudioScope({
+        enabled: true,
+        appearance: light,
+        wallpaper: { assetId: "wall-1", url: BLOB_A },
+      }),
+    )["--studio-scrim"],
+  ).a;
+  const full = sampleAppearance("glass", "light");
+  full.wallpaper = { ...full.wallpaper, dim: 1 };
+  const dim1 = parseScrim(
+    applied(
+      resolveStudioScope({
+        enabled: true,
+        appearance: full,
+        wallpaper: { assetId: "wall-1", url: BLOB_A },
+      }),
+    )["--studio-scrim"],
+  ).a;
+  assert.ok(dim1 + 1e-6 >= dim0);
+  assert.equal(dim1, 1);
+  const uncovered = sampleAppearance("glass", "light");
+  uncovered.wallpaper = { ...uncovered.wallpaper, dim: 0 };
+  const bare = applied(resolveStudioScope({ enabled: true, appearance: uncovered }));
+  assert.equal(bare["--studio-scrim"], "rgba(0, 0, 0, 0)");
+});
+
+test("appearance: more contrast keeps the rendered ink at 7:1 on the canvas", () => {
+  const surfaces = ["#555555", "#636363", "#777777", "#2a2a2a", "#d0d0d0", "#ffffff", "#000000"];
+  for (const surface of surfaces) {
+    for (const text of ["#000000", "#ffffff", "#777777"]) {
+      const dark = surface === "#000000" || surface === "#2a2a2a";
+      const style = applied(
+        resolveStudioScope({
+          enabled: true,
+          moreContrast: true,
+          appearance: custom({
+            id: "canvas-ink",
+            name: "Canvas ink",
+            mode: dark ? "dark" : "light",
+            palette: { accent: text, surface, text, secondaryText: text },
+          }),
+        }),
+      );
+      const onCanvas = contrastRatioHex(style["--ink"], style["--canvas"]);
+      const onSurface = contrastRatioHex(style["--ink"], style["--elevated"]);
+      assert.ok(onCanvas !== null && onCanvas + 1e-6 >= 7, `${surface} on ${text} canvas ${onCanvas}`);
+      assert.ok(onSurface !== null && onSurface + 1e-6 >= 7, `${surface} on ${text} surface ${onSurface}`);
+    }
+  }
 });
 
 test("appearance: this module does not touch storage, network, fonts, or data-theme", () => {
