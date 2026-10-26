@@ -26,10 +26,9 @@ for (let i = 0; i < args.length; i += 1) {
     try {
       info = statSync(dir);
     } catch (error) {
-      // A not-yet-created suite directory (Studio component tests) adds nothing.
-      // A directory that exists but cannot be read still fails the run.
-      if (error && error.code === "ENOENT") continue;
-      throw error;
+      console.error(`run-tests: required suite directory is missing or unreadable: ${dir}`);
+      console.error(error);
+      process.exit(2);
     }
     if (!info.isDirectory()) {
       console.error(`run-tests: --find path is not a directory: ${dir}`);
