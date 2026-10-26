@@ -20,6 +20,7 @@ import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
 import { cleanupProfileStudioData, planStudioAppearanceRestore, studioStorageFrom } from "@/lib/spread/studio/persistence";
+import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { create } from "zustand";
 import {
   cloneWeek,
@@ -574,12 +575,14 @@ export const useSpread = create<Store>((set, get) => ({
     // The roster goes first: if it cannot be written the profile stays listed, with its data.
     if (!writeProfiles(next)) return false;
     drop(profile.store);
-    // The roster is already durable. Remove only this profile's Studio settings and assets;
-    // never block planner deletion on a failed or unavailable image byte store.
-    void import("@/spread/components/studio/studio-bridge")
-      .then(({ studioAssetStore }) => studioAssetStore())
-      .then((assets) => cleanupProfileStudioData(studioStorageFrom(localStorage), assets, id))
-      .catch(() => undefined);
+    // A disabled Studio must not open image storage or delete any appearance data.
+    // When enabled, profile removal is durable before best-effort asset cleanup.
+    if (STUDIO_FLAG) {
+      void import("@/spread/components/studio/studio-bridge")
+        .then(({ studioAssetStore }) => studioAssetStore())
+        .then((assets) => cleanupProfileStudioData(studioStorageFrom(localStorage), assets, id))
+        .catch(() => undefined);
+    }
     if (get().activeId !== id) {
       set({ profiles: next });
       return true;
