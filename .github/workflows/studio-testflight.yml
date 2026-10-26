@@ -28,7 +28,7 @@ jobs:
           set -euo pipefail
           test -n "$CODEMAGIC_API_TOKEN" || { echo "Missing CODEMAGIC_API_TOKEN secret" >&2; exit 1; }
           test -n "$CODEMAGIC_APP_ID" || { echo "Missing CODEMAGIC_APP_ID secret" >&2; exit 1; }
-          payload=$(jq -nc --arg app "$CODEMAGIC_APP_ID" '{appId:$app,workflowId:"spread-studio-testflight",branch:"spread-studio"}')
+          payload=$(jq -nc --arg app "$CODEMAGIC_APP_ID" --arg sha "$APPROVED_SHA" '{appId:$app,workflowId:"spread-studio-testflight",branch:"spread-studio",environment:{variables:{STUDIO_APPROVED_SHA:$sha}}}')
           response=$(curl --fail-with-body --silent --show-error --retry 2 \
             --request POST 'https://api.codemagic.io/builds' \
             --header "x-auth-token: $CODEMAGIC_API_TOKEN" \
@@ -37,6 +37,6 @@ jobs:
           build_id=$(jq -er '.buildId // .build._id // ._id' <<<"$response")
           echo "Requested Codemagic Studio build: $build_id"
           echo "Approved staging commit: $APPROVED_SHA"
-          echo "NOTE: Codemagic API queues a branch build, not a commit-pinned build."
+          echo "Codemagic will enforce approved SHA after checkout."
           echo "The Codemagic build guard must verify its checked-out commit against the approved SHA."
           echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
