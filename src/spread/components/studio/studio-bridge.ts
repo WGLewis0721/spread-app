@@ -18,9 +18,12 @@ import {
   commitStudioAppearance,
   loadStudioAppearance,
   studioStorageFrom,
+  sweepOrphanStudioData,
+  sweepUnreferencedStudioAssets,
   type StudioStorage,
 } from "../../../lib/spread/studio/persistence.ts";
 import { isNativeApp } from "../../../lib/spread/native.ts";
+import { parseProfiles, PROFILES_KEY } from "../../../lib/spread/profiles.ts";
 import { importFailureCopy, STUDIO_UI_COPY } from "./studio-copy.ts";
 import {
   openStudioSession,
@@ -52,9 +55,30 @@ export function studioAssetStore(): Promise<AssetByteStore | null> {
 }
 
 async function openAssetStore(): Promise<AssetByteStore | null> {
-  if (isNativeApp()) return createFileAssetStore(await openIosStudioFiles());
-  if (typeof indexedDB === "undefined") return null;
-  return createIndexedDbAssetStore(indexedDB);
+  const assets = isNativeApp()
+    ? createFileAssetStore(await openIosStudioFiles())
+    : typeof indexedDB !== "undefined"
+      ? await createIndexedDbAssetStore(indexedDB)
+      : null;
+  if (!assets) return null;
+
+  // One cold-start sweep, BEFORE handing the store to any editor/import caller.
+  // Only trust an actual readable roster; a storage failure must never erase photos.
+  const storage = browserStudioStorage();
+  if (storage) {
+    try {
+      const raw = storage.getItem(PROFILES_KEY);
+      const profiles = parseProfiles(raw);
+      if (raw !== null && profiles.length > 0) {
+        const ids = profiles.map((profile) => profile.id);
+        await sweepOrphanStudioData(storage, assets, ids);
+        await sweepUnreferencedStudioAssets(storage, assets, ids);
+      }
+    } catch {
+      // Studio still opens if maintenance is unavailable; retry next launch.
+    }
+  }
+  return assets;
 }
 
 export async function loadSession(input: {
