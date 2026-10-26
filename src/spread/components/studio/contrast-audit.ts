@@ -20,8 +20,11 @@ export async function auditStudioContrast(page: Page): Promise<StudioContrastVio
     type Color = { r: number; g: number; b: number; a: number };
     function parse(input: string): Color | null {
       const m = /^rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)(?:\s*,\s*(\d+(?:\.\d+)?))?\s*\)$/.exec(input);
-      if (!m) return null;
-      return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: m[4] === undefined ? 1 : Number(m[4]) };
+      if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: m[4] === undefined ? 1 : Number(m[4]) };
+      // Chromium resolves CSS color-mix() to modern color(srgb ...) notation.
+      const modern = /^color\\(srgb\\s+([0-9.]+)\\s+([0-9.]+)\\s+([0-9.]+)(?:\\s*\\/\\s*([0-9.]+))?\\)$/.exec(input);
+      if (!modern) return null;
+      return { r: 255 * Number(modern[1]), g: 255 * Number(modern[2]), b: 255 * Number(modern[3]), a: modern[4] === undefined ? 1 : Number(modern[4]) };
     }
     function luminance(c: Color) {
       const linear = (n: number) => {
@@ -56,22 +59,29 @@ export async function auditStudioContrast(page: Page): Promise<StudioContrastVio
         violations.push({ text: text.slice(0, 75), element: label, reason: "unknown-ink" });
         continue;
       }
-      let bg: Color | null = null;
+      const layers: Color[] = [];
       for (let element: HTMLElement | null = parent; element && scope.contains(element); element = element.parentElement) {
         const style = getComputedStyle(element);
         const color = parse(style.backgroundColor);
-        // A translucent fill over arbitrary wallpaper never guarantees readable text.
-        // If a stronger, solid surface is below it, composite the tint over that surface.
-        if (color && color.a >= 0.995) {
-          bg = color;
-          break;
-        }
+        if (color && color.a > 0) layers.push(color);
+        if (color && color.a >= 0.995) break;
       }
-      if (!bg) {
+      if (layers.length === 0) {
         violations.push({ text: text.slice(0, 75), element: label, reason: "unprotected-wallpaper" });
         continue;
       }
-      const contrast = ratio(ink, bg);
+      const compose = (base: Color) => layers.slice().reverse().reduce((under, overlay) => ({
+        r: overlay.r * overlay.a + under.r * (1 - overlay.a),
+        g: overlay.g * overlay.a + under.g * (1 - overlay.a),
+        b: overlay.b * overlay.a + under.b * (1 - overlay.a),
+        a: 1,
+      }), base);
+      // If no opaque plate exists, test BOTH black and white photo pixels.
+      // A translucent glass card passes only when worst-case contrast clears WCAG AA.
+      const contrast = Math.min(
+        ratio(ink, compose({ r: 0, g: 0, b: 0, a: 1 })),
+        ratio(ink, compose({ r: 255, g: 255, b: 255, a: 1 })),
+      );
       if (contrast + 1e-5 < 4.5) {
         violations.push({ text: text.slice(0, 75), element: label, reason: "low-contrast", contrast: Math.round(contrast * 100) / 100 });
       }
