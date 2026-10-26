@@ -22,6 +22,7 @@ import {
   type StudioSession,
 } from "./draft";
 import { StudioLivePreview } from "./studio-preview";
+import { STUDIO_APPEARANCE_SAVED_EVENT } from "./live-planner";
 import "./studio-ui.css";
 
 export function StudioCustomizeEntry() {
@@ -161,6 +162,9 @@ function StudioCustomizeLive() {
       enabled: true,
       planner: readPlanner(),
     });
+    if (result.wrote && profileId) {
+      window.dispatchEvent(new CustomEvent(STUDIO_APPEARANCE_SAVED_EVENT, { detail: { profileId } }));
+    }
     if (!openRef.current) return;
     setSession(result.session);
     setBusy(false);
