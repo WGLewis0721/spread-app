@@ -1,0 +1,94 @@
+# One-time off-GitHub archival job. Lives ONLY on the backup helper branch.
+# No TestFlight, Apple signing, production deploy, or main changes.
+name: Archive pre-Studio golden source and iOS assets
+on:
+  push:
+    branches:
+      - backup/golden-2026-10-26-offsite
+permissions:
+  contents: read
+jobs:
+  portable-golden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Fetch precisely pinned pre-Studio main
+        uses: actions/checkout@v4
+        with:
+          ref: d6fb09cbd609e3f9a5a8aea8f0faf60a1ec63012
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Archive source, full recovery history, and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          PIN="d6fb09cbd609e3f9a5a8aea8f0faf60a1ec63012"
+          test "$(git rev-parse HEAD)" = "$PIN"
+          mkdir -p golden
+          git archive --format=tar --prefix=Spread-pre-Studio-source/ HEAD | gzip -n > golden/Spread-pre-Studio-source.tar.gz
+          git bundle create golden/Spread-pre-Studio-history.bundle HEAD
+          git bundle verify golden/Spread-pre-Studio-history.bundle
+          cat > golden/README-RESTORE.txt <<'EOF'
+          SPREAD — GOLDEN PRE-STUDIO SOURCE SNAPSHOT
+          Captured 2026-10-26, pin: d6fb09cbd609e3f9a5a8aea8f0faf60a1ec63012
+          This is the pre-Studio main branch, not the experimental Studio PR #85.
+
+          CONTENTS
+          1) Spread-pre-Studio-source.tar.gz — all Git-tracked application
+             source, docs, native iOS project, images, scripts, and configs
+             at exactly the pinned commit.
+          2) Spread-pre-Studio-history.bundle — offline Git bundle with full
+             ancestry reachable from the pinned commit.
+          3) Spread-pre-Studio-ios-web.tar.gz — compiled self-contained
+             Capacitor iOS WebView assets from the pinned source (if built).
+          4) SHA256SUMS — archive hashes for verification.
+
+          TO RECOVER WITHOUT GITHUB
+            sha256sum -c SHA256SUMS
+            git clone Spread-pre-Studio-history.bundle spread-recovered
+            cd spread-recovered
+            git switch -c golden-restored d6fb09cbd609e3f9a5a8aea8f0faf60a1ec63012
+            npm ci
+            npm run ios:sync
+
+          IMPORTANT LIMITATIONS
+          - NOT a signed .ipa, not a retrievable installed TestFlight build,
+            not an App Store Connect archive or Apple signing identity.
+          - The actual TestFlight binary/version may differ from the main
+            source pin; check TestFlight build number separately.
+          - No personal planner data, photo library, keychain, private CI
+            secrets, signing certificates, or provisioning profiles included.
+          - Restoring an iPhone build requires Mac, Xcode, Apple developer
+            credentials, and a new authorized signing/upload step.
+          - Do not overwrite the current installation without backing up
+            device-local Spread planner data first.
+          EOF
+      - name: Build the frozen iOS WebView assets
+        env:
+          VITE_SPREAD_STUDIO: '0'
+          VITE_SPREAD_CLOUD_BACKUP: '0'
+          VITE_SPREAD_CLOUD_SYNC: '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run export:ios
+          test -f dist-ios/index.html
+          tar -czf golden/Spread-pre-Studio-ios-web.tar.gz -C dist-ios .
+      - name: Hash all portable assets
+        shell: bash
+        run: |
+          cd golden
+          sha256sum Spread-pre-Studio-source.tar.gz Spread-pre-Studio-history.bundle Spread-pre-Studio-ios-web.tar.gz README-RESTORE.txt > SHA256SUMS
+          cat SHA256SUMS
+      - name: Publish external-backup transfer package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spread-GOLDEN-2026-10-26-pre-Studio-d6fb09c
+          path: golden/
+          retention-days: 90
+          if-no-files-found: error
