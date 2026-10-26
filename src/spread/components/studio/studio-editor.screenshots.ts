@@ -19,8 +19,11 @@ const shots: string[] = [];
 const errors: string[] = [];
 try {
   const context = await browser.newContext();
-  await context.exposeFunction("__fsRead", async () => null);
-  await context.exposeFunction("__fsWrite", async () => {});
+  // The native simulator must retain file bytes just like Capacitor Filesystem.
+  // Without this backing map a Studio import cannot be read back into its preview.
+  const fakeNativeFiles = new Map<string, string>();
+  await context.exposeFunction("__fsRead", async (path: string) => fakeNativeFiles.get(path) ?? null);
+  await context.exposeFunction("__fsWrite", async (path: string, data: string) => { fakeNativeFiles.set(path, data); });
   await context.exposeFunction("__cloudSave", async () => ({ ok: true, tag: "shot" }));
   await context.exposeFunction("__cloudChanges", async () => ({ rows: [], seq: 0 }));
   await context.addInitScript(nativeInit);
