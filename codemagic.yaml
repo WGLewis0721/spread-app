@@ -97,7 +97,7 @@ workflows:
         script: |
           set -eu
           test "$CM_BRANCH" = spread-studio || { echo "Only spread-studio is allowed" >&2; exit 1; }
-          test "${CM_REPO_SLUG:-}" = WGLewis0721/spread-app || { echo "Unexpected source repository" >&2; exit 1; }
+          test "$(printf "%s" "${CM_REPO_SLUG:-}" | tr "[:upper:]" "[:lower:]")" = wglewis0721/spread-app || { echo "Unexpected source repository" >&2; exit 1; }
           test "${CM_PULL_REQUEST:-false}" = false || { echo "Pull requests cannot publish" >&2; exit 1; }
           test "${CM_TRIGGER_SOURCE:-}" = api || { echo "Only manually/API requested builds are allowed" >&2; exit 1; }
           test "${STUDIO_RELEASE_SOURCE:-}" = github-actions-approved || { echo "Missing release approval marker" >&2; exit 1; }
