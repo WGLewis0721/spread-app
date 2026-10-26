@@ -900,7 +900,7 @@ function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () =
   const done = rows.reduce((sum, row) => sum + row.box.tasks.filter((task) => task.done).length, 0);
   const active = rows.filter((row) => row.box.hours > 0);
   return (
-    <section className="px-1 pt-5">
+    <section className="studio-readable-panel px-1 pt-5">
       <p className="text-base">
         <span className="font-semibold tabular-nums">{formatHourLabel(totalHours)}</span>
         <span className="text-secondary">
