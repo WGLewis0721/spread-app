@@ -354,9 +354,6 @@ function resolveWallpaper(
   return handle.url;
 }
 
-/** Loose text on a wallpaper. Surface text uses the stronger mode floor. */
-const LOOSE_TEXT_FLOOR = 4.5;
-
 function plateClears(plate: string, colors: readonly string[], floor: number): boolean {
   return colors.every((color) => (contrastRatioHex(color, plate) ?? 1) + 1e-6 >= floor);
 }
@@ -386,43 +383,6 @@ function canvasForRenderedInk(shifted: string, surface: string, ink: string, flo
   }
   if ((contrastRatioHex(ink, best) ?? 1) + 1e-6 < floor) return surface;
   return best;
-}
-
-/**
- * Veil color for text that sits on the wallpaper. Starts at the canvas color
- * and, when that misses the loose-text floor, moves toward the surface the
- * ink was solved against.
- */
-function looseVeil(canvas: string, surface: string, colors: readonly string[], floor: number): string {
-  if (plateClears(canvas, colors, floor)) return canvas;
-  const from = hexToRgb(canvas);
-  const to = hexToRgb(surface);
-  if (!from || !to) return surface;
-  let lo = 0;
-  let hi = 1;
-  let best = surface;
-  for (let step = 0; step < 18; step += 1) {
-    const mid = (lo + hi) / 2;
-    const color = rgbToHex(mixRgb(from, to, mid));
-    if (plateClears(color, colors, floor)) {
-      best = color;
-      hi = mid;
-    } else {
-      lo = mid;
-    }
-  }
-  return plateClears(best, colors, floor) ? best : surface;
-}
-
-/** Smallest veil alpha that clears `floor` over both a black and a white pixel. */
-function minimumScrimAlpha(veil: string, colors: readonly string[], floor: number): number {
-  let show = 1;
-  for (const color of colors) show = Math.min(show, clampTransparency(veil, color, 1, floor));
-  let alpha = round4(1 - show);
-  const clears = (amount: number) =>
-    colors.every((color) => worstCaseContrast(veil, color, round4(Math.max(0, 1 - amount))) + 1e-6 >= floor);
-  while (alpha < 1 && !clears(alpha)) alpha = round4(Math.min(1, alpha + 0.0001));
-  return alpha;
 }
 
 function materialLabel(treatment: MaterialTreatment): string {
@@ -497,15 +457,10 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const blur = material === "glass" ? Math.min(STUDIO_LIMITS.blurMax, round4(6 + depth * 18)) : 0;
   const wallpaperBlur = wallpaper && !reducedTransparency ? appearance.wallpaper.blur : 0;
   const userDim = wallpaper ? appearance.wallpaper.dim : 0;
-  const loose = [text, secondary, accentFit.accent];
-  let scrimColor = "#000000";
-  let scrimAlpha = userDim;
-  if (wallpaper) {
-    scrimColor = looseVeil(canvas, surface, loose, LOOSE_TEXT_FLOOR);
-    const floorAlpha = minimumScrimAlpha(scrimColor, loose, LOOSE_TEXT_FLOOR);
-    scrimAlpha = round4(Math.max(userDim, floorAlpha));
-    if (scrimAlpha > userDim + 0.0001) warnings.push("Wallpaper dim was raised so text on it stays readable.");
-  }
+  // Photo visibility is controlled by the user. Contrast belongs on local text/card plates,
+  // never on an auto-inflated full-screen mask that makes their wallpaper disappear.
+  const scrimColor = "#000000";
+  const scrimAlpha = userDim;
   const metalAmount = depth * 0.35;
   const metalHi = mixHex(surface, "#ffffff", metalAmount);
   const metalLo = mixHex(surface, "#000000", metalAmount);
