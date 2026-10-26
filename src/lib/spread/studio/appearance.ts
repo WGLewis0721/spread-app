@@ -24,7 +24,6 @@ import {
   contrastingInk,
   contrastRatioHex,
   enforceContrast,
-  worstCaseContrast,
   hexToRgb,
   hslToRgb,
   liftBackground,
@@ -352,10 +351,6 @@ function resolveWallpaper(
     return null;
   }
   return handle.url;
-}
-
-function plateClears(plate: string, colors: readonly string[], floor: number): boolean {
-  return colors.every((color) => (contrastRatioHex(color, plate) ?? 1) + 1e-6 >= floor);
 }
 
 /**
