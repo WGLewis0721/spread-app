@@ -32,7 +32,7 @@ export const STUDIO_UI_COPY = {
   text: "Text",
   secondaryText: "Secondary text",
   appearance: "Light and dark",
-  appearanceHint: "This is the customized look in the preview. Settings still has its own System, Light, and Dark control.",
+  appearanceHint: "System follows Spread Settings (or your device if Settings is System). Light and Dark override the look only; Settings still controls the rest of Spread.",
   system: "System",
   light: "Light",
   dark: "Dark",
