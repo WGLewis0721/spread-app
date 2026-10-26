@@ -13,20 +13,33 @@ import { GROK_PROVIDERS } from "./providers";
  * hook attaches that token when present; when deployed (cookie auth) no token
  * is stored, so nothing changes.
  *
- * To sign out call `signOut()` below, NOT `authClient.signOut()`: the raw call
+ * To sign out call `signOut()` below, NOT `getAuthClient().signOut()`: the raw call
  * leaves the bearer token in place, and `onRequest` keeps re-attaching it, so
  * the visitor stays signed in.
  */
-export const authClient = createAuthClient({
-  plugins: [genericOAuthClient()],
-  fetchOptions: {
-    onRequest(ctx) {
-      const token = getBearerToken();
-      if (token) ctx.headers.set("Authorization", `Bearer ${token}`);
-      return ctx;
+function createWebAuthClient() {
+  return createAuthClient({
+    plugins: [genericOAuthClient()],
+    fetchOptions: {
+      onRequest(ctx) {
+        const token = getBearerToken();
+        if (token) ctx.headers.set("Authorization", `Bearer ${token}`);
+        return ctx;
+      },
     },
-  },
-});
+  });
+}
+
+let webAuthClient: ReturnType<typeof createWebAuthClient> | undefined;
+
+/**
+ * Native startup imports the web sign-in UI but never uses it. Better Auth
+ * validates window.location.origin when created and rejects capacitor://localhost.
+ * Initialize only when a web auth action or session hook actually needs it.
+ */
+export function getAuthClient() {
+  return (webAuthClient ??= createWebAuthClient());
+}
 
 /**
  * True when sign-in UI should be shown — i.e. whenever `VITE_AUTH_ENABLED` is
@@ -116,7 +129,7 @@ export async function signIn(
   await runPreSignInSignOut({
     livePreview: inLivePreview(),
     hasBearer: Boolean(getBearerToken()),
-    requestSignOut: () => authClient.signOut(),
+    requestSignOut: () => getAuthClient().signOut(),
     clearToken: () => setBearerToken(null),
   });
 
@@ -129,7 +142,7 @@ export async function signIn(
     // Avoid a full iframe reload when we're already on the destination — that
     // reload was the slow "still loading after the popup closed" feeling.
     try {
-      await authClient.getSession();
+      await getAuthClient().getSession();
     } catch {
       /* session store will recover on next useSession fetch */
     }
@@ -143,7 +156,7 @@ export async function signIn(
     return;
   }
 
-  const { data, error } = await authClient.signIn.oauth2({
+  const { data, error } = await getAuthClient().signIn.oauth2({
     providerId,
     callbackURL,
     errorCallbackURL,
@@ -209,7 +222,7 @@ function waitForPopupToken(popup: Window): Promise<string | null> {
 /**
  * Sign out of THIS app's local session, clear the preview token, then redirect.
  *
- * Use this, never `authClient.signOut()` — see the note on `authClient`.
+ * Use this, never `getAuthClient().signOut()` — see the note on `getAuthClient`.
  * Sequencing lives in `scripts/sign-out-plan.mjs` so it can be unit-tested.
  *
  * **Rejects when deployed if the server never confirms.** There the session is
@@ -225,7 +238,7 @@ export async function signOut(redirectTo = "/"): Promise<void> {
     // Better Auth resolves with `{ error }` instead of rejecting, so surface a
     // failed response as a rejection for the sequence to act on.
     requestSignOut: async () => {
-      const { error } = await authClient.signOut();
+      const { error } = await getAuthClient().signOut();
       if (error) throw new Error(error.message ?? "Sign-out failed");
     },
     clearToken: () => setBearerToken(null),
