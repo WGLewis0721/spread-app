@@ -417,6 +417,29 @@ test("appearance: user-selected wallpaper dim stays unchanged and ink is safe on
   assert.equal(bare["--studio-scrim"], "rgba(0, 0, 0, 0)");
 });
 
+test("appearance: dark scheme renders genuinely dark surfaces while retaining the photo and readable ink", () => {
+  const look = custom({ mode: "system", wallpaperAssetId: "wall-1" });
+  const wallpaper = { assetId: "wall-1", url: BLOB_A };
+  const light = applied(resolveStudioScope({ enabled: true, appearance: look, wallpaper, systemScheme: "light" }));
+  const dark = applied(resolveStudioScope({ enabled: true, appearance: look, wallpaper, systemScheme: "dark" }));
+  const channel = (hex: string, offset: number) => Number.parseInt(hex.slice(offset, offset + 2), 16);
+  const brightness = (hex: string) => (channel(hex, 1) + channel(hex, 3) + channel(hex, 5)) / 3;
+  assert.ok(brightness(light["--elevated"]) > 180, "default light card stays light");
+  assert.ok(brightness(dark["--elevated"]) < 80, "dark card is visually dark");
+  assert.ok(brightness(dark["--canvas"]) < 80, "dark canvas matches dark cards");
+  assert.equal(dark["--studio-wallpaper-image"], light["--studio-wallpaper-image"]);
+  for (const ink of ["--ink", "--secondary"] as const) {
+    const ratio = contrastRatioHex(dark[ink], dark["--elevated"]);
+    assert.ok(ratio !== null && ratio >= 4.5, `${ink} readable on dark surface: ${ratio}`);
+  }
+  const explicitlyLight = custom({ mode: "light", wallpaperAssetId: "wall-1" });
+  const override = applied(resolveStudioScope({ enabled: true, appearance: explicitlyLight, wallpaper, systemScheme: "dark" }));
+  assert.ok(brightness(override["--elevated"]) > 180, "explicit Studio Light overrides dark planner");
+  const alreadyDark = custom({ mode: "dark", palette: { ...look.palette, surface: "#111827" } });
+  const retained = applied(resolveStudioScope({ enabled: true, appearance: alreadyDark, systemScheme: "light" }));
+  assert.equal(retained["--elevated"], "#111827", "already-dark custom surfaces are not recolored");
+});
+
 test("appearance: more contrast keeps the rendered ink at 7:1 on the canvas", () => {
   const surfaces = ["#555555", "#636363", "#777777", "#2a2a2a", "#d0d0d0", "#ffffff", "#000000"];
   for (const surface of surfaces) {
