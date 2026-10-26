@@ -382,6 +382,19 @@ function canvasForRenderedInk(shifted: string, surface: string, inks: readonly s
   return best;
 }
 
+/**
+ * The saved palette is the user's LIGHT-side color source. StudioAppearanceV1
+ * has one palette, not parallel light/dark swatches. Derive a hue-preserving
+ * dark surface rather than showing white cards under a dark inherited scheme.
+ * Already-dark custom surfaces are kept unchanged.
+ */
+function surfaceForScheme(surface: string, scheme: StudioScheme): string {
+  if (scheme === "light") return surface;
+  const rgb = hexToRgb(surface);
+  if (!rgb || relativeLuminance(rgb) <= 0.12) return surface;
+  return mixHex(surface, "#000000", 0.85);
+}
+
 function materialLabel(treatment: MaterialTreatment): string {
   if (treatment === "glass") return "Glass";
   if (treatment === "matte") return "Matte";
@@ -421,7 +434,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const requestedMaterial = appearance.material.treatment;
   const material = effectiveMaterial(requestedMaterial, reducedTransparency, gates);
   const floors = moreContrast ? { text: 7, ui: 4.5 } : { text: 4.5, ui: 3 };
-  const lifted = liftBackground(appearance.palette.surface, floors.text);
+  const lifted = liftBackground(surfaceForScheme(appearance.palette.surface, scheme), floors.text);
   const surface = lifted.color;
   const textFix = enforceContrast(appearance.palette.text, surface, floors.text);
   const secondaryFix = enforceContrast(appearance.palette.secondaryText, surface, floors.text);
