@@ -4,6 +4,8 @@ import { backupFile, collectFullPayload, fullBackupText, parseAnyBackup, parseFu
 import { defaultData, STORE_KEY, normalizeData } from "./model.ts";
 import { ACTIVE_PROFILE_KEY, PROFILE_LIMIT, PROFILES_KEY, profileStore, type Profile } from "./profiles.ts";
 import { SCHEMA_KEY } from "./schema.ts";
+import { originalStudioAppearance } from "./studio/contract.ts";
+import { planStudioAppearanceRestore, studioAppearanceKey } from "./studio/persistence.ts";
 
 class Memory {
   map = new Map<string, string>();
@@ -288,4 +290,40 @@ test("once any profile has been written, it is backed up", () => {
 
 test("no profiles means nothing to back up", () => {
   assert.equal(plannerHasSavedData(new Memory()), false);
+});
+
+test("full backup includes per-profile validated Studio JSON but excludes unlisted profiles and image bytes", async () => {
+  const storage = twoProfilePlanner();
+  const look = { ...originalStudioAppearance(), id: "personal", name: "My photo", wallpaperAssetId: "wall-a" };
+  storage.setItem(studioAppearanceKey("p1")!, JSON.stringify(look));
+  storage.setItem("spread-studio.orphan", JSON.stringify(look));
+  storage.setItem("spread-studio.p2", "{invalid json");
+  const collected = collectFullPayload(storage, new Date("2026-10-25T12:00:00Z"), null);
+  assert.deepEqual(Object.keys(collected.studio ?? {}), ["p1"]);
+  assert.equal(JSON.parse(collected.studio!.p1).wallpaperAssetId, "wall-a");
+  assert.equal(Object.keys(collected.settings).some((key) => key.startsWith("spread-studio.")), false);
+  const raw = await fullBackupText(collected);
+  const read = await parseFullBackup(raw);
+  assert.ok(read);
+  assert.deepEqual(read.payload.studio, collected.studio);
+});
+
+test("restoring Studio looks follows restored profile IDs without copying photo bytes", () => {
+  const storage = twoProfilePlanner();
+  const look = { ...originalStudioAppearance(), id: "personal", name: "My photo", wallpaperAssetId: "wall-a" };
+  storage.setItem(studioAppearanceKey("p1")!, JSON.stringify(look));
+  const payload = collectFullPayload(storage, new Date(), null);
+  let index = 0;
+  const plan = planRestoreAsNew(payload, [], () => `restored${++index}`);
+  assert.ok(plan.ok);
+  assert.equal(plan.idMap.p1, "restored1");
+  assert.equal(plan.idMap.p2, "restored2");
+  const extra = planStudioAppearanceRestore(
+    Object.entries(payload.studio ?? {}).map(([profileId, json]) => ({ profileId, json })),
+    plan.idMap,
+  );
+  assert.deepEqual(extra.skipped, []);
+  assert.equal(extra.writes.length, 1);
+  assert.equal(extra.writes[0].key, studioAppearanceKey("restored1"));
+  assert.deepEqual(JSON.parse(extra.writes[0].value), look);
 });
