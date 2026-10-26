@@ -29,6 +29,9 @@ try {
   await context.exposeFunction("__cloudChanges", async () => ({ rows: [], seq: 0 }));
   await context.addInitScript(nativeInit);
   const page = await context.newPage();
+  // Deliberately keep the OS light while testing BOTH Spread Settings choices.
+  // If Studio uses OS media instead of Spread Settings, the dark case must fail.
+  await page.emulateMedia({ colorScheme: "light" });
   page.on("pageerror", (error) => errors.push(String(error)));
 
   await page.goto(url, { waitUntil: "domcontentloaded" });
@@ -38,6 +41,8 @@ try {
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("heading", { name: "More" }).waitFor();
     await page.getByRole("radio", { name: scheme === "light" ? "Light" : "Dark" }).click();
+    const plannerSetting = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+    if (plannerSetting !== scheme) throw new Error(`Expected Spread Settings ${scheme}, got ${plannerSetting}`);
     const entry = page.getByRole("button", { name: "Customize Spread" });
     await entry.waitFor();
     await entry.click();
@@ -83,6 +88,8 @@ try {
       ) as HTMLButtonElement | undefined;
       return button && !button.disabled;
     }, null, { timeout: 30_000 });
+    const draftScheme = await editor.locator("[data-studio-scheme]").first().getAttribute("data-studio-scheme");
+    if (draftScheme !== scheme) throw new Error(`N3: editor preview scheme ${draftScheme}, expected ${scheme} with light OS`);
     for (const size of sizes) {
       await page.setViewportSize(size);
       const file = `editor-${scheme}-${size.width}-wallpaper-draft.png`;
@@ -102,6 +109,10 @@ try {
       return !!scope && getComputedStyle(scope).getPropertyValue("--studio-wallpaper-image").includes("blob:");
     }, null, { timeout: 15_000 });
     await page.getByRole("tab", { name: "Week" }).click();
+    await page.waitForFunction((expected) => document.querySelector("[data-studio-appearance]")?.getAttribute("data-studio-scheme") === expected, scheme);
+    const actualScheme = await page.locator("[data-studio-appearance]").getAttribute("data-studio-scheme");
+    if (actualScheme !== scheme) throw new Error(`N3: saved Week scheme ${actualScheme}, expected ${scheme} with light OS`);
+    console.log(`N3 planner-theme light-OS/${scheme}-Settings -> live Week ${actualScheme}`);
     await page.waitForTimeout(600); // Settled transition; avoid misleading half-opacity capture.
     for (const size of sizes) {
       await page.setViewportSize(size);
@@ -116,7 +127,18 @@ try {
       }
     }
   }
-  writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, status: "captured mounted Customize and validated Apply on live Week" }, null, 2));
+  // When Spread Settings is System, follow changes to the OS as well.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("heading", { name: "More" }).waitFor();
+  await page.getByRole("radio", { name: "System" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  for (const os of ["dark", "light"] as const) {
+    await page.emulateMedia({ colorScheme: os });
+    await page.waitForFunction((expected) => document.querySelector("[data-studio-appearance]")?.getAttribute("data-studio-scheme") === expected, os);
+    console.log(`N3 planner-theme system / OS ${os} -> live Week ${os}`);
+  }
+
+  writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, osThemeOverrideChecked: true, status: "N3 passed: Studio System inherits Spread Settings, or OS when Spread Settings is System" }, null, 2));
   if (errors.length) throw Error(errors.join("\n"));
   console.log(`Captured ${shots.length} real Customize editor screenshots`);
 } finally {
