@@ -24,6 +24,8 @@ jobs:
       - run: npm run lint
       - run: npm run test:spread
       - run: npm run test:scripts
+      - name: Test manual Studio Codemagic API orchestration (offline)
+        run: python3 -m unittest discover -s scripts -p test_studio_codemagic.py -v
 
   bridge-sims:
     # The installed-app logic against a fake native plugin, in Chromium: backup, restore, sync and
