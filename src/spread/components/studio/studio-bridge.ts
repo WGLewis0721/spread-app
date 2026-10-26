@@ -64,19 +64,28 @@ async function openAssetStore(): Promise<AssetByteStore | null> {
 
   // One cold-start sweep, BEFORE handing the store to any editor/import caller.
   // Only trust an actual readable roster; a storage failure must never erase photos.
-  const storage = browserStudioStorage();
-  if (storage) {
-    try {
-      const raw = storage.getItem(PROFILES_KEY);
+  try {
+    // Do NOT use the tolerant browserStudioStorage adapter for destructive maintenance:
+    // that adapter converts storage errors to null and could erase recoverable photo bytes.
+    const rawStorage = typeof window === "undefined" ? null : window.localStorage;
+    if (rawStorage) {
+      const raw = rawStorage.getItem(PROFILES_KEY);
       const profiles = parseProfiles(raw);
       if (raw !== null && profiles.length > 0) {
+        const storage: StudioStorage = {
+          getItem: (key) => rawStorage.getItem(key),
+          setItem: (key, value) => rawStorage.setItem(key, value),
+          removeItem: (key) => rawStorage.removeItem(key),
+          keys: () => Array.from({ length: rawStorage.length }, (_, index) => rawStorage.key(index))
+            .filter((key): key is string => key !== null),
+        };
         const ids = profiles.map((profile) => profile.id);
         await sweepOrphanStudioData(storage, assets, ids);
         await sweepUnreferencedStudioAssets(storage, assets, ids);
       }
-    } catch {
-      // Studio still opens if maintenance is unavailable; retry next launch.
     }
+  } catch {
+    // Studio still opens if maintenance is unavailable; retry next launch.
   }
   return assets;
 }
