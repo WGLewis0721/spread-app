@@ -6,6 +6,7 @@
       async writeFile(o) { await window.__fsWrite(o.path, o.data, o.encoding || 'base64'); (window.__fsNames = window.__fsNames || new Set()).add(o.path); return { uri: 'file:///fake/' + o.path }; },
       async readdir() { return { files: [...(window.__fsNames || [])].map((name) => ({ name })) }; },
       async deleteFile(o) { (window.__fsNames || new Set()).delete(o.path); },
+      async mkdir() {},
       async rmdir() {},
     },
     Share: {
