@@ -660,6 +660,27 @@ test("assets: cancel, storage-full, and save failure leave no asset", async () =
   assert.equal(rows.size, 0);
 });
 
+test("assets: throwing native file plugin is a recoverable save failure, not an unhandled rejection", async () => {
+  const rgba = solid(2, 2, [50, 120, 200, 255]);
+  const store = memoryDb().store;
+  const result = await importStudioImage({
+    profileId: "profile1",
+    bytes: jpeg(2, 2),
+    decoder: countingDecoder(rgba, 2, 2).decoder,
+    encoder: recordingEncoder().encoder,
+    store: {
+      ...store,
+      async put() { throw new Error("Native Filesystem.mkdir unavailable"); },
+    },
+    enabled: true,
+  });
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.reason, "save-failed");
+    assert.equal(result.message, STUDIO_ASSET_MESSAGES.saveFailed);
+  }
+});
+
 test("assets: the studio flag off does not decode or store", async () => {
   assert.equal(STUDIO_FLAG, false);
   const { decoder, calls } = countingDecoder(solid(2, 2, [1, 2, 3, 255]), 2, 2);
