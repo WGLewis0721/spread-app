@@ -5,6 +5,8 @@ import { installBrowser } from "../../test-support/browser-env.ts";
 import { defaultData, type SpreadData } from "./model.ts";
 import { PROFILES_KEY, profileStore, type Profile } from "./profiles.ts";
 import type { FullBackupPayload } from "./backup.ts";
+import { originalStudioAppearance } from "./studio/contract.ts";
+import { studioAppearanceKey } from "./studio/persistence.ts";
 
 const storage = installBrowser();
 const { useSpread } = await import("@/lib/spread/store");
@@ -149,4 +151,40 @@ test("A09: a copy holding an unreadable profile is refused, not partly restored"
   const result = useSpread.getState().rollbackToCopy(was.entries);
   assert.deepEqual(result, { ok: false, reason: "damaged" });
   assert.deepEqual([...storage.map], [...before]);
+});
+
+test("Studio restore: actual Zustand restore writes appearance under remapped profile ID", () => {
+  const localData = defaultData();
+  localData.weeks[localData.currentWeek].boxes[0].tasks.push({ id: "keep", text: "Keep me", done: false });
+  seed(localData);
+  const before = storage.map.get(local.store);
+  const look = { ...originalStudioAppearance(), id: "personal", name: "My home wallpaper", wallpaperAssetId: "photo-123" };
+  const payload = backupOf(imported);
+  payload.studio = { remote: JSON.stringify(look), missing: JSON.stringify(look) };
+  const result = useSpread.getState().restoreAsNew(payload);
+  assert.equal(result.ok, true);
+  const roster = JSON.parse(storage.map.get(PROFILES_KEY) as string) as Profile[];
+  const restored = roster.find((row) => row.id !== "local");
+  assert.ok(restored, "imported profile gets a new local ID");
+  assert.deepEqual(JSON.parse(storage.map.get(studioAppearanceKey(restored.id)!) as string), look);
+  assert.equal(storage.map.get(local.store), before, "existing planner was not replaced");
+  assert.equal(storage.map.has(studioAppearanceKey("remote")!), false, "source ID is not reused");
+  assert.equal(storage.map.has(studioAppearanceKey("missing")!), false, "unselected source cannot write metadata");
+  assert.equal([...storage.map.keys()].some((key) => key.includes("photo-123")), false, "no photo bytes stored");
+});
+
+test("Studio restore: failure writing appearance rolls back all planner bodies and roster", () => {
+  const localData = defaultData();
+  localData.weeks[localData.currentWeek].boxes[0].tasks.push({ id: "keep", text: "Keep me", done: false });
+  seed(localData);
+  const look = { ...originalStudioAppearance(), id: "personal", name: "My wallpaper" };
+  const payload = backupOf(imported);
+  payload.studio = { remote: JSON.stringify(look) };
+  const before = new Map(storage.map);
+  storage.failWhen = (key) => key.startsWith("spread-studio.");
+  const result = useSpread.getState().restoreAsNew(payload);
+  storage.failWhen = null;
+  assert.equal(result.ok, false);
+  assert.deepEqual([...storage.map], [...before], "rollback restores all keys byte-for-byte");
+  assert.equal(useSpread.getState().profiles.length, 1);
 });
