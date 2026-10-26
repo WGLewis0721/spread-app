@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import "./render.css";
+import { useSpread } from "@/lib/spread/store";
 import { STUDIO_APPEARANCE_ATTRIBUTE, STUDIO_FLAG, type StudioAppearanceV1 } from "@/lib/spread/studio/contract";
 import {
   resolveStudioScope,
@@ -45,6 +46,10 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
   const reducedTransparency = useMediaFlag("(prefers-reduced-transparency: reduce)");
   const moreContrast = useMediaFlag("(prefers-contrast: more)");
   const systemDark = useMediaFlag("(prefers-color-scheme: dark)");
+  // Planner Settings is the source of truth for Studio "System". The OS is consulted
+  // only when the planner itself is set to System; explicit Studio modes still win.
+  const plannerTheme = useSpread((state) => state.theme);
+  const inheritedScheme = plannerTheme === "system" ? (systemDark ? "dark" : "light") : plannerTheme;
   const scope = resolveStudioScope({
     enabled: true,
     appearance,
@@ -52,7 +57,7 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
     catalog,
     wallpaper,
     gates,
-    systemScheme: systemDark ? "dark" : "light",
+    systemScheme: inheritedScheme,
     reducedMotion,
     reducedTransparency,
     moreContrast,
