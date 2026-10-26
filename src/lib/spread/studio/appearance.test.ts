@@ -7,7 +7,7 @@ import {
   originalStudioAppearance,
   type StudioAppearanceV1,
 } from "./contract.ts";
-import { contrastRatio, contrastRatioHex, hexToRgb, mixRgb } from "./contrast.ts";
+import { contrastRatioHex } from "./contrast.ts";
 import {
   STUDIO_STYLE_KEYS,
   appearanceForId,
@@ -391,76 +391,29 @@ function parseScrim(value: string): { r: number; g: number; b: number; a: number
   return { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]), a: Number(match[4]) };
 }
 
-/** Contrast of `text` on the scrim composited over pure black and pure white. */
-function worstWallpaperContrast(text: string, scrim: string): number {
-  const veil = parseScrim(scrim);
-  const ink = hexToRgb(text);
-  assert.ok(ink);
-  const plate = { r: veil.r, g: veil.g, b: veil.b };
-  const overBlack = contrastRatio(ink, mixRgb({ r: 0, g: 0, b: 0 }, plate, veil.a));
-  const overWhite = contrastRatio(ink, mixRgb({ r: 255, g: 255, b: 255 }, plate, veil.a));
-  return Math.min(overBlack, overWhite);
-}
-
-test("appearance: a wallpaper scrim keeps loose text at 4.5:1 even when dim is 0", () => {
-  const fixtures = SAMPLE_SCHEMES.map((scheme) => {
-    const appearance = sampleAppearance("glass", scheme);
-    appearance.wallpaper = { ...appearance.wallpaper, dim: 0 };
-    return { label: `glass ${scheme}`, appearance, scheme };
-  });
-  const harsh = custom({
-    id: "scrim-harsh",
-    name: "Harsh",
-    mode: "dark",
-    palette: { accent: "#000000", surface: "#555555", text: "#000000", secondaryText: "#777777" },
-    wallpaperAssetId: "wall-1",
-    wallpaper: { fit: "cover", positionX: 50, positionY: 50, dim: 0, blur: 0 },
-    material: { treatment: "glass", transparency: 0.42, depth: 0.55 },
-  });
-  fixtures.push({ label: "harsh", appearance: harsh, scheme: "dark" });
-  for (const fixture of fixtures) {
-    const scope = resolveStudioScope({
-      enabled: true,
-      appearance: fixture.appearance,
-      systemScheme: fixture.scheme,
-      wallpaper: { assetId: "wall-1", url: BLOB_A },
-    });
-    const style = applied(scope);
-    const scrim = parseScrim(style["--studio-scrim"]);
-    assert.ok(scrim.a > 0, `${fixture.label} alpha ${scrim.a}`);
-    for (const key of ["--ink", "--secondary", "--accent"] as const) {
-      const ratio = worstWallpaperContrast(style[key], style["--studio-scrim"]);
-      assert.ok(ratio + 1e-6 >= 4.5, `${fixture.label} ${key} ${ratio}`);
+test("appearance: user-selected wallpaper dim stays unchanged and ink is safe on local plates", () => {
+  const css = readFileSync(new URL("../../spread/components/studio/render.css", import.meta.url), "utf8");
+  assert.match(css, /\.studio-readable-panel/);
+  assert.match(css, /\.studio-readable-note/);
+  assert.match(css, /background-color:\s*var\(--elevated\)/);
+  for (const scheme of SAMPLE_SCHEMES) {
+    for (const dim of [0, 0.2, 0.6, 1]) {
+      const appearance = sampleAppearance("glass", scheme);
+      appearance.wallpaper = { ...appearance.wallpaper, dim };
+      const scope = resolveStudioScope({
+        enabled: true, appearance, systemScheme: scheme,
+        wallpaper: { assetId: "wall-1", url: BLOB_A },
+      });
+      const style = applied(scope);
+      assert.equal(parseScrim(style["--studio-scrim"]).a, dim);
+      assert.equal(scope.warnings.some((warning) => warning.includes("Wallpaper dim was raised")), false);
+      for (const key of ["--ink", "--secondary", "--accent"] as const) {
+        const contrast = contrastRatioHex(style[key], style["--elevated"]);
+        assert.ok(contrast !== null && contrast + 1e-6 >= 4.5, `${scheme} ${key} on plate: ${contrast}`);
+      }
     }
-    assert.ok(scope.warnings.includes("Wallpaper dim was raised so text on it stays readable."), fixture.label);
   }
-  const light = sampleAppearance("glass", "light");
-  light.wallpaper = { ...light.wallpaper, dim: 0 };
-  const dim0 = parseScrim(
-    applied(
-      resolveStudioScope({
-        enabled: true,
-        appearance: light,
-        wallpaper: { assetId: "wall-1", url: BLOB_A },
-      }),
-    )["--studio-scrim"],
-  ).a;
-  const full = sampleAppearance("glass", "light");
-  full.wallpaper = { ...full.wallpaper, dim: 1 };
-  const dim1 = parseScrim(
-    applied(
-      resolveStudioScope({
-        enabled: true,
-        appearance: full,
-        wallpaper: { assetId: "wall-1", url: BLOB_A },
-      }),
-    )["--studio-scrim"],
-  ).a;
-  assert.ok(dim1 + 1e-6 >= dim0);
-  assert.equal(dim1, 1);
-  const uncovered = sampleAppearance("glass", "light");
-  uncovered.wallpaper = { ...uncovered.wallpaper, dim: 0 };
-  const bare = applied(resolveStudioScope({ enabled: true, appearance: uncovered }));
+  const bare = applied(resolveStudioScope({ enabled: true, appearance: sampleAppearance("glass", "light") }));
   assert.equal(bare["--studio-scrim"], "rgba(0, 0, 0, 0)");
 });
 
