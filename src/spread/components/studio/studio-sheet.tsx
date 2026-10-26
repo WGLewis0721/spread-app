@@ -45,9 +45,11 @@ function StudioCustomizeLive() {
   const [reduceTransparency, setReduceTransparency] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const profileIdRef = useRef(profileId);
   const openRef = useRef(open);
   const activityRef = useRef(activity);
   openRef.current = open;
+  profileIdRef.current = profileId;
   activityRef.current = activity;
 
   useEffect(() => {
@@ -165,7 +167,7 @@ function StudioCustomizeLive() {
     if (result.wrote && profileId) {
       window.dispatchEvent(new CustomEvent(STUDIO_APPEARANCE_SAVED_EVENT, { detail: { profileId } }));
     }
-    if (!openRef.current) return;
+    if (!openRef.current || profileIdRef.current !== profileId) return;
     setSession(result.session);
     setBusy(false);
     setActivity("idle");
@@ -183,25 +185,34 @@ function StudioCustomizeLive() {
     abortRef.current = abort;
     setBusy(true);
     setActivity("import");
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const result = await importDraftPhoto({
-      session,
-      profileId,
-      bytes,
-      mime: file.type || undefined,
-      store: assets,
-      enabled: true,
-      signal: abort.signal,
-    });
-    if (result.effect.type === "drop-pending") await dropPendingAsset(assets, profileId, result.effect.assetId);
-    if (!openRef.current || abort.signal.aborted) {
-      const pending = result.session.pendingAssetId;
-      if (pending) await dropPendingAsset(assets, profileId, pending);
-      return;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const result = await importDraftPhoto({
+        session,
+        profileId,
+        bytes,
+        mime: file.type || undefined,
+        store: assets,
+        enabled: true,
+        signal: abort.signal,
+      });
+      if (result.effect.type === "drop-pending") await dropPendingAsset(assets, profileId, result.effect.assetId);
+      if (!openRef.current || abort.signal.aborted || profileIdRef.current !== profileId) {
+        const pending = result.session.pendingAssetId;
+        if (pending) await dropPendingAsset(assets, profileId, pending);
+        return;
+      }
+      setSession(result.session);
+    } catch {
+      if (openRef.current && !abort.signal.aborted && profileIdRef.current === profileId) {
+        applyAction({ type: "note", message: STUDIO_UI_COPY.photosUnavailable });
+      }
+    } finally {
+      // A browser/plugin exception must never leave the sheet locked on "Saving."
+      abortRef.current = null;
+      setBusy(false);
+      setActivity("idle");
     }
-    setSession(result.session);
-    setBusy(false);
-    setActivity("idle");
   }
 
   const status =
@@ -269,7 +280,7 @@ function StudioCustomizeLive() {
                 type="button"
                 className="min-h-11 rounded-full bg-fill text-sm font-semibold disabled:opacity-40"
                 aria-label={STUDIO_UI_COPY.resetLabel}
-                disabled={!ready || draftIsOriginal(session)}
+                disabled={!ready || busy || draftIsOriginal(session)}
                 onClick={() => applyAction({ type: "reset" })}
               >
                 {STUDIO_UI_COPY.reset}
