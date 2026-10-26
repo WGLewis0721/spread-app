@@ -828,7 +828,7 @@ function WeekScreen() {
           ) : (
             <button
               type="button"
-              className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
+              className="studio-readable-note flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
               onClick={() => setEditing(true)}
             >
               <SpreadIcon name="icon-edit.svg" size={24} />
