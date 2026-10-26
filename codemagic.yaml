@@ -74,3 +74,99 @@ workflows:
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
+
+  spread-studio-testflight:
+    name: Spread Studio - approved internal TestFlight
+    # API-started builds bypass configured trigger rules. Enforce guards in scripts.
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.graymatter.spread
+      vars:
+        VITE_SPREAD_STUDIO: "1"
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 26.5
+    scripts:
+      - name: Enforce approved Studio source and local-only flags
+        script: |
+          set -eu
+          test "$CM_BRANCH" = spread-studio || { echo "Only spread-studio is allowed" >&2; exit 1; }
+          test "${CM_REPO_SLUG:-}" = WGLewis0721/spread-app || { echo "Unexpected source repository" >&2; exit 1; }
+          test "${CM_PULL_REQUEST:-false}" = false || { echo "Pull requests cannot publish" >&2; exit 1; }
+          test "${CM_TRIGGER_SOURCE:-}" = api || { echo "Only manually/API requested builds are allowed" >&2; exit 1; }
+          test "${STUDIO_RELEASE_SOURCE:-}" = github-actions-approved || { echo "Missing release approval marker" >&2; exit 1; }
+          case "${EXPECTED_STUDIO_COMMIT:-}" in
+            *[!a-f0-9]*|"") echo "Invalid approved SHA" >&2; exit 1 ;;
+          esac
+          test "${#EXPECTED_STUDIO_COMMIT}" -eq 40 || { echo "Expected full SHA" >&2; exit 1; }
+          test "$CM_COMMIT" = "$EXPECTED_STUDIO_COMMIT" || { echo "Staging moved since approval" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$EXPECTED_STUDIO_COMMIT" || { echo "Checkout does not match approval" >&2; exit 1; }
+          test "$VITE_SPREAD_STUDIO" = 1 || { echo "Studio must be enabled in the iOS build" >&2; exit 1; }
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
+          test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
+          test -n "${APP_STORE_APPLE_ID:-}" || { echo "Configure numeric APP_STORE_APPLE_ID in Codemagic" >&2; exit 1; }
+          echo "Approved Studio source: $CM_COMMIT"
+      - name: Verify planner and native core
+        script: |
+          set -eu
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:spread
+          swift test --package-path ios/App/SpreadCloudCore
+      - name: Bake in Studio and synchronize Capacitor
+        script: |
+          set -eu
+          test "$VITE_SPREAD_STUDIO" = 1
+          npm run ios:sync
+          grep -R -l 'spread:studio-appearance-saved' ios/App/App/public/assets >/dev/null || {
+            echo "Studio marker absent from bundled iOS JavaScript" >&2; exit 1;
+          }
+      - name: Use next available TestFlight build number
+        script: |
+          set -eu
+          # Codemagic workflow-local BUILD_NUMBER can restart at 1; query Apple.
+          latest="$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --app-store-version=1.0)"
+          case "$latest" in *[!0-9]*|"") echo "Cannot read latest TestFlight build number" >&2; exit 1 ;; esac
+          next="$((latest + 1))"
+          test "$next" -ge 8 || { echo "Unexpectedly low TestFlight build number" >&2; exit 1; }
+          export next
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+          path = Path("ios/App/App.xcodeproj/project.pbxproj")
+          original = path.read_text()
+          modified, count = re.subn(
+              r"CURRENT_PROJECT_VERSION = [0-9]+;",
+              f"CURRENT_PROJECT_VERSION = {os.environ['next']};",
+              original,
+          )
+          if count != 2:
+              raise SystemExit(f"Expected 2 App build-number settings, found {count}")
+          path.write_text(modified)
+          print("Next TestFlight build:", os.environ["next"])
+          PY
+          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
+      - name: Apply existing App Store signing profile
+        script: xcode-project use-profiles
+      - name: Build signed Studio IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
+            --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload only; no external beta review and no App Store review.
+        submit_to_testflight: false
+        submit_to_app_store: false
