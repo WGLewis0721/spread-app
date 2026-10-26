@@ -19,6 +19,7 @@ import { carryOpenTasks, type CarryPick } from "@/lib/spread/task-rollover";
 import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
+import { cleanupProfileStudioData, planStudioAppearanceRestore, studioStorageFrom } from "@/lib/spread/studio/persistence";
 import { create } from "zustand";
 import {
   cloneWeek,
@@ -573,6 +574,12 @@ export const useSpread = create<Store>((set, get) => ({
     // The roster goes first: if it cannot be written the profile stays listed, with its data.
     if (!writeProfiles(next)) return false;
     drop(profile.store);
+    // The roster is already durable. Remove only this profile's Studio settings and assets;
+    // never block planner deletion on a failed or unavailable image byte store.
+    void import("@/spread/components/studio/studio-bridge")
+      .then(({ studioAssetStore }) => studioAssetStore())
+      .then((assets) => cleanupProfileStudioData(studioStorageFrom(localStorage), assets, id))
+      .catch(() => undefined);
     if (get().activeId !== id) {
       set({ profiles: next });
       return true;
@@ -922,9 +929,15 @@ export const useSpread = create<Store>((set, get) => ({
     const emptyId = emptyProfileId(get());
     const plan = planRestoreAsNew(payload, get().profiles, uid, { select, replaceEmpty: emptyId });
     if (!plan.ok) return plan;
+    // Appearance metadata is restored transactionally alongside planner bodies; image bytes are
+    // deliberately NOT transported. Missing images render the original look until re-imported.
+    const appearance = planStudioAppearanceRestore(
+      Object.entries(payload.studio ?? {}).map(([profileId, json]) => ({ profileId, json })),
+      plan.idMap,
+    );
     // All or nothing: bodies, then the roster as the commit point, with every key journalled so a
     // failure (or a kill part-way) puts everything back.
-    const committed = commitRestore(txStorage, { writes: plan.writes, rosterKey: PROFILES_KEY, rosterValue: JSON.stringify(plan.profiles) });
+    const committed = commitRestore(txStorage, { writes: [...plan.writes, ...appearance.writes], rosterKey: PROFILES_KEY, rosterValue: JSON.stringify(plan.profiles) });
     if (!committed.ok) return { ok: false, reason: committed.rolledBack ? "write-failed" : "rollback-failed" };
     failureReported = false;
     notifyStorageChanged();
