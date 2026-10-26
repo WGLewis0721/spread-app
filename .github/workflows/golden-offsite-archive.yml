@@ -100,6 +100,9 @@ jobs:
             cat Spread-pre-Studio-history.part-* > Spread-pre-Studio-history.bundle
           All three archive payloads can be downloaded into the same folder.
           EOF
+          # README changed after the initial asset hash; rehash the final copy.
+          sed -i '/  README-RESTORE.txt$/d' SHA256SUMS
+          sha256sum README-RESTORE.txt >> SHA256SUMS
           echo "Uploaded parts:"
           du -h Spread-pre-Studio-history.part-* Spread-pre-Studio-source.tar.gz Spread-pre-Studio-ios-web.tar.gz
           cat SHA256SUMS
