@@ -358,8 +358,10 @@ function resolveWallpaper(
  * `floor` on it. The check is that rendered ink against the canvas, not a
  * provisional ink against the surface.
  */
-function canvasForRenderedInk(shifted: string, surface: string, ink: string, floor: number): string {
-  if ((contrastRatioHex(ink, shifted) ?? 1) + 1e-6 >= floor) return shifted;
+function canvasForRenderedInk(shifted: string, surface: string, inks: readonly string[], floor: number): string {
+  const allClear = (plate: string) =>
+    inks.every((ink) => (contrastRatioHex(ink, plate) ?? 1) + 1e-6 >= floor);
+  if (allClear(shifted)) return shifted;
   const from = hexToRgb(surface);
   const to = hexToRgb(shifted);
   if (!from || !to) return surface;
@@ -369,14 +371,14 @@ function canvasForRenderedInk(shifted: string, surface: string, ink: string, flo
   for (let step = 0; step < 18; step += 1) {
     const mid = (lo + hi) / 2;
     const color = rgbToHex(mixRgb(from, to, mid));
-    if ((contrastRatioHex(ink, color) ?? 1) + 1e-6 >= floor) {
+    if (allClear(color)) {
       best = color;
       lo = mid;
     } else {
       hi = mid;
     }
   }
-  if ((contrastRatioHex(ink, best) ?? 1) + 1e-6 < floor) return surface;
+  if (!allClear(best)) return surface;
   return best;
 }
 
@@ -428,7 +430,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const secondary = secondaryFix.color;
   const lum = relativeLuminance(hexToRgb(surface) ?? { r: 255, g: 255, b: 255 });
   const shiftedCanvas = mixHex(surface, lum > 0.45 ? "#000000" : "#ffffff", 0.08);
-  const canvas = canvasForRenderedInk(shiftedCanvas, surface, text, floors.text);
+  const canvas = canvasForRenderedInk(shiftedCanvas, surface, [text, secondary], floors.text);
   const tertiary = enforceContrast(mixHex(secondary, surface, 0.35), surface, floors.ui).color;
   const dangerSeed = scheme === "dark" ? SHIPPED_DARK.danger : SHIPPED_LIGHT.danger;
   const cautionSeed = scheme === "dark" ? SHIPPED_DARK.caution : SHIPPED_LIGHT.caution;
