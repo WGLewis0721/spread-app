@@ -92,7 +92,9 @@ try {
     // REAL live planner (not merely a preview) adopts the saved appearance.
     await editor.getByRole("button", { name: "Apply", exact: true }).click();
     await editor.waitFor({ state: "hidden", timeout: 15_000 });
-    await page.keyboard.press("Escape");
+    // Closing the nested Customize portal returns to More. Explicitly close the
+    // underlying More sheet, since Escape is consumed by Radix during unmount.
+    await page.getByRole("button", { name: "Close", exact: true }).click();
     await page.getByRole("heading", { name: "More" }).waitFor({ state: "hidden" });
     await page.waitForFunction(() => {
       const scope = document.querySelector<HTMLElement>("[data-studio-appearance]");
@@ -102,10 +104,8 @@ try {
     const actual = `live-week-${scheme}-saved-photo.png`;
     await page.screenshot({ path: join(dir, actual) });
     shots.push(actual);
-    await page.getByRole("button", { name: "Settings" }).click();
-    await page.getByRole("heading", { name: "More" }).waitFor({ state: "hidden" });
   }
-  writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, status: "captured mounted Customize, no Apply" }, null, 2));
+  writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, status: "captured mounted Customize and validated Apply on live Week" }, null, 2));
   if (errors.length) throw Error(errors.join("\n"));
   console.log(`Captured ${shots.length} real Customize editor screenshots`);
 } finally {
