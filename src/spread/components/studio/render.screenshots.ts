@@ -14,6 +14,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type Page } from "playwright";
+import { auditStudioContrast } from "./contrast-audit.ts";
 import { STUDIO_STYLE_KEYS, resolveStudioScope, type StudioScope } from "../../../lib/spread/studio/appearance.ts";
 import {
   SAMPLE_SCHEMES,
@@ -27,7 +28,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..", "..", "..");
 const baseURL = process.env.SCREENSHOT_BASE_URL ?? "http://127.0.0.1:8080";
 const outDir = join(root, "screenshots", "studio-g3");
-const artifactDir = "/opt/cursor/artifacts/screenshots/studio-g3";
+const artifactDir = process.env.STUDIO_ARTIFACT_DIR ?? outDir;
 const nativeInit = readFileSync(join(root, "scripts", "ios-bridge-sim", "native-init.js"), "utf8");
 const renderCss = readFileSync(join(here, "render.css"), "utf8");
 
@@ -168,7 +169,7 @@ async function main() {
   mkdirSync(artifactDir, { recursive: true });
   const browser = await chromium.launch({
     headless: true,
-    executablePath: process.env.CHROME_PATH ?? "/opt/google/chrome/chrome",
+    executablePath: process.env.CHROME_PATH ?? chromium.executablePath(),
   });
   const pageErrors: string[] = [];
   const files: string[] = [];
@@ -235,6 +236,39 @@ async function main() {
         }
       }
     }
+    // Release-blocking browser audit: real Spread and Week with busy image, no
+    // global scrim, both schemes and all supported preview widths.
+    const contrastAudit: Record<string, Awaited<ReturnType<typeof auditStudioContrast>>> = {};
+    for (const scheme of SAMPLE_SCHEMES) {
+      await setScheme(page, scheme);
+      for (const width of SAMPLE_WIDTHS) {
+        await page.setViewportSize(viewports[width]);
+        const appearance = sampleAppearance("glass", scheme);
+        appearance.wallpaper = { ...appearance.wallpaper, dim: 0 };
+        const scope = resolveStudioScope({
+          enabled: true,
+          appearance,
+          systemScheme: scheme,
+          wallpaper: wallpaperUrl ? { assetId: SAMPLE_WALLPAPER_ID, url: wallpaperUrl } : null,
+        });
+        for (const view of ["week", "spread"] as const) {
+          await paint(page, scope);
+          if (view === "week") await openWeek(page);
+          else await openSpread(page);
+          const violations = await auditStudioContrast(page);
+          const key = `${view}-${scheme}-${width}-dim0`;
+          contrastAudit[key] = violations;
+          files.push(await save(page, `audit-${key}`, false));
+          console.log(`contrast-audit ${key}: ${violations.length} violations`);
+          if (violations.length) console.error(JSON.stringify(violations.slice(0, 30), null, 2));
+        }
+      }
+    }
+    writeFileSync(join(outDir, "contrast-audit.json"), JSON.stringify(contrastAudit, null, 2));
+    if (Object.values(contrastAudit).some((issues) => issues.length > 0)) {
+      process.exitCode = 1;
+    }
+
     await page.setViewportSize(viewports[390]);
     for (const scheme of SAMPLE_SCHEMES) {
       await setScheme(page, scheme);
@@ -256,6 +290,7 @@ async function main() {
       baseURL,
       files,
       pageErrors,
+      contrastAudit,
       note: "Harness applied resolver output on body because the shared planner shell is not wrapped. Flag off has no data-studio-appearance. Spread frames include hour banks and a completed task. Week frames include the crown, day cards, hour chips, To place, and task rows. week-*-390-glass-dim0 uses glass with wallpaper dim 0.",
     };
     writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2));
