@@ -68,6 +68,26 @@
   color: var(--studio-status-done);
 }
 
+/* Text directly over an arbitrary photo has no guaranteed contrast. Protect only the
+   planner's loose copy on opaque semantic plates; leave the rest of the image visible.
+   Cards already have their own --elevated surfaces. This is scoped to Studio only. */
+[data-studio-appearance] .studio-readable-panel {
+  background-color: var(--elevated);
+  border-radius: 22px;
+  padding: 1rem;
+}
+
+[data-studio-appearance] .studio-readable-note {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.75rem;
+  background-color: var(--elevated);
+}
+
+/* Native CSS prefers-contrast support is unchanged by the wallpaper dim slider. */
+
 /* treatment flat */
 [data-studio-appearance][data-studio-scheme][data-studio-material="flat"] .bg-elevated,
 [data-studio-appearance][data-studio-scheme][data-studio-material="flat"] .sheet,
