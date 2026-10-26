@@ -540,6 +540,7 @@ export async function importStudioImage(input: {
   createId?: () => string;
 }): Promise<StudioAssetImport> {
   const enabled = input.enabled ?? STUDIO_FLAG;
+  const debugStage = (stage: string) => { if (import.meta.env?.DEV) console.debug(`[Studio import] ${stage}`); };
   if (!enabled) return fail("disabled", STUDIO_ASSET_MESSAGES.disabled);
   const signal = input.signal ?? new AbortController().signal;
   if (signal.aborted) return fail("cancelled", STUDIO_ASSET_MESSAGES.cancelled);
@@ -561,7 +562,9 @@ export async function importStudioImage(input: {
 
   let decoded: DecodedRaster | null = null;
   try {
+    debugStage("decode-start");
     decoded = await input.decoder.decode(input.bytes, signal);
+    debugStage("decode-end");
   } catch {
     decoded = null;
   }
@@ -599,13 +602,17 @@ export async function importStudioImage(input: {
     size.height,
   );
   if (!resized) return fail("corrupt", STUDIO_ASSET_MESSAGES.corrupt);
+  debugStage("palette-start");
   const suggestion = suggestPalette(resized, size.width, size.height);
+  debugStage("palette-end");
   const flat = flattenOnWhite(resized);
   const preferred = derivativeFormat(header.format);
   let format: "jpeg" | "webp" = preferred;
   let encoded: Uint8Array | null = null;
   try {
+    debugStage("encode-start");
     encoded = await input.encoder.encode(flat, size.width, size.height, preferred);
+    debugStage("encode-end");
   } catch {
     encoded = null;
   }
@@ -635,6 +642,7 @@ export async function importStudioImage(input: {
   });
   if (!ref.ok) return fail("save-failed", STUDIO_ASSET_MESSAGES.saveFailed);
 
+  debugStage("store-start");
   const stored = await input.store.put({
     id: ref.value.id,
     profileId: input.profileId,
@@ -643,6 +651,7 @@ export async function importStudioImage(input: {
     height: size.height,
     bytes: new Uint8Array(encoded),
   });
+  debugStage("store-end");
   if (stored === "full") return fail("storage-full", STUDIO_ASSET_MESSAGES.storageFull);
   if (stored !== "ok") return fail("save-failed", STUDIO_ASSET_MESSAGES.saveFailed);
   return { ok: true, ref: ref.value, suggestion };
