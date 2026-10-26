@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { authClient } from "@/lib/auth/client";
+import { getAuthClient } from "@/lib/auth/client";
 import { ACCESS_MESSAGES, normalizeEmail, validatePassword } from "@/lib/beta-access";
 import { RESET_MESSAGES } from "@/lib/password-reset";
 import type { BetaGate } from "./use-beta-gate";
@@ -136,7 +136,7 @@ export function BetaAccessCard({
     }
     writeReset(null);
     // The reset signs the account out everywhere; sign in with the new password.
-    const result = await authClient.signIn.email({ email: reset.email, password });
+    const result = await getAuthClient().signIn.email({ email: reset.email, password });
     setBusy(false);
     if (result.error) {
       setReset(null);
@@ -180,8 +180,8 @@ export function BetaAccessCard({
     try {
       const result =
         mode === "signup"
-          ? await authClient.signUp.email({ email: cleanEmail, password, name: name.trim() || cleanEmail.split("@")[0] })
-          : await authClient.signIn.email({ email: cleanEmail, password });
+          ? await getAuthClient().signUp.email({ email: cleanEmail, password, name: name.trim() || cleanEmail.split("@")[0] })
+          : await getAuthClient().signIn.email({ email: cleanEmail, password });
       if (result.error) {
         setError(describe(result.error as AuthError, mode));
         return;
