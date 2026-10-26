@@ -341,6 +341,46 @@ export async function sweepOrphanStudioData(
   return { removedProfiles, removedAssets };
 }
 
+/**
+ * Cold-start maintenance: remove uncommitted image bytes within profiles that still exist.
+ *
+ * Run ONLY before the first Studio editor session opens, while the asset store is being
+ * initialized. Calling this during active editing could delete an intentionally pending
+ * import that has not yet been committed. Never delete the committed wallpaper.
+ * If appearance storage is unavailable or corrupt, preserve bytes conservatively.
+ */
+export async function sweepUnreferencedStudioAssets(
+  storage: StudioStorage | null,
+  assets: AssetByteStore | null,
+  profileIds: readonly string[],
+): Promise<number> {
+  if (!storage || !assets) return 0;
+  const live = new Set(profileIds.filter(isStudioOpaqueId));
+  let removed = 0;
+  const references = new Map<string, string | null>();
+  for (const id of live) {
+    const key = studioAppearanceKey(id);
+    if (!key) continue;
+    let json: string | null;
+    try {
+      json = storage.getItem(key);
+    } catch {
+      continue; // Unable to verify: never risk deleting a saved image.
+    }
+    const parsed = parseStored(json);
+    if (json !== null && !parsed.ok) continue; // Damaged appearance needs recovery.
+    references.set(id, parsed.ok ? (parsed.value.wallpaperAssetId ?? null) : null);
+  }
+  for (const row of await assets.list()) {
+    // Profile deletion cleanup is handled by sweepOrphanStudioData.
+    if (!references.has(row.profileId)) continue;
+    if (references.get(row.profileId) === row.id) continue;
+    await assets.delete(row.profileId, row.id);
+    removed += 1;
+  }
+  return removed;
+}
+
 export type StudioBackupEntry = {
   profileId: string;
   json: string;
