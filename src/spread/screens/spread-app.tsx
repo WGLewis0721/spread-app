@@ -42,6 +42,9 @@ import { BetaAccessCard } from "@/spread/components/beta-access";
 import { useBetaGate, type BetaGate } from "@/spread/components/use-beta-gate";
 import { signOut } from "@/lib/auth/client";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
+import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
+import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
+import { StudioLivePlanner } from "@/spread/components/studio/live-planner";
 
 type Sheet = "more" | "new" | "icloud" | null;
 
@@ -586,7 +589,8 @@ function WeekScreen() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <StudioLivePlanner profileId={profileId}>
+      <div className="min-h-dvh">
       {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
       <div className="mx-auto w-full max-w-xl" style={{ "--spread-header": `${headerH}px` } as CSSProperties}>
         <header ref={headerRef} className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
@@ -862,7 +866,8 @@ function WeekScreen() {
       {openTask && (
         <TaskSheet hatId={openTask.hatId} taskId={openTask.taskId} onClose={() => setOpenTask(null)} />
       )}
-    </div>
+      </div>
+    </StudioLivePlanner>
   );
 }
 
@@ -1824,6 +1829,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           />
         ))}
       </div>
+      {STUDIO_FLAG ? <StudioCustomizeEntry /> : null}
       {native ? null : (
         <button
           type="button"
