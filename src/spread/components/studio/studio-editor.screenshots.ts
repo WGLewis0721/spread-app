@@ -112,7 +112,17 @@ try {
     await page.waitForFunction((expected) => document.querySelector("[data-studio-appearance]")?.getAttribute("data-studio-scheme") === expected, scheme);
     const actualScheme = await page.locator("[data-studio-appearance]").getAttribute("data-studio-scheme");
     if (actualScheme !== scheme) throw new Error(`N3: saved Week scheme ${actualScheme}, expected ${scheme} with light OS`);
-    console.log(`N3 planner-theme light-OS/${scheme}-Settings -> live Week ${actualScheme}`);
+    // Attribute alone is not proof: catch light cards incorrectly rendered in dark mode.
+    const elevated = await page.locator("[data-studio-appearance]").first().evaluate((el) =>
+      getComputedStyle(el).getPropertyValue("--elevated").trim()
+    );
+    if (!/^#[0-9a-fA-F]{6}$/.test(elevated)) throw Error(`Missing solid elevated surface: ${elevated}`);
+    const channels = [1, 3, 5].map((offset) => Number.parseInt(elevated.slice(offset, offset + 2), 16));
+    const surfaceBrightness = channels.reduce((sum, value) => sum + value, 0) / 3;
+    if ((scheme === "dark" && surfaceBrightness >= 100) || (scheme === "light" && surfaceBrightness <= 140)) {
+      throw Error(`N3: visual ${scheme} palette incorrect: surface=${elevated}, brightness=${surfaceBrightness}`);
+    }
+    console.log(`N3 planner-theme light-OS/${scheme}-Settings -> live Week ${actualScheme}, card ${elevated}`);
     await page.waitForTimeout(600); // Settled transition; avoid misleading half-opacity capture.
     for (const size of sizes) {
       await page.setViewportSize(size);
