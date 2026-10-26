@@ -27,6 +27,7 @@ import {
   studioAppearanceKey,
   studioImageStatus,
   sweepOrphanStudioData,
+  sweepUnreferencedStudioAssets,
   type StudioStorage,
 } from "./persistence.ts";
 
@@ -595,4 +596,60 @@ test("persistence: backup entries are appearance JSON, and restore remaps profil
   assert.deepEqual(junk.writes, []);
   assert.deepEqual(junk.skipped, ["alpha01", "nope"]);
   assert.equal(STUDIO_ASSET_MESSAGES.tooLarge.includes("20 MB"), true);
+});
+
+test("B4: cold-start sweep removes abandoned images within live profiles, preserves committed references", async () => {
+  const saved = memoryStorage();
+  const assets = memoryAssets();
+  const put = async (id: string, profileId = "alpha01") =>
+    assets.store.put({ id, profileId, format: "jpeg", width: 2, height: 2, bytes: Uint8Array.from([1, 2, 3]) });
+  await put("committed");
+  await put("cancelled");
+  await put("crashed-import");
+  await put("from-other-profile", "beta02");
+  saved.storage.setItem(studioAppearanceKey("alpha01")!, JSON.stringify(appearance({
+    id: "my-look", name: "My look", wallpaperAssetId: "committed",
+  })));
+  const count = await sweepUnreferencedStudioAssets(saved.storage, assets.store, ["alpha01", "beta02"]);
+  assert.equal(count, 3);
+  assert.ok(await assets.store.get("alpha01", "committed"));
+  assert.equal(await assets.store.get("alpha01", "cancelled"), null);
+  assert.equal(await assets.store.get("alpha01", "crashed-import"), null);
+  assert.equal(await assets.store.get("beta02", "from-other-profile"), null);
+  // Idempotent and profile-isolated: no subsequent change to the protected photo.
+  assert.equal(await sweepUnreferencedStudioAssets(saved.storage, assets.store, ["alpha01", "beta02"]), 0);
+  assert.ok(await assets.store.get("alpha01", "committed"));
+});
+
+test("B4: sweep preserves photos when appearance JSON is corrupt or storage cannot be read", async () => {
+  const saved = memoryStorage({ "spread-studio.alpha01": "{unreadable-json" });
+  const assets = memoryAssets();
+  await assets.store.put({
+    id: "only-copy", profileId: "alpha01", format: "jpeg", width: 1, height: 1, bytes: Uint8Array.from([4]),
+  });
+  assert.equal(await sweepUnreferencedStudioAssets(saved.storage, assets.store, ["alpha01"]), 0);
+  assert.ok(await assets.store.get("alpha01", "only-copy"));
+  const failure: StudioStorage = {
+    ...saved.storage,
+    getItem: () => { throw new Error("Storage unavailable"); },
+  };
+  assert.equal(await sweepUnreferencedStudioAssets(failure, assets.store, ["alpha01"]), 0);
+  assert.ok(await assets.store.get("alpha01", "only-copy"));
+});
+
+test("B4: cold-start sweep never alters planner entries or cross-profile saved looks", async () => {
+  const saved = memoryStorage(plannerSeed());
+  const assets = memoryAssets();
+  await assets.store.put({
+    id: "beta-photo", profileId: "beta02", format: "webp", width: 2, height: 2, bytes: Uint8Array.from([3]),
+  });
+  saved.storage.setItem(studioAppearanceKey("beta02")!, JSON.stringify(appearance({
+    name: "Beta", id: "beta-look", wallpaperAssetId: "beta-photo",
+  })));
+  const beforePlanner = saved.map.get("spread.v1");
+  const count = await sweepUnreferencedStudioAssets(saved.storage, assets.store, ["alpha01", "beta02"]);
+  assert.equal(count, 0);
+  assert.equal(saved.map.get("spread.v1"), beforePlanner);
+  assert.ok(await assets.store.get("beta02", "beta-photo"));
+  assert.ok(saved.map.get(studioAppearanceKey("beta02")!));
 });
