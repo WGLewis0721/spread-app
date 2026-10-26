@@ -174,13 +174,6 @@ export function createIndexedDbAssetStore(idb: Pick<IDBFactory, "open">): AssetB
     const db = await database();
     const tx = db.transaction(STORE_NAME, mode);
     const request = body(tx.objectStore(STORE_NAME));
-    if (import.meta.env?.DEV) {
-      console.debug(`[Studio IndexedDB] ${mode} request ${request.source?.constructor.name}`);
-      request.addEventListener("success", () => console.debug(`[Studio IndexedDB] ${mode} request-success`));
-      request.addEventListener("error", () => console.debug(`[Studio IndexedDB] ${mode} request-error`));
-      tx.addEventListener("complete", () => console.debug(`[Studio IndexedDB] ${mode} tx-complete`));
-      tx.addEventListener("abort", () => console.debug(`[Studio IndexedDB] ${mode} tx-abort`));
-    }
     return requestOf(request);
   };
   return assetStoreFromDb({
