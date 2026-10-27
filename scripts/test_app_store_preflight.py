@@ -64,7 +64,23 @@ class PreflightTests(unittest.TestCase):
             checks.ipa(ipa)
             self.assertGreaterEqual(sum(not ok for _, ok, _ in checks.items), 3)
 
-    def test_bad_plist_fails_closed(self):
+    def test_native_eager_web_auth_is_a_release_blocker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            client = root / "src/lib/auth/client.ts"
+            client.parent.mkdir(parents=True)
+            client.write_text("export const authClient = createAuthClient({});")
+            checks = preflight.Checks()
+            checks.source(root)
+            matched = [ok for name, ok, _ in checks.items if name == "Native auth startup"]
+            self.assertEqual(matched, [False])
+            client.write_text("export function getAuthClient() { return createAuthClient({}); }")
+            checks = preflight.Checks()
+            checks.source(root)
+            matched = [ok for name, ok, _ in checks.items if name == "Native auth startup"]
+            self.assertEqual(matched, [True])
+
+
         checks = preflight.Checks()
         self.assertIsNone(checks.plist(b"not-a-plist", "broken"))
         self.assertFalse(checks.items[0][1])
