@@ -436,7 +436,11 @@ try {
         const stage=node.getBoundingClientRect();
         const dock=document.querySelector<HTMLElement>(".app-dock")!.getBoundingClientRect();
         const style=getComputedStyle(host);
-        const scallop=getComputedStyle(node).maskImage;
+        const crest=node.querySelector<SVGSVGElement>(".studio-week-scallop");
+        const crestRect=crest?.getBoundingClientRect();
+        const scallop=!!crest && getComputedStyle(crest).display!=="none"
+          && !!crestRect && Math.abs(crestRect.top-(stage.top-38))<=2
+          && crest.querySelector("path")?.getAttribute("stroke-width")==="3";
         const last=node.querySelector<HTMLElement>("[data-day]:last-of-type");
         const lastRect=last?.getBoundingClientRect();
         return {top:stage.top,height:window.innerHeight,dockTop:dock.top,lastDayBottom:lastRect?.bottom??null,
@@ -444,8 +448,8 @@ try {
           outline:style.getPropertyValue("--studio-skin-outline").trim(),
           shadow:style.getPropertyValue("--studio-skin-shadow").trim(),
           font:style.getPropertyValue("--studio-display-font").trim(),
-          scallop:scallop.includes("data:image"),current:node.getAttribute("data-studio-detent"),
-          mask:scallop.slice(0,120)};
+          scallop,current:node.getAttribute("data-studio-detent"),
+          mask:crest?getComputedStyle(crest).display:"missing"};
       });
       const boardTop={peek:.79,half:.47,full:.15}[mode]*844;
       const delta=Math.abs(Number(geometry.top)-boardTop);
