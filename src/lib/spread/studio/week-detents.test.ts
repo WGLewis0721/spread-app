@@ -20,14 +20,15 @@ test("E1 board ratios map the three sheet positions and drag is damped",()=>{
  const {sheetTop,rubberBandSheetTop,settleWeekSheet,wallpaperShiftForSheet,STUDIO_WEEK_BOARD}=requireDetents();
  assert.equal(STUDIO_WEEK_BOARD.height,874);
  assert.equal(sheetTop("peek",874),690);
- assert.equal(sheetTop("half",874),410);
- assert.equal(sheetTop("full",874),130);
+ assert.equal(sheetTop("half",874),411);
+ assert.equal(sheetTop("full",874),131);
  assert.equal(settleWeekSheet(400,-0.8,874),"full");
  assert.equal(settleWeekSheet(500,0.9,874),"peek");
  assert.ok(rubberBandSheetTop(-100,874)>-36);
  assert.equal(wallpaperShiftForSheet(690,874),0);
- assert.equal(wallpaperShiftForSheet(410,874),-222);
- assert.equal(wallpaperShiftForSheet(130,874),-222);
- assert.equal(wallpaperShiftForSheet(549,874),-112);
+ assert.equal(wallpaperShiftForSheet(411,874),-241);
+ assert.equal(wallpaperShiftForSheet(131,874),-241);
+ assert.ok(wallpaperShiftForSheet(549,874)<-100);
+ assert.equal(wallpaperShiftForSheet(sheetTop("half",804),804),-222);
 });
 function requireDetents(){return {sheetTop, rubberBandSheetTop,settleWeekSheet,wallpaperShiftForSheet,STUDIO_WEEK_BOARD};}

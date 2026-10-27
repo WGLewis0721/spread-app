@@ -14,12 +14,12 @@ export function snapDetent(current:StudioWeekDetent,dy:number,elapsedMs:number):
 }
 
 export const STUDIO_WEEK_BOARD = {
-  width: 402, height: 874, header: 126,
-  peek: 690, half: 410, full: 130,
+  width: 402, height: 874, // header is measured at runtime
+  peek: 0.79, half: 0.47, full: 0.15,
 } as const;
 export function sheetTop(detent:StudioWeekDetent, viewportHeight:number):number {
   const basis=STUDIO_WEEK_BOARD[detent];
-  return Math.round(Math.max(0,viewportHeight)*basis/STUDIO_WEEK_BOARD.height);
+  return Math.round(Math.max(0,viewportHeight)*basis);
 }
 export function rubberBandSheetTop(top:number, viewportHeight:number):number {
   const min=sheetTop("full",viewportHeight), max=sheetTop("peek",viewportHeight);
@@ -40,5 +40,5 @@ export function wallpaperShiftForSheet(top:number,height:number):number{
   if(!Number.isFinite(top)||!Number.isFinite(height)||height<=0)return 0;
   const peek=sheetTop("peek",height),half=sheetTop("half",height);
   const t=Math.min(1,Math.max(0,(peek-top)/Math.max(1,peek-half)));
-  return t===0?0:-Math.round((222*height/874)*t);
+  return t===0?0:-Math.round((222*height/804)*t);
 }

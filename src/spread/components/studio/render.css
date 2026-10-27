@@ -705,9 +705,7 @@
    even though the reference's full detent leaves only four pixels below its header. */
 [data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber {
   padding-top:0.5rem;
-  background:linear-gradient(to bottom,transparent 0%,var(--studio-skin-mist) 86%),var(--studio-wallpaper-image);
-  background-size:auto,cover;
-  background-position:center,var(--studio-wallpaper-position);
+  background:var(--studio-skin-mist);
 }
 [data-studio-appearance][data-studio-skin="linocut"] .studio-week-grab-control {
   min-height:5.5rem;
@@ -764,4 +762,46 @@
 }
 @media(min-resolution:1dppx) {
   [data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber-caption {font-size:1rem;}
+}
+
+/* E1: scallop projects 38px ABOVE the sheet with a 3px ink stroke.
+   Old internal mask clipped it. No spec borders have been removed. */
+[data-studio-appearance][data-studio-skin="linocut"][data-studio-sheet-edge="scallop"] .studio-week-stage{
+  -webkit-mask-image:none;mask-image:none;
+}
+[data-studio-appearance] .studio-week-scallop{display:none}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-scallop{
+  display:block;position:absolute;top:-38px;left:-2px;width:calc(100% + 4px);
+  height:40px;overflow:visible;pointer-events:none;z-index:2;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage{
+  display:flex;flex-direction:column;overflow:visible;
+  border-top:var(--studio-skin-outline) solid var(--ink);
+  border-bottom:var(--studio-skin-outline) solid var(--ink);
+  --studio-week-peek:79dvh;--studio-week-half:47dvh;--studio-week-full:15dvh;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"]{
+  --studio-sheet-top:max(var(--studio-week-full),var(--spread-header,0px));
+  overflow:visible;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="peek"],
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="half"]{overflow:visible;}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-header[data-studio-view="week"]{
+  --studio-crown-height:3.5rem;
+  min-height:calc(env(safe-area-inset-top,0px) + var(--studio-crown-height) + .75rem);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage .studio-week-grabber{
+  flex-shrink:0;position:relative;z-index:1;background:var(--studio-skin-mist);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"] .studio-week-grabber{position:relative;top:auto;}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage .studio-week-scrollbody{
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding-bottom:calc(env(safe-area-inset-bottom) + 9.5rem);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="peek"] .studio-week-scrollbody{display:none;}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber-caption,
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber-help{border-width:var(--studio-skin-outline);}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber-caption{font-size:1rem;line-height:1.45;}
+@media(prefers-reduced-motion:reduce){
+  [data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage{transition:opacity 80ms ease;}
 }
