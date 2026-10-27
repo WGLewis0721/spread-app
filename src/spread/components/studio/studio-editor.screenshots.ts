@@ -373,6 +373,7 @@ try {
   // wallpapers, every detent, both light/dark schemes, and WCAG automated audit.
   const skinEvidence: Array<Record<string, unknown>> = [];
   await page.setViewportSize({width:390,height:844});
+  for(const scheme of ["light","dark"] as const){
   for(const wallpaperVariant of ["ink-stripes","open-sky"] as const){
     await page.getByRole("button",{name:"Settings"}).click();
     await page.getByRole("button",{name:"Customize Spread"}).click();
@@ -440,6 +441,7 @@ try {
         dockTop:geometry.dockTop,lastDayBottom:geometry.lastDayBottom,outline:geometry.outline,
         shadow:geometry.shadow,scallop:geometry.scallop,screenshot:shot});
     }
+  }
   }
   // Accessibility: axe-core examines the *real mounted page*, not a DOM stub.
   await page.addScriptTag({content:axe.source});
