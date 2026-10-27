@@ -155,46 +155,9 @@
   box-shadow: inset 0 1px 0 color-mix(in srgb, white 60%, transparent), var(--shadow);
 }
 
-/* Curated structural treatments only. No planner layout, hit area or task meaning changes. */
-[data-studio-appearance][data-studio-controls="desktop"] .week-seq-item,
-[data-studio-appearance][data-studio-controls="desktop"] .spread-bubbles > *,
-[data-studio-appearance][data-studio-controls="desktop"] .crown-wheel,
-[data-studio-appearance][data-studio-controls="desktop"] .bg-elevated.rounded-3xl,
-[data-studio-appearance][data-studio-controls="desktop"] .bg-elevated.rounded-2xl {
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  box-shadow: inset 1px 1px 0 var(--elevated), 2px 2px 0 var(--line);
-}
-[data-studio-appearance][data-studio-controls="desktop"] .week-seq-item > div:first-child {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 0.5rem;
-}
-[data-studio-appearance][data-studio-controls="desktop"] .crown-wheel {
-  box-shadow: inset 2px 2px 0 var(--glass-line), 2px 2px 0 var(--line);
-}
-[data-studio-appearance][data-studio-controls="soft-glass"] .week-seq-item,
-[data-studio-appearance][data-studio-controls="soft-glass"] .spread-bubbles > *,
-[data-studio-appearance][data-studio-controls="soft-glass"] .crown-wheel {
-  border-radius: 26px;
-  border: 1px solid var(--glass-stroke);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), inset 0 1px 0 var(--glass-line);
-}
-[data-studio-appearance][data-studio-controls="soft-glass"] .week-seq-item > div:first-child {
-  padding-bottom: 0.5rem;
-}
-@media (prefers-contrast: more) {
-  [data-studio-appearance][data-studio-controls] .week-seq-item {
-    border: 2px solid var(--ink);
-  }
-}
-@media (prefers-reduced-transparency: reduce) {
-  [data-studio-appearance][data-studio-controls="soft-glass"] .week-seq-item,
-  [data-studio-appearance][data-studio-controls="soft-glass"] .spread-bubbles > *,
-  [data-studio-appearance][data-studio-controls="soft-glass"] .crown-wheel {
-    background: var(--elevated);
-    box-shadow: none;
-  }
-}
+/* Component geometry is resolved exclusively from data-studio-<part> selectors below.
+   Do not reapply legacy global selectors; they would override a user's per-part
+   choice of Original while the overall treatment is Desktop or Glass. */
 /* treatment end */
 
 @media (prefers-reduced-transparency: reduce) {
