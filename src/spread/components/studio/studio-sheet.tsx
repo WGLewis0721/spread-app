@@ -26,6 +26,7 @@ import { STUDIO_APPEARANCE_SAVED_EVENT } from "./live-planner";
 import { STUDIO_STARTERS } from "@/lib/spread/studio/presets";
 import { STUDIO_ELEMENT_PARTS, type StudioElementPart, type StudioElementStyle } from "@/lib/spread/studio/contract";
 import { effectiveStudioParts } from "@/lib/spread/studio/appearance";
+import { analyzeWallpaperFile, type StudioWallpaperLanguage } from "@/lib/spread/studio/wallpaper-language";
 import "./studio-ui.css";
 
 export function StudioCustomizeEntry() {
@@ -44,6 +45,7 @@ function StudioCustomizeLive() {
     openStudioSession({ render: originalStudioAppearance(), imageMessage: null, planner: "" }),
   );
   const [wallpaperUrl, setWallpaperUrl] = useState<string | null>(null);
+  const [language, setLanguage] = useState<StudioWallpaperLanguage | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [reduceTransparency, setReduceTransparency] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -75,6 +77,7 @@ function StudioCustomizeLive() {
     if (!open) return;
     let cancel = false;
     setReady(false);
+    setLanguage(null);
     const planner = readPlanner();
     void (async () => {
       if (!profileId) {
@@ -190,6 +193,9 @@ function StudioCustomizeLive() {
     setActivity("import");
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      // Analyze a downscaled image locally. Never send pixels to a model/server.
+      // A failed analysis must not prevent a valid image from being imported.
+      const measured = await analyzeWallpaperFile(file,abort.signal).catch(()=>null);
       const result = await importDraftPhoto({
         session,
         profileId,
@@ -205,7 +211,11 @@ function StudioCustomizeLive() {
         if (pending) await dropPendingAsset(assets, profileId, pending);
         return;
       }
-      setSession(result.session);
+      const designed=measured && result.session.draft.wallpaperAssetId
+        ? reduceStudioSession(result.session,{type:"apply-wallpaper-language",language:measured}).state
+        : result.session;
+      setSession(designed);
+      setLanguage(measured);
     } catch {
       if (openRef.current && !abort.signal.aborted && profileIdRef.current === profileId) {
         applyAction({ type: "note", message: STUDIO_UI_COPY.photosUnavailable });
@@ -216,6 +226,19 @@ function StudioCustomizeLive() {
       setBusy(false);
       setActivity("idle");
     }
+  }
+
+  async function rematchWallpaper(){
+    if(!wallpaperUrl || busy || !ready) return;
+    setBusy(true);
+    try {
+      const local=await fetch(wallpaperUrl);
+      const measured=await analyzeWallpaperFile(await local.blob());
+      applyAction({type:"apply-wallpaper-language",language:measured});
+      setLanguage(measured);
+    }catch {
+      applyAction({type:"note",message:"Couldn't measure that photo. Existing settings are unchanged."});
+    }finally {setBusy(false);}
   }
 
   const status =
@@ -265,6 +288,9 @@ function StudioCustomizeLive() {
             </fieldset>
             <StudioLivePreview pane={pane} onPane={setPane} appearance={draft} wallpaperUrl={wallpaperUrl} />
             <fieldset disabled={!ready || busy} className="mt-4 min-w-0 border-0 p-0">
+              <WallpaperLanguageControls language={language} hasWallpaper={!!draft.wallpaperAssetId} onRematch={()=>void rematchWallpaper()}/>
+            </fieldset>
+            <fieldset disabled={!ready || busy} className="mt-4 min-w-0 border-0 p-0">
               <ElementStyleControls draft={draft} onAction={applyAction} />
             </fieldset>
             <fieldset disabled={!ready || busy} className="mt-5 min-w-0 border-0 p-0">
@@ -308,6 +334,25 @@ function StudioCustomizeLive() {
       </Dialog.Root>
     </>
   );
+}
+
+function WallpaperLanguageControls({language,hasWallpaper,onRematch}:{
+  language:StudioWallpaperLanguage|null;hasWallpaper:boolean;onRematch:()=>void;
+}){
+  if(!hasWallpaper)return null;
+  return <section aria-label="Wallpaper design language" className="rounded-2xl border border-line bg-canvas p-3">
+    <div className="flex items-center justify-between gap-2">
+      <h2 className="text-base font-semibold">From your wallpaper</h2>
+      <button type="button" className="min-h-11 rounded-full bg-fill px-3 text-xs font-semibold" onClick={onRematch}>Match wallpaper</button>
+    </div>
+    <p className="mt-1 text-xs text-secondary">Analyzed privately on this device. No artwork uploads or subject recognition.</p>
+    {language?<div className="mt-2">
+      <p className="text-xs text-secondary">{language.explanation}. Quiet image area: {Math.round(language.quietBand.from*100)}–{Math.round(language.quietBand.to*100)}% down.</p>
+      <div className="mt-2 flex flex-wrap gap-2" aria-label="Measured colors">
+        {language.swatches.map((color,index)=><span key={index} className="size-8 rounded-lg border border-line" title={color.hex+" "+Math.round(color.share*100)+"%"} style={{background:color.hex}}/> )}
+      </div>
+    </div>:<p className="mt-2 text-xs text-secondary">Tap Match wallpaper to generate a coordinated design.</p>}
+  </section>;
 }
 
 function StarterLooks({
