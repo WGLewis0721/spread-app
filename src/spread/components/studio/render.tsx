@@ -71,6 +71,11 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-scheme={scope.scheme}
       data-studio-density={scope.density}
       data-studio-controls={scope.controls}
+      data-studio-crown={scope.parts.crown}
+      data-studio-responsibilities={scope.parts.responsibilities}
+      data-studio-week={scope.parts.week}
+      data-studio-tasks={scope.parts.tasks}
+      data-studio-dock={scope.parts.dock}
       style={style}
     >
       {children}

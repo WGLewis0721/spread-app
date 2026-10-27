@@ -13,6 +13,8 @@ import {
   STUDIO_LIMITS,
   type ControlDensity,
   type ControlTreatmentId,
+  type StudioElementPart,
+  type StudioElementStyle,
   type TypographyPresetId,
   type MaterialTreatment,
   type StudioAppearanceV1,
@@ -42,6 +44,7 @@ export type StudioDraftAction =
   | { type: "use-starter"; id: StudioStarterId }
   | { type: "set-typeface"; presetId: TypographyPresetId }
   | { type: "set-control-treatment"; treatmentId: ControlTreatmentId }
+  | { type: "set-element-style"; part: StudioElementPart; style: StudioElementStyle }
   | { type: "set-mode"; mode: StudioMode }
   | { type: "set-fit"; fit: WallpaperFit }
   | { type: "set-wallpaper-number"; key: "positionX" | "positionY" | "dim" | "blur"; value: number }
@@ -117,12 +120,23 @@ function reduce(
     case "use-starter":
       return edit(session, (draft) => appearanceFromStarter(action.id, draft), { suggestion: null });
     case "set-typeface": {
-      if (!["system", "editorial", "mono"].includes(action.presetId)) return hold(session);
+      if (!["system", "editorial", "mono", "display"].includes(action.presetId)) return hold(session);
       return edit(session, (draft) => ({ ...draft, typography: { ...draft.typography, presetId: action.presetId } }));
     }
     case "set-control-treatment": {
-      if (!["original", "desktop", "soft-glass"].includes(action.treatmentId)) return hold(session);
-      return edit(session, (draft) => ({ ...draft, controls: { ...draft.controls, treatmentId: action.treatmentId } }));
+      if (!["original", "desktop", "soft-glass", "illustrated"].includes(action.treatmentId)) return hold(session);
+      return edit(session, (draft) => ({ ...draft, controls: { ...draft.controls, treatmentId: action.treatmentId, parts: undefined } }));
+    }
+    case "set-element-style": {
+      if (!["crown", "responsibilities", "week", "tasks", "dock"].includes(action.part)) return hold(session);
+      if (!["inherit", "original", "outline", "comic", "glass"].includes(action.style)) return hold(session);
+      return edit(session, (draft) => ({
+        ...draft,
+        controls: {
+          ...draft.controls,
+          parts: { ...draft.controls.parts, [action.part]: action.style },
+        },
+      }));
     }
     case "set-mode": {
       if (!MODES.includes(action.mode)) return hold(session);
@@ -154,7 +168,7 @@ function reduce(
     case "use-suggestion": {
       if (!session.suggestion) return hold(session);
       const suggestion = session.suggestion;
-      return edit(session, (draft) => ({ ...draft, palette: { ...suggestion } }));
+      return edit(session, (draft) => ({ ...draft, palette: { ...suggestion, ...(draft.palette.highlight ? { highlight: draft.palette.highlight } : {}) } }));
     }
     case "imported": {
       const parsedId = parseStudioAppearance({
@@ -383,7 +397,7 @@ function cloneAppearance(value: StudioAppearanceV1): StudioAppearanceV1 {
     palette: { ...value.palette },
     material: { ...value.material },
     typography: { ...value.typography },
-    controls: { ...value.controls },
+    controls: { ...value.controls, ...(value.controls.parts ? { parts: { ...value.controls.parts } } : {}) },
     effects: { ...value.effects },
   };
 }

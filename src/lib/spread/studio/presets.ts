@@ -5,7 +5,7 @@
  */
 import { originalStudioAppearance, parseStudioAppearance, type StudioAppearanceV1 } from "./contract.ts";
 
-export type StudioStarterId = "personal" | "retro" | "glass";
+export type StudioStarterId = "personal" | "retro" | "glass" | "illustrated";
 export type StudioStarter = {
   id: StudioStarterId;
   label: string;
@@ -63,6 +63,23 @@ export const STUDIO_STARTERS: readonly StudioStarter[] = [
       typography: { presetId: "system", scale: 1.04, numeralEmphasis: 0.8 },
       controls: { density: "comfortable", treatmentId: "soft-glass" },
       effects: { decorationIntensity: 0.24, animationIntensity: 0.2 },
+    },
+  },
+  {
+    id: "illustrated",
+    label: "Dynamic Ink",
+    description: "Bold illustrated panels, electric blue and warm orange. Bring your own wallpaper.",
+    appearance: {
+      ...original,
+      id: "studio-illustrated",
+      name: "Dynamic Ink",
+      mode: "light",
+      wallpaper: { ...original.wallpaper, dim: 0.07, blur: 0 },
+      palette: { accent: "#0876c9", surface: "#f7fbff", text: "#102b45", secondaryText: "#36516b", highlight: "#ff8a24" },
+      material: { treatment: "flat", transparency: 0, depth: 0 },
+      typography: { presetId: "display", scale: 1.03, numeralEmphasis: 0.9 },
+      controls: { density: "comfortable", treatmentId: "illustrated" },
+      effects: { decorationIntensity: 0.08, animationIntensity: 0.15 },
     },
   },
 ];

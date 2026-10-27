@@ -38,8 +38,10 @@ export const STUDIO_LIMITS = {
 } as const;
 
 export const MATERIAL_TREATMENTS = ["flat", "glass", "matte", "metal"] as const;
-export const TYPOGRAPHY_PRESET_IDS = ["system", "editorial", "mono"] as const;
-export const CONTROL_TREATMENT_IDS = ["original", "desktop", "soft-glass"] as const;
+export const TYPOGRAPHY_PRESET_IDS = ["system", "editorial", "mono", "display"] as const;
+export const CONTROL_TREATMENT_IDS = ["original", "desktop", "soft-glass", "illustrated"] as const;
+export const STUDIO_ELEMENT_PARTS = ["crown", "responsibilities", "week", "tasks", "dock"] as const;
+export const STUDIO_ELEMENT_STYLES = ["inherit", "original", "outline", "comic", "glass"] as const;
 export const CONTROL_DENSITIES = ["comfortable", "compact"] as const;
 export const ASSET_FORMATS = ["jpeg", "png", "webp"] as const;
 export const AI_AVAILABILITY = ["available", "unsupported", "not-ready", "error"] as const;
@@ -51,6 +53,8 @@ export type MaterialTreatment = (typeof MATERIAL_TREATMENTS)[number];
 export type TypographyPresetId = (typeof TYPOGRAPHY_PRESET_IDS)[number];
 export type ControlTreatmentId = (typeof CONTROL_TREATMENT_IDS)[number];
 export type ControlDensity = (typeof CONTROL_DENSITIES)[number];
+export type StudioElementPart = (typeof STUDIO_ELEMENT_PARTS)[number];
+export type StudioElementStyle = (typeof STUDIO_ELEMENT_STYLES)[number];
 export type AssetFormat = (typeof ASSET_FORMATS)[number];
 export type AIAvailability = (typeof AI_AVAILABILITY)[number];
 export type StudioReceipt = (typeof STUDIO_RECEIPTS)[number];
@@ -71,6 +75,8 @@ export type StudioPalette = {
   surface: string;
   text: string;
   secondaryText: string;
+  /** Optional second accent for artwork-inspired outlines; never communicates status alone. */
+  highlight?: string;
 };
 
 export type StudioMaterial = {
@@ -88,6 +94,8 @@ export type StudioTypography = {
 export type StudioControls = {
   density: ControlDensity;
   treatmentId: ControlTreatmentId;
+  /** Optional V1 extension: missing parts inherit the whole-UI treatment. */
+  parts?: Partial<Record<StudioElementPart, StudioElementStyle>>;
 };
 
 export type StudioEffects = {
@@ -175,10 +183,10 @@ const APPEARANCE_FIELDS = [
 ] as const;
 
 const WALLPAPER_FIELDS = ["fit", "positionX", "positionY", "dim", "blur"] as const;
-const PALETTE_FIELDS = ["accent", "surface", "text", "secondaryText"] as const;
+const PALETTE_FIELDS = ["accent", "surface", "text", "secondaryText", "highlight"] as const;
 const MATERIAL_FIELDS = ["treatment", "transparency", "depth"] as const;
 const TYPOGRAPHY_FIELDS = ["presetId", "scale", "numeralEmphasis"] as const;
-const CONTROLS_FIELDS = ["density", "treatmentId"] as const;
+const CONTROLS_FIELDS = ["density", "treatmentId", "parts"] as const;
 const EFFECTS_FIELDS = ["decorationIntensity", "animationIntensity"] as const;
 const DRAFT_FIELDS = ["baseAppearanceId", "proposed", "explanation", "warnings"] as const;
 const ASSET_FIELDS = ["id", "format", "width", "height", "bytes", "orientation"] as const;
@@ -281,7 +289,13 @@ function readPalette(value: unknown): StudioRead<StudioPalette> {
   if (!surface) return fail("palette.surface");
   if (!text) return fail("palette.text");
   if (!secondaryText) return fail("palette.secondaryText");
-  return pass({ accent, surface, text, secondaryText });
+  let highlight: string | undefined;
+  if ("highlight" in value) {
+    const parsed = readColor(value.highlight);
+    if (!parsed) return fail("palette.highlight");
+    highlight = parsed;
+  }
+  return pass({ accent, surface, text, secondaryText, ...(highlight ? { highlight } : {}) });
 }
 
 function readMaterial(value: unknown): StudioRead<StudioMaterial> {
@@ -314,7 +328,19 @@ function readControls(value: unknown): StudioRead<StudioControls> {
   if (extra) return fail(`unknown-field:controls.${extra}`);
   if (!oneOf(value.density, CONTROL_DENSITIES)) return fail("controls.density");
   if (!oneOf(value.treatmentId, CONTROL_TREATMENT_IDS)) return fail("controls.treatmentId");
-  return pass({ density: value.density, treatmentId: value.treatmentId });
+  let parts: Partial<Record<StudioElementPart, StudioElementStyle>> | undefined;
+  if ("parts" in value) {
+    if (!isRecord(value.parts)) return fail("controls.parts");
+    const badPart = unexpected(value.parts, STUDIO_ELEMENT_PARTS);
+    if (badPart) return fail(`unknown-field:controls.parts.${badPart}`);
+    parts = {};
+    for (const part of STUDIO_ELEMENT_PARTS) {
+      if (!(part in value.parts)) continue;
+      if (!oneOf(value.parts[part], STUDIO_ELEMENT_STYLES)) return fail(`controls.parts.${part}`);
+      parts[part] = value.parts[part];
+    }
+  }
+  return pass({ density: value.density, treatmentId: value.treatmentId, ...(parts ? { parts } : {}) });
 }
 
 function readEffects(value: unknown): StudioRead<StudioEffects> {
