@@ -407,3 +407,18 @@ test("V1 appearances accept bounded per-element treatments and reject unknown ar
   invalidHighlight.palette.highlight = "linear-gradient(red,blue)";
   assert.equal(parseStudioAppearance(invalidHighlight).ok, false);
 });
+test("optional Starry material is strict and backwards compatible",()=>{
+ const old=appearance();
+ assert.equal(parseStudioAppearance(old).ok,true);
+ const current=appearance();
+ current.skin={sheetEdge:"scallop",outline:3,hardShadow:3,blockRadii:[14,14,14,4],
+  checkGlyph:"star",displayFont:"ericaOne",wallpaperFollowsSheet:true,
+  ground:"#254252",steel:"#476c7b",mist:"#add4dd",cream:"#fbf4c0"};
+ const parsed=parseStudioAppearance(current);
+ assert.equal(parsed.ok,true);
+ if(parsed.ok)assert.deepEqual(parsed.value.skin?.blockRadii,[14,14,14,4]);
+ const high=appearance();high.skin={...current.skin,outline:7};
+ assert.equal(parseStudioAppearance(high).ok,false);
+ const extra=appearance();extra.skin={...current.skin,arbitraryCSS:"url(http://evil)"} as typeof extra.skin;
+ assert.equal(parseStudioAppearance(extra).ok,false);
+});

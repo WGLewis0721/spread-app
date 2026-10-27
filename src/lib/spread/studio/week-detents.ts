@@ -28,7 +28,7 @@ export function rubberBandSheetTop(top:number, viewportHeight:number):number {
   return top;
 }
 export function settleWeekSheet(top:number,velocity:number,height:number):StudioWeekDetent {
-  const projected=top+Math.max(-1.4,Math.min(1.4,velocity))*125;
+  const projected=top+Math.max(-1.4,Math.min(1.4,velocity))*240;
   return STUDIO_WEEK_DETENTS.reduce((best,item)=>
     Math.abs(sheetTop(item,height)-projected)<Math.abs(sheetTop(best,height)-projected)?item:best,"half" as StudioWeekDetent);
 }
