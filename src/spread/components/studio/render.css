@@ -685,9 +685,9 @@
   padding-top:0.35rem;
   transition:top 420ms cubic-bezier(.32,.72,0,1);
 }
-[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="peek"] {--studio-sheet-top:var(--studio-week-peek);}
-[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="half"] {--studio-sheet-top:var(--studio-week-half);}
-[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"] {--studio-sheet-top:var(--studio-week-full);overflow-y:auto;}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="peek"] {--studio-sheet-top:var(--studio-week-peek);top:var(--studio-drag-top,var(--studio-sheet-top));}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="half"] {--studio-sheet-top:var(--studio-week-half);top:var(--studio-drag-top,var(--studio-sheet-top));}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"] {--studio-sheet-top:var(--studio-week-full);top:var(--studio-drag-top,var(--studio-sheet-top));overflow-y:auto;}
 [data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-dragging="true"] {transition:none;}
 [data-studio-appearance][data-studio-skin="linocut"][data-studio-sheet-edge="scallop"] .studio-week-stage {
   -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20402%2040%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22white%22%20d%3D%22M0%2040V26A16%2016%200%200%201%2024%2014A22%2022%200%200%201%2072%2012A20%2020%200%200%201%20116%2012A22%2022%200%200%201%20164%2010A20%2020%200%200%201%20208%2012A22%2022%200%200%201%20256%2010A20%2020%200%200%201%20300%2012A22%2022%200%200%201%20350%2012A16%2016%200%200%201%20402%2024V40Z%22%2F%3E%3C%2Fsvg%3E"),linear-gradient(#000,#000);
