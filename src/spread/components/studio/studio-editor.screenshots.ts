@@ -430,7 +430,11 @@ try {
       });
       const boardTop={peek:690,half:410,full:130}[mode]/874*844;
       const delta=Math.abs(Number(geometry.top)-boardTop);
-      const valid=geometry.current===mode && delta<=2 && geometry.outline==="3px"
+      // Wallpaper offsets are read from the unmodified E1 HTML, not guessed:
+      // 0px Peek, -222px Half and Full, at 402x874; scale by viewport height.
+      const referenceWallpaperOffset=(mode==="peek"?0:-222)*844/874;
+      const wallpaperOffsetDelta=Math.abs(Number.parseFloat(geometry.wallpaperOffset)-referenceWallpaperOffset);
+      const valid=geometry.current===mode && delta<=2 && wallpaperOffsetDelta<=2 && geometry.outline==="3px"
         && geometry.shadow==="3px" && geometry.scallop;
       if(!valid)throw new Error("Starry E1 geometry/token mismatch: "+JSON.stringify({mode,geometry,boardTop,delta}));
       // Full is compared in its useful end-of-week state. Scroll all the way to
@@ -447,6 +451,7 @@ try {
       shots.push(shot);
       skinEvidence.push({wallpaperVariant,scheme,mode,topPx:geometry.top,
         referenceTopPx:boardTop,deltaPx:delta,wallpaperOffset:geometry.wallpaperOffset,
+        referenceWallpaperOffsetPx:referenceWallpaperOffset,wallpaperOffsetDeltaPx:wallpaperOffsetDelta,
         dockTop:geometry.dockTop,lastDayBottom:geometry.lastDayBottom,outline:geometry.outline,
         shadow:geometry.shadow,scallop:geometry.scallop,screenshot:shot});
     }

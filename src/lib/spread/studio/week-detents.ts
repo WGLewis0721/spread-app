@@ -32,6 +32,13 @@ export function settleWeekSheet(top:number,velocity:number,height:number):Studio
   return STUDIO_WEEK_DETENTS.reduce((best,item)=>
     Math.abs(sheetTop(item,height)-projected)<Math.abs(sheetTop(best,height)-projected)?item:best,"half" as StudioWeekDetent);
 }
+/** E1 raw HTML: Peek has an unshifted full image; Half and Full show the
+ * same art with the bitmap at top:-222 inside a 402x804 source panel.
+ * Interpolate during finger drag to preserve continuity and keep visible art.
+ * CSS scales the asset with cover and never changes its aspect ratio. */
 export function wallpaperShiftForSheet(top:number,height:number):number{
-  return -Math.round(Math.min(140,Math.max(0,height-top)*0.15));
+  if(!Number.isFinite(top)||!Number.isFinite(height)||height<=0)return 0;
+  const peek=sheetTop("peek",height),half=sheetTop("half",height);
+  const t=Math.min(1,Math.max(0,(peek-top)/Math.max(1,peek-half)));
+  return -Math.round((222*height/874)*t);
 }
