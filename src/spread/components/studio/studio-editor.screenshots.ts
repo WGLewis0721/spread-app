@@ -237,6 +237,9 @@ try {
     }
     const firstDetent=await stage.getAttribute("data-studio-detent");
     if(firstDetent!=="half")throw new Error(`Could not select Half sheet, got ${firstDetent}`);
+    // The detent attribute updates on click; position settles after the
+    // 420ms spring. Do not mistake a transitional frame for a layout defect.
+    await page.waitForTimeout(470);
     const firstPosition=await stage.evaluate((el)=>({
       position:getComputedStyle(el).position,
       top:Math.round(el.getBoundingClientRect().top),
