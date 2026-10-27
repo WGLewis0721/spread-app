@@ -480,6 +480,38 @@ try {
   });
   writeFileSync(join(dir,"starry-200-percent-type.json"),JSON.stringify(legibility,null,2));
   if(!legibility.good)throw new Error("200% text clipped the Week grabber: "+JSON.stringify(legibility));
+
+  // Pointer regression: the sheet must track the finger *before release*.
+  // Keyboard-only detent tests do not establish this critical interaction.
+  const sheetForDrag=page.locator(".studio-week-stage");
+  const handleForDrag=page.getByRole("slider",{name:"Week sheet position"});
+  await handleForDrag.focus();
+  await handleForDrag.press("Home");
+  await page.waitForTimeout(470);
+  const beforeDrag=await sheetForDrag.evaluate(el=>el.getBoundingClientRect().top);
+  const gripBox=await handleForDrag.boundingBox();
+  if(!gripBox)throw Error("Slider grabber has no pointer surface");
+  const x=gripBox.x+gripBox.width/2,y=gripBox.y+Math.min(40,gripBox.height/2);
+  await page.mouse.move(x,y);await page.mouse.down();
+  await page.mouse.move(x,y-100,{steps:8});
+  const duringDrag=await sheetForDrag.evaluate(el=>({
+    top:el.getBoundingClientRect().top,dragging:el.getAttribute("data-studio-dragging"),
+  }));
+  if(duringDrag.dragging!=="true" || duringDrag.top>=beforeDrag-40)
+    throw new Error("Week sheet does not follow pointer before release: "+JSON.stringify({beforeDrag,duringDrag}));
+  await page.mouse.up();
+  await page.waitForTimeout(470);
+  const released=await sheetForDrag.getAttribute("data-studio-detent");
+  if(released==="peek")throw new Error("Fast upward finger release failed to expand sheet");
+  await page.emulateMedia({reducedMotion:"reduce"});
+  const reduced=await sheetForDrag.evaluate(el=>({
+    property:getComputedStyle(el).transitionProperty,
+    duration:getComputedStyle(el).transitionDuration,
+  }));
+  writeFileSync(join(dir,"starry-pointer-and-motion.json"),JSON.stringify({beforeDrag,duringDrag,released,reduced},null,2));
+  if(reduced.property.includes("top") || !reduced.property.includes("opacity"))
+    throw new Error("Reduce Motion did not remove the spring: "+JSON.stringify(reduced));
+  await page.emulateMedia({reducedMotion:"no-preference"});
   // Reset proves the original look is still a true no-wrapper rollback.
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Customize Spread" }).click();
