@@ -221,6 +221,49 @@ try {
     shots.push(fullWallpaperShot);
     await page.getByRole("tab", { name: "Week" }).click();
     await page.waitForFunction((expected) => document.querySelector("[data-studio-appearance]")?.getAttribute("data-studio-scheme") === expected, scheme);
+    // Verify the real Week planner has three useful sheet positions only when
+    // a personal wallpaper is selected. The Week content is the existing live planner.
+    const stage = page.locator(".studio-week-stage");
+    await stage.waitFor({state:"visible"});
+    const firstDetent=await stage.getAttribute("data-studio-detent");
+    if(firstDetent!=="half")throw new Error(`Expected default Half sheet, got ${firstDetent}`);
+    const firstPosition=await stage.evaluate((el)=>({
+      position:getComputedStyle(el).position,
+      top:Math.round(el.getBoundingClientRect().top),
+      viewport:window.innerHeight,
+    }));
+    if(firstPosition.position!=="fixed"||Math.abs(firstPosition.top/firstPosition.viewport-.47)>.03)
+      throw new Error(`Half sheet not at its viewport detent: ${JSON.stringify(firstPosition)}`);
+    const detentToggle=page.getByRole("button",{name:/Week sheet (half|peek|full)/});
+    // Three distinct positions must be reachable through the accessible grabber.
+    await detentToggle.click(); // Half -> Full
+    await page.waitForTimeout(470);
+    if(await stage.getAttribute("data-studio-detent")!=="full")throw new Error("Full detent did not open");
+    const fullPaint=await stage.evaluate(el=>({
+      overflow:getComputedStyle(el).overflowY,
+      maxScroll:el.scrollHeight-el.clientHeight,
+    }));
+    if(fullPaint.overflow!=="auto"||fullPaint.maxScroll<=0)throw new Error("Full sheet is not scrollable: "+JSON.stringify(fullPaint));
+    await stage.evaluate(el=>{el.scrollTop=el.scrollHeight});
+    await page.waitForTimeout(80);
+    const end=await page.locator(".studio-week-stage [data-day]").last().evaluate(el=>el.getBoundingClientRect().bottom);
+    const dockTop=await page.locator(".app-dock").first().evaluate(el=>el.getBoundingClientRect().top);
+    if(end>dockTop-4)throw new Error(`Final day is hidden behind floating dock: day=${end} dock=${dockTop}`);
+    await detentToggle.click(); // Full -> Peek
+    await page.waitForTimeout(470);
+    if(await stage.getAttribute("data-studio-detent")!=="peek")throw new Error("Peek detent did not open");
+    if(await stage.locator(".studio-week-scrollbody").isVisible())throw new Error("Peek should reveal the wallpaper subject");
+    await page.setViewportSize({width:390,height:844});
+    const peekShot=`studio-week-peek-${scheme}-390.png`;
+    await page.screenshot({path:join(dir,peekShot)});shots.push(peekShot);
+    await detentToggle.click(); // Peek -> Half
+    await page.waitForTimeout(470);
+    const halfShot=`studio-week-half-${scheme}-390.png`;
+    await page.screenshot({path:join(dir,halfShot)});shots.push(halfShot);
+    await detentToggle.click(); // Half -> Full for existing readability and screenshot tests.
+    await page.waitForTimeout(470);
+    const fullShot=`studio-week-full-${scheme}-390.png`;
+    await page.screenshot({path:join(dir,fullShot)});shots.push(fullShot);
     const actualScheme = await page.locator("[data-studio-appearance]").getAttribute("data-studio-scheme");
     if (actualScheme !== scheme) throw new Error(`N3: saved Week scheme ${actualScheme}, expected ${scheme} with light OS`);
     // Attribute alone is not proof: catch light cards incorrectly rendered in dark mode.
