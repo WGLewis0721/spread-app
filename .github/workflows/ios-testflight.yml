@@ -98,6 +98,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v
+          python3 scripts/app-store-preflight.py
           npm ci
           npm run typecheck
           npm run lint
@@ -105,7 +107,9 @@ jobs:
           swift test --package-path ios/App/SpreadCloudCore
       - name: Export local-only iOS assets and synchronize Capacitor
         if: inputs.operation == 'upload_internal_testflight'
-        run: npm run ios:sync
+        run: |
+          npm run ios:sync
+          python3 scripts/app-store-preflight.py --bundle dist-ios
       - name: Sign and upload to INTERNAL TestFlight (not App Review)
         if: inputs.operation == 'upload_internal_testflight'
         run: bundle exec fastlane ios internal_testflight
