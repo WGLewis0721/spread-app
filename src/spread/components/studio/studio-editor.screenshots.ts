@@ -449,6 +449,20 @@ try {
         if(clearance>dock-2)throw new Error(`Full last-day/dock collision: day ${clearance}px dock ${dock}px`);
       }
       if(mode==="full"){
+        // Nonmodal: sheet above the header only for the scallop, dock stays
+        // above the sheet, without focus trap or opaque full-screen scrim.
+        const nonmodal=await page.evaluate(()=>{
+          const stage=document.querySelector<HTMLElement>(".studio-week-stage")!;
+          const header=document.querySelector<HTMLElement>(".studio-week-header")!;
+          const dock=document.querySelector<HTMLElement>(".app-dock")!;
+          return {sheetZ:getComputedStyle(stage).zIndex,headerZ:getComputedStyle(header).zIndex,
+            dockZ:getComputedStyle(dock).zIndex,modal:stage.getAttribute("aria-modal"),
+            headerInert:header.hasAttribute("inert"),dockInert:dock.hasAttribute("inert")};
+        });
+        if(!(Number(nonmodal.sheetZ)>Number(nonmodal.headerZ)) ||
+           !(Number(nonmodal.dockZ)>Number(nonmodal.sheetZ)) ||
+           nonmodal.modal!==null||nonmodal.headerInert||nonmodal.dockInert)
+          throw new Error("Week must remain nonmodal with interactive header/dock: "+JSON.stringify(nonmodal));
         // E1 Full hides artwork under the solid sheet; only the exterior
         // scallop overlaps the header. No modal scrim or portal is permitted.
         const paint=await sheet.locator(".studio-week-grabber").evaluate(el=>({

@@ -822,3 +822,9 @@
   border-style:solid;
   border-width:var(--studio-skin-outline);
 }
+
+/* Full's scallop must render over the control shelf while controls and dock
+   retain independent pointer interaction. Dock is z30; Week sheet is z22. */
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"]{
+  z-index:22;
+}
