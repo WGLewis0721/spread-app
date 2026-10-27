@@ -200,6 +200,13 @@ try {
   for (const tab of ["Spread", "Week"]) {
     await page.getByRole("tab", { name: tab, exact: true }).click();
     await page.waitForFunction(() => document.querySelector("[data-studio-controls='desktop'][data-studio-appearance='studio-retro']") !== null);
+    // Capture settled paint. During the Week transition, text temporarily fades.
+    await page.waitForTimeout(700);
+    const violations = await auditStudioContrast(page);
+    if (violations.length > 0) {
+      console.error(JSON.stringify(violations.slice(0, 20), null, 2));
+      throw new Error(`Retro Desk ${tab} failed settled contrast: ${violations.length} violations`);
+    }
     const capture = `live-${tab.toLowerCase()}-retro-390.png`;
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: join(dir, capture) });
