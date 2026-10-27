@@ -1,4 +1,4 @@
-import { authClient, authEnabled } from "./client";
+import { getAuthClient, authEnabled } from "./client";
 
 /** Normalized user shape used across the app, auth on or off. */
 export type AppUser = {
@@ -57,7 +57,7 @@ export type CurrentUserState = {
 export function useCurrentUserState(): CurrentUserState {
   if (!authEnabled) return { user: DEV_USER, isPending: false };
   // eslint-disable-next-line react-hooks/rules-of-hooks -- authEnabled is constant for the app's lifetime
-  const { data, isPending } = authClient.useSession();
+  const { data, isPending } = getAuthClient().useSession();
   const user = data?.user;
   return {
     user: user
