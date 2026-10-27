@@ -771,7 +771,7 @@
 }
 [data-studio-appearance] .studio-week-scallop{display:none}
 [data-studio-appearance][data-studio-skin="linocut"] .studio-week-scallop{
-  display:block;position:absolute;top:-38px;left:-2px;width:calc(100% + 4px);
+  display:block;position:absolute;top:calc(-38px - var(--studio-skin-outline));left:-2px;width:calc(100% + 4px);
   height:40px;overflow:visible;pointer-events:none;z-index:2;
 }
 [data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage{
