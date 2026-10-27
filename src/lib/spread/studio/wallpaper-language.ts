@@ -44,7 +44,11 @@ export function measureWallpaper(
       rgba.length < width * height * 4) return { swatches: [], edgeDensity: 0, quietBand: { from: 0.25, to: 0.6 } };
   const jump = Math.max(1, Math.ceil(Math.sqrt((width * height) / 3800)));
   const points: Point[] = [];
-  for (let y=0;y<height;y+=jump) for (let x=0;x<width;x+=jump) {
+  // Stagger the sample lattice to avoid aliasing horizontal stripes: with a
+  // two-pixel step every other row can vanish entirely from the palette.
+  const rowStep=Math.max(1,Math.floor(jump/2));
+  const colStep=jump*2;
+  for (let y=0;y<height;y+=rowStep) for (let x=Math.floor(y/rowStep)%colStep;x<width;x+=colStep) {
     const i=(y*width+x)*4; if (rgba[i+3] < 128) continue;
     const rgb: [number, number, number] = [rgba[i],rgba[i+1],rgba[i+2]];
     points.push({ rgb, lab: lab(...rgb) });
