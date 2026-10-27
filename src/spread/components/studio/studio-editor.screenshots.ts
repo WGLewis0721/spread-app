@@ -231,7 +231,7 @@ try {
     await stage.waitFor({state:"visible"});
     // The detent is intentionally retained when the user revisits the Week.
     // Normalize to Half rather than assuming every new photo resets their state.
-    const detentToggle=page.getByRole("button",{name:/Week sheet (half|peek|full)/});
+    const detentToggle=page.getByRole("slider",{name:"Week sheet position"});
     for(let attempt=0;attempt<3 && await stage.getAttribute("data-studio-detent")!=="half";attempt++){
       await detentToggle.click();
     }

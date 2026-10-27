@@ -46,7 +46,7 @@ import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "
 import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
 import { StudioLivePlanner } from "@/spread/components/studio/live-planner";
-import { cycleDetent, snapDetent, type StudioWeekDetent } from "@/lib/spread/studio/week-detents";
+import { cycleDetent, sheetTop, rubberBandSheetTop, settleWeekSheet, wallpaperShiftForSheet, type StudioWeekDetent } from "@/lib/spread/studio/week-detents";
 
 type Sheet = "more" | "new" | "icloud" | null;
 
@@ -368,7 +368,9 @@ function WeekScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState(false);
   const [studioDetent, setStudioDetent] = useState<StudioWeekDetent>("half");
-  const weekGrabRef = useRef<{y:number;at:number}|null>(null);
+  const weekGrabRef = useRef<{y:number;at:number;top:number;lastY:number;lastAt:number;velocity:number}|null>(null);
+  const [studioDragTop,setStudioDragTop]=useState<number|null>(null);
+  const studioWeekRef=useRef<HTMLElement>(null);
   const skipGrabClick = useRef(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const profileId = useSpread((s) => s.activeId);
@@ -424,6 +426,25 @@ function WeekScreen() {
   const rollover = useSpread((s) => s.rollover);
   const range = formatWeek(data.currentWeek);
   const isCurrent = data.currentWeek === weekKey();
+  const currentPlan=data.weeks[data.currentWeek];
+  const placedIds=new Set((currentPlan?.allocations??[]).map(allocation=>allocation.id));
+  const assignedTasks=(currentPlan?.boxes??[]).flatMap(box=>box.tasks).filter(task=>task.allocationId && placedIds.has(task.allocationId)).length;
+  const scheduledHours=(currentPlan?.allocations??[]).reduce((sum,allocation)=>sum+allocation.hours,0);
+  const sheetSummary=assignedTasks
+    ? `${assignedTasks} ${assignedTasks===1?"task":"tasks"} placed · ${scheduledHours}h scheduled`
+    : scheduledHours ? `${scheduledHours}h scheduled · tasks not placed` : "Start by planning your hours";
+  const paintWallpaperSheet=(top:number)=>{
+    const host=studioWeekRef.current?.closest<HTMLElement>("[data-studio-appearance]");
+    if(!host || host.dataset.studioWallpaperFollows!=="yes")return;
+    host.style.setProperty("--studio-wallpaper-follow-y",`${wallpaperShiftForSheet(top,window.innerHeight)}px`);
+  };
+  useEffect(()=>{
+    if(!STUDIO_FLAG)return;
+    paintWallpaperSheet(sheetTop(studioDetent,window.innerHeight));
+    const changed=()=>paintWallpaperSheet(sheetTop(studioDetent,window.innerHeight));
+    window.addEventListener("resize",changed);
+    return ()=>{window.removeEventListener("resize",changed);const host=studioWeekRef.current?.closest<HTMLElement>("[data-studio-appearance]");host?.style.removeProperty("--studio-wallpaper-follow-y");};
+  },[studioDetent,view]);
   const now = new Date();
   const onThisMonth = monthCursor.year === now.getFullYear() && monthCursor.month === now.getMonth();
   const boxByHat = new Map(data.weeks[data.currentWeek]?.boxes.map((box) => [box.hatId, box]) ?? []);
@@ -716,39 +737,67 @@ function WeekScreen() {
           aria-labelledby={`planner-tab-${view}`}
           tabIndex={0}
           className={cn("px-4 pt-2 pb-dock",STUDIO_FLAG && view==="week" && "studio-week-stage")}
+          ref={studioWeekRef}
           data-studio-detent={STUDIO_FLAG && view==="week" ? studioDetent : undefined}
+          data-studio-dragging={studioDragTop!==null ? "true" : undefined}
+          style={studioDragTop!==null ? {"--studio-drag-top":`${studioDragTop}px`} as CSSProperties : undefined}
         >
           {STUDIO_FLAG && view==="week" ? <div className="studio-week-grabber">
-            <button
-              type="button"
+            <div
+              role="slider"
+              tabIndex={0}
               className="studio-week-grab-control"
-              aria-label={`Week sheet ${studioDetent}. ${studioDetent==="full"?"Collapse":"Expand"} weekly plan.`}
-              aria-expanded={studioDetent!=="peek"}
-              onPointerDown={(e)=>{ weekGrabRef.current={y:e.clientY,at:performance.now()};skipGrabClick.current=false;e.currentTarget.setPointerCapture(e.pointerId); }}
+              aria-label="Week sheet position"
+              aria-valuemin={0} aria-valuemax={2}
+              aria-valuenow={studioDetent==="peek"?0:studioDetent==="half"?1:2}
+              aria-valuetext={studioDetent}
+              aria-orientation="vertical"
+              onKeyDown={(e)=>{
+                if(e.key==="ArrowUp"){e.preventDefault();setStudioDetent(d=>d==="peek"?"half":"full");}
+                else if(e.key==="ArrowDown"){e.preventDefault();setStudioDetent(d=>d==="full"?"half":"peek");}
+                else if(e.key==="Home"){e.preventDefault();setStudioDetent("peek");}
+                else if(e.key==="End"){e.preventDefault();setStudioDetent("full");}
+              }}
+              onPointerDown={(e)=>{
+                e.stopPropagation();
+                const at=performance.now();
+                weekGrabRef.current={y:e.clientY,at,top:studioWeekRef.current?.getBoundingClientRect().top??sheetTop(studioDetent,window.innerHeight),lastY:e.clientY,lastAt:at,velocity:0};
+                skipGrabClick.current=false;
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={(e)=>{
+                const grab=weekGrabRef.current;if(!grab)return;
+                const at=performance.now(), elapsed=Math.max(1,at-grab.lastAt);
+                grab.velocity=(e.clientY-grab.lastY)/elapsed;
+                grab.lastY=e.clientY;grab.lastAt=at;
+                if(Math.abs(e.clientY-grab.y)<3 && studioDragTop===null)return;
+                const top=rubberBandSheetTop(grab.top+e.clientY-grab.y,window.innerHeight);
+                setStudioDragTop(top);paintWallpaperSheet(top);
+              }}
               onPointerUp={(e)=>{
-                const initial=weekGrabRef.current;weekGrabRef.current=null;
-                if(!initial)return;
-                const delta=e.clientY-initial.y,elapsed=performance.now()-initial.at;
-                if(Math.abs(delta)>=25){
-                  setStudioDetent(d=>snapDetent(d,delta,elapsed));
+                const grab=weekGrabRef.current;weekGrabRef.current=null;
+                if(!grab)return;
+                const moved=e.clientY-grab.y;
+                if(Math.abs(moved)>7){
+                  const top=rubberBandSheetTop(grab.top+moved,window.innerHeight);
+                  const next=settleWeekSheet(top,grab.velocity,window.innerHeight);
+                  setStudioDetent(next);paintWallpaperSheet(sheetTop(next,window.innerHeight));
                   skipGrabClick.current=true;
                 }
+                setStudioDragTop(null);
               }}
-              onPointerCancel={()=>{weekGrabRef.current=null;skipGrabClick.current=false;}}
-              onClick={()=>{
-                if(skipGrabClick.current){skipGrabClick.current=false;return;}
-                setStudioDetent(cycleDetent);
-              }}
+              onPointerCancel={()=>{weekGrabRef.current=null;skipGrabClick.current=true;setStudioDragTop(null);}}
+              onClick={()=>{if(skipGrabClick.current){skipGrabClick.current=false;return;}setStudioDetent(cycleDetent);}}
             >
               <span className="studio-week-grabber-line" aria-hidden="true"/>
               <span className="studio-week-grabber-caption">
                 <strong>Today</strong>
                 <span>{now.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}</span>
                 <span className="studio-week-summary">
-                  {(data.weeks[data.currentWeek]?.boxes??[]).reduce((count,box)=>count+box.tasks.length,0)} tasks this week
+{sheetSummary}
                 </span>
               </span>
-            </button>
+            </div>
             <span className="studio-week-grabber-help" aria-hidden="true">Drag or tap to {studioDetent==="full"?"collapse":"expand"}</span>
           </div>:null}
           <h1 className="hidden print:block px-1 pt-4 text-2xl font-bold">Spread · {range}</h1>
