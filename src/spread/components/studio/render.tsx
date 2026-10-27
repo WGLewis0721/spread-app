@@ -76,6 +76,7 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-week={scope.parts.week}
       data-studio-tasks={scope.parts.tasks}
       data-studio-dock={scope.parts.dock}
+      data-studio-wallpaper={scope.wallpaper ? "on" : "off"}
       style={style}
     >
       {children}
