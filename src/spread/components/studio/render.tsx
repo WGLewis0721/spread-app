@@ -1,3 +1,4 @@
+import "@fontsource/erica-one/400.css";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import "./render.css";
 import { useSpread } from "@/lib/spread/store";

@@ -601,7 +601,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--studio-skin-cream": appearance.skin?.cream ?? surface,
     "--studio-skin-steel": appearance.skin?.steel ?? secondary,
     "--studio-display-font": appearance.skin?.displayFont==="ericaOne"
-      ? '"Spread Erica", Impact, "Arial Black", system-ui, sans-serif' : fonts[appearance.typography.presetId],
+      ? '"Erica One", Impact, "Arial Black", system-ui, sans-serif' : fonts[appearance.typography.presetId],
   };
   roles.forEach((color, index) => {
     style[`--studio-role-${index + 1}`] = color;
