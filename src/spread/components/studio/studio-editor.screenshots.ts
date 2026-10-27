@@ -57,6 +57,37 @@ try {
       await page.screenshot({ path: join(dir, file) });
       shots.push(file);
     }
+    // Verify all three curated looks in the *mounted editor*, not only object-level tests.
+    // A click must immediately update real scoped planner preview paint, but not persist.
+    for (const starter of [
+      { name: "Personal Canvas", id: "studio-personal", controls: "original", font: "Georgia" },
+      { name: "Retro Desk", id: "studio-retro", controls: "desktop", font: "mono" },
+      { name: "Clear Glass", id: "studio-glass", controls: "soft-glass", font: "apple-system" },
+    ]) {
+      await editor.getByRole("button", { name: new RegExp("^" + starter.name) }).click();
+      const preview = editor.locator("[data-studio-appearance]").first();
+      await preview.waitFor({ state: "visible" });
+      const drawn = await preview.evaluate((el) => ({
+        id: el.getAttribute("data-studio-appearance"),
+        controls: el.getAttribute("data-studio-controls"),
+        font: getComputedStyle(el).getPropertyValue("--font-sans"),
+      }));
+      if (drawn.id !== starter.id || drawn.controls !== starter.controls || !drawn.font.includes(starter.font)) {
+        throw new Error(`Starter ${starter.name} preview mismatch: ${JSON.stringify(drawn)}`);
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      const capture = `starter-${scheme}-${starter.id}-390.png`;
+      await page.screenshot({ path: join(dir, capture) });
+      shots.push(capture);
+    }
+    // Cancel must throw away all three previews and restore the prior saved look.
+    await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+    await editor.waitFor({ state: "hidden" });
+    await entry.click();
+    await editor.getByRole("heading", { name: "Customize Spread" }).waitFor();
+    if (await editor.getByRole("button", { name: "Apply", exact: true }).isEnabled()) {
+      throw new Error("Cancelling starter previews unexpectedly left an unsaved draft");
+    }
     // Import a small high-contrast procedural image; no uploaded/third-party copyrighted art.
     const base64 = await page.evaluate(() => {
       const canvas = document.createElement("canvas");
@@ -148,6 +179,30 @@ try {
     console.log(`N3 planner-theme system / OS ${os} -> live Week ${os}`);
   }
 
+  // Persist a starter and prove that the real planner adopts it across both tabs.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Customize Spread" }).click();
+  const studio = page.locator(".studio-sheet");
+  await studio.getByRole("button", { name: /^Retro Desk/ }).click();
+  await studio.getByRole("button", { name: "Apply", exact: true }).click();
+  await studio.waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  for (const tab of ["Spread", "Week"]) {
+    await page.getByRole("tab", { name: tab, exact: true }).click();
+    await page.waitForFunction(() => document.querySelector("[data-studio-controls='desktop'][data-studio-appearance='studio-retro']") !== null);
+    const capture = `live-${tab.toLowerCase()}-retro-390.png`;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: join(dir, capture) });
+    shots.push(capture);
+  }
+  // Reset proves the original look is still a true no-wrapper rollback.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Customize Spread" }).click();
+  await studio.getByRole("button", { name: "Reset", exact: true }).click();
+  await studio.getByRole("button", { name: "Apply", exact: true }).click();
+  await studio.waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.waitForFunction(() => document.querySelector("[data-studio-appearance]") === null);
   writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, osThemeOverrideChecked: true, status: "N3 passed: Studio System inherits Spread Settings, or OS when Spread Settings is System" }, null, 2));
   if (errors.length) throw Error(errors.join("\n"));
   console.log(`Captured ${shots.length} real Customize editor screenshots`);
