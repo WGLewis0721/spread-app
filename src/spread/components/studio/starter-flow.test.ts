@@ -31,3 +31,29 @@ test("type and shape remain selected while scaling and changing density", () => 
   assert.equal(s.draft.typography.presetId, "editorial");
   assert.equal(s.draft.controls.treatmentId, "soft-glass");
 });
+
+test("per-element styling previews are reversible and never write planning data", () => {
+  const start = openStudioSession({ render: originalStudioAppearance(), imageMessage: null, planner: "DO-NOT-EDIT" });
+  let current = reduceStudioSession(start, { type: "use-starter", id: "illustrated" }).state;
+  for (const part of ["crown", "responsibilities", "week", "tasks", "dock"] as const) {
+    current = reduceStudioSession(current, { type: "set-element-style", part, style: "outline" }).state;
+    assert.equal(current.draft.controls.parts?.[part], "outline");
+    assert.equal(current.planner, "DO-NOT-EDIT");
+    assert.deepEqual(current.committed, start.committed);
+  }
+  current = reduceStudioSession(current, { type: "set-color", key: "highlight", value: "#ff9900" }).state;
+  assert.equal(current.draft.palette.highlight, "#ff9900");
+  const apply = reduceStudioSession(current, { type: "apply" });
+  assert.equal(apply.effect.type, "commit");
+  assert.equal(apply.state.planner, "DO-NOT-EDIT");
+  const cancel = reduceStudioSession(current, { type: "cancel" });
+  assert.deepEqual(cancel.state.draft, start.committed);
+});
+test("changing the entire control treatment clears manual section overrides", () => {
+  let state = openStudioSession({ render: originalStudioAppearance(), imageMessage: null, planner: "UNCHANGED" });
+  state = reduceStudioSession(state, {type: "set-element-style", part: "week", style: "comic"}).state;
+  state = reduceStudioSession(state, {type: "set-control-treatment", treatmentId: "desktop"}).state;
+  assert.equal(state.draft.controls.treatmentId, "desktop");
+  assert.equal(state.draft.controls.parts, undefined);
+  assert.equal(state.planner, "UNCHANGED");
+});

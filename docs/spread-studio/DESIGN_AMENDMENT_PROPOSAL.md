@@ -22,7 +22,7 @@ Allow a Studio-only override of a closed set of **existing semantic tokens**, an
 
 `data-theme` is unchanged. Appearance `mode` (`system` | `light` | `dark`) is a separate field. Studio must not write `data-theme` and must not treat `data-theme` as the custom look.
 
-There is no marketplace, occupation, team, film, or franchise theme class. Three original, editable starting looks (Personal Canvas, Retro Desk, Clear Glass) are available. "Original" is the reset to today's Spread, not a marketed theme pack.
+There is no marketplace, occupation, team, film, or franchise theme class. Four original, editable starting looks (Personal Canvas, Retro Desk, Clear Glass, Dynamic Ink) are available. Each UI group can be independently drawn with the closed treatments; this must not change semantics, gestures or hit target size. "Original" is the reset to today's Spread, not a marketed theme pack.
 
 ## Tokens a resolver may set inside the Studio scope
 

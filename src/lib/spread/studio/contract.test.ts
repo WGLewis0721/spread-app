@@ -387,3 +387,23 @@ test("studio contract: this module does not touch storage, fetch, or data-theme"
   if (!poisonedRead.ok) assert.equal(poisonedRead.reason, "unknown-field:__proto__");
   assert.equal(poisoned.admin, undefined);
 });
+
+test("V1 appearances accept bounded per-element treatments and reject unknown artwork/code", () => {
+  const old = appearance();
+  assert.equal(parseStudioAppearance(old).ok, true); // Backward-compatible V1 records
+  const good = appearance();
+  good.controls.parts = { crown: "comic", responsibilities: "glass", week: "outline", tasks: "original", dock: "inherit" };
+  good.palette.highlight = "#ff8a24";
+  const parsed = parseStudioAppearance(good);
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) assert.deepEqual(parsed.value.controls.parts, good.controls.parts);
+  const script = appearance();
+  script.controls.parts = { crown: "url(http://evil)" as "comic" };
+  assert.equal(parseStudioAppearance(script).ok, false);
+  const extra = appearance();
+  extra.controls.parts = { crown: "comic", invented: "comic" } as typeof extra.controls.parts;
+  assert.equal(parseStudioAppearance(extra).ok, false);
+  const invalidHighlight = appearance();
+  invalidHighlight.palette.highlight = "linear-gradient(red,blue)";
+  assert.equal(parseStudioAppearance(invalidHighlight).ok, false);
+});
