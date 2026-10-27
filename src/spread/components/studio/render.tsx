@@ -77,10 +77,10 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-tasks={scope.parts.tasks}
       data-studio-dock={scope.parts.dock}
       data-studio-wallpaper={scope.wallpaper ? "on" : "off"}
-      data-studio-skin={rest.appearance && typeof rest.appearance === "object" && "skin" in rest.appearance ? "linocut" : undefined}
-      data-studio-sheet-edge={rest.appearance && typeof rest.appearance === "object" && "skin" in rest.appearance ? (rest.appearance as StudioAppearanceV1).skin?.sheetEdge : undefined}
-      data-studio-check={rest.appearance && typeof rest.appearance === "object" && "skin" in rest.appearance ? (rest.appearance as StudioAppearanceV1).skin?.checkGlyph : undefined}
-      data-studio-wallpaper-follows={rest.appearance && typeof rest.appearance === "object" && "skin" in rest.appearance && (rest.appearance as StudioAppearanceV1).skin?.wallpaperFollowsSheet ? "yes" : "no"}
+      data-studio-skin={appearance && typeof appearance === "object" && "skin" in appearance ? "linocut" : undefined}
+      data-studio-sheet-edge={appearance && typeof appearance === "object" && "skin" in appearance ? (appearance as StudioAppearanceV1).skin?.sheetEdge : undefined}
+      data-studio-check={appearance && typeof appearance === "object" && "skin" in appearance ? (appearance as StudioAppearanceV1).skin?.checkGlyph : undefined}
+      data-studio-wallpaper-follows={appearance && typeof appearance === "object" && "skin" in appearance && (appearance as StudioAppearanceV1).skin?.wallpaperFollowsSheet ? "yes" : "no"}
       style={style}
     >
       {children}
