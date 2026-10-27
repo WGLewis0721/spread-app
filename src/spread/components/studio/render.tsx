@@ -70,6 +70,7 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-material={scope.material}
       data-studio-scheme={scope.scheme}
       data-studio-density={scope.density}
+      data-studio-controls={scope.controls}
       style={style}
     >
       {children}

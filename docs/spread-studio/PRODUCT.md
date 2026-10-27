@@ -6,7 +6,7 @@
 
 'Your Spread, your appearance.' Bring the customization freedom people associate with iOS Home Screen personalization, Android launchers, and historical jailbroken-iPhone tweaks **inside the Spread app**, without jailbreaking, replacing the system launcher, or changing Spread's planning mechanics.
 
-The user does **not** choose a premade 'Tradesperson', 'Toy Story', 'Avengers', 'Atlanta Falcons', 'Macintosh', or 'Anime' theme. They can import a picture, describe the look they want, or customize every supported control themselves. Appearance and planning responsibilities are independent.
+The user can begin with one of three original, bundled starting looks (Personal Canvas, Retro Desk, Clear Glass), import a personal picture, or manually adjust supported controls. Presets are editable starting values, not locked themes, personas or licensed franchises. Appearance and planning responsibilities are independent.
 
 ### Provenance of illustrative concepts (not build assets)
 
@@ -25,7 +25,7 @@ A **Customize Spread** studio provides a live preview of real Spread surfaces an
 | Type and controls | Approved type stacks, legibility/scale, constrained component treatments and density | Preserve target sizes, information hierarchy, gestures, and focus order. |
 | Motion/decorations | Bounded ornamental effects, backgrounds, subtle animations | Reduced Motion and Reduce Transparency override effects. |
 
-**No marketplace or premade theme store.** Default Spread is an immediate reset/starting state, not one of many marketed theme packs. Users can save and rename their **own** appearances after reviewing how they work on Spread and Week.
+**No marketplace or franchise theme store.** Three curated, original starting looks are allowed. Default Spread remains an immediate reset. Saving applies the edited look for the current profile; a multi-look personal library is still future scope.
 
 ### Example: personal Falcons wallpaper
 
@@ -50,11 +50,11 @@ A personal Toy Story or Avengers wallpaper can inspire colors and presentation i
 - Foundation Models: optional natural-language interface over the same manual controls.
 - iOS Home Screen and Focus: separate Apple-controlled system surfaces; Spread can expose optional controls/alternate bundled app icons later, but cannot restyle the entire phone.
 
-**Do not add** a theme catalog, automatically inferred demographic identity, AI-generated CSS/JS/components, mandatory registration, cloud model fallback, or a calendar/recurrence engine merely to implement appearance.
+**Do not add** a marketplace, demographic themes, AI-generated CSS/JS/components, mandatory registration, cloud model fallback, or a calendar/recurrence engine merely to implement appearance. A small local preset array is permitted.
 
 ## Essential workflow
 
-Open Customize Spread → import wallpaper (or start blank) → change supported settings → preview Spread and Week → Apply/Cancel → manage user-created saved appearances → Reset to original.
+Open Customize Spread → choose a starter or import wallpaper → edit supported settings → preview Spread and Week → Apply/Cancel → Reset to original. An appearance applies only to the current profile; multi-look management is not yet supported.
 
 Manual editing is always available. On compatible devices, a visible **Describe your look** field optionally generates a *draft*, with edit/refine/apply/cancel; on unsupported devices do not show a broken AI control. Siri runs only user-invoked, capability-checked actions. The app never pretends that the Siri language model is embedded in React.
 

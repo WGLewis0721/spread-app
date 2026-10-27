@@ -9,12 +9,16 @@ import {
   MATERIAL_TREATMENTS,
   STUDIO_LIMITS,
   CONTROL_DENSITIES,
+  CONTROL_TREATMENT_IDS,
+  TYPOGRAPHY_PRESET_IDS,
   WALLPAPER_FITS,
   originalStudioAppearance,
   parseStudioAppearance,
   studioAppearanceOrDefault,
   type ControlDensity,
+  type ControlTreatmentId,
   type MaterialTreatment,
+  type TypographyPresetId,
   type StudioAppearanceV1,
   type StudioMode,
   type WallpaperFit,
@@ -78,6 +82,7 @@ export type StudioScope = {
   requestedMaterial: MaterialTreatment;
   scheme: StudioScheme;
   density: ControlDensity;
+  controls: ControlTreatmentId;
   style: Record<string, string>;
   warnings: string[];
   wallpaper: string | null;
@@ -194,7 +199,7 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
       depth: clampNumber(appearance.material?.depth, 0, STUDIO_LIMITS.unitMax, 0),
     },
     typography: {
-      presetId: "system",
+      presetId: oneOf<TypographyPresetId>(appearance.typography?.presetId, TYPOGRAPHY_PRESET_IDS, "system"),
       scale: clampNumber(
         appearance.typography?.scale,
         STUDIO_LIMITS.scaleMin,
@@ -205,7 +210,7 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
     },
     controls: {
       density: oneOf<ControlDensity>(appearance.controls?.density, CONTROL_DENSITIES, "comfortable"),
-      treatmentId: "original",
+      treatmentId: oneOf<ControlTreatmentId>(appearance.controls?.treatmentId, CONTROL_TREATMENT_IDS, "original"),
     },
     effects: {
       decorationIntensity: clampNumber(appearance.effects?.decorationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
@@ -240,6 +245,7 @@ function inactiveScope(scheme: StudioScheme): StudioScope {
     requestedMaterial: "flat",
     scheme,
     density: "comfortable",
+    controls: "original",
     style: {},
     warnings: [],
     wallpaper: null,
@@ -479,6 +485,11 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const shadowAlpha = Math.min(0.5, round4((scheme === "dark" ? 0.28 : 0.1) + depth * 0.12));
   const glassAlpha = material === "glass" ? Math.min(0.92, Math.max(0.55, panel)) : 1;
   const numeral = appearance.typography.numeralEmphasis;
+  const fonts: Record<TypographyPresetId, string> = {
+    system: SHIPPED_FONT_SANS,
+    editorial: '"Iowan Old Style", "Baskerville", Georgia, serif',
+    mono: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace',
+  };
 
   if (material !== requestedMaterial) warnings.push(`${materialLabel(requestedMaterial)} was drawn flat.`);
   else if (transparency + 0.0001 < requestedTransparency) warnings.push("Transparency was reduced for contrast.");
@@ -506,7 +517,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--glass-line": rgba("#ffffff", scheme === "dark" ? 0.16 : 0.9),
     "--scrim": rgba("#000000", scheme === "dark" ? 0.5 : 0.32),
     "--shadow": `0 ${formatCssNumber(shadowY)}px ${formatCssNumber(shadowBlur)}px rgba(0, 0, 0, ${formatCssNumber(shadowAlpha)})`,
-    "--font-sans": SHIPPED_FONT_SANS,
+    "--font-sans": fonts[appearance.typography.presetId],
     "--studio-type-scale": formatCssNumber(appearance.typography.scale),
     "--studio-numeral-weight": numeral <= 0 ? "inherit" : numeral < 0.5 ? "700" : "800",
     "--studio-numeral-tracking": numeral <= 0 ? "normal" : `${formatCssNumber(-0.02 * numeral)}em`,
@@ -552,6 +563,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     requestedMaterial,
     scheme,
     density: appearance.controls.density,
+    controls: appearance.controls.treatmentId,
     style: ordered,
     warnings,
     wallpaper,

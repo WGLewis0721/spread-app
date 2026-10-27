@@ -12,6 +12,8 @@ import {
   parseStudioAppearance,
   STUDIO_LIMITS,
   type ControlDensity,
+  type ControlTreatmentId,
+  type TypographyPresetId,
   type MaterialTreatment,
   type StudioAppearanceV1,
   type StudioMode,
@@ -19,6 +21,7 @@ import {
   type WallpaperFit,
 } from "../../../lib/spread/studio/contract.ts";
 import { STUDIO_UI_COPY } from "./studio-copy.ts";
+import { appearanceFromStarter, type StudioStarterId } from "../../../lib/spread/studio/presets.ts";
 
 export type StudioSession = {
   committed: StudioAppearanceV1;
@@ -36,6 +39,9 @@ export type StudioEffect =
   | { type: "drop-pending"; assetId: string };
 
 export type StudioDraftAction =
+  | { type: "use-starter"; id: StudioStarterId }
+  | { type: "set-typeface"; presetId: TypographyPresetId }
+  | { type: "set-control-treatment"; treatmentId: ControlTreatmentId }
   | { type: "set-mode"; mode: StudioMode }
   | { type: "set-fit"; fit: WallpaperFit }
   | { type: "set-wallpaper-number"; key: "positionX" | "positionY" | "dim" | "blur"; value: number }
@@ -108,6 +114,16 @@ function reduce(
   action: StudioDraftAction,
 ): { state: StudioSession; effect: StudioEffect } {
   switch (action.type) {
+    case "use-starter":
+      return edit(session, (draft) => appearanceFromStarter(action.id, draft), { suggestion: null });
+    case "set-typeface": {
+      if (!["system", "editorial", "mono"].includes(action.presetId)) return hold(session);
+      return edit(session, (draft) => ({ ...draft, typography: { ...draft.typography, presetId: action.presetId } }));
+    }
+    case "set-control-treatment": {
+      if (!["original", "desktop", "soft-glass"].includes(action.treatmentId)) return hold(session);
+      return edit(session, (draft) => ({ ...draft, controls: { ...draft.controls, treatmentId: action.treatmentId } }));
+    }
     case "set-mode": {
       if (!MODES.includes(action.mode)) return hold(session);
       return edit(session, (draft) => ({ ...draft, mode: action.mode }));
@@ -190,7 +206,7 @@ function reduce(
       if (value === null) return hold(session);
       return edit(session, (draft) => ({
         ...draft,
-        typography: { ...draft.typography, presetId: "system", scale: value },
+        typography: { ...draft.typography, scale: value },
       }));
     }
     case "set-numeral": {
@@ -198,14 +214,14 @@ function reduce(
       if (value === null) return hold(session);
       return edit(session, (draft) => ({
         ...draft,
-        typography: { ...draft.typography, presetId: "system", numeralEmphasis: value },
+        typography: { ...draft.typography, numeralEmphasis: value },
       }));
     }
     case "set-density": {
       if (!DENSITIES.includes(action.density)) return hold(session);
       return edit(session, (draft) => ({
         ...draft,
-        controls: { ...draft.controls, density: action.density, treatmentId: "original" },
+        controls: { ...draft.controls, density: action.density },
       }));
     }
     case "set-effect": {

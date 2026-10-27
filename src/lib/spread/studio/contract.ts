@@ -38,8 +38,8 @@ export const STUDIO_LIMITS = {
 } as const;
 
 export const MATERIAL_TREATMENTS = ["flat", "glass", "matte", "metal"] as const;
-export const TYPOGRAPHY_PRESET_IDS = ["system"] as const;
-export const CONTROL_TREATMENT_IDS = ["original"] as const;
+export const TYPOGRAPHY_PRESET_IDS = ["system", "editorial", "mono"] as const;
+export const CONTROL_TREATMENT_IDS = ["original", "desktop", "soft-glass"] as const;
 export const CONTROL_DENSITIES = ["comfortable", "compact"] as const;
 export const ASSET_FORMATS = ["jpeg", "png", "webp"] as const;
 export const AI_AVAILABILITY = ["available", "unsupported", "not-ready", "error"] as const;

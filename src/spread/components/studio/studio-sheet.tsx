@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type RefObject } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronRight, X } from "lucide-react";
 import { useSpread } from "@/lib/spread/store";
@@ -23,6 +23,7 @@ import {
 } from "./draft";
 import { StudioLivePreview } from "./studio-preview";
 import { STUDIO_APPEARANCE_SAVED_EVENT } from "./live-planner";
+import { STUDIO_STARTERS } from "@/lib/spread/studio/presets";
 import "./studio-ui.css";
 
 export function StudioCustomizeEntry() {
@@ -257,6 +258,9 @@ function StudioCustomizeLive() {
             <p role="status" className="mt-3 min-h-11 text-sm text-secondary">
               {status ?? ""}
             </p>
+            <fieldset disabled={!ready || busy} className="mt-1 min-w-0 border-0 p-0">
+              <StarterLooks draft={draft} onAction={applyAction} />
+            </fieldset>
             <StudioLivePreview pane={pane} onPane={setPane} appearance={draft} wallpaperUrl={wallpaperUrl} />
             <fieldset disabled={!ready || busy} className="mt-5 min-w-0 border-0 p-0">
               <WallpaperControls
@@ -298,6 +302,50 @@ function StudioCustomizeLive() {
         </Dialog.Portal>
       </Dialog.Root>
     </>
+  );
+}
+
+function StarterLooks({
+  draft,
+  onAction,
+}: {
+  draft: StudioAppearanceV1;
+  onAction: (action: StudioDraftAction) => void;
+}) {
+  return (
+    <section aria-label="Starting looks" className="mb-4">
+      <h2 className="text-base font-semibold">Choose a starting look</h2>
+      <p className="mb-3 mt-1 text-xs text-secondary">Tap to preview. Adjust anything, then Apply. Your plan stays untouched.</p>
+      <div className="studio-starter-grid">
+        {STUDIO_STARTERS.map((starter) => (
+          <button
+            key={starter.id}
+            type="button"
+            className="studio-starter-card"
+            aria-label={starter.label + ". " + starter.description}
+            aria-pressed={draft.id === starter.appearance.id}
+            onClick={() => onAction({ type: "use-starter", id: starter.id })}
+          >
+            <span
+              className={`studio-starter-art studio-starter-art--${starter.id}`}
+              style={{
+                "--starter-surface": starter.appearance.palette.surface,
+                "--starter-ink": starter.appearance.palette.text,
+                "--starter-accent": starter.appearance.palette.accent,
+              } as CSSProperties}
+              aria-hidden="true"
+            >
+              <span className="studio-starter-art-head" />
+              <span className="studio-starter-art-line" />
+              <span className="studio-starter-art-line studio-starter-art-line--short" />
+              <span className="studio-starter-art-pill" />
+            </span>
+            <span className="studio-starter-name">{starter.label}</span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-secondary">Original is always available through Reset.</p>
+    </section>
   );
 }
 
@@ -492,8 +540,22 @@ function MoreControls({
   ] as const;
   return (
     <div className="mt-2">
-      <p className="text-sm text-secondary">{STUDIO_UI_COPY.systemType}</p>
-      <p className="mt-1 text-sm text-secondary">{STUDIO_UI_COPY.originalControls}</p>
+      <p className="text-sm font-semibold">Typography</p>
+      <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Typography">
+        {([["system", "System"], ["editorial", "Editorial"], ["mono", "Mono"]] as const).map(([presetId, label]) => (
+          <button key={presetId} type="button" role="radio" aria-checked={draft.typography.presetId === presetId}
+            className={`min-h-11 rounded-xl px-1 text-xs font-semibold ${draft.typography.presetId === presetId ? "bg-segment text-ink" : "bg-fill text-secondary"}`}
+            onClick={() => onAction({ type: "set-typeface", presetId })}>{label}</button>
+        ))}
+      </div>
+      <p className="mt-4 text-sm font-semibold">Control shape</p>
+      <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Control shape">
+        {([["original", "Original"], ["desktop", "Desktop"], ["soft-glass", "Soft glass"]] as const).map(([treatmentId, label]) => (
+          <button key={treatmentId} type="button" role="radio" aria-checked={draft.controls.treatmentId === treatmentId}
+            className={`min-h-11 rounded-xl px-1 text-xs font-semibold ${draft.controls.treatmentId === treatmentId ? "bg-segment text-ink" : "bg-fill text-secondary"}`}
+            onClick={() => onAction({ type: "set-control-treatment", treatmentId })}>{label}</button>
+        ))}
+      </div>
       {reduceMotion ? <p className="mt-2 text-sm text-secondary">{STUDIO_UI_COPY.reduceMotion}</p> : null}
       {reduceTransparency ? <p className="mt-2 text-sm text-secondary">{STUDIO_UI_COPY.reduceTransparency}</p> : null}
       <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label={STUDIO_UI_COPY.surfaceStyle}>
