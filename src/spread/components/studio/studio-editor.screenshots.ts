@@ -8,6 +8,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import axe from "axe-core";
 import { auditStudioContrast } from "./contrast-audit.ts";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const dir = join(root, "screenshots", "studio-editor");
@@ -367,6 +368,102 @@ try {
     await page.screenshot({path: join(dir,capture)});
     shots.push(capture);
   }
+
+  // Starry Ink independent material evidence: two deliberately distinct local
+  // wallpapers, every detent, both light/dark schemes, and WCAG automated audit.
+  const skinEvidence: Array<Record<string, unknown>> = [];
+  await page.setViewportSize({width:390,height:844});
+  for(const wallpaperVariant of ["ink-stripes","open-sky"] as const){
+    await page.getByRole("button",{name:"Settings"}).click();
+    await page.getByRole("button",{name:"Customize Spread"}).click();
+    if(wallpaperVariant==="open-sky"){
+      // Different silhouette/composition from the high-contrast striped test:
+      // calm vertical sky gradient with a solid horizon and warm sun disk.
+      const image=await page.evaluate(()=>{
+        const canvas=document.createElement("canvas");canvas.width=320;canvas.height=640;
+        const c=canvas.getContext("2d")!;
+        const gradient=c.createLinearGradient(0,0,0,640);
+        gradient.addColorStop(0,"#87cdec");gradient.addColorStop(.65,"#c0e5f0");
+        gradient.addColorStop(.66,"#eae7d2");gradient.addColorStop(1,"#304c35");
+        c.fillStyle=gradient;c.fillRect(0,0,320,640);
+        c.fillStyle="#fff4c7";c.beginPath();c.arc(228,180,44,0,2*Math.PI);c.fill();
+        c.fillStyle="#234d38";c.fillRect(0,522,320,118);
+        return canvas.toDataURL("image/png").split(",")[1];
+      });
+      await studio.locator("input[type='file']").setInputFiles({name:"open-sky-procedural.png",mimeType:"image/png",buffer:Buffer.from(image,"base64")});
+      await page.waitForFunction(()=>{
+        const el=document.querySelector(".studio-sheet")!;
+        return el?.querySelector("button:not(:disabled)")&&
+        Array.from(el.querySelectorAll("button")).some(e=>e.textContent?.trim()==="Apply"&&!(e as HTMLButtonElement).disabled);
+      });
+    }
+    await studio.getByRole("button",{name:/^Starry Ink/}).click();
+    await studio.getByRole("radio",{name:scheme==="light"?"Light":"Dark"}).click();
+    await studio.getByRole("button",{name:"Apply",exact:true}).click();
+    await studio.waitFor({state:"hidden"});
+    await page.getByRole("button",{name:"Close",exact:true}).click();
+    await page.getByRole("tab",{name:"Week",exact:true}).click();
+    const sheet=page.locator(".studio-week-stage");
+    await page.waitForFunction(()=>document.querySelector("[data-studio-skin='linocut'][data-studio-appearance='studio-starry']")!==null);
+    const handle=page.getByRole("slider",{name:"Week sheet position"});
+    for(const mode of ["peek","half","full"] as const){
+      await handle.focus();
+      await handle.press(mode==="peek"?"Home":mode==="full"?"End":"Home");
+      if(mode==="half") await handle.press("ArrowUp");
+      await page.waitForTimeout(490);
+      const geometry=await sheet.evaluate((node)=>{
+        const host=node.closest<HTMLElement>("[data-studio-appearance]")!;
+        const stage=node.getBoundingClientRect();
+        const dock=document.querySelector<HTMLElement>(".app-dock")!.getBoundingClientRect();
+        const style=getComputedStyle(host);
+        const scallop=getComputedStyle(node).maskImage;
+        const last=node.querySelector<HTMLElement>("[data-day]:last-of-type");
+        const lastRect=last?.getBoundingClientRect();
+        return {top:stage.top,height:window.innerHeight,dockTop:dock.top,lastDayBottom:lastRect?.bottom??null,
+          wallpaperOffset:style.getPropertyValue("--studio-wallpaper-follow-y").trim(),
+          outline:style.getPropertyValue("--studio-skin-outline").trim(),
+          shadow:style.getPropertyValue("--studio-skin-shadow").trim(),
+          font:style.getPropertyValue("--studio-display-font").trim(),
+          scallop:scallop.includes("data:image"),current:node.getAttribute("data-studio-detent"),
+          mask:scallop.slice(0,120)};
+      });
+      const boardTop={peek:690,half:410,full:130}[mode]/874*844;
+      const delta=Math.abs(Number(geometry.top)-boardTop);
+      const valid=geometry.current===mode && delta<=2 && geometry.outline==="3px"
+        && geometry.shadow==="3px" && geometry.scallop;
+      if(!valid)throw new Error("Starry E1 geometry/token mismatch: "+JSON.stringify({mode,geometry,boardTop,delta}));
+      const shot=`starry-${wallpaperVariant}-${scheme}-${mode}-390.png`;
+      await page.screenshot({path:join(dir,shot)});
+      shots.push(shot);
+      skinEvidence.push({wallpaperVariant,scheme,mode,topPx:geometry.top,
+        referenceTopPx:boardTop,deltaPx:delta,wallpaperOffset:geometry.wallpaperOffset,
+        dockTop:geometry.dockTop,lastDayBottom:geometry.lastDayBottom,outline:geometry.outline,
+        shadow:geometry.shadow,scallop:geometry.scallop,screenshot:shot});
+    }
+  }
+  // Accessibility: axe-core examines the *real mounted page*, not a DOM stub.
+  await page.addScriptTag({content:axe.source});
+  const a11y=await page.evaluate(async()=>{
+    const run=(window as unknown as {axe:{run: (root: Element,options:unknown)=>Promise<{violations:Array<{id:string;impact:string;nodes:unknown[]}>}>}}).axe;
+    return run.run(document.querySelector("[data-studio-appearance]")!,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}});
+  });
+  const a11yReport=a11y.violations.map(v=>({id:v.id,impact:v.impact,count:v.nodes.length}));
+  writeFileSync(join(dir,"starry-axe-report.json"),JSON.stringify({violations:a11yReport},null,2));
+  writeFileSync(join(dir,"starry-geometry-report.json"),JSON.stringify(skinEvidence,null,2));
+  console.log("starry-evidence",JSON.stringify({captures:skinEvidence.length,maxDetentErrorPx:Math.max(...skinEvidence.map(x=>Number(x.deltaPx))),a11yReport}));
+  if(a11yReport.some(v=>v.impact==="critical"))throw new Error("Starry has critical WCAG axe failures: "+JSON.stringify(a11yReport));
+  // The font scales with the device; the slider must remain keyboard reachable.
+  const legibility=await page.evaluate(()=>{
+    const root=document.documentElement,old=root.style.fontSize;
+    root.style.fontSize="200%";
+    const slider=document.querySelector<HTMLElement>('[role="slider"][aria-label="Week sheet position"]')!;
+    const rect=slider.getBoundingClientRect();
+    const good=rect.width>=44&&rect.height>=44;
+    root.style.fontSize=old;
+    return {good,width:rect.width,height:rect.height};
+  });
+  writeFileSync(join(dir,"starry-200-percent-type.json"),JSON.stringify(legibility,null,2));
+  if(!legibility.good)throw new Error("200% text clipped the Week grabber: "+JSON.stringify(legibility));
   // Reset proves the original look is still a true no-wrapper rollback.
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Customize Spread" }).click();
