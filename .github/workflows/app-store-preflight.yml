@@ -1,0 +1,28 @@
+name: App Store preflight
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-store-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app-store-preflight:
+    name: App Store preflight / source checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Regression-test the scanner
+        run: python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v
+      - name: Check release source without external credentials
+        run: python3 scripts/app-store-preflight.py
