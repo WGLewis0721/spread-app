@@ -433,6 +433,15 @@ try {
       const valid=geometry.current===mode && delta<=2 && geometry.outline==="3px"
         && geometry.shadow==="3px" && geometry.scallop;
       if(!valid)throw new Error("Starry E1 geometry/token mismatch: "+JSON.stringify({mode,geometry,boardTop,delta}));
+      // Full is compared in its useful end-of-week state. Scroll all the way to
+      // the bottom and prove the last chronological day clears the dock.
+      if(mode==="full"){
+        await sheet.evaluate(el=>{el.scrollTop=el.scrollHeight});
+        await page.waitForTimeout(100);
+        const clearance=await page.locator(".studio-week-stage [data-day]").last().evaluate(el=>el.getBoundingClientRect().bottom);
+        const dock=await page.locator(".app-dock").first().evaluate(el=>el.getBoundingClientRect().top);
+        if(clearance>dock-2)throw new Error(`Full last-day/dock collision: day ${clearance}px dock ${dock}px`);
+      }
       const shot=`starry-${wallpaperVariant}-${scheme}-${mode}-390.png`;
       await page.screenshot({path:join(dir,shot)});
       shots.push(shot);

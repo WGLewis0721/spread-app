@@ -147,6 +147,7 @@ export const STUDIO_STYLE_KEYS = [
   "--studio-skin-ground",
   "--studio-skin-mist",
   "--studio-skin-cream",
+  "--studio-skin-bright",
   "--studio-skin-steel",
   "--studio-display-font",
   ...ROLE_KEYS,
@@ -487,7 +488,11 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const requestedMaterial = appearance.material.treatment;
   const material = effectiveMaterial(requestedMaterial, reducedTransparency, gates);
   const floors = moreContrast ? { text: 7, ui: 4.5 } : { text: 4.5, ui: 3 };
-  const lifted = liftBackground(surfaceForScheme(appearance.palette.surface, scheme), floors.text);
+  // Solid linocut material explicitly keeps its ink-on-cream identity in either
+  // OS scheme. Applying the generic dark inversion to a bright paper material
+  // made headings white-on-cream (detected in independent browser screenshots).
+  // Glass, matte, and the golden look still follow the normal scheme resolver.
+  const lifted = liftBackground(appearance.skin ? appearance.skin.cream : surfaceForScheme(appearance.palette.surface, scheme), floors.text);
   const surface = lifted.color;
   const textFix = enforceContrast(appearance.palette.text, surface, floors.text);
   const secondaryFix = enforceContrast(appearance.palette.secondaryText, surface, floors.text);
@@ -599,6 +604,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--studio-skin-ground": appearance.skin?.ground ?? surface,
     "--studio-skin-mist": appearance.skin?.mist ?? surface,
     "--studio-skin-cream": appearance.skin?.cream ?? surface,
+    "--studio-skin-bright": appearance.palette.accent,
     "--studio-skin-steel": appearance.skin?.steel ?? secondary,
     "--studio-display-font": appearance.skin?.displayFont==="ericaOne"
       ? '"Erica One", Impact, "Arial Black", system-ui, sans-serif' : fonts[appearance.typography.presetId],

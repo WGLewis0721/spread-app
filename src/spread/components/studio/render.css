@@ -630,7 +630,7 @@
 [data-studio-appearance][data-studio-skin="linocut"] .crown-cap {
   min-width: 44px;
   min-height: 44px;
-  background:var(--accent);
+  background:var(--studio-skin-bright);
   border:var(--studio-skin-outline) solid var(--ink);
   box-shadow:inset 0 -2px 0 var(--studio-skin-steel);
   filter:none;
@@ -739,7 +739,7 @@
   place-items:center;
   min-width:1.75rem;min-height:1.75rem;
   font-size:1.75rem;
-  color:var(--accent);
+  color:var(--studio-skin-bright);
   -webkit-text-stroke:1px var(--ink);
 }
 /* Mask just the scroll-edge atmosphere, never the task controls beneath it. */
