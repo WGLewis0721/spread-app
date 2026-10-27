@@ -14,7 +14,7 @@
 ## Automated technical checks — engineering
 
 - [ ] `python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v`
-- [ ] `python3 scripts/app-store-preflight.py` (bundle ID, localStorage origin, native no-login path, privacy manifest, purpose string, app icon source).
+- [ ] `python3 scripts/app-store-preflight.py` (bundle ID, localStorage origin, native no-login path, lazy web-auth startup, privacy manifest, purpose string, app icon source).
 - [ ] `npm run typecheck`, `npm run lint`, `npm run test:spread`, `swift test --package-path ios/App/SpreadCloudCore`.
 - [ ] `npm run ios:sync`, then `python3 scripts/app-store-preflight.py --bundle dist-ios`: all entry-page local assets exist and the web-only injector is excluded.
 - [ ] Inspect the **actual signed release IPA** with `python3 scripts/app-store-preflight.py --ipa path/to/Spread.ipa`. Confirm resolved build number, App Store bundle ID, privacy manifest and export-compliance key. Independently verify distribution signing/capabilities.
