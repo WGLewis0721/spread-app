@@ -57,6 +57,86 @@ try {
       await page.screenshot({ path: join(dir, file) });
       shots.push(file);
     }
+    // Verify all four curated looks in the *mounted editor*, not only object-level tests.
+    // A click must immediately update real scoped planner preview paint, but not persist.
+    for (const starter of [
+      { name: "Personal Canvas", id: "studio-personal", controls: "original", font: "Georgia" },
+      { name: "Retro Desk", id: "studio-retro", controls: "desktop", font: "mono" },
+      { name: "Clear Glass", id: "studio-glass", controls: "soft-glass", font: "apple-system" },
+      { name: "Dynamic Ink", id: "studio-illustrated", controls: "illustrated", font: "Arial Black" },
+    ]) {
+      await editor.getByRole("button", { name: new RegExp("^" + starter.name) }).click();
+      const preview = editor.locator("[data-studio-appearance]").first();
+      await preview.waitFor({ state: "visible" });
+      const drawn = await preview.evaluate((el) => ({
+        id: el.getAttribute("data-studio-appearance"),
+        controls: el.getAttribute("data-studio-controls"),
+        font: getComputedStyle(el).getPropertyValue("--font-sans"),
+      }));
+      if (drawn.id !== starter.id || drawn.controls !== starter.controls || !drawn.font.includes(starter.font)) {
+        throw new Error(`Starter ${starter.name} preview mismatch: ${JSON.stringify(drawn)}`);
+      }
+      // Check each stage of the actual weekly planning workflow with the same starter.
+      for (const stage of ["Roles", "Hours", "Week", "Tasks"]) {
+        await editor.getByRole("tab", { name: stage, exact: true }).click();
+        const selected = await editor.getByRole("tab", { name: stage, exact: true }).getAttribute("aria-selected");
+        if (selected !== "true") throw new Error(`Preview step ${stage} did not select`);
+        if (stage === "Hours" && await editor.getByText("Allocated this week").count() !== 1) {
+          throw new Error("Hours preview missing the real plan readout");
+        }
+      }
+      await editor.getByRole("tab", { name: "Roles", exact: true }).click();
+      await page.setViewportSize({ width: 390, height: 844 });
+      const capture = `starter-${scheme}-${starter.id}-390.png`;
+      await page.screenshot({ path: join(dir, capture) });
+      shots.push(capture);
+    }
+    // A section choice must change the *computed geometry* of the actual role/week cards.
+    await editor.getByRole("button", { name: /^Dynamic Ink/ }).click();
+    await editor.getByRole("radio", { name: "Responsibility cards: Frame" }).click();
+    const roleCard = editor.locator("[data-studio-appearance] .studio-role-card").first();
+    await roleCard.waitFor();
+    const outlined = await roleCard.evaluate((el) => ({
+      width: getComputedStyle(el).borderTopWidth,
+      radius: getComputedStyle(el).borderTopLeftRadius,
+    }));
+    if (outlined.width !== "1px" || outlined.radius !== "6px") {
+      throw new Error(`Responsibility treatment did not change actual card geometry: ${JSON.stringify(outlined)}`);
+    }
+    await editor.getByRole("radio", { name: "Responsibility cards: Ink" }).click();
+    const inked = await roleCard.evaluate((el) => ({
+      width: getComputedStyle(el).borderTopWidth,
+      radius: getComputedStyle(el).borderTopLeftRadius,
+    }));
+    if (inked.width !== "2px" || inked.radius !== "14px") {
+      throw new Error(`Comic treatment did not change actual card geometry: ${JSON.stringify(inked)}`);
+    }
+    for (const part of ["Week crown", "Responsibility cards", "Week cards", "Task rows", "Navigation dock"]) {
+      await editor.getByRole("radio", { name: part + ": Ink" }).click();
+    }
+    await editor.getByRole("tab", { name: "Week", exact: true }).click();
+    const dayCard = editor.locator("[data-studio-appearance] .week-seq-item").first();
+    await dayCard.waitFor();
+    const dayPaint = await dayCard.evaluate((el) => ({
+      top: getComputedStyle(el).borderTopWidth,
+      radius: getComputedStyle(el).borderTopLeftRadius,
+    }));
+    if (dayPaint.top !== "6px" || dayPaint.radius !== "16px") {
+      throw new Error(`Week treatment did not change card geometry: ${JSON.stringify(dayPaint)}`);
+    }
+    await editor.getByRole("tab", { name: "Roles", exact: true }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const artShot = `dynamic-ink-elements-${scheme}-390.png`;
+    await page.screenshot({ path: join(dir, artShot) });
+    shots.push(artShot);
+    // Cancel must throw away all four previews and restore the prior saved look.
+    await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+    await editor.waitFor({ state: "hidden" });
+    await entry.click();
+    await editor.getByRole("heading", { name: "Customize Spread" }).waitFor();
+    if (await editor.getByRole("button", { name: "Apply", exact: true }).isEnabled()) {
+      throw new Error("Cancelling starter previews unexpectedly left an unsaved draft");
+    }
     // Import a small high-contrast procedural image; no uploaded/third-party copyrighted art.
     const base64 = await page.evaluate(() => {
       const canvas = document.createElement("canvas");
@@ -148,6 +228,67 @@ try {
     console.log(`N3 planner-theme system / OS ${os} -> live Week ${os}`);
   }
 
+  // Persist a starter and prove that the real planner adopts it across both tabs.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Customize Spread" }).click();
+  const studio = page.locator(".studio-sheet");
+  await studio.getByRole("button", { name: /^Retro Desk/ }).click();
+  await studio.getByRole("button", { name: "Apply", exact: true }).click();
+  await studio.waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  for (const tab of ["Spread", "Week"]) {
+    await page.getByRole("tab", { name: tab, exact: true }).click();
+    await page.waitForFunction(() => document.querySelector("[data-studio-controls='desktop'][data-studio-appearance='studio-retro']") !== null);
+    // Capture settled paint. During the Week transition, text temporarily fades.
+    await page.waitForTimeout(700);
+    const violations = await auditStudioContrast(page);
+    if (violations.length > 0) {
+      console.error(JSON.stringify(violations.slice(0, 20), null, 2));
+      throw new Error(`Retro Desk ${tab} failed settled contrast: ${violations.length} violations`);
+    }
+    const capture = `live-${tab.toLowerCase()}-retro-390.png`;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: join(dir, capture) });
+    shots.push(capture);
+  }
+  // Persist five independently styled groups, then test their real planner geometry.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Customize Spread" }).click();
+  await studio.getByRole("button", { name: /^Dynamic Ink/ }).click();
+  await studio.getByRole("radio", { name: "Week crown: Frame" }).click();
+  for (const part of ["Responsibility cards", "Week cards", "Task rows", "Navigation dock"]) {
+    await studio.getByRole("radio", { name: part + ": Ink" }).click();
+  }
+  await studio.getByRole("button", { name: "Apply", exact: true }).click();
+  await studio.waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  for (const [tab, className, expectedBorder] of [
+    ["Spread", ".studio-role-card", "2px"],
+    ["Week", ".week-seq-item", "6px"],
+  ] as const) {
+    await page.getByRole("tab", { name: tab, exact: true }).click();
+    await page.waitForFunction(() =>
+      document.querySelector("[data-studio-appearance='studio-illustrated'][data-studio-crown='outline'][data-studio-responsibilities='comic'][data-studio-week='comic'][data-studio-tasks='comic'][data-studio-dock='comic']") !== null
+    );
+    await page.waitForTimeout(700);
+    const border = await page.locator("[data-studio-appearance] " + className).first().evaluate((node) =>
+      getComputedStyle(node).borderTopWidth);
+    if (border !== expectedBorder) {
+      throw new Error(`Actual ${tab} component did not transform: ${border}, expected ${expectedBorder}`);
+    }
+    const capture = `live-${tab.toLowerCase()}-dynamic-ink-390.png`;
+    await page.setViewportSize({width: 390, height: 844});
+    await page.screenshot({path: join(dir,capture)});
+    shots.push(capture);
+  }
+  // Reset proves the original look is still a true no-wrapper rollback.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Customize Spread" }).click();
+  await studio.getByRole("button", { name: "Reset to the original look", exact: true }).click();
+  await studio.getByRole("button", { name: "Apply", exact: true }).click();
+  await studio.waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.waitForFunction(() => document.querySelector("[data-studio-appearance]") === null);
   writeFileSync(join(dir, "manifest.json"), JSON.stringify({ url, shots, errors, osThemeOverrideChecked: true, status: "N3 passed: Studio System inherits Spread Settings, or OS when Spread Settings is System" }, null, 2));
   if (errors.length) throw Error(errors.join("\n"));
   console.log(`Captured ${shots.length} real Customize editor screenshots`);

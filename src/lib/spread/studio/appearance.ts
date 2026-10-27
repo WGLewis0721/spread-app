@@ -9,12 +9,20 @@ import {
   MATERIAL_TREATMENTS,
   STUDIO_LIMITS,
   CONTROL_DENSITIES,
+  CONTROL_TREATMENT_IDS,
+  STUDIO_ELEMENT_PARTS,
+  STUDIO_ELEMENT_STYLES,
+  TYPOGRAPHY_PRESET_IDS,
   WALLPAPER_FITS,
   originalStudioAppearance,
   parseStudioAppearance,
   studioAppearanceOrDefault,
   type ControlDensity,
+  type ControlTreatmentId,
+  type StudioElementPart,
+  type StudioElementStyle,
   type MaterialTreatment,
+  type TypographyPresetId,
   type StudioAppearanceV1,
   type StudioMode,
   type WallpaperFit,
@@ -78,6 +86,8 @@ export type StudioScope = {
   requestedMaterial: MaterialTreatment;
   scheme: StudioScheme;
   density: ControlDensity;
+  controls: ControlTreatmentId;
+  parts: Record<StudioElementPart, Exclude<StudioElementStyle, "inherit">>;
   style: Record<string, string>;
   warnings: string[];
   wallpaper: string | null;
@@ -128,6 +138,7 @@ export const STUDIO_STYLE_KEYS = [
   "--studio-metal-hi",
   "--studio-metal-lo",
   "--studio-matte-line",
+  "--studio-highlight",
   ...ROLE_KEYS,
   "--studio-status-done",
   "--studio-status-danger",
@@ -187,6 +198,7 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
       surface: color(appearance.palette?.surface, fallback.palette.surface),
       text: color(appearance.palette?.text, fallback.palette.text),
       secondaryText: color(appearance.palette?.secondaryText, fallback.palette.secondaryText),
+      ...(appearance.palette?.highlight ? { highlight: color(appearance.palette.highlight, "#ff8a24") } : {}),
     },
     material: {
       treatment: oneOf<MaterialTreatment>(appearance.material?.treatment, MATERIAL_TREATMENTS, "flat"),
@@ -194,7 +206,7 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
       depth: clampNumber(appearance.material?.depth, 0, STUDIO_LIMITS.unitMax, 0),
     },
     typography: {
-      presetId: "system",
+      presetId: oneOf<TypographyPresetId>(appearance.typography?.presetId, TYPOGRAPHY_PRESET_IDS, "system"),
       scale: clampNumber(
         appearance.typography?.scale,
         STUDIO_LIMITS.scaleMin,
@@ -205,13 +217,36 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
     },
     controls: {
       density: oneOf<ControlDensity>(appearance.controls?.density, CONTROL_DENSITIES, "comfortable"),
-      treatmentId: "original",
+      treatmentId: oneOf<ControlTreatmentId>(appearance.controls?.treatmentId, CONTROL_TREATMENT_IDS, "original"),
+      ...(appearance.controls?.parts ? {
+        parts: Object.fromEntries(STUDIO_ELEMENT_PARTS.map((part) => [part,
+          oneOf<StudioElementStyle>(appearance.controls.parts?.[part] ?? "inherit", STUDIO_ELEMENT_STYLES, "inherit"),
+        ])) as Record<StudioElementPart, StudioElementStyle>,
+      } : {}),
     },
     effects: {
       decorationIntensity: clampNumber(appearance.effects?.decorationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
       animationIntensity: clampNumber(appearance.effects?.animationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
     },
   };
+}
+
+
+/** Part selection is allowlisted and falls back to the whole-UI treatment. */
+export function effectiveStudioParts(
+  appearance: StudioAppearanceV1,
+): Record<StudioElementPart, Exclude<StudioElementStyle, "inherit">> {
+  const defaultStyle: Exclude<StudioElementStyle, "inherit"> =
+    appearance.controls.treatmentId === "desktop" ? "outline" :
+    appearance.controls.treatmentId === "soft-glass" ? "glass" :
+    appearance.controls.treatmentId === "illustrated" ? "comic" : "original";
+  const result = {} as Record<StudioElementPart, Exclude<StudioElementStyle, "inherit">>;
+  for (const part of STUDIO_ELEMENT_PARTS) {
+    const requested = appearance.controls.parts?.[part];
+    result[part] = requested && requested !== "inherit" && STUDIO_ELEMENT_STYLES.includes(requested)
+      ? requested : defaultStyle;
+  }
+  return result;
 }
 
 export function effectiveMaterial(
@@ -240,6 +275,8 @@ function inactiveScope(scheme: StudioScheme): StudioScope {
     requestedMaterial: "flat",
     scheme,
     density: "comfortable",
+    controls: "original",
+    parts: { crown: "original", responsibilities: "original", week: "original", tasks: "original", dock: "original" },
     style: {},
     warnings: [],
     wallpaper: null,
@@ -452,7 +489,12 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const caution = enforceContrast(cautionSeed, surface, floors.text).color;
   const onDanger = contrastingInk(danger);
   const roles = distinctRoles(shippedRoleColors(), surface, floors.ui);
-  const wallpaper = resolveWallpaper(appearance, input.wallpaper, warnings);
+  // Retro Desk and Clear Glass are deliberately wallpaper-free compositions. Keep
+  // any locally stored image reference intact so choosing Personal Canvas later
+  // restores the photo without uploading, reimporting or deleting personal data.
+  const wallpaper = appearance.id === "studio-retro" || appearance.id === "studio-glass"
+    ? null
+    : resolveWallpaper(appearance, input.wallpaper, warnings);
   const requestedTransparency = appearance.material.transparency;
   let transparency = 0;
   if (material !== "flat") {
@@ -479,6 +521,12 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const shadowAlpha = Math.min(0.5, round4((scheme === "dark" ? 0.28 : 0.1) + depth * 0.12));
   const glassAlpha = material === "glass" ? Math.min(0.92, Math.max(0.55, panel)) : 1;
   const numeral = appearance.typography.numeralEmphasis;
+  const fonts: Record<TypographyPresetId, string> = {
+    system: SHIPPED_FONT_SANS,
+    editorial: '"Iowan Old Style", "Baskerville", Georgia, serif',
+    mono: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace',
+    display: '"Arial Black", Impact, system-ui, sans-serif',
+  };
 
   if (material !== requestedMaterial) warnings.push(`${materialLabel(requestedMaterial)} was drawn flat.`);
   else if (transparency + 0.0001 < requestedTransparency) warnings.push("Transparency was reduced for contrast.");
@@ -506,7 +554,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--glass-line": rgba("#ffffff", scheme === "dark" ? 0.16 : 0.9),
     "--scrim": rgba("#000000", scheme === "dark" ? 0.5 : 0.32),
     "--shadow": `0 ${formatCssNumber(shadowY)}px ${formatCssNumber(shadowBlur)}px rgba(0, 0, 0, ${formatCssNumber(shadowAlpha)})`,
-    "--font-sans": SHIPPED_FONT_SANS,
+    "--font-sans": fonts[appearance.typography.presetId],
     "--studio-type-scale": formatCssNumber(appearance.typography.scale),
     "--studio-numeral-weight": numeral <= 0 ? "inherit" : numeral < 0.5 ? "700" : "800",
     "--studio-numeral-tracking": numeral <= 0 ? "normal" : `${formatCssNumber(-0.02 * numeral)}em`,
@@ -526,6 +574,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--studio-metal-hi": metalHi,
     "--studio-metal-lo": metalLo,
     "--studio-matte-line": rgba(text, depth * 0.08),
+    "--studio-highlight": appearance.palette.highlight ?? "#ff8a24",
   };
   roles.forEach((color, index) => {
     style[`--studio-role-${index + 1}`] = color;
@@ -552,6 +601,8 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     requestedMaterial,
     scheme,
     density: appearance.controls.density,
+    controls: appearance.controls.treatmentId,
+    parts: effectiveStudioParts(appearance),
     style: ordered,
     warnings,
     wallpaper,

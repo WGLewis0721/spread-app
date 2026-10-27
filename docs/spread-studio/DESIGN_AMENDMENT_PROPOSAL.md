@@ -1,8 +1,8 @@
-# PROPOSAL - requires owner approval
+# STUDIO DESIGN EXCEPTION - flagged implementation only
 
-This is a proposal. It does not change `docs/design/SPREAD_DESIGN_SYSTEM.md` or `AGENTS.project.md`. Those files still say: do not add colors, fonts, or decorative styles. Visual Studio work stays behind the `studio` flag until the owner accepts a narrower rule than this draft, or rejects it.
+The owner authorized changes to Studio on 2026-10-27 while preserving the golden baseline. This narrow permission now appears in `docs/design/SPREAD_DESIGN_SYSTEM.md` and `AGENTS.project.md`. The exception applies only under the default-off Studio flag and does **not** authorize merging, enabling production, deploying, TestFlight or App Store submission.
 
-Status: **awaiting owner**. Gate 50% can be recorded as met only pending that approval. Merging this pull request does not approve the amendment.
+Status: **approved for isolated implementation and verification only**. Merge and release gates remain independently pending.
 
 Read at `spread-studio` `6b8ec1823e457329592ac5f272e23a7bae08e012`:
 
@@ -18,11 +18,11 @@ Allow a Studio-only override of a closed set of **existing semantic tokens**, an
 1. `STUDIO_FLAG` from `src/lib/spread/studio/contract.ts` is on (`VITE_SPREAD_STUDIO` is `"1"` or `"true"`). Default remains off. Flag off means the rules in `SPREAD_DESIGN_SYSTEM.md` apply with no exception, and no Studio attribute is set.
 2. The override is scoped to an element that has `data-studio-appearance` (`STUDIO_APPEARANCE_ATTRIBUTE`). It must not rewrite `:root` tokens in a way that survives a profile switch or a flag-off render.
 3. Values come from a validated `StudioAppearanceV1` through one resolver. The resolver does not accept CSS text, selectors, font URLs, or script.
-4. The user applied that appearance. A draft, including an AI proposal, does not count.
+4. The user applied that appearance in the real planner. Inside the inert, non-writing editor preview, a temporary scope may show a draft. A draft never persists before Apply.
 
 `data-theme` is unchanged. Appearance `mode` (`system` | `light` | `dark`) is a separate field. Studio must not write `data-theme` and must not treat `data-theme` as the custom look.
 
-There is no theme pack, occupation, team, film, or franchise class name. "Original" is the reset to today's Spread, not a catalog entry.
+There is no marketplace, occupation, team, film, or franchise theme class. Four original, editable starting looks (Personal Canvas, Retro Desk, Clear Glass, Dynamic Ink) are available. Each UI group can be independently drawn with the closed treatments; this must not change semantics, gestures or hit target size. "Original" is the reset to today's Spread, not a marketed theme pack.
 
 ## Tokens a resolver may set inside the Studio scope
 
@@ -41,7 +41,7 @@ Wallpaper is an image referenced by opaque `wallpaperAssetId`, painted behind co
 
 Material (`flat` | `glass` | `matte` | `metal`), transparency, and depth may change **how those same tokens are painted** (opacity, blur, shadow) inside the scope. They may not introduce a new palette. `flat` remains available, and it is the treatment when Reduce Transparency is on, or when the advanced path is disabled.
 
-Typography `presetId` is allowlisted to `system`, which means the shipped `--font-sans` stack already in `src/styles.css`. No new `@font-face`, no downloaded font, no landed serif as a planner default. `scale` and `numeralEmphasis` stay inside `STUDIO_LIMITS`. Control `treatmentId` is allowlisted to `original` until a later contract change names another structural treatment. That name must not be a theme pack.
+Typography `presetId` is allowlisted to `system`, `editorial`, `mono`, or `display`, using only device-local fallback stacks. There is no `@font-face`, font download, or new unflagged planner default. `scale` and `numeralEmphasis` remain bounded. Control `treatmentId` is allowlisted to `original`, `desktop`, `soft-glass`, or `illustrated`. These treatments alter border radius, borders and shadows, never control semantics or hit-targets.
 
 `decorationIntensity` and `animationIntensity` only modulate existing motion and ornament. They do not add new illustration, blobs, or a second component library.
 
@@ -66,8 +66,8 @@ These are conditions on future visual code, not behavior this proposal turns on:
 - Hit targets stay at least 44px. The crown, day cards, hour banks, To place, task rows, sheets, completion, and undo stay the same components.
 - Unknown or invalid appearance id: render `originalStudioAppearance()` and do not keep a partial override.
 
-## What owner approval would still need to edit
+## Rollback and remaining release approval
 
-Acceptance would be a separate change, by the owner, to `docs/design/SPREAD_DESIGN_SYSTEM.md` and the matching paragraph in `AGENTS.project.md`. This file would stay as the proposal those edits cite. Until that happens, agents may implement a flagged resolver only as proposed behavior, and review treats the design gate as **pending owner**.
+The scoped exception is documented in `docs/design/SPREAD_DESIGN_SYSTEM.md` and `AGENTS.project.md` as part of draft PR #93. The change is **not shipped** until independently reviewed and explicitly merged/activated by the owner.
 
-Rejection leaves the design system as written. Rollback of any later visual experiment is: `studio` flag off, plus revert of the resolver. Flag off must match the baseline in `docs/spread-studio/BASELINE.md`.
+Rollback is immediate: keep `VITE_SPREAD_STUDIO=0`. Rejecting the experiment means closing PR #93 or reverting its isolated changes. Flag-off output must match `docs/spread-studio/BASELINE.md`.

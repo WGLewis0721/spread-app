@@ -155,6 +155,9 @@
   box-shadow: inset 0 1px 0 color-mix(in srgb, white 60%, transparent), var(--shadow);
 }
 
+/* Component geometry is resolved exclusively from data-studio-<part> selectors below.
+   Do not reapply legacy global selectors; they would override a user's per-part
+   choice of Original while the overall treatment is Desktop or Glass. */
 /* treatment end */
 
 @media (prefers-reduced-transparency: reduce) {
@@ -192,5 +195,235 @@
 @media (prefers-contrast: more) {
   [data-studio-appearance] :focus-visible {
     outline-width: 3px;
+  }
+}
+
+
+/* Studio element treatments: each real planner surface can be changed independently.
+   No drag listeners, button semantics, state or global brand styles are replaced. */
+
+/* Crown: the same accessible wheel and navigation buttons, with alternate physical forms. */
+[data-studio-appearance][data-studio-crown="outline"] .crown-wheel {
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  box-shadow: inset 1px 1px var(--glass-line), 3px 4px 0 var(--line);
+}
+[data-studio-appearance][data-studio-crown="comic"] .crown-wheel {
+  border: 3px solid var(--ink);
+  border-radius: 20px 5px 20px 5px;
+  background: var(--elevated);
+  background-image: linear-gradient(115deg, transparent 74%, var(--studio-highlight) 74% 100%);
+  box-shadow: 5px 6px 0 var(--accent);
+}
+[data-studio-appearance][data-studio-crown="comic"] .crown-wheel .crown-ridges,
+[data-studio-appearance][data-studio-crown="comic"] .crown-wheel .crown-sheen {
+  display: none;
+}
+[data-studio-appearance][data-studio-crown="comic"] .crown-readout {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+}
+[data-studio-appearance][data-studio-crown="comic"] .crown-cap {
+  border-color: var(--ink);
+  filter: saturate(1.3);
+}
+[data-studio-appearance][data-studio-crown="glass"] .crown-wheel {
+  border: 1px solid var(--glass-line);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--elevated) 88%, transparent);
+  box-shadow: var(--shadow), inset 0 1px var(--glass-line);
+  backdrop-filter: blur(var(--studio-blur));
+  -webkit-backdrop-filter: blur(var(--studio-blur));
+}
+
+/* Responsibility cards & hour badges use the user's original role-color dots. */
+[data-studio-appearance][data-studio-responsibilities="outline"] .studio-responsibility-list,
+[data-studio-appearance][data-studio-responsibilities="comic"] .studio-responsibility-list,
+[data-studio-appearance][data-studio-responsibilities="glass"] .studio-responsibility-list {
+  display: grid;
+  gap: 0.5rem;
+  background: transparent;
+}
+[data-studio-appearance][data-studio-responsibilities="outline"] .studio-role-card {
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+  background: var(--elevated);
+  box-shadow: 2px 2px 0 var(--line);
+}
+[data-studio-appearance][data-studio-responsibilities="outline"] .studio-hour-chip {
+  padding-inline: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+[data-studio-appearance][data-studio-responsibilities="comic"] .studio-role-card {
+  margin-block: 0.4rem;
+  border: 2px solid var(--ink);
+  border-left: 6px solid var(--accent);
+  border-radius: 14px 4px 14px 4px;
+  background: var(--elevated);
+  box-shadow: 4px 5px 0 var(--studio-highlight);
+}
+[data-studio-appearance][data-studio-responsibilities="comic"] .studio-role-card input {
+  font-weight: 800;
+}
+[data-studio-appearance][data-studio-responsibilities="comic"] .studio-hour-chip {
+  padding-inline: 0.5rem;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 7px 2px 7px 2px;
+  background: color-mix(in srgb, var(--studio-highlight) 20%, var(--elevated));
+  font-weight: 900;
+}
+[data-studio-appearance][data-studio-responsibilities="glass"] .studio-role-card {
+  margin-block: 0.4rem;
+  border: 1px solid var(--glass-stroke);
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--elevated) 90%, transparent);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--studio-blur));
+  -webkit-backdrop-filter: blur(var(--studio-blur));
+}
+[data-studio-appearance][data-studio-responsibilities="glass"] .studio-hour-chip {
+  padding-inline: 0.5rem;
+  background: var(--fill);
+  border-radius: 12px;
+  color: var(--ink);
+  font-weight: 800;
+}
+/* Hours preview should use the same visual recipe as responsibility cards. */
+[data-studio-appearance][data-studio-responsibilities="outline"] .studio-hour-bank {
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+[data-studio-appearance][data-studio-responsibilities="comic"] .studio-hour-bank {
+  border: 2px solid var(--ink);
+  border-radius: 14px 4px 14px 4px;
+  box-shadow: 5px 5px 0 var(--studio-highlight);
+}
+[data-studio-appearance][data-studio-responsibilities="glass"] .studio-hour-bank {
+  border: 1px solid var(--glass-stroke);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+/* Week cards: date headings and allocation chips retain their original actions. */
+[data-studio-appearance][data-studio-week="outline"] .week-seq-item {
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 var(--line);
+}
+[data-studio-appearance][data-studio-week="comic"] .week-seq-item {
+  border: 2px solid var(--ink);
+  border-top: 6px solid var(--accent);
+  border-radius: 16px 4px 16px 4px;
+  background: var(--elevated);
+  box-shadow: 4px 5px 0 var(--studio-highlight);
+}
+[data-studio-appearance][data-studio-week="comic"] .week-seq-item > div:first-child h2 {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+}
+[data-studio-appearance][data-studio-week="comic"] .week-seq-item li.bg-canvas {
+  border: 1px solid var(--line);
+  border-radius: 8px 2px 8px 2px;
+}
+[data-studio-appearance][data-studio-week="glass"] .week-seq-item {
+  border: 1px solid var(--glass-stroke);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--elevated) 89%, transparent);
+  backdrop-filter: blur(var(--studio-blur));
+  -webkit-backdrop-filter: blur(var(--studio-blur));
+  box-shadow: var(--shadow);
+}
+[data-studio-appearance][data-studio-week="outline"] .spread-bubbles > *,
+[data-studio-appearance][data-studio-week="comic"] .spread-bubbles > * {
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+}
+
+/* Task design is independent from week-card and responsibility-card design. */
+[data-studio-appearance][data-studio-tasks="outline"] .studio-task-row {
+  border-left: 2px solid var(--ink);
+  background: var(--elevated);
+}
+[data-studio-appearance][data-studio-tasks="comic"] .studio-task-row {
+  margin-block: 0.35rem;
+  border: 2px solid var(--ink);
+  border-left: 5px solid var(--studio-highlight);
+  border-radius: 10px 3px 10px 3px;
+  background: var(--elevated);
+  box-shadow: 3px 3px 0 var(--accent);
+}
+[data-studio-appearance][data-studio-tasks="comic"] .studio-task-row [role="checkbox"] .rounded-full {
+  border-radius: 5px;
+}
+[data-studio-appearance][data-studio-tasks="comic"] .studio-task-panel {
+  border: 2px solid var(--ink);
+  border-radius: 14px 3px 14px 3px;
+}
+[data-studio-appearance][data-studio-tasks="glass"] .studio-task-row,
+[data-studio-appearance][data-studio-tasks="glass"] .studio-task-panel {
+  border: 1px solid var(--glass-stroke);
+  border-radius: 19px;
+  background: color-mix(in srgb, var(--elevated) 89%, transparent);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--studio-blur));
+  -webkit-backdrop-filter: blur(var(--studio-blur));
+}
+
+/* Actual bottom dock and inert preview of the same chrome. */
+[data-studio-appearance][data-studio-dock="outline"] .app-dock .glass,
+[data-studio-appearance][data-studio-dock="outline"] .studio-dock-preview {
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--elevated);
+  box-shadow: 3px 3px 0 var(--line);
+}
+[data-studio-appearance][data-studio-dock="comic"] .app-dock .glass,
+[data-studio-appearance][data-studio-dock="comic"] .studio-dock-preview {
+  border: 3px solid var(--ink);
+  border-radius: 15px 4px 15px 4px;
+  background: var(--elevated);
+  box-shadow: 4px 5px 0 var(--studio-highlight);
+  backdrop-filter: none;
+}
+[data-studio-appearance][data-studio-dock="comic"] .app-dock button {
+  border-radius: 7px 2px 7px 2px;
+  font-weight: 800;
+}
+[data-studio-appearance][data-studio-dock="glass"] .app-dock .glass,
+[data-studio-appearance][data-studio-dock="glass"] .studio-dock-preview {
+  border: 1px solid var(--glass-stroke);
+  border-radius: 30px;
+  background: color-mix(in srgb, var(--elevated) 85%, transparent);
+  backdrop-filter: blur(var(--studio-blur));
+  -webkit-backdrop-filter: blur(var(--studio-blur));
+  box-shadow: var(--shadow);
+}
+[data-studio-appearance] .studio-dock-preview {
+  padding: 0.75rem 1rem;
+  min-height: 44px;
+  border-radius: 999px;
+}
+@media (prefers-reduced-transparency: reduce) {
+  [data-studio-appearance][data-studio-crown="glass"] .crown-wheel,
+  [data-studio-appearance][data-studio-responsibilities="glass"] .studio-role-card,
+  [data-studio-appearance][data-studio-week="glass"] .week-seq-item,
+  [data-studio-appearance][data-studio-tasks="glass"] .studio-task-row,
+  [data-studio-appearance][data-studio-dock="glass"] .app-dock .glass {
+    background: var(--elevated);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  [data-studio-appearance] .studio-role-card,
+  [data-studio-appearance] .studio-task-row,
+  [data-studio-appearance] .week-seq-item {
+    border-color: var(--ink);
   }
 }

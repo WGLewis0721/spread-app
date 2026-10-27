@@ -2,7 +2,7 @@
 
 This is the one place the planner's visual rules live. `DESIGN.md` covers the landing page only.
 The planner has no brand board of its own: it uses the tokens in `src/styles.css` and the patterns below.
-**Do not add colors, fonts or decorative styles.** Use a token, or reuse a pattern.
+**Do not add colors, fonts or decorative styles to the unflagged Spread planner.** Use a token, or reuse a pattern. **Narrow Studio exception (2026-10-27):** when `VITE_SPREAD_STUDIO=1`, a validated per-profile appearance may override scoped semantic colors, local system font stacks, material paint and control geometry. All changes stay under `[data-studio-appearance]`; the golden/flag-off baseline remains visually unchanged. No planner meaning, hat colors, tasks, hours, hit-targets or storage keys may change.
 
 ## Tokens
 
@@ -85,7 +85,7 @@ Applies to the **planner** only. The landing page remains governed by `DESIGN.md
 - [21st.dev calendar components](https://21st.dev) — implementation patterns and state variants, not runtime dependencies; individual licensing must be reviewed before copying code.
 - [Pinterest weekly planner search](https://www.pinterest.com/search/pins/?q=minimal%20weekly%20planner%20app%20ui) — spacing inspiration only, not licensed product assets.
 
-**Reference lock:** Keep the crown, Spread/Week/Month semantics, responsibility colors, hour bank, round surfaces, and the quiet palette. Reject unrelated navigation, invented brand colors, extra icon libraries, and decorative animation.
+**Reference lock:** Keep the crown, Spread/Week/Month semantics, responsibility colors, hour bank and quiet default palette. Existing round surfaces remain the golden baseline; user-invoked, flagged Studio appearances may change their paint or geometry while preserving all control semantics and >=44px targets. Reject unrelated navigation, extra icon libraries, and decorative animation unrelated to bounded Studio settings.
 
 ### Verification gates
 

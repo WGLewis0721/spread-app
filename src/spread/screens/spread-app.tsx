@@ -13,6 +13,7 @@ import { collectFullPayload, fullBackupText, parseAnyBackup, parseFullBackup, ty
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import { isNativeApp } from "@/lib/spread/native";
+import { LOCAL_FIRST_OPEN_ACCESS } from "@/lib/spread/open-access";
 import { listPinned, prepareNativeStorage, readPinned, type PinnedCopy } from "@/lib/spread/native-mirror";
 import { ensureSafetyCopy } from "@/lib/spread/safety";
 import { acknowledgeBackup, backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
@@ -1062,7 +1063,7 @@ function RoleBlock({
   return (
     <section id={`spread-role-${hat.id}`} tabIndex={-1} className="scroll-mt-48 print:break-inside-avoid">
       {!first && <div className="ms-16 border-t border-line" />}
-      <div className="relative overflow-hidden">
+      <div className="studio-role-card relative overflow-hidden">
         <div className="flex min-h-16 items-center gap-3 px-4 py-2">
         <button
           type="button"
@@ -1110,7 +1111,7 @@ function RoleBlock({
         ) : (
           <button
             type="button"
-            className="grid h-11 min-w-8 shrink-0 place-items-center text-[17px] font-normal text-secondary tabular-nums"
+            className="studio-hour-chip grid h-11 min-w-8 shrink-0 place-items-center text-[17px] font-normal text-secondary tabular-nums"
             aria-label={`${hat.name}, ${hourChip(hours)} hours. Adjust`}
             onClick={() => setAdjusting(true)}
           >
@@ -1298,7 +1299,7 @@ function TaskRow({
     if (id) showUndoToast("Not today. It’s back in To place.", () => undoEdit(id));
   }
   return (
-    <li className={delay ? "cascade-item" : undefined} style={delay ? { animationDelay: delay } : undefined}>
+    <li className={cn("studio-task-row", delay && "cascade-item")} style={delay ? { animationDelay: delay } : undefined}>
       <div className="ms-[4.75rem] border-t border-line" />
       <div className="flex min-h-14 items-center ps-12">
         <button
@@ -1722,7 +1723,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        {native ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license ? "Signed in to the Spread beta." : "Not signed in."}
+        {native || LOCAL_FIRST_OPEN_ACCESS ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license ? "Signed in to the Spread beta." : "Not signed in."}
       </Dialog.Description>
       <LocalStatusRow />
       <ProfilesSection
@@ -1830,7 +1831,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
         ))}
       </div>
       {STUDIO_FLAG ? <StudioCustomizeEntry /> : null}
-      {native ? null : (
+      {native || LOCAL_FIRST_OPEN_ACCESS ? null : (
         <button
           type="button"
           className="mt-4 h-12 w-full rounded-full text-base font-semibold text-danger"

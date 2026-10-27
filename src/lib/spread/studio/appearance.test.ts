@@ -483,3 +483,32 @@ test("appearance: this module does not touch storage, network, fonts, or data-th
     assert.equal(/falcons|avengers|toy story|theme pack/i.test(source), false, name);
   }
 });
+
+test("appearance: wallpaper-free starter suppresses only the paint, never its local asset reference", () => {
+  for (const id of ["studio-retro", "studio-glass"]) {
+    const look = custom({ id, wallpaperAssetId: "test-photo" });
+    const scope = resolveStudioScope({ enabled: true, appearance: look, wallpaper: {
+      assetId: "test-photo", url: BLOB_A,
+    } });
+    assert.equal(scope.wallpaper, null);
+    assert.equal(applied(scope)["--studio-wallpaper-image"], "none");
+  }
+});
+
+test("appearance: every per-element treatment is independent and stays scoped", () => {
+  const look = custom();
+  look.controls = { density: "comfortable", treatmentId: "original",
+    parts: { crown: "comic", responsibilities: "outline", week: "glass", tasks: "comic", dock: "original" } };
+  look.palette.highlight = "#ff8a24";
+  const result = resolveStudioScope({ enabled: true, appearance: look });
+  assert.equal(result.parts.crown, "comic");
+  assert.equal(result.parts.responsibilities, "outline");
+  assert.equal(result.parts.week, "glass");
+  assert.equal(result.parts.tasks, "comic");
+  assert.equal(result.parts.dock, "original");
+  assert.equal(result.style["--studio-highlight"], "#ff8a24");
+  const hidden = resolveStudioScope({ enabled: false, appearance: look });
+  assert.equal(hidden.applied, false);
+  assert.deepEqual(hidden.style, {});
+  assert.equal(hidden.parts.crown, "original");
+});

@@ -1,5 +1,6 @@
 import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
+import { LOCAL_FIRST_OPEN_ACCESS } from "@/lib/spread/open-access";
 import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
 import { runMigrations } from "@/lib/spread/schema";
 import { classifyStored } from "@/lib/spread/pristine";
@@ -141,11 +142,11 @@ export type RestoreResult =
 // never written to storage there, so it can't go stale or be removed by a storage reset.
 const NATIVE_LICENSE: License = { ok: true, plan: "personal" };
 
-// On the web the planner opens only for a verified beta session (see enterBeta and
-// src/lib/beta-status.ts). Nothing in browser storage can open it, so the old stored
-// license key and the public trial key no longer unlock anything.
+// Native and explicitly opted-in local-first Studio builds open without sign-in.
+// Normal web production still requires the existing beta session. This never grants
+// server/database access; it only unlocks the device-local planner.
 function readLicense(): License | null {
-  return isNativeApp() ? NATIVE_LICENSE : null;
+  return isNativeApp() || LOCAL_FIRST_OPEN_ACCESS ? NATIVE_LICENSE : null;
 }
 
 function readData(): SpreadData {
@@ -512,7 +513,7 @@ export const useSpread = create<Store>((set, get) => ({
     set({ license });
   },
   logout: () => {
-    if (isNativeApp()) return;
+    if (isNativeApp() || LOCAL_FIRST_OPEN_ACCESS) return;
     flushSpread();
     document.documentElement.removeAttribute("data-spread");
     set({ license: null });
