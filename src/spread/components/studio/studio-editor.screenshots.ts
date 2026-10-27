@@ -377,6 +377,23 @@ try {
   for(const wallpaperVariant of ["ink-stripes","bright-confetti-mosaic"] as const){
     await page.getByRole("button",{name:"Settings"}).click();
     await page.getByRole("button",{name:"Customize Spread"}).click();
+    // Reimport each fixture on every scheme: otherwise the previous bright
+    // wallpaper could be mislabeled as stripes in the next test iteration.
+    if(wallpaperVariant==="ink-stripes"){
+      const stripes=await page.evaluate(()=>{
+        const canvas=document.createElement("canvas");canvas.width=320;canvas.height=640;
+        const c=canvas.getContext("2d")!;
+        c.fillStyle="#254252";c.fillRect(0,0,320,640);
+        c.strokeStyle="#fbf4c0";c.lineWidth=26;
+        for(let x=-240;x<510;x+=52){
+          c.beginPath();c.moveTo(x,0);c.lineTo(x+320,640);c.stroke();
+        }
+        return canvas.toDataURL("image/png").split(",")[1];
+      });
+      await studio.locator("input[type='file']").setInputFiles({
+        name:"ink-stripes-procedural.png",mimeType:"image/png",buffer:Buffer.from(stripes,"base64"),
+      });
+    }
     if(wallpaperVariant==="bright-confetti-mosaic"){
       // Bright Confetti Mosaic: busy, high-saturation geometric artwork,
       // distinctly unlike Starry Ink's dark, low-frequency illustration.
