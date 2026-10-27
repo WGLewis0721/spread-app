@@ -28,6 +28,27 @@
   filter: blur(var(--studio-wallpaper-blur));
 }
 
+/* A personalized wallpaper is a device backdrop, not a panel texture.
+   The original header's opaque .bar-fade was hiding it across the first ~300px.
+   Only opt in when a valid local wallpaper exists; retain the golden header
+   (and its scroll fade) for Original and wallpaper-free looks. */
+[data-studio-appearance][data-studio-wallpaper="on"] .bar-fade {
+  background: transparent;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .bar-fade::after {
+  display: none;
+}
+/* The wheel and controls have their own plates. Protect its loose hint against
+   arbitrary sky, faces or artwork without covering the wallpaper. */
+[data-studio-appearance][data-studio-wallpaper="on"] .crown > p[role="status"] {
+  display: table;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.85rem;
+  background: var(--elevated);
+}
+
 [data-studio-appearance]::after {
   content: "";
   position: absolute;

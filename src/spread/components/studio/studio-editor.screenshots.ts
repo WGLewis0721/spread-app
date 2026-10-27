@@ -188,6 +188,37 @@ try {
       const scope = document.querySelector<HTMLElement>("[data-studio-appearance]");
       return !!scope && getComputedStyle(scope).getPropertyValue("--studio-wallpaper-image").includes("blob:");
     }, null, { timeout: 15_000 });
+    // A wallpaper must paint under the header from the top of the viewport,
+    // not begin at the old opaque sticky bar's bottom edge.
+    const wallpaperPaint = await page.locator("[data-studio-wallpaper='on']").first().evaluate((scope) => {
+      const header = scope.querySelector<HTMLElement>(".bar-fade");
+      if (!header) return null;
+      const headerPaint = getComputedStyle(header);
+      const fade = getComputedStyle(header, "::after");
+      const backdrop = getComputedStyle(scope, "::before");
+      return {
+        headerBackground: headerPaint.backgroundColor,
+        headerImage: headerPaint.backgroundImage,
+        fade: fade.display,
+        backdropPosition: backdrop.position,
+        backdropSize: backdrop.backgroundSize,
+        backdropTop: backdrop.top,
+        image: backdrop.backgroundImage,
+      };
+    });
+    if (!wallpaperPaint ||
+      wallpaperPaint.headerBackground !== "rgba(0, 0, 0, 0)" ||
+      wallpaperPaint.headerImage !== "none" ||
+      wallpaperPaint.fade !== "none" ||
+      wallpaperPaint.backdropPosition !== "fixed" ||
+      !wallpaperPaint.backdropSize.includes("cover") ||
+      !wallpaperPaint.image.includes("blob:")) {
+      throw new Error("Wallpaper does not extend behind the full-height planner header: " + JSON.stringify(wallpaperPaint));
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    const fullWallpaperShot = `live-fullscreen-wallpaper-${scheme}-390.png`;
+    await page.screenshot({ path: join(dir, fullWallpaperShot) });
+    shots.push(fullWallpaperShot);
     await page.getByRole("tab", { name: "Week" }).click();
     await page.waitForFunction((expected) => document.querySelector("[data-studio-appearance]")?.getAttribute("data-studio-scheme") === expected, scheme);
     const actualScheme = await page.locator("[data-studio-appearance]").getAttribute("data-studio-scheme");
