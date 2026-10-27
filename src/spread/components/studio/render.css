@@ -458,7 +458,7 @@
 
 /* Wallpaper-first Week sheet. Only a selected local wallpaper activates it.
    The golden planner and wallpaper-free Studio looks remain unchanged. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header {
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   gap: 0.5rem 0.75rem;
@@ -467,24 +467,24 @@
   border-bottom: 3px solid var(--ink);
   padding-bottom: 0.65rem;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header > div:first-child {
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] > div:first-child {
   grid-column: 1 / -1;
   margin-bottom: 0;
   min-height: 36px;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header .crown {
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown {
   grid-column: 1;
   min-width: 0;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header .crown-wheel {
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown-wheel {
   height: 3.45rem;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header .crown > p[role="status"] {
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown > p[role="status"] {
   position: absolute;
   width: 1px;height:1px;padding:0;overflow:hidden;
   white-space:nowrap;clip:rect(0,0,0,0);
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header > [role="tablist"] {
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] > [role="tablist"] {
   grid-column: 2;
   margin: 0;
   min-width: 98px;

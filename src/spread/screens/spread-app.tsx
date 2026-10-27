@@ -598,7 +598,7 @@ function WeekScreen() {
       <div className="min-h-dvh">
       {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
       <div className="mx-auto w-full max-w-xl" style={{ "--spread-header": `${headerH}px` } as CSSProperties}>
-        <header ref={headerRef} className="bar-fade studio-week-header no-print sticky top-0 z-20 px-4 pt-safe pb-3">
+        <header ref={headerRef} data-studio-view={STUDIO_FLAG ? view : undefined} className="bar-fade studio-week-header no-print sticky top-0 z-20 px-4 pt-safe pb-3">
           <div className="mb-3 flex items-center gap-3">
             <button type="button" className="brand" aria-label="Spread, home" onClick={goHome}>
               <BrandMark size={34} />
