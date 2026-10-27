@@ -211,11 +211,13 @@ function StudioCustomizeLive() {
         if (pending) await dropPendingAsset(assets, profileId, pending);
         return;
       }
-      const designed=measured && result.session.draft.wallpaperAssetId
+      // Only a successful import may associate a freshly measured language
+      // with the chosen image. An invalid file must not restyle an older photo.
+      const designed=measured && !result.message && result.session.draft.wallpaperAssetId
         ? reduceStudioSession(result.session,{type:"apply-wallpaper-language",language:measured}).state
         : result.session;
       setSession(designed);
-      setLanguage(measured);
+      setLanguage(result.message?null:measured);
     } catch {
       if (openRef.current && !abort.signal.aborted && profileIdRef.current === profileId) {
         applyAction({ type: "note", message: STUDIO_UI_COPY.photosUnavailable });
