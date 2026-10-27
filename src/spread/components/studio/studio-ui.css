@@ -105,3 +105,39 @@
   .studio-starter-card { border-color: currentColor; }
   .studio-starter-card[aria-pressed="true"] { outline: 3px solid var(--accent); outline-offset: 2px; }
 }
+
+
+/* Structural customization stays inside the protected Studio scope. */
+.studio-starter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.studio-starter-art--illustrated {
+  color: #102b45;
+  border: 2px solid #102b45;
+  background: linear-gradient(130deg, #d9f2ff 15%, #ffffff 48%, #ffc48c 49%, #ff8a24);
+  font-family: Impact, "Arial Black", system-ui, sans-serif;
+  box-shadow: 3px 3px 0 #0876c9;
+}
+.studio-starter-art--illustrated .studio-starter-art-pill {
+  border: 1px solid #102b45;
+  border-radius: 2px;
+  box-shadow: 2px 2px 0 #102b45;
+}
+.studio-element-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.25rem; }
+.studio-element-option {
+  min-height: 44px;
+  padding: 0.25rem 0.125rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--canvas);
+  color: var(--secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.studio-element-option[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.studio-element-option:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}

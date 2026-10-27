@@ -24,6 +24,8 @@ import {
 import { StudioLivePreview, type PreviewPane } from "./studio-preview";
 import { STUDIO_APPEARANCE_SAVED_EVENT } from "./live-planner";
 import { STUDIO_STARTERS } from "@/lib/spread/studio/presets";
+import { STUDIO_ELEMENT_PARTS, type StudioElementPart, type StudioElementStyle } from "@/lib/spread/studio/contract";
+import { effectiveStudioParts } from "@/lib/spread/studio/appearance";
 import "./studio-ui.css";
 
 export function StudioCustomizeEntry() {
@@ -262,6 +264,9 @@ function StudioCustomizeLive() {
               <StarterLooks draft={draft} onAction={applyAction} />
             </fieldset>
             <StudioLivePreview pane={pane} onPane={setPane} appearance={draft} wallpaperUrl={wallpaperUrl} />
+            <fieldset disabled={!ready || busy} className="mt-4 min-w-0 border-0 p-0">
+              <ElementStyleControls draft={draft} onAction={applyAction} />
+            </fieldset>
             <fieldset disabled={!ready || busy} className="mt-5 min-w-0 border-0 p-0">
               <WallpaperControls
                 draft={draft}
@@ -344,7 +349,62 @@ function StarterLooks({
           </button>
         ))}
       </div>
-      <p className="mt-2 text-xs text-secondary">Retro and Glass hide your wallpaper, but keep it available for Personal Canvas. Original is always under Reset.</p>
+      <p className="mt-2 text-xs text-secondary">Retro and Clear Glass hide your wallpaper. Personal Canvas and Dynamic Ink use it. Reset restores Original.</p>
+    </section>
+  );
+}
+
+const ELEMENT_TITLES: Record<StudioElementPart, string> = {
+  crown: "Week crown",
+  responsibilities: "Responsibility cards",
+  week: "Week cards",
+  tasks: "Task rows",
+  dock: "Navigation dock",
+};
+const ELEMENT_CHOICES: readonly { style: StudioElementStyle; label: string }[] = [
+  { style: "inherit", label: "Auto" },
+  { style: "original", label: "Round" },
+  { style: "outline", label: "Frame" },
+  { style: "comic", label: "Ink" },
+  { style: "glass", label: "Glass" },
+];
+function ElementStyleControls({
+  draft,
+  onAction,
+}: {
+  draft: StudioAppearanceV1;
+  onAction: (action: StudioDraftAction) => void;
+}) {
+  const drawn = effectiveStudioParts(draft);
+  return (
+    <section aria-label="Interface elements">
+      <h2 className="text-base font-semibold">Customize the actual interface</h2>
+      <p className="mt-1 text-xs text-secondary">
+        Change each part separately. Auto follows the overall look. Preview before Apply.
+      </p>
+      {STUDIO_ELEMENT_PARTS.map((part) => (
+        <div key={part} className="mt-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold">{ELEMENT_TITLES[part]}</p>
+            <span className="text-xs text-secondary">Showing: {drawn[part]}</span>
+          </div>
+          <div className="studio-element-options mt-2" role="radiogroup" aria-label={ELEMENT_TITLES[part]}>
+            {ELEMENT_CHOICES.map(({ style, label }) => (
+              <button
+                key={style}
+                type="button"
+                role="radio"
+                aria-label={`${ELEMENT_TITLES[part]}: ${label}`}
+                aria-checked={(draft.controls.parts?.[part] ?? "inherit") === style}
+                className="studio-element-option"
+                onClick={() => onAction({ type: "set-element-style", part, style })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </section>
   );
 }
@@ -482,6 +542,7 @@ function ColorControls({
         <p className="mt-1 text-sm text-secondary">{STUDIO_UI_COPY.noSuggestion}</p>
       )}
       <ColorControl label={STUDIO_UI_COPY.accent} value={draft.palette.accent} onChange={(value) => onAction({ type: "set-color", key: "accent", value })} />
+      <ColorControl label="Highlight / outline" value={draft.palette.highlight ?? "#ff8a24"} onChange={(value) => onAction({ type: "set-color", key: "highlight", value })} />
       <ColorControl label={STUDIO_UI_COPY.surface} value={draft.palette.surface} onChange={(value) => onAction({ type: "set-color", key: "surface", value })} />
       <ColorControl label={STUDIO_UI_COPY.text} value={draft.palette.text} onChange={(value) => onAction({ type: "set-color", key: "text", value })} />
       <ColorControl
@@ -541,16 +602,16 @@ function MoreControls({
   return (
     <div className="mt-2">
       <p className="text-sm font-semibold">Typography</p>
-      <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Typography">
-        {([["system", "System"], ["editorial", "Editorial"], ["mono", "Mono"]] as const).map(([presetId, label]) => (
+      <div className="mt-2 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Typography">
+        {([["system", "System"], ["editorial", "Editorial"], ["mono", "Mono"], ["display", "Bold"]] as const).map(([presetId, label]) => (
           <button key={presetId} type="button" role="radio" aria-checked={draft.typography.presetId === presetId}
             className={`min-h-11 rounded-xl px-1 text-xs font-semibold ${draft.typography.presetId === presetId ? "bg-segment text-ink" : "bg-fill text-secondary"}`}
             onClick={() => onAction({ type: "set-typeface", presetId })}>{label}</button>
         ))}
       </div>
       <p className="mt-4 text-sm font-semibold">Control shape</p>
-      <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Control shape">
-        {([["original", "Original"], ["desktop", "Desktop"], ["soft-glass", "Soft glass"]] as const).map(([treatmentId, label]) => (
+      <div className="mt-2 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Control shape">
+        {([["original", "Original"], ["desktop", "Desktop"], ["soft-glass", "Glass"], ["illustrated", "Ink"]] as const).map(([treatmentId, label]) => (
           <button key={treatmentId} type="button" role="radio" aria-checked={draft.controls.treatmentId === treatmentId}
             className={`min-h-11 rounded-xl px-1 text-xs font-semibold ${draft.controls.treatmentId === treatmentId ? "bg-segment text-ink" : "bg-fill text-secondary"}`}
             onClick={() => onAction({ type: "set-control-treatment", treatmentId })}>{label}</button>

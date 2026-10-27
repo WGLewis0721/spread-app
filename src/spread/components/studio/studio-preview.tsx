@@ -67,6 +67,9 @@ export function StudioLivePreview({
             {pane === "spread" ? <SpreadReadout /> : pane === "hours" ? <HoursReadout /> : pane === "tasks" ? <TasksReadout /> : <WeekReadout />}
           </StudioAppearanceScope>
         </div>
+        <div className="studio-dock-preview mt-3 flex items-center justify-center gap-3 bg-elevated text-sm font-semibold">
+          <span>Spread</span><span aria-hidden="true">·</span><span>Week</span><span aria-hidden="true">·</span><span>Settings</span>
+        </div>
       </div>
     </section>
   );
@@ -82,17 +85,17 @@ function SpreadReadout() {
     <div className="px-3 py-3">
       <p className="studio-readable-note px-1 pb-2 text-xs text-secondary">{formatWeek(data.currentWeek)}</p>
       <h3 className="mb-2 px-1 text-sm font-semibold">Responsibilities</h3>
-      <div className="overflow-hidden rounded-[22px] bg-elevated">
+      <div className="studio-responsibility-list rounded-[22px] bg-elevated">
         {data.hats.map((hat, index) => {
           const box = week?.boxes.find((item) => item.hatId === hat.id);
           const hours = box?.hours ?? hat.defaultHours;
           return (
-            <section key={hat.id} className="px-4 py-3">
+            <section key={hat.id} className="studio-role-card px-4 py-3">
               {index > 0 ? <div className="mb-3 border-t border-line" /> : null}
               <div className="flex min-h-11 items-center gap-3">
                 <span className="size-9 shrink-0 rounded-full" style={{ backgroundColor: hat.color }} aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate text-[17px]">{hat.name}</span>
-                <span className="text-secondary tabular-nums">{hoursLabel(hours)}h</span>
+                <span className="studio-hour-chip text-secondary tabular-nums">{hoursLabel(hours)}h</span>
               </div>
             </section>
           );
@@ -114,7 +117,7 @@ function HoursReadout() {
   return (
     <div className="p-3">
       <p className="studio-readable-note text-xs text-secondary">{formatWeek(data.currentWeek)}</p>
-      <section className="mt-3 rounded-[22px] bg-elevated p-4">
+      <section className="studio-hour-bank mt-3 rounded-[22px] bg-elevated p-4">
         <p className="text-xs font-semibold text-secondary">Allocated this week</p>
         <p className="mt-1 text-2xl font-bold tabular-nums">{hoursLabel(total)}h</p>
         <ul className="mt-3">
@@ -148,16 +151,16 @@ function TasksReadout() {
     <div className="p-3">
       <p className="studio-readable-note text-xs text-secondary">{formatWeek(data.currentWeek)}</p>
       {grouped.length === 0 ? (
-        <p className="studio-readable-note mt-3 text-sm text-secondary">Your tasks will appear here as you add them to Spread.</p>
+        <p className="studio-task-panel studio-readable-note mt-3 text-sm text-secondary">Your tasks will appear here as you add them to Spread.</p>
       ) : grouped.map(({ hat, tasks }) => (
-        <section key={hat.id} className="mt-3 overflow-hidden rounded-[22px] bg-elevated p-4">
+        <section key={hat.id} className="studio-task-panel mt-3 overflow-hidden rounded-[22px] bg-elevated p-4">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <span className="size-3 rounded-full" style={{ backgroundColor: hat.color }} aria-hidden="true" />
             {hat.name}
           </h3>
           <ul className="mt-2">
             {tasks.map((task) => (
-              <li key={task.id} className="flex min-h-11 items-center gap-3 border-t border-line py-2 text-sm">
+              <li key={task.id} className="studio-task-row flex min-h-11 items-center gap-3 border-t border-line py-2 text-sm">
                 <span className="text-secondary">{task.done ? "Done" : "Open"}</span>
                 <span className={task.done ? "line-through" : ""}>{task.text}</span>
               </li>

@@ -125,7 +125,7 @@ function reduce(
     }
     case "set-control-treatment": {
       if (!["original", "desktop", "soft-glass", "illustrated"].includes(action.treatmentId)) return hold(session);
-      return edit(session, (draft) => ({ ...draft, controls: { ...draft.controls, treatmentId: action.treatmentId, parts: undefined } }));
+      return edit(session, (draft) => ({ ...draft, controls: { density: draft.controls.density, treatmentId: action.treatmentId } }));
     }
     case "set-element-style": {
       if (!["crown", "responsibilities", "week", "tasks", "dock"].includes(action.part)) return hold(session);

@@ -7,7 +7,7 @@ export const STUDIO_UI_COPY = {
   entry: "Customize",
   entryLabel: "Customize Spread",
   title: "Customize Spread",
-  description: "Choose a look or make your own. Personal photos stay on this device.",
+  description: "Match your photo with real card, crown, task and navigation styles. Photos stay on this device.",
   close: "Close",
   choosePhoto: "Choose a photo",
   readingPhoto: "Reading that photo.",
