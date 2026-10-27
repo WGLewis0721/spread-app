@@ -41,7 +41,7 @@ Wallpaper is an image referenced by opaque `wallpaperAssetId`, painted behind co
 
 Material (`flat` | `glass` | `matte` | `metal`), transparency, and depth may change **how those same tokens are painted** (opacity, blur, shadow) inside the scope. They may not introduce a new palette. `flat` remains available, and it is the treatment when Reduce Transparency is on, or when the advanced path is disabled.
 
-Typography `presetId` is allowlisted to `system`, `editorial`, or `mono`, using only device-local fallback stacks. There is no `@font-face`, font download, or new unflagged planner default. `scale` and `numeralEmphasis` remain bounded. Control `treatmentId` is allowlisted to `original`, `desktop`, or `soft-glass`. These treatments alter border radius, borders and shadows, never control semantics or hit-targets.
+Typography `presetId` is allowlisted to `system`, `editorial`, `mono`, or `display`, using only device-local fallback stacks. There is no `@font-face`, font download, or new unflagged planner default. `scale` and `numeralEmphasis` remain bounded. Control `treatmentId` is allowlisted to `original`, `desktop`, `soft-glass`, or `illustrated`. These treatments alter border radius, borders and shadows, never control semantics or hit-targets.
 
 `decorationIntensity` and `animationIntensity` only modulate existing motion and ornament. They do not add new illustration, blobs, or a second component library.
 

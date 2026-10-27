@@ -251,6 +251,36 @@ try {
     await page.screenshot({ path: join(dir, capture) });
     shots.push(capture);
   }
+  // Persist five independently styled groups, then test their real planner geometry.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Customize Spread" }).click();
+  await studio.getByRole("button", { name: /^Dynamic Ink/ }).click();
+  await studio.getByRole("radio", { name: "Week crown: Frame" }).click();
+  for (const part of ["Responsibility cards", "Week cards", "Task rows", "Navigation dock"]) {
+    await studio.getByRole("radio", { name: part + ": Ink" }).click();
+  }
+  await studio.getByRole("button", { name: "Apply", exact: true }).click();
+  await studio.waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  for (const [tab, className, expectedBorder] of [
+    ["Spread", ".studio-role-card", "2px"],
+    ["Week", ".week-seq-item", "6px"],
+  ] as const) {
+    await page.getByRole("tab", { name: tab, exact: true }).click();
+    await page.waitForFunction(() =>
+      document.querySelector("[data-studio-appearance='studio-illustrated'][data-studio-crown='outline'][data-studio-responsibilities='comic'][data-studio-week='comic'][data-studio-tasks='comic'][data-studio-dock='comic']") !== null
+    );
+    await page.waitForTimeout(700);
+    const border = await page.locator("[data-studio-appearance] " + className).first().evaluate((node) =>
+      getComputedStyle(node).borderTopWidth);
+    if (border !== expectedBorder) {
+      throw new Error(`Actual ${tab} component did not transform: ${border}, expected ${expectedBorder}`);
+    }
+    const capture = `live-${tab.toLowerCase()}-dynamic-ink-390.png`;
+    await page.setViewportSize({width: 390, height: 844});
+    await page.screenshot({path: join(dir,capture)});
+    shots.push(capture);
+  }
   // Reset proves the original look is still a true no-wrapper rollback.
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Customize Spread" }).click();
