@@ -455,3 +455,144 @@
     border-color: var(--ink);
   }
 }
+
+/* Wallpaper-first Week sheet. Only a selected local wallpaper activates it.
+   The golden planner and wallpaper-free Studio looks remain unchanged. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  background: var(--elevated);
+  border-bottom: 3px solid var(--ink);
+  padding-bottom: 0.65rem;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] > div:first-child {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+  min-height: 36px;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown {
+  grid-column: 1;
+  min-width: 0;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown-wheel {
+  height: 3.45rem;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown > p[role="status"] {
+  position: absolute;
+  width: 1px;height:1px;padding:0;overflow:hidden;
+  white-space:nowrap;clip:rect(0,0,0,0);
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] > [role="tablist"] {
+  grid-column: 2;
+  margin: 0;
+  min-width: 98px;
+  justify-self: end;
+}
+/* Header is deliberately a solid stable control shelf; the rest of the
+   viewport shows the one fixed wallpaper underneath the floating sheet. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage {
+  position: fixed;
+  z-index: 12;
+  inset-inline: 0;
+  left: 50%;
+  right: auto;
+  bottom: 0;
+  width: min(100%,36rem);
+  padding-top: 0.25rem;
+  padding-inline: 0.8rem;
+  transform: translateX(-50%);
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  border: 2px solid var(--ink);
+  border-bottom: none;
+  border-radius: 28px 28px 0 0;
+  background: var(--elevated);
+  box-shadow: 0 -5px 25px rgba(0,0,0,.14);
+  transition: top 420ms cubic-bezier(.32,.72,0,1);
+  scrollbar-width: thin;
+  touch-action: pan-y;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="peek"] {
+  top: 77dvh;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="half"] {
+  top: 47dvh;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] {
+  top: max(calc(env(safe-area-inset-top) + 143px), 18dvh);
+  overflow-y: auto;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="peek"] .studio-week-scrollbody {
+  display: none;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-grabber {
+  display: block;
+}
+[data-studio-appearance] .studio-week-grabber { display: none; }
+[data-studio-appearance] .studio-week-grab-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 88px;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  text-align: center;
+  touch-action: none;
+}
+[data-studio-appearance] .studio-week-grabber-line {
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--ink);
+}
+[data-studio-appearance] .studio-week-grabber-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  line-height: 1.3;
+  font-size: 0.83rem;
+}
+[data-studio-appearance] .studio-week-grabber-caption strong { font-size: 1.06rem; }
+[data-studio-appearance] .studio-week-summary {
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  background: var(--canvas);
+  padding: 0.25rem 0.5rem;
+  font-weight: 700;
+}
+[data-studio-appearance] .studio-week-grabber-help {
+  display: block;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--secondary);
+  padding-bottom: 0.25rem;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] .studio-week-grabber {
+  position: sticky;
+  top: -0.25rem;
+  z-index: 2;
+  background: var(--elevated);
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-scrollbody {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8.5rem);
+}
+@media (prefers-reduced-motion:reduce) {
+  [data-studio-appearance] .studio-week-stage { transition:none; }
+}
+@media (max-height:610px) {
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="peek"] { top: 70dvh; }
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="half"] { top: 42dvh; }
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] { top: 132px; }
+}

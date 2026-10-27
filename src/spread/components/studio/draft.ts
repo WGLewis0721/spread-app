@@ -24,6 +24,7 @@ import {
 } from "../../../lib/spread/studio/contract.ts";
 import { STUDIO_UI_COPY } from "./studio-copy.ts";
 import { appearanceFromStarter, type StudioStarterId } from "../../../lib/spread/studio/presets.ts";
+import type { StudioWallpaperLanguage } from "../../../lib/spread/studio/wallpaper-language.ts";
 
 export type StudioSession = {
   committed: StudioAppearanceV1;
@@ -42,6 +43,7 @@ export type StudioEffect =
 
 export type StudioDraftAction =
   | { type: "use-starter"; id: StudioStarterId }
+  | { type: "apply-wallpaper-language"; language: StudioWallpaperLanguage }
   | { type: "set-typeface"; presetId: TypographyPresetId }
   | { type: "set-control-treatment"; treatmentId: ControlTreatmentId }
   | { type: "set-element-style"; part: StudioElementPart; style: StudioElementStyle }
@@ -117,6 +119,18 @@ function reduce(
   action: StudioDraftAction,
 ): { state: StudioSession; effect: StudioEffect } {
   switch (action.type) {
+    case "apply-wallpaper-language": {
+      const language=action.language;
+      const applied=edit(session,(draft)=>({
+        ...draft,
+        id:"studio-wallpaper",name:"From Wallpaper",
+        palette:{...language.palette},
+        material:{treatment:language.treatment==="soft-glass"?"glass":"flat",transparency:language.treatment==="soft-glass"?0.14:0,depth:language.treatment==="soft-glass"?0.55:0.12},
+        typography:{...draft.typography,presetId:language.typeface},
+        controls:{density:draft.controls.density,treatmentId:language.treatment,parts:{...language.parts}},
+      }));
+      return { ...applied, state:{...applied.state,notice:"Local design created. "+language.explanation+". Review and tap Apply."} };
+    }
     case "use-starter":
       return edit(session, (draft) => appearanceFromStarter(action.id, draft), { suggestion: null });
     case "set-typeface": {

@@ -46,6 +46,7 @@ import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "
 import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
 import { StudioLivePlanner } from "@/spread/components/studio/live-planner";
+import { cycleDetent, snapDetent, type StudioWeekDetent } from "@/lib/spread/studio/week-detents";
 
 type Sheet = "more" | "new" | "icloud" | null;
 
@@ -366,6 +367,9 @@ function WeekScreen() {
   const openWeek = useSpread((s) => s.openWeek);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState(false);
+  const [studioDetent, setStudioDetent] = useState<StudioWeekDetent>("half");
+  const weekGrabRef = useRef<{y:number;at:number}|null>(null);
+  const skipGrabClick = useRef(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const profileId = useSpread((s) => s.activeId);
   const [view, setView] = useState<"spread" | "week">(() => readViewContext(safeStorage(), useSpread.getState().activeId).view);
@@ -594,7 +598,7 @@ function WeekScreen() {
       <div className="min-h-dvh">
       {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
       <div className="mx-auto w-full max-w-xl" style={{ "--spread-header": `${headerH}px` } as CSSProperties}>
-        <header ref={headerRef} className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
+        <header ref={headerRef} data-studio-view={STUDIO_FLAG ? view : undefined} className="bar-fade studio-week-header no-print sticky top-0 z-20 px-4 pt-safe pb-3">
           <div className="mb-3 flex items-center gap-3">
             <button type="button" className="brand" aria-label="Spread, home" onClick={goHome}>
               <BrandMark size={34} />
@@ -711,9 +715,44 @@ function WeekScreen() {
           role="tabpanel"
           aria-labelledby={`planner-tab-${view}`}
           tabIndex={0}
-          className="px-4 pt-2 pb-dock"
+          className={cn("px-4 pt-2 pb-dock",STUDIO_FLAG && view==="week" && "studio-week-stage")}
+          data-studio-detent={STUDIO_FLAG && view==="week" ? studioDetent : undefined}
         >
+          {STUDIO_FLAG && view==="week" ? <div className="studio-week-grabber">
+            <button
+              type="button"
+              className="studio-week-grab-control"
+              aria-label={`Week sheet ${studioDetent}. ${studioDetent==="full"?"Collapse":"Expand"} weekly plan.`}
+              aria-expanded={studioDetent!=="peek"}
+              onPointerDown={(e)=>{ weekGrabRef.current={y:e.clientY,at:performance.now()};skipGrabClick.current=false;e.currentTarget.setPointerCapture(e.pointerId); }}
+              onPointerUp={(e)=>{
+                const initial=weekGrabRef.current;weekGrabRef.current=null;
+                if(!initial)return;
+                const delta=e.clientY-initial.y,elapsed=performance.now()-initial.at;
+                if(Math.abs(delta)>=25){
+                  setStudioDetent(d=>snapDetent(d,delta,elapsed));
+                  skipGrabClick.current=true;
+                }
+              }}
+              onPointerCancel={()=>{weekGrabRef.current=null;skipGrabClick.current=false;}}
+              onClick={()=>{
+                if(skipGrabClick.current){skipGrabClick.current=false;return;}
+                setStudioDetent(cycleDetent);
+              }}
+            >
+              <span className="studio-week-grabber-line" aria-hidden="true"/>
+              <span className="studio-week-grabber-caption">
+                <strong>Today</strong>
+                <span>{now.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}</span>
+                <span className="studio-week-summary">
+                  {(data.weeks[data.currentWeek]?.boxes??[]).reduce((count,box)=>count+box.tasks.length,0)} tasks this week
+                </span>
+              </span>
+            </button>
+            <span className="studio-week-grabber-help" aria-hidden="true">Drag or tap to {studioDetent==="full"?"collapse":"expand"}</span>
+          </div>:null}
           <h1 className="hidden print:block px-1 pt-4 text-2xl font-bold">Spread · {range}</h1>
+          <div className={STUDIO_FLAG && view==="week" ? "studio-week-scrollbody" : undefined}>
           {view === "week" ? (
             <div className="layer-stack">
               {showWeekLayer && (
@@ -792,6 +831,7 @@ function WeekScreen() {
               </div>
             </div>
           )}
+          </div>
         </main>
       </div>
 
