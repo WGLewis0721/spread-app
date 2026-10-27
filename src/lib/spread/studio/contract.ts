@@ -48,6 +48,9 @@ export const AI_AVAILABILITY = ["available", "unsupported", "not-ready", "error"
 export const STUDIO_RECEIPTS = ["pending", "previewed", "applied"] as const;
 export const STUDIO_MODES = ["system", "light", "dark"] as const;
 export const WALLPAPER_FITS = ["cover", "contain"] as const;
+export const STUDIO_SHEET_EDGES = ["round", "scallop"] as const;
+export const STUDIO_CHECK_GLYPHS = ["check", "star"] as const;
+export const STUDIO_DISPLAY_FONTS = ["system", "ericaOne"] as const;
 
 export type MaterialTreatment = (typeof MATERIAL_TREATMENTS)[number];
 export type TypographyPresetId = (typeof TYPOGRAPHY_PRESET_IDS)[number];
@@ -60,6 +63,9 @@ export type AIAvailability = (typeof AI_AVAILABILITY)[number];
 export type StudioReceipt = (typeof STUDIO_RECEIPTS)[number];
 export type StudioMode = (typeof STUDIO_MODES)[number];
 export type WallpaperFit = (typeof WALLPAPER_FITS)[number];
+export type StudioSheetEdge = (typeof STUDIO_SHEET_EDGES)[number];
+export type StudioCheckGlyph = (typeof STUDIO_CHECK_GLYPHS)[number];
+export type StudioDisplayFont = (typeof STUDIO_DISPLAY_FONTS)[number];
 export type AssetOrientation = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export type StudioWallpaper = {
@@ -98,6 +104,20 @@ export type StudioControls = {
   parts?: Partial<Record<StudioElementPart, StudioElementStyle>>;
 };
 
+export type StudioSkin = {
+  sheetEdge: StudioSheetEdge;
+  outline: number;
+  hardShadow: number;
+  blockRadii: [number, number, number, number];
+  checkGlyph: StudioCheckGlyph;
+  displayFont: StudioDisplayFont;
+  wallpaperFollowsSheet: boolean;
+  ground: string;
+  steel: string;
+  mist: string;
+  cream: string;
+};
+
 export type StudioEffects = {
   decorationIntensity: number;
   animationIntensity: number;
@@ -115,6 +135,7 @@ export type StudioAppearanceV1 = {
   typography: StudioTypography;
   controls: StudioControls;
   effects: StudioEffects;
+  skin?: StudioSkin;
 };
 
 export type StudioDraft = {
@@ -180,6 +201,7 @@ const APPEARANCE_FIELDS = [
   "typography",
   "controls",
   "effects",
+  "skin",
 ] as const;
 
 const WALLPAPER_FIELDS = ["fit", "positionX", "positionY", "dim", "blur"] as const;
@@ -188,6 +210,7 @@ const MATERIAL_FIELDS = ["treatment", "transparency", "depth"] as const;
 const TYPOGRAPHY_FIELDS = ["presetId", "scale", "numeralEmphasis"] as const;
 const CONTROLS_FIELDS = ["density", "treatmentId", "parts"] as const;
 const EFFECTS_FIELDS = ["decorationIntensity", "animationIntensity"] as const;
+const SKIN_FIELDS = ["sheetEdge","outline","hardShadow","blockRadii","checkGlyph","displayFont","wallpaperFollowsSheet","ground","steel","mist","cream"] as const;
 const DRAFT_FIELDS = ["baseAppearanceId", "proposed", "explanation", "warnings"] as const;
 const ASSET_FIELDS = ["id", "format", "width", "height", "bytes", "orientation"] as const;
 const REQUEST_FIELDS = ["instruction", "current"] as const;
@@ -343,6 +366,29 @@ function readControls(value: unknown): StudioRead<StudioControls> {
   return pass({ density: value.density, treatmentId: value.treatmentId, ...(parts ? { parts } : {}) });
 }
 
+function readSkin(value: unknown): StudioRead<StudioSkin> {
+  if (!isRecord(value)) return fail("skin");
+  const unknown = unexpected(value, SKIN_FIELDS);
+  if (unknown) return fail(`unknown-field:skin.${unknown}`);
+  if (!oneOf(value.sheetEdge, STUDIO_SHEET_EDGES)) return fail("skin.sheetEdge");
+  if (!oneOf(value.checkGlyph, STUDIO_CHECK_GLYPHS)) return fail("skin.checkGlyph");
+  if (!oneOf(value.displayFont, STUDIO_DISPLAY_FONTS)) return fail("skin.displayFont");
+  if (typeof value.wallpaperFollowsSheet !== "boolean") return fail("skin.wallpaperFollowsSheet");
+  const outline = readNumber(value.outline, 0, 6);
+  const hardShadow = readNumber(value.hardShadow, 0, 6);
+  if (outline === null || hardShadow === null) return fail("skin.weight");
+  if (!Array.isArray(value.blockRadii) || value.blockRadii.length !== 4) return fail("skin.blockRadii");
+  const radii = value.blockRadii.map((n) => readNumber(n, 0, 32));
+  if (radii.some((n) => n === null)) return fail("skin.blockRadii");
+  const ground = readColor(value.ground), steel = readColor(value.steel);
+  const mist = readColor(value.mist), cream = readColor(value.cream);
+  if (!ground || !steel || !mist || !cream) return fail("skin.palette");
+  return pass({sheetEdge:value.sheetEdge,outline,hardShadow,
+    blockRadii:radii as [number,number,number,number],
+    checkGlyph:value.checkGlyph,displayFont:value.displayFont,
+    wallpaperFollowsSheet:value.wallpaperFollowsSheet,ground,steel,mist,cream});
+}
+
 function readEffects(value: unknown): StudioRead<StudioEffects> {
   if (!isRecord(value)) return fail("effects");
   const extra = unexpected(value, EFFECTS_FIELDS);
@@ -414,6 +460,8 @@ export function parseStudioAppearance(value: unknown): StudioRead<StudioAppearan
   if (!controls.ok) return controls;
   const effects = readEffects(value.effects);
   if (!effects.ok) return effects;
+  const skin = "skin" in value ? readSkin(value.skin) : null;
+  if (skin && !skin.ok) return skin;
   return pass({
     version: 1,
     id,
@@ -426,6 +474,7 @@ export function parseStudioAppearance(value: unknown): StudioRead<StudioAppearan
     typography: typography.value,
     controls: controls.value,
     effects: effects.value,
+    ...(skin?.ok ? {skin:skin.value} : {}),
   });
 }
 

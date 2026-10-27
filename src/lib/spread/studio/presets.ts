@@ -5,7 +5,7 @@
  */
 import { originalStudioAppearance, parseStudioAppearance, type StudioAppearanceV1 } from "./contract.ts";
 
-export type StudioStarterId = "personal" | "retro" | "glass" | "illustrated";
+export type StudioStarterId = "personal" | "retro" | "glass" | "illustrated" | "starry";
 export type StudioStarter = {
   id: StudioStarterId;
   label: string;
@@ -80,6 +80,25 @@ export const STUDIO_STARTERS: readonly StudioStarter[] = [
       typography: { presetId: "display", scale: 1.03, numeralEmphasis: 0.9 },
       controls: { density: "comfortable", treatmentId: "illustrated" },
       effects: { decorationIntensity: 0.08, animationIntensity: 0.15 },
+    },
+  },
+  {
+    id:"starry",label:"Starry Ink",
+    description:"Linocut outlines, scalloped Week sheet, Erica One display and star checks.",
+    appearance:{
+      ...original,
+      id:"studio-starry",name:"Starry Ink",mode:"light",
+      palette:{accent:"#f5d62d",surface:"#fbf4c0",text:"#0e151a",secondaryText:"#254252",highlight:"#476c7b"},
+      wallpaper:{...original.wallpaper,fit:"cover",positionX:50,positionY:50,dim:0},
+      material:{treatment:"flat",transparency:0,depth:0},
+      typography:{presetId:"system",scale:1,numeralEmphasis:0.5},
+      controls:{density:"comfortable",treatmentId:"illustrated"},
+      effects:{decorationIntensity:0,animationIntensity:0.3},
+      skin:{
+        sheetEdge:"scallop",outline:3,hardShadow:3,blockRadii:[14,14,14,4],
+        checkGlyph:"star",displayFont:"ericaOne",wallpaperFollowsSheet:true,
+        ground:"#254252",steel:"#476c7b",mist:"#add4dd",cream:"#fbf4c0",
+      },
     },
   },
 ];

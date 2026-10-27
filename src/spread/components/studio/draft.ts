@@ -413,6 +413,7 @@ function cloneAppearance(value: StudioAppearanceV1): StudioAppearanceV1 {
     typography: { ...value.typography },
     controls: { ...value.controls, ...(value.controls.parts ? { parts: { ...value.controls.parts } } : {}) },
     effects: { ...value.effects },
+    ...(value.skin ? {skin:{...value.skin,blockRadii:[...value.skin.blockRadii] as [number,number,number,number]}} : {}),
   };
 }
 

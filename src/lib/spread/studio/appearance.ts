@@ -139,6 +139,14 @@ export const STUDIO_STYLE_KEYS = [
   "--studio-metal-lo",
   "--studio-matte-line",
   "--studio-highlight",
+  "--studio-skin-outline",
+  "--studio-skin-shadow",
+  "--studio-skin-radius",
+  "--studio-skin-ground",
+  "--studio-skin-mist",
+  "--studio-skin-cream",
+  "--studio-skin-steel",
+  "--studio-display-font",
   ...ROLE_KEYS,
   "--studio-status-done",
   "--studio-status-danger",
@@ -224,6 +232,12 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
         ])) as Record<StudioElementPart, StudioElementStyle>,
       } : {}),
     },
+    ...(appearance.skin ? { skin:{
+      ...appearance.skin,
+      blockRadii:appearance.skin.blockRadii.map(n=>clampNumber(n,0,32,14)) as [number,number,number,number],
+      outline:clampNumber(appearance.skin.outline,0,6,0),
+      hardShadow:clampNumber(appearance.skin.hardShadow,0,6,0),
+    }} : {}),
     effects: {
       decorationIntensity: clampNumber(appearance.effects?.decorationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
       animationIntensity: clampNumber(appearance.effects?.animationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
@@ -575,6 +589,15 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--studio-metal-lo": metalLo,
     "--studio-matte-line": rgba(text, depth * 0.08),
     "--studio-highlight": appearance.palette.highlight ?? "#ff8a24",
+    "--studio-skin-outline": `${appearance.skin?.outline ?? 0}px`,
+    "--studio-skin-shadow": `${appearance.skin?.hardShadow ?? 0}px`,
+    "--studio-skin-radius": (appearance.skin?.blockRadii ?? [14,14,14,4]).map(n=>`${n}px`).join(" "),
+    "--studio-skin-ground": appearance.skin?.ground ?? surface,
+    "--studio-skin-mist": appearance.skin?.mist ?? surface,
+    "--studio-skin-cream": appearance.skin?.cream ?? surface,
+    "--studio-skin-steel": appearance.skin?.steel ?? secondary,
+    "--studio-display-font": appearance.skin?.displayFont==="ericaOne"
+      ? '"Spread Erica", Impact, "Arial Black", system-ui, sans-serif' : fonts[appearance.typography.presetId],
   };
   roles.forEach((color, index) => {
     style[`--studio-role-${index + 1}`] = color;
