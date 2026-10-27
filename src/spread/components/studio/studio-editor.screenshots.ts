@@ -374,24 +374,26 @@ try {
   const skinEvidence: Array<Record<string, unknown>> = [];
   await page.setViewportSize({width:390,height:844});
   for(const scheme of ["light","dark"] as const){
-  for(const wallpaperVariant of ["ink-stripes","open-sky"] as const){
+  for(const wallpaperVariant of ["ink-stripes","bright-confetti-mosaic"] as const){
     await page.getByRole("button",{name:"Settings"}).click();
     await page.getByRole("button",{name:"Customize Spread"}).click();
-    if(wallpaperVariant==="open-sky"){
-      // Different silhouette/composition from the high-contrast striped test:
-      // calm vertical sky gradient with a solid horizon and warm sun disk.
+    if(wallpaperVariant==="bright-confetti-mosaic"){
+      // Bright Confetti Mosaic: busy, high-saturation geometric artwork,
+      // distinctly unlike Starry Ink's dark, low-frequency illustration.
       const image=await page.evaluate(()=>{
         const canvas=document.createElement("canvas");canvas.width=320;canvas.height=640;
         const c=canvas.getContext("2d")!;
-        const gradient=c.createLinearGradient(0,0,0,640);
-        gradient.addColorStop(0,"#87cdec");gradient.addColorStop(.65,"#c0e5f0");
-        gradient.addColorStop(.66,"#eae7d2");gradient.addColorStop(1,"#304c35");
-        c.fillStyle=gradient;c.fillRect(0,0,320,640);
-        c.fillStyle="#fff4c7";c.beginPath();c.arc(228,180,44,0,2*Math.PI);c.fill();
-        c.fillStyle="#234d38";c.fillRect(0,522,320,118);
+        c.fillStyle="#fff385";c.fillRect(0,0,320,640);
+        const colors=["#ff416c","#00a7d4","#7e52e8","#52bb55","#ff9419","#f5e8ff"];
+        for(let n=0;n<130;n++){
+          const x=(n*79)%320,y=(n*131)%640,size=16+(n*11)%55;
+          c.fillStyle=colors[n%colors.length];
+          if(n%3===0){c.beginPath();c.arc(x,y,size/2,0,Math.PI*2);c.fill();}
+          else {c.save();c.translate(x,y);c.rotate((n%7)*Math.PI/12);c.fillRect(-size/2,-size/2,size,size);c.restore();}
+        }
         return canvas.toDataURL("image/png").split(",")[1];
       });
-      await studio.locator("input[type='file']").setInputFiles({name:"open-sky-procedural.png",mimeType:"image/png",buffer:Buffer.from(image,"base64")});
+      await studio.locator("input[type='file']").setInputFiles({name:"bright-confetti-mosaic.png",mimeType:"image/png",buffer:Buffer.from(image,"base64")});
       await page.waitForFunction(()=>{
         const el=document.querySelector(".studio-sheet")!;
         return el?.querySelector("button:not(:disabled)")&&
@@ -428,11 +430,11 @@ try {
           scallop:scallop.includes("data:image"),current:node.getAttribute("data-studio-detent"),
           mask:scallop.slice(0,120)};
       });
-      const boardTop={peek:690,half:410,full:130}[mode]/874*844;
+      const boardTop={peek:.79,half:.47,full:.15}[mode]*844;
       const delta=Math.abs(Number(geometry.top)-boardTop);
       // Wallpaper offsets are read from the unmodified E1 HTML, not guessed:
       // 0px Peek, -222px Half and Full, at 402x874; scale by viewport height.
-      const referenceWallpaperOffset=(mode==="peek"?0:-222)*844/874;
+      const referenceWallpaperOffset=(mode==="peek"?0:-222)*844/804;
       const wallpaperOffsetDelta=Math.abs(Number.parseFloat(geometry.wallpaperOffset)-referenceWallpaperOffset);
       const valid=geometry.current===mode && delta<=2 && wallpaperOffsetDelta<=2 && geometry.outline==="3px"
         && geometry.shadow==="3px" && geometry.scallop;
@@ -440,11 +442,21 @@ try {
       // Full is compared in its useful end-of-week state. Scroll all the way to
       // the bottom and prove the last chronological day clears the dock.
       if(mode==="full"){
-        await sheet.evaluate(el=>{el.scrollTop=el.scrollHeight});
+        await sheet.locator(".studio-week-scrollbody").evaluate(el=>{el.scrollTop=el.scrollHeight});
         await page.waitForTimeout(100);
         const clearance=await page.locator(".studio-week-stage [data-day]").last().evaluate(el=>el.getBoundingClientRect().bottom);
         const dock=await page.locator(".app-dock").first().evaluate(el=>el.getBoundingClientRect().top);
         if(clearance>dock-2)throw new Error(`Full last-day/dock collision: day ${clearance}px dock ${dock}px`);
+      }
+      if(mode==="full"){
+        // E1 Full hides artwork under the solid sheet; only the exterior
+        // scallop overlaps the header. No modal scrim or portal is permitted.
+        const paint=await sheet.locator(".studio-week-grabber").evaluate(el=>({
+          image:getComputedStyle(el).backgroundImage,
+          scallop:!!el.parentElement?.querySelector(".studio-week-scallop"),
+        }));
+        if(paint.image!=="none"||!paint.scallop)
+          throw new Error("Full wallpaper portal/overhang mismatch: "+JSON.stringify(paint));
       }
       const shot=`starry-${wallpaperVariant}-${scheme}-${mode}-390.png`;
       await page.screenshot({path:join(dir,shot)});
