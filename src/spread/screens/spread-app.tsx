@@ -1403,7 +1403,10 @@ function TaskRow({
           className="grid size-14 shrink-0 place-items-center"
         >
           {task.done ? (
-            <SpreadIcon name="icon-check.svg" size={28} />
+            <span className="studio-check-glyph">
+              <SpreadIcon name="icon-check.svg" size={28} />
+              <span className="studio-completion-star" aria-hidden="true">★</span>
+            </span>
           ) : (
             <span className="size-7 rounded-full border-2" style={{ borderColor: "var(--tertiary)" }} />
           )}

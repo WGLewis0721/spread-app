@@ -596,3 +596,172 @@
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="half"] { top: 42dvh; }
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] { top: 132px; }
 }
+
+/* Starry Ink is a validated material slot, not a hardcoded preset selector.
+   Default, glass, other illustrations and the golden flag-off app are unchanged. */
+[data-studio-appearance][data-studio-skin="linocut"] {
+  --studio-week-peek: calc(100dvh * 690 / 874);
+  --studio-week-half: calc(100dvh * 410 / 874);
+  --studio-week-full: calc(100dvh * 130 / 874);
+}
+[data-studio-appearance][data-studio-skin="linocut"][data-studio-wallpaper-follows="yes"]::before {
+  background-position: center, var(--studio-wallpaper-position-x) calc(var(--studio-wallpaper-position-y) + var(--studio-wallpaper-follow-y, 0px));
+  transition: background-position 420ms cubic-bezier(.32,.72,0,1);
+}
+[data-studio-appearance][data-studio-skin="linocut"]:has(.studio-week-stage[data-studio-dragging="true"])::before {
+  transition: none;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-header[data-studio-view="week"] {
+  background:var(--studio-skin-mist);
+  border-bottom:var(--studio-skin-outline) solid var(--ink);
+  box-shadow:0 var(--studio-skin-shadow) 0 var(--studio-skin-ground);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-header[data-studio-view="week"] .crown-wheel {
+  min-height: 3.5rem;
+  background:repeating-linear-gradient(90deg,var(--studio-skin-ground) 0 .2rem,var(--studio-skin-steel) .2rem .5rem);
+  border:var(--studio-skin-outline) solid var(--ink);
+  border-radius:var(--studio-skin-radius);
+  box-shadow:var(--studio-skin-shadow) var(--studio-skin-shadow) 0 var(--ink);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-header[data-studio-view="week"] .crown-ridges,
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-header[data-studio-view="week"] .crown-sheen {
+  display:none;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .crown-cap {
+  min-width: 44px;
+  min-height: 44px;
+  background:var(--accent);
+  border:var(--studio-skin-outline) solid var(--ink);
+  box-shadow:inset 0 -2px 0 var(--studio-skin-steel);
+  filter:none;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .crown-readout {
+  background:var(--studio-skin-cream);
+  color:var(--ink);
+  border:calc(var(--studio-skin-outline) - 1px) solid var(--ink);
+  border-radius:0.65rem;
+  font-family:var(--studio-display-font);
+  text-transform:none;
+  font-weight:400;
+  box-shadow:none;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .crown-readout p:first-child {
+  font-family:var(--studio-display-font);
+  font-size:clamp(1rem,1.1rem,1.3rem);
+  font-weight:400;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .week-seq-item,
+[data-studio-appearance][data-studio-skin="linocut"] .studio-role-card,
+[data-studio-appearance][data-studio-skin="linocut"] .studio-task-panel {
+  border:var(--studio-skin-outline) solid var(--ink);
+  border-radius:var(--studio-skin-radius);
+  background:var(--studio-skin-cream);
+  box-shadow:var(--studio-skin-shadow) var(--studio-skin-shadow) 0 var(--ink);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .week-seq-item h2 {
+  font-family:var(--studio-display-font);
+  font-weight:400;
+  font-size:clamp(1rem,1.1rem,1.4rem);
+  letter-spacing:0;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .spread-bubbles > * {
+  border:var(--studio-skin-outline) solid var(--ink);
+  border-radius:999px;
+  box-shadow:var(--studio-skin-shadow) var(--studio-skin-shadow) 0 var(--ink);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-hour-chip {
+  border:var(--studio-skin-outline) solid var(--ink);
+  border-radius:999px;
+  box-shadow:var(--studio-skin-shadow) var(--studio-skin-shadow) 0 var(--ink);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage {
+  --studio-sheet-top:var(--studio-week-half);
+  top:var(--studio-drag-top,var(--studio-sheet-top));
+  background:var(--studio-skin-mist);
+  border:var(--studio-skin-outline) solid var(--ink);
+  border-bottom:0;
+  border-radius:0;
+  box-shadow:var(--studio-skin-shadow) 0 0 var(--ink);
+  padding-top:0.35rem;
+  transition:top 420ms cubic-bezier(.32,.72,0,1);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="peek"] {--studio-sheet-top:var(--studio-week-peek);}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="half"] {--studio-sheet-top:var(--studio-week-half);}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"] {--studio-sheet-top:var(--studio-week-full);overflow-y:auto;}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-dragging="true"] {transition:none;}
+[data-studio-appearance][data-studio-skin="linocut"][data-studio-sheet-edge="scallop"] .studio-week-stage {
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20402%2040%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22white%22%20d%3D%22M0%2040V26A16%2016%200%200%201%2024%2014A22%2022%200%200%201%2072%2012A20%2020%200%200%201%20116%2012A22%2022%200%200%201%20164%2010A20%2020%200%200%201%20208%2012A22%2022%200%200%201%20256%2010A20%2020%200%200%201%20300%2012A22%2022%200%200%201%20350%2012A16%2016%200%200%201%20402%2024V40Z%22%2F%3E%3C%2Fsvg%3E"),linear-gradient(#000,#000);
+  mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20402%2040%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22white%22%20d%3D%22M0%2040V26A16%2016%200%200%201%2024%2014A22%2022%200%200%201%2072%2012A20%2020%200%200%201%20116%2012A22%2022%200%200%201%20164%2010A20%2020%200%200%201%20208%2012A22%2022%200%200%201%20256%2010A20%2020%200%200%201%20300%2012A22%2022%200%200%201%20350%2012A16%2016%200%200%201%20402%2024V40Z%22%2F%3E%3C%2Fsvg%3E"),linear-gradient(#000,#000);
+  -webkit-mask-repeat:no-repeat,no-repeat;
+  mask-repeat:no-repeat,no-repeat;
+  -webkit-mask-size:100% 40px,100% calc(100% - 39px);
+  mask-size:100% 40px,100% calc(100% - 39px);
+  -webkit-mask-position:top,bottom;
+  mask-position:top,bottom;
+  -webkit-mask-composite:source-over;
+  mask-composite:add;
+}
+/* An intentionally slim wallpaper portal remains recognizable at Full,
+   even though the reference's full detent leaves only four pixels below its header. */
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber {
+  padding-top:0.5rem;
+  background:linear-gradient(to bottom,transparent 0%,var(--studio-skin-mist) 86%),var(--studio-wallpaper-image);
+  background-size:auto,cover;
+  background-position:center,var(--studio-wallpaper-position);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grab-control {
+  min-height:5.5rem;
+  padding-inline:1rem;
+  border-radius:var(--studio-skin-radius);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grab-control:focus-visible {
+  outline:3px solid var(--accent);
+  outline-offset:-3px;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber-caption,
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber-help {
+  background:var(--studio-skin-cream);
+  border:1px solid var(--ink);
+  padding:.2rem .5rem;
+  border-radius:999px;
+  color:var(--ink);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber-caption strong {
+  font-family:var(--studio-display-font);
+  font-size:1.2rem;
+  font-weight:400;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-summary {border:none; background:transparent;}
+[data-studio-appearance][data-studio-check="star"] .studio-check-glyph > svg {display:none;}
+[data-studio-appearance] .studio-completion-star {display:none;}
+[data-studio-appearance][data-studio-check="star"] .studio-completion-star {
+  display:inline-grid;
+  place-items:center;
+  min-width:1.75rem;min-height:1.75rem;
+  font-size:1.75rem;
+  color:var(--accent);
+  -webkit-text-stroke:1px var(--ink);
+}
+/* Mask just the scroll-edge atmosphere, never the task controls beneath it. */
+[data-studio-appearance][data-studio-skin="linocut"] .app-dock::before {
+  content:"";
+  position:fixed;left:0;right:0;bottom:0;height:8.5rem;
+  pointer-events:none;z-index:-1;
+  background:var(--studio-skin-ground);
+  -webkit-mask-image:linear-gradient(to bottom,transparent,black 85%);
+  mask-image:linear-gradient(to bottom,transparent,black 85%);
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-scrollbody {
+  padding-bottom:calc(env(safe-area-inset-bottom) + 9.5rem);
+}
+@media(prefers-reduced-motion:reduce) {
+ [data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage {
+    transition:opacity 80ms ease;
+ }
+ [data-studio-appearance][data-studio-skin="linocut"][data-studio-wallpaper-follows="yes"]::before {
+    transition:none;
+ }
+}
+@media(min-resolution:1dppx) {
+  [data-studio-appearance][data-studio-skin="linocut"] .studio-week-grabber-caption {font-size:1rem;}
+}
