@@ -27,13 +27,18 @@ workflows:
       - name: Install and check the planner
         script: |
           set -eu
+          python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v
+          python3 scripts/app-store-preflight.py
           npm ci
           npm run typecheck
           npm run lint
           npm run test:spread
           swift test --package-path ios/App/SpreadCloudCore
       - name: Bundle Spread and synchronize the Capacitor app
-        script: npm run ios:sync
+        script: |
+          set -eu
+          npm run ios:sync
+          python3 scripts/app-store-preflight.py --bundle dist-ios
       - name: Set unique build number and production push entitlement
         script: |
           set -eu
@@ -62,9 +67,14 @@ workflows:
         script: xcode-project use-profiles
       - name: Build signed IPA
         script: |
+          set -eu
           xcode-project build-ipa \
             --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
             --scheme App
+          for ipa in build/ios/ipa/*.ipa; do
+            test -f "$ipa" || { echo "No signed IPA found" >&2; exit 1; }
+            python3 scripts/app-store-preflight.py --ipa "$ipa"
+          done
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
@@ -117,6 +127,8 @@ workflows:
       - name: Verify planner and native core
         script: |
           set -eu
+          python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v
+          python3 scripts/app-store-preflight.py
           npm ci
           npm run typecheck
           npm run lint
@@ -128,6 +140,7 @@ workflows:
           test "$VITE_SPREAD_STUDIO" = 1
           npm run ios:sync
           node scripts/check-studio-ios-assets.mjs
+          python3 scripts/app-store-preflight.py --bundle dist-ios
       - name: Use next available TestFlight build number
         script: |
           set -eu
@@ -157,9 +170,14 @@ workflows:
         script: xcode-project use-profiles
       - name: Build signed Studio IPA
         script: |
+          set -eu
           xcode-project build-ipa \
             --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
             --scheme App
+          for ipa in build/ios/ipa/*.ipa; do
+            test -f "$ipa" || { echo "No signed IPA found" >&2; exit 1; }
+            python3 scripts/app-store-preflight.py --ipa "$ipa"
+          done
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
