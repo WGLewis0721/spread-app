@@ -198,6 +198,7 @@ try {
       const backdrop = getComputedStyle(scope, "::before");
       return {
         headerBackground: headerPaint.backgroundColor,
+        headerView: header.getAttribute("data-studio-view"),
         headerImage: headerPaint.backgroundImage,
         fade: fade.display,
         backdropPosition: backdrop.position,
@@ -207,7 +208,10 @@ try {
       };
     });
     if (!wallpaperPaint ||
-      wallpaperPaint.headerBackground !== "rgba(0, 0, 0, 0)" ||
+      // Spread lets the photo fill behind the header; Week deliberately uses a
+      // solid pinned control shelf from the user-provided end-state specification.
+      (wallpaperPaint.headerView === "spread" && wallpaperPaint.headerBackground !== "rgba(0, 0, 0, 0)") ||
+      (wallpaperPaint.headerView === "week" && wallpaperPaint.headerBackground === "rgba(0, 0, 0, 0)") ||
       wallpaperPaint.headerImage !== "none" ||
       wallpaperPaint.fade !== "none" ||
       wallpaperPaint.backdropPosition !== "fixed" ||
@@ -225,8 +229,14 @@ try {
     // a personal wallpaper is selected. The Week content is the existing live planner.
     const stage = page.locator(".studio-week-stage");
     await stage.waitFor({state:"visible"});
+    // The detent is intentionally retained when the user revisits the Week.
+    // Normalize to Half rather than assuming every new photo resets their state.
+    const detentToggle=page.getByRole("button",{name:/Week sheet (half|peek|full)/});
+    for(let attempt=0;attempt<3 && await stage.getAttribute("data-studio-detent")!=="half";attempt++){
+      await detentToggle.click();
+    }
     const firstDetent=await stage.getAttribute("data-studio-detent");
-    if(firstDetent!=="half")throw new Error(`Expected default Half sheet, got ${firstDetent}`);
+    if(firstDetent!=="half")throw new Error(`Could not select Half sheet, got ${firstDetent}`);
     const firstPosition=await stage.evaluate((el)=>({
       position:getComputedStyle(el).position,
       top:Math.round(el.getBoundingClientRect().top),
@@ -234,7 +244,6 @@ try {
     }));
     if(firstPosition.position!=="fixed"||Math.abs(firstPosition.top/firstPosition.viewport-.47)>.03)
       throw new Error(`Half sheet not at its viewport detent: ${JSON.stringify(firstPosition)}`);
-    const detentToggle=page.getByRole("button",{name:/Week sheet (half|peek|full)/});
     // Three distinct positions must be reachable through the accessible grabber.
     await detentToggle.click(); // Half -> Full
     await page.waitForTimeout(470);
