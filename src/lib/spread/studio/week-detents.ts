@@ -40,5 +40,5 @@ export function wallpaperShiftForSheet(top:number,height:number):number{
   if(!Number.isFinite(top)||!Number.isFinite(height)||height<=0)return 0;
   const peek=sheetTop("peek",height),half=sheetTop("half",height);
   const t=Math.min(1,Math.max(0,(peek-top)/Math.max(1,peek-half)));
-  return -Math.round((222*height/874)*t);
+  return t===0?0:-Math.round((222*height/874)*t);
 }
