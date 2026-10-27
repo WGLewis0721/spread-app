@@ -1,6 +1,6 @@
 # Spread Studio — approval-controlled internal TestFlight
 
-**Scope:** Codemagic API + existing Apple signing integration. Builds only the reviewed `spread-studio` tip. **No change to production web, `main` app source, or the golden backup.** No automatic push builds and no App Store submission.
+**Scope:** Codemagic API + existing Apple signing integration. Builds only the reviewed `spread-studio` tip. **No change to production web, `main` app source, or the golden backup.** The Studio build enables a local-only access flag: no beta sign-in; server/database account endpoints remain protected. No automatic push builds and no App Store submission.
 
 ## Current state and ownership
 

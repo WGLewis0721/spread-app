@@ -90,6 +90,7 @@ workflows:
         bundle_identifier: com.graymatter.spread
       vars:
         VITE_SPREAD_STUDIO: "1"
+        VITE_SPREAD_OPEN_ACCESS: "1"
         VITE_SPREAD_CLOUD_BACKUP: "0"
         VITE_SPREAD_CLOUD_SYNC: "0"
       node: 22
@@ -110,6 +111,7 @@ workflows:
           test "$CM_COMMIT" = "$EXPECTED_STUDIO_COMMIT" || { echo "Staging moved since approval" >&2; exit 1; }
           test "$(git rev-parse HEAD)" = "$EXPECTED_STUDIO_COMMIT" || { echo "Checkout does not match approval" >&2; exit 1; }
           test "$VITE_SPREAD_STUDIO" = 1 || { echo "Studio must be enabled in the iOS build" >&2; exit 1; }
+          test "$VITE_SPREAD_OPEN_ACCESS" = 1 || { echo "Local-first beta access must be enabled" >&2; exit 1; }
           test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
           test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
           test -n "${APP_STORE_APPLE_ID:-}" || { echo "Configure numeric APP_STORE_APPLE_ID in Codemagic" >&2; exit 1; }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getBetaStatus, type BetaStatus } from "@/lib/beta-status";
 import { isNativeApp } from "@/lib/spread/native";
+import { LOCAL_FIRST_OPEN_ACCESS } from "@/lib/spread/open-access";
 import { useSpread } from "@/lib/spread/store";
 
 // A convenience only: it makes a returning tester wait for the check instead of flashing the
@@ -40,7 +41,7 @@ export type BetaGate = {
  * has no sign-in step and skips all of this.
  */
 export function useBetaGate(): BetaGate {
-  const native = isNativeApp();
+  const native = isNativeApp() || LOCAL_FIRST_OPEN_ACCESS;
   const enterBeta = useSpread((s) => s.enterBeta);
   const logout = useSpread((s) => s.logout);
   const [checking, setChecking] = useState(() => !native && typeof window !== "undefined" && seenBefore());
