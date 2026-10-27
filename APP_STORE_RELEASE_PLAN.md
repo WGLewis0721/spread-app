@@ -77,6 +77,10 @@ Do not add RevenueCat, subscriptions, credits, APEX, or a web checkout flow for 
 
 If Spread later becomes free + premium digital features, evaluate StoreKit IAP/subscriptions and Restore Purchases then.
 
+## App Review acceptance gate
+
+Before authorizing a release, complete [the App Store review checklist](docs/APP_STORE_REVIEW_CHECKLIST.md), review the [App Store Connect reviewer notes](docs/APP_REVIEW_NOTES.md), and verify the automated source, offline-bundle and signed-IPA preflight on the exact candidate. These checks do not replace actual hardware testing or owner approval. See the checklist for GitHub branch protection setup.
+
 ## Release sequence
 
 Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also holds the exact build and upload steps and the list of checks that still need an Apple account or a physical iPhone. A checked box below means the work is done and verified at the level the note says.
