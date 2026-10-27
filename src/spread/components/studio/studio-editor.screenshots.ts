@@ -208,7 +208,7 @@ try {
   // Reset proves the original look is still a true no-wrapper rollback.
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Customize Spread" }).click();
-  await studio.getByRole("button", { name: "Reset", exact: true }).click();
+  await studio.getByRole("button", { name: "Reset to the original look", exact: true }).click();
   await studio.getByRole("button", { name: "Apply", exact: true }).click();
   await studio.waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "Close", exact: true }).click();
