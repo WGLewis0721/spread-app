@@ -483,3 +483,14 @@ test("appearance: this module does not touch storage, network, fonts, or data-th
     assert.equal(/falcons|avengers|toy story|theme pack/i.test(source), false, name);
   }
 });
+
+test("appearance: wallpaper-free starter suppresses only the paint, never its local asset reference", () => {
+  for (const id of ["studio-retro", "studio-glass"]) {
+    const look = custom({ id, wallpaperAssetId: "test-photo" });
+    const scope = resolveStudioScope({ enabled: true, appearance: look, wallpaper: {
+      assetId: "test-photo", url: BLOB_A,
+    } });
+    assert.equal(scope.wallpaper, null);
+    assert.equal(applied(scope)["--studio-wallpaper-image"], "none");
+  }
+});

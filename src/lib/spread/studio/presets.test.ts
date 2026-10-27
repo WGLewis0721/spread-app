@@ -29,3 +29,19 @@ test("starter selection preserves an existing personal photo without changing so
   assert.equal(after.controls.treatmentId, "desktop");
   assert.equal(JSON.stringify(before), copy);
 });
+
+test("wallpaper-free starters keep asset ownership but deliberately do not paint the image", () => {
+  const current = { ...originalStudioAppearance(), id: "custom", wallpaperAssetId: "photo-7" };
+  for (const id of ["retro", "glass"] as const) {
+    const look = appearanceFromStarter(id, current);
+    const view = resolveStudioScope({ enabled: true, appearance: look,
+      wallpaper: { assetId: "photo-7", url: "blob:http://127.0.0.1:8080/photo-7" } });
+    assert.equal(view.wallpaper, null);
+    assert.equal(view.style["--studio-wallpaper-image"], "none");
+    assert.equal(look.wallpaperAssetId, "photo-7");
+  }
+  const personal = appearanceFromStarter("personal", current);
+  const view = resolveStudioScope({ enabled: true, appearance: personal,
+    wallpaper: { assetId: "photo-7", url: "blob:http://127.0.0.1:8080/photo-7" } });
+  assert.ok(view.wallpaper?.includes("blob:"));
+});

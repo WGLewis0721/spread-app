@@ -344,7 +344,7 @@ function StarterLooks({
           </button>
         ))}
       </div>
-      <p className="mt-2 text-xs text-secondary">Original is always available through Reset.</p>
+      <p className="mt-2 text-xs text-secondary">Retro and Glass hide your wallpaper, but keep it available for Personal Canvas. Original is always under Reset.</p>
     </section>
   );
 }

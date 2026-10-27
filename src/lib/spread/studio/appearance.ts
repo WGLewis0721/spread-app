@@ -458,7 +458,12 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const caution = enforceContrast(cautionSeed, surface, floors.text).color;
   const onDanger = contrastingInk(danger);
   const roles = distinctRoles(shippedRoleColors(), surface, floors.ui);
-  const wallpaper = resolveWallpaper(appearance, input.wallpaper, warnings);
+  // Retro Desk and Clear Glass are deliberately wallpaper-free compositions. Keep
+  // any locally stored image reference intact so choosing Personal Canvas later
+  // restores the photo without uploading, reimporting or deleting personal data.
+  const wallpaper = appearance.id === "studio-retro" || appearance.id === "studio-glass"
+    ? null
+    : resolveWallpaper(appearance, input.wallpaper, warnings);
   const requestedTransparency = appearance.material.transparency;
   let transparency = 0;
   if (material !== "flat") {

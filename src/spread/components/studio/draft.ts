@@ -171,6 +171,11 @@ function reduce(
         session,
         (draft) => ({
           ...draft,
+          // Explicit photo import always makes the photo visible, including after
+          // a wallpaper-free starter such as Retro Desk or Clear Glass.
+          ...(draft.id === "studio-retro" || draft.id === "studio-glass"
+            ? { id: "custom", name: "Custom" }
+            : {}),
           wallpaperAssetId: action.assetId,
           palette: applySuggestion ? { ...action.suggestion } : draft.palette,
         }),
