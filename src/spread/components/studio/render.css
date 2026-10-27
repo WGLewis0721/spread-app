@@ -805,3 +805,20 @@
 @media(prefers-reduced-motion:reduce){
   [data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage{transition:opacity 80ms ease;}
 }
+
+/* Full: E1 shows no wallpaper opening between the safe-area/Crown control
+   shelf and the solid Week panel. This extends the shelf paint, never adds a
+   modal scrim, does not block input, and keeps the sheet at ~15dvh. */
+[data-studio-appearance][data-studio-skin="linocut"]:has(.studio-week-stage[data-studio-detent="full"]) .studio-week-header[data-studio-view="week"]::before {
+  content:"";
+  position:absolute;
+  top:100%;
+  left:0;right:0;
+  height:max(0px,calc(15dvh - var(--spread-header, 0px)));
+  background:var(--studio-skin-mist);
+  pointer-events:none;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-summary {
+  border-style:solid;
+  border-width:var(--studio-skin-outline);
+}
