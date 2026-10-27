@@ -57,7 +57,7 @@ export const STUDIO_UI_COPY = {
   reduceTransparency: "Reduce Transparency is on, so glass, matte, and metal draw flat.",
   previewSpread: "Preview of Spread",
   previewWeek: "Preview of Week",
-  previewNote: "The preview does not change your plan.",
+  previewNote: "The preview shows your real responsibilities, hours, week and tasks without changing your plan.",
   saved: "Saved on this device.",
   discarded: "Changes discarded.",
   reset: "Reset",

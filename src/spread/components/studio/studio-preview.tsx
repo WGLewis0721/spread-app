@@ -6,7 +6,8 @@ import { StudioAppearanceScope } from "@/spread/components/studio/render";
 import type { StudioAppearanceV1 } from "@/lib/spread/studio/contract";
 import { STUDIO_UI_COPY } from "./studio-copy";
 
-type PreviewPane = "spread" | "week";
+export type PreviewPane = "spread" | "hours" | "week" | "tasks";
+const PANES: readonly PreviewPane[] = ["spread", "hours", "week", "tasks"];
 
 /**
  * Live preview of the current plan. StudioAppearanceScope calls resolveStudioScope
@@ -26,12 +27,14 @@ export function StudioLivePreview({
   const assetId = appearance.wallpaperAssetId ?? null;
   const wallpaper = assetId && wallpaperUrl ? { assetId, url: wallpaperUrl } : null;
   return (
-    <section aria-label={pane === "spread" ? STUDIO_UI_COPY.previewSpread : STUDIO_UI_COPY.previewWeek}>
-      <div className="grid grid-cols-2 rounded-full bg-fill p-1" role="tablist" aria-label="Preview">
+    <section aria-label="Preview across the planning workflow">
+      <div className="grid grid-cols-4 rounded-full bg-fill p-1" role="tablist" aria-label="Planner preview steps">
         {(
           [
-            ["spread", STUDIO_UI_COPY.previewSpread],
-            ["week", STUDIO_UI_COPY.previewWeek],
+            ["spread", "Roles"],
+            ["hours", "Hours"],
+            ["week", "Week"],
+            ["tasks", "Tasks"],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -47,9 +50,8 @@ export function StudioLivePreview({
             onKeyDown={(event) => {
               if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
               event.preventDefault();
-              const order = ["spread", "week"] as const;
-              const index = order.indexOf(key);
-              const next = order[event.key === "ArrowRight" ? Math.min(1, index + 1) : Math.max(0, index - 1)];
+              const index = PANES.indexOf(key);
+              const next = PANES[event.key === "ArrowRight" ? Math.min(PANES.length - 1, index + 1) : Math.max(0, index - 1)];
               onPane(next);
               window.requestAnimationFrame(() => document.getElementById(`studio-preview-tab-${next}`)?.focus());
             }}
@@ -62,7 +64,7 @@ export function StudioLivePreview({
       <div id="studio-preview-panel" role="tabpanel" aria-labelledby={`studio-preview-tab-${pane}`} className="studio-preview-frame mt-3">
         <div className="pointer-events-none" inert>
           <StudioAppearanceScope appearance={appearance} wallpaper={wallpaper}>
-            {pane === "spread" ? <SpreadReadout /> : <WeekReadout />}
+            {pane === "spread" ? <SpreadReadout /> : pane === "hours" ? <HoursReadout /> : pane === "tasks" ? <TasksReadout /> : <WeekReadout />}
           </StudioAppearanceScope>
         </div>
       </div>
@@ -79,11 +81,11 @@ function SpreadReadout() {
   return (
     <div className="px-3 py-3">
       <p className="studio-readable-note px-1 pb-2 text-xs text-secondary">{formatWeek(data.currentWeek)}</p>
+      <h3 className="mb-2 px-1 text-sm font-semibold">Responsibilities</h3>
       <div className="overflow-hidden rounded-[22px] bg-elevated">
         {data.hats.map((hat, index) => {
           const box = week?.boxes.find((item) => item.hatId === hat.id);
           const hours = box?.hours ?? hat.defaultHours;
-          const tasks = box?.tasks ?? [];
           return (
             <section key={hat.id} className="px-4 py-3">
               {index > 0 ? <div className="mb-3 border-t border-line" /> : null}
@@ -92,22 +94,77 @@ function SpreadReadout() {
                 <span className="min-w-0 flex-1 truncate text-[17px]">{hat.name}</span>
                 <span className="text-secondary tabular-nums">{hoursLabel(hours)}h</span>
               </div>
-              {tasks.length === 0 ? (
-                <p className="pb-1 text-sm text-secondary">No tasks</p>
-              ) : (
-                <ul>
-                  {tasks.map((task) => (
-                    <li key={task.id} className="flex min-h-11 items-center gap-3 border-t border-line text-sm">
-                      <span className="text-secondary">{task.done ? "Done" : "Open"}</span>
-                      <span className="min-w-0 flex-1 truncate">{task.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </section>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** Actual current plan data: read-only, same budget and responsibility labels. */
+function HoursReadout() {
+  const data = useSpread((s) => s.data);
+  const week = data.weeks[data.currentWeek];
+  const entries = data.hats.map((hat) => ({
+    id: hat.id, name: hat.name, color: hat.color,
+    hours: week?.boxes.find((box) => box.hatId === hat.id)?.hours ?? hat.defaultHours,
+  }));
+  const total = entries.reduce((sum, item) => sum + item.hours, 0);
+  return (
+    <div className="p-3">
+      <p className="studio-readable-note text-xs text-secondary">{formatWeek(data.currentWeek)}</p>
+      <section className="mt-3 rounded-[22px] bg-elevated p-4">
+        <p className="text-xs font-semibold text-secondary">Allocated this week</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums">{hoursLabel(total)}h</p>
+        <ul className="mt-3">
+          {entries.length === 0 ? <li className="text-sm text-secondary">Add a responsibility in Spread to begin.</li> : null}
+          {entries.map((entry) => (
+            <li key={entry.id} className="border-t border-line py-3">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="truncate font-semibold">{entry.name}</span>
+                <span className="tabular-nums">{hoursLabel(entry.hours)}h</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-fill" aria-hidden="true">
+                <div className="h-full rounded-full" style={{
+                  width: `${total > 0 ? (entry.hours / total) * 100 : 0}%`, backgroundColor: entry.color,
+                }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function TasksReadout() {
+  const data = useSpread((s) => s.data);
+  const week = data.weeks[data.currentWeek];
+  const grouped = data.hats.map((hat) => ({
+    hat, tasks: week?.boxes.find((box) => box.hatId === hat.id)?.tasks ?? [],
+  })).filter((entry) => entry.tasks.length > 0);
+  return (
+    <div className="p-3">
+      <p className="studio-readable-note text-xs text-secondary">{formatWeek(data.currentWeek)}</p>
+      {grouped.length === 0 ? (
+        <p className="studio-readable-note mt-3 text-sm text-secondary">Your tasks will appear here as you add them to Spread.</p>
+      ) : grouped.map(({ hat, tasks }) => (
+        <section key={hat.id} className="mt-3 overflow-hidden rounded-[22px] bg-elevated p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <span className="size-3 rounded-full" style={{ backgroundColor: hat.color }} aria-hidden="true" />
+            {hat.name}
+          </h3>
+          <ul className="mt-2">
+            {tasks.map((task) => (
+              <li key={task.id} className="flex min-h-11 items-center gap-3 border-t border-line py-2 text-sm">
+                <span className="text-secondary">{task.done ? "Done" : "Open"}</span>
+                <span className={task.done ? "line-through" : ""}>{task.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

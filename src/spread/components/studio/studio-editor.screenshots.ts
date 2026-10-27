@@ -75,6 +75,16 @@ try {
       if (drawn.id !== starter.id || drawn.controls !== starter.controls || !drawn.font.includes(starter.font)) {
         throw new Error(`Starter ${starter.name} preview mismatch: ${JSON.stringify(drawn)}`);
       }
+      // Check each stage of the actual weekly planning workflow with the same starter.
+      for (const stage of ["Roles", "Hours", "Week", "Tasks"]) {
+        await editor.getByRole("tab", { name: stage, exact: true }).click();
+        const selected = await editor.getByRole("tab", { name: stage, exact: true }).getAttribute("aria-selected");
+        if (selected !== "true") throw new Error(`Preview step ${stage} did not select`);
+        if (stage === "Hours" && await editor.getByText("Allocated this week").count() !== 1) {
+          throw new Error("Hours preview missing the real plan readout");
+        }
+      }
+      await editor.getByRole("tab", { name: "Roles", exact: true }).click();
       await page.setViewportSize({ width: 390, height: 844 });
       const capture = `starter-${scheme}-${starter.id}-390.png`;
       await page.screenshot({ path: join(dir, capture) });

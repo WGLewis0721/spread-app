@@ -21,7 +21,7 @@ import {
   type StudioDraftAction,
   type StudioSession,
 } from "./draft";
-import { StudioLivePreview } from "./studio-preview";
+import { StudioLivePreview, type PreviewPane } from "./studio-preview";
 import { STUDIO_APPEARANCE_SAVED_EVENT } from "./live-planner";
 import { STUDIO_STARTERS } from "@/lib/spread/studio/presets";
 import "./studio-ui.css";
@@ -37,7 +37,7 @@ function StudioCustomizeLive() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [activity, setActivity] = useState<"idle" | "import" | "save">("idle");
-  const [pane, setPane] = useState<"spread" | "week">("spread");
+  const [pane, setPane] = useState<PreviewPane>("spread");
   const [session, setSession] = useState<StudioSession>(() =>
     openStudioSession({ render: originalStudioAppearance(), imageMessage: null, planner: "" }),
   );
