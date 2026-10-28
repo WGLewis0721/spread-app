@@ -4,7 +4,7 @@
 //
 //   node scripts/design-tokens.mjs --write   regenerate docs/design/tokens.json
 //   node scripts/design-tokens.mjs           print it
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // What each token is for. Source: docs/design/planner/SPREAD_DESIGN_SYSTEM.md, Tokens table.
@@ -52,7 +52,23 @@ function declarations(body, filter) {
   return out;
 }
 
-export function buildTokens(css) {
+function sourceFiles(dir) {
+  return readdirSync(dir).flatMap((name) => {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) return sourceFiles(full);
+    return /\.(tsx?|css)$/.test(name) && !name.endsWith("styles.css") ? [full] : [];
+  });
+}
+
+// Whether any component actually uses a --radius-* token (by var() or by its Tailwind class).
+function radiusUsage(root, names) {
+  const text = sourceFiles(join(root, "src")).map((f) => readFileSync(f, "utf8")).join("\n");
+  return Object.fromEntries(
+    names.map((n) => [n, text.includes(`var(${n})`) || text.includes(`rounded-${n.replace("--radius-", "")}`)]),
+  );
+}
+
+export function buildTokens(css, root) {
   const colorKey = (k) => k in TOKEN_ROLES;
   const light = declarations(block(css, "\n:root {"), colorKey);
   const dark = declarations(block(css, ':root[data-theme="dark"] {'), colorKey);
@@ -60,6 +76,7 @@ export function buildTokens(css) {
   const scale = declarations(theme, (k) => /^--(radius|text)-/.test(k));
   const font = declarations(block(css, "\n:root {"), (k) => k === "--font-sans")["--font-sans"];
   const roles = Object.fromEntries(Object.keys(light).map((k) => [k, TOKEN_ROLES[k]]));
+  const radii = Object.keys(scale).filter((k) => k.startsWith("--radius-"));
   return {
     note: "Generated from src/styles.css by scripts/design-tokens.mjs. Do not edit by hand. Use tokens, never raw values. Role colors are data in src/lib/spread/model.ts, not tokens.",
     modes: "light is :root and [data-theme=\"light\"]; dark is [data-theme=\"dark\"] and the prefers-color-scheme block (same values)",
@@ -67,12 +84,14 @@ export function buildTokens(css) {
     light,
     dark,
     scale,
+    radiusTokensUsedByComponents: root ? radiusUsage(root, radii) : "not checked",
+    cardRadiusInPractice: "Tailwind rounded-3xl on cards; rows on a card use rounded-2xl (see planner/SPREAD_DESIGN_SYSTEM.md Patterns)",
     font,
   };
 }
 
 export function renderTokens(root) {
-  return `${JSON.stringify(buildTokens(readFileSync(join(root, "src/styles.css"), "utf8")), null, 2)}\n`;
+  return `${JSON.stringify(buildTokens(readFileSync(join(root, "src/styles.css"), "utf8"), root), null, 2)}\n`;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
