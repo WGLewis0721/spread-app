@@ -11,4 +11,5 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 | Date | Spec | Status |
 | --- | --- | --- |
 | 2026-10-28 | [Token-efficient design docs](2026-10-28-token-efficient-docs.md) | Approved, implemented |
+| 2026-10-28 | [Studio rebuild](2026-10-28-studio-rebuild.md) | Draft, four owner decisions open |
 | 2026-10-28 | [Lock Screen and Home Screen widget, Live Activity later](2026-10-28-widget-live-activity.md) | Draft |
