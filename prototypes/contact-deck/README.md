@@ -8,12 +8,11 @@ Open `index.html` in Safari or Chrome. No build step, account, or backend is nee
 
 A tactile, photography-forward contact browser combining the clarity of modern iOS with classic Cover Flow and index-card gestures.
 
-- **Stack:** vertical Rolodex-style browsing. Swipe vertically or use arrow keys.
-- **Fan:** a handheld spread of cards. Swipe horizontally.
-- **Orbit:** rotating, depth-based Cover Flow. Swipe horizontally.
-- **Orientation:** independently toggle face-forward vs. edge-forward. Tapping an edge-forward card reveals the face; tapping again opens details.
-- **Appearance:** Current, iOS 18, iOS 7, iOS 6. These are **interpretations**, not exact reproductions or native API components. The selected mode, orientation, skin, idle preference, sort, filter, and sample favorites persist locally when storage is available.
-- **Cinematic idle / Cover Flow:** after 8 seconds of inactivity, the current browsing view crossfades to pure black using a dedicated alpha-animated overlay (not an un-animatable gradient-to-solid CSS transition). The 3D photo carousel advances every ~3.1 seconds, wakes on first touch/key press, and restores the previously selected browsing mode. The **▶** button in the top-right toolbar previews the effect immediately; **Looks → Preview Cover Flow now** is an alternative. Auto-idle can be turned off, and animation is suppressed during search, dialogs, backgrounding and system Reduce Motion.
+- **Stack:** nearly full-width cards, vertical Rolodex-style browsing. Swipe vertically or use arrow keys.
+- **Fan:** a handheld spread of cards. Swipe horizontally or drag the bottom orb for accelerated scrubbing.
+- **Flow:** rotating, depth-based classic Cover Flow. Swipe horizontally.
+- **Appearance:** Liquid (Liquid Glass), Modern (iOS 18-era), Flat (iOS 7-era), Skeuo (iOS 6-era). These are **interpretations**, not exact reproductions or native API components. The selected mode, skin, idle preference, sort, filter, and sample favorites persist locally when storage is available.
+- **Cinematic idle / Cover Flow:** after 8 seconds of inactivity, the current browsing view crossfades to pure black using a dedicated alpha-animated overlay (not an un-animatable gradient-to-solid CSS transition). Stack cycles vertically, Fan cycles horizontally with a spread, and Flow preserves the classic 3D Cover Flow rotation. Each advances every ~3.1 seconds, wakes on first touch/key press, and restores the previously selected browsing mode. The **▶** button in the top-right toolbar previews the effect immediately; **Looks → Preview Cover Flow now** is an alternative. Auto-idle can be turned off, and animation is suppressed during search, dialogs, backgrounding and system Reduce Motion.
 - **Find and organize:** search by name, company, role or email; sort by first name, surname or company; filter favorites, friends, work or family.
 - **Contacts and communication:** eight **fictional** entries. Call, Message and FaceTime actions are intentionally disabled.
 - **Export:** client-side PNG (1080 × 1350) using Canvas with opt-in phone and email. No upload is performed. Export uses initials rather than a photo, since third-party sample images may not be CORS safe.
@@ -38,7 +37,7 @@ These are UX references; **no third-party components or copyrighted design code 
 ## Investor walkthrough
 
 1. Start in Stack and swipe vertically to another contact.
-2. Switch to Fan and Orbit; continue swiping sideways. Use Looks to compare the current skin against classic eras, and toggle face/edge-forward.
+2. Switch to Fan and Flow; continue swiping sideways. Drag Fan's bottom orb to scrub rapidly. Use Looks to compare the current skin against classic eras.
 3. Tap **▶** in the top toolbar. The entire surrounding interface crossfades to black, portrait cards revolve every ~3 seconds, and reflections remain visible. Touch once to wake.
 4. Search for Marcus, examine contact details, choose which fields to export, and share/save a PNG card. The phone numbers and addresses are **fictional** and calling is deliberately disabled.
 
@@ -70,3 +69,13 @@ The current revision was additionally exercised with a local Python/Chromium int
 ## Next engineering step (approval required)
 
 If validated, move Contact Deck into **its own repository**. Implement native iOS ContactsUI/Contacts read permissions with limited-access flows, actual permitted photos, SwiftUI/UIKit controls, appropriate accessibility/haptics, and production-grade GPU-efficient physics. Separate Apple-era cosmetic skins from native control behavior. Do not request permissions at launch before explaining their purpose.
+
+## UI references and design decisions (October 2026)
+
+- User-provided: AI OS Analytics vertical full-width overlapping cards; Audio Sphere fan with a bottom orb; classic iPod Cover Flow's centered face, side perspective and black reflected floor.
+- Refero: [Location by amo card stack](https://refero.design/screens/eeb7279b-3596-44fe-b675-22cf5449c366), [Suno carousel](https://refero.design/screens/51bab5f3-25fc-400c-873f-202ec2a886b3), and earlier Telegram contact portrait reference.
+- 21st.dev: [3D carousel exploration](https://21st.dev/community/components/explore/3d-carousel), [Liquid Glass components](https://21st.dev/community/components/explore/liquid-glass-components). No source components copied.
+- GitHub implementation references to evaluate before extraction: [react-spring](https://github.com/pmndrs/react-spring) for physics, [Embla Carousel](https://github.com/davidjerleke/embla-carousel) for inertial scrubbing, and [Motion](https://github.com/motiondivision/motion) for layout transitions. These are references, not dependencies in this standalone HTML build.
+- Appearance names are era-inspired, not claims of pixel-perfect reproduction. Liquid=Liquid Glass; Modern=iOS 18-style; Flat=iOS 7-style; Skeuo=iOS 6-style.
+
+**Verification gate:** The latest view-specific changes have not yet completed physical Safari or automated browser regression testing. Do not represent this iteration as investor-ready until gesture scrubbing, full-width clipping, cinematic timing and image export pass mobile testing.
