@@ -110,10 +110,6 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-tasks={scope.parts.tasks}
       data-studio-dock={scope.parts.dock}
       data-studio-wallpaper={scope.wallpaper ? "on" : "off"}
-      data-studio-skin={scope.skin ? "on" : "off"}
-      data-studio-sheet-edge={scope.skin?.sheetEdge}
-      data-studio-check={scope.skin?.checkGlyph}
-      data-studio-display={scope.skin?.display ? "on" : undefined}
       style={style}
     >
       {children}

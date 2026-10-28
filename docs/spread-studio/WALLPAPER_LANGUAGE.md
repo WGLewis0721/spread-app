@@ -47,26 +47,38 @@ Foundation Models code is in the shipped application.
 Keep the rules in `docs/design/SPREAD_DESIGN_SYSTEM.md`; this document
 explains the Studio-only exception, not a replacement design system.
 
-## Material skin derived from the wallpaper (2026-10-27)
+## Apple material rebuild (2026-10-28)
 
-`StudioAppearanceV1` gained an optional `skin` and `palette.sheet`. Nothing in it names a
-wallpaper or a bundled look. `languageFromPixels` derives every value from the image:
+Supersedes the 2026-10-27 "material skin" (outline, hard shadow, scalloped edge, star glyph,
+Erica One). A wallpaper now decides four things and nothing else. Layout, type, shapes and
+controls never vary with the image.
 
-| Field | Derived from |
+| Output | Derived from |
 | --- | --- |
-| `palette.sheet` | a quiet, light swatch (luminance near 0.58, low saturation); none for dark art |
-| `palette.text` | the darkest swatch, forced to 7:1 on cards and 4.5:1 on the sheet |
-| `palette.highlight` | the brightest saturated swatch (fills such as the Crown readout and chips) |
-| `skin.outline` / `hardShadow` | strong-edge density (`lineDensity`): 0, 1, 2 or 3 px; soft photos get 0 |
-| `skin.sheetEdge` | scallop only at outline 3, otherwise round |
-| `skin.checkGlyph` | star only for colorful, outlined art |
-| `skin.focusY` | center of the busiest seven-band window (texture heuristic, not subject detection) |
+| `palette` (tint, quiet `sheet`, ink, accent) | Lab k-means swatches; ink forced to 7:1 on cards and 4.5:1 on the sheet |
+| `wallpaper.dim` (0 to 0.35) | mean luminance; none for dark art, the full 35% for bright art |
+| `material` thickness (thin, regular, thick) | strong-edge density; busier art gets thicker (more opaque) material |
+| `wallpaper.focusY` | center of the busiest seven-band window (texture heuristic, not subject detection) |
+
+Layers, as in iOS: wallpaper, then the functional layer (header, Week sheet, dock) as
+translucent material with a hairline, then content (cards, rows) as plain opaque surfaces with
+no blur. The sheet floats inset with a 1.75rem corner at Peek and Half and goes flush and more
+opaque at Full (`--studio-sheet-panel`, `--studio-sheet-panel-full`). Reduce Transparency makes
+the sheet and header opaque. Increase Contrast strengthens the hairline.
+
+`clampTransparency` guarantees ink stays at or above the contrast floor against the worst-case
+backdrop, so a thin material over bright art is clamped rather than trusted.
+
+Legacy drafts: a stored `skin` block is tolerated. Only its `focusY` survives, moved to
+`wallpaper.focusY`; the rest is dropped. Any other unknown field is still rejected.
 
 Week sheet: one `--studio-sheet-top` variable drives the sheet and the wallpaper layer, so the
 art re-centers in the strip above the sheet at Peek, Half and while dragging. Detent tops follow
 the end-state proportions (79%, 47%, header bottom + 6 px). The grabber is a vertical slider
 (Arrow, Home, End) and the sheet follows the finger with rubber banding and velocity settle.
 
-Display type: Erica One is bundled locally (`src/spread/fonts`, SIL OFL) and used for the
-`Today` heading only when the derived look selects the display typeface. `render.test.ts` allows
-exactly that one local face and still rejects any other `@font-face` or remote font URL.
+Typography is system type only. `render.test.ts` rejects any `@font-face` or remote font URL.
+
+Known limits: CSS `backdrop-filter` approximates system material. Whether
+`prefers-reduced-transparency` reaches the WKWebView is unverified. Blur performance, VoiceOver
+and haptics are owed on a real iPhone.

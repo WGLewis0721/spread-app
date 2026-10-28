@@ -149,7 +149,7 @@
   border: 0.5px solid var(--glass-stroke);
 }
 
-[data-studio-appearance][data-studio-scheme][data-studio-material="glass"] .crown-wheel {
+[data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-scheme][data-studio-material="glass"] .crown-wheel {
   background-color: color-mix(in srgb, var(--elevated) calc(var(--studio-panel) * 100%), transparent);
   background-image: none;
   backdrop-filter: blur(var(--studio-blur)) saturate(1.3);
@@ -161,7 +161,7 @@
 [data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .bg-elevated,
 [data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .sheet,
 [data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .pop,
-[data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .crown-wheel,
+[data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-scheme][data-studio-material="matte"] .crown-wheel,
 [data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .glass {
   background-color: var(--elevated);
   background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, var(--studio-matte-line) 3px);
@@ -174,7 +174,7 @@
 [data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .bg-elevated,
 [data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .sheet,
 [data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .pop,
-[data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .crown-wheel,
+[data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-scheme][data-studio-material="metal"] .crown-wheel,
 [data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .glass {
   background-color: var(--elevated);
   background-image: linear-gradient(180deg, var(--studio-metal-hi), var(--elevated) 46%, var(--studio-metal-lo));
@@ -196,15 +196,15 @@
   [data-studio-appearance][data-studio-material="glass"] .bg-elevated,
   [data-studio-appearance][data-studio-material="glass"] .sheet,
   [data-studio-appearance][data-studio-material="glass"] .pop,
-  [data-studio-appearance][data-studio-material="glass"] .crown-wheel,
+  [data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-material="glass"] .crown-wheel,
   [data-studio-appearance][data-studio-material="matte"] .bg-elevated,
   [data-studio-appearance][data-studio-material="matte"] .sheet,
   [data-studio-appearance][data-studio-material="matte"] .pop,
-  [data-studio-appearance][data-studio-material="matte"] .crown-wheel,
+  [data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-material="matte"] .crown-wheel,
   [data-studio-appearance][data-studio-material="metal"] .bg-elevated,
   [data-studio-appearance][data-studio-material="metal"] .sheet,
   [data-studio-appearance][data-studio-material="metal"] .pop,
-  [data-studio-appearance][data-studio-material="metal"] .crown-wheel,
+  [data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-material="metal"] .crown-wheel,
   [data-studio-appearance] .glass {
     background-color: var(--elevated);
     background-image: none;
@@ -456,24 +456,20 @@
   }
 }
 
-/* Erica One is bundled locally (SIL OFL). It is used for headings only, and only when the
-   wallpaper-derived look selects display type. No network request is made for it. */
-@font-face {
-  font-family: "Erica One";
-  src: url("../../fonts/EricaOne-Regular.ttf") format("truetype");
-  font-display: swap;
-}
-
-/* Wallpaper-first Week sheet. Only a selected local wallpaper activates it.
-   The golden planner and wallpaper-free Studio looks remain unchanged.
-   Every shape and color here reads variables derived from the user's wallpaper. */
+/* Wallpaper-first Week. Only a selected local wallpaper activates it. The golden planner and
+   wallpaper-free Studio looks are unchanged. Layout never varies with the image: the wallpaper
+   supplies a tint, a dim and a material thickness, nothing else.
+   Layers, as in iOS: wallpaper, then the functional layer (header, sheet, dock: translucent
+   material with a hairline), then content (cards and rows: plain opaque surfaces, no blur). */
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   gap: 0.5rem 0.75rem;
   align-items: center;
-  background: var(--studio-sheet, var(--elevated));
-  border-bottom: max(var(--studio-outline, 3px), 1px) solid var(--ink);
+  background: color-mix(in srgb, var(--studio-sheet, var(--elevated)) calc(var(--studio-sheet-panel, 1) * 100%), transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  border-bottom: 0.5px solid var(--glass-stroke, color-mix(in srgb, var(--ink) 16%, transparent));
   padding-bottom: 0.65rem;
 }
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] > div:first-child {
@@ -516,56 +512,40 @@
 }
 [data-studio-appearance][data-studio-dragging]::before { transition: none; }
 
-/* The sheet is nonmodal: no scrim, no focus trap; header and dock stay live. */
+/* The sheet is nonmodal: no scrim, no focus trap; header and dock stay live.
+   Peek and Half float inset with a continuous corner. Full goes flush and more opaque, as the
+   system sheet does, so long lists read on a calm surface. */
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage {
   position: fixed;
   z-index: 12;
   left: 50%;
   right: auto;
-  bottom: 0;
+  bottom: max(8px, env(safe-area-inset-bottom));
   top: var(--studio-sheet-top, 47dvh);
-  width: min(100%,36rem);
+  width: min(calc(100% - 16px), 36rem);
   display: flex;
   flex-direction: column;
   padding: 0 0.8rem 0;
   transform: translateX(-50%);
   overflow: visible;
-  border: var(--studio-outline, 2px) solid var(--ink);
-  border-bottom: none;
-  border-radius: 28px 28px 0 0;
-  background: var(--studio-sheet, var(--elevated));
-  box-shadow: 0 -5px 25px rgba(0,0,0,.14);
-  transition: top 420ms cubic-bezier(.32,.72,0,1);
+  border: 0.5px solid var(--glass-stroke, color-mix(in srgb, var(--ink) 16%, transparent));
+  border-radius: 1.75rem;
+  background: color-mix(in srgb, var(--studio-sheet, var(--elevated)) calc(var(--studio-sheet-panel, 1) * 100%), transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+  /* hairline top highlight + soft ambient shadow, never a hard offset */
+  box-shadow: inset 0 0.5px 0 color-mix(in srgb, white 45%, transparent), 0 -2px 24px rgba(0,0,0,.12);
+  transition: top 420ms cubic-bezier(.32,.72,0,1), width 420ms cubic-bezier(.32,.72,0,1), bottom 420ms cubic-bezier(.32,.72,0,1), border-radius 420ms cubic-bezier(.32,.72,0,1);
   touch-action: pan-y;
 }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] {
+  width: 100%;
+  bottom: 0;
+  border-bottom: none;
+  border-radius: 1.75rem 1.75rem 0 0;
+  background: color-mix(in srgb, var(--studio-sheet, var(--elevated)) calc(var(--studio-sheet-panel-full, 1) * 100%), transparent);
+}
 [data-studio-appearance][data-studio-dragging] .studio-week-stage { transition: none; }
-
-/* Scalloped edge: two masked layers. The ink layer is the silhouette, the fill layer sits
-   one outline-width lower, so the rim reads as a hand-cut outline. */
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage {
-  border-top: none;
-  border-radius: 0;
-  --studio-scallop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='18' viewBox='0 0 34 18'><path d='M0 18V17A17 17 0 0 1 34 17V18Z'/></svg>");
-}
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage::before,
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage::after {
-  content: "";
-  position: absolute;
-  left: calc(-1 * var(--studio-outline, 2px));
-  right: calc(-1 * var(--studio-outline, 2px));
-  height: 18px;
-  pointer-events: none;
-  -webkit-mask: var(--studio-scallop) repeat-x bottom center / 34px 18px;
-  mask: var(--studio-scallop) repeat-x bottom center / 34px 18px;
-}
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage::before {
-  top: -18px;
-  background: var(--ink);
-}
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage::after {
-  top: calc(-18px + var(--studio-outline, 2px));
-  background: var(--studio-sheet, var(--elevated));
-}
 
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="peek"] .studio-week-scrollbody {
   display: none;
@@ -598,10 +578,10 @@
 [data-studio-appearance] .studio-week-grabber-line {
   display: block;
   flex: none;
-  width: 40px;
+  width: 36px;
   height: 5px;
   border-radius: 999px;
-  background: var(--ink);
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
 }
 [data-studio-appearance] .studio-week-grabber-caption {
   display: flex;
@@ -612,14 +592,13 @@
   line-height: 1.3;
   font-size: 0.83rem;
 }
-[data-studio-appearance] .studio-week-grabber-caption strong { font-size: 1.06rem; font-family: var(--studio-heading-font, inherit); font-weight: 400; }
+[data-studio-appearance] .studio-week-grabber-caption strong { font-size: 1.06rem; font-weight: 600; }
 [data-studio-appearance] .studio-week-summary {
   border-radius: 999px;
-  border: max(var(--studio-outline, 1px), 1px) solid var(--ink);
   background: var(--studio-highlight);
   color: var(--studio-on-highlight);
-  padding: 0.25rem 0.5rem;
-  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  font-weight: 600;
 }
 [data-studio-appearance] .studio-week-grabber-help {
   display: block;
@@ -642,100 +621,53 @@
 }
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-scrollbody::-webkit-scrollbar { display: none; }
 
-/* Skin: outline, hard shadow, radii, glyph and heading face come from the wallpaper-derived
-   variables. Nothing below names a wallpaper, a color or a look. */
-[data-studio-appearance][data-studio-skin="on"][data-studio-week] .week-seq-item {
-  border: var(--studio-outline) solid var(--ink);
-  border-radius: var(--studio-card-radius);
-  background: var(--elevated);
-  box-shadow: var(--studio-card-shadow);
+/* Content layer (when the Week cards part is Original; an explicit Ink/Glass choice still wins):
+   cards and rows are plain, opaque and quiet. Material belongs to the sheet,
+   header and dock, so these never blur and never carry an outline weight from the image. */
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .studio-week-stage .bg-elevated,
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .studio-week-stage .week-seq-item {
+  background-color: var(--elevated);
+  background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
-[data-studio-appearance][data-studio-skin="on"][data-studio-week] .week-seq-item > div:first-child h2 {
-  font-weight: 700;
-  text-transform: none;
-  letter-spacing: 0;
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .week-seq-item {
+  border: 0.5px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.06);
 }
-[data-studio-appearance][data-studio-skin="on"][data-studio-week] .week-seq-item li.bg-canvas {
-  border: max(var(--studio-outline) / 2, 1px) solid var(--ink);
-  border-radius: 10px 10px 10px 3px;
-}
-[data-studio-skin="on"] .studio-week-grabber-help { display: none; }
-/* Inside the solid sheet the note plates would be a box on a box. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-grabber-help { display: none; }
+/* Inside the translucent sheet the note plates would be a box on a box. */
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage h2.studio-readable-note,
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage p.studio-readable-note {
   background-color: transparent;
   padding-inline: 0;
   display: flex;
 }
-[data-studio-skin="on"] .spread-bubbles { background: transparent; }
-[data-studio-skin="on"] section[aria-label="Free time"] > h2,
-[data-studio-skin="on"] section[aria-label="Free time"] li > button span {
-  color: var(--ink);
-}
-[data-studio-skin="on"] section[aria-label="Free time"] li > button {
-  background: color-mix(in srgb, var(--studio-highlight) 30%, var(--elevated));
-  border: max(var(--studio-outline), 1px) solid var(--ink);
-  box-shadow: var(--studio-card-shadow);
-}
-[data-studio-skin="on"] .spread-bubbles > * {
-  border: max(var(--studio-outline), 1px) solid var(--ink);
-  border-radius: 999px;
-  box-shadow: var(--studio-card-shadow);
-  background: var(--elevated);
-  color: var(--ink);
-}
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-wheel {
-  background: var(--studio-crown);
-  border-radius: 1.1rem;
-  box-shadow: var(--studio-card-shadow);
-  --tooth-dark: var(--studio-crown-fg);
-  --tooth-mid: color-mix(in srgb, var(--studio-crown-fg) 45%, var(--studio-crown));
-  --tooth-light: color-mix(in srgb, var(--studio-crown-fg) 25%, var(--studio-crown));
-  --tooth-gap: var(--studio-crown);
-}
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-sheen,
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap::after { display: none; }
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap { color: var(--studio-crown-fg); }
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-ridges {
-  opacity:var(--studio-crown-ridge-opacity);
-}
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 0.55rem;
-  height: 0.55rem;
-  border: solid currentColor;
-  border-width: 0 0 3px 3px;
-}
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap-left::before { left: 1.05rem; transform: translateY(-50%) rotate(45deg); }
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap-right::before { right: 1.05rem; transform: translateY(-50%) rotate(-135deg); }
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-readout * { color: var(--studio-on-highlight); }
-[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-readout {
-  background: var(--studio-highlight);
-  color: var(--studio-on-highlight);
-  border: max(var(--studio-outline), 1px) solid var(--studio-crown);
-  border-radius: 0.7rem;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+[data-studio-appearance][data-studio-wallpaper="on"] .spread-bubbles { background: transparent; }
+/* The chip row scrolls sideways, so it clips anything outside its box. A shadow there reads as a
+   stray band; use a hairline instead. */
+[data-studio-appearance][data-studio-scheme][data-studio-wallpaper="on"] .spread-bubbles > * {
+  box-shadow: none;
+  border: 0.5px solid color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
-/* Completion glyph. "star" swaps the check for a star drawn from the same two variables. */
-[data-studio-check="star"] .studio-task-check[aria-checked="true"] > * { display: none; }
-[data-studio-check="star"] .studio-task-check[aria-checked="true"]::before,
-[data-studio-check="star"] .studio-task-check[aria-checked="true"]::after {
-  content: "";
-  grid-area: 1 / 1;
-  width: 30px;
-  height: 30px;
-  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1.8l3 6.9 7.5.7-5.7 5 1.8 7.4L12 17.7l-6.6 4.1 1.8-7.4-5.7-5 7.5-.7z'/></svg>") center / contain no-repeat;
-  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1.8l3 6.9 7.5.7-5.7 5 1.8 7.4L12 17.7l-6.6 4.1 1.8-7.4-5.7-5 7.5-.7z'/></svg>") center / contain no-repeat;
+/* Reduce Transparency: the sheet and header become opaque, as the system does. */
+@media (prefers-reduced-transparency: reduce) {
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
+    background: var(--studio-sheet, var(--elevated));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
-[data-studio-check="star"] .studio-task-check[aria-checked="true"]::before { background: var(--ink); }
-[data-studio-check="star"] .studio-task-check[aria-checked="true"]::after {
-  background: var(--studio-highlight);
-  width: 20px;
-  height: 20px;
+/* Increase Contrast: a stronger hairline instead of a lighter one. */
+@media (prefers-contrast: more) {
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
+    border-color: var(--ink);
+    border-width: 1px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -5,18 +5,34 @@
  */
 import { suggestPalette } from "./palette.ts";
 import { contrastRatioHex, enforceContrast, hexToRgb, mixRgb, relativeLuminance, rgbToHex } from "./contrast.ts";
-import type { StudioPalette, StudioSkin, ControlTreatmentId, TypographyPresetId, StudioElementPart, StudioElementStyle } from "./contract.ts";
+import type { StudioPalette } from "./contract.ts";
 
+/** How thick the sheet material reads over this wallpaper. Busy art needs thicker material for legible text. */
+export type StudioMaterialThickness = "thin" | "regular" | "thick";
+
+/** Transparency and depth (blur) the contract carries for each thickness. Thicker means more opaque. */
+export const MATERIAL_THICKNESS: Record<StudioMaterialThickness, { transparency: number; depth: number }> = {
+  thin: { transparency: 0.5, depth: 0.85 },
+  regular: { transparency: 0.3, depth: 0.9 },
+  thick: { transparency: 0.16, depth: 1 },
+};
+
+/** Apple's guidance: about 35% dim behind readable UI when the content under it is bright. */
+export const MAX_WALLPAPER_DIM = 0.35;
+
+/**
+ * What a wallpaper decides, and nothing else: a tint (with a quiet sheet color and readable ink),
+ * a dim, a material thickness, and where the image's interest sits. Layout, type, shapes and
+ * controls never vary with the image.
+ */
 export type StudioWallpaperLanguage = {
   palette: StudioPalette;
-  treatment: ControlTreatmentId;
-  typeface: TypographyPresetId;
-  parts: Record<StudioElementPart, StudioElementStyle>;
+  thickness: StudioMaterialThickness;
+  dim: number;
+  focusY: number;
   swatches: readonly { hex: string; share: number }[];
   edgeDensity: number;
   quietBand: { from: number; to: number };
-  /** Derived from this wallpaper's measurements. Never copied from a bundled look. */
-  skin: StudioSkin;
   explanation: string;
 };
 
@@ -121,26 +137,29 @@ export function measureWallpaper(
 const lumOf=(color:string)=>{const rgb=hexToRgb(color);return rgb?relativeLuminance(rgb):0;};
 const mix=(a:string,b:string,amount:number)=>{const x=hexToRgb(a),y=hexToRgb(b);return x&&y?rgbToHex(mixRgb(x,y,amount)):a;};
 
-/**
- * Material skin rules. Every output is a function of the measurements, so a soft photo,
- * a poster and a dark scene each get a different result from the same code:
- * - outline weight follows linework density (edge density) and colorfulness
- * - hard shadow follows outline weight; soft photos keep the soft shadow
- * - scalloped sheet edge only where the linework is strong enough to carry it
- * - star completion only where the look is graphic
- * - focus follows the busiest band so the art stays framed above the sheet
- */
-export function skinFromMeasurements(m:{lineDensity:number;colorful:number;focusY:number}):StudioSkin {
-  const line=m.lineDensity>=0.1?3:m.lineDensity>=0.06?2:m.lineDensity>=0.02?1:0;
-  const graphic=m.colorful>=0.26;
-  const outline=graphic?line:Math.min(line,1);
-  return {
-    sheetEdge:outline>=3?"scallop":"round",
-    outline,
-    hardShadow:outline>=2?outline:0,
-    checkGlyph:outline>=2&&graphic?"star":"check",
-    focusY:m.focusY,
-  };
+/** Mean luminance (0 to 1) of the measured swatches, weighted by pixel share. */
+export function meanLuminance(swatches: readonly { hex: string; share: number }[]): number {
+  let total = 0, weight = 0;
+  for (const { hex: color, share } of swatches) {
+    const rgb = hexToRgb(color);
+    if (!rgb) continue;
+    total += relativeLuminance(rgb) * share;
+    weight += share;
+  }
+  return weight > 0 ? total / weight : 0.5;
+}
+
+/** Dim grows with brightness: none for dark art, the full 35% for bright art. */
+export function dimForLuminance(luminance: number): number {
+  const t = Math.min(1, Math.max(0, (luminance - 0.3) / 0.4));
+  return Number((t * MAX_WALLPAPER_DIM).toFixed(2));
+}
+
+/** Soft images take thin material; busy, high-detail images take thicker material so text stays legible. */
+export function thicknessForEdges(edgeDensity: number): StudioMaterialThickness {
+  if (edgeDensity < 0.02) return "thin";
+  if (edgeDensity < 0.07) return "regular";
+  return "thick";
 }
 
 /** Sheet tint: a quiet, light swatch from the wallpaper itself, never a fixed color. */
@@ -156,7 +175,7 @@ function sheetFrom(swatches:readonly {hex:string;share:number}[],dominant:string
   return best??mix(dominant,"#ffffff",0.72);
 }
 
-/** A bounded and contrast-guarded design using the wallpaper's measured palette. */
+/** A bounded, contrast-guarded tint, dim and material derived from the wallpaper's measurements. */
 export function languageFromPixels(rgba:Uint8ClampedArray,width:number,height:number):StudioWallpaperLanguage {
   const measured=measureWallpaper(rgba,width,height);
   const base=suggestPalette(rgba,width,height).palette; // existing WCAG-safe base
@@ -164,46 +183,28 @@ export function languageFromPixels(rgba:Uint8ClampedArray,width:number,height:nu
   const samples=measured.swatches.map(({hex:color,share})=>({hex:color,share,rgb:hexToRgb(color)}));
   const vivid=samples.filter(s=>s.rgb && sat([s.rgb.r,s.rgb.g,s.rgb.b])>=0.29);
   vivid.sort((a,b)=>b.share-a.share);
-  const surface=base.surface;
-  const fg=enforceContrast(base.text,surface,4.5).color;
-  const accent=enforceContrast(base.accent,surface,3).color;
-  // Large colorful posters need strong material geometry. Quiet, low-detail
-  // photography works better with restrained glass or clean outlines.
-  const colorful=vivid.reduce((sum,s)=>sum+s.share,0);
-  const vibrant=colorful>=0.26 && measured.lineDensity>=0.05;
-  const dark=contrastRatioHex("#ffffff",dominant)!==null && (contrastRatioHex("#ffffff",dominant)??0)>5.5;
-  const treatment:ControlTreatmentId=vibrant?"illustrated":dark?"soft-glass":"desktop";
-  const style:StudioElementStyle=vibrant?"comic":dark?"glass":"outline";
-  const parts:Record<StudioElementPart,StudioElementStyle>={
-    crown:style,responsibilities:style,week:style,tasks:style,dock:style,
-  };
-  const skin=skinFromMeasurements({lineDensity:measured.lineDensity,colorful,focusY:measured.focusY});
-  const typeface:TypographyPresetId=vibrant&&skin.outline>=3?"display":vibrant?"display":dark?"system":"editorial";
-  // Light wallpapers get a wallpaper-tinted sheet and darkest-swatch ink. Dark ones keep the
-  // contrast-checked base palette so nothing is forced light.
   const lightBase=lumOf(base.surface)>0.4;
-  const sheet=lightBase?sheetFrom(measured.swatches,dominant):base.surface;
+  // A quiet tint of the sheet and a near-white card surface on light art; the contrast-checked base on dark art.
+  const tint=lightBase?mix(sheetFrom(measured.swatches,dominant),"#ffffff",0.4):base.surface;
+  const surface=lightBase?mix(tint,"#ffffff",0.85):base.surface;
   const darkest=[...measured.swatches].sort((a,b)=>lumOf(a.hex)-lumOf(b.hex))[0]?.hex;
-  const sheetSurface=lightBase&&skin.outline>0?mix(sheet,"#ffffff",0.72):surface;
-  const inkSeed=lightBase&&darkest?darkest:fg;
-  const ink=enforceContrast(inkSeed,sheetSurface,7).color;
-  const inkOnSheet=enforceContrast(ink,sheet,4.5).color;
-  // Brightest saturated swatch that works as a fill under ink text; share breaks ties.
-  const fillable=vivid.filter(v=>lumOf(v.hex)>0.18).sort((a,b)=>
-    (sat([hexToRgb(b.hex)!.r,hexToRgb(b.hex)!.g,hexToRgb(b.hex)!.b])*Math.sqrt(lumOf(b.hex))*(0.5+b.share))-
-    (sat([hexToRgb(a.hex)!.r,hexToRgb(a.hex)!.g,hexToRgb(a.hex)!.b])*Math.sqrt(lumOf(a.hex))*(0.5+a.share)));
-  const accentVivid=fillable[0]?.hex??accent;
-  // Text-safe accent: the most share-heavy saturated swatch that already reads on the card.
-  const textAccent=[...vivid].filter(v=>(contrastRatioHex(v.hex,sheetSurface)??0)>=4.5)[0]?.hex??accentVivid;
+  const inkSeed=lightBase&&darkest?darkest:enforceContrast(base.text,surface,4.5).color;
+  const ink=enforceContrast(enforceContrast(inkSeed,surface,7).color,tint,4.5).color;
+  const secondary=enforceContrast(mix(ink,surface,0.32),lightBase?tint:surface,4.5).color;
+  // One tint for Today, links, primary actions and selection: the most share-heavy saturated swatch that reads as text.
+  const accentSeed=vivid.find(v=>(contrastRatioHex(v.hex,surface)??0)>=4.5&&(contrastRatioHex(v.hex,tint)??0)>=4.5)?.hex??base.accent;
+  const accent=enforceContrast(enforceContrast(accentSeed,surface,4.5).color,tint,4.5).color;
+  // Brightest saturated swatch, kept only for editor swatches and explicit starter styles.
+  const fillable=vivid.filter(v=>lumOf(v.hex)>0.18)[0]?.hex??accent;
   return {
-    palette:{
-      accent:enforceContrast(textAccent,sheetSurface,4.5).color,
-      surface:sheetSurface,text:inkOnSheet,secondaryText:enforceContrast(mix(inkOnSheet,sheetSurface,0.32),lightBase?sheet:sheetSurface,4.5).color,
-      highlight:accentVivid,...(lightBase?{sheet}:{}),
-    },
-    treatment,typeface,parts,skin,swatches:measured.swatches,
-    edgeDensity:measured.edgeDensity,quietBand:measured.quietBand,
-    explanation:vibrant?"Bold illustration-inspired surfaces":dark?"Layered glass-inspired surfaces":"Clean framed surfaces",
+    palette:{accent,surface,text:ink,secondaryText:secondary,highlight:fillable,...(lightBase?{sheet:tint}:{})},
+    thickness:thicknessForEdges(measured.edgeDensity),
+    dim:dimForLuminance(meanLuminance(measured.swatches)),
+    focusY:measured.focusY,
+    swatches:measured.swatches,
+    edgeDensity:measured.edgeDensity,
+    quietBand:measured.quietBand,
+    explanation:"Tint, dim and material taken from your wallpaper",
   };
 }
 

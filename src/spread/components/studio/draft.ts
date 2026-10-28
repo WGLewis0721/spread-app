@@ -24,7 +24,7 @@ import {
 } from "../../../lib/spread/studio/contract.ts";
 import { STUDIO_UI_COPY } from "./studio-copy.ts";
 import { appearanceFromStarter, type StudioStarterId } from "../../../lib/spread/studio/presets.ts";
-import type { StudioWallpaperLanguage } from "../../../lib/spread/studio/wallpaper-language.ts";
+import { MATERIAL_THICKNESS, type StudioWallpaperLanguage } from "../../../lib/spread/studio/wallpaper-language.ts";
 
 export type StudioSession = {
   committed: StudioAppearanceV1;
@@ -121,14 +121,16 @@ function reduce(
   switch (action.type) {
     case "apply-wallpaper-language": {
       const language=action.language;
+      // A wallpaper decides tint, dim, material thickness and focus. Layout, type and controls stay as shipped.
+      const thick=MATERIAL_THICKNESS[language.thickness];
       const applied=edit(session,(draft)=>({
         ...draft,
         id:"studio-wallpaper",name:"From Wallpaper",
         palette:{...language.palette},
-        material:{treatment:language.treatment==="soft-glass"?"glass":"flat",transparency:language.treatment==="soft-glass"?0.14:0,depth:language.treatment==="soft-glass"?0.55:0.12},
-        typography:{...draft.typography,presetId:language.typeface},
-        controls:{density:draft.controls.density,treatmentId:language.treatment,parts:{...language.parts}},
-        skin:{...language.skin},
+        material:{treatment:"glass",transparency:thick.transparency,depth:thick.depth},
+        typography:{...draft.typography,presetId:"system"},
+        controls:{density:draft.controls.density,treatmentId:"original"},
+        wallpaper:{...draft.wallpaper,dim:language.dim,focusY:language.focusY},
       }));
       return { ...applied, state:{...applied.state,notice:"Local design created. "+language.explanation+". Review and tap Apply."} };
     }
