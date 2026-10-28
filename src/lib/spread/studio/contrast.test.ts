@@ -74,3 +74,18 @@ test("role card inks clear 4.5:1 on every shipped role color", async () => {
     }
   }
 });
+
+test("role card paint keeps white ink at 4.5:1 across the whole gradient, glow included", async () => {
+  const { roleCardPaint, ROLE_GLOW_ALPHA, mixRgb, rgbToHex, hexToRgb } = await import("./contrast.ts");
+  const { ROLE_COLORS } = await import("../model.ts");
+  for (const color of ROLE_COLORS) {
+    const paint = roleCardPaint(color);
+    const top = hexToRgb(paint.top)!;
+    const glow = rgbToHex(mixRgb(top, { r: 255, g: 255, b: 255 }, ROLE_GLOW_ALPHA));
+    for (const stop of [paint.top, paint.bottom, glow]) {
+      for (const [name, ink] of [["ink", paint.ink], ["secondary", paint.secondary], ["tertiary", paint.tertiary]] as const) {
+        assert.ok((contrastRatioHex(ink, stop) ?? 0) >= 4.5, `${name} ${ink} on ${stop} (${color})`);
+      }
+    }
+  }
+});

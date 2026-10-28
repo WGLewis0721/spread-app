@@ -89,6 +89,40 @@ export function roleCardInks(background: string): { ink: string; secondary: stri
   return { ink, secondary: soften(0.14), tertiary: soften(0.26) };
 }
 
+/**
+ * Paint for a role card in the board look: a gradient from the role color down to a deeper stop,
+ * with a soft highlight (ROLE_GLOW_ALPHA of white) over the top corner. White ink is used when the
+ * color needs at most 28% darkening to carry it at 4.5:1; otherwise the color stays vivid and the
+ * ink is near-black, which is the honest choice for orange, green and yellow. Secondary and
+ * tertiary are forced to 4.5:1 on the worst stop of the gradient, glow included.
+ */
+export const ROLE_GLOW_ALPHA = 0.12;
+const ROLE_DARK_INK = "#0a0a0b";
+export function roleCardPaint(color: string): { top: string; bottom: string; ink: string; secondary: string; tertiary: string } {
+  const base = hexToRgb(color) ?? { r: 128, g: 128, b: 128 };
+  const glowOf = (rgb: Rgb) => mixRgb(rgb, WHITE, ROLE_GLOW_ALPHA);
+  for (let amount = 0; amount <= 0.28; amount += 0.02) {
+    const top = mixRgb(base, BLACK, amount);
+    if (contrastRatio(mixRgb(WHITE, top, 0.1), glowOf(top)) >= 4.65) {
+      const topHex = rgbToHex(top);
+      const bottom = rgbToHex(mixRgb(top, BLACK, 0.34));
+      const soft = enforceContrast(rgbToHex(mixRgb(WHITE, top, 0.1)), rgbToHex(glowOf(top)), 4.5).color;
+      return { top: topHex, bottom, ink: "#ffffff", secondary: soft, tertiary: soft };
+    }
+  }
+  const top = rgbToHex(base);
+  const inkRgb = hexToRgb(ROLE_DARK_INK) ?? BLACK;
+  // Deepen the bottom only as far as the dark ink still reads on it with room for softening.
+  let bottomRgb = base;
+  for (let amount = 0.22; amount >= 0; amount -= 0.02) {
+    bottomRgb = mixRgb(base, BLACK, amount);
+    if (contrastRatio(mixRgb(inkRgb, base, 0.12), bottomRgb) >= 4.8) break;
+  }
+  const bottom = rgbToHex(bottomRgb);
+  const soft = enforceContrast(rgbToHex(mixRgb(inkRgb, base, 0.12)), bottom, 4.5).color;
+  return { top, bottom, ink: ROLE_DARK_INK, secondary: soft, tertiary: soft };
+}
+
 export function mixRgb(from: Rgb, to: Rgb, amount: number): Rgb {
   const t = Math.max(0, Math.min(1, Number.isFinite(amount) ? amount : 0));
   return {

@@ -123,3 +123,13 @@ The Studio build no longer shows the shipped look until a wallpaper is applied. 
 - **Dock.** An ink pill with paper icons. Labelled controls (Edit, Done) are paper pills with ink text.
 - **Sheets.** More and Task portal into the scope element (`useStudioPortal`) so they receive the same variables. Groups are pastel by kind (status sage, lists butter, actions peach, other sky); dark uses deep mixes of the same colors.
 - **Revert.** Saving "Original" in the editor also shows Board, because the shipped look is what a build without the flag renders.
+
+## Reference pass: rotating gradient stack on black (2026-10-28)
+
+Board is now dark-first (it follows the OS unless the planner theme is explicitly Light or Dark), on a near-black canvas.
+
+- Role cards are saturated vertical gradients from `roleCardPaint` (`contrast.ts`). Ink is white when a modest darkening clears 4.5:1 across the whole gradient, including the white highlight, and near-black on the brighter colors. Every stop is tested in `contrast.test.ts`.
+- The stack overlaps so only a rounded strip of each closed card shows. The front card is open.
+- The stack turns on its own every 5 seconds: the front card lifts away, the others slide up, the wrapped card rises in at the back (FLIP, Web Animations API). It holds for hidden tabs, Reduce Motion, recent touch, a focused text field, an open sheet or task, editing, and the Pause button.
+- Each card carries a small sparkline of that role's hours across the week.
+- Not built yet: the fanned layout and sphere dial from Audio Sphere, category tabs, a day-at-a-glance timeline, and a restyled Customize editor.

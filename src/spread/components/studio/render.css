@@ -694,10 +694,11 @@
 }
 [data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item {
   position: relative;
-  margin-top: -1.1rem;
-  padding-bottom: 1.1rem;
-  border-radius: 1.5rem;
-  background: var(--role);
+  margin-top: -1.55rem;
+  padding-bottom: 1.55rem;
+  border-radius: 1.75rem;
+  background: var(--role-bg, var(--role));
+  background-color: var(--role);
   color: var(--role-ink);
   --ink: var(--role-ink);
   --secondary: var(--role-ink-2);
@@ -744,7 +745,8 @@
    today is lifted with an accent hairline and a leading bar. This is the board's Schedule layout:
    neutral days, colored blocks. */
 [data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-board="on"] .studio-role-chip {
-  background: var(--role);
+  background: var(--role-bg, var(--role));
+  background-color: var(--role);
   color: var(--role-ink);
   --ink: var(--role-ink);
   --secondary: var(--role-ink-2);
@@ -789,7 +791,8 @@
   transition: transform 180ms cubic-bezier(.32,.72,0,1);
 }
 [data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-board="on"] .studio-month-day[data-studio-marked="true"] {
-  background: var(--role);
+  background: var(--role-bg, var(--role));
+  background-color: var(--role);
   color: var(--role-ink);
   --ink: var(--role-ink);
   --secondary: var(--role-ink-2);
@@ -1069,3 +1072,23 @@
 [data-studio-appearance][data-studio-board="on"][data-studio-scheme] .studio-week-header[data-studio-view="week"] .crown-readout > p:first-child {
   font-size: calc(1.45rem * var(--studio-type-scale));
 }
+
+
+/* Reference pass (AI OS Analytics, Habits, Audio Sphere): black canvas, saturated gradient cards
+   that overlap so only a rounded strip of each shows, one card up front, and a stack that turns
+   by itself. Closed cards are a strip; the front card is open. FLIP animates the turn, so the
+   fold itself must not animate or it would fight the slide. */
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack .task-fold { transition: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item {
+  box-shadow: inset 0 0.5px 0 rgba(255,255,255,.35), 0 -6px 18px rgba(0,0,0,.35);
+  will-change: transform;
+}
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack .studio-role-card > div:first-child { min-height: 4.6rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item:first-child .studio-role-card > div:first-child { min-height: 5.4rem; }
+/* The title above the stack is the screen's headline, like the references. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .studio-week-header[data-studio-view="spread"] .crown-readout > p:first-child {
+  font-size: calc(2.5rem * var(--studio-type-scale));
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+[data-studio-appearance][data-studio-board="on"] .studio-role-spark { right: 7.6rem; top: 1.35rem; }

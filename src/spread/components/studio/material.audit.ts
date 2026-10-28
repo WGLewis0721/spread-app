@@ -121,15 +121,15 @@ try {
       if(spreadText.length)errors.push(shape+"/"+scheme+": Spread tab text audit "+spreadText.length+" violations "+JSON.stringify(spreadText[0]).slice(0,240));
       const stackCards=await page.locator(".studio-role-stack > .week-seq-item").count();
       if(stackCards<3)errors.push(shape+"/"+scheme+": expected stacked role cards, found "+stackCards);
-      // Carousel: exactly one card open; it advances on its own; Pause stops it.
+      // Carousel: the stack turns by itself (front card changes); exactly one card is open; Pause stops it.
       if(!carouselChecked){
         carouselChecked=true;
-        const openCards=()=>page.evaluate(()=>[...document.querySelectorAll(".studio-role-stack .task-fold")].map(e=>e.classList.contains("task-fold-open")?1:0).join(""));
+        const openCards=()=>page.evaluate(()=>[...document.querySelectorAll(".studio-role-stack > .week-seq-item")].map(e=>(e.getAttribute("data-role-id")||"?")+(e.querySelector(".task-fold")?.classList.contains("task-fold-open")?"+":"-")).join(","));
         const first=await openCards();
-        if(first.split("1").length!==2) errors.push("carousel: expected exactly one open card, got "+first);
+        if(first.split("+").length!==2) errors.push("carousel: expected exactly one open card, got "+first);
         await page.waitForTimeout(7600);
         const second=await openCards();
-        if(second===first||second.split("1").length!==2) errors.push("carousel did not advance: "+first+" -> "+second);
+        if(second===first||second.split("+").length!==2) errors.push("carousel did not advance: "+first+" -> "+second);
         await page.getByRole("button",{name:"Pause auto-advance"}).click();
         const held=await openCards();
         await page.waitForTimeout(7600);

@@ -102,7 +102,10 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
   // Planner Settings is the source of truth for Studio "System". The OS is consulted
   // only when the planner itself is set to System; explicit Studio modes still win.
   const plannerTheme = useSpread((state) => state.theme);
-  const inheritedScheme = plannerTheme === "system" ? (systemDark ? "dark" : "light") : plannerTheme;
+  const isBoard = (appearance as { id?: string } | undefined)?.id === "studio-board";
+  // Board is dark-first, like its references. It follows the OS only when the planner is set to
+  // an explicit Light or Dark.
+  const inheritedScheme = plannerTheme === "system" ? (isBoard ? "dark" : systemDark ? "dark" : "light") : plannerTheme;
   const scope = resolveStudioScope({
     enabled: true,
     appearance,

@@ -463,11 +463,11 @@ function withBoardScheme(appearance: StudioAppearanceV1, scheme: StudioScheme): 
     ...appearance,
     palette: {
       ...appearance.palette,
-      accent: "#f6efe4",
-      surface: "#2b2621",
-      text: "#f6efe4",
-      secondaryText: "#bdb3a4",
-      sheet: "#1d1915",
+      accent: "#f5f5f7",
+      surface: "#1c1c1e",
+      text: "#f5f5f7",
+      secondaryText: "#a1a1a6",
+      sheet: "#101011",
     },
   };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
 import { createPortal, flushSync } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -372,7 +372,10 @@ function WeekScreen() {
   const [studioDetent, setStudioDetent] = useState<StudioWeekDetent>("half");
   // Stacked role cards (Studio wallpaper look): one card open at a time. undefined means the first one.
   const [stackOn, setStackOn] = useState(false);
-  const [openRole, setOpenRole] = useState<string | null | undefined>(undefined);
+  // Stack rotation: the card at the front is open; the rest peek out behind it. `rot` is how many
+  // places the base order has been turned.
+  const [rot, setRot] = useState(0);
+  const [frontOpen, setFrontOpen] = useState(true);
   const weekGrabRef = useRef<{y:number;startTop:number;samples:{y:number;t:number}[]}|null>(null);
   const skipGrabClick = useRef(false);
   const stageRef = useRef<HTMLElement|null>(null);
@@ -461,31 +464,36 @@ function WeekScreen() {
     };
   });
 
-  // Studio stack: slowly advance the open card, like a vertical carousel. It never fights the
-  // person: it stops for Reduce Motion, a hidden tab, an open sheet, editing, anything focused in
-  // the stack, any touch in the last 15 seconds, or the Pause button (WCAG 2.2.2).
-  const roleIdsRef = useRef<string[]>([]);
-  roleIdsRef.current = rows.map((row) => row.hat.id);
-  const openRoleRef = useRef<string | null | undefined>(undefined);
-  openRoleRef.current = openRole;
+  // Studio stack: the stack turns on its own, one card every 5 seconds, like a vertical carousel.
+  // The front card lifts away and returns at the back while the rest slide up (FLIP, see
+  // useStackFlip). It never fights the person: it stops for Reduce Motion, a hidden tab, an open
+  // sheet, editing, a text field being edited, any touch in the last 10 seconds, or the Pause
+  // button (WCAG 2.2.2). Being focused on a card button does not stop it.
+  const stackRef = useRef<HTMLDivElement>(null);
   const stackTouched = useRef(0);
   const [stackPaused, setStackPaused] = useState(false);
   const stackBlocked = sheet !== null || openTask !== null;
+  const count = rows.length;
+  const order = stackOn && !editing && count > 0 ? Array.from({ length: count }, (_, i) => (i + (rot % count)) % count) : rows.map((_, i) => i);
+  const turnTo = useStackFlip(stackRef, order.map((i) => rows[i]?.hat.id ?? "").join("|"));
+  const rotateBy = useCallback((steps: number, animate: boolean) => {
+    if (count < 2) return;
+    turnTo(animate, () => {
+      setFrontOpen(true);
+      setRot((value) => (value + steps + count * 8) % count);
+    });
+  }, [count, turnTo]);
   useEffect(() => {
-    if (!stackOn || stackPaused || editing || stackBlocked || view === "week") return;
+    if (!stackOn || stackPaused || editing || stackBlocked || view === "week" || count < 2) return;
     const id = window.setInterval(() => {
       if (document.hidden) return;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      if (Date.now() - stackTouched.current < 15000) return;
-      if (document.activeElement?.closest(".studio-role-stack")) return;
-      const ids = roleIdsRef.current;
-      if (ids.length < 2) return;
-      const current = openRoleRef.current === undefined ? ids[0] : openRoleRef.current;
-      const at = current ? ids.indexOf(current) : -1;
-      setOpenRole(ids[(at + 1) % ids.length]);
-    }, 7000);
+      if (Date.now() - stackTouched.current < 10000) return;
+      if (document.activeElement?.matches("input, textarea, [contenteditable]")) return;
+      rotateBy(1, true);
+    }, 5000);
     return () => window.clearInterval(id);
-  }, [stackOn, stackPaused, editing, stackBlocked, view]);
+  }, [stackOn, stackPaused, editing, stackBlocked, view, count, rotateBy]);
 
   const goWeek = useCallback(
     (direction: -1 | 1) => {
@@ -903,14 +911,16 @@ function WeekScreen() {
                 </div>
               )}
               <div
+                ref={stackRef}
                 className="studio-role-stack mt-6 overflow-hidden rounded-[22px] bg-elevated"
                 onPointerDownCapture={() => { stackTouched.current = Date.now(); }}
                 onFocusCapture={() => { stackTouched.current = Date.now(); }}
                 onKeyDownCapture={() => { stackTouched.current = Date.now(); }}
               >
-                {rows.map(({ hat, box }, index) => (
+                {order.map((rowIndex, index) => rows[rowIndex]).map(({ hat, box }, index) => (
                   <div
                     key={hat.id}
+                    data-role-id={hat.id}
                     className={cn("week-seq-item", profilePlay && "cascade-item")}
                     style={roleVars(hat.color, { animationDelay: `${(index + 1) * 45}ms` })}
                   >
@@ -921,8 +931,11 @@ function WeekScreen() {
                       editing={editing}
                       first={index === 0}
                       stack={stackOn ? {
-                        open: (openRole === undefined ? rows[0]?.hat.id : openRole) === hat.id,
-                        toggle: () => setOpenRole((openRole === undefined ? rows[0]?.hat.id : openRole) === hat.id ? null : hat.id),
+                        open: index === 0 && frontOpen,
+                        toggle: () => {
+                          if (index === 0) setFrontOpen((open) => !open);
+                          else rotateBy(index, true);
+                        },
                       } : undefined}
                       onRemove={() => setRemoveId(hat.id)}
                       onOpenTask={(taskId) => setOpenTask({ hatId: hat.id, taskId })}
@@ -1109,6 +1122,80 @@ function formatHourLabel(hours: number) {
 
 const DAY_MARKS = ["M", "Tu", "W", "Th", "F", "Sa", "Su"] as const;
 
+/**
+ * Turn the role stack with motion. The caller asks for a turn; this lifts the front card away,
+ * commits the new order, then slides every card that moved up from where it was (FLIP) and lets
+ * the card that went to the back rise in behind the rest. Positions are read before the commit,
+ * so the order change itself needs no knowledge of the animation. Reduce Motion commits at once.
+ */
+function useStackFlip(host: RefObject<HTMLElement | null>, orderKey: string) {
+  const snap = useRef<{ index: Map<string, number>; top: Map<string, number> } | null>(null);
+  const turnTo = useCallback(
+    (animate: boolean, commit: () => void) => {
+      const root = host.current;
+      const still = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!animate || still || !root) {
+        snap.current = null;
+        commit();
+        return;
+      }
+      const nodes = [...root.querySelectorAll<HTMLElement>(":scope > [data-role-id]")];
+      snap.current = {
+        index: new Map(nodes.map((node, i) => [node.dataset.roleId ?? "", i])),
+        top: new Map(nodes.map((node) => [node.dataset.roleId ?? "", node.offsetTop])),
+      };
+      const lift = nodes[0]?.animate(
+        [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(-26px) scale(.96)" }],
+        { duration: 240, easing: "ease-in", fill: "forwards" },
+      );
+      if (!lift) commit();
+      else void lift.finished.then(commit, commit);
+    },
+    [host],
+  );
+  useLayoutEffect(() => {
+    const before = snap.current;
+    snap.current = null;
+    const root = host.current;
+    if (!before || !root) return;
+    [...root.querySelectorAll<HTMLElement>(":scope > [data-role-id]")].forEach((node, i) => {
+      const id = node.dataset.roleId ?? "";
+      node.getAnimations().forEach((animation) => animation.cancel());
+      const was = before.index.get(id);
+      const top = node.offsetTop;
+      const from = before.top.get(id);
+      if (was === undefined || from === undefined || (was === i && from === top)) return;
+      if (i > was) {
+        node.animate(
+          [{ opacity: 0, transform: "translateY(56px) scale(.96)" }, { opacity: 1, transform: "none" }],
+          { duration: 640, delay: 180, easing: "cubic-bezier(.32,.72,0,1)", fill: "backwards" },
+        );
+      } else {
+        node.animate(
+          [{ transform: `translateY(${from - top}px)` }, { transform: "none" }],
+          { duration: 780, easing: "cubic-bezier(.32,.72,0,1)" },
+        );
+      }
+    });
+  }, [orderKey, host]);
+  return turnTo;
+}
+
+/** A small trend line of this role's hours across the week, drawn in the card's ink. Decorative. */
+function RoleSpark({ hatId }: { hatId: string }) {
+  const data = useSpread((s) => s.data);
+  const week = data.weeks[data.currentWeek];
+  const days = weekDays(data.currentWeek).slice().reverse();
+  const hours = days.map((day) => (week?.allocations ?? []).filter((item) => item.hatId === hatId && item.day === day.date).reduce((sum, item) => sum + item.hours, 0));
+  const max = Math.max(1, ...hours);
+  const points = hours.map((value, i) => `${(i / 6) * 44 + 2},${18 - (value / max) * 14 - 2}`).join(" ");
+  return (
+    <svg className="studio-role-spark pointer-events-none absolute" width="48" height="20" viewBox="0 0 48 20" aria-hidden="true">
+      <polyline points={points} fill="none" stroke="var(--role-ink)" strokeOpacity="0.7" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function DayMarks({ hatId, name, color }: { hatId: string; name: string; color: string }) {
   const data = useSpread((s) => s.data);
   const placed = data.weeks[data.currentWeek]?.allocations.filter((item) => item.hatId === hatId && item.hours > 0) ?? [];
@@ -1214,6 +1301,7 @@ function RoleBlock({
     <section id={`spread-role-${hat.id}`} tabIndex={-1} className="scroll-mt-48 print:break-inside-avoid">
       {!first && <div className="ms-16 border-t border-line" />}
       <div className="studio-role-card relative overflow-hidden">
+        {stack && <RoleSpark hatId={hat.id} />}
         <div className="flex min-h-16 items-center gap-3 px-4 py-2">
         <button
           type="button"
