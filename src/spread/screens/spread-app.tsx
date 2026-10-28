@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { createPortal, flushSync } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -573,6 +573,18 @@ function WeekScreen() {
         ))}
       </div>
   );
+  const viewNode =
+    layout === "fan" ? (
+      <FanLayout rows={layoutRows} selectedId={selectedId} onSelect={selectRole}>{detailFor(selectedId)}</FanLayout>
+    ) : layout === "dial" ? (
+      <DialLayout rows={layoutRows} selectedId={selectedId} onSelect={selectRole}>{detailFor(selectedId)}</DialLayout>
+    ) : layout === "tabs" ? (
+      <TabsLayout rows={layoutRows} tab={tabNow} onTab={(id) => { setRoleTab(id); setDetailOpen(true); }}>{tabNow === "all" ? stackNode : detailFor(tabNow)}</TabsLayout>
+    ) : layout === "day" ? (
+      <DayLayout rows={layoutRows} days={dayList} allocations={data.weeks[data.currentWeek]?.allocations ?? []} today={todayIso} selectedDay={dayId} onDay={setPickedDay} selectedId={selectedId} onPickRole={selectRole}>{detailFor(selectedId)}</DayLayout>
+    ) : (
+      stackNode
+    );
 
   const goWeek = useCallback(
     (direction: -1 | 1) => {
@@ -974,32 +986,21 @@ function WeekScreen() {
                     if (rollover(false) === "confirm") setRolloverAsk(true);
                   }}
                   onReview={openTasksOf(data).length > 0 ? () => setCarryAsk(true) : undefined}
+                  aside={rotating && rows.length > 1 ? (
+                    <button
+                      type="button"
+                      className="studio-stack-pause"
+                      aria-label={stackPaused ? "Resume auto-advance" : "Pause auto-advance"}
+                      aria-pressed={stackPaused}
+                      title={stackPaused ? "Resume auto-advance" : "Pause auto-advance"}
+                      onClick={() => setStackPaused((paused) => !paused)}
+                    >
+                      {stackPaused ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
+                    </button>
+                  ) : null}
                 />
               </div>
-              {rotating && rows.length > 1 && (
-                <div className="mt-5 -mb-2 flex justify-end">
-                  <button
-                    type="button"
-                    className="studio-readable-note studio-stack-pause flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
-                    aria-pressed={stackPaused}
-                    onClick={() => setStackPaused((paused) => !paused)}
-                  >
-                    {stackPaused ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
-                    {stackPaused ? "Resume auto-advance" : "Pause auto-advance"}
-                  </button>
-                </div>
-              )}
-              {layout === "fan" ? (
-                <FanLayout rows={layoutRows} selectedId={selectedId} onSelect={selectRole}>{detailFor(selectedId)}</FanLayout>
-              ) : layout === "dial" ? (
-                <DialLayout rows={layoutRows} selectedId={selectedId} onSelect={selectRole}>{detailFor(selectedId)}</DialLayout>
-              ) : layout === "tabs" ? (
-                <TabsLayout rows={layoutRows} tab={tabNow} onTab={(id) => { setRoleTab(id); setDetailOpen(true); }}>{tabNow === "all" ? stackNode : detailFor(tabNow)}</TabsLayout>
-              ) : layout === "day" ? (
-                <DayLayout rows={layoutRows} days={dayList} allocations={data.weeks[data.currentWeek]?.allocations ?? []} today={todayIso} selectedDay={dayId} onDay={setPickedDay} selectedId={selectedId} onPickRole={selectRole}>{detailFor(selectedId)}</DayLayout>
-              ) : (
-                stackNode
-              )}
+              {stackOn ? <div key={layout} className="studio-view" data-layout={layout}>{viewNode}</div> : viewNode}
               <div className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}>
                 <NewLifeBox onClick={() => setSheet("new")} />
               </div>
@@ -1109,23 +1110,24 @@ type Row = {
   box: { hours: number; tasks: { done: boolean }[] };
 };
 
-function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () => void; onReview?: () => void }) {
+function Summary({ rows, onRollover, onReview, aside }: { rows: Row[]; onRollover: () => void; onReview?: () => void; aside?: ReactNode }) {
   const totalHours = rows.reduce((sum, row) => sum + Number(row.box.hours || 0), 0);
   const taskCount = rows.reduce((sum, row) => sum + row.box.tasks.length, 0);
   const done = rows.reduce((sum, row) => sum + row.box.tasks.filter((task) => task.done).length, 0);
   const active = rows.filter((row) => row.box.hours > 0);
   return (
-    <section className="studio-readable-panel px-1 pt-5">
-      <p className="text-base">
+    <section className="studio-readable-panel studio-summary px-1 pt-5">
+      <p className="studio-sum-head text-base">
         <span className="font-semibold tabular-nums">{formatHourLabel(totalHours)}</span>
         <span className="text-secondary">
           {" "}
           across {rows.length} {rows.length === 1 ? "spread" : "spreads"}
         </span>
       </p>
+      {aside ? <div className="studio-sum-aside">{aside}</div> : null}
       {totalHours > 0 && (
         <div
-          className="mt-1 flex min-h-11 items-center gap-1 overflow-x-auto"
+          className="studio-sum-bar mt-1 flex min-h-11 items-center gap-1 overflow-x-auto"
           role="group"
           aria-label={`${formatHourLabel(totalHours)} across responsibilities. Choose a color to jump to its responsibility.`}
         >
@@ -1151,13 +1153,13 @@ function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () =
           ))}
         </div>
       )}
-      <p className="mt-3 text-xs text-secondary tabular-nums">
+      <p className="studio-sum-done mt-3 text-xs text-secondary tabular-nums">
         {taskCount === 0 ? "List the work that fits." : `${done} of ${taskCount} done`}
       </p>
       {totalHours > 45 && (
         <p className="mt-1 text-xs text-caution">If the hours don’t fit, something is lying.</p>
       )}
-      <div className="mt-1 flex flex-wrap items-center gap-x-6">
+      <div className="studio-sum-actions mt-1 flex flex-wrap items-center gap-x-6">
         <button type="button" className="flex min-h-11 items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
           <SpreadIcon name="icon-rollover.svg" size={24} />
           Rollover
