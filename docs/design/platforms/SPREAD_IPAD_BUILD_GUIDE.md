@@ -1,5 +1,8 @@
 # Spread on iPad: build guide
 
+> Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
+
+
 Researched 2026-10-21 from developer.apple.com, the Spread repo docs, and GitHub. This file covers iPad only. The shared baseline (toolchain, submission rules, privacy manifest, Capacitor, repo rules, haptics, drag-and-drop mechanics, testing commands) is in `SPREAD_IPHONE_BUILD_GUIDE.md` section 1 and still applies. iPhone Duo is in `SPREAD_IPHONE_DUO_BUILD_GUIDE.md`.
 
 Evidence tags: **[Apple]** read on a developer.apple.com page. **[Repo]** from the Spread docs. **[3P]** third party, unverified. **[Rec]** my recommendation.

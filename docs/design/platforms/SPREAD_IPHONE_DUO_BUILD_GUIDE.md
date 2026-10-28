@@ -1,5 +1,8 @@
 # Spread on iPhone Duo: build guide
 
+> Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
+
+
 Researched 2026-10-21 from developer.apple.com, the Spread repo docs, and GitHub. This file covers iPhone Duo only. The shared baseline (toolchain, submission rules, privacy manifest, Capacitor, repo rules, haptics, drag-and-drop mechanics, test commands) is in `SPREAD_IPHONE_BUILD_GUIDE.md` section 1 and still applies. The iPad layout work in `SPREAD_IPAD_BUILD_GUIDE.md` is the base for the Duo inner display.
 
 Evidence tags: **[Apple]** read on a developer.apple.com page. **[Repo]** from the Spread docs. **[3P]** third party, unverified. **[Rec]** my recommendation.

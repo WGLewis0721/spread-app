@@ -108,7 +108,7 @@ Apple-ready screenshots + still assets
 
 ## Planner UX pass (Unified UX)
 
-See `docs/SPREAD_UNIFIED_UX_IMPLEMENTATION.md` for the result matrix.
+See [docs/design/planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md](docs/design/planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md) for the result matrix.
 
 - [x] Place tasks on days (drag, tap, keyboard), To place tray, Not today.
 - [x] Undo after drag, placement and Not today.
@@ -119,7 +119,7 @@ See `docs/SPREAD_UNIFIED_UX_IMPLEMENTATION.md` for the result matrix.
 
 ## HIG planner refinement (2026-10-08)
 
-The refined controls and reference decisions are documented in [docs/design/SPREAD_DESIGN_SYSTEM.md](docs/design/SPREAD_DESIGN_SYSTEM.md). Scope is confined to existing planner presentation; the design PR does not touch the local/cloud data model.
+The refined controls and reference decisions are documented in [docs/design/planner/SPREAD_DESIGN_SYSTEM.md](docs/design/planner/SPREAD_DESIGN_SYSTEM.md). Scope is confined to existing planner presentation; the design PR does not touch the local/cloud data model.
 
 - [x] Crown supports focused keyboard arrows and wider navigation hit areas.
 - [x] Edit mode retains stable responsibility-row geometry instead of shifting the row.
@@ -130,7 +130,7 @@ The refined controls and reference decisions are documented in [docs/design/SPRE
 
 ## Achievement 8 — Branded Landing Page
 
-The design direction is in [DESIGN.md](DESIGN.md). The full page is frozen as `golden/2026-09-28-full-landing-modes`.
+The design direction is in [docs/design/landing/DESIGN.md](docs/design/landing/DESIGN.md). The full page is frozen as `golden/2026-09-28-full-landing-modes`.
 
 - [x] Build the public Spread landing page around the product model: Responsibilities → Hours → Week → Tasks.
 - [x] Show the actual product instead of generic productivity imagery: every section's focal object is built from real Spread parts.

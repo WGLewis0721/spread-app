@@ -1,5 +1,9 @@
 # Spread icon handoff
 
+> Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
+
+The SVG files themselves stay in `public/icons/`; this file only documents them.
+
 All production icons live in `public/icons/`. Prefer these SVGs. Do not invent filenames.
 
 ## App icon

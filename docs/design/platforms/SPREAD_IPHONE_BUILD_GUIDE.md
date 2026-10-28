@@ -1,11 +1,14 @@
 # Spread on iPhone: build guide
 
+> Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
+
+
 Researched 2026-10-21 from developer.apple.com, the Spread repo docs, and GitHub. This file covers single-screen iPhone and holds the **shared baseline** that applies to every device. iPad is in `SPREAD_IPAD_BUILD_GUIDE.md`. iPhone Duo is in `SPREAD_IPHONE_DUO_BUILD_GUIDE.md`.
 
 Evidence tags used below:
 
 - **[Apple]** read on a developer.apple.com page.
-- **[Repo]** taken from the Spread docs (`DESIGN.md`, the unified UX plan and result, the promo docs).
+- **[Repo]** taken from the Spread docs ([`landing/DESIGN.md`](../landing/DESIGN.md), the unified UX plan and result in [`planner/`](../planner/), the promo docs).
 - **[3P]** third-party source, not verified by Apple. Treat as a lead.
 - **[Rec]** a recommendation, not a fact.
 
@@ -38,7 +41,7 @@ Spread is a Capacitor app: the planner runs in one WKWebView and `ios/App/CapApp
 - All task changes go through `store.ts` actions and `commit`. No second store.
 - Cloud behavior stays flagged off. Never show iCloud success without a native acknowledgment.
 - Add every new test file to the explicit `test:spread` list and raise `--min`.
-- `DESIGN.md` is the landing page only. Do not use it for planner decisions.
+- `landing/DESIGN.md` is the landing page only. Do not use it for planner decisions. Planner rules are in [`planner/SPREAD_DESIGN_SYSTEM.md`](../planner/SPREAD_DESIGN_SYSTEM.md).
 
 ---
 

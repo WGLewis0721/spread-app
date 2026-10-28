@@ -1,6 +1,9 @@
 # Spread design system (planner)
 
-This is the one place the planner's visual rules live. `DESIGN.md` covers the landing page only.
+> Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
+
+
+This is the one place the planner's visual rules live. [`landing/DESIGN.md`](../landing/DESIGN.md) covers the landing page only.
 The planner has no brand board of its own: it uses the tokens in `src/styles.css` and the patterns below.
 **Do not add colors, fonts or decorative styles.** Use a token, or reuse a pattern.
 
@@ -61,7 +64,7 @@ Every drag has a tap equivalent and a keyboard equivalent:
 
 ## Human Interface Guidelines polish — 2026-10-08
 
-Applies to the **planner** only. The landing page remains governed by `DESIGN.md`, and no new palette, typeface, component framework, or storage mechanism is introduced.
+Applies to the **planner** only. The landing page remains governed by [`landing/DESIGN.md`](../landing/DESIGN.md), and no new palette, typeface, component framework, or storage mechanism is introduced.
 
 | Surface | Refinement | Reason |
 | --- | --- | --- |

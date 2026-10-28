@@ -74,6 +74,9 @@ components:
 
 # Spread
 
+> Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
+
+
 This is the design direction for Spread's public site, the one-page landing and entry screen in `src/spread/screens/spread-app.tsx` (`UnlockScreen`). Read it before changing anything on that page. It is written the same way as the DESIGN.md references that shaped it, so any design tool can pick it up as prompt context.
 
 The frozen reference for this direction is `golden/2026-09-28-full-landing-modes`: the whole page, both modes. The hero alone is also frozen as `golden/2026-09-28-stack-hero-landing`.
@@ -199,4 +202,4 @@ This direction was built in passes: a foundation pass, a refinement pass, a hero
 
 Their palettes, fonts and content were not used.
 
-The planner screens (not the landing page) follow `docs/design/SPREAD_DESIGN_SYSTEM.md`.
+The planner screens (not the landing page) follow [`docs/design/planner/SPREAD_DESIGN_SYSTEM.md`](../planner/SPREAD_DESIGN_SYSTEM.md).

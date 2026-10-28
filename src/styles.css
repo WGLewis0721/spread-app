@@ -1630,7 +1630,7 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 /* =====================================================================
    Sections pass: every section below the hero gets one focal object,
    built from the same parts as the hero (paper sheet, dark product card,
-   role colors, hour banks). See DESIGN.md.
+   role colors, hour banks). See docs/design/landing/DESIGN.md.
    ===================================================================== */
 
 /* ---------- how it works: the week builds itself as the steps go by ---------- */
