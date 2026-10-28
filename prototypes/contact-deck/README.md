@@ -13,7 +13,7 @@ A tactile, photography-forward contact browser combining the clarity of modern i
 - **Orbit:** rotating, depth-based Cover Flow. Swipe horizontally.
 - **Orientation:** independently toggle face-forward vs. edge-forward. Tapping an edge-forward card reveals the face; tapping again opens details.
 - **Appearance:** Current, iOS 18, iOS 7, iOS 6. These are **interpretations**, not exact reproductions or native API components. The selected mode, orientation, skin, idle preference, sort, filter, and sample favorites persist locally when storage is available.
-- **Cinematic idle / Cover Flow:** after 8 seconds of inactivity, the current browsing view crossfades to pure black using a dedicated alpha-animated overlay (not an un-animatable gradient-to-solid CSS transition). The 3D photo carousel advances every ~3.1 seconds, wakes on first touch/key press, and restores the previously selected browsing mode. The **▶** button near the contact count previews the effect immediately; **Looks → Preview Cover Flow now** is an alternative. Auto-idle can be turned off, and animation is suppressed during search, dialogs, backgrounding and system Reduce Motion.
+- **Cinematic idle / Cover Flow:** after 8 seconds of inactivity, the current browsing view crossfades to pure black using a dedicated alpha-animated overlay (not an un-animatable gradient-to-solid CSS transition). The 3D photo carousel advances every ~3.1 seconds, wakes on first touch/key press, and restores the previously selected browsing mode. The **▶** button in the top-right toolbar previews the effect immediately; **Looks → Preview Cover Flow now** is an alternative. Auto-idle can be turned off, and animation is suppressed during search, dialogs, backgrounding and system Reduce Motion.
 - **Find and organize:** search by name, company, role or email; sort by first name, surname or company; filter favorites, friends, work or family.
 - **Contacts and communication:** eight **fictional** entries. Call, Message and FaceTime actions are intentionally disabled.
 - **Export:** client-side PNG (1080 × 1350) using Canvas with opt-in phone and email. No upload is performed. Export uses initials rather than a photo, since third-party sample images may not be CORS safe.
@@ -39,7 +39,7 @@ These are UX references; **no third-party components or copyrighted design code 
 
 1. Start in Stack and swipe vertically to another contact.
 2. Switch to Fan and Orbit; continue swiping sideways. Use Looks to compare the current skin against classic eras, and toggle face/edge-forward.
-3. Tap **▶** next to the contact count. The entire surrounding interface crossfades to black, portrait cards revolve every ~3 seconds, and reflections remain visible. Touch once to wake.
+3. Tap **▶** in the top toolbar. The entire surrounding interface crossfades to black, portrait cards revolve every ~3 seconds, and reflections remain visible. Touch once to wake.
 4. Search for Marcus, examine contact details, choose which fields to export, and share/save a PNG card. The phone numbers and addresses are **fictional** and calling is deliberately disabled.
 
 **Known investor-demo risk:** remote sample photos may not load without network access. An inline illustrated fallback is intentional. Before any external pitch, verify on the actual iPhone and internet connection; physical Safari validation is still outstanding.
