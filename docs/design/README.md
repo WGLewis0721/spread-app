@@ -126,7 +126,7 @@ Gathered from the documents. Resolve one here and in its source document togethe
 
 - Tokens and planner styles: `src/styles.css` (`:root`, `[data-theme="dark"]`, and the "Landing page only" block).
 - Role colors: `ROLE_COLORS` and hat `color` in `src/lib/spread/model.ts`.
-- Theme: `applyTheme` in `src/lib/spread/store.ts` writes `data-theme` (`light`, `dark`, or removed for system). Nothing else may write it.
+- Theme: `applyTheme` in `src/lib/spread/store.ts` writes `data-theme` (`light`, `dark`, or removed for system); the pre-paint script in `src/routes/__root.tsx` sets the same attribute before first render. Nothing else may write it, and it must not be reused for a custom look.
 - Landing: `src/spread/screens/spread-app.tsx` (`UnlockScreen`), `src/spread/components/landing-*.tsx`.
 - Icons: `public/icons/`.
 - Fonts: `public/fonts/inter-latin.woff2` (Spread Sans).
