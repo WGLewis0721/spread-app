@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { auditStudioContrast } from "./contrast-audit.ts";
+import { openAppearance } from "./settings-steps.ts";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const dir = join(root, "screenshots", "studio-editor");
 const nativeInit = readFileSync(join(root, "scripts", "ios-bridge-sim", "native-init.js"), "utf8");
@@ -40,6 +41,7 @@ try {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("heading", { name: "More" }).waitFor();
+    await openAppearance(page);
     await page.getByRole("radio", { name: scheme === "light" ? "Light" : "Dark" }).click();
     const plannerSetting = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
     if (plannerSetting !== scheme) throw new Error(`Expected Spread Settings ${scheme}, got ${plannerSetting}`);
@@ -309,6 +311,7 @@ try {
   // When Spread Settings is System, follow changes to the OS as well.
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("heading", { name: "More" }).waitFor();
+  await openAppearance(page);
   await page.getByRole("radio", { name: "System" }).click();
   await page.getByRole("button", { name: "Close", exact: true }).click();
   for (const os of ["dark", "light"] as const) {

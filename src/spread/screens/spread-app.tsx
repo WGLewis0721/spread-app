@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createPortal, flushSync } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Pause, Play, Plus, Sun, X } from "lucide-react";
+import { Archive, ChevronRight, Check, LayoutGrid, List, LockKeyhole, Minus, Moon, Palette, Pause, Play, Plus, Share2, Sun, Users, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, isoDate, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
@@ -46,7 +46,11 @@ import { signOut } from "@/lib/auth/client";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
-import { StudioStackProbe, useStudioPortal } from "@/spread/components/studio/render";
+import { StudioStackProbe, useStudioPortal, useStudioStack } from "@/spread/components/studio/render";
+import { DayLayout, DialLayout, FanLayout, LayoutPicker, TabsLayout } from "@/spread/components/studio/layouts";
+import { SPREAD_LAYOUTS } from "@/lib/spread/studio/layouts";
+import { setSpreadLayout, useSpreadLayout } from "@/lib/spread/studio/layout-pref";
+import { ControlCenter, type ControlTile } from "@/spread/components/studio/control-center";
 import { StudioLivePlanner } from "@/spread/components/studio/live-planner";
 import { cycleDetent, detentTops, followTop, nearestDetent, STUDIO_WEEK_DETENTS, type StudioWeekDetent } from "@/lib/spread/studio/week-detents";
 
@@ -376,6 +380,12 @@ function WeekScreen() {
   // places the base order has been turned.
   const [rot, setRot] = useState(0);
   const [frontOpen, setFrontOpen] = useState(true);
+  // Spread tab layout (Studio Board only): Stack is the default; the rest are chosen in Settings > View.
+  const storedLayout = useSpreadLayout();
+  const [pickedRole, setPickedRole] = useState<string | null>(null);
+  const [roleTab, setRoleTab] = useState("all");
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(true);
   const weekGrabRef = useRef<{y:number;startTop:number;samples:{y:number;t:number}[]}|null>(null);
   const skipGrabClick = useRef(false);
   const stageRef = useRef<HTMLElement|null>(null);
@@ -474,7 +484,10 @@ function WeekScreen() {
   const [stackPaused, setStackPaused] = useState(false);
   const stackBlocked = sheet !== null || openTask !== null;
   const count = rows.length;
-  const order = stackOn && !editing && count > 0 ? Array.from({ length: count }, (_, i) => (i + (rot % count)) % count) : rows.map((_, i) => i);
+  const layout = stackOn && !editing ? storedLayout : "stack";
+  const tabNow = roleTab === "all" || rows.some((row) => row.hat.id === roleTab) ? roleTab : "all";
+  const rotating = stackOn && !editing && (layout === "stack" || (layout === "tabs" && tabNow === "all"));
+  const order = rotating && count > 0 ? Array.from({ length: count }, (_, i) => (i + (rot % count)) % count) : rows.map((_, i) => i);
   const turnTo = useStackFlip(stackRef, order.map((i) => rows[i]?.hat.id ?? "").join("|"));
   const rotateBy = useCallback((steps: number, animate: boolean) => {
     if (count < 2) return;
@@ -484,7 +497,7 @@ function WeekScreen() {
     });
   }, [count, turnTo]);
   useEffect(() => {
-    if (!stackOn || stackPaused || editing || stackBlocked || view === "week" || count < 2) return;
+    if (!rotating || stackPaused || editing || stackBlocked || view === "week" || count < 2) return;
     const id = window.setInterval(() => {
       if (document.hidden) return;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -493,7 +506,73 @@ function WeekScreen() {
       rotateBy(1, true);
     }, 5000);
     return () => window.clearInterval(id);
-  }, [stackOn, stackPaused, editing, stackBlocked, view, count, rotateBy]);
+  }, [rotating, stackPaused, editing, stackBlocked, view, count, rotateBy]);
+
+  const selectedId = rows.some((row) => row.hat.id === pickedRole) ? (pickedRole as string) : (rows[0]?.hat.id ?? "");
+  const layoutRows = rows.map(({ hat, box }) => ({ hat, hours: box.hours }));
+  const dayList = weekDays(data.currentWeek).slice().reverse();
+  const todayIso = isoDate(new Date());
+  const dayId = dayList.some((day) => day.date === pickedDay) ? (pickedDay as string) : (dayList.find((day) => day.date === todayIso)?.date ?? dayList[0].date);
+  const selectRole = (id: string) => {
+    setPickedRole(id);
+    setDetailOpen(true);
+  };
+  /** One spread opened on its own, for every layout that shows a single card at a time. */
+  const detailFor = (id: string) => {
+    const row = rows.find((item) => item.hat.id === id);
+    if (!row) return null;
+    return (
+      <div key={id} className="studio-role-stack studio-role-single mt-5 overflow-hidden rounded-[22px] bg-elevated">
+        <div className="week-seq-item" data-role-id={id} style={roleVars(row.hat.color)}>
+          <RoleBlock
+            hat={row.hat}
+            hours={row.box.hours}
+            tasks={row.box.tasks}
+            editing={false}
+            first
+            stack={{ open: detailOpen, toggle: () => setDetailOpen((open) => !open) }}
+            onRemove={() => setRemoveId(row.hat.id)}
+            onOpenTask={(taskId) => setOpenTask({ hatId: row.hat.id, taskId })}
+          />
+        </div>
+      </div>
+    );
+  };
+  const stackNode = (
+      <div
+        ref={stackRef}
+        className="studio-role-stack mt-6 overflow-hidden rounded-[22px] bg-elevated"
+        onPointerDownCapture={() => { stackTouched.current = Date.now(); }}
+        onFocusCapture={() => { stackTouched.current = Date.now(); }}
+        onKeyDownCapture={() => { stackTouched.current = Date.now(); }}
+      >
+        {order.map((rowIndex, index) => rows[rowIndex]).map(({ hat, box }, index) => (
+          <div
+            key={hat.id}
+            data-role-id={hat.id}
+            className={cn("week-seq-item", profilePlay && "cascade-item")}
+            style={roleVars(hat.color, { animationDelay: `${(index + 1) * 45}ms` })}
+          >
+            <RoleBlock
+              hat={hat}
+              hours={box.hours}
+              tasks={box.tasks}
+              editing={editing}
+              first={index === 0}
+              stack={stackOn ? {
+                open: index === 0 && frontOpen,
+                toggle: () => {
+                  if (index === 0) setFrontOpen((open) => !open);
+                  else rotateBy(index, true);
+                },
+              } : undefined}
+              onRemove={() => setRemoveId(hat.id)}
+              onOpenTask={(taskId) => setOpenTask({ hatId: hat.id, taskId })}
+            />
+          </div>
+        ))}
+      </div>
+  );
 
   const goWeek = useCallback(
     (direction: -1 | 1) => {
@@ -897,7 +976,7 @@ function WeekScreen() {
                   onReview={openTasksOf(data).length > 0 ? () => setCarryAsk(true) : undefined}
                 />
               </div>
-              {stackOn && rows.length > 1 && (
+              {rotating && rows.length > 1 && (
                 <div className="mt-5 -mb-2 flex justify-end">
                   <button
                     type="button"
@@ -910,39 +989,17 @@ function WeekScreen() {
                   </button>
                 </div>
               )}
-              <div
-                ref={stackRef}
-                className="studio-role-stack mt-6 overflow-hidden rounded-[22px] bg-elevated"
-                onPointerDownCapture={() => { stackTouched.current = Date.now(); }}
-                onFocusCapture={() => { stackTouched.current = Date.now(); }}
-                onKeyDownCapture={() => { stackTouched.current = Date.now(); }}
-              >
-                {order.map((rowIndex, index) => rows[rowIndex]).map(({ hat, box }, index) => (
-                  <div
-                    key={hat.id}
-                    data-role-id={hat.id}
-                    className={cn("week-seq-item", profilePlay && "cascade-item")}
-                    style={roleVars(hat.color, { animationDelay: `${(index + 1) * 45}ms` })}
-                  >
-                    <RoleBlock
-                      hat={hat}
-                      hours={box.hours}
-                      tasks={box.tasks}
-                      editing={editing}
-                      first={index === 0}
-                      stack={stackOn ? {
-                        open: index === 0 && frontOpen,
-                        toggle: () => {
-                          if (index === 0) setFrontOpen((open) => !open);
-                          else rotateBy(index, true);
-                        },
-                      } : undefined}
-                      onRemove={() => setRemoveId(hat.id)}
-                      onOpenTask={(taskId) => setOpenTask({ hatId: hat.id, taskId })}
-                    />
-                  </div>
-                ))}
-              </div>
+              {layout === "fan" ? (
+                <FanLayout rows={layoutRows} selectedId={selectedId} onSelect={selectRole}>{detailFor(selectedId)}</FanLayout>
+              ) : layout === "dial" ? (
+                <DialLayout rows={layoutRows} selectedId={selectedId} onSelect={selectRole}>{detailFor(selectedId)}</DialLayout>
+              ) : layout === "tabs" ? (
+                <TabsLayout rows={layoutRows} tab={tabNow} onTab={(id) => { setRoleTab(id); setDetailOpen(true); }}>{tabNow === "all" ? stackNode : detailFor(tabNow)}</TabsLayout>
+              ) : layout === "day" ? (
+                <DayLayout rows={layoutRows} days={dayList} allocations={data.weeks[data.currentWeek]?.allocations ?? []} today={todayIso} selectedDay={dayId} onDay={setPickedDay} selectedId={selectedId} onPickRole={selectRole}>{detailFor(selectedId)}</DayLayout>
+              ) : (
+                stackNode
+              )}
               <div className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}>
                 <NewLifeBox onClick={() => setSheet("new")} />
               </div>
@@ -1881,6 +1938,10 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const [copies, setCopies] = useState<PinnedCopy[] | null>(null);
   const [pickedCopy, setPickedCopy] = useState<{ copy: PinnedCopy; entries: Record<string, string> } | null>(null);
   const week = buildWeekDocument(data);
+  const board = useStudioStack();
+  const layout = useSpreadLayout();
+  const profileList = useSpread((st) => st.profiles);
+  const activeProfileId = useSpread((st) => st.activeId);
 
   const native = isNativeApp();
   // A file leaves the app through the share sheet on the phone and through a download on the web.
@@ -1946,61 +2007,17 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   // WKWebView can't print.
   const actions = native ? allActions.filter((action) => action.label !== "Print / Save PDF") : allActions;
 
-  return (
-    <>
-      <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
-        <span />
-        <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={() => setSheet(null)}
-          className="grid size-11 place-items-center justify-self-end rounded-full text-secondary"
-        >
-          <X className="size-5" strokeWidth={2.7} />
-        </button>
-      </div>
-      <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
-      <Dialog.Description className="mt-1 text-sm text-secondary">
-        {native || LOCAL_FIRST_OPEN_ACCESS ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license ? "Signed in to the Spread beta." : "Not signed in."}
-      </Dialog.Description>
-      <LocalStatusRow />
-      <ProfilesSection
-        onSwitched={(who) => {
-          toast(`Switched to ${who}.`);
-          setSheet(null);
-        }}
-      />
-      <input
-        ref={fileRef}
-        type="file"
-        accept={native ? undefined : ".spread,.json,application/json"}
-        className="sr-only"
-        aria-label="Choose a Spread backup"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          event.target.value = "";
-          if (!file) return;
-          void file
-            .text()
-            .then((text) => parseAnyBackup(text))
-            .then((next) => {
-              if (!next) {
-                toast("That file isn’t a Spread backup, or it is damaged.");
-                return;
-              }
-              setBackup(next);
-            });
-        }}
-      />
+  // The pieces of this sheet. The shipped sheet lists them in a column; the Studio Board gathers
+  // them into Control Center style tiles that open in place (see control-center.tsx).
+  const renderActions = (list: typeof actions) => (
       <div className="stack-rows mt-4 overflow-hidden rounded-3xl bg-canvas">
-        {actions.map((action, index) => (
+        {list.map((action, index) => (
           <button
             key={action.label}
             type="button"
             className={cn(
               "flex h-12 w-full items-center gap-3 px-4 text-left text-base active:bg-fill",
-              index < actions.length - 1 && "border-b border-line",
+              index < list.length - 1 && "border-b border-line",
             )}
             onClick={action.run}
           >
@@ -2009,6 +2026,9 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           </button>
         ))}
       </div>
+  );
+  const safetyNode = (
+    <>
       {native && (
         <>
           <button
@@ -2049,6 +2069,10 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           )}
         </>
       )}
+    </>
+  );
+  const appearanceNode = (
+    <>
       <div className="mt-5">
         <Segmented value={theme} onChange={setTheme} />
       </div>
@@ -2069,6 +2093,78 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           />
         ))}
       </div>
+    </>
+  );
+  const profilesNode = (
+    <ProfilesSection
+      onSwitched={(who) => {
+        toast(`Switched to ${who}.`);
+        setSheet(null);
+      }}
+    />
+  );
+  const shareLabels = ["Copy last week", "Copy week", "Word document", "Print / Save PDF"];
+  const shareActions = actions.filter((action) => shareLabels.includes(action.label));
+  const backupActions = actions.filter((action) => !shareLabels.includes(action.label));
+  const activeName = profileList.find((profile) => profile.id === activeProfileId)?.name ?? "Profile";
+  const tiles: ControlTile[] = [
+    { id: "profiles", title: "Profiles", detail: `${activeName} · ${profileList.length} of ${PROFILE_LIMIT}`, icon: <Users className="size-5" strokeWidth={2.4} />, tone: "sky", wide: true, body: profilesNode },
+    { id: "appearance", title: "Appearance", detail: theme === "system" ? "Automatic" : theme === "dark" ? "Dark" : "Light", icon: <Palette className="size-5" strokeWidth={2.4} />, tone: "butter", body: appearanceNode },
+    { id: "view", title: "View", detail: SPREAD_LAYOUTS.find((item) => item.id === layout)?.label ?? "Stack", icon: <LayoutGrid className="size-5" strokeWidth={2.4} />, tone: "lilac", body: (
+      <div className="mt-4">
+        <LayoutPicker layout={layout} onPick={setSpreadLayout} />
+      </div>
+    ) },
+    { id: "share", title: "Share", detail: native ? "Copy, Word" : "Copy, Word, PDF", icon: <Share2 className="size-5" strokeWidth={2.4} />, tone: "peach", body: <div className="mt-4">{renderActions(shareActions)}</div> },
+    { id: "backup", title: "Backup", detail: syncAvailable() ? "iCloud and files" : "Files and restore", icon: <Archive className="size-5" strokeWidth={2.4} />, tone: "sage", body: <div className="mt-4">{renderActions(backupActions)}{safetyNode}</div> },
+  ];
+
+  return (
+    <>
+      <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
+        <span />
+        <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={() => setSheet(null)}
+          className="grid size-11 place-items-center justify-self-end rounded-full text-secondary"
+        >
+          <X className="size-5" strokeWidth={2.7} />
+        </button>
+      </div>
+      <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
+      <Dialog.Description className="mt-1 text-sm text-secondary">
+        {native || LOCAL_FIRST_OPEN_ACCESS ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license ? "Signed in to the Spread beta." : "Not signed in."}
+      </Dialog.Description>
+      <LocalStatusRow />
+      {board ? null : profilesNode}
+      {board ? <ControlCenter tiles={tiles} /> : null}
+      <input
+        ref={fileRef}
+        type="file"
+        accept={native ? undefined : ".spread,.json,application/json"}
+        className="sr-only"
+        aria-label="Choose a Spread backup"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          void file
+            .text()
+            .then((text) => parseAnyBackup(text))
+            .then((next) => {
+              if (!next) {
+                toast("That file isn’t a Spread backup, or it is damaged.");
+                return;
+              }
+              setBackup(next);
+            });
+        }}
+      />
+      {board ? null : renderActions(actions)}
+      {board ? null : safetyNode}
+      {board ? null : appearanceNode}
       {STUDIO_FLAG ? <StudioCustomizeEntry /> : null}
       {native || LOCAL_FIRST_OPEN_ACCESS ? null : (
         <button

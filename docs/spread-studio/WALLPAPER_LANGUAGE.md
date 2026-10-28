@@ -133,3 +133,12 @@ Board is now dark-first (it follows the OS unless the planner theme is explicitl
 - The stack turns on its own every 5 seconds: the front card lifts away, the others slide up, the wrapped card rises in at the back (FLIP, Web Animations API). It holds for hidden tabs, Reduce Motion, recent touch, a focused text field, an open sheet or task, editing, and the Pause button.
 - Each card carries a small sparkline of that role's hours across the week.
 - Not built yet: the fanned layout and sphere dial from Audio Sphere, category tabs, a day-at-a-glance timeline, and a restyled Customize editor.
+
+## Spread tab views and Control Center Settings (2026-10-28)
+
+Studio Board only. With the flag off nothing here renders.
+
+- **Views** (Settings > View): Stack (default, the rotating overlap), Fan (a hand of cards pivoting below the stage, swipe or tap), Dial (arcs sized by hours around a dark sphere, drag, tap or arrow keys, one `slider`), Tabs (All shows the stack, a role tab shows that one spread), Day (a day picker and a vertical timeline of that day's planned hours). Editing always shows the full stack so every spread can be renamed or removed. The choice is a per-device preference in `src/lib/spread/studio/layout-pref.ts`, separate from the appearance contract: it is not synced, backed up or saved with a look.
+- **Settings** is a grid of tiles (Profiles, Appearance, View, Share, Backup) like the iOS Control Center. A tile blows up from its own box with a clip-path and a color ease, then the grid folds away so the sheet fits the panel. Back reverses it. Reduce Motion swaps with no animation. Customize stays a single row under the grid.
+- **Fixed in the same pass:** the scope's `> *` rule overrode Tailwind's `.fixed` and `.z-*` on the portaled sheet, scrim and dialogs, so on any page taller than the screen the sheet was laid out at the foot of the page, off screen. `.fixed` and the z-index utilities are restored for direct children of the scope.
+- **Contrast:** secondary and tertiary ink inside sheets are mixed from the page ink so they clear 4.5:1 on the sheet and on each pastel group. The material audit now cycles every view and opens every Settings tile in both schemes.

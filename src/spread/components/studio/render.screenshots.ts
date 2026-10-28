@@ -15,6 +15,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type Page } from "playwright";
 import { auditStudioContrast } from "./contrast-audit.ts";
+import { openAppearance } from "./settings-steps.ts";
 import { STUDIO_STYLE_KEYS, resolveStudioScope, type StudioScope } from "../../../lib/spread/studio/appearance.ts";
 import {
   SAMPLE_SCHEMES,
@@ -97,6 +98,7 @@ async function closeSettings(page: Page) {
 
 async function setScheme(page: Page, scheme: "light" | "dark") {
   await openSettings(page);
+  await openAppearance(page);
   const radio = page.getByRole("radio", { name: scheme === "dark" ? "Dark" : "Light" });
   await radio.scrollIntoViewIfNeeded();
   await radio.click();

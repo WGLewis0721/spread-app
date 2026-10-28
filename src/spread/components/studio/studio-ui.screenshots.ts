@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { chromium, type Page } from "playwright";
 import { resolveStudioScope, STUDIO_STYLE_KEYS, type StudioScope } from "../../../lib/spread/studio/appearance.ts";
 import { originalStudioAppearance, type StudioAppearanceV1 } from "../../../lib/spread/studio/contract.ts";
+import { openAppearance } from "./settings-steps.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..", "..", "..");
@@ -96,6 +97,7 @@ async function setScheme(page: Page, scheme: "light" | "dark") {
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("heading", { name: "More" }).waitFor();
+  await openAppearance(page);
   const radio = page.getByRole("radio", { name: scheme === "dark" ? "Dark" : "Light" });
   await radio.scrollIntoViewIfNeeded();
   await radio.click();

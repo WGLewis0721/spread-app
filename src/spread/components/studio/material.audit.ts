@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { auditStudioContrast } from "./contrast-audit.ts";
+import { openAppearance } from "./settings-steps.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const output = join(root, "screenshots", "studio-material");
@@ -23,6 +24,7 @@ const results: Array<Record<string,unknown>> = [];
 const errors: string[] = [];
 const geometryByCase = new Map<string,string>();
 let carouselChecked = false;
+const layoutsChecked = new Set<string>();
 
 mkdirSync(output,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH ?? chromium.executablePath()});
@@ -95,6 +97,7 @@ try {
       await page.getByRole("tab",{name:"Spread"}).waitFor({timeout:30000});
       await page.getByRole("button",{name:"Settings"}).click();
       await page.getByRole("heading",{name:"More"}).waitFor();
+      await openAppearance(page);
       await page.getByRole("radio",{name:scheme==="light"?"Light":"Dark"}).click();
       await page.getByRole("button",{name:"Customize Spread"}).click();
       const editor=page.locator(".studio-sheet");
@@ -135,6 +138,38 @@ try {
         await page.waitForTimeout(7600);
         if((await openCards())!==held) errors.push("carousel kept moving after Pause");
         await page.getByRole("button",{name:"Resume auto-advance"}).click();
+      }
+      // Spread tab views: every layout and every Settings tile must keep its text legible.
+      if(!layoutsChecked.has(scheme)){
+        layoutsChecked.add(scheme);
+        for(const layout of ["fan","dial","tabs","day","stack"]){
+          await page.getByRole("button",{name:"Settings"}).click();
+          await page.getByRole("heading",{name:"More"}).waitFor();
+          await page.getByRole("button",{name:/^View/}).click();
+          await page.getByRole("radio",{name:new RegExp("^"+layout,"i")}).click();
+          await page.getByRole("button",{name:"Close",exact:true}).click();
+          await page.getByRole("heading",{name:"More"}).waitFor({state:"hidden"});
+          await page.waitForTimeout(900);
+          const found=await auditStudioContrast(page);
+          if(found.length)errors.push(shape+"/"+scheme+": "+layout+" layout audit "+found.length+" violations "+JSON.stringify(found[0]).slice(0,240));
+          const expected={fan:".studio-fan-card",dial:".studio-dial",tabs:".studio-tab",day:".studio-day-block, .studio-day-head",stack:".studio-role-stack > .week-seq-item"}[layout]!;
+          if(await page.locator(expected).count()===0)errors.push(shape+"/"+scheme+": "+layout+" layout did not render ("+expected+")");
+        }
+        await page.getByRole("button",{name:"Settings"}).click();
+        await page.getByRole("heading",{name:"More"}).waitFor();
+        await page.waitForTimeout(700);
+        const grid=await auditStudioContrast(page);
+        if(grid.length)errors.push(shape+"/"+scheme+": Settings tiles audit "+grid.length+" violations "+JSON.stringify(grid[0]).slice(0,240));
+        for(const tile of ["Profiles","Appearance","View","Share","Backup"]){
+          await page.getByRole("button",{name:new RegExp("^"+tile)}).click();
+          await page.waitForTimeout(1000);
+          const inside=await auditStudioContrast(page);
+          if(inside.length)errors.push(shape+"/"+scheme+": Settings "+tile+" panel audit "+inside.length+" violations "+JSON.stringify(inside[0]).slice(0,240));
+          await page.getByRole("button",{name:"Back to Settings"}).click();
+          await page.waitForTimeout(700);
+        }
+        await page.getByRole("button",{name:"Close",exact:true}).click();
+        await page.waitForTimeout(500);
       }
       await page.getByRole("tab",{name:"Week",exact:true}).click();
       await page.waitForFunction(()=>{

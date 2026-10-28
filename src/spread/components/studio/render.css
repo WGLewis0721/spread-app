@@ -13,6 +13,13 @@
   position: relative;
   z-index: 1;
 }
+/* Sheets, scrims and dialogs are portaled into the scope so they inherit its variables. The rule
+   above is not layered, so it beats Tailwind's .fixed and .z-* utilities on direct children. Put
+   them back, or a sheet is laid out at the foot of the whole page instead of the screen. */
+[data-studio-appearance] > .fixed { position: fixed; }
+[data-studio-appearance] > .z-40 { z-index: 40; }
+[data-studio-appearance] > .z-50 { z-index: 50; }
+[data-studio-appearance] > .z-\[60\] { z-index: 60; }
 
 [data-studio-appearance]::before {
   content: "";
@@ -1005,6 +1012,8 @@
 /* Sheet groups: each kind of group is a soft color, like the board's Settings. Cards use the
    pastel in light and a deep mix of it in dark, so the ink color is always the page ink. */
 [data-studio-appearance][data-studio-board="on"] .sheet {
+  --secondary: color-mix(in srgb, var(--ink) 80%, var(--studio-sheet, var(--canvas)));
+  --tertiary: color-mix(in srgb, var(--ink) 76%, var(--studio-sheet, var(--canvas)));
   --pastel-sage: #dce6d6; --pastel-peach: #f1dfcf; --pastel-butter: #f3e7bf; --pastel-sky: #dbe7f1;
 }
 [data-studio-appearance][data-studio-board="on"][data-studio-scheme="dark"] .sheet {
@@ -1013,11 +1022,11 @@
   --pastel-butter: color-mix(in srgb, #d8b94a 28%, var(--elevated));
   --pastel-sky: color-mix(in srgb, #6f9fcb 30%, var(--elevated));
 }
-[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas { background: var(--pastel-sky); border-radius: 1.5rem; }
-[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas.stack-rows { background: var(--pastel-peach); }
-[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas[role="status"] { background: var(--pastel-sage); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas { background: var(--pastel-sky); border-radius: 1.5rem; --secondary: color-mix(in srgb, var(--ink) 78%, var(--pastel-sky)); --tertiary: color-mix(in srgb, var(--ink) 76%, var(--pastel-sky)); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas.stack-rows { background: var(--pastel-peach); --secondary: color-mix(in srgb, var(--ink) 78%, var(--pastel-peach)); --tertiary: color-mix(in srgb, var(--ink) 76%, var(--pastel-peach)); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas[role="status"] { background: var(--pastel-sage); --secondary: color-mix(in srgb, var(--ink) 78%, var(--pastel-sage)); --tertiary: color-mix(in srgb, var(--ink) 76%, var(--pastel-sage)); }
 [data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas[role="list"],
-[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas[role="listbox"] { background: var(--pastel-butter); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas[role="listbox"] { background: var(--pastel-butter); --secondary: color-mix(in srgb, var(--ink) 78%, var(--pastel-butter)); --tertiary: color-mix(in srgb, var(--ink) 76%, var(--pastel-butter)); }
 [data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-segment { background: color-mix(in srgb, var(--ink) 8%, transparent); }
 
 /* Spread tab role cards: a big bold name and a big hour count, like the board's habit cards. */
@@ -1092,3 +1101,134 @@
   line-height: 1;
 }
 [data-studio-appearance][data-studio-board="on"] .studio-role-spark { right: 7.6rem; top: 1.35rem; }
+
+/* Spread tab views (Settings > View): Fan, Dial, Tabs and Day, plus the Control Center style
+   Settings tiles. Stack, the default, is the rules above. Every color on text here is an opaque
+   token or a role ink that roleCardPaint already proved against its card. */
+[data-studio-appearance][data-studio-board="on"] .sheet { --pastel-lilac: #e4dff2; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="dark"] .sheet { --pastel-lilac: color-mix(in srgb, #9a86d6 30%, var(--elevated)); }
+[data-studio-appearance][data-studio-board="on"] .studio-role-single > .week-seq-item { animation: none; }
+
+/* Fan: cards pivot on a point well below the stage. */
+[data-studio-appearance][data-studio-board="on"] .studio-fan { position: relative; height: 13.25rem; margin-top: 1.25rem; overflow: hidden; touch-action: pan-y; user-select: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-fan-card {
+  position: absolute; left: 50%; top: 0.75rem; width: min(16.5rem, 74%); height: 10.5rem; padding: 0;
+  border-radius: 1.9rem; text-align: left;
+  background: var(--role-bg); background-color: var(--role); color: var(--role-ink);
+  transform-origin: 50% 185%;
+  transform: translateX(-50%) rotate(calc(var(--d) * 13deg));
+  z-index: calc(10 - var(--abs));
+  transition: transform 560ms cubic-bezier(.32,.72,0,1), opacity 300ms;
+  box-shadow: inset 0 0.5px 0 rgba(255,255,255,.35), 0 12px 30px rgba(0,0,0,.38);
+}
+[data-studio-appearance][data-studio-board="on"] .studio-fan-card[data-far="true"] { opacity: 0; pointer-events: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-fan-badge { position: absolute; top: 0.8rem; display: block; line-height: 0; }
+[data-studio-appearance][data-studio-board="on"] .studio-fan-card[data-side="left"] .studio-fan-badge { left: 0.8rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-fan-card[data-side="right"] .studio-fan-badge { right: 0.8rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-fan-card[data-front="true"] .studio-fan-badge { left: 1rem; right: auto; top: 1rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-fan-label { position: absolute; left: 1.1rem; right: 1.1rem; bottom: 1rem; display: grid; gap: 0.1rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-fan-name { font-size: calc(1.9rem * var(--studio-type-scale)); font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+[data-studio-appearance][data-studio-board="on"] .studio-fan-hours { font-size: 1.15rem; font-weight: 700; color: var(--role-ink-2); }
+
+/* Dial: arcs sized by hours around a dark sphere. */
+[data-studio-appearance][data-studio-board="on"] .studio-dial { position: relative; width: min(17.5rem, 80%); aspect-ratio: 1; margin: 1.25rem auto 0; touch-action: none; cursor: grab; border-radius: 50%; }
+[data-studio-appearance][data-studio-board="on"] .studio-dial:active { cursor: grabbing; }
+[data-studio-appearance][data-studio-board="on"] .studio-dial:focus-visible { outline: 2px solid var(--ink); outline-offset: 8px; }
+[data-studio-appearance][data-studio-board="on"] .studio-dial-ring { display: block; width: 100%; height: 100%; overflow: visible; }
+[data-studio-appearance][data-studio-board="on"] .studio-dial-sphere {
+  position: absolute; inset: 17%; border-radius: 50%; display: grid; place-content: center; justify-items: center; gap: 0.1rem; text-align: center;
+  color: #ffffff; background-color: #0b0b0c;
+  background-image: radial-gradient(circle at 38% 26%, color-mix(in srgb, var(--role) 46%, #000000), #0b0b0c 72%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 16px 36px rgba(0,0,0,.42);
+  pointer-events: none;
+}
+[data-studio-appearance][data-studio-board="on"] .studio-dial-hours { font-size: calc(3.1rem * var(--studio-type-scale)); font-weight: 800; letter-spacing: -0.045em; line-height: 1; }
+[data-studio-appearance][data-studio-board="on"] .studio-dial-name { font-size: 1.05rem; font-weight: 700; }
+[data-studio-appearance][data-studio-board="on"] .studio-dial-total { font-size: 0.8rem; font-weight: 600; color: #c7c7cc; }
+
+/* Tabs. */
+[data-studio-appearance][data-studio-board="on"] .studio-tabs { display: flex; gap: 0.5rem; margin-top: 1.25rem; padding: 0.25rem 0.1rem; overflow-x: auto; scrollbar-width: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-tabs::-webkit-scrollbar { display: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-tab {
+  flex: none; display: flex; align-items: center; gap: 0.45rem; height: 2.75rem; padding: 0 1.05rem; border-radius: 999px;
+  font-size: 0.95rem; font-weight: 700; color: var(--ink);
+  background-color: var(--elevated); border: 1px solid color-mix(in srgb, var(--ink) 14%, var(--elevated));
+  transition: background-color 220ms, color 220ms;
+}
+[data-studio-appearance][data-studio-board="on"] .studio-tab-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--role); }
+[data-studio-appearance][data-studio-board="on"] .studio-tab[aria-selected="true"] { background: var(--role-bg); background-color: var(--role); color: var(--role-ink); border-color: transparent; }
+[data-studio-appearance][data-studio-board="on"] .studio-tab[aria-selected="true"] .studio-tab-dot { background: var(--role-ink); }
+[data-studio-appearance][data-studio-board="on"] .studio-tab-all[aria-selected="true"] { background: var(--ink); background-color: var(--ink); color: var(--canvas); }
+
+/* Day at a glance. */
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chips { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.35rem; margin-top: 1.25rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chip {
+  position: relative; display: grid; justify-items: center; gap: 0.05rem; padding: 0.55rem 0 0.7rem; min-height: 3.6rem; border-radius: 1.1rem;
+  color: var(--ink); background-color: var(--elevated);
+}
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chip-name { font-size: 0.7rem; font-weight: 700; color: var(--secondary); }
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chip-date { font-size: 1.1rem; font-weight: 800; }
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chip[data-planned="true"]::after { content: ""; position: absolute; bottom: 0.3rem; width: 0.28rem; height: 0.28rem; border-radius: 50%; background: var(--ink); }
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chip[data-today="true"] { box-shadow: inset 0 0 0 1.5px var(--ink); }
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chip[aria-pressed="true"] { background: var(--ink); background-color: var(--ink); color: var(--canvas); }
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chip[aria-pressed="true"] .studio-glance-chip-name { color: var(--canvas); }
+[data-studio-appearance][data-studio-board="on"] .studio-glance-chip[aria-pressed="true"]::after { background: var(--canvas); }
+[data-studio-appearance][data-studio-board="on"] .studio-day-head h2 { margin-top: 0; font-size: calc(1.7rem * var(--studio-type-scale)); font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; }
+[data-studio-appearance][data-studio-board="on"] .studio-day-head p { margin-top: 0.2rem; font-size: 0.9rem; color: var(--secondary); }
+[data-studio-appearance][data-studio-board="on"] .studio-day-timeline { position: relative; display: grid; gap: 0.6rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-day-timeline::before { content: ""; position: absolute; left: 3.15rem; top: 0.4rem; bottom: 0.4rem; width: 1px; background: var(--line); }
+[data-studio-appearance][data-studio-board="on"] .studio-day-row { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 0.9rem; align-items: start; }
+[data-studio-appearance][data-studio-board="on"] .studio-day-time { align-self: start; margin-top: 0.35rem; padding: 0.15rem 0.35rem; border-radius: 0.6rem; background-color: var(--elevated); text-align: right; font-size: 0.75rem; font-weight: 700; color: var(--secondary); }
+[data-studio-appearance][data-studio-board="on"] .studio-day-block {
+  display: flex; align-items: center; gap: 0.75rem; width: 100%; min-height: calc(3.5rem + var(--h) * 0.9rem); padding: 0.75rem 1rem; border-radius: 1.5rem; text-align: left;
+  background: var(--role-bg); background-color: var(--role); color: var(--role-ink);
+  box-shadow: inset 0 0.5px 0 rgba(255,255,255,.3);
+}
+[data-studio-appearance][data-studio-board="on"] .studio-day-block[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+[data-studio-appearance][data-studio-board="on"] .studio-day-block-name { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; }
+[data-studio-appearance][data-studio-board="on"] .studio-day-block-hours { margin-left: auto; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; }
+
+/* View picker in Settings. */
+[data-studio-appearance][data-studio-board="on"] .studio-layout-picker { display: grid; gap: 0.5rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-layout-option {
+  display: flex; align-items: center; gap: 0.9rem; padding: 0.8rem 1rem; border-radius: 1.4rem; text-align: left;
+  color: var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+[data-studio-appearance][data-studio-board="on"] .studio-layout-option[aria-checked="true"] { background: var(--ink); background-color: var(--ink); color: var(--canvas); }
+[data-studio-appearance][data-studio-board="on"] .studio-layout-text { display: grid; gap: 0.1rem; min-width: 0; }
+[data-studio-appearance][data-studio-board="on"] .studio-layout-name { display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem; font-weight: 800; }
+[data-studio-appearance][data-studio-board="on"] .studio-layout-name em { font-style: normal; font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 999px; background: color-mix(in srgb, currentColor 16%, transparent); }
+[data-studio-appearance][data-studio-board="on"] .studio-layout-hint { font-size: 0.82rem; color: var(--secondary); }
+[data-studio-appearance][data-studio-board="on"] .studio-layout-option[aria-checked="true"] .studio-layout-hint { color: color-mix(in srgb, var(--canvas) 80%, var(--ink)); }
+
+/* Settings as Control Center tiles. The grid and the open panel share one cell, so the sheet is
+   always as tall as the taller of the two and the panel can blow up over the tiles. */
+[data-studio-appearance][data-studio-board="on"] .studio-cc { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-cc > * { grid-area: 1 / 1; }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-content: start; }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-tile {
+  --tone: var(--pastel-sky);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; min-height: 7.5rem; padding: 1rem; border-radius: 1.75rem; text-align: left;
+  background: var(--tone); background-color: var(--tone); color: var(--ink);
+  --secondary: color-mix(in srgb, var(--ink) 78%, var(--tone)); --tertiary: color-mix(in srgb, var(--ink) 76%, var(--tone));
+  transition: transform 200ms cubic-bezier(.32,.72,0,1);
+}
+[data-studio-appearance][data-studio-board="on"] .studio-cc-tile:active { transform: scale(.96); }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-tile[data-wide="true"] { grid-column: 1 / -1; min-height: 5.75rem; }
+[data-studio-appearance][data-studio-board="on"] [data-tone="sky"] { --tone: var(--pastel-sky); }
+[data-studio-appearance][data-studio-board="on"] [data-tone="peach"] { --tone: var(--pastel-peach); }
+[data-studio-appearance][data-studio-board="on"] [data-tone="sage"] { --tone: var(--pastel-sage); }
+[data-studio-appearance][data-studio-board="on"] [data-tone="butter"] { --tone: var(--pastel-butter); }
+[data-studio-appearance][data-studio-board="on"] [data-tone="lilac"] { --tone: var(--pastel-lilac); }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-icon { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; margin-bottom: auto; border-radius: 50%; background: color-mix(in srgb, var(--ink) 12%, transparent); }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-title { margin-top: 0.7rem; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-detail { font-size: 0.82rem; font-weight: 500; color: var(--secondary); }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-grid[data-settled="true"] { height: 0; overflow: hidden; visibility: hidden; }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-panel { min-width: 0; position: relative; z-index: 2; padding: 0.25rem 0 1rem; border-radius: 1.5rem; background-color: var(--studio-sheet, var(--elevated)); }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-panel-head { display: flex; align-items: center; gap: 0.6rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-panel-head h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; }
+[data-studio-appearance][data-studio-board="on"] .studio-cc-back { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; color: var(--ink); background: color-mix(in srgb, var(--ink) 10%, transparent); }
+@media (prefers-reduced-motion: reduce) {
+  [data-studio-appearance][data-studio-board="on"] .studio-fan-card { transition: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-tab { transition: none; }
+}
