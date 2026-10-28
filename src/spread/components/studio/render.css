@@ -715,6 +715,30 @@
 /* Summary and New Spread match the card radius. */
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-readable-panel { border-radius: 1.5rem; }
 
+/* Behavior and motion for the stack.
+   Open card: its tasks unfold (the app's own grid-row fold). Closed cards show only their title
+   edge, so the hand of cards stays compact. Cards are dealt in from below with a stagger, and
+   press down slightly under the finger. Reduce Motion removes the deal and the press. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item {
+  animation-name: studio-deal;
+  animation-fill-mode: backwards;
+  animation-timing-function: cubic-bezier(.32,.72,0,1);
+  animation-duration: 460ms;
+  transition: transform 220ms cubic-bezier(.32,.72,0,1), box-shadow 220ms cubic-bezier(.32,.72,0,1);
+  transform-origin: 50% 0;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item:active { transform: scale(.985); }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack .task-fold { transition-duration: 380ms; transition-timing-function: cubic-bezier(.32,.72,0,1); }
+@keyframes studio-deal {
+  from { opacity: 0; transform: translateY(36px) scale(.94); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item { animation: none; transition: none; }
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item:active { transform: none; }
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack .task-fold { transition: none; }
+}
+
 /* Reduce Transparency: the sheet and header become opaque, as the system does. */
 @media (prefers-reduced-transparency: reduce) {
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,

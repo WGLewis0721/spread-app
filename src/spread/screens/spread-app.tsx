@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createPortal, flushSync } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
+import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Pause, Play, Plus, Sun, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatWeek, isoDate, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
@@ -46,6 +46,7 @@ import { signOut } from "@/lib/auth/client";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
+import { StudioStackProbe } from "@/spread/components/studio/render";
 import { StudioLivePlanner } from "@/spread/components/studio/live-planner";
 import { cycleDetent, detentTops, followTop, nearestDetent, STUDIO_WEEK_DETENTS, type StudioWeekDetent } from "@/lib/spread/studio/week-detents";
 
@@ -369,6 +370,9 @@ function WeekScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState(false);
   const [studioDetent, setStudioDetent] = useState<StudioWeekDetent>("half");
+  // Stacked role cards (Studio wallpaper look): one card open at a time. undefined means the first one.
+  const [stackOn, setStackOn] = useState(false);
+  const [openRole, setOpenRole] = useState<string | null | undefined>(undefined);
   const weekGrabRef = useRef<{y:number;startTop:number;samples:{y:number;t:number}[]}|null>(null);
   const skipGrabClick = useRef(false);
   const stageRef = useRef<HTMLElement|null>(null);
@@ -456,6 +460,32 @@ function WeekScreen() {
       box,
     };
   });
+
+  // Studio stack: slowly advance the open card, like a vertical carousel. It never fights the
+  // person: it stops for Reduce Motion, a hidden tab, an open sheet, editing, anything focused in
+  // the stack, any touch in the last 15 seconds, or the Pause button (WCAG 2.2.2).
+  const roleIdsRef = useRef<string[]>([]);
+  roleIdsRef.current = rows.map((row) => row.hat.id);
+  const openRoleRef = useRef<string | null | undefined>(undefined);
+  openRoleRef.current = openRole;
+  const stackTouched = useRef(0);
+  const [stackPaused, setStackPaused] = useState(false);
+  const stackBlocked = sheet !== null || openTask !== null;
+  useEffect(() => {
+    if (!stackOn || stackPaused || editing || stackBlocked || view === "week") return;
+    const id = window.setInterval(() => {
+      if (document.hidden) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (Date.now() - stackTouched.current < 15000) return;
+      if (document.activeElement?.closest(".studio-role-stack")) return;
+      const ids = roleIdsRef.current;
+      if (ids.length < 2) return;
+      const current = openRoleRef.current === undefined ? ids[0] : openRoleRef.current;
+      const at = current ? ids.indexOf(current) : -1;
+      setOpenRole(ids[(at + 1) % ids.length]);
+    }, 7000);
+    return () => window.clearInterval(id);
+  }, [stackOn, stackPaused, editing, stackBlocked, view]);
 
   const goWeek = useCallback(
     (direction: -1 | 1) => {
@@ -613,6 +643,7 @@ function WeekScreen() {
 
   return (
     <StudioLivePlanner profileId={profileId}>
+      <StudioStackProbe onChange={setStackOn} />
       <div className="min-h-dvh">
       {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
       <div className="mx-auto w-full max-w-xl" style={{ "--spread-header": `${headerH}px` } as CSSProperties}>
@@ -857,7 +888,25 @@ function WeekScreen() {
                   onReview={openTasksOf(data).length > 0 ? () => setCarryAsk(true) : undefined}
                 />
               </div>
-              <div className="studio-role-stack mt-6 overflow-hidden rounded-[22px] bg-elevated">
+              {stackOn && rows.length > 1 && (
+                <div className="mt-5 -mb-2 flex justify-end">
+                  <button
+                    type="button"
+                    className="studio-readable-note studio-stack-pause flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
+                    aria-pressed={stackPaused}
+                    onClick={() => setStackPaused((paused) => !paused)}
+                  >
+                    {stackPaused ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
+                    {stackPaused ? "Resume auto-advance" : "Pause auto-advance"}
+                  </button>
+                </div>
+              )}
+              <div
+                className="studio-role-stack mt-6 overflow-hidden rounded-[22px] bg-elevated"
+                onPointerDownCapture={() => { stackTouched.current = Date.now(); }}
+                onFocusCapture={() => { stackTouched.current = Date.now(); }}
+                onKeyDownCapture={() => { stackTouched.current = Date.now(); }}
+              >
                 {rows.map(({ hat, box }, index) => (
                   <div
                     key={hat.id}
@@ -870,6 +919,10 @@ function WeekScreen() {
                       tasks={box.tasks}
                       editing={editing}
                       first={index === 0}
+                      stack={stackOn ? {
+                        open: (openRole === undefined ? rows[0]?.hat.id : openRole) === hat.id,
+                        toggle: () => setOpenRole((openRole === undefined ? rows[0]?.hat.id : openRole) === hat.id ? null : hat.id),
+                      } : undefined}
                       onRemove={() => setRemoveId(hat.id)}
                       onOpenTask={(taskId) => setOpenTask({ hatId: hat.id, taskId })}
                     />
@@ -1101,6 +1154,7 @@ function RoleBlock({
   tasks,
   editing,
   first,
+  stack,
   onRemove,
   onOpenTask,
 }: {
@@ -1109,6 +1163,8 @@ function RoleBlock({
   tasks: { id: string; text: string; done: boolean }[];
   editing: boolean;
   first: boolean;
+  /** Set when the role cards are stacked: the parent owns which card is open. */
+  stack?: { open: boolean; toggle: () => void };
   onRemove: () => void;
   onOpenTask: (taskId: string) => void;
 }) {
@@ -1160,6 +1216,9 @@ function RoleBlock({
       setTaskMotion("in");
     }
   }
+
+  const chevronOpen = stack ? stack.open : tasksOpen && taskMotion !== "out";
+  const foldOpen = stack ? stack.open : tasksOpen || taskMotion === "out";
 
   return (
     <section id={`spread-role-${hat.id}`} tabIndex={-1} className="scroll-mt-48 print:break-inside-avoid">
@@ -1221,12 +1280,12 @@ function RoleBlock({
         )}
         <button
           type="button"
-          aria-expanded={tasksOpen && taskMotion !== "out"}
-          aria-label={tasksOpen && taskMotion !== "out" ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
+          aria-expanded={chevronOpen}
+          aria-label={chevronOpen ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
           className="grid size-11 shrink-0 place-items-center text-secondary"
-          onClick={toggleTasks}
+          onClick={stack ? stack.toggle : toggleTasks}
         >
-          <ChevronRight className={cn("size-5 transition-transform duration-300", tasksOpen && taskMotion !== "out" && "rotate-90")} />
+          <ChevronRight className={cn("size-5 transition-transform duration-300", chevronOpen && "rotate-90")} />
         </button>
         </div>
         {editing && (
@@ -1301,7 +1360,7 @@ function RoleBlock({
           </div>
         </div>
       )}
-      <div className={cn("task-fold", (tasksOpen || taskMotion === "out") && "task-fold-open")}>
+      <div className={cn("task-fold", foldOpen && "task-fold-open")}>
       <ul className={taskMotion === "in" ? "cascade" : taskMotion === "out" ? "cascade cascade-out" : undefined}>
         {tasks.map((task, index) => (
           <TaskRow

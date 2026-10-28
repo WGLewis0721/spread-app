@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import "./render.css";
 import { useSpread } from "@/lib/spread/store";
 import { STUDIO_APPEARANCE_ATTRIBUTE, STUDIO_FLAG, type StudioAppearanceV1 } from "@/lib/spread/studio/contract";
@@ -7,6 +7,24 @@ import {
   type StudioMaterialGates,
   type StudioWallpaperHandle,
 } from "@/lib/spread/studio/appearance";
+
+/** True when a wallpaper Studio look is applied. The Spread tab uses it to stack its role cards. */
+const StudioStackContext = createContext(false);
+export function useStudioStack(): boolean {
+  return useContext(StudioStackContext);
+}
+
+/**
+ * SpreadApp renders the Studio scope itself, so it sits above the context. This probe lives
+ * inside the scope and reports the value up.
+ */
+export function StudioStackProbe({ onChange }: { onChange: (on: boolean) => void }) {
+  const on = useStudioStack();
+  useEffect(() => {
+    onChange(on);
+  }, [on, onChange]);
+  return null;
+}
 
 type ScopeProps = {
   /** Omitted, or the original id, leaves the shipped look in place. */
@@ -112,7 +130,7 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-wallpaper={scope.wallpaper ? "on" : "off"}
       style={style}
     >
-      {children}
+      <StudioStackContext.Provider value={Boolean(scope.wallpaper)}>{children}</StudioStackContext.Provider>
     </div>
   );
 }

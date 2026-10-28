@@ -22,6 +22,7 @@ const detents = ["peek", "half", "full"] as const;
 const results: Array<Record<string,unknown>> = [];
 const errors: string[] = [];
 const geometryByCase = new Map<string,string>();
+let carouselChecked = false;
 
 mkdirSync(output,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH ?? chromium.executablePath()});
@@ -120,6 +121,21 @@ try {
       if(spreadText.length)errors.push(shape+"/"+scheme+": Spread tab text audit "+spreadText.length+" violations "+JSON.stringify(spreadText[0]).slice(0,240));
       const stackCards=await page.locator(".studio-role-stack > .week-seq-item").count();
       if(stackCards<3)errors.push(shape+"/"+scheme+": expected stacked role cards, found "+stackCards);
+      // Carousel: exactly one card open; it advances on its own; Pause stops it.
+      if(!carouselChecked){
+        carouselChecked=true;
+        const openCards=()=>page.evaluate(()=>[...document.querySelectorAll(".studio-role-stack .task-fold")].map(e=>e.classList.contains("task-fold-open")?1:0).join(""));
+        const first=await openCards();
+        if(first.split("1").length!==2) errors.push("carousel: expected exactly one open card, got "+first);
+        await page.waitForTimeout(7600);
+        const second=await openCards();
+        if(second===first||second.split("1").length!==2) errors.push("carousel did not advance: "+first+" -> "+second);
+        await page.getByRole("button",{name:"Pause auto-advance"}).click();
+        const held=await openCards();
+        await page.waitForTimeout(7600);
+        if((await openCards())!==held) errors.push("carousel kept moving after Pause");
+        await page.getByRole("button",{name:"Resume auto-advance"}).click();
+      }
       await page.getByRole("tab",{name:"Week",exact:true}).click();
       await page.waitForFunction(()=>{
         const host=document.querySelector<HTMLElement>('[data-studio-wallpaper="on"]');
