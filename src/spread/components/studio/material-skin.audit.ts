@@ -134,6 +134,7 @@ try {
               highlight:get("--studio-highlight"),onHighlight:get("--studio-on-highlight"),
               outline:get("--studio-outline"),focus:get("--studio-focus"),
               sheetEdge:scope.getAttribute("data-studio-sheet-edge"),
+              ridgeOpacity:get("--studio-crown-ridge-opacity"),
               aria:grab.getAttribute("aria-valuetext"),
               dragging:scope.hasAttribute("data-studio-dragging"),
               grabWidth:grab.getBoundingClientRect().width,grabHeight:grab.getBoundingClientRect().height,

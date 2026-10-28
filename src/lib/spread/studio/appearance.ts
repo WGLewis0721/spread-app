@@ -155,6 +155,7 @@ export const STUDIO_STYLE_KEYS = [
   "--studio-card-shadow",
   "--studio-crown",
   "--studio-crown-fg",
+  "--studio-crown-ridge-opacity",
   "--studio-on-highlight",
   "--studio-card-radius",
   ...ROLE_KEYS,
@@ -628,6 +629,10 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
       : `0 ${formatCssNumber(shadowY)}px ${formatCssNumber(shadowBlur)}px rgba(0, 0, 0, ${formatCssNumber(shadowAlpha)})`,
     "--studio-crown": crownBg,
     "--studio-crown-fg": crownFg,
+    // The same locally measured outline strength determines whether the Crown
+    // should retain mechanical ridges: soft photos have 0, graphic linework more.
+    "--studio-crown-ridge-opacity": appearance.skin
+      ? formatCssNumber(Math.min(1,Math.max(0,appearance.skin.outline/3))) : "1",
     "--studio-on-highlight": onHighlight,
     "--studio-card-radius": skinOutline >= 2 ? "14px 14px 14px 4px" : "18px",
     "--studio-heading-font": appearance.typography.presetId === "display"

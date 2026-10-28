@@ -696,6 +696,9 @@
 [data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-sheen,
 [data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap::after { display: none; }
 [data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap { color: var(--studio-crown-fg); }
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-ridges {
+  opacity:var(--studio-crown-ridge-opacity);
+}
 [data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap::before {
   content: "";
   position: absolute;
