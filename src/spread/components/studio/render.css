@@ -849,3 +849,12 @@
 [data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"]{
   z-index:12;
 }
+
+/* Full header owns its actual layout height, not a painted extension. This
+   removes the overlay that hid the Today slider under the header. */
+[data-studio-appearance][data-studio-skin="linocut"]:has(.studio-week-stage[data-studio-detent="full"]) .studio-week-header[data-studio-view="week"]{
+  min-height:max(15dvh,calc(env(safe-area-inset-top,0px) + var(--studio-crown-height) + .75rem));
+}
+[data-studio-appearance][data-studio-skin="linocut"]:has(.studio-week-stage[data-studio-detent="full"]) .studio-week-header[data-studio-view="week"]::before{
+  display:none;
+}

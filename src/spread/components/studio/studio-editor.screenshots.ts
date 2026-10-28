@@ -483,6 +483,14 @@ try {
             modal:stage.getAttribute("aria-modal"),
             headerInert:header.hasAttribute("inert"),dockInert:dock.hasAttribute("inert")};
         });
+        // The header may not cover the sheet's Today slider. Geometric
+        // assertions alone missed this z-index/background-layer regression.
+        const grabberVisible=await handle.evaluate(el=>{
+          const r=el.getBoundingClientRect();
+          const point=document.elementFromPoint(r.left+r.width/2,r.top+Math.min(22,r.height/2));
+          return !!point?.closest(".studio-week-grabber");
+        });
+        if(!grabberVisible)throw new Error("Full Today grabber is painted beneath the header");
         if(!(Number(nonmodal.headerZ)>Number(nonmodal.sheetZ)) ||
            !(Number(nonmodal.dockZ)>Number(nonmodal.sheetZ)) ||
            nonmodal.modal!==null||!nonmodal.visibleHeaderScallop||nonmodal.headerInert||nonmodal.dockInert)
