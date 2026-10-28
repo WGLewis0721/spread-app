@@ -112,3 +112,14 @@ Same rules as the stacked cards: only in a wallpaper look, only through computed
 - **Day rail (Week sheet).** A row of seven tall day pills (Mon to Sun) above the day cards. Today is the accent, each pill shows a dot per scheduled role, and a tap scrolls to that day card (smooth, or instant under Reduce Motion). It is a plain navigation group labelled "Jump to a day".
 - **Gating.** `MonthView` gets `studio` and `WeeklyView` gets `dayRail` from the `stackOn` state that `StudioStackProbe` reports, so with the flag off or no wallpaper the DOM is unchanged.
 - **Not done.** The More sheet is a portal outside the Studio scope, so Settings still uses the system look. Theming it needs a scope on the portal, which is its own change.
+
+## Board is the Studio default (2026-10-28)
+
+The Studio build no longer shows the shipped look until a wallpaper is applied. With `VITE_SPREAD_STUDIO` on and nothing saved, the planner renders **Board**: warm paper canvas, rounded type (`ui-rounded`), ink dock, role-colored stacked cards, colored Month, day rail, pastel sheet groups. Flag off is unchanged and is the revert path.
+
+- **Appearance.** `boardStudioAppearance()` in `presets.ts` (id `studio-board`, also the first starter). `resolveStudioScope` returns `board: true` for it and for any wallpaper look. The scope sets `data-studio-board="on"`; every board rule in `render.css` is gated on that attribute (it replaced `data-studio-wallpaper="on"`, which is still set when an image is present).
+- **Dark.** Board is authored in light. `withBoardScheme` swaps in a warm-charcoal palette for dark because contrast correction alone turned the dark ink into a mid gray, and the canvas goes darker than the cards.
+- **Header.** The metal Crown is a large title with two round arrow buttons. The wheel still takes drag, scroll and arrow keys. Over a wallpaper the title gets its own thin material.
+- **Dock.** An ink pill with paper icons. Labelled controls (Edit, Done) are paper pills with ink text.
+- **Sheets.** More and Task portal into the scope element (`useStudioPortal`) so they receive the same variables. Groups are pastel by kind (status sage, lists butter, actions peach, other sky); dark uses deep mixes of the same colors.
+- **Revert.** Saving "Original" in the editor also shows Board, because the shipped look is what a build without the flag renders.

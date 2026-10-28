@@ -3,7 +3,8 @@
  * No planner writes. The image handle is transient, scoped and revoked on profile switch.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { STUDIO_FLAG, originalStudioAppearance, type StudioAppearanceV1 } from "@/lib/spread/studio/contract";
+import { STUDIO_FLAG, type StudioAppearanceV1 } from "@/lib/spread/studio/contract";
+import { boardStudioAppearance } from "@/lib/spread/studio/presets";
 import { loadStudioAppearance } from "@/lib/spread/studio/persistence";
 import { StudioAppearanceScope } from "./render";
 import { browserStudioStorage, studioAssetStore } from "./studio-bridge";
@@ -49,9 +50,9 @@ export function StudioLivePlanner({ profileId, children }: { profileId: string |
           }
         }
         if (cancelled) return;
-        setDisplay({ profileId, appearance: read.appearance, wallpaper });
+        setDisplay({ profileId, appearance: read.state === "saved" ? read.appearance : boardStudioAppearance(), wallpaper });
       } catch {
-        if (!cancelled) setDisplay({ profileId, appearance: originalStudioAppearance(), wallpaper: null });
+        if (!cancelled) setDisplay({ profileId, appearance: boardStudioAppearance(), wallpaper: null });
       }
     };
     void load();
@@ -65,7 +66,7 @@ export function StudioLivePlanner({ profileId, children }: { profileId: string |
   const current = display?.profileId === profileId ? display : null;
   return (
     <StudioAppearanceScope
-      appearance={current?.appearance ?? originalStudioAppearance()}
+      appearance={current?.appearance ?? boardStudioAppearance()}
       wallpaper={current?.wallpaper ?? null}
     >
       {children}

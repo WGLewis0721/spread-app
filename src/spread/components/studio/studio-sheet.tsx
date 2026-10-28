@@ -650,7 +650,7 @@ function MoreControls({
     <div className="mt-2">
       <p className="text-sm font-semibold">Typography</p>
       <div className="mt-2 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Typography">
-        {([["system", "System"], ["editorial", "Editorial"], ["mono", "Mono"], ["display", "Bold"]] as const).map(([presetId, label]) => (
+        {([["system", "System"], ["editorial", "Editorial"], ["mono", "Mono"], ["display", "Bold"], ["rounded", "Rounded"]] as const).map(([presetId, label]) => (
           <button key={presetId} type="button" role="radio" aria-checked={draft.typography.presetId === presetId}
             className={`min-h-11 rounded-xl px-1 text-xs font-semibold ${draft.typography.presetId === presetId ? "bg-segment text-ink" : "bg-fill text-secondary"}`}
             onClick={() => onAction({ type: "set-typeface", presetId })}>{label}</button>

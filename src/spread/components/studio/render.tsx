@@ -26,6 +26,16 @@ export function StudioStackProbe({ onChange }: { onChange: (on: boolean) => void
   return null;
 }
 
+/**
+ * Sheets are portaled. Rendered into <body> they would sit outside the scope and show the
+ * shipped look. They portal into the scope element instead, so the same variables reach them.
+ * Undefined outside a scope (flag off), which leaves Radix on its default container.
+ */
+const StudioPortalContext = createContext<HTMLElement | null>(null);
+export function useStudioPortal(): HTMLElement | undefined {
+  return useContext(StudioPortalContext) ?? undefined;
+}
+
 type ScopeProps = {
   /** Omitted, or the original id, leaves the shipped look in place. */
   appearance?: unknown;
@@ -107,6 +117,7 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
   });
   const aspect = useImageAspect(scope.wallpaper);
   const viewport = useViewport();
+  const [portal, setPortal] = useState<HTMLElement | null>(null);
   if (!scope.attribute) return children;
   // Cover height of the fixed wallpaper layer (it bleeds 24px past the viewport on every side).
   const wallpaperHeight = Math.max(viewport.h + 48, (viewport.w + 48) * aspect);
@@ -128,9 +139,13 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-tasks={scope.parts.tasks}
       data-studio-dock={scope.parts.dock}
       data-studio-wallpaper={scope.wallpaper ? "on" : "off"}
+      data-studio-board={scope.board ? "on" : "off"}
       style={style}
+      ref={setPortal}
     >
-      <StudioStackContext.Provider value={Boolean(scope.wallpaper)}>{children}</StudioStackContext.Provider>
+      <StudioPortalContext.Provider value={scope.board ? portal : null}>
+        <StudioStackContext.Provider value={scope.board}>{children}</StudioStackContext.Provider>
+      </StudioPortalContext.Provider>
     </div>
   );
 }

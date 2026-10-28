@@ -32,22 +32,22 @@
    The original header's opaque .bar-fade was hiding it across the first ~300px.
    Only opt in when a valid local wallpaper exists; retain the golden header
    (and its scroll fade) for Original and wallpaper-free looks. */
-[data-studio-appearance][data-studio-wallpaper="on"] .bar-fade {
+[data-studio-appearance][data-studio-board="on"] .bar-fade {
   background: transparent;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .bar-fade::after {
+[data-studio-appearance][data-studio-board="on"] .bar-fade::after {
   display: none;
 }
 /* The wheel and controls have their own plates. Protect its loose hint against
    arbitrary sky, faces or artwork without covering the wallpaper. */
 /* Do not let the translucent crown readout reveal unpredictable wallpaper
    behind small secondary date text (WCAG contrast regression on the phone). */
-[data-studio-appearance][data-studio-wallpaper="on"] .crown-readout {
+[data-studio-appearance][data-studio-board="on"] .crown-readout {
   background: var(--elevated);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .crown > p[role="status"] {
+[data-studio-appearance][data-studio-board="on"] .crown > p[role="status"] {
   display: table;
   max-width: 100%;
   margin-inline: auto;
@@ -149,7 +149,7 @@
   border: 0.5px solid var(--glass-stroke);
 }
 
-[data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-scheme][data-studio-material="glass"] .crown-wheel {
+[data-studio-appearance]:not([data-studio-board="on"])[data-studio-scheme][data-studio-material="glass"] .crown-wheel {
   background-color: color-mix(in srgb, var(--elevated) calc(var(--studio-panel) * 100%), transparent);
   background-image: none;
   backdrop-filter: blur(var(--studio-blur)) saturate(1.3);
@@ -161,7 +161,7 @@
 [data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .bg-elevated,
 [data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .sheet,
 [data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .pop,
-[data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-scheme][data-studio-material="matte"] .crown-wheel,
+[data-studio-appearance]:not([data-studio-board="on"])[data-studio-scheme][data-studio-material="matte"] .crown-wheel,
 [data-studio-appearance][data-studio-scheme][data-studio-material="matte"] .glass {
   background-color: var(--elevated);
   background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, var(--studio-matte-line) 3px);
@@ -174,7 +174,7 @@
 [data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .bg-elevated,
 [data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .sheet,
 [data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .pop,
-[data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-scheme][data-studio-material="metal"] .crown-wheel,
+[data-studio-appearance]:not([data-studio-board="on"])[data-studio-scheme][data-studio-material="metal"] .crown-wheel,
 [data-studio-appearance][data-studio-scheme][data-studio-material="metal"] .glass {
   background-color: var(--elevated);
   background-image: linear-gradient(180deg, var(--studio-metal-hi), var(--elevated) 46%, var(--studio-metal-lo));
@@ -196,15 +196,15 @@
   [data-studio-appearance][data-studio-material="glass"] .bg-elevated,
   [data-studio-appearance][data-studio-material="glass"] .sheet,
   [data-studio-appearance][data-studio-material="glass"] .pop,
-  [data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-material="glass"] .crown-wheel,
+  [data-studio-appearance]:not([data-studio-board="on"])[data-studio-material="glass"] .crown-wheel,
   [data-studio-appearance][data-studio-material="matte"] .bg-elevated,
   [data-studio-appearance][data-studio-material="matte"] .sheet,
   [data-studio-appearance][data-studio-material="matte"] .pop,
-  [data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-material="matte"] .crown-wheel,
+  [data-studio-appearance]:not([data-studio-board="on"])[data-studio-material="matte"] .crown-wheel,
   [data-studio-appearance][data-studio-material="metal"] .bg-elevated,
   [data-studio-appearance][data-studio-material="metal"] .sheet,
   [data-studio-appearance][data-studio-material="metal"] .pop,
-  [data-studio-appearance]:not([data-studio-wallpaper="on"])[data-studio-material="metal"] .crown-wheel,
+  [data-studio-appearance]:not([data-studio-board="on"])[data-studio-material="metal"] .crown-wheel,
   [data-studio-appearance] .glass {
     background-color: var(--elevated);
     background-image: none;
@@ -461,7 +461,7 @@
    supplies a tint, a dim and a material thickness, nothing else.
    Layers, as in iOS: wallpaper, then the functional layer (header, sheet, dock: translucent
    material with a hairline), then content (cards and rows: plain opaque surfaces, no blur). */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
+[data-studio-appearance][data-studio-board="on"] .studio-week-header[data-studio-view="week"] {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   gap: 0.5rem 0.75rem;
@@ -472,24 +472,24 @@
   border-bottom: 0.5px solid var(--glass-stroke, color-mix(in srgb, var(--ink) 16%, transparent));
   padding-bottom: 0.65rem;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] > div:first-child {
+[data-studio-appearance][data-studio-board="on"] .studio-week-header[data-studio-view="week"] > div:first-child {
   grid-column: 1 / -1;
   margin-bottom: 0;
   min-height: 36px;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown {
+[data-studio-appearance][data-studio-board="on"] .studio-week-header[data-studio-view="week"] .crown {
   grid-column: 1;
   min-width: 0;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown-wheel {
+[data-studio-appearance][data-studio-board="on"] .studio-week-header[data-studio-view="week"] .crown-wheel {
   height: 3.45rem;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] .crown > p[role="status"] {
+[data-studio-appearance][data-studio-board="on"] .studio-week-header[data-studio-view="week"] .crown > p[role="status"] {
   position: absolute;
   width: 1px;height:1px;padding:0;overflow:hidden;
   white-space:nowrap;clip:rect(0,0,0,0);
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] > [role="tablist"] {
+[data-studio-appearance][data-studio-board="on"] .studio-week-header[data-studio-view="week"] > [role="tablist"] {
   grid-column: 2;
   margin: 0;
   min-width: 98px;
@@ -501,7 +501,7 @@
    Half and while dragging. --studio-focus is where this wallpaper's busiest band sits
    (0 top, 1 bottom). The image may rise off the bottom of the screen, since the sheet covers
    that edge, but it never leaves the strip above the sheet bare. */
-[data-studio-appearance][data-studio-wallpaper="on"]:has(.studio-week-stage)::before {
+[data-studio-appearance][data-studio-board="on"]:has(.studio-week-stage)::before {
   background-size: auto, var(--studio-wallpaper-size);
   background-position: 0 0, 50% clamp(
     calc(var(--studio-sheet-top) + 42px - var(--studio-wp-h)),
@@ -515,7 +515,7 @@
 /* The sheet is nonmodal: no scrim, no focus trap; header and dock stay live.
    Peek and Half float inset with a continuous corner. Full goes flush and more opaque, as the
    system sheet does, so long lists read on a calm surface. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage {
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage {
   position: fixed;
   z-index: 12;
   left: 50%;
@@ -538,7 +538,7 @@
   transition: top 420ms cubic-bezier(.32,.72,0,1), width 420ms cubic-bezier(.32,.72,0,1), bottom 420ms cubic-bezier(.32,.72,0,1), border-radius 420ms cubic-bezier(.32,.72,0,1);
   touch-action: pan-y;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] {
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage[data-studio-detent="full"] {
   width: 100%;
   bottom: 0;
   border-bottom: none;
@@ -547,10 +547,10 @@
 }
 [data-studio-appearance][data-studio-dragging] .studio-week-stage { transition: none; }
 
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="peek"] .studio-week-scrollbody {
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage[data-studio-detent="peek"] .studio-week-scrollbody {
   display: none;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-grabber {
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage .studio-week-grabber {
   display: block;
   flex: none;
 }
@@ -609,7 +609,7 @@
 }
 /* The list scrolls inside the sheet and fades out before the dock, so day cards never
    run hard behind the floating controls. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-scrollbody {
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage .studio-week-scrollbody {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -619,42 +619,42 @@
   -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 9.5rem - env(safe-area-inset-bottom)), transparent calc(100% - 5rem - env(safe-area-inset-bottom)));
   mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 9.5rem - env(safe-area-inset-bottom)), transparent calc(100% - 5rem - env(safe-area-inset-bottom)));
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-scrollbody::-webkit-scrollbar { display: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage .studio-week-scrollbody::-webkit-scrollbar { display: none; }
 
 /* Content layer (when the Week cards part is Original; an explicit Ink/Glass choice still wins):
    cards and rows are plain, opaque and quiet. Material belongs to the sheet,
    header and dock, so these never blur and never carry an outline weight from the image. */
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .studio-week-stage .bg-elevated,
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .studio-week-stage .week-seq-item {
+[data-studio-appearance][data-studio-board="on"][data-studio-week="original"] .studio-week-stage .bg-elevated,
+[data-studio-appearance][data-studio-board="on"][data-studio-week="original"] .studio-week-stage .week-seq-item {
   background-color: var(--elevated);
   background-image: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .studio-week-stage .week-seq-item {
+[data-studio-appearance][data-studio-board="on"][data-studio-week="original"] .studio-week-stage .week-seq-item {
   border: 0.5px solid color-mix(in srgb, var(--ink) 12%, transparent);
   border-radius: 1.5rem;
   box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.06);
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-grabber-help { display: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-week-grabber-help { display: none; }
 /* Inside the translucent sheet the note plates would be a box on a box. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage h2.studio-readable-note,
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage p.studio-readable-note {
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage h2.studio-readable-note,
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage p.studio-readable-note {
   background-color: transparent;
   padding-inline: 0;
   display: flex;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .spread-bubbles { background: transparent; }
+[data-studio-appearance][data-studio-board="on"] .spread-bubbles { background: transparent; }
 /* The chip row scrolls sideways, so it clips anything outside its box. A shadow there reads as a
    stray band; use a hairline instead. */
-[data-studio-appearance][data-studio-scheme][data-studio-wallpaper="on"] .spread-bubbles > * {
+[data-studio-appearance][data-studio-scheme][data-studio-board="on"] .spread-bubbles > * {
   box-shadow: none;
   border: 0.5px solid color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
 /* The View toggle sits on the bare wallpaper on the Spread tab, so it needs its own thin
    material or the unselected icon disappears into the art. */
-[data-studio-appearance][data-studio-wallpaper="on"] [role="tablist"][aria-label="View"] {
+[data-studio-appearance][data-studio-board="on"] [role="tablist"][aria-label="View"] {
   background: color-mix(in srgb, var(--studio-sheet, var(--elevated)) calc(var(--studio-sheet-panel, 1) * 100%), transparent);
   -webkit-backdrop-filter: blur(22px) saturate(1.6);
   backdrop-filter: blur(22px) saturate(1.6);
@@ -664,7 +664,7 @@
 /* Quiet knurl. The shipped Crown stays the same object (same wheel, caps and readout), but over a
    wallpaper its full-contrast metal teeth fight everything else. Here the wheel is thin material
    and the teeth are low-contrast tints of the ink, so it reads as the same family as the sheet. */
-[data-studio-appearance][data-studio-wallpaper="on"] .crown-wheel {
+[data-studio-appearance][data-studio-board="on"] .crown-wheel {
   --tooth-dark: color-mix(in srgb, var(--ink) 34%, transparent);
   --tooth-mid: color-mix(in srgb, var(--ink) 16%, transparent);
   --tooth-light: color-mix(in srgb, var(--ink) 6%, transparent);
@@ -675,16 +675,16 @@
   border: 0.5px solid var(--glass-stroke, color-mix(in srgb, var(--ink) 16%, transparent));
   box-shadow: inset 0 0.5px 0 color-mix(in srgb, white 40%, transparent), 0 1px 3px rgba(0,0,0,.12);
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .crown-sheen,
-[data-studio-appearance][data-studio-wallpaper="on"] .crown-cap::after { display: none; }
+[data-studio-appearance][data-studio-board="on"] .crown-sheen,
+[data-studio-appearance][data-studio-board="on"] .crown-cap::after { display: none; }
 
 /* Stacked role cards (Spread tab). Each responsibility is a card in its own color, overlapping
    the one before it so only a rounded title edge shows, like a hand of cards. Ink is chosen per
    color in code (readableInkOn), and the card re-points the app's own ink, secondary, line, fill
    and accent variables, so every child (hours, tasks, add row) stays legible without per-element
    overrides. The Spread logo is a fan of cards; this is the same idea at list scale. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack.bg-elevated,
-[data-studio-appearance][data-studio-scheme][data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack.bg-elevated {
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack.bg-elevated,
+[data-studio-appearance][data-studio-scheme][data-studio-appearance][data-studio-board="on"] .studio-role-stack.bg-elevated {
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -692,7 +692,7 @@
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item {
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item {
   position: relative;
   margin-top: -1.1rem;
   padding-bottom: 1.1rem;
@@ -708,18 +708,18 @@
   --on-accent: var(--role);
   box-shadow: inset 0 0.5px 0 color-mix(in srgb, white 45%, transparent), 0 -4px 14px rgba(0,0,0,.16);
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item:first-child { margin-top: 0; }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item:last-child { padding-bottom: 0; }
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item:first-child { margin-top: 0; }
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item:last-child { padding-bottom: 0; }
 /* The hairline between roles is replaced by the card edge. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item section > div.border-t:first-child { display: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item section > div.border-t:first-child { display: none; }
 /* Summary and New Spread match the card radius. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-readable-panel { border-radius: 1.5rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-readable-panel { border-radius: 1.5rem; }
 
 /* Behavior and motion for the stack.
    Open card: its tasks unfold (the app's own grid-row fold). Closed cards show only their title
    edge, so the hand of cards stays compact. Cards are dealt in from below with a stagger, and
    press down slightly under the finger. Reduce Motion removes the deal and the press. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item {
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item {
   animation-name: studio-deal;
   animation-fill-mode: backwards;
   animation-timing-function: cubic-bezier(.32,.72,0,1);
@@ -727,23 +727,23 @@
   transition: transform 220ms cubic-bezier(.32,.72,0,1), box-shadow 220ms cubic-bezier(.32,.72,0,1);
   transform-origin: 50% 0;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item:active { transform: scale(.985); }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack .task-fold { transition-duration: 380ms; transition-timing-function: cubic-bezier(.32,.72,0,1); }
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item:active { transform: scale(.985); }
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack .task-fold { transition-duration: 380ms; transition-timing-function: cubic-bezier(.32,.72,0,1); }
 @keyframes studio-deal {
   from { opacity: 0; transform: translateY(36px) scale(.94); }
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item { animation: none; transition: none; }
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item:active { transform: none; }
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack .task-fold { transition: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item { animation: none; transition: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-role-stack > .week-seq-item:active { transform: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-role-stack .task-fold { transition: none; }
 }
 
 /* Week sheet in the same language. Role chips, free-time suggestions and scheduled role rows are
    painted in the role color with computed ink, like the stacked cards. Day cards stay quiet, and
    today is lifted with an accent hairline and a leading bar. This is the board's Schedule layout:
    neutral days, colored blocks. */
-[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-wallpaper="on"] .studio-role-chip {
+[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-board="on"] .studio-role-chip {
   background: var(--role);
   color: var(--role-ink);
   --ink: var(--role-ink);
@@ -756,29 +756,29 @@
   border: 0;
   box-shadow: none;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-chip > span[style*="background-color"],
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-chip > button > span[style*="background-color"] { background-color: var(--role-ink) !important; }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-chip[aria-pressed="true"] { outline: 2px solid var(--role-ink) !important; outline-offset: 2px; }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-chip ul { background: color-mix(in srgb, var(--role-ink) 12%, transparent); }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item:has(h2[aria-current="date"]) {
+[data-studio-appearance][data-studio-board="on"] .studio-role-chip > span[style*="background-color"],
+[data-studio-appearance][data-studio-board="on"] .studio-role-chip > button > span[style*="background-color"] { background-color: var(--role-ink) !important; }
+[data-studio-appearance][data-studio-board="on"] .studio-role-chip[aria-pressed="true"] { outline: 2px solid var(--role-ink) !important; outline-offset: 2px; }
+[data-studio-appearance][data-studio-board="on"] .studio-role-chip ul { background: color-mix(in srgb, var(--role-ink) 12%, transparent); }
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage .week-seq-item:has(h2[aria-current="date"]) {
   /* A hairline and a leading bar, not a tint: a tint would lower ink contrast on dark palettes. */
   border-color: color-mix(in srgb, var(--accent) 70%, transparent);
   box-shadow: inset 4px 0 0 var(--accent), 0 1px 2px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.06);
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item {
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage .week-seq-item {
   animation-name: studio-deal;
   animation-fill-mode: backwards;
   animation-timing-function: cubic-bezier(.32,.72,0,1);
   animation-duration: 340ms;
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item { animation: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-week-stage .week-seq-item { animation: none; }
 }
 
 /* Month view, in the board's calendar language: a day with scheduled roles is a card in its first
    role's color (computed ink, like the stack), empty days are plain opaque surfaces with no blur.
    Today keeps the accent disc. Days are dealt in with a short stagger; Reduce Motion removes it. */
-[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-wallpaper="on"] .studio-month-day {
+[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-board="on"] .studio-month-day {
   background: var(--elevated);
   border: 0.5px solid color-mix(in srgb, var(--ink) 12%, transparent);
   box-shadow: none;
@@ -788,7 +788,7 @@
   animation: studio-deal 320ms cubic-bezier(.32,.72,0,1) backwards;
   transition: transform 180ms cubic-bezier(.32,.72,0,1);
 }
-[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-wallpaper="on"] .studio-month-day[data-studio-marked="true"] {
+[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-board="on"] .studio-month-day[data-studio-marked="true"] {
   background: var(--role);
   color: var(--role-ink);
   --ink: var(--role-ink);
@@ -798,16 +798,16 @@
   --on-accent: var(--role);
   border-color: transparent;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-month-day[data-studio-marked="true"] > span > span[style*="background-color"] { background-color: var(--role-ink) !important; }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-month-day:active { transform: scale(.96); opacity: 1; }
+[data-studio-appearance][data-studio-board="on"] .studio-month-day[data-studio-marked="true"] > span > span[style*="background-color"] { background-color: var(--role-ink) !important; }
+[data-studio-appearance][data-studio-board="on"] .studio-month-day:active { transform: scale(.96); opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-month-day { animation: none !important; transition: none; }
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-month-day:active { transform: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-month-day { animation: none !important; transition: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-month-day:active { transform: none; }
 }
 
 /* Day rail (the board's Schedule screen): a row of tall day pills above the day cards. Plain
    opaque surfaces, today in the accent, a dot per scheduled role. Tapping scrolls to that day. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip {
+[data-studio-appearance][data-studio-board="on"] .studio-day-chip {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -820,20 +820,20 @@
   color: var(--ink);
   transition: transform 180ms cubic-bezier(.32,.72,0,1);
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip:active { transform: scale(.94); }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip[aria-current="date"] {
+[data-studio-appearance][data-studio-board="on"] .studio-day-chip:active { transform: scale(.94); }
+[data-studio-appearance][data-studio-board="on"] .studio-day-chip[aria-current="date"] {
   background: var(--accent);
   color: var(--on-accent);
   border-color: transparent;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip[aria-current="date"] > span:first-child { color: var(--on-accent); opacity: .85; }
+[data-studio-appearance][data-studio-board="on"] .studio-day-chip[aria-current="date"] > span:first-child { color: var(--on-accent); opacity: .85; }
 @media (prefers-reduced-motion: reduce) {
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip { transition: none; }
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip:active { transform: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-day-chip { transition: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-day-chip:active { transform: none; }
 }
 
 /* The grid is a set of cards already; the wrapper must not be a box around them. */
-[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-week="original"][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item.studio-month-wrap {
+[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-week="original"][data-studio-board="on"] .studio-week-stage .week-seq-item.studio-month-wrap {
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -845,10 +845,10 @@
 
 /* Reduce Transparency: the sheet and header become opaque, as the system does. */
 @media (prefers-reduced-transparency: reduce) {
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,
-  [data-studio-appearance][data-studio-wallpaper="on"] .crown-wheel,
-  [data-studio-appearance][data-studio-wallpaper="on"] [role="tablist"][aria-label="View"],
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
+  [data-studio-appearance][data-studio-board="on"] .studio-week-stage,
+  [data-studio-appearance][data-studio-board="on"] .crown-wheel,
+  [data-studio-appearance][data-studio-board="on"] [role="tablist"][aria-label="View"],
+  [data-studio-appearance][data-studio-board="on"] .studio-week-header[data-studio-view="week"] {
     background: var(--studio-sheet, var(--elevated));
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -856,8 +856,8 @@
 }
 /* Increase Contrast: a stronger hairline instead of a lighter one. */
 @media (prefers-contrast: more) {
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
+  [data-studio-appearance][data-studio-board="on"] .studio-week-stage,
+  [data-studio-appearance][data-studio-board="on"] .studio-week-header[data-studio-view="week"] {
     border-color: var(--ink);
     border-width: 1px;
   }
@@ -866,4 +866,206 @@
 @media (prefers-reduced-motion: reduce) {
   [data-studio-appearance] .studio-week-stage,
   [data-studio-appearance]::before { transition: none; }
+}
+
+/* ===== Board overhaul =====
+   The Studio build's default look. Same layering as before (paper canvas, a functional layer of
+   header, sheet and dock, then opaque content), with the metal Crown and the stock iOS sheets
+   replaced so the whole app reads as one object instead of the old app with cards on top. */
+
+/* Header: a large title with two round arrow buttons, not a metal wheel. The wheel still takes
+   a drag, a scroll and the arrow keys, so navigation is unchanged. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-wheel {
+  display: flex;
+  align-items: center;
+  height: auto;
+  min-height: 3.4rem;
+  padding-right: 6.4rem;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  cursor: default;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-ridges,
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-sheen { display: none; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-readout {
+  position: static;
+  transform: none;
+  width: auto;
+  min-width: 0;
+  align-items: flex-start;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-readout > p:first-child {
+  font-size: calc(1.85rem * var(--studio-type-scale));
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-readout > p:not(:first-child),
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-readout > button {
+  margin-top: 0.15rem;
+  font-size: calc(0.9rem * var(--studio-type-scale));
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown > p[role="status"] {
+  margin-inline: 0;
+  padding: 0.25rem 0 0;
+  background: transparent;
+  text-align: left;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap {
+  top: 50%;
+  bottom: auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-top: -1.375rem;
+  border-radius: 999px;
+  background: var(--elevated);
+  border: 0.5px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap-left { left: auto; right: 3.15rem; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap-right { right: 0; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap::after,
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap-left::after,
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap-right::after {
+  display: block;
+  inset: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  border: solid var(--ink);
+  border-width: 0 2.5px 2.5px 0;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap-left::after { transform: translateX(2px) rotate(135deg); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap-right::after { transform: translateX(-2px) rotate(-45deg); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-cap:active { transform: scale(.92); }
+
+/* Sheets (More, Task): opaque paper with a large radius. Rows inside are plain opaque cards. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet {
+  background: var(--studio-sheet, var(--canvas));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 0;
+  border-radius: 2rem 2rem 0 0;
+  box-shadow: 0 -12px 44px rgba(0,0,0,.2);
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-elevated {
+  background: var(--elevated);
+  background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 0.5px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: none;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .sheet h2,
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .sheet [role="heading"] {
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+/* Dock: an ink pill with paper icons, the board's bottom bar. Tokens are re-pointed on the pill so
+   every control inside (labels, pressed fill, the Done button) keeps its contrast. */
+[data-studio-appearance][data-studio-board="on"] .app-dock { --dock-ink: var(--ink); --dock-paper: var(--elevated); --dock-hi: var(--studio-highlight); --dock-on-hi: var(--studio-on-highlight); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .app-dock .glass {
+  background: var(--dock-ink);
+  border: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 10px 30px rgba(0,0,0,.28);
+  --ink: var(--dock-paper);
+  --secondary: color-mix(in srgb, var(--dock-paper) 72%, transparent);
+  --tertiary: color-mix(in srgb, var(--dock-paper) 52%, transparent);
+  --fill: color-mix(in srgb, var(--dock-paper) 18%, transparent);
+  --line: color-mix(in srgb, var(--dock-paper) 22%, transparent);
+  --glass-line: color-mix(in srgb, var(--dock-paper) 22%, transparent);
+  --accent: var(--dock-hi);
+  --on-accent: var(--dock-on-hi);
+  color: var(--dock-paper);
+}
+
+/* Sheet groups: each kind of group is a soft color, like the board's Settings. Cards use the
+   pastel in light and a deep mix of it in dark, so the ink color is always the page ink. */
+[data-studio-appearance][data-studio-board="on"] .sheet {
+  --pastel-sage: #dce6d6; --pastel-peach: #f1dfcf; --pastel-butter: #f3e7bf; --pastel-sky: #dbe7f1;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="dark"] .sheet {
+  --pastel-sage: color-mix(in srgb, #7fae78 30%, var(--elevated));
+  --pastel-peach: color-mix(in srgb, #d9915f 30%, var(--elevated));
+  --pastel-butter: color-mix(in srgb, #d8b94a 28%, var(--elevated));
+  --pastel-sky: color-mix(in srgb, #6f9fcb 30%, var(--elevated));
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas { background: var(--pastel-sky); border-radius: 1.5rem; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas.stack-rows { background: var(--pastel-peach); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas[role="status"] { background: var(--pastel-sage); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas[role="list"],
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-canvas[role="listbox"] { background: var(--pastel-butter); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .sheet .bg-segment { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+
+/* Spread tab role cards: a big bold name and a big hour count, like the board's habit cards. */
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack input[aria-label$=" name"] {
+  font-size: calc(1.5rem * var(--studio-type-scale));
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack .studio-hour-chip {
+  font-size: calc(1.6rem * var(--studio-type-scale));
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+[data-studio-appearance][data-studio-board="on"] .studio-role-stack .studio-role-card > div:first-child { min-height: 5rem; }
+
+/* Inside the Week sheet the role chips scroll with the content. The shipped sticky offset assumed
+   the old header and pushed the row down over the Free time heading. */
+[data-studio-appearance][data-studio-board="on"] .studio-week-stage .spread-bubbles { position: static; }
+
+/* Over a personal wallpaper the title needs its own thin material, since art can be any color.
+   With the plain Board canvas it stays bare type. */
+[data-studio-appearance][data-studio-board="on"][data-studio-wallpaper="on"][data-studio-scheme] .crown-wheel {
+  padding: 0.55rem 6.4rem 0.55rem 1rem;
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--studio-sheet, var(--elevated)) calc(var(--studio-sheet-panel, 1) * 100%), transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  border: 0.5px solid var(--glass-stroke, color-mix(in srgb, var(--ink) 16%, transparent));
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-wallpaper="on"][data-studio-scheme] .crown > p[role="status"] {
+  display: table;
+  margin-inline: 0;
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.85rem;
+  background: var(--elevated);
+}
+
+/* A labelled control in the dock (Edit, Done) is a paper pill with ink text on the ink dock. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-material] .app-dock .glass .studio-readable-note {
+  background: var(--dock-paper);
+  box-shadow: none;
+  --accent: var(--dock-ink);
+  --ink: var(--dock-ink);
+  color: var(--dock-ink);
+}
+
+/* The title shares a row with the arrows (and the view toggle in Week and Month), so it truncates
+   rather than running under them, and is a size smaller there. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .crown-readout { max-width: 100%; flex: 1 1 auto; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .studio-week-header[data-studio-view="week"] .crown-readout > p:first-child {
+  font-size: calc(1.45rem * var(--studio-type-scale));
 }

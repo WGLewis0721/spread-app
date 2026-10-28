@@ -137,7 +137,7 @@ function reduce(
     case "use-starter":
       return edit(session, (draft) => appearanceFromStarter(action.id, draft), { suggestion: null });
     case "set-typeface": {
-      if (!["system", "editorial", "mono", "display"].includes(action.presetId)) return hold(session);
+      if (!["system", "editorial", "mono", "display", "rounded"].includes(action.presetId)) return hold(session);
       return edit(session, (draft) => ({ ...draft, typography: { ...draft.typography, presetId: action.presetId } }));
     }
     case "set-control-treatment": {

@@ -38,7 +38,7 @@ export const STUDIO_LIMITS = {
 } as const;
 
 export const MATERIAL_TREATMENTS = ["flat", "glass", "matte", "metal"] as const;
-export const TYPOGRAPHY_PRESET_IDS = ["system", "editorial", "mono", "display"] as const;
+export const TYPOGRAPHY_PRESET_IDS = ["system", "editorial", "mono", "display", "rounded"] as const;
 export const CONTROL_TREATMENT_IDS = ["original", "desktop", "soft-glass", "illustrated"] as const;
 export const STUDIO_ELEMENT_PARTS = ["crown", "responsibilities", "week", "tasks", "dock"] as const;
 export const STUDIO_ELEMENT_STYLES = ["inherit", "original", "outline", "comic", "glass"] as const;

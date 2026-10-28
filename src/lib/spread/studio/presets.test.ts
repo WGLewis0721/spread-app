@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { originalStudioAppearance, parseStudioAppearance } from "./contract.ts";
 import { resolveStudioScope } from "./appearance.ts";
-import { STUDIO_STARTERS, appearanceFromStarter } from "./presets.ts";
+import { STUDIO_STARTERS, appearanceFromStarter, boardStudioAppearance } from "./presets.ts";
+import { contrastRatioHex } from "./contrast.ts";
 
-test("four original starter looks use valid allowlisted appearance values", () => {
-  assert.deepEqual(STUDIO_STARTERS.map((item) => item.id), ["personal", "retro", "glass", "illustrated"]);
+test("the starter looks use valid allowlisted appearance values", () => {
+  assert.deepEqual(STUDIO_STARTERS.map((item) => item.id), ["board", "personal", "retro", "glass", "illustrated"]);
   for (const item of STUDIO_STARTERS) {
     assert.equal(parseStudioAppearance(item.appearance).ok, true);
     assert.equal(item.appearance.wallpaperAssetId, undefined);
@@ -59,4 +60,21 @@ test("illustrated starter preserves local wallpaper, provides editable two-color
   assert.equal(view.parts.week, "comic");
   assert.equal(view.style["--studio-highlight"], "#ff8a24");
   assert.ok(view.wallpaper?.includes("blob:"));
+});
+test("Board is a board look with no wallpaper, in both schemes, and the other starters are not", () => {
+  for (const systemScheme of ["light", "dark"] as const) {
+    const scope = resolveStudioScope({ enabled: true, appearance: boardStudioAppearance(), systemScheme });
+    assert.equal(scope.applied, true);
+    assert.equal(scope.board, true);
+    assert.equal(scope.wallpaper, null);
+    assert.equal(scope.scheme, systemScheme);
+    assert.match(scope.style["--font-sans"], /ui-rounded/);
+    // Ink must be real ink in dark, not a corrected mid gray.
+    assert.ok((contrastRatioHex(scope.style["--ink"], scope.style["--elevated"]) ?? 0) >= 7, `ink on card in ${systemScheme}`);
+    assert.ok((contrastRatioHex(scope.style["--secondary"], scope.style["--elevated"]) ?? 0) >= 4.5, `secondary on card in ${systemScheme}`);
+    assert.ok((contrastRatioHex(scope.style["--ink"], scope.style["--canvas"]) ?? 0) >= 7, `ink on canvas in ${systemScheme}`);
+  }
+  for (const item of STUDIO_STARTERS.filter((entry) => entry.id !== "board")) {
+    assert.equal(resolveStudioScope({ enabled: true, appearance: item.appearance }).board, false, item.id);
+  }
 });

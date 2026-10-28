@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { useStudioPortal } from "@/spread/components/studio/render";
 import { emptyContent, uid, type ContentBlock, type OutlineItem, type TaskContent } from "@/lib/spread/model";
 import { flushSpread, useSpread } from "@/lib/spread/store";
 import { SpreadIcon } from "@/spread/components/spread-icon";
@@ -19,6 +20,7 @@ const FORMATS: {
 ];
 
 export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: string; onClose: () => void }) {
+  const portal = useStudioPortal();
   const data = useSpread((s) => s.data);
   const setTaskText = useSpread((s) => s.setTaskText);
   const setTaskContent = useSpread((s) => s.setTaskContent);
@@ -88,7 +90,7 @@ export function TaskSheet({ hatId, taskId, onClose }: { hatId: string; taskId: s
 
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
-      <Dialog.Portal>
+      <Dialog.Portal container={portal}>
         <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
         <Dialog.Content
           className={`sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl bg-elevated px-5 pt-3 pb-safe outline-none ${openNote ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}

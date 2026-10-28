@@ -5,7 +5,7 @@
  */
 import { originalStudioAppearance, parseStudioAppearance, type StudioAppearanceV1 } from "./contract.ts";
 
-export type StudioStarterId = "personal" | "retro" | "glass" | "illustrated";
+export type StudioStarterId = "board" | "personal" | "retro" | "glass" | "illustrated";
 export type StudioStarter = {
   id: StudioStarterId;
   label: string;
@@ -15,7 +15,33 @@ export type StudioStarter = {
 
 const original = originalStudioAppearance();
 
+/**
+ * The Studio default. Warm paper, ink, rounded type and the board's stacked role cards, with no
+ * wallpaper needed. A saved look replaces it; Original in the editor shows it too, because the
+ * shipped look is what a build without the Studio flag renders.
+ */
+export function boardStudioAppearance(): StudioAppearanceV1 {
+  return {
+    ...original,
+    id: "studio-board",
+    name: "Board",
+    mode: "system",
+    wallpaper: { ...original.wallpaper, dim: 0, blur: 0 },
+    palette: { accent: "#1d1a16", surface: "#fffaf2", text: "#1d1a16", secondaryText: "#665e53", sheet: "#f6efe2", highlight: "#ff8a24" },
+    material: { treatment: "glass", transparency: 0.1, depth: 0.2 },
+    typography: { presetId: "rounded", scale: 1.04, numeralEmphasis: 0.6 },
+    controls: { density: "comfortable", treatmentId: "original" },
+    effects: { decorationIntensity: 0, animationIntensity: 0.5 },
+  };
+}
+
 export const STUDIO_STARTERS: readonly StudioStarter[] = [
+  {
+    id: "board",
+    label: "Board",
+    description: "Warm paper, rounded type, role-colored stacked cards.",
+    appearance: boardStudioAppearance(),
+  },
   {
     id: "personal",
     label: "Personal Canvas",

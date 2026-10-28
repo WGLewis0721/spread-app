@@ -91,6 +91,8 @@ export type StudioScope = {
   style: Record<string, string>;
   warnings: string[];
   wallpaper: string | null;
+  /** The board look: stacked role cards, day rail, colored month. A wallpaper look or the Board look. */
+  board: boolean;
 };
 
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
@@ -291,6 +293,7 @@ function inactiveScope(scheme: StudioScheme): StudioScope {
     style: {},
     warnings: [],
     wallpaper: null,
+    board: false,
   };
 }
 
@@ -451,6 +454,25 @@ function materialLabel(treatment: MaterialTreatment): string {
 }
 
 /**
+ * The Board look is authored in light. In dark it uses a warm-charcoal palette of its own, because
+ * contrast correction alone turns a dark ink into a mid gray.
+ */
+function withBoardScheme(appearance: StudioAppearanceV1, scheme: StudioScheme): StudioAppearanceV1 {
+  if (appearance.id !== "studio-board" || scheme !== "dark") return appearance;
+  return {
+    ...appearance,
+    palette: {
+      ...appearance.palette,
+      accent: "#f6efe4",
+      surface: "#2b2621",
+      text: "#f6efe4",
+      secondaryText: "#bdb3a4",
+      sheet: "#1d1915",
+    },
+  };
+}
+
+/**
  * Map one appearance onto a closed set of CSS variables.
  * Flag off, the original id, and an unknown catalog id produce an empty style
  * so the shipped stylesheet stays in charge. Variables are scoped by the caller.
@@ -467,7 +489,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     return quiet;
   }
 
-  const appearance = boundAppearance(selected);
+  const appearance = withBoardScheme(boundAppearance(selected), scheme);
   if (appearance.id === "original") return inactiveScope(scheme);
 
   const warnings: string[] = [];
@@ -491,7 +513,8 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const secondary = secondaryFix.color;
   const lum = relativeLuminance(hexToRgb(surface) ?? { r: 255, g: 255, b: 255 });
   const shiftedCanvas = mixHex(surface, lum > 0.45 ? "#000000" : "#ffffff", 0.08);
-  const canvas = canvasForRenderedInk(shiftedCanvas, surface, [text, secondary], floors.text);
+  const boardDark = appearance.id === "studio-board" && scheme === "dark";
+  const canvas = canvasForRenderedInk(boardDark ? mixHex(surface, "#000000", 0.6) : shiftedCanvas, surface, [text, secondary], floors.text);
   const tertiary = enforceContrast(mixHex(secondary, surface, 0.35), surface, floors.ui).color;
   const dangerSeed = scheme === "dark" ? SHIPPED_DARK.danger : SHIPPED_LIGHT.danger;
   const cautionSeed = scheme === "dark" ? SHIPPED_DARK.caution : SHIPPED_LIGHT.caution;
@@ -555,6 +578,7 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     editorial: '"Iowan Old Style", "Baskerville", Georgia, serif',
     mono: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace',
     display: '"Arial Black", Impact, system-ui, sans-serif',
+    rounded: 'ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, -apple-system, sans-serif',
   };
 
   if (material !== requestedMaterial) warnings.push(`${materialLabel(requestedMaterial)} was drawn flat.`);
@@ -642,5 +666,6 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     style: ordered,
     warnings,
     wallpaper,
+    board: Boolean(wallpaper) || appearance.id === "studio-board",
   };
 }

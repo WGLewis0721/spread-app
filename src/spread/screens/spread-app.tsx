@@ -46,7 +46,7 @@ import { signOut } from "@/lib/auth/client";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
-import { StudioStackProbe } from "@/spread/components/studio/render";
+import { StudioStackProbe, useStudioPortal } from "@/spread/components/studio/render";
 import { StudioLivePlanner } from "@/spread/components/studio/live-planner";
 import { cycleDetent, detentTops, followTop, nearestDetent, STUDIO_WEEK_DETENTS, type StudioWeekDetent } from "@/lib/spread/studio/week-detents";
 
@@ -1548,9 +1548,10 @@ function AppSheet({ sheet, setSheet, onPrint }: { sheet: Sheet; setSheet: (sheet
   }
 
   useLockPageScroll(Boolean(sheet));
+  const portal = useStudioPortal();
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
-      <Dialog.Portal>
+      <Dialog.Portal container={portal}>
         <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
         <Dialog.Content className={cn("sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none", sheet === "more" && "sheet-stack")}>
           {sheet === "more" && <MoreSheet setSheet={go} onPrint={onPrint} />}
