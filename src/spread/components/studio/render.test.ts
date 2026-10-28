@@ -38,7 +38,14 @@ test("render: the scope is opt-in, scoped, and free of storage or data-theme", (
   assert.equal(metal.includes("backdrop-filter: blur"), false);
   assert.match(metal, /\.crown-wheel/);
   assert.match(css, /font-family:\s*var\(--font-sans\)/);
-  assert.equal(css.includes("@font-face"), false);
+  // Typography policy: no downloaded fonts. The single exception is the bundled, locally
+  // served Erica One face (SIL OFL), used for headings only when the wallpaper-derived look
+  // asks for display type. Any other @font-face, or any remote URL, still fails.
+  const faces = css.match(/@font-face\s*\{[^}]*\}/g) ?? [];
+  assert.equal(faces.length, 1);
+  assert.match(faces[0], /font-family:\s*"Erica One"/);
+  assert.match(faces[0], /url\("\.\.\/\.\.\/fonts\/EricaOne-Regular\.ttf"\)/);
+  assert.equal(/https?:|\/\//.test(faces[0].replace(/url\("\.\.\/\.\.\/fonts\//, "")), false);
   assert.equal(css.includes("fonts.googleapis"), false);
   assert.equal(/falcons|avengers|toy story/i.test(css + source), false);
 });

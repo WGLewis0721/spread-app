@@ -14,6 +14,10 @@ import {
   STUDIO_ELEMENT_STYLES,
   TYPOGRAPHY_PRESET_IDS,
   WALLPAPER_FITS,
+  SHEET_EDGES,
+  CHECK_GLYPHS,
+  type SheetEdge,
+  type CheckGlyph,
   originalStudioAppearance,
   parseStudioAppearance,
   studioAppearanceOrDefault,
@@ -91,7 +95,11 @@ export type StudioScope = {
   style: Record<string, string>;
   warnings: string[];
   wallpaper: string | null;
+  skin: { sheetEdge: SheetEdge; checkGlyph: CheckGlyph; display: boolean } | null;
 };
+
+/** Erica One is bundled locally (OFL) in render.css. Heading use only; numerals stay in the body face. */
+const DISPLAY_HEADING_FONT = '"Erica One", "Arial Black", Impact, system-ui, sans-serif';
 
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 const BLOB_URL = /^blob:[A-Za-z0-9][A-Za-z0-9:/._~%-]{0,2000}$/;
@@ -139,6 +147,17 @@ export const STUDIO_STYLE_KEYS = [
   "--studio-metal-lo",
   "--studio-matte-line",
   "--studio-highlight",
+  "--studio-sheet",
+  "--studio-outline",
+  "--studio-hard-shadow",
+  "--studio-focus",
+  "--studio-heading-font",
+  "--studio-card-shadow",
+  "--studio-crown",
+  "--studio-crown-fg",
+  "--studio-crown-ridge-opacity",
+  "--studio-on-highlight",
+  "--studio-card-radius",
   ...ROLE_KEYS,
   "--studio-status-done",
   "--studio-status-danger",
@@ -199,6 +218,7 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
       text: color(appearance.palette?.text, fallback.palette.text),
       secondaryText: color(appearance.palette?.secondaryText, fallback.palette.secondaryText),
       ...(appearance.palette?.highlight ? { highlight: color(appearance.palette.highlight, "#ff8a24") } : {}),
+      ...(appearance.palette?.sheet ? { sheet: color(appearance.palette.sheet, fallback.palette.surface) } : {}),
     },
     material: {
       treatment: oneOf<MaterialTreatment>(appearance.material?.treatment, MATERIAL_TREATMENTS, "flat"),
@@ -228,6 +248,15 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
       decorationIntensity: clampNumber(appearance.effects?.decorationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
       animationIntensity: clampNumber(appearance.effects?.animationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
     },
+    ...(appearance.skin ? {
+      skin: {
+        sheetEdge: oneOf<SheetEdge>(appearance.skin.sheetEdge, SHEET_EDGES, "round"),
+        outline: clampNumber(appearance.skin.outline, 0, 4, 0),
+        hardShadow: clampNumber(appearance.skin.hardShadow, 0, 4, 0),
+        checkGlyph: oneOf<CheckGlyph>(appearance.skin.checkGlyph, CHECK_GLYPHS, "check"),
+        focusY: clampNumber(appearance.skin.focusY, 0, STUDIO_LIMITS.unitMax, 0.5),
+      },
+    } : {}),
   };
 }
 
@@ -280,6 +309,7 @@ function inactiveScope(scheme: StudioScheme): StudioScope {
     style: {},
     warnings: [],
     wallpaper: null,
+    skin: null,
   };
 }
 
@@ -521,6 +551,21 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const shadowAlpha = Math.min(0.5, round4((scheme === "dark" ? 0.28 : 0.1) + depth * 0.12));
   const glassAlpha = material === "glass" ? Math.min(0.92, Math.max(0.55, panel)) : 1;
   const numeral = appearance.typography.numeralEmphasis;
+  // Sheet tint comes from the wallpaper. It is used only if the drawn ink clears the
+  // contrast floor on it; otherwise the card surface is used.
+  const sheetSeed = surfaceForScheme(appearance.palette.sheet ?? appearance.palette.surface, scheme);
+  const sheetLift = liftBackground(sheetSeed, floors.text);
+  const sheet = [text, secondary].every((ink) => (contrastRatioHex(ink, sheetLift.color) ?? 1) + 1e-6 >= floors.text)
+    ? sheetLift.color
+    : surface;
+  // Without a skin the Week sheet keeps its shipped 3px frame; skin rules are gated on data-studio-skin.
+  const skinOutline = appearance.skin ? appearance.skin.outline : 3;
+  const skinShadow = appearance.skin ? appearance.skin.hardShadow : 0;
+  // Crown body is the darker of ink and sheet, so it reads dark in light looks and in dark looks.
+  const lumHex = (hex: string) => relativeLuminance(hexToRgb(hex) ?? { r: 255, g: 255, b: 255 });
+  const crownBg = lumHex(text) <= lumHex(sheet) ? text : sheet;
+  const crownFg = crownBg === text ? sheet : text;
+  const onHighlight = contrastingInk(appearance.palette.highlight ?? "#ff8a24");
   const fonts: Record<TypographyPresetId, string> = {
     system: SHIPPED_FONT_SANS,
     editorial: '"Iowan Old Style", "Baskerville", Georgia, serif',
@@ -575,6 +620,24 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--studio-metal-lo": metalLo,
     "--studio-matte-line": rgba(text, depth * 0.08),
     "--studio-highlight": appearance.palette.highlight ?? "#ff8a24",
+    "--studio-sheet": sheet,
+    "--studio-outline": `${formatCssNumber(skinOutline)}px`,
+    "--studio-hard-shadow": `${formatCssNumber(skinShadow)}px`,
+    "--studio-focus": formatCssNumber(appearance.skin?.focusY ?? 0.5),
+    "--studio-card-shadow": skinShadow > 0
+      ? `${formatCssNumber(skinShadow)}px ${formatCssNumber(skinShadow)}px 0 ${text}`
+      : `0 ${formatCssNumber(shadowY)}px ${formatCssNumber(shadowBlur)}px rgba(0, 0, 0, ${formatCssNumber(shadowAlpha)})`,
+    "--studio-crown": crownBg,
+    "--studio-crown-fg": crownFg,
+    // The same locally measured outline strength determines whether the Crown
+    // should retain mechanical ridges: soft photos have 0, graphic linework more.
+    "--studio-crown-ridge-opacity": appearance.skin
+      ? formatCssNumber(Math.min(1,Math.max(0,appearance.skin.outline/3))) : "1",
+    "--studio-on-highlight": onHighlight,
+    "--studio-card-radius": skinOutline >= 2 ? "14px 14px 14px 4px" : "18px",
+    "--studio-heading-font": appearance.typography.presetId === "display"
+      ? DISPLAY_HEADING_FONT
+      : "var(--font-sans)",
   };
   roles.forEach((color, index) => {
     style[`--studio-role-${index + 1}`] = color;
@@ -606,5 +669,8 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     style: ordered,
     warnings,
     wallpaper,
+    skin: appearance.skin
+      ? { sheetEdge: appearance.skin.sheetEdge, checkGlyph: appearance.skin.checkGlyph, display: appearance.typography.presetId === "display" }
+      : null,
   };
 }

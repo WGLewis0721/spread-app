@@ -231,7 +231,7 @@ try {
     await stage.waitFor({state:"visible"});
     // The detent is intentionally retained when the user revisits the Week.
     // Normalize to Half rather than assuming every new photo resets their state.
-    const detentToggle=page.getByRole("button",{name:/Week sheet (half|peek|full)/});
+    const detentToggle=page.getByRole("slider",{name:"Week sheet position"});
     for(let attempt=0;attempt<3 && await stage.getAttribute("data-studio-detent")!=="half";attempt++){
       await detentToggle.click();
     }
@@ -251,12 +251,15 @@ try {
     await detentToggle.click(); // Half -> Full
     await page.waitForTimeout(470);
     if(await stage.getAttribute("data-studio-detent")!=="full")throw new Error("Full detent did not open");
-    const fullPaint=await stage.evaluate(el=>({
+    // Claude's nonmodal material sheet scrolls its Week CONTENT, not the
+    // outer fixed panel. Test the real scroll owner without changing layout.
+    const scrollbody = stage.locator(".studio-week-scrollbody");
+    const fullPaint=await scrollbody.evaluate(el=>({
       overflow:getComputedStyle(el).overflowY,
       maxScroll:el.scrollHeight-el.clientHeight,
     }));
-    if(fullPaint.overflow!=="auto"||fullPaint.maxScroll<=0)throw new Error("Full sheet is not scrollable: "+JSON.stringify(fullPaint));
-    await stage.evaluate(el=>{el.scrollTop=el.scrollHeight});
+    if(fullPaint.overflow!=="auto"||fullPaint.maxScroll<=0)throw new Error("Full Week content is not scrollable: "+JSON.stringify(fullPaint));
+    await scrollbody.evaluate(el=>{el.scrollTop=el.scrollHeight});
     await page.waitForTimeout(80);
     const end=await page.locator(".studio-week-stage [data-day]").last().evaluate(el=>el.getBoundingClientRect().bottom);
     const dockTop=await page.locator(".app-dock").first().evaluate(el=>el.getBoundingClientRect().top);

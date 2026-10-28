@@ -512,3 +512,13 @@ test("appearance: every per-element treatment is independent and stays scoped", 
   assert.deepEqual(hidden.style, {});
   assert.equal(hidden.parts.crown, "original");
 });
+
+test("appearance: Crown ridges scale with measured skin outline, not a named preset",()=>{
+ const first=custom({skin:{
+   sheetEdge:"round",outline:0,hardShadow:0,checkGlyph:"check",focusY:0.5,
+ }});
+ const stronger=custom({skin:{...first.skin!,outline:3,hardShadow:3,sheetEdge:"scallop"}});
+ assert.equal(applied(resolveStudioScope({enabled:true,appearance:first}))["--studio-crown-ridge-opacity"],"0");
+ assert.equal(applied(resolveStudioScope({enabled:true,appearance:stronger}))["--studio-crown-ridge-opacity"],"1");
+ assert.equal(resolveStudioScope({enabled:true,appearance:originalStudioAppearance()}).applied,false);
+});

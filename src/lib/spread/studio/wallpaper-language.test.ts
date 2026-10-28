@@ -38,3 +38,59 @@ test("invalid raster cannot crash or infer a person",()=>{
  const result=measureWallpaper(new Uint8ClampedArray(2),100,100);
  assert.deepEqual(result.swatches,[]);
 });
+
+// ---- skin: every shape comes from the measurements of the image in hand ----
+function poster(w:number,h:number,busyFrom:number,busyTo:number):Uint8ClampedArray{
+ // Hard two-color linework inside [busyFrom, busyTo) rows, flat paper elsewhere.
+ const rgba=new Uint8ClampedArray(w*h*4);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  const busy=y>=busyFrom&&y<busyTo;
+  const c=busy?((x+y)%4<2?[245,214,45]:[14,21,26]):[173,212,221];
+  rgba.set([...c,255],(y*w+x)*4);
+ }
+ return rgba;
+}
+function soft(w:number,h:number):Uint8ClampedArray{
+ const rgba=new Uint8ClampedArray(w*h*4);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  rgba.set([200-Math.round(80*y/h),160-Math.round(40*y/h),130+Math.round(60*x/w),255],(y*w+x)*4);
+ }
+ return rgba;
+}
+test("outline, shadow, edge and glyph follow the image: linework gets them, a soft photo does not",()=>{
+ const lines=languageFromPixels(poster(120,240,0,240),120,240).skin;
+ const photo=languageFromPixels(soft(120,240),120,240).skin;
+ assert.ok(lines.outline>=2,"dense linework earns an outline");
+ assert.equal(lines.hardShadow,lines.outline);
+ assert.equal(photo.outline,0);
+ assert.equal(photo.hardShadow,0);
+ assert.equal(photo.sheetEdge,"round");
+ assert.equal(photo.checkGlyph,"check");
+ assert.notDeepEqual(lines,photo);
+});
+test("the wallpaper focus follows where the busy band is, not a fixed offset",()=>{
+ const top=languageFromPixels(poster(120,240,0,90),120,240).skin.focusY;
+ const bottom=languageFromPixels(poster(120,240,150,240),120,240).skin.focusY;
+ assert.ok(top<0.4,`top-heavy art focuses high (${top})`);
+ assert.ok(bottom>0.6,`bottom-heavy art focuses low (${bottom})`);
+});
+test("sheet tint and ink come from the image and clear contrast on both sheet and card",()=>{
+ const l=languageFromPixels(poster(120,240,0,110),120,240);
+ const p=l.palette;
+ assert.ok(p.sheet,"a light wallpaper gets a wallpaper-tinted sheet");
+ assert.ok((contrastRatioHex(p.text,p.sheet!)??0)>=4.5);
+ assert.ok((contrastRatioHex(p.secondaryText,p.sheet!)??0)>=4.5);
+ assert.ok((contrastRatioHex(p.secondaryText,p.surface)??0)>=4.5);
+ const other=languageFromPixels(poster(120,240,0,110).map((v,i)=>i%4===3?255:255-v),120,240).palette;
+ assert.notEqual(other.sheet??other.surface,p.sheet);
+});
+test("a derived skin survives the strict contract and rejects stray fields",()=>{
+ const l=languageFromPixels(poster(120,240,0,240),120,240);
+ const next=reduceStudioSession(openStudioSession({render:originalStudioAppearance(),imageMessage:null,planner:"p"}),{type:"apply-wallpaper-language",language:l}).state.draft;
+ const parsed=parseStudioAppearance(next);
+ assert.equal(parsed.ok,true);
+ assert.deepEqual(parsed.ok&&parsed.value.skin,l.skin);
+ assert.equal(parseStudioAppearance({...next,skin:{...next.skin,font:"x"}}).ok,false);
+ assert.equal(parseStudioAppearance({...next,skin:{...next.skin,outline:9}}).ok,false);
+ assert.equal(parseStudioAppearance({...next,skin:{...next.skin,sheetEdge:"zigzag"}}).ok,false);
+});

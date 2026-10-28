@@ -128,6 +128,7 @@ function reduce(
         material:{treatment:language.treatment==="soft-glass"?"glass":"flat",transparency:language.treatment==="soft-glass"?0.14:0,depth:language.treatment==="soft-glass"?0.55:0.12},
         typography:{...draft.typography,presetId:language.typeface},
         controls:{density:draft.controls.density,treatmentId:language.treatment,parts:{...language.parts}},
+        skin:{...language.skin},
       }));
       return { ...applied, state:{...applied.state,notice:"Local design created. "+language.explanation+". Review and tap Apply."} };
     }

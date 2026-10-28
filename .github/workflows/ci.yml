@@ -121,6 +121,70 @@ jobs:
           path: screenshots/studio-editor/
           retention-days: 14
 
+  studio-ui-screenshots:
+    # Legacy UI proof intentionally uses the flag-off planner and injected scope;
+    # do not confuse its screenshot count with the live wallpaper-derived audit.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run original Studio UI screenshot suite
+        env:
+          VITE_SPREAD_STUDIO: "0"
+        run: |
+          npm run dev > /tmp/studio-ui-vite.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS http://127.0.0.1:8080 >/dev/null; then break; fi
+            sleep 1
+          done
+          node --experimental-strip-types src/spread/components/studio/studio-ui.screenshots.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-ui-evidence
+          path: screenshots/studio-g1/
+          retention-days: 14
+
+  studio-material-matrix:
+    # Independent LIVE import tests. All measured colors, edges and focus points
+    # come from 3 different local wallpapers; no bundled look or remote image.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Audit 54 live cases, contrast, 200% type and Reduce Motion
+        env:
+          VITE_SPREAD_STUDIO: "1"
+        run: |
+          npm run dev > /tmp/studio-material-vite.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS http://127.0.0.1:8080 >/dev/null; then break; fi
+            sleep 1
+          done
+          node --experimental-strip-types src/spread/components/studio/material-skin.audit.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-material-evidence
+          path: screenshots/studio-material/
+          retention-days: 14
+
   swift-core:
     runs-on: ubuntu-latest
     timeout-minutes: 15
