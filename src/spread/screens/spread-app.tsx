@@ -28,6 +28,7 @@ import { CategoryBadge } from "@/spread/components/category-badge";
 import { TaskSheet } from "@/spread/components/task-sheet";
 import { deriveLocalStatus, getSaveFacts, subscribeSaveFacts } from "@/lib/spread/local-status";
 import { openTasksOf } from "@/lib/spread/task-rollover";
+import { roleCardInks } from "@/lib/spread/studio/contrast";
 import { placedDay } from "@/lib/spread/task-schedule";
 import { completionHaptic } from "@/lib/spread/haptics";
 import { readViewContext, writeViewContext } from "@/lib/spread/view-context";
@@ -856,9 +857,13 @@ function WeekScreen() {
                   onReview={openTasksOf(data).length > 0 ? () => setCarryAsk(true) : undefined}
                 />
               </div>
-              <div className="mt-6 overflow-hidden rounded-[22px] bg-elevated">
+              <div className="studio-role-stack mt-6 overflow-hidden rounded-[22px] bg-elevated">
                 {rows.map(({ hat, box }, index) => (
-                  <div key={hat.id} className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(index + 1) * 45}ms` }}>
+                  <div
+                    key={hat.id}
+                    className={cn("week-seq-item", profilePlay && "cascade-item")}
+                    style={roleStackStyle(hat.color, (index + 1) * 45)}
+                  >
                     <RoleBlock
                       hat={hat}
                       hours={box.hours}
@@ -973,6 +978,17 @@ function NewLifeBox({ onClick }: { onClick: () => void }) {
       </span>
     </button>
   );
+}
+
+function roleStackStyle(color: string, delayMs: number): CSSProperties {
+  const inks = roleCardInks(color);
+  return {
+    animationDelay: `${delayMs}ms`,
+    "--role": color,
+    "--role-ink": inks.ink,
+    "--role-ink-2": inks.secondary,
+    "--role-ink-3": inks.tertiary,
+  } as CSSProperties;
 }
 
 type Row = {

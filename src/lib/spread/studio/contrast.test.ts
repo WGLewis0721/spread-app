@@ -63,3 +63,14 @@ test("contrast: transparency is capped without looking at an image", () => {
   assert.equal(source.includes("enum "), false);
   assert.equal(source.includes("@/"), false);
 });
+
+test("role card inks clear 4.5:1 on every shipped role color", async () => {
+  const { roleCardInks } = await import("./contrast.ts");
+  const { ROLE_COLORS } = await import("../model.ts");
+  for (const color of ROLE_COLORS) {
+    const inks = roleCardInks(color);
+    for (const [name, value] of Object.entries(inks)) {
+      assert.ok((contrastRatioHex(value, color) ?? 0) >= 4.5, `${name} ${value} on ${color}`);
+    }
+  }
+});

@@ -678,6 +678,43 @@
 [data-studio-appearance][data-studio-wallpaper="on"] .crown-sheen,
 [data-studio-appearance][data-studio-wallpaper="on"] .crown-cap::after { display: none; }
 
+/* Stacked role cards (Spread tab). Each responsibility is a card in its own color, overlapping
+   the one before it so only a rounded title edge shows, like a hand of cards. Ink is chosen per
+   color in code (readableInkOn), and the card re-points the app's own ink, secondary, line, fill
+   and accent variables, so every child (hours, tasks, add row) stays legible without per-element
+   overrides. The Spread logo is a fan of cards; this is the same idea at list scale. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack.bg-elevated,
+[data-studio-appearance][data-studio-scheme][data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack.bg-elevated {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item {
+  position: relative;
+  margin-top: -1.1rem;
+  padding-bottom: 1.1rem;
+  border-radius: 1.5rem;
+  background: var(--role);
+  color: var(--role-ink);
+  --ink: var(--role-ink);
+  --secondary: var(--role-ink-2);
+  --tertiary: var(--role-ink-3);
+  --line: color-mix(in srgb, var(--role-ink) 24%, transparent);
+  --fill: color-mix(in srgb, var(--role-ink) 14%, transparent);
+  --accent: var(--role-ink);
+  --on-accent: var(--role);
+  box-shadow: inset 0 0.5px 0 color-mix(in srgb, white 45%, transparent), 0 -4px 14px rgba(0,0,0,.16);
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item:first-child { margin-top: 0; }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item:last-child { padding-bottom: 0; }
+/* The hairline between roles is replaced by the card edge. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack > .week-seq-item section > div.border-t:first-child { display: none; }
+/* Summary and New Spread match the card radius. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-readable-panel { border-radius: 1.5rem; }
+
 /* Reduce Transparency: the sheet and header become opaque, as the system does. */
 @media (prefers-reduced-transparency: reduce) {
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,

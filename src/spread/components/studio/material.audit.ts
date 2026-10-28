@@ -111,10 +111,15 @@ try {
       // Spread tab: one grouped list. Role rows reuse .week-seq-item but must not become nested cards.
       await page.waitForTimeout(900);
       const nested=await page.evaluate(()=>[...document.querySelectorAll<HTMLElement>(".week-seq-item")]
-        .filter(el=>!el.closest(".studio-week-stage"))
+        .filter(el=>!el.closest(".studio-week-stage")&&!el.parentElement?.classList.contains("studio-role-stack"))
         .map(el=>{const c=getComputedStyle(el);return {r:c.borderTopLeftRadius,w:c.borderTopWidth,s:c.boxShadow};})
         .filter(v=>v.r!=="0px"||v.w!=="0px"||v.s!=="none"));
       if(nested.length) errors.push(shape+"/"+scheme+": Spread tab rows became nested cards "+JSON.stringify(nested[0]));
+      // Stacked role cards: every visible text node on the Spread tab must clear contrast on its card.
+      const spreadText=await auditStudioContrast(page);
+      if(spreadText.length)errors.push(shape+"/"+scheme+": Spread tab text audit "+spreadText.length+" violations "+JSON.stringify(spreadText[0]).slice(0,240));
+      const stackCards=await page.locator(".studio-role-stack > .week-seq-item").count();
+      if(stackCards<3)errors.push(shape+"/"+scheme+": expected stacked role cards, found "+stackCards);
       await page.getByRole("tab",{name:"Week",exact:true}).click();
       await page.waitForFunction(()=>{
         const host=document.querySelector<HTMLElement>('[data-studio-wallpaper="on"]');

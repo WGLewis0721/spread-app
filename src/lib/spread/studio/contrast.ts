@@ -66,6 +66,29 @@ export function contrastRatioHex(foreground: string, background: string): number
   return contrastRatio(fg, bg);
 }
 
+/** Near-black or white, whichever reads better on a role color. Used by the stacked role cards. */
+export function readableInkOn(background: string): string {
+  const dark = "#0a0a0b";
+  const light = "#ffffff";
+  const onDark = contrastRatioHex(dark, background) ?? 0;
+  const onLight = contrastRatioHex(light, background) ?? 0;
+  return onDark >= onLight ? dark : light;
+}
+
+/**
+ * Ink, secondary and tertiary text colors for a card painted in a role color. All three are
+ * forced to 4.5:1 on that color, so the stacked role cards never rely on a fixed gray.
+ */
+export function roleCardInks(background: string): { ink: string; secondary: string; tertiary: string } {
+  const ink = readableInkOn(background);
+  const inkRgb = hexToRgb(ink);
+  const bgRgb = hexToRgb(background);
+  if (!inkRgb || !bgRgb) return { ink, secondary: ink, tertiary: ink };
+  const soften = (amount: number) =>
+    enforceContrast(rgbToHex(mixRgb(inkRgb, bgRgb, amount)), background, 4.5).color;
+  return { ink, secondary: soften(0.14), tertiary: soften(0.26) };
+}
+
 export function mixRgb(from: Rgb, to: Rgb, amount: number): Rgb {
   const t = Math.max(0, Math.min(1, Number.isFinite(amount) ? amount : 0));
   return {
