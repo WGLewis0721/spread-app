@@ -23,10 +23,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..", "..", "..");
 const baseURL = process.env.SCREENSHOT_BASE_URL ?? "http://127.0.0.1:8080";
 const outDir = join(root, "screenshots", "studio-g1");
-const artifactDir = "/opt/cursor/artifacts/screenshots/studio-g1";
+const artifactDir = process.env.STUDIO_ARTIFACT_DIR ?? outDir;
 const nativeInit = readFileSync(join(root, "scripts", "ios-bridge-sim", "native-init.js"), "utf8");
 const renderCss = readFileSync(join(here, "render.css"), "utf8");
-const widths = [390, 820, 1440] as const;
+const widths = [390, 402, 820, 1440] as const;
 const schemes = ["light", "dark"] as const;
 const WALLPAPER_ID = "wall-1";
 
@@ -144,7 +144,7 @@ async function main() {
   mkdirSync(artifactDir, { recursive: true });
   const browser = await chromium.launch({
     headless: true,
-    executablePath: process.env.CHROME_PATH ?? "/opt/google/chrome/chrome",
+    executablePath: process.env.CHROME_PATH ?? chromium.executablePath(),
   });
   const pageErrors: string[] = [];
   const files: string[] = [];
@@ -187,7 +187,7 @@ async function main() {
     for (const scheme of schemes) {
       await setScheme(page, scheme);
       for (const width of widths) {
-        await page.setViewportSize({ width, height: width === 1440 ? 900 : width === 820 ? 1180 : 844 });
+        await page.setViewportSize({ width, height: width === 1440 ? 900 : width === 820 ? 1180 : width === 402 ? 874 : 844 });
         for (const mode of ["off", "color", "image"] as const) {
           const scope = scopeFor(mode, scheme, wallpaperUrl);
           await paint(page, scope);
