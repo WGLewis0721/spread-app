@@ -81,7 +81,7 @@ All paths are under `docs/design/`.
 
 ## 5. Studio (wallpaper-driven personalization)
 
-Not on `main`. It is on the branch `spread-studio` (draft PR #93) behind `VITE_SPREAD_STUDIO`, default off, with its documents in `docs/spread-studio/` there. When it merges, move that folder to `docs/design/studio/` in the same pull request and add it to the router and the table above.
+Not on `main`. It is on the branch `spread-studio` (no PR into `main` yet) behind `VITE_SPREAD_STUDIO`, default off, docs in `docs/spread-studio/` there. Rebuild spec: [specs/2026-10-28-studio-rebuild.md](specs/2026-10-28-studio-rebuild.md). On merge, move that folder to `docs/design/studio/` in the same pull request and add it to the router and the table above.
 
 Its one rule exception is narrow: with the flag on, a validated per-profile appearance may override scoped colors, system font stacks, material paint and control geometry inside `[data-studio-appearance]`. Flag-off output stays identical to the golden baseline. It does not authorize merging or releasing. Studio follows [platforms/APPLE_DESIGN_PRINCIPLES.md](platforms/APPLE_DESIGN_PRINCIPLES.md): the image decides a tint, a dim, a material thickness and a mode; layout never changes with the image.
 
