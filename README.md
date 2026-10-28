@@ -1,4 +1,4 @@
-[Live site](https://thespreadapp.com/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design direction](DESIGN.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md)
+[Live site](https://thespreadapp.com/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design docs](docs/design/README.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md)
 
 # Spread
 
@@ -20,7 +20,7 @@ The [standalone launch-video workspace](tools/launch-video/README.md) preserves 
 
 ## The site
 
-The first screen is the public landing page and the way into the planner. Its design direction is written down in **[DESIGN.md](DESIGN.md)**: warm paper becoming a polished digital product, one focal object per section built from real product parts, the brand board, the type scale, motion rules and guardrails. Read it before changing the landing page.
+The first screen is the public landing page and the way into the planner. Its design direction is written down in **[docs/design/landing/DESIGN.md](docs/design/landing/DESIGN.md)**: warm paper becoming a polished digital product, one focal object per section built from real product parts, the brand board, the type scale, motion rules and guardrails. Read it before changing the landing page.
 
 The short version:
 
@@ -44,7 +44,7 @@ src/lib/spread            week data and actions
 src/styles.css            app styles, then the landing block ("Landing page only")
 ```
 
-Planner UI rules: [docs/design/SPREAD_DESIGN_SYSTEM.md](docs/design/SPREAD_DESIGN_SYSTEM.md).
+All design guidance (planner rules, landing page, iPhone/iPad/Duo, icons) is mapped in [docs/design/README.md](docs/design/README.md). Planner UI rules: [docs/design/planner/SPREAD_DESIGN_SYSTEM.md](docs/design/planner/SPREAD_DESIGN_SYSTEM.md).
 
 Gestures call actions. They do not write week data themselves.
 

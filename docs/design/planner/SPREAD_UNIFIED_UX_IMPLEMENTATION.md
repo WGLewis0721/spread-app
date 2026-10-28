@@ -1,5 +1,9 @@
 # Spread — Unified UX, Reliability & Apple Integration Plan
 
+> Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
+
+> Note (2026-10-28): section 5 told the implementer not to assume iPhone Duo, hinge or reserved-region APIs. Apple has since documented them; see [../platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md](../platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md). The section stays as written because it records what the original plan said.
+
 **Status:** Implementation specification; repository verification required  
 **Repository:** https://github.com/WGLewis0721/spread-app  
 **Production:** https://spread-app-teal.vercel.app  
@@ -156,7 +160,7 @@ Do not manufacture dozens of unrelated tests. Disclose tests that could not run,
 Reuse existing documentation structure; avoid contradictory parallel ledgers. Update only relevant existing files, creating a new document only when needed:
 
 - **This implementation spec**: final feature-by-feature **PASS / FAIL / DEFERRED / BLOCKED** matrix, code references, and baseline/final SHA.
-- **Existing design-system documentation** (or `docs/design/SPREAD_DESIGN_SYSTEM.md` if absent): canonical tokens/components, states, accessibility, motion, responsive rules, reference provenance.
+- **Existing design-system documentation** (or `docs/design/planner/SPREAD_DESIGN_SYSTEM.md` if absent): canonical tokens/components, states, accessibility, motion, responsive rules, reference provenance.
 - **`ROADMAP.md`**, if present: verified delivered features and deferred native/cloud scope.
 - **Existing engineering/architecture documentation**: storage/undo/capacity/native adapter/sync decisions and migrations.
 - **`APP_STORE_RELEASE_PLAN.md`**, if present: supported native integrations, privacy implications, outstanding device/release gates.
@@ -183,7 +187,7 @@ Baseline: `5b0bdb05e4bfaf8dc86d7a8e081c6badf123e705` (main at the start of the w
 
 | # | Feature | Result | Where | Evidence and honest limits |
 | --- | --- | --- | --- | --- |
-| 3 | Design system | PASS | `docs/design/SPREAD_DESIGN_SYSTEM.md`, `src/spread/ui/undo-toast.tsx` | Tokens and patterns written down from the code that exists. No new colours, fonts or decorative styles; the three hard-coded grey fallbacks in the new week code were changed to `var(--tertiary)`. |
+| 3 | Design system | PASS | `docs/design/planner/SPREAD_DESIGN_SYSTEM.md`, `src/spread/ui/undo-toast.tsx` | Tokens and patterns written down from the code that exists. No new colours, fonts or decorative styles; the three hard-coded grey fallbacks in the new week code were changed to `var(--tertiary)`. |
 | 4.9 | Drag and drop for tasks (added request) | PASS with a hardware pass owed | `task-schedule.ts`, `resolve-drop.ts`, `weekly-view.tsx`, store `assignTask` | Resolution and store logic unit tested. Tap path ("Place" / "Move to") and keyboard drag (Space, arrows step day by day, Space, announced) driven in Chromium and persisted; the tap path also runs in CI (`native_e2e.py`). A synthetic mouse drag did not start in headless Chromium, **and neither did the existing allocation drag used as a control**, so mouse and touch-hold drags are unverified here and need the iPhone/iPad pass. A task only goes on its own role's day: a drop on another role's row lands on its own row that day, and a day without its role is refused with a message. |
 | 4.1 | Undo after drag | PASS | `week-edit.ts`, store `undoable`/`undoEdit` | Restores the exact week, is saved, undoes once, refuses (and changes nothing) if the week changed since, still works after turning to another week. Only the latest change shows Undo. Also covers placement, take-off, Free time and Not today. |
 | 4.2 | One-tap "Not today" | PASS | `spread-app.tsx` `TaskRow` | "Not today" appears only on tasks placed on today; other placed tasks show a day tag. Task keeps id, text and notes; it returns to To place; Undo offered. CI: `native_e2e.py` places a task, takes it off with Not today and undoes it. |
