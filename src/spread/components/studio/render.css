@@ -621,16 +621,17 @@
 }
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-scrollbody::-webkit-scrollbar { display: none; }
 
-/* Content layer: cards and rows are plain, opaque and quiet. Material belongs to the sheet,
+/* Content layer (when the Week cards part is Original; an explicit Ink/Glass choice still wins):
+   cards and rows are plain, opaque and quiet. Material belongs to the sheet,
    header and dock, so these never blur and never carry an outline weight from the image. */
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .bg-elevated,
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item {
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .studio-week-stage .bg-elevated,
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .studio-week-stage .week-seq-item {
   background-color: var(--elevated);
   background-image: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week] .week-seq-item {
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .week-seq-item {
   border: 0.5px solid color-mix(in srgb, var(--ink) 12%, transparent);
   border-radius: 1.5rem;
   box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.06);
