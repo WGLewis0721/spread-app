@@ -1,3 +1,4 @@
+import "@fontsource/erica-one/400.css";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import "./render.css";
 import { useSpread } from "@/lib/spread/store";
@@ -77,6 +78,10 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-tasks={scope.parts.tasks}
       data-studio-dock={scope.parts.dock}
       data-studio-wallpaper={scope.wallpaper ? "on" : "off"}
+      data-studio-skin={appearance && typeof appearance === "object" && "skin" in appearance ? "linocut" : undefined}
+      data-studio-sheet-edge={appearance && typeof appearance === "object" && "skin" in appearance ? (appearance as StudioAppearanceV1).skin?.sheetEdge : undefined}
+      data-studio-check={appearance && typeof appearance === "object" && "skin" in appearance ? (appearance as StudioAppearanceV1).skin?.checkGlyph : undefined}
+      data-studio-wallpaper-follows={appearance && typeof appearance === "object" && "skin" in appearance && (appearance as StudioAppearanceV1).skin?.wallpaperFollowsSheet ? "yes" : "no"}
       style={style}
     >
       {children}

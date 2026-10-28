@@ -8,6 +8,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import axe from "axe-core";
 import { auditStudioContrast } from "./contrast-audit.ts";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const dir = join(root, "screenshots", "studio-editor");
@@ -231,7 +232,7 @@ try {
     await stage.waitFor({state:"visible"});
     // The detent is intentionally retained when the user revisits the Week.
     // Normalize to Half rather than assuming every new photo resets their state.
-    const detentToggle=page.getByRole("button",{name:/Week sheet (half|peek|full)/});
+    const detentToggle=page.getByRole("slider",{name:"Week sheet position"});
     for(let attempt=0;attempt<3 && await stage.getAttribute("data-studio-detent")!=="half";attempt++){
       await detentToggle.click();
     }
@@ -367,6 +368,208 @@ try {
     await page.screenshot({path: join(dir,capture)});
     shots.push(capture);
   }
+
+  // Starry Ink independent material evidence: two deliberately distinct local
+  // wallpapers, every detent, both light/dark schemes, and WCAG automated audit.
+  const skinEvidence: Array<Record<string, unknown>> = [];
+  await page.setViewportSize({width:390,height:844});
+  for(const scheme of ["light","dark"] as const){
+  for(const wallpaperVariant of ["ink-stripes","bright-confetti-mosaic"] as const){
+    await page.getByRole("button",{name:"Settings"}).click();
+    await page.getByRole("button",{name:"Customize Spread"}).click();
+    // Reimport each fixture on every scheme: otherwise the previous bright
+    // wallpaper could be mislabeled as stripes in the next test iteration.
+    if(wallpaperVariant==="ink-stripes"){
+      const stripes=await page.evaluate(()=>{
+        const canvas=document.createElement("canvas");canvas.width=320;canvas.height=640;
+        const c=canvas.getContext("2d")!;
+        c.fillStyle="#254252";c.fillRect(0,0,320,640);
+        c.strokeStyle="#fbf4c0";c.lineWidth=26;
+        for(let x=-240;x<510;x+=52){
+          c.beginPath();c.moveTo(x,0);c.lineTo(x+320,640);c.stroke();
+        }
+        return canvas.toDataURL("image/png").split(",")[1];
+      });
+      await studio.locator("input[type='file']").setInputFiles({
+        name:"ink-stripes-procedural.png",mimeType:"image/png",buffer:Buffer.from(stripes,"base64"),
+      });
+    }
+    if(wallpaperVariant==="bright-confetti-mosaic"){
+      // Bright Confetti Mosaic: busy, high-saturation geometric artwork,
+      // distinctly unlike Starry Ink's dark, low-frequency illustration.
+      const image=await page.evaluate(()=>{
+        const canvas=document.createElement("canvas");canvas.width=320;canvas.height=640;
+        const c=canvas.getContext("2d")!;
+        c.fillStyle="#fff385";c.fillRect(0,0,320,640);
+        const colors=["#ff416c","#00a7d4","#7e52e8","#52bb55","#ff9419","#f5e8ff"];
+        for(let n=0;n<130;n++){
+          const x=(n*79)%320,y=(n*131)%640,size=16+(n*11)%55;
+          c.fillStyle=colors[n%colors.length];
+          if(n%3===0){c.beginPath();c.arc(x,y,size/2,0,Math.PI*2);c.fill();}
+          else {c.save();c.translate(x,y);c.rotate((n%7)*Math.PI/12);c.fillRect(-size/2,-size/2,size,size);c.restore();}
+        }
+        return canvas.toDataURL("image/png").split(",")[1];
+      });
+      await studio.locator("input[type='file']").setInputFiles({name:"bright-confetti-mosaic.png",mimeType:"image/png",buffer:Buffer.from(image,"base64")});
+      await page.waitForFunction(()=>{
+        const el=document.querySelector(".studio-sheet")!;
+        return el?.querySelector("button:not(:disabled)")&&
+        Array.from(el.querySelectorAll("button")).some(e=>e.textContent?.trim()==="Apply"&&!(e as HTMLButtonElement).disabled);
+      });
+    }
+    await studio.getByRole("button",{name:/^Starry Ink/}).click();
+    await studio.getByRole("radio",{name:scheme==="light"?"Light":"Dark"}).click();
+    await studio.getByRole("button",{name:"Apply",exact:true}).click();
+    await studio.waitFor({state:"hidden"});
+    await page.getByRole("button",{name:"Close",exact:true}).click();
+    await page.getByRole("tab",{name:"Week",exact:true}).click();
+    const sheet=page.locator(".studio-week-stage");
+    await page.waitForFunction(()=>document.querySelector("[data-studio-skin='linocut'][data-studio-appearance='studio-starry']")!==null);
+    const handle=page.getByRole("slider",{name:"Week sheet position"});
+    for(const mode of ["peek","half","full"] as const){
+      await handle.focus();
+      await handle.press(mode==="peek"?"Home":mode==="full"?"End":"Home");
+      if(mode==="half") await handle.press("ArrowUp");
+      await page.waitForTimeout(490);
+      const geometry=await sheet.evaluate((node)=>{
+        const host=node.closest<HTMLElement>("[data-studio-appearance]")!;
+        const stage=node.getBoundingClientRect();
+        const dock=document.querySelector<HTMLElement>(".app-dock")!.getBoundingClientRect();
+        const style=getComputedStyle(host);
+        const crest=node.querySelector<SVGSVGElement>(".studio-week-scallop");
+        const crestRect=crest?.getBoundingClientRect();
+        const scallop=!!crest && getComputedStyle(crest).display!=="none"
+          && !!crestRect && Math.abs(crestRect.top-(stage.top-38))<=2
+          && getComputedStyle(crest.querySelector("path")!).strokeWidth==="3px";
+        const last=node.querySelector<HTMLElement>("[data-day]:last-of-type");
+        const lastRect=last?.getBoundingClientRect();
+        return {top:stage.top,height:window.innerHeight,dockTop:dock.top,lastDayBottom:lastRect?.bottom??null,
+          wallpaperOffset:style.getPropertyValue("--studio-wallpaper-follow-y").trim(),
+          outline:style.getPropertyValue("--studio-skin-outline").trim(),
+          shadow:style.getPropertyValue("--studio-skin-shadow").trim(),
+          font:style.getPropertyValue("--studio-display-font").trim(),
+          scallop,current:node.getAttribute("data-studio-detent"),
+          mask:crest?getComputedStyle(crest).display:"missing"};
+      });
+      const boardTop={peek:.79,half:.47,full:.15}[mode]*844;
+      const delta=Math.abs(Number(geometry.top)-boardTop);
+      // Wallpaper offsets are read from the unmodified E1 HTML, not guessed:
+      // 0px Peek, -222px Half and Full, at 402x874; scale by viewport height.
+      const referenceWallpaperOffset=(mode==="peek"?0:-222)*844/804;
+      const wallpaperOffsetDelta=Math.abs(Number.parseFloat(geometry.wallpaperOffset)-referenceWallpaperOffset);
+      const valid=geometry.current===mode && delta<=2 && wallpaperOffsetDelta<=2 && geometry.outline==="3px"
+        && geometry.shadow==="3px" && geometry.scallop;
+      if(!valid)throw new Error("Starry E1 geometry/token mismatch: "+JSON.stringify({mode,geometry,boardTop,delta}));
+      // Full is compared in its useful end-of-week state. Scroll all the way to
+      // the bottom and prove the last chronological day clears the dock.
+      if(mode==="full"){
+        await sheet.locator(".studio-week-scrollbody").evaluate(el=>{el.scrollTop=el.scrollHeight});
+        await page.waitForTimeout(100);
+        const clearance=await page.locator(".studio-week-stage [data-day]").last().evaluate(el=>el.getBoundingClientRect().bottom);
+        const dock=await page.locator(".app-dock").first().evaluate(el=>el.getBoundingClientRect().top);
+        if(clearance>dock-2)throw new Error(`Full last-day/dock collision: day ${clearance}px dock ${dock}px`);
+      }
+      if(mode==="full"){
+        // Nonmodal: sheet above the header only for the scallop, dock stays
+        // above the sheet, without focus trap or opaque full-screen scrim.
+        const nonmodal=await page.evaluate(()=>{
+          const stage=document.querySelector<HTMLElement>(".studio-week-stage")!;
+          const header=document.querySelector<HTMLElement>(".studio-week-header")!;
+          const dock=document.querySelector<HTMLElement>(".app-dock")!;
+          const headerScallop=header.querySelector<SVGSVGElement>(".studio-week-header-scallop");
+          return {sheetZ:getComputedStyle(stage).zIndex,headerZ:getComputedStyle(header).zIndex,
+            dockZ:getComputedStyle(dock).zIndex,
+            visibleHeaderScallop:!!headerScallop && getComputedStyle(headerScallop).display!=="none",
+            modal:stage.getAttribute("aria-modal"),
+            headerInert:header.hasAttribute("inert"),dockInert:dock.hasAttribute("inert")};
+        });
+        // The header may not cover the sheet's Today slider. Geometric
+        // assertions alone missed this z-index/background-layer regression.
+        const grabberVisible=await handle.evaluate(el=>{
+          const r=el.getBoundingClientRect();
+          const point=document.elementFromPoint(r.left+r.width/2,r.top+Math.min(22,r.height/2));
+          return !!point?.closest(".studio-week-grabber");
+        });
+        if(!grabberVisible)throw new Error("Full Today grabber is painted beneath the header");
+        if(!(Number(nonmodal.headerZ)>Number(nonmodal.sheetZ)) ||
+           !(Number(nonmodal.dockZ)>Number(nonmodal.sheetZ)) ||
+           nonmodal.modal!==null||!nonmodal.visibleHeaderScallop||nonmodal.headerInert||nonmodal.dockInert)
+          throw new Error("Week must remain nonmodal with interactive header/dock: "+JSON.stringify(nonmodal));
+        // E1 Full hides artwork under the solid sheet; only the exterior
+        // scallop overlaps the header. No modal scrim or portal is permitted.
+        const paint=await sheet.locator(".studio-week-grabber").evaluate(el=>({
+          image:getComputedStyle(el).backgroundImage,
+          scallop:!!el.parentElement?.querySelector(".studio-week-scallop"),
+        }));
+        if(paint.image!=="none"||!paint.scallop)
+          throw new Error("Full wallpaper portal/overhang mismatch: "+JSON.stringify(paint));
+      }
+      const shot=`starry-${wallpaperVariant}-${scheme}-${mode}-390.png`;
+      await page.screenshot({path:join(dir,shot)});
+      shots.push(shot);
+      skinEvidence.push({wallpaperVariant,scheme,mode,topPx:geometry.top,
+        referenceTopPx:boardTop,deltaPx:delta,wallpaperOffset:geometry.wallpaperOffset,
+        referenceWallpaperOffsetPx:referenceWallpaperOffset,wallpaperOffsetDeltaPx:wallpaperOffsetDelta,
+        dockTop:geometry.dockTop,lastDayBottom:geometry.lastDayBottom,outline:geometry.outline,
+        shadow:geometry.shadow,scallop:geometry.scallop,screenshot:shot});
+    }
+  }
+  }
+  // Accessibility: axe-core examines the *real mounted page*, not a DOM stub.
+  await page.addScriptTag({content:axe.source});
+  const a11y=await page.evaluate(async()=>{
+    const run=(window as unknown as {axe:{run: (root: Element,options:unknown)=>Promise<{violations:Array<{id:string;impact:string;nodes:unknown[]}>}>}}).axe;
+    return run.run(document.querySelector("[data-studio-appearance]")!,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}});
+  });
+  const a11yReport=a11y.violations.map(v=>({id:v.id,impact:v.impact,count:v.nodes.length}));
+  writeFileSync(join(dir,"starry-axe-report.json"),JSON.stringify({violations:a11yReport},null,2));
+  writeFileSync(join(dir,"starry-geometry-report.json"),JSON.stringify(skinEvidence,null,2));
+  console.log("starry-evidence",JSON.stringify({captures:skinEvidence.length,maxDetentErrorPx:Math.max(...skinEvidence.map(x=>Number(x.deltaPx))),a11yReport}));
+  if(a11yReport.some(v=>v.impact==="critical"))throw new Error("Starry has critical WCAG axe failures: "+JSON.stringify(a11yReport));
+  // The font scales with the device; the slider must remain keyboard reachable.
+  const legibility=await page.evaluate(()=>{
+    const root=document.documentElement,old=root.style.fontSize;
+    root.style.fontSize="200%";
+    const slider=document.querySelector<HTMLElement>('[role="slider"][aria-label="Week sheet position"]')!;
+    const rect=slider.getBoundingClientRect();
+    const good=rect.width>=44&&rect.height>=44;
+    root.style.fontSize=old;
+    return {good,width:rect.width,height:rect.height};
+  });
+  writeFileSync(join(dir,"starry-200-percent-type.json"),JSON.stringify(legibility,null,2));
+  if(!legibility.good)throw new Error("200% text clipped the Week grabber: "+JSON.stringify(legibility));
+
+  // Pointer regression: the sheet must track the finger *before release*.
+  // Keyboard-only detent tests do not establish this critical interaction.
+  const sheetForDrag=page.locator(".studio-week-stage");
+  const handleForDrag=page.getByRole("slider",{name:"Week sheet position"});
+  await handleForDrag.focus();
+  await handleForDrag.press("Home");
+  await page.waitForTimeout(470);
+  const beforeDrag=await sheetForDrag.evaluate(el=>el.getBoundingClientRect().top);
+  const gripBox=await handleForDrag.boundingBox();
+  if(!gripBox)throw Error("Slider grabber has no pointer surface");
+  const x=gripBox.x+gripBox.width/2,y=gripBox.y+Math.min(40,gripBox.height/2);
+  await page.mouse.move(x,y);await page.mouse.down();
+  await page.mouse.move(x,y-100,{steps:8});
+  const duringDrag=await sheetForDrag.evaluate(el=>({
+    top:el.getBoundingClientRect().top,dragging:el.getAttribute("data-studio-dragging"),
+  }));
+  if(duringDrag.dragging!=="true" || duringDrag.top>=beforeDrag-40)
+    throw new Error("Week sheet does not follow pointer before release: "+JSON.stringify({beforeDrag,duringDrag}));
+  await page.mouse.up();
+  await page.waitForTimeout(470);
+  const released=await sheetForDrag.getAttribute("data-studio-detent");
+  if(released==="peek")throw new Error("Fast upward finger release failed to expand sheet");
+  await page.emulateMedia({reducedMotion:"reduce"});
+  const reduced=await sheetForDrag.evaluate(el=>({
+    property:getComputedStyle(el).transitionProperty,
+    duration:getComputedStyle(el).transitionDuration,
+  }));
+  writeFileSync(join(dir,"starry-pointer-and-motion.json"),JSON.stringify({beforeDrag,duringDrag,released,reduced},null,2));
+  if(reduced.property.includes("top") || !reduced.property.includes("opacity"))
+    throw new Error("Reduce Motion did not remove the spring: "+JSON.stringify(reduced));
+  await page.emulateMedia({reducedMotion:"no-preference"});
   // Reset proves the original look is still a true no-wrapper rollback.
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Customize Spread" }).click();

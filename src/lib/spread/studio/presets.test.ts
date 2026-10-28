@@ -5,7 +5,7 @@ import { resolveStudioScope } from "./appearance.ts";
 import { STUDIO_STARTERS, appearanceFromStarter } from "./presets.ts";
 
 test("four original starter looks use valid allowlisted appearance values", () => {
-  assert.deepEqual(STUDIO_STARTERS.map((item) => item.id), ["personal", "retro", "glass", "illustrated"]);
+  assert.deepEqual(STUDIO_STARTERS.map((item) => item.id), ["personal", "retro", "glass", "illustrated", "starry"]);
   for (const item of STUDIO_STARTERS) {
     assert.equal(parseStudioAppearance(item.appearance).ok, true);
     assert.equal(item.appearance.wallpaperAssetId, undefined);

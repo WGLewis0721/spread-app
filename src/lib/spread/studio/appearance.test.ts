@@ -512,3 +512,17 @@ test("appearance: every per-element treatment is independent and stays scoped", 
   assert.deepEqual(hidden.style, {});
   assert.equal(hidden.parts.crown, "original");
 });
+test("Linocut remains legible in both system schemes while retaining its accent token",()=>{
+ const base=originalStudioAppearance();
+ const look={...base,id:"studio-starry",palette:{accent:"#f5d62d",surface:"#fbf4c0",text:"#0e151a",secondaryText:"#254252"},skin:{
+    sheetEdge:"scallop" as const,outline:3,hardShadow:3,blockRadii:[14,14,14,4] as [number,number,number,number],
+    checkGlyph:"star" as const,displayFont:"ericaOne" as const,wallpaperFollowsSheet:true,
+    ground:"#254252",steel:"#476c7b",mist:"#add4dd",cream:"#fbf4c0",
+  }};
+ for(const systemScheme of ["light","dark"] as const) {
+   const view=resolveStudioScope({enabled:true,appearance:look,systemScheme});
+   assert.equal(view.applied,true);
+   assert.equal(view.style["--studio-skin-bright"],"#f5d62d");
+   assert.ok(contrastRatioHex(view.style["--ink"],view.style["--elevated"])!>=4.5);
+ }
+});

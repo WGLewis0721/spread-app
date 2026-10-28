@@ -396,7 +396,7 @@ function StarterLooks({
           </button>
         ))}
       </div>
-      <p className="mt-2 text-xs text-secondary">Retro and Clear Glass hide your wallpaper. Personal Canvas and Dynamic Ink use it. Reset restores Original.</p>
+      <p className="mt-2 text-xs text-secondary">Retro and Clear Glass hide your wallpaper. Personal Canvas, Dynamic Ink and Starry Ink use it. Reset restores Original.</p>
     </section>
   );
 }

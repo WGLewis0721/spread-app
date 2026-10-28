@@ -133,12 +133,23 @@ export const STUDIO_STYLE_KEYS = [
   "--studio-wallpaper-image",
   "--studio-wallpaper-size",
   "--studio-wallpaper-position",
+  "--studio-wallpaper-position-x",
+  "--studio-wallpaper-position-y",
   "--studio-wallpaper-blur",
   "--studio-scrim",
   "--studio-metal-hi",
   "--studio-metal-lo",
   "--studio-matte-line",
   "--studio-highlight",
+  "--studio-skin-outline",
+  "--studio-skin-shadow",
+  "--studio-skin-radius",
+  "--studio-skin-ground",
+  "--studio-skin-mist",
+  "--studio-skin-cream",
+  "--studio-skin-bright",
+  "--studio-skin-steel",
+  "--studio-display-font",
   ...ROLE_KEYS,
   "--studio-status-done",
   "--studio-status-danger",
@@ -224,6 +235,12 @@ export function boundAppearance(appearance: StudioAppearanceV1): StudioAppearanc
         ])) as Record<StudioElementPart, StudioElementStyle>,
       } : {}),
     },
+    ...(appearance.skin ? { skin:{
+      ...appearance.skin,
+      blockRadii:appearance.skin.blockRadii.map(n=>clampNumber(n,0,32,14)) as [number,number,number,number],
+      outline:clampNumber(appearance.skin.outline,0,6,0),
+      hardShadow:clampNumber(appearance.skin.hardShadow,0,6,0),
+    }} : {}),
     effects: {
       decorationIntensity: clampNumber(appearance.effects?.decorationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
       animationIntensity: clampNumber(appearance.effects?.animationIntensity, 0, STUDIO_LIMITS.unitMax, 0),
@@ -471,7 +488,11 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
   const requestedMaterial = appearance.material.treatment;
   const material = effectiveMaterial(requestedMaterial, reducedTransparency, gates);
   const floors = moreContrast ? { text: 7, ui: 4.5 } : { text: 4.5, ui: 3 };
-  const lifted = liftBackground(surfaceForScheme(appearance.palette.surface, scheme), floors.text);
+  // Solid linocut material explicitly keeps its ink-on-cream identity in either
+  // OS scheme. Applying the generic dark inversion to a bright paper material
+  // made headings white-on-cream (detected in independent browser screenshots).
+  // Glass, matte, and the golden look still follow the normal scheme resolver.
+  const lifted = liftBackground(appearance.skin ? appearance.skin.cream : surfaceForScheme(appearance.palette.surface, scheme), floors.text);
   const surface = lifted.color;
   const textFix = enforceContrast(appearance.palette.text, surface, floors.text);
   const secondaryFix = enforceContrast(appearance.palette.secondaryText, surface, floors.text);
@@ -569,12 +590,24 @@ export function resolveStudioScope(input: StudioResolveInput): StudioScope {
     "--studio-wallpaper-image": cssUrl(wallpaper),
     "--studio-wallpaper-size": appearance.wallpaper.fit,
     "--studio-wallpaper-position": `${formatCssNumber(appearance.wallpaper.positionX)}% ${formatCssNumber(appearance.wallpaper.positionY)}%`,
+    "--studio-wallpaper-position-x": `${formatCssNumber(appearance.wallpaper.positionX)}%`,
+    "--studio-wallpaper-position-y": `${formatCssNumber(appearance.wallpaper.positionY)}%`,
     "--studio-wallpaper-blur": `${formatCssNumber(wallpaperBlur)}px`,
     "--studio-scrim": rgba(scrimColor, scrimAlpha),
     "--studio-metal-hi": metalHi,
     "--studio-metal-lo": metalLo,
     "--studio-matte-line": rgba(text, depth * 0.08),
     "--studio-highlight": appearance.palette.highlight ?? "#ff8a24",
+    "--studio-skin-outline": `${appearance.skin?.outline ?? 0}px`,
+    "--studio-skin-shadow": `${appearance.skin?.hardShadow ?? 0}px`,
+    "--studio-skin-radius": (appearance.skin?.blockRadii ?? [14,14,14,4]).map(n=>`${n}px`).join(" "),
+    "--studio-skin-ground": appearance.skin?.ground ?? surface,
+    "--studio-skin-mist": appearance.skin?.mist ?? surface,
+    "--studio-skin-cream": appearance.skin?.cream ?? surface,
+    "--studio-skin-bright": appearance.palette.accent,
+    "--studio-skin-steel": appearance.skin?.steel ?? secondary,
+    "--studio-display-font": appearance.skin?.displayFont==="ericaOne"
+      ? '"Erica One", Impact, "Arial Black", system-ui, sans-serif' : fonts[appearance.typography.presetId],
   };
   roles.forEach((color, index) => {
     style[`--studio-role-${index + 1}`] = color;
