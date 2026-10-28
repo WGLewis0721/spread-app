@@ -82,3 +82,24 @@ Typography is system type only. `render.test.ts` rejects any `@font-face` or rem
 Known limits: CSS `backdrop-filter` approximates system material. Whether
 `prefers-reduced-transparency` reaches the WKWebView is unverified. Blur performance, VoiceOver
 and haptics are owed on a real iPhone.
+
+## Stacked cards (2026-10-28, design board)
+
+Studio's wallpaper look now uses the stacked-card pattern from the owner's design board (the
+My Habits and Analytics stacks), which also echoes the Spread logo, a fan of cards.
+
+- Spread tab: each responsibility is a card in its own role color, overlapping the previous one
+  so only a rounded title edge shows. One card is open at a time (the app's grid-row fold, with a
+  spring curve), and the open card advances every 7 seconds like a slow vertical carousel.
+- Auto-advance stops for Reduce Motion, a hidden tab, an open sheet, editing, focus inside the
+  stack, any touch in the last 15 seconds, and a visible Pause button (WCAG 2.2.2).
+- Week sheet: role chips, free-time suggestions and scheduled role rows use the same role colors.
+  Day cards stay neutral and today gets an accent hairline and a leading bar (a tint lowered ink contrast on dark palettes), as in the board's Schedule layout.
+- Color safety: `roleCardInks` (contrast.ts) computes ink, secondary and tertiary text for each
+  role color and forces 4.5:1. Cards re-point the app's own `--ink`, `--secondary`, `--tertiary`,
+  `--line`, `--fill` and `--accent`, so children need no per-element overrides.
+- Motion: cards are dealt in from below with a stagger and press down to 98.5%. Reduce Motion
+  removes the deal, the press and the fold transition.
+- Guards in `material.audit.ts`: Spread tab text contrast, exactly one open card, advance and
+  Pause behavior.
+

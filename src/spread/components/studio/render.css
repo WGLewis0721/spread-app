@@ -739,6 +739,42 @@
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-role-stack .task-fold { transition: none; }
 }
 
+/* Week sheet in the same language. Role chips, free-time suggestions and scheduled role rows are
+   painted in the role color with computed ink, like the stacked cards. Day cards stay quiet, and
+   today is lifted with an accent hairline and a leading bar. This is the board's Schedule layout:
+   neutral days, colored blocks. */
+[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-wallpaper="on"] .studio-role-chip {
+  background: var(--role);
+  color: var(--role-ink);
+  --ink: var(--role-ink);
+  --secondary: var(--role-ink-2);
+  --tertiary: var(--role-ink-3);
+  --line: color-mix(in srgb, var(--role-ink) 24%, transparent);
+  --fill: color-mix(in srgb, var(--role-ink) 14%, transparent);
+  --accent: var(--role-ink);
+  --on-accent: var(--role);
+  border: 0;
+  box-shadow: none;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-chip > span[style*="background-color"],
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-chip > button > span[style*="background-color"] { background-color: var(--role-ink) !important; }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-chip[aria-pressed="true"] { outline: 2px solid var(--role-ink) !important; outline-offset: 2px; }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-role-chip ul { background: color-mix(in srgb, var(--role-ink) 12%, transparent); }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item:has(h2[aria-current="date"]) {
+  /* A hairline and a leading bar, not a tint: a tint would lower ink contrast on dark palettes. */
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: inset 4px 0 0 var(--accent), 0 1px 2px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.06);
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item {
+  animation-name: studio-deal;
+  animation-fill-mode: backwards;
+  animation-timing-function: cubic-bezier(.32,.72,0,1);
+  animation-duration: 340ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item { animation: none; }
+}
+
 /* Reduce Transparency: the sheet and header become opaque, as the system does. */
 @media (prefers-reduced-transparency: reduce) {
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,

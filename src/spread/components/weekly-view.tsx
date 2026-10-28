@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { showUndoToast } from "@/spread/ui/undo-toast";
 import { clampHours, isoDate, remainingHours, weekDays, type Allocation, type Task } from "@/lib/spread/model";
 import { useSpread } from "@/lib/spread/store";
+import { roleVars } from "@/lib/spread/studio/role-style";
 import { suggestFreeTime, type Suggestion } from "@/lib/spread/free-time";
 import { assignFailureText, eligibleAllocations, tasksOnAllocation, unscheduledTasks } from "@/lib/spread/task-schedule";
 import { SpreadIcon } from "@/spread/components/spread-icon";
@@ -316,8 +317,8 @@ function SpreadChip({
       ref={setNodeRef}
       type="button"
       data-drag="spread"
-      className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-elevated px-3 text-sm font-semibold"
-      style={{ outline: selected ? `2px solid ${color}` : undefined, touchAction: "pan-x" }}
+      className="studio-role-chip flex h-11 shrink-0 items-center gap-2 rounded-full bg-elevated px-3 text-sm font-semibold"
+      style={roleVars(color, { outline: selected ? `2px solid ${color}` : undefined, touchAction: "pan-x" })}
       onClick={onSelect}
       {...listeners}
       {...attributes}
@@ -460,7 +461,7 @@ function AllocationRow({
   const [showTasks, setShowTasks] = useState(false);
   const listId = `tasks-${id}`;
   return (
-    <li ref={drop.setNodeRef} className={`rounded-2xl bg-canvas${entering ? " descend-in" : ""}${leaving ? " ascend-out" : ""}`}>
+    <li ref={drop.setNodeRef} className={`studio-role-chip rounded-2xl bg-canvas${entering ? " descend-in" : ""}${leaving ? " ascend-out" : ""}`} style={roleVars(color)}>
       <div className="flex items-center gap-1 ps-2">
       <button
         ref={drag.setNodeRef}
@@ -731,7 +732,8 @@ function FreeTimeChip({ item, name, color, onAdd }: { item: Suggestion; name: st
     <li>
       <button
         type="button"
-        className="studio-readable-note flex h-11 items-center gap-2 rounded-full bg-accent/10 ps-3 pe-4 text-sm font-semibold text-accent"
+        className="studio-readable-note studio-role-chip flex h-11 items-center gap-2 rounded-full bg-accent/10 ps-3 pe-4 text-sm font-semibold text-accent"
+        style={roleVars(color)}
         aria-label={`Add ${item.hours} ${item.hours === 1 ? "hour" : "hours"} of ${name} on ${item.dayLabel}`}
         onClick={onAdd}
       >
