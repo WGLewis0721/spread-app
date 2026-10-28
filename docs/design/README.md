@@ -14,6 +14,7 @@ Last reorganized: 2026-10-28.
 
 | If you are doing... | Read first | Then, if needed |
 | --- | --- | --- |
+| **Asked to make a plan, spec sheet, redesign or UI review** | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), then [specs/TEMPLATE.md](specs/TEMPLATE.md) | The rows below for the surface the request touches |
 | Any planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) | [platforms/APPLE_DESIGN_PRINCIPLES.md](platforms/APPLE_DESIGN_PRINCIPLES.md) |
 | The public landing page (`UnlockScreen`, `landing-*` components, "Landing page only" CSS) | [landing/DESIGN.md](landing/DESIGN.md) | Frozen reference `golden/2026-09-28-full-landing-modes` |
 | Making the UI feel native to Apple platforms: materials, color, sheets, motion | [platforms/APPLE_DESIGN_PRINCIPLES.md](platforms/APPLE_DESIGN_PRINCIPLES.md) | The Apple pages listed at the end of each device guide |
@@ -34,6 +35,11 @@ If a task fits no row, add one here as part of the change.
 ```
 docs/design/
   README.md                     this map (start here)
+  PLAN_SPEC_PROTOCOL.md         how to plan and spec a request: process, sizes, output contract, self-check
+  AI_TOOL_SETUP.md              how to point Claude, ChatGPT, Gemini, Grok, Codex, Copilot at this folder; chat preamble
+  specs/                        one spec per request
+    TEMPLATE.md                   the spec sheet template
+    README.md                     index of specs
   planner/                      rules for the app itself
     SPREAD_DESIGN_SYSTEM.md       tokens, patterns, motion, moving things without dragging, rules a change must keep
     SPREAD_UNIFIED_UX_IMPLEMENTATION.md   the Unified UX plan and its PASS/FAIL result matrix
@@ -50,6 +56,8 @@ docs/design/
 
 | Document | Governs | Status | Authority |
 | --- | --- | --- | --- |
+| PLAN_SPEC_PROTOCOL.md and specs/TEMPLATE.md | How every plan and spec is produced and shaped | New 2026-10-28. Built from Apple's prototyping session and Design Pathway, Shape Up's pitch format and common design-doc templates | Process authority. It never overrides a design rule |
+| AI_TOOL_SETUP.md | How AI tools reach these documents | New 2026-10-28. Vendor file conventions not re-verified | Advisory |
 | planner/SPREAD_DESIGN_SYSTEM.md | Planner visuals and patterns | Current. Includes the 2026-10-08 HIG polish decisions and the reference lock | Highest for planner UI |
 | landing/DESIGN.md | Landing page | Current. Direction `spread-landing-2026-09-28`, frozen as `golden/2026-09-28-full-landing-modes` | Highest for the landing page only. Never use it for planner decisions |
 | planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | Planner UX pass: undo, Not today, view memory, haptics, free-time suggestion, rollover, offline, status honesty | Historical spec and result record. Section 5 on Duo is superseded by the Duo guide | Evidence of what was verified, not a design authority |
@@ -154,7 +162,7 @@ These are not design rules, or they are bound to scripts that write to fixed pat
 | Release and App Store process: release plan, roadmap, TestFlight runbook, review checklist and notes | `APP_STORE_RELEASE_PLAN.md`, `ROADMAP.md`, `docs/IOS_RELEASE.md`, `docs/IOS_AUTOMATION.md`, `docs/APP_STORE_REVIEW_CHECKLIST.md`, `docs/APP_REVIEW_NOTES.md` | Process, not design |
 | iCloud, beta access, waitlist API, audits | `docs/ICLOUD_PLAN.md`, `docs/BETA_ACCESS.md`, `docs/WAITLIST_API.md`, `docs/audits/` | Data and ops, not design |
 | Test plan stubs | `e2e/plans/` | Test tooling |
-| Project instructions for agents | `AGENTS.project.md`, `AGENTS.md` | Point here for design |
+| Project instructions for agents | `AGENTS.project.md`, `AGENTS.md`, and the pointer files `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | They point here for design. Keep them thin |
 | Promo status, storyboard and production plan; end-state spec; Studio review | The Claude Project "Spread-app-design" (not in git) | Working documents outside the repo |
 
 ---
@@ -168,6 +176,8 @@ These are not design rules, or they are bound to scripts that write to fixed pat
 - Record a decision in the document it changes, with its date, and remove it from section 4 when it is resolved.
 - When a document is superseded, say so at its top and name its replacement. Do not delete the history.
 - Each document starts with a link back to this file. Keep it.
+- Specs go in `specs/`, one file per request. Do not scatter plans through the repository root.
+- `scripts/design-docs.test.mjs` (run by `npm run test:scripts` and CI) fails if a link breaks, a document is missing from the folder map, a document lacks its link back here, or a pointer file stops pointing here.
 - The root `DESIGN.md` is only a pointer to [landing/DESIGN.md](landing/DESIGN.md). Do not add content to it.
 
 ### Decision log
@@ -179,3 +189,4 @@ These are not design rules, or they are bound to scripts that write to fixed pat
 | 2026-10-21 | Device build guides researched (iPhone, iPad, Duo) | platforms/ |
 | 2026-10-27 | Narrow Studio design exception, flag-gated, on the Studio branch only | Section 6 |
 | 2026-10-28 | All design documents consolidated under `docs/design/`; Apple design principles added | This file |
+| 2026-10-28 | Plan and spec protocol, spec template and AI tool entry points added; docs link check added to CI | PLAN_SPEC_PROTOCOL.md, AI_TOOL_SETUP.md |

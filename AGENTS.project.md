@@ -11,6 +11,7 @@ These apply to any agent or tool working in this repository, alongside `AGENTS.m
   - Planner screens (Week, Spread, sheets, toasts): `docs/design/planner/SPREAD_DESIGN_SYSTEM.md`. It lists the tokens and patterns to reuse; do not add new colours or styles.
   - Device-specific layout, safe-area, multitasking, fold or App Store screenshot work: `docs/design/platforms/` (`SPREAD_IPHONE_BUILD_GUIDE.md` is the shared baseline). They are research notes with evidence tags; section 6a of the iPhone guide proposes dark palette values that are not yet adopted, so the "no new colours" rule below still applies until they are.
   - Icons: `docs/design/brand/ICON_HANDOFF.md`.
+  - **Asked for a plan, spec sheet, redesign or UI review:** follow `docs/design/PLAN_SPEC_PROTOCOL.md` and write the spec with `docs/design/specs/TEMPLATE.md`. Save it in `docs/design/specs/`. List anything that seems to need a new color, font or decorative style as an exception for the owner to decide; do not design around a rule silently.
 
 ## Rules
 
