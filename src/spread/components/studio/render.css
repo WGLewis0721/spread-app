@@ -456,15 +456,24 @@
   }
 }
 
+/* Erica One is bundled locally (SIL OFL). It is used for headings only, and only when the
+   wallpaper-derived look selects display type. No network request is made for it. */
+@font-face {
+  font-family: "Erica One";
+  src: url("../../fonts/EricaOne-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
 /* Wallpaper-first Week sheet. Only a selected local wallpaper activates it.
-   The golden planner and wallpaper-free Studio looks remain unchanged. */
+   The golden planner and wallpaper-free Studio looks remain unchanged.
+   Every shape and color here reads variables derived from the user's wallpaper. */
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   gap: 0.5rem 0.75rem;
   align-items: center;
-  background: var(--elevated);
-  border-bottom: 3px solid var(--ink);
+  background: var(--studio-sheet, var(--elevated));
+  border-bottom: max(var(--studio-outline, 3px), 1px) solid var(--ink);
   padding-bottom: 0.65rem;
 }
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] > div:first-child {
@@ -490,46 +499,80 @@
   min-width: 98px;
   justify-self: end;
 }
-/* Header is deliberately a solid stable control shelf; the rest of the
-   viewport shows the one fixed wallpaper underneath the floating sheet. */
+
+/* One fixed wallpaper. In Week it re-centers in the strip between the header and the sheet:
+   the layer reads the same --studio-sheet-top the sheet uses, so the art stays framed at Peek,
+   Half and while dragging. --studio-focus is where this wallpaper's busiest band sits
+   (0 top, 1 bottom). The image may rise off the bottom of the screen, since the sheet covers
+   that edge, but it never leaves the strip above the sheet bare. */
+[data-studio-appearance][data-studio-wallpaper="on"]:has(.studio-week-stage)::before {
+  background-size: auto, var(--studio-wallpaper-size);
+  background-position: 0 0, 50% clamp(
+    calc(var(--studio-sheet-top) + 42px - var(--studio-wp-h)),
+    calc((var(--studio-head, 126px) + var(--studio-sheet-top)) / 2 + 24px - var(--studio-focus, 0.5) * var(--studio-wp-h)),
+    0px
+  );
+  transition: background-position 420ms cubic-bezier(.32,.72,0,1);
+}
+[data-studio-appearance][data-studio-dragging]::before { transition: none; }
+
+/* The sheet is nonmodal: no scrim, no focus trap; header and dock stay live. */
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage {
   position: fixed;
   z-index: 12;
-  inset-inline: 0;
   left: 50%;
   right: auto;
   bottom: 0;
+  top: var(--studio-sheet-top, 47dvh);
   width: min(100%,36rem);
-  padding-top: 0.25rem;
-  padding-inline: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0.8rem 0;
   transform: translateX(-50%);
-  overflow-x: hidden;
-  overflow-y: hidden;
-  overscroll-behavior: contain;
-  border: 2px solid var(--ink);
+  overflow: visible;
+  border: var(--studio-outline, 2px) solid var(--ink);
   border-bottom: none;
   border-radius: 28px 28px 0 0;
-  background: var(--elevated);
+  background: var(--studio-sheet, var(--elevated));
   box-shadow: 0 -5px 25px rgba(0,0,0,.14);
   transition: top 420ms cubic-bezier(.32,.72,0,1);
-  scrollbar-width: thin;
   touch-action: pan-y;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="peek"] {
-  top: 77dvh;
+[data-studio-appearance][data-studio-dragging] .studio-week-stage { transition: none; }
+
+/* Scalloped edge: two masked layers. The ink layer is the silhouette, the fill layer sits
+   one outline-width lower, so the rim reads as a hand-cut outline. */
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage {
+  border-top: none;
+  border-radius: 0;
+  --studio-scallop: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='18' viewBox='0 0 34 18'><path d='M0 18V17A17 17 0 0 1 34 17V18Z'/></svg>");
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="half"] {
-  top: 47dvh;
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage::before,
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage::after {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--studio-outline, 2px));
+  right: calc(-1 * var(--studio-outline, 2px));
+  height: 18px;
+  pointer-events: none;
+  -webkit-mask: var(--studio-scallop) repeat-x bottom center / 34px 18px;
+  mask: var(--studio-scallop) repeat-x bottom center / 34px 18px;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] {
-  top: max(calc(env(safe-area-inset-top) + 143px), 18dvh);
-  overflow-y: auto;
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage::before {
+  top: -18px;
+  background: var(--ink);
 }
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-sheet-edge="scallop"] .studio-week-stage::after {
+  top: calc(-18px + var(--studio-outline, 2px));
+  background: var(--studio-sheet, var(--elevated));
+}
+
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="peek"] .studio-week-scrollbody {
   display: none;
 }
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-grabber {
   display: block;
+  flex: none;
 }
 [data-studio-appearance] .studio-week-grabber { display: none; }
 [data-studio-appearance] .studio-week-grab-control {
@@ -546,6 +589,11 @@
   color: var(--ink);
   text-align: center;
   touch-action: none;
+}
+[data-studio-appearance] .studio-week-grab-control:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+  border-radius: 14px;
 }
 [data-studio-appearance] .studio-week-grabber-line {
   display: block;
@@ -564,11 +612,12 @@
   line-height: 1.3;
   font-size: 0.83rem;
 }
-[data-studio-appearance] .studio-week-grabber-caption strong { font-size: 1.06rem; }
+[data-studio-appearance] .studio-week-grabber-caption strong { font-size: 1.06rem; font-family: var(--studio-heading-font, inherit); font-weight: 400; }
 [data-studio-appearance] .studio-week-summary {
   border-radius: 999px;
-  border: 1px solid var(--ink);
-  background: var(--canvas);
+  border: max(var(--studio-outline, 1px), 1px) solid var(--ink);
+  background: var(--studio-highlight);
+  color: var(--studio-on-highlight);
   padding: 0.25rem 0.5rem;
   font-weight: 700;
 }
@@ -579,20 +628,114 @@
   color: var(--secondary);
   padding-bottom: 0.25rem;
 }
-[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] .studio-week-grabber {
-  position: sticky;
-  top: -0.25rem;
-  z-index: 2;
-  background: var(--elevated);
-}
+/* The list scrolls inside the sheet and fades out before the dock, so day cards never
+   run hard behind the floating controls. */
 [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-scrollbody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
   padding-bottom: calc(env(safe-area-inset-bottom) + 8.5rem);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 9.5rem - env(safe-area-inset-bottom)), transparent calc(100% - 5rem - env(safe-area-inset-bottom)));
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 9.5rem - env(safe-area-inset-bottom)), transparent calc(100% - 5rem - env(safe-area-inset-bottom)));
 }
-@media (prefers-reduced-motion:reduce) {
-  [data-studio-appearance] .studio-week-stage { transition:none; }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .studio-week-scrollbody::-webkit-scrollbar { display: none; }
+
+/* Skin: outline, hard shadow, radii, glyph and heading face come from the wallpaper-derived
+   variables. Nothing below names a wallpaper, a color or a look. */
+[data-studio-appearance][data-studio-skin="on"][data-studio-week] .week-seq-item {
+  border: var(--studio-outline) solid var(--ink);
+  border-radius: var(--studio-card-radius);
+  background: var(--elevated);
+  box-shadow: var(--studio-card-shadow);
 }
-@media (max-height:610px) {
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="peek"] { top: 70dvh; }
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="half"] { top: 42dvh; }
-  [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage[data-studio-detent="full"] { top: 132px; }
+[data-studio-appearance][data-studio-skin="on"][data-studio-week] .week-seq-item > div:first-child h2 {
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+[data-studio-appearance][data-studio-skin="on"][data-studio-week] .week-seq-item li.bg-canvas {
+  border: max(var(--studio-outline) / 2, 1px) solid var(--ink);
+  border-radius: 10px 10px 10px 3px;
+}
+[data-studio-skin="on"] .studio-week-grabber-help { display: none; }
+/* Inside the solid sheet the note plates would be a box on a box. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage h2.studio-readable-note,
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage p.studio-readable-note {
+  background-color: transparent;
+  padding-inline: 0;
+  display: flex;
+}
+[data-studio-skin="on"] .spread-bubbles { background: transparent; }
+[data-studio-skin="on"] section[aria-label="Free time"] > h2,
+[data-studio-skin="on"] section[aria-label="Free time"] li > button span {
+  color: var(--ink);
+}
+[data-studio-skin="on"] section[aria-label="Free time"] li > button {
+  background: color-mix(in srgb, var(--studio-highlight) 30%, var(--elevated));
+  border: max(var(--studio-outline), 1px) solid var(--ink);
+  box-shadow: var(--studio-card-shadow);
+}
+[data-studio-skin="on"] .spread-bubbles > * {
+  border: max(var(--studio-outline), 1px) solid var(--ink);
+  border-radius: 999px;
+  box-shadow: var(--studio-card-shadow);
+  background: var(--elevated);
+  color: var(--ink);
+}
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-wheel {
+  background: var(--studio-crown);
+  border-radius: 1.1rem;
+  box-shadow: var(--studio-card-shadow);
+  --tooth-dark: var(--studio-crown-fg);
+  --tooth-mid: color-mix(in srgb, var(--studio-crown-fg) 45%, var(--studio-crown));
+  --tooth-light: color-mix(in srgb, var(--studio-crown-fg) 25%, var(--studio-crown));
+  --tooth-gap: var(--studio-crown);
+}
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-sheen,
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap::after { display: none; }
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap { color: var(--studio-crown-fg); }
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  border: solid currentColor;
+  border-width: 0 0 3px 3px;
+}
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap-left::before { left: 1.05rem; transform: translateY(-50%) rotate(45deg); }
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-cap-right::before { right: 1.05rem; transform: translateY(-50%) rotate(-135deg); }
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-readout * { color: var(--studio-on-highlight); }
+[data-studio-skin="on"] .studio-week-header[data-studio-view="week"] .crown-readout {
+  background: var(--studio-highlight);
+  color: var(--studio-on-highlight);
+  border: max(var(--studio-outline), 1px) solid var(--studio-crown);
+  border-radius: 0.7rem;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Completion glyph. "star" swaps the check for a star drawn from the same two variables. */
+[data-studio-check="star"] .studio-task-check[aria-checked="true"] > * { display: none; }
+[data-studio-check="star"] .studio-task-check[aria-checked="true"]::before,
+[data-studio-check="star"] .studio-task-check[aria-checked="true"]::after {
+  content: "";
+  grid-area: 1 / 1;
+  width: 30px;
+  height: 30px;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1.8l3 6.9 7.5.7-5.7 5 1.8 7.4L12 17.7l-6.6 4.1 1.8-7.4-5.7-5 7.5-.7z'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1.8l3 6.9 7.5.7-5.7 5 1.8 7.4L12 17.7l-6.6 4.1 1.8-7.4-5.7-5 7.5-.7z'/></svg>") center / contain no-repeat;
+}
+[data-studio-check="star"] .studio-task-check[aria-checked="true"]::before { background: var(--ink); }
+[data-studio-check="star"] .studio-task-check[aria-checked="true"]::after {
+  background: var(--studio-highlight);
+  width: 20px;
+  height: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-studio-appearance] .studio-week-stage,
+  [data-studio-appearance]::before { transition: none; }
 }

@@ -46,3 +46,27 @@ Foundation Models code is in the shipped application.
 
 Keep the rules in `docs/design/SPREAD_DESIGN_SYSTEM.md`; this document
 explains the Studio-only exception, not a replacement design system.
+
+## Material skin derived from the wallpaper (2026-10-27)
+
+`StudioAppearanceV1` gained an optional `skin` and `palette.sheet`. Nothing in it names a
+wallpaper or a bundled look. `languageFromPixels` derives every value from the image:
+
+| Field | Derived from |
+| --- | --- |
+| `palette.sheet` | a quiet, light swatch (luminance near 0.58, low saturation); none for dark art |
+| `palette.text` | the darkest swatch, forced to 7:1 on cards and 4.5:1 on the sheet |
+| `palette.highlight` | the brightest saturated swatch (fills such as the Crown readout and chips) |
+| `skin.outline` / `hardShadow` | strong-edge density (`lineDensity`): 0, 1, 2 or 3 px; soft photos get 0 |
+| `skin.sheetEdge` | scallop only at outline 3, otherwise round |
+| `skin.checkGlyph` | star only for colorful, outlined art |
+| `skin.focusY` | center of the busiest seven-band window (texture heuristic, not subject detection) |
+
+Week sheet: one `--studio-sheet-top` variable drives the sheet and the wallpaper layer, so the
+art re-centers in the strip above the sheet at Peek, Half and while dragging. Detent tops follow
+the end-state proportions (79%, 47%, header bottom + 6 px). The grabber is a vertical slider
+(Arrow, Home, End) and the sheet follows the finger with rubber banding and velocity settle.
+
+Display type: Erica One is bundled locally (`src/spread/fonts`, SIL OFL) and used for the
+`Today` heading only when the derived look selects the display typeface. `render.test.ts` allows
+exactly that one local face and still rejects any other `@font-face` or remote font URL.

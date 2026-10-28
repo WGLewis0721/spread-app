@@ -48,6 +48,8 @@ export const AI_AVAILABILITY = ["available", "unsupported", "not-ready", "error"
 export const STUDIO_RECEIPTS = ["pending", "previewed", "applied"] as const;
 export const STUDIO_MODES = ["system", "light", "dark"] as const;
 export const WALLPAPER_FITS = ["cover", "contain"] as const;
+export const SHEET_EDGES = ["round", "scallop"] as const;
+export const CHECK_GLYPHS = ["check", "star"] as const;
 
 export type MaterialTreatment = (typeof MATERIAL_TREATMENTS)[number];
 export type TypographyPresetId = (typeof TYPOGRAPHY_PRESET_IDS)[number];
@@ -60,6 +62,8 @@ export type AIAvailability = (typeof AI_AVAILABILITY)[number];
 export type StudioReceipt = (typeof STUDIO_RECEIPTS)[number];
 export type StudioMode = (typeof STUDIO_MODES)[number];
 export type WallpaperFit = (typeof WALLPAPER_FITS)[number];
+export type SheetEdge = (typeof SHEET_EDGES)[number];
+export type CheckGlyph = (typeof CHECK_GLYPHS)[number];
 export type AssetOrientation = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export type StudioWallpaper = {
@@ -77,6 +81,23 @@ export type StudioPalette = {
   secondaryText: string;
   /** Optional second accent for artwork-inspired outlines; never communicates status alone. */
   highlight?: string;
+  /** Optional tint for the pinned header and Week sheet, taken from the wallpaper. Defaults to surface. */
+  sheet?: string;
+};
+
+/**
+ * Optional material skin. Every field is derived from the user's own wallpaper
+ * (see wallpaper-language.ts) and stays editable. Missing skin = the shipped shapes.
+ */
+export type StudioSkin = {
+  sheetEdge: SheetEdge;
+  /** Outline weight in px. 0 hides outlines on cards, chips and the sheet. */
+  outline: number;
+  /** Hard offset shadow in px. 0 keeps the soft shadow. */
+  hardShadow: number;
+  checkGlyph: CheckGlyph;
+  /** Vertical center of interest in the wallpaper, 0 (top) to 1 (bottom). */
+  focusY: number;
 };
 
 export type StudioMaterial = {
@@ -115,6 +136,7 @@ export type StudioAppearanceV1 = {
   typography: StudioTypography;
   controls: StudioControls;
   effects: StudioEffects;
+  skin?: StudioSkin;
 };
 
 export type StudioDraft = {
@@ -180,10 +202,12 @@ const APPEARANCE_FIELDS = [
   "typography",
   "controls",
   "effects",
+  "skin",
 ] as const;
 
 const WALLPAPER_FIELDS = ["fit", "positionX", "positionY", "dim", "blur"] as const;
-const PALETTE_FIELDS = ["accent", "surface", "text", "secondaryText", "highlight"] as const;
+const PALETTE_FIELDS = ["accent", "surface", "text", "secondaryText", "highlight", "sheet"] as const;
+const SKIN_FIELDS = ["sheetEdge", "outline", "hardShadow", "checkGlyph", "focusY"] as const;
 const MATERIAL_FIELDS = ["treatment", "transparency", "depth"] as const;
 const TYPOGRAPHY_FIELDS = ["presetId", "scale", "numeralEmphasis"] as const;
 const CONTROLS_FIELDS = ["density", "treatmentId", "parts"] as const;
@@ -295,7 +319,28 @@ function readPalette(value: unknown): StudioRead<StudioPalette> {
     if (!parsed) return fail("palette.highlight");
     highlight = parsed;
   }
-  return pass({ accent, surface, text, secondaryText, ...(highlight ? { highlight } : {}) });
+  let sheet: string | undefined;
+  if ("sheet" in value) {
+    const parsed = readColor(value.sheet);
+    if (!parsed) return fail("palette.sheet");
+    sheet = parsed;
+  }
+  return pass({ accent, surface, text, secondaryText, ...(highlight ? { highlight } : {}), ...(sheet ? { sheet } : {}) });
+}
+
+function readSkin(value: unknown): StudioRead<StudioSkin> {
+  if (!isRecord(value)) return fail("skin");
+  const extra = unexpected(value, SKIN_FIELDS);
+  if (extra) return fail(`unknown-field:skin.${extra}`);
+  if (!oneOf(value.sheetEdge, SHEET_EDGES)) return fail("skin.sheetEdge");
+  if (!oneOf(value.checkGlyph, CHECK_GLYPHS)) return fail("skin.checkGlyph");
+  const outline = readNumber(value.outline, 0, 4);
+  const hardShadow = readNumber(value.hardShadow, 0, 4);
+  const focusY = readNumber(value.focusY, 0, STUDIO_LIMITS.unitMax);
+  if (outline === null) return fail("skin.outline");
+  if (hardShadow === null) return fail("skin.hardShadow");
+  if (focusY === null) return fail("skin.focusY");
+  return pass({ sheetEdge: value.sheetEdge, outline, hardShadow, checkGlyph: value.checkGlyph, focusY });
 }
 
 function readMaterial(value: unknown): StudioRead<StudioMaterial> {
@@ -414,6 +459,12 @@ export function parseStudioAppearance(value: unknown): StudioRead<StudioAppearan
   if (!controls.ok) return controls;
   const effects = readEffects(value.effects);
   if (!effects.ok) return effects;
+  let skin: StudioSkin | undefined;
+  if ("skin" in value) {
+    const parsedSkin = readSkin(value.skin);
+    if (!parsedSkin.ok) return parsedSkin;
+    skin = parsedSkin.value;
+  }
   return pass({
     version: 1,
     id,
@@ -426,6 +477,7 @@ export function parseStudioAppearance(value: unknown): StudioRead<StudioAppearan
     typography: typography.value,
     controls: controls.value,
     effects: effects.value,
+    ...(skin ? { skin } : {}),
   });
 }
 

@@ -41,6 +41,31 @@ function useMediaFlag(query: string): boolean {
   return matches;
 }
 
+/** Natural aspect (height / width) of the local wallpaper, read once from its own object URL. */
+function useImageAspect(url: string | null): number {
+  const [aspect, setAspect] = useState(1.8);
+  useEffect(() => {
+    if (!url) return;
+    let live = true;
+    const image = new Image();
+    image.onload = () => { if (live && image.naturalWidth > 0) setAspect(image.naturalHeight / image.naturalWidth); };
+    image.src = url;
+    return () => { live = false; };
+  }, [url]);
+  return aspect;
+}
+
+function useViewport(): { w: number; h: number } {
+  const read = () => ({ w: window.innerWidth, h: window.innerHeight });
+  const [size, setSize] = useState(read);
+  useEffect(() => {
+    const on = () => setSize(read());
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return size;
+}
+
 function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, gates, children }: ScopeProps) {
   const reducedMotion = useMediaFlag("(prefers-reduced-motion: reduce)");
   const reducedTransparency = useMediaFlag("(prefers-reduced-transparency: reduce)");
@@ -62,8 +87,16 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
     reducedTransparency,
     moreContrast,
   });
+  const aspect = useImageAspect(scope.wallpaper);
+  const viewport = useViewport();
   if (!scope.attribute) return children;
-  const style = { ...scope.style, colorScheme: scope.scheme } as CSSProperties;
+  // Cover height of the fixed wallpaper layer (it bleeds 24px past the viewport on every side).
+  const wallpaperHeight = Math.max(viewport.h + 48, (viewport.w + 48) * aspect);
+  const style = {
+    ...scope.style,
+    "--studio-wp-h": `${Math.round(wallpaperHeight)}px`,
+    colorScheme: scope.scheme,
+  } as CSSProperties;
   return (
     <div
       {...{ [STUDIO_APPEARANCE_ATTRIBUTE]: scope.attribute }}
@@ -77,6 +110,10 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-tasks={scope.parts.tasks}
       data-studio-dock={scope.parts.dock}
       data-studio-wallpaper={scope.wallpaper ? "on" : "off"}
+      data-studio-skin={scope.skin ? "on" : "off"}
+      data-studio-sheet-edge={scope.skin?.sheetEdge}
+      data-studio-check={scope.skin?.checkGlyph}
+      data-studio-display={scope.skin?.display ? "on" : undefined}
       style={style}
     >
       {children}

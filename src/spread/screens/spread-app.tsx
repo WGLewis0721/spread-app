@@ -46,7 +46,7 @@ import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "
 import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
 import { StudioLivePlanner } from "@/spread/components/studio/live-planner";
-import { cycleDetent, snapDetent, type StudioWeekDetent } from "@/lib/spread/studio/week-detents";
+import { cycleDetent, detentTops, followTop, nearestDetent, STUDIO_WEEK_DETENTS, type StudioWeekDetent } from "@/lib/spread/studio/week-detents";
 
 type Sheet = "more" | "new" | "icloud" | null;
 
@@ -368,8 +368,9 @@ function WeekScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editing, setEditing] = useState(false);
   const [studioDetent, setStudioDetent] = useState<StudioWeekDetent>("half");
-  const weekGrabRef = useRef<{y:number;at:number}|null>(null);
+  const weekGrabRef = useRef<{y:number;startTop:number;samples:{y:number;t:number}[]}|null>(null);
   const skipGrabClick = useRef(false);
+  const stageRef = useRef<HTMLElement|null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const profileId = useSpread((s) => s.activeId);
   const [view, setView] = useState<"spread" | "week">(() => readViewContext(safeStorage(), useSpread.getState().activeId).view);
@@ -405,6 +406,22 @@ function WeekScreen() {
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
+  // Studio Week sheet: the sheet's top edge is one CSS variable on the appearance scope.
+  // The wallpaper layer reads the same variable, so art and sheet move together.
+  const studioRoot = useCallback(() => stageRef.current?.closest<HTMLElement>("[data-studio-appearance]") ?? null, []);
+  const studioTops = useCallback(() => detentTops(window.innerHeight, headerRef.current?.getBoundingClientRect().bottom ?? 126), []);
+  useLayoutEffect(() => {
+    if (!STUDIO_FLAG) return;
+    const root = studioRoot();
+    if (!root) return;
+    const settle = () => {
+      root.style.setProperty("--studio-head", `${Math.round(headerRef.current?.getBoundingClientRect().bottom ?? 126)}px`);
+      root.style.setProperty("--studio-sheet-top", `${studioTops()[studioDetent]}px`);
+    };
+    settle();
+    window.addEventListener("resize", settle);
+    return () => { window.removeEventListener("resize", settle); root.style.removeProperty("--studio-sheet-top"); root.style.removeProperty("--studio-head"); };
+  }, [studioDetent, headerH, studioRoot, studioTops, view]);
   const [viewPlay, setViewPlay] = useState(false);
   const [profilePlay, setProfilePlay] = useState(false);
   const [gears, setGears] = useState(false);
@@ -715,6 +732,7 @@ function WeekScreen() {
           role="tabpanel"
           aria-labelledby={`planner-tab-${view}`}
           tabIndex={0}
+          ref={(node) => { stageRef.current = node; }}
           className={cn("px-4 pt-2 pb-dock",STUDIO_FLAG && view==="week" && "studio-week-stage")}
           data-studio-detent={STUDIO_FLAG && view==="week" ? studioDetent : undefined}
         >
@@ -722,19 +740,46 @@ function WeekScreen() {
             <button
               type="button"
               className="studio-week-grab-control"
-              aria-label={`Week sheet ${studioDetent}. ${studioDetent==="full"?"Collapse":"Expand"} weekly plan.`}
-              aria-expanded={studioDetent!=="peek"}
-              onPointerDown={(e)=>{ weekGrabRef.current={y:e.clientY,at:performance.now()};skipGrabClick.current=false;e.currentTarget.setPointerCapture(e.pointerId); }}
-              onPointerUp={(e)=>{
-                const initial=weekGrabRef.current;weekGrabRef.current=null;
-                if(!initial)return;
-                const delta=e.clientY-initial.y,elapsed=performance.now()-initial.at;
-                if(Math.abs(delta)>=25){
-                  setStudioDetent(d=>snapDetent(d,delta,elapsed));
-                  skipGrabClick.current=true;
-                }
+              role="slider"
+              aria-orientation="vertical"
+              aria-label="Week sheet position"
+              aria-valuemin={0}
+              aria-valuemax={2}
+              aria-valuenow={STUDIO_WEEK_DETENTS.indexOf(studioDetent)}
+              aria-valuetext={studioDetent==="peek"?"Peek, today only":studioDetent==="half"?"Half, wallpaper and week":"Full, whole week"}
+              onKeyDown={(e)=>{
+                const i=STUDIO_WEEK_DETENTS.indexOf(studioDetent);
+                if(e.key==="ArrowUp"||e.key==="PageUp"){e.preventDefault();setStudioDetent(STUDIO_WEEK_DETENTS[Math.min(2,i+1)]);}
+                else if(e.key==="ArrowDown"||e.key==="PageDown"){e.preventDefault();setStudioDetent(STUDIO_WEEK_DETENTS[Math.max(0,i-1)]);}
+                else if(e.key==="Home"){e.preventDefault();setStudioDetent("peek");}
+                else if(e.key==="End"){e.preventDefault();setStudioDetent("full");}
               }}
-              onPointerCancel={()=>{weekGrabRef.current=null;skipGrabClick.current=false;}}
+              onPointerDown={(e)=>{
+                weekGrabRef.current={y:e.clientY,startTop:studioTops()[studioDetent],samples:[{y:e.clientY,t:performance.now()}]};
+                skipGrabClick.current=false;e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={(e)=>{
+                const g=weekGrabRef.current;if(!g)return;
+                const dy=e.clientY-g.y;
+                if(Math.abs(dy)<6&&!skipGrabClick.current)return;
+                skipGrabClick.current=true;
+                const root=studioRoot();if(!root)return;
+                root.setAttribute("data-studio-dragging","");
+                g.samples.push({y:e.clientY,t:performance.now()});if(g.samples.length>6)g.samples.shift();
+                root.style.setProperty("--studio-sheet-top",`${followTop(g.startTop,dy,studioTops())}px`);
+              }}
+              onPointerUp={(e)=>{
+                const g=weekGrabRef.current;weekGrabRef.current=null;
+                const root=studioRoot();root?.removeAttribute("data-studio-dragging");
+                if(!g||!skipGrabClick.current)return;
+                const first=g.samples[0],last=g.samples[g.samples.length-1];
+                const velocity=last.t>first.t?(last.y-first.y)/(last.t-first.t):0;
+                const tops=studioTops();
+                const next=nearestDetent(followTop(g.startTop,e.clientY-g.y,tops),velocity,tops);
+                root?.style.setProperty("--studio-sheet-top",`${tops[next]}px`);
+                setStudioDetent(next);
+              }}
+              onPointerCancel={()=>{weekGrabRef.current=null;skipGrabClick.current=false;studioRoot()?.removeAttribute("data-studio-dragging");studioRoot()?.style.setProperty("--studio-sheet-top",`${studioTops()[studioDetent]}px`);}}
               onClick={()=>{
                 if(skipGrabClick.current){skipGrabClick.current=false;return;}
                 setStudioDetent(cycleDetent);
@@ -745,7 +790,7 @@ function WeekScreen() {
                 <strong>Today</strong>
                 <span>{now.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}</span>
                 <span className="studio-week-summary">
-                  {(data.weeks[data.currentWeek]?.boxes??[]).reduce((count,box)=>count+box.tasks.length,0)} tasks this week
+                  {(()=>{const n=(data.weeks[data.currentWeek]?.boxes??[]).reduce((count,box)=>count+box.tasks.length,0);return n===0?"No tasks yet":`${n} ${n===1?"task":"tasks"} this week`;})()}
                 </span>
               </span>
             </button>
@@ -1351,7 +1396,7 @@ function TaskRow({
             if (!task.done) void completionHaptic();
             toggleTask(hatId, task.id);
           }}
-          className="grid size-14 shrink-0 place-items-center"
+          className="studio-task-check grid size-14 shrink-0 place-items-center"
         >
           {task.done ? (
             <SpreadIcon name="icon-check.svg" size={28} />
