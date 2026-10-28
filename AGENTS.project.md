@@ -6,12 +6,36 @@ These apply to any agent or tool working in this repository, alongside `AGENTS.m
 
 - Read `README.md` for how the planner works and where it deploys.
 - Read `APP_STORE_RELEASE_PLAN.md` before any iOS packaging, TestFlight, App Store, native storage/share, pricing, or CloudKit work. It fixes the 1.0 direction as Capacitor + the existing React app, local-first, no account required, paid-app commerce. For iCloud backup/sync, migrations, attachments, iPad and the related release gates read `docs/ICLOUD_PLAN.md` too, and never ship a cloud feature outside its `cloud.*` flag until its gate has passed.
-- **All design work starts at [`docs/design/README.md`](docs/design/README.md)**, the design brain. It maps every design doc, says which one governs which task, and lists the rules and open decisions in one place. Do not look for design guidance anywhere else.
-  - Landing page (`UnlockScreen` in `src/spread/screens/spread-app.tsx`, the `landing-*` components, the "Landing page only" block of `src/styles.css`): `docs/design/landing/DESIGN.md`.
-  - Planner screens (Week, Spread, sheets, toasts): `docs/design/planner/SPREAD_DESIGN_SYSTEM.md`. It lists the tokens and patterns to reuse; do not add new colours or styles.
-  - Device-specific layout, safe-area, multitasking, fold or App Store screenshot work: `docs/design/platforms/` (`SPREAD_IPHONE_BUILD_GUIDE.md` is the shared baseline). They are research notes with evidence tags; section 6a of the iPhone guide proposes dark palette values that are not yet adopted, so the "no new colours" rule below still applies until they are.
-  - Icons: `docs/design/brand/ICON_HANDOFF.md`.
-  - **Asked for a plan, spec sheet, redesign or UI review:** follow `docs/design/PLAN_SPEC_PROTOCOL.md` and write the spec with `docs/design/specs/TEMPLATE.md`. Save it in `docs/design/specs/`. List anything that seems to need a new color, font or decorative style as an exception for the owner to decide; do not design around a rule silently.
+- **Design work:** the block below is generated from `docs/design/RULES_CARD.md`. Do not edit it here; run `npm run docs:sync`. Landing page rules, planner rules and device notes are in the packs the router names.
+
+<!-- design-rules-card:start -->
+**Start here:** `docs/design/README.md` (router). Plans and specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens as data: `docs/design/tokens.json`. Read the task pack the router names, then only the section it points to.
+
+**Look**
+- No new colors, fonts or decorative styles in the unflagged planner. Use a token (`--canvas`, `--elevated`, `--ink`, `--secondary`, `--tertiary`, `--line`, `--fill`, `--accent`, `--on-accent`, `--danger`, `--caution`, `--scrim`, `--shadow`, `--glass*`) or reuse a pattern.
+- Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
+- Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
+- Week keeps three kinds of thing: solid day cards, a dashed To place tray, tinted Free time chips.
+- Keep the Crown, Spread/Week/Month semantics, the hour bank and the quiet palette.
+- The landing page is separate (`docs/design/landing/DESIGN.md`): one focal object per section, both modes.
+
+**Behavior**
+- A task goes on its own role's day only. Every drag has a tap and a keyboard path. Drags and "Not today" offer Undo.
+- Nothing may claim iCloud works. Cloud behavior stays behind its `cloud.*` flag.
+- Motion uses existing classes; reduced motion removes movement. One light haptic on completing a task, iPhone only.
+
+**Boundaries**
+- Task changes go through `store.ts` actions. No second store. No data migration for UI work.
+- Landing work never changes the planner. Never modify a `golden/*` branch.
+- Do not touch cloud, sync, backup, restore, schema files, `ios/App/App/Cloud/**`, `ios/App/SpreadCloudCore/**`, `server/`.
+- Only `applyTheme` and the pre-paint script write `data-theme`.
+
+**Verify**
+- Widths 390, 820, 1024 (1366 iPad, 1440 landing), light and dark, reduced motion, no horizontal scroll.
+- Typecheck, lint, tests and build are necessary, not sufficient. Device checks are owed. New test files go in the explicit lists with `--min` raised.
+
+**If a request seems to need something forbidden, list it as an exception for the owner to decide. Never design around a rule silently.**
+<!-- design-rules-card:end -->
 
 ## Rules
 

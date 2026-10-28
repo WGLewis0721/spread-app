@@ -67,7 +67,7 @@ Empty, first run, loading, error, overflow, offline, undo, refused action. One l
 - **Where it lives:** files and components.
 - **Data and state:** store actions used, new state if any (convenience state uses a key that does not start with `spread.`). No data migration for UI work.
 - **Flags and rollout:** is a flag needed, what is the default.
-- **Do not touch:** confirm none of the paths in README section 3 are modified.
+- **Do not touch:** confirm none of the paths under Boundaries in [../RULES_CARD.md](../RULES_CARD.md) are modified.
 - **Dependencies:** none, or each with its license and why.
 - **Performance and privacy:** anything that blurs, animates or stores data; Spread is local-first, so state if anything leaves the device.
 
@@ -83,7 +83,7 @@ Empty, first run, loading, error, overflow, offline, undo, refused action. One l
 Observable statements: "Given ..., when ..., then ...". No "code exists" criteria.
 
 ### Checks
-- Typecheck, lint, tests, build (README section 3).
+- Typecheck, lint, tests, build ([../RULES_CARD.md](../RULES_CARD.md), Verify).
 - Browser: widths and modes, Reduce Motion, mouse and touch, no horizontal scroll.
 - Owed on a physical device (list them): drag feel, haptics, blur performance, VoiceOver, offline.
 

@@ -2,6 +2,8 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
 
+> Summary: iPad only: size classes and multitasking (3), drag and drop, pointer and keyboard (4), App Store assets (6), test gates (7). Layout digest in [../packs/device-layout.md](../packs/device-layout.md).
+
 
 Researched 2026-10-21 from developer.apple.com, the Spread repo docs, and GitHub. This file covers iPad only. The shared baseline (toolchain, submission rules, privacy manifest, Capacitor, repo rules, haptics, drag-and-drop mechanics, testing commands) is in `SPREAD_IPHONE_BUILD_GUIDE.md` section 1 and still applies. iPhone Duo is in `SPREAD_IPHONE_DUO_BUILD_GUIDE.md`.
 

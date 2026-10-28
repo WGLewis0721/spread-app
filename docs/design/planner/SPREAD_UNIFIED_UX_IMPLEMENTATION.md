@@ -2,6 +2,8 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
 
+> Summary: historical spec and result matrix for the Unified UX pass (undo, Not today, view memory, haptics, free-time suggestion, rollover, offline, status honesty). Evidence of what was verified, not a design authority. Read by section; section 4 holds the pass/fail gates.
+
 > Note (2026-10-28): section 5 told the implementer not to assume iPhone Duo, hinge or reserved-region APIs. Apple has since documented them; see [../platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md](../platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md). The section stays as written because it records what the original plan said.
 
 **Status:** Implementation specification; repository verification required  

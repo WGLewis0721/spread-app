@@ -23,7 +23,10 @@
     "export:ios": "node scripts/export-ios.mjs",
     "ios:sync": "npm run export:ios && npx --yes @capacitor/cli@8.5.1 sync ios",
     "ios:open": "npm run ios:sync && npx --yes @capacitor/cli@8.5.1 open ios",
-    "test:scripts": "node scripts/run-tests.mjs --min 195 --find scripts .test.mjs"
+    "test:scripts": "node scripts/run-tests.mjs --min 200 --find scripts .test.mjs",
+    "docs:tokens": "node scripts/design-tokens.mjs --write",
+    "docs:sync": "node scripts/design-docs.mjs --sync",
+    "docs:check": "node scripts/design-docs.mjs"
   },
   "dependencies": {
     "@capacitor/core": "8.5.1",

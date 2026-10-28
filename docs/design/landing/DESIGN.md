@@ -76,6 +76,8 @@ components:
 
 > Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
 
+> Summary: landing page only. Warm paper becoming a polished product, a fixed brand board, one focal object per section, motion that explains paper becoming product, all dark values in one block. For routine changes read [../packs/landing-change.md](../packs/landing-change.md) first.
+
 
 This is the design direction for Spread's public site, the one-page landing and entry screen in `src/spread/screens/spread-app.tsx` (`UnlockScreen`). Read it before changing anything on that page. It is written the same way as the DESIGN.md references that shaped it, so any design tool can pick it up as prompt context.
 
