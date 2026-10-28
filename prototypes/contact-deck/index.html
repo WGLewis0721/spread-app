@@ -257,35 +257,33 @@
 .screen .fan-orb{bottom:13px}
 @media(max-width:420px){.screen .contact-card,.screen .arena:has(.track[data-mode$="-stack"]) .contact-card,.screen .arena:has(.track[data-mode$="-fan"]) .contact-card,.screen .arena:has(.track[data-mode$="-orbit"]) .contact-card{width:calc(100% - 12px);left:6px}}
 
-/* Edge-to-edge photo deck: navigation floats above a continuous card canvas. */
-.screen .arena,.screen.cinematic .arena{top:0;bottom:0;left:0;right:0;overflow:hidden;perspective:1100px}
-.screen .arena .track{inset:0}
-.screen .arena .contact-card,.screen.cinematic .arena .contact-card,
-.screen .arena:has(.track[data-mode$="-stack"]) .contact-card,
-.screen.cinematic .arena:has(.track[data-mode$="-stack"]) .contact-card,
-.screen.cinematic .arena:has(.track[data-mode$="-fan"]) .contact-card{
-top:7px;left:7px;right:7px;width:calc(100% - 14px);max-width:none;height:calc(100% - 14px);
-margin:0;border-radius:32px;overflow:hidden;-webkit-box-reflect:none;
-opacity:var(--deck-opacity,1)!important;filter:brightness(var(--deck-brightness,1)) saturate(var(--deck-saturation,1));
+/* Full-height portrait deck: centered geometry, no competing absolute offsets. */
+.screen .arena,.screen.cinematic .arena{top:142px;bottom:91px;left:0;right:0;overflow:hidden;perspective:1000px}
+.screen .arena .contact-card,.screen.cinematic .arena .contact-card{
+top:50%;left:50%;right:auto;width:calc(100% - 28px);height:calc(100% - 20px);
+margin-left:calc(-50% + 14px);margin-top:calc(-50% + 10px);
+border-radius:24px;overflow:hidden;-webkit-box-reflect:none;
+opacity:var(--deck-opacity,1);filter:brightness(var(--deck-brightness,1)) saturate(var(--deck-saturation,1));
 transition:transform .68s cubic-bezier(.16,1,.27,1),opacity .68s ease,filter .68s ease
 }
+/* The negative half-height must be measured from the arena, not the card width. */
+.screen .arena .contact-card,.screen.cinematic .arena .contact-card{height:calc(100% - 20px);top:10px;margin-top:0}
+.screen .arena:has(.track[data-mode$="-fan"]) .contact-card,
+.screen .arena:has(.track[data-mode$="-orbit"]) .contact-card{width:calc(100% - 56px);margin-left:calc(-50% + 28px)}
 .screen .arena .contact-card .poster{position:absolute;inset:0;width:100%;height:100%}
 .screen .arena .contact-card .person-photo{width:100%;height:100%;object-fit:cover}
-.screen .arena .contact-card .card-body{bottom:0;padding:0 24px 122px}
-.screen .arena .contact-card .card-top{top:188px}
+.screen .arena .contact-card .card-body{bottom:0;padding:0 20px 20px}
+.screen .arena .contact-card .card-top{top:12px}
 .screen .app-head{z-index:12;pointer-events:none}
 .screen .app-head button,.screen .app-head .modes,.screen .app-head .toolrow{pointer-events:auto}
 .screen .captionline{z-index:12;pointer-events:none}
 .screen .footer{z-index:12}
-.screen .hint{z-index:12;bottom:105px;color:#fff;text-shadow:0 1px 5px #0008}
 .screen .ambient{opacity:0;pointer-events:none}
-.screen .arena .contact-card.distant{filter:brightness(var(--deck-brightness,.78)) saturate(var(--deck-saturation,.8))}
-.screen.cinematic .arena .contact-card{border-color:#ffffff72}
-.screen.cinematic .arena .contact-card .card-body{padding-bottom:48px}
-.screen.cinematic .arena .contact-card .card-top{opacity:0}
-.screen.cinematic .hint{opacity:0}
-.screen .fan-orb{bottom:92px;z-index:13}
-@media(max-height:720px){.screen .arena .contact-card .card-body{padding-bottom:92px}.screen .arena .contact-card .card-top{top:155px}}
+.screen .fan-orb{bottom:94px;z-index:13}
+.screen.cinematic .arena{top:62px;bottom:62px}
+.screen.cinematic .arena .contact-card{height:calc(100% - 20px);top:10px}
+.screen.cinematic .arena .contact-card .card-top,.screen.cinematic .arena .contact-card .card-actions{opacity:0}
+@media(max-height:720px){.screen .arena{top:130px;bottom:84px}.screen .arena .contact-card .card-body{padding-bottom:12px}}
 </style></head><body>
 <div class="desktop"><aside class="editorial"><div class="eyebrow">Interaction study / v0.1</div><h1>People,<br><em>in motion.</em></h1><p>A more human way to find, remember, and connect. The joy of a physical card deck, designed for the way iPhone works today.</p><div class="mini-title">Three ways to browse</div><div class="feature"><span class="number">01</span> Stack — flip vertically like a Rolodex</div><div class="feature"><span class="number">02</span> Fan — sweep through a hand of cards</div><div class="feature"><span class="number">03</span> Flow — rotate an immersive Cover Flow</div><div class="mini-title">Try it</div><p style="font-size:13px">Swipe on the phone, change the view, tap a card, or open Appearance. Keyboard arrow keys also rotate the deck.</p></aside>
 <div class="device" aria-label="Interactive iPhone app prototype"><div id="screen" class="screen skin-current"><div class="cinematic-blackout" aria-hidden="true"></div><div class="status"><span>9:41</span><div class="dynamic" aria-hidden="true"></div><span class="signals">▂▄▆  ◢  ▰</span></div><header class="app-head"><div class="toprow"><div><div class="branding">People<span style="color:#6186cf">.</span></div><div class="small-over">Your world, one card at a time.</div></div><div class="toolrow"><button type="button" id="previewIdle" class="cinema-shortcut" title="Preview cinematic Cover Flow" aria-label="Preview cinematic Cover Flow">▶</button><button class="round" id="searchBtn" aria-label="Search contacts">⌕</button><button class="round" id="filterBtn" aria-label="Sort and filter">☷</button></div></div><nav class="modes" aria-label="Card views"><button data-view="stack" class="active">Stack</button><button data-view="fan">Fan</button><button data-view="orbit">Flow</button></nav></header><div class="captionline"><strong id="collectionTitle">ALL CONTACTS</strong><span id="countLabel">01 / 08</span></div><main class="arena" id="arena" aria-label="Swipe to browse contact cards"><div class="ambient"></div><div class="track" id="track"></div><div class="fan-orb" id="fanOrb" role="slider" aria-label="Scrub contacts quickly" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1" tabindex="0"></div><div class="empty" id="empty"><b>No contacts found</b>Try another search or filter.</div></main><div class="hint"><b id="hintArrow">↕</b><span id="hintText">Swipe up or down to browse</span></div><footer class="footer"><nav class="dock" aria-label="App navigation"><button class="navbtn selected" id="peopleTab" aria-label="People">▦<small>People</small></button><button class="navbtn" id="favoritesTab" aria-label="Favorites">☆<small>Favorites</small></button><button class="navbtn" id="searchTab" aria-label="Search">⌕<small>Search</small></button><button class="navbtn" id="settingsTab" aria-label="Appearance">☷<small>Looks</small></button></nav></footer><div class="home-indicator"></div><div class="overlay" id="overlay" role="presentation"><section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Contact options"></section></div><div class="toast" id="toast" role="status" aria-live="polite"></div><div class="cinema-heading" aria-hidden="true"><b>PEOPLE / COVER FLOW</b><span>THE PEOPLE WHO MATTER</span></div><button id="idleWake" class="wake-layer" type="button" tabindex="-1" aria-label="Leave cinematic Cover Flow and return to contacts"><span>Touch anywhere to browse</span></button></div></div>
