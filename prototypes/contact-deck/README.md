@@ -13,7 +13,7 @@ A tactile, photography-forward contact browser combining the clarity of modern i
 - **Orbit:** rotating, depth-based Cover Flow. Swipe horizontally.
 - **Orientation:** independently toggle face-forward vs. edge-forward. Tapping an edge-forward card reveals the face; tapping again opens details.
 - **Appearance:** Current, iOS 18, iOS 7, iOS 6. These are **interpretations**, not exact reproductions or native API components.
-- **Idle motion:** advances every few seconds after inactivity; disabled during dialogs, search and system Reduce Motion.
+- **Cinematic idle / Cover Flow:** after 8 seconds of inactivity, the current browsing view temporarily gives way to an automatic 3D carousel on a nearly black backdrop, with reflected portrait cards and minimal chrome. It advances every ~3.1 seconds, wakes on first touch/key press, and restores the user's previously selected browsing mode. Disable via Appearance → Cinematic idle mode; suppressed during search, dialogs, backgrounding and system Reduce Motion.
 - **Find and organize:** search by name, company, role or email; sort by first name, surname or company; filter favorites, friends, work or family.
 - **Contacts and communication:** eight **fictional** entries. Call, Message and FaceTime actions are intentionally disabled.
 - **Export:** client-side PNG (1080 × 1350) using Canvas with opt-in phone and email. No upload is performed. Export uses initials rather than a photo, since third-party sample images may not be CORS safe.
