@@ -1,8 +1,8 @@
-# Contact Deck — iOS interaction prototype
+# Contact Deck — independent, investor-facing interaction build
 
-**Status:** Isolated, fictional-data prototype. Not part of Spread's planner or iOS binary. Not production-ready.
+**Status:** Isolated, working web application with fictional sample data. Not part of Spread's planner, iOS binary, or production deployment. Native Contacts/FaceTime integration is **not** implemented.
 
-Open `index.html` in a browser. No build step, accounts, backend, or dependencies. The app title **People.** is temporary and requires name/trademark clearance.
+Open `index.html` in Safari or Chrome. No build step, account, or backend is needed. The app title **People.** is temporary and requires name/trademark clearance. The static preview is served from a GitHub-hosted mirror; no private user data should be entered into this experimental build.
 
 ## Concept
 
@@ -12,8 +12,8 @@ A tactile, photography-forward contact browser combining the clarity of modern i
 - **Fan:** a handheld spread of cards. Swipe horizontally.
 - **Orbit:** rotating, depth-based Cover Flow. Swipe horizontally.
 - **Orientation:** independently toggle face-forward vs. edge-forward. Tapping an edge-forward card reveals the face; tapping again opens details.
-- **Appearance:** Current, iOS 18, iOS 7, iOS 6. These are **interpretations**, not exact reproductions or native API components.
-- **Cinematic idle / Cover Flow:** after 8 seconds of inactivity, the current browsing view temporarily gives way to an automatic 3D carousel on a nearly black backdrop, with reflected portrait cards and minimal chrome. It advances every ~3.1 seconds, wakes on first touch/key press, and restores the user's previously selected browsing mode. Disable via Appearance → Cinematic idle mode; suppressed during search, dialogs, backgrounding and system Reduce Motion.
+- **Appearance:** Current, iOS 18, iOS 7, iOS 6. These are **interpretations**, not exact reproductions or native API components. The selected mode, orientation, skin, idle preference, sort, filter, and sample favorites persist locally when storage is available.
+- **Cinematic idle / Cover Flow:** after 8 seconds of inactivity, the current browsing view crossfades to pure black using a dedicated alpha-animated overlay (not an un-animatable gradient-to-solid CSS transition). The 3D photo carousel advances every ~3.1 seconds, wakes on first touch/key press, and restores the previously selected browsing mode. The **▶** button near the contact count previews the effect immediately; **Looks → Preview Cover Flow now** is an alternative. Auto-idle can be turned off, and animation is suppressed during search, dialogs, backgrounding and system Reduce Motion.
 - **Find and organize:** search by name, company, role or email; sort by first name, surname or company; filter favorites, friends, work or family.
 - **Contacts and communication:** eight **fictional** entries. Call, Message and FaceTime actions are intentionally disabled.
 - **Export:** client-side PNG (1080 × 1350) using Canvas with opt-in phone and email. No upload is performed. Export uses initials rather than a photo, since third-party sample images may not be CORS safe.
@@ -22,7 +22,7 @@ A tactile, photography-forward contact browser combining the clarity of modern i
 
 No real contacts are read, no `Contacts` permission requested, and no contacts are persisted. The sample photo source is `i.pravatar.cc`; a bundled SVG illustration is displayed when the image is unavailable. Preview photos therefore require a network connection and should be replaced with consented/local assets in a product.
 
-This demo is an intentionally dependency-free HTML/CSS/JavaScript exploration, **not** a shipped iOS app and not a native Liquid Glass implementation.
+This is a deliberately zero-dependency static web build suitable for product walkthroughs, **not** a shipped iOS app or a native Liquid Glass implementation. The HTML/JS are not yet componentized; before implementing production contacts access, move the app into an independently buildable and tested codebase (recommended React/TypeScript web app with a future Capacitor/Swift bridge).
 
 Do not fold it into `src/`, `public/`, a Spread route, or Capacitor without an approved separate product/repository decision. Keep Spread's golden baseline, bundle ID and release workflow untouched.
 
@@ -35,6 +35,15 @@ Do not fold it into `src/`, `public/`, a Spread route, or Capacitor without an a
 
 These are UX references; **no third-party components or copyrighted design code were copied**. App shell and gestures are original demo code.
 
+## Investor walkthrough
+
+1. Start in Stack and swipe vertically to another contact.
+2. Switch to Fan and Orbit; continue swiping sideways. Use Looks to compare the current skin against classic eras, and toggle face/edge-forward.
+3. Tap **▶** next to the contact count. The entire surrounding interface crossfades to black, portrait cards revolve every ~3 seconds, and reflections remain visible. Touch once to wake.
+4. Search for Marcus, examine contact details, choose which fields to export, and share/save a PNG card. The phone numbers and addresses are **fictional** and calling is deliberately disabled.
+
+**Known investor-demo risk:** remote sample photos may not load without network access. An inline illustrated fallback is intentional. Before any external pitch, verify on the actual iPhone and internet connection; physical Safari validation is still outstanding.
+
 ## Acceptance / QA
 
 - Launch as a standalone static HTML page at iPhone 390 × 844 and desktop 1450 × 940; no page-level horizontal overflow.
@@ -42,10 +51,21 @@ These are UX references; **no third-party components or copyrighted design code 
 - Edge-forward card rotates left; tap to face and tap again to expand.
 - Search finds Marcus, filtering limits results, sorting by company doesn't redirect selection to a different contact.
 - Favorites toggle updates filters and selected count.
-- Appearance changes skins without losing view or focus; idle animation can be switched off and respects `prefers-reduced-motion`.
+- Appearance changes skins without losing view or focus; settings persist locally. Sort does not unexpectedly change the current contact.
+- Cinematic mode must actually crossfade to an opaque black overlay, not simply toggle a class; a one-tap preview must work. Idle animation can be switched off and respects `prefers-reduced-motion`.
 - Detail sheet shows the correct selected fictional person. Nonfunctional calling actions are labeled as demo-only.
 - PNG export downloads and only includes phone/email when their checkboxes are selected.
 - No production route, package, configuration, tests, native code or deployment workflow changed.
+
+### Automated browser checks
+
+The standalone suite is in `tests/quality.spec.ts` and uses the repository's existing Playwright dependency; it never touches Spread's production data. After installing dependencies and Playwright Chromium, run:
+
+```sh
+npx playwright test --config=prototypes/contact-deck/playwright.config.ts
+```
+
+The current revision was additionally exercised with a local Python/Chromium interaction suite at 390, 402, 820, and 1450 px. The tests verified opacity progression, mode switching, sample sorting, local appearance persistence, canvas PNG download, and Reduce Motion. These checks are **not** a substitute for physical Safari/iPhone validation.
 
 ## Next engineering step (approval required)
 
