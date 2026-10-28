@@ -631,7 +631,7 @@
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .week-seq-item {
+[data-studio-appearance][data-studio-wallpaper="on"][data-studio-week="original"] .studio-week-stage .week-seq-item {
   border: 0.5px solid color-mix(in srgb, var(--ink) 12%, transparent);
   border-radius: 1.5rem;
   box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.06);
@@ -652,9 +652,37 @@
   border: 0.5px solid color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
+/* The View toggle sits on the bare wallpaper on the Spread tab, so it needs its own thin
+   material or the unselected icon disappears into the art. */
+[data-studio-appearance][data-studio-wallpaper="on"] [role="tablist"][aria-label="View"] {
+  background: color-mix(in srgb, var(--studio-sheet, var(--elevated)) calc(var(--studio-sheet-panel, 1) * 100%), transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  border: 0.5px solid var(--glass-stroke, color-mix(in srgb, var(--ink) 16%, transparent));
+}
+
+/* Quiet knurl. The shipped Crown stays the same object (same wheel, caps and readout), but over a
+   wallpaper its full-contrast metal teeth fight everything else. Here the wheel is thin material
+   and the teeth are low-contrast tints of the ink, so it reads as the same family as the sheet. */
+[data-studio-appearance][data-studio-wallpaper="on"] .crown-wheel {
+  --tooth-dark: color-mix(in srgb, var(--ink) 34%, transparent);
+  --tooth-mid: color-mix(in srgb, var(--ink) 16%, transparent);
+  --tooth-light: color-mix(in srgb, var(--ink) 6%, transparent);
+  --tooth-gap: transparent;
+  background: color-mix(in srgb, var(--studio-sheet, var(--elevated)) calc(var(--studio-sheet-panel, 1) * 100%), transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  border: 0.5px solid var(--glass-stroke, color-mix(in srgb, var(--ink) 16%, transparent));
+  box-shadow: inset 0 0.5px 0 color-mix(in srgb, white 40%, transparent), 0 1px 3px rgba(0,0,0,.12);
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .crown-sheen,
+[data-studio-appearance][data-studio-wallpaper="on"] .crown-cap::after { display: none; }
+
 /* Reduce Transparency: the sheet and header become opaque, as the system does. */
 @media (prefers-reduced-transparency: reduce) {
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,
+  [data-studio-appearance][data-studio-wallpaper="on"] .crown-wheel,
+  [data-studio-appearance][data-studio-wallpaper="on"] [role="tablist"][aria-label="View"],
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-header[data-studio-view="week"] {
     background: var(--studio-sheet, var(--elevated));
     -webkit-backdrop-filter: none;

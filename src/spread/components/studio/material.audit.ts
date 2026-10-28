@@ -108,6 +108,13 @@ try {
       await editor.getByRole("button",{name:"Apply",exact:true}).click();
       await editor.waitFor({state:"hidden",timeout:15000});
       await page.getByRole("button",{name:"Close",exact:true}).click();
+      // Spread tab: one grouped list. Role rows reuse .week-seq-item but must not become nested cards.
+      await page.waitForTimeout(900);
+      const nested=await page.evaluate(()=>[...document.querySelectorAll<HTMLElement>(".week-seq-item")]
+        .filter(el=>!el.closest(".studio-week-stage"))
+        .map(el=>{const c=getComputedStyle(el);return {r:c.borderTopLeftRadius,w:c.borderTopWidth,s:c.boxShadow};})
+        .filter(v=>v.r!=="0px"||v.w!=="0px"||v.s!=="none"));
+      if(nested.length) errors.push(shape+"/"+scheme+": Spread tab rows became nested cards "+JSON.stringify(nested[0]));
       await page.getByRole("tab",{name:"Week",exact:true}).click();
       await page.waitForFunction(()=>{
         const host=document.querySelector<HTMLElement>('[data-studio-wallpaper="on"]');
