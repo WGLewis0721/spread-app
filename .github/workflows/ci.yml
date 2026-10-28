@@ -177,7 +177,7 @@ jobs:
             if curl -fsS http://127.0.0.1:8080 >/dev/null; then break; fi
             sleep 1
           done
-          node --experimental-strip-types src/spread/components/studio/material-skin.audit.ts
+          node --experimental-strip-types src/spread/components/studio/material.audit.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,5 +1,6 @@
 /**
- * Independent screenshot/contrast audit of the *live* wallpaper-derived skin.
+ * Independent screenshot/contrast audit of the *live* wallpaper-derived material.
+ * Also asserts the layout is identical across wallpapers: only color, dim and material change.
  * Three very different procedural images, no image URL or production data.
  * 3 widths x 2 schemes x 3 wallpapers x 3 Week detents = 54 screenshots.
  */
@@ -13,12 +14,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..
 const output = join(root, "screenshots", "studio-material");
 const origin = process.env.SCREENSHOT_BASE_URL ?? "http://127.0.0.1:8080";
 const nativeInit = readFileSync(join(root, "scripts", "ios-bridge-sim", "native-init.js"), "utf8");
-const shapes = ["line-illustration", "dark-poster", "soft-photo"] as const;
-const schemes = ["light", "dark"] as const;
+const quick = process.env.AUDIT_QUICK === "1";
+const shapes = (quick ? ["line-illustration"] : ["line-illustration", "dark-poster", "soft-photo"]) as unknown as readonly ["line-illustration", "dark-poster", "soft-photo"];
+const schemes = (quick ? ["light"] : ["light", "dark"]) as unknown as readonly ["light", "dark"];
 const sizes = [{width:390,height:844},{width:402,height:874},{width:820,height:1180}] as const;
 const detents = ["peek", "half", "full"] as const;
 const results: Array<Record<string,unknown>> = [];
 const errors: string[] = [];
+const geometryByCase = new Map<string,string>();
 
 mkdirSync(output,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH ?? chromium.executablePath()});
@@ -107,7 +110,7 @@ try {
       await page.getByRole("button",{name:"Close",exact:true}).click();
       await page.getByRole("tab",{name:"Week",exact:true}).click();
       await page.waitForFunction(()=>{
-        const host=document.querySelector<HTMLElement>('[data-studio-wallpaper="on"][data-studio-skin="on"]');
+        const host=document.querySelector<HTMLElement>('[data-studio-wallpaper="on"]');
         return !!host && getComputedStyle(host).getPropertyValue("--studio-wallpaper-image").includes("blob:");
       },null,{timeout:15000});
       const sheet=page.locator(".studio-week-stage");
@@ -120,7 +123,7 @@ try {
           if(detent==="half") await handle.press("ArrowUp");
           await page.waitForTimeout(475);
           const measured=await page.evaluate(()=>{
-            const scope=document.querySelector<HTMLElement>('[data-studio-skin="on"]')!;
+            const scope=document.querySelector<HTMLElement>('[data-studio-wallpaper="on"]')!;
             const week=document.querySelector<HTMLElement>(".studio-week-stage")!;
             const card=week.querySelector<HTMLElement>(".week-seq-item");
             const grab=week.querySelector<HTMLElement>('[role="slider"]')!;
@@ -132,21 +135,38 @@ try {
               viewportHeight:innerHeight,
               ink:get("--ink"),sheet:get("--studio-sheet"),card:cs?.backgroundColor??get("--elevated"),
               highlight:get("--studio-highlight"),onHighlight:get("--studio-on-highlight"),
-              outline:get("--studio-outline"),focus:get("--studio-focus"),
-              sheetEdge:scope.getAttribute("data-studio-sheet-edge"),
-              ridgeOpacity:get("--studio-crown-ridge-opacity"),
+              focus:get("--studio-focus"),sheetPanel:get("--studio-sheet-panel"),
+              sheetBlur:getComputedStyle(week).backdropFilter,
+              cardBlur:card?getComputedStyle(card).backdropFilter:"none",
+              geometry:[week.getBoundingClientRect(),grab.getBoundingClientRect(),
+                document.querySelector<HTMLElement>(".studio-week-header")!.getBoundingClientRect()]
+                .map(r=>[r.left,r.top,r.width,r.height].map(n=>Math.round(n*10)/10).join(",")).join("|"),
               aria:grab.getAttribute("aria-valuetext"),
               dragging:scope.hasAttribute("data-studio-dragging"),
               grabWidth:grab.getBoundingClientRect().width,grabHeight:grab.getBoundingClientRect().height,
             };
           });
           if(!measured.aria?.toLowerCase().includes(detent)) errors.push(shape+"/"+scheme+"/"+size.width+"/"+detent+": slider value");
+          // Material belongs to the functional layer only: the sheet blurs, cards do not.
+          if(!/blur/.test(measured.sheetBlur)) errors.push(shape+"/"+scheme+"/"+size.width+"/"+detent+": sheet has no material blur");
+          if(/blur/.test(measured.cardBlur)) errors.push(shape+"/"+scheme+"/"+size.width+"/"+detent+": card must not blur");
+          const key=scheme+"/"+size.width+"/"+detent;
+          const seen=geometryByCase.get(key);
+          if(seen===undefined) geometryByCase.set(key,measured.geometry);
+          else if(seen!==measured.geometry) errors.push(key+": layout changed with the wallpaper ("+shape+")");
           const inkSheet=ratio(measured.ink,measured.sheet);
           // Cards must have an opaque local plate. Use its computed background.
           const inkCard=ratio(measured.ink,measured.card);
           const inkHighlight=ratio(measured.onHighlight,measured.highlight);
           if((inkSheet??0)<4.5||(inkCard??0)<4.5||(inkHighlight??0)<4.5){
             errors.push(shape+"/"+scheme+"/"+size.width+"/"+detent+": contrast "+JSON.stringify({inkSheet,inkCard,inkHighlight,measured}));
+          }
+          await handle.evaluate(el=>(el as HTMLElement).blur());
+          if(process.env.AUDIT_DEBUG&&size.width===390&&detent==="half"){
+            console.log(JSON.stringify(await page.evaluate(()=>{
+              const b=document.querySelector<HTMLElement>(".spread-bubbles");
+              return [...document.elementsFromPoint(200,578)].slice(0,6).map(e=>{const c=getComputedStyle(e);return {tag:e.tagName,cls:String(e.className).slice(0,70),bg:c.backgroundColor,bf:c.backdropFilter,sh:c.boxShadow.slice(0,50),z:c.zIndex}}).concat(b?[{bubbles:getComputedStyle(b).backgroundColor,rect:JSON.stringify(b.getBoundingClientRect())}] as never:[]);
+            })));
           }
           const shot=shape+"-"+scheme+"-"+size.width+"-"+detent+".png";
           await page.screenshot({path:join(output,shot)});
@@ -187,4 +207,4 @@ console.log("MATERIAL AUDIT: "+JSON.stringify({
   minHighlight:Math.min(...geometry.map(v=>(v.contrast as {onHighlight:number}).onHighlight)),
   errors:errors.slice(0,12),errorCount:errors.length,
 }));
-if(geometry.length!==54||errors.length)throw new Error("material skin audit failed: "+errors.length+" findings; see measurements.json");
+if((!quick&&geometry.length!==54)||errors.length)throw new Error("material audit failed: "+errors.length+" findings; see measurements.json");

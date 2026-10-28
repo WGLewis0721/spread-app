@@ -513,12 +513,15 @@ test("appearance: every per-element treatment is independent and stays scoped", 
   assert.equal(hidden.parts.crown, "original");
 });
 
-test("appearance: Crown ridges scale with measured skin outline, not a named preset",()=>{
- const first=custom({skin:{
-   sheetEdge:"round",outline:0,hardShadow:0,checkGlyph:"check",focusY:0.5,
- }});
- const stronger=custom({skin:{...first.skin!,outline:3,hardShadow:3,sheetEdge:"scallop"}});
- assert.equal(applied(resolveStudioScope({enabled:true,appearance:first}))["--studio-crown-ridge-opacity"],"0");
- assert.equal(applied(resolveStudioScope({enabled:true,appearance:stronger}))["--studio-crown-ridge-opacity"],"1");
+test("appearance: sheet material alpha follows requested transparency and never drops below the contrast floor",()=>{
+ const thin=custom({material:{treatment:"glass",transparency:0.5,depth:0.85}});
+ const thick=custom({material:{treatment:"glass",transparency:0.16,depth:1}});
+ const flat=custom({material:{treatment:"flat",transparency:0,depth:0}});
+ const t=applied(resolveStudioScope({enabled:true,appearance:thin}));
+ const k=applied(resolveStudioScope({enabled:true,appearance:thick}));
+ const f=applied(resolveStudioScope({enabled:true,appearance:flat}));
+ assert.ok(Number(k["--studio-sheet-panel"])>=Number(t["--studio-sheet-panel"]),"thicker material is more opaque");
+ assert.equal(f["--studio-sheet-panel"],"1");
+ assert.ok(Number(t["--studio-sheet-panel-full"])>=Number(t["--studio-sheet-panel"]),"Full detent is never less opaque than Peek");
  assert.equal(resolveStudioScope({enabled:true,appearance:originalStudioAppearance()}).applied,false);
 });
