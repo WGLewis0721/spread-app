@@ -103,3 +103,12 @@ My Habits and Analytics stacks), which also echoes the Spread logo, a fan of car
 - Guards in `material.audit.ts`: Spread tab text contrast, exactly one open card, advance and
   Pause behavior.
 
+
+## Month and day rail (2026-10-28, design board)
+
+Same rules as the stacked cards: only in a wallpaper look, only through computed ink, never in flag-off output.
+
+- **Month view.** A day with scheduled roles is a card in its first role's color (`roleVars`, ink from `roleCardInks`), empty days are plain opaque cards with a hairline, no blur. Today keeps the accent disc. The grid wrapper is transparent so the day cards are not a box inside a box. Cards are dealt in with a 14 ms stagger (320 ms each). Reduce Motion removes the deal and the press.
+- **Day rail (Week sheet).** A row of seven tall day pills (Mon to Sun) above the day cards. Today is the accent, each pill shows a dot per scheduled role, and a tap scrolls to that day card (smooth, or instant under Reduce Motion). It is a plain navigation group labelled "Jump to a day".
+- **Gating.** `MonthView` gets `studio` and `WeeklyView` gets `dayRail` from the `stackOn` state that `StudioStackProbe` reports, so with the flag off or no wallpaper the DOM is unchanged.
+- **Not done.** The More sheet is a portal outside the Studio scope, so Settings still uses the system look. Theming it needs a scope on the portal, which is its own change.

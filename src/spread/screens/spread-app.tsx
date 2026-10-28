@@ -840,6 +840,7 @@ function WeekScreen() {
                         onTurn={setGesture}
                         onCommit={goWeek}
                         focusDate={focusDate}
+                        dayRail={stackOn}
                         onFocused={() => setFocusDate(null)}
                         selectedId={picked}
                         onSelected={setPicked}
@@ -863,8 +864,8 @@ function WeekScreen() {
                     className={monthDir !== 0 ? "week-seq" : undefined}
                     style={monthDir !== 0 ? weekFrom(monthDir) : followStyle(monthShift)}
                   >
-                    <div className="week-seq-item">
-                      <MonthView year={monthCursor.year} month={monthCursor.month} data={data} onPick={pickDay} />
+                    <div className={stackOn ? "week-seq-item studio-month-wrap" : "week-seq-item"}>
+                      <MonthView year={monthCursor.year} month={monthCursor.month} data={data} onPick={pickDay} studio={stackOn} />
                     </div>
                   </div>
                 </div>

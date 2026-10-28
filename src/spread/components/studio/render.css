@@ -775,6 +775,74 @@
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item { animation: none; }
 }
 
+/* Month view, in the board's calendar language: a day with scheduled roles is a card in its first
+   role's color (computed ink, like the stack), empty days are plain opaque surfaces with no blur.
+   Today keeps the accent disc. Days are dealt in with a short stagger; Reduce Motion removes it. */
+[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-wallpaper="on"] .studio-month-day {
+  background: var(--elevated);
+  border: 0.5px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-radius: 1.1rem;
+  animation: studio-deal 320ms cubic-bezier(.32,.72,0,1) backwards;
+  transition: transform 180ms cubic-bezier(.32,.72,0,1);
+}
+[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-wallpaper="on"] .studio-month-day[data-studio-marked="true"] {
+  background: var(--role);
+  color: var(--role-ink);
+  --ink: var(--role-ink);
+  --secondary: var(--role-ink-2);
+  --tertiary: var(--role-ink-3);
+  --accent: var(--role-ink);
+  --on-accent: var(--role);
+  border-color: transparent;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-month-day[data-studio-marked="true"] > span > span[style*="background-color"] { background-color: var(--role-ink) !important; }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-month-day:active { transform: scale(.96); opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-month-day { animation: none !important; transition: none; }
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-month-day:active { transform: none; }
+}
+
+/* Day rail (the board's Schedule screen): a row of tall day pills above the day cards. Plain
+   opaque surfaces, today in the accent, a dot per scheduled role. Tapping scrolls to that day. */
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0 6px;
+  min-height: 3.6rem;
+  border-radius: 999px;
+  background: var(--elevated);
+  border: 0.5px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  color: var(--ink);
+  transition: transform 180ms cubic-bezier(.32,.72,0,1);
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip:active { transform: scale(.94); }
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip[aria-current="date"] {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+[data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip[aria-current="date"] > span:first-child { color: var(--on-accent); opacity: .85; }
+@media (prefers-reduced-motion: reduce) {
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip { transition: none; }
+  [data-studio-appearance][data-studio-wallpaper="on"] .studio-day-chip:active { transform: none; }
+}
+
+/* The grid is a set of cards already; the wrapper must not be a box around them. */
+[data-studio-appearance][data-studio-scheme][data-studio-material][data-studio-week="original"][data-studio-wallpaper="on"] .studio-week-stage .week-seq-item.studio-month-wrap {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  animation: none;
+  padding: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 /* Reduce Transparency: the sheet and header become opaque, as the system does. */
 @media (prefers-reduced-transparency: reduce) {
   [data-studio-appearance][data-studio-wallpaper="on"] .studio-week-stage,

@@ -42,6 +42,7 @@ export function WeeklyView({
   onFocused,
   selectedId = null,
   onSelected,
+  dayRail = false,
 }: {
   onTurn?: (dx: number) => void;
   onCommit?: (direction: -1 | 1) => void;
@@ -49,6 +50,8 @@ export function WeeklyView({
   onFocused?: () => void;
   selectedId?: string | null;
   onSelected?: (id: string | null) => void;
+  /** Studio wallpaper look: a row of day chips that jumps to a day card. */
+  dayRail?: boolean;
 }) {
   const data = useSpread((s) => s.data);
   const moveSpreadToDay = useSpread((s) => s.moveSpreadToDay);
@@ -228,6 +231,38 @@ export function WeeklyView({
             days={days}
             onPlace={placeTask}
           />
+        )}
+        {dayRail && (
+          <nav aria-label="Jump to a day" className="studio-day-rail mt-6 grid grid-cols-7 gap-1.5">
+            {[...days].reverse().map((day) => {
+              const mine = allocations.filter((item) => item.day === day.date);
+              const colors = [...new Set(mine.map((item) => hatsById.get(item.hatId)?.color).filter((c): c is string => Boolean(c)))].slice(0, 3);
+              const isToday = day.date === today;
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  className="studio-day-chip"
+                  aria-current={isToday ? "date" : undefined}
+                  aria-label={`${isToday ? "Today, " : ""}${day.label} ${Number(day.date.slice(8))}. ${mine.length === 0 ? "Nothing scheduled." : `${mine.length} scheduled.`}`}
+                  onClick={() => {
+                    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+                    document
+                      .querySelector(`[data-day="${CSS.escape(day.date)}"]`)
+                      ?.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+                  }}
+                >
+                  <span className="text-[11px] font-medium text-secondary">{day.label[0]}</span>
+                  <span className="text-sm font-semibold tabular-nums">{Number(day.date.slice(8))}</span>
+                  <span className="flex h-1.5 items-center gap-0.5" aria-hidden="true">
+                    {colors.map((color, index) => (
+                      <span key={index} className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
+                    ))}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
         )}
         <div className="mt-6 flex flex-col gap-3">
           {days.map((day, index) => {

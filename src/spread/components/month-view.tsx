@@ -1,5 +1,6 @@
 import { isoDate, type SpreadData } from "@/lib/spread/model";
 import { dayMarks, monthGrid } from "@/lib/spread/month";
+import { roleVars } from "@/lib/spread/studio/role-style";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
@@ -8,23 +9,26 @@ export function MonthView({
   month,
   data,
   onPick,
+  studio = false,
 }: {
   year: number;
   month: number;
   data: SpreadData;
   onPick: (date: string) => void;
+  /** Studio wallpaper look: a day with scheduled roles is dealt as a card in its first role's color. */
+  studio?: boolean;
 }) {
   const today = isoDate(new Date());
   const cells = monthGrid(year, month);
   return (
     <div className="px-1 pt-4">
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className={`grid grid-cols-7 gap-1.5${studio ? " studio-month" : ""}`}>
         {WEEKDAYS.map((label) => (
           <div key={label} className="pb-1 text-center text-[11px] font-medium text-secondary">
             {label}
           </div>
         ))}
-        {cells.map((cell) => {
+        {cells.map((cell, cellIndex) => {
           const marks = dayMarks(data, cell.date);
           const todayCell = cell.date === today;
           const count = marks.colors.length + marks.extra;
@@ -37,7 +41,15 @@ export function MonthView({
             <button
               key={cell.date}
               type="button"
-              className="flex min-h-14 flex-col items-center rounded-2xl bg-elevated px-0.5 py-1.5 active:opacity-70"
+              className={`flex min-h-14 flex-col items-center rounded-2xl bg-elevated px-0.5 py-1.5 active:opacity-70${studio ? " studio-month-day" : ""}`}
+              data-studio-marked={studio && marks.colors.length > 0 ? "true" : undefined}
+              style={
+                studio
+                  ? marks.colors[0]
+                    ? roleVars(marks.colors[0], { animationDelay: `${Math.min(cellIndex, 20) * 14}ms` })
+                    : { animationDelay: `${Math.min(cellIndex, 20) * 14}ms` }
+                  : undefined
+              }
               onClick={() => onPick(cell.date)}
               aria-label={`${todayCell ? "Today, " : ""}${label}. ${count === 0 ? "No responsibilities scheduled." : `${count} ${count === 1 ? "responsibility" : "responsibilities"} scheduled.`}`}
               aria-current={todayCell ? "date" : undefined}
