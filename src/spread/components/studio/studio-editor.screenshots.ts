@@ -440,7 +440,7 @@ try {
         const crestRect=crest?.getBoundingClientRect();
         const scallop=!!crest && getComputedStyle(crest).display!=="none"
           && !!crestRect && Math.abs(crestRect.top-(stage.top-38))<=2
-          && crest.querySelector("path")?.getAttribute("stroke-width")==="3";
+          && getComputedStyle(crest.querySelector("path")!).strokeWidth==="3px";
         const last=node.querySelector<HTMLElement>("[data-day]:last-of-type");
         const lastRect=last?.getBoundingClientRect();
         return {top:stage.top,height:window.innerHeight,dockTop:dock.top,lastDayBottom:lastRect?.bottom??null,
@@ -476,13 +476,16 @@ try {
           const stage=document.querySelector<HTMLElement>(".studio-week-stage")!;
           const header=document.querySelector<HTMLElement>(".studio-week-header")!;
           const dock=document.querySelector<HTMLElement>(".app-dock")!;
+          const headerScallop=header.querySelector<SVGSVGElement>(".studio-week-header-scallop");
           return {sheetZ:getComputedStyle(stage).zIndex,headerZ:getComputedStyle(header).zIndex,
-            dockZ:getComputedStyle(dock).zIndex,modal:stage.getAttribute("aria-modal"),
+            dockZ:getComputedStyle(dock).zIndex,
+            visibleHeaderScallop:!!headerScallop && getComputedStyle(headerScallop).display!=="none",
+            modal:stage.getAttribute("aria-modal"),
             headerInert:header.hasAttribute("inert"),dockInert:dock.hasAttribute("inert")};
         });
-        if(!(Number(nonmodal.sheetZ)>Number(nonmodal.headerZ)) ||
+        if(!(Number(nonmodal.headerZ)>Number(nonmodal.sheetZ)) ||
            !(Number(nonmodal.dockZ)>Number(nonmodal.sheetZ)) ||
-           nonmodal.modal!==null||nonmodal.headerInert||nonmodal.dockInert)
+           nonmodal.modal!==null||!nonmodal.visibleHeaderScallop||nonmodal.headerInert||nonmodal.dockInert)
           throw new Error("Week must remain nonmodal with interactive header/dock: "+JSON.stringify(nonmodal));
         // E1 Full hides artwork under the solid sheet; only the exterior
         // scallop overlaps the header. No modal scrim or portal is permitted.

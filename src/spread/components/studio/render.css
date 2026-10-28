@@ -828,3 +828,24 @@
 [data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"]{
   z-index:22;
 }
+
+/* E1 Full: position the scallop within the header's paint layer, behind
+   accessible Crown/toggle controls. Keeping the sheet above the entire
+   header was visually obscuring This Week in the 390px screenshots. */
+[data-studio-appearance] .studio-week-header-scallop{display:none}
+[data-studio-appearance][data-studio-skin="linocut"]:has(.studio-week-stage[data-studio-detent="full"]) .studio-week-header-scallop{
+  display:block;
+  position:absolute;
+  top:calc(max(15dvh,var(--spread-header,0px)) - 38px);
+  left:0;width:100%;height:40px;
+  pointer-events:none;
+  z-index:1;
+}
+[data-studio-appearance][data-studio-skin="linocut"]:has(.studio-week-stage[data-studio-detent="full"]) .studio-week-header[data-studio-view="week"] .crown,
+[data-studio-appearance][data-studio-skin="linocut"]:has(.studio-week-stage[data-studio-detent="full"]) .studio-week-header[data-studio-view="week"] > [role="tablist"],
+[data-studio-appearance][data-studio-skin="linocut"]:has(.studio-week-stage[data-studio-detent="full"]) .studio-week-header[data-studio-view="week"] > div:first-child{
+  position:relative;z-index:2;
+}
+[data-studio-appearance][data-studio-skin="linocut"] .studio-week-stage[data-studio-detent="full"]{
+  z-index:12;
+}

@@ -728,6 +728,7 @@ function WeekScreen() {
               </button>
             ))}
           </div>
+          {STUDIO_FLAG && view==="week" ? <svg className="studio-week-header-scallop" viewBox="0 0 402 40" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M0 40 V26 A16 16 0 0 1 24 14 A22 22 0 0 1 72 12 A20 20 0 0 1 116 12 A22 22 0 0 1 164 10 A20 20 0 0 1 208 12 A22 22 0 0 1 256 10 A20 20 0 0 1 300 12 A22 22 0 0 1 350 12 A16 16 0 0 1 402 24 V40 Z" fill="var(--studio-skin-mist)" stroke="var(--ink)" style={{strokeWidth:"var(--studio-skin-outline)"}} strokeLinejoin="round"/></svg> : null}
         </header>
 
         <main
@@ -742,7 +743,7 @@ function WeekScreen() {
           data-studio-dragging={studioDragTop!==null ? "true" : undefined}
           style={studioDragTop!==null ? {"--studio-drag-top":`${studioDragTop}px`} as CSSProperties : undefined}
         >
-          {STUDIO_FLAG && view==="week" ? <svg className="studio-week-scallop" viewBox="0 0 402 40" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M0 40 V26 A16 16 0 0 1 24 14 A22 22 0 0 1 72 12 A20 20 0 0 1 116 12 A22 22 0 0 1 164 10 A20 20 0 0 1 208 12 A22 22 0 0 1 256 10 A20 20 0 0 1 300 12 A22 22 0 0 1 350 12 A16 16 0 0 1 402 24 V40 Z" fill="var(--studio-skin-mist)" stroke="var(--ink)" strokeWidth="3" strokeLinejoin="round"/></svg> : null}
+          {STUDIO_FLAG && view==="week" ? <svg className="studio-week-scallop" viewBox="0 0 402 40" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M0 40 V26 A16 16 0 0 1 24 14 A22 22 0 0 1 72 12 A20 20 0 0 1 116 12 A22 22 0 0 1 164 10 A20 20 0 0 1 208 12 A22 22 0 0 1 256 10 A20 20 0 0 1 300 12 A22 22 0 0 1 350 12 A16 16 0 0 1 402 24 V40 Z" fill="var(--studio-skin-mist)" stroke="var(--ink)" style={{strokeWidth:"var(--studio-skin-outline)"}} strokeLinejoin="round"/></svg> : null}
           {STUDIO_FLAG && view==="week" ? <div className="studio-week-grabber">
             <div
               role="slider"
