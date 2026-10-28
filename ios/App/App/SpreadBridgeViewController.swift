@@ -6,5 +6,6 @@ import UIKit
 final class SpreadBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(SpreadCloudPlugin())
+        bridge?.registerPluginInstance(SpreadWidgetPlugin())
     }
 }
