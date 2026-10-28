@@ -2,6 +2,8 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
 
+> Summary: first principles, what Apple's materials, color and sheet guidance means for Spread (section 2), what a web layer cannot do (3), what reads as amateur (5) and a UI change checklist (6). For routine work read [../packs/apple-native-feel.md](../packs/apple-native-feel.md) first.
+
 Written 2026-10-28. This file turns Apple's current guidance on materials, color and sheets into decisions for Spread, and records the first principles behind them. The device guides in this folder cover layout, safe areas, submission and testing per device. This file covers how Spread should *look and feel* on any Apple device.
 
 Evidence tags, same as the device guides: **[Apple]** read on a developer.apple.com page this session. **[3P]** third party, including mirrors of Apple pages. **[Repo]** from Spread docs or code. **[Rec]** a recommendation, not a fact.
@@ -54,7 +56,7 @@ The honest ceiling for the web layer is "feels native to the platform", not "is 
 ## 4. How this fits Spread's existing rules
 
 - **Unchanged:** no new colors, fonts or decorative styles in the unflagged planner [Repo: [planner/SPREAD_DESIGN_SYSTEM.md](../planner/SPREAD_DESIGN_SYSTEM.md)]. Apple's guidance is a way to use existing tokens well: hierarchy from type and spacing, one accent, hairlines.
-- **Tension to resolve before using material in the planner:** `AGENTS.project.md` lists "No gradient meshes, glassmorphism, floating blobs" under its rules. That sentence sits with the landing page work, but it is written as a general rule. Blur and translucency in the planner need an explicit owner decision. The only existing exception is the flagged Studio exception for material paint (see [../README.md](../README.md), section "Studio").
+- **Glass is already in the planner, on the dock.** The `glass` utility (blur 28px, saturate 1.7) and the `--glass*` tokens ship today [Repo: `src/styles.css`]. The "No gradient meshes, glassmorphism, floating blobs" line in `AGENTS.project.md` sits with the landing page work, so it does not forbid this. What is still undecided is blur on cards and sheets; Apple says cards are content layer, so the default is no glass there. The owner decides, see [../DECISIONS.md](../DECISIONS.md). The only other exception is the flagged Studio exception for material paint (see [../README.md](../README.md), section on Studio).
 - **Dark mode:** the iPhone guide's elevation ladder (lighter means higher), dimmed white text and softened accent are the same idea as Apple's materials in dark mode. Adopt them together, as tokens, not as ad hoc values [Repo: [iPhone guide section 6a](SPREAD_IPHONE_BUILD_GUIDE.md)].
 - **Dynamic Type** is still an open decision in the iPhone guide. If Spread adopts system text sizes, define the type scale once (rem based) and test at 200%.
 

@@ -2,6 +2,8 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
 
+> Summary: planner tokens, patterns, motion, moving things without dragging, and the rules a change must keep. Read [../packs/planner-change.md](../packs/planner-change.md) first and open this file only by section.
+
 
 This is the one place the planner's visual rules live. [`landing/DESIGN.md`](../landing/DESIGN.md) covers the landing page only.
 The planner has no brand board of its own: it uses the tokens in `src/styles.css` and the patterns below.

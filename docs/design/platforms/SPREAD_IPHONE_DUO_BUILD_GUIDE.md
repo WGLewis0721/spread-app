@@ -2,6 +2,8 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
 
+> Summary: iPhone Duo only: why web chrome gets no automatic fold behavior (3), layout and the fold (4), App Store assets (9), testing (10), do and do not (11). Layout digest in [../packs/device-layout.md](../packs/device-layout.md).
+
 
 Researched 2026-10-21 from developer.apple.com, the Spread repo docs, and GitHub. This file covers iPhone Duo only. The shared baseline (toolchain, submission rules, privacy manifest, Capacitor, repo rules, haptics, drag-and-drop mechanics, test commands) is in `SPREAD_IPHONE_BUILD_GUIDE.md` section 1 and still applies. The iPad layout work in `SPREAD_IPAD_BUILD_GUIDE.md` is the base for the Duo inner display.
 

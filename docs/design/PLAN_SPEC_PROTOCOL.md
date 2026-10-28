@@ -2,6 +2,8 @@
 
 > Part of the Spread design brain. Start at [README.md](README.md) for the map, the rules and what to read for which task.
 
+> Summary: the 13-step process, sizes, output contract and self-check for any plan or spec (sections 2 to 5). Section 1 is background on sources. For routine work read [packs/spec-writing.md](packs/spec-writing.md) first.
+
 **Who this is for:** any person or AI tool (Claude, ChatGPT, Grok, Gemini, Codex, Copilot, Cursor) asked to make a plan or spec sheet for a Spread request.
 **What it does:** fixes the process and the output, so every tool starts from the same documents and returns the same shape of answer.
 **Template to fill in:** [specs/TEMPLATE.md](specs/TEMPLATE.md).
@@ -35,15 +37,15 @@ Not read, so not relied on: WWDC25 "Design foundations from idea to interface" (
 ## 2. The process (follow in order)
 
 1. **Restate the request in one sentence**, including who it is for and on which surface (planner, landing page, a device). If you cannot, ask the owner one question. Otherwise do not ask; write your assumption in the spec and mark it `[Assumption]`.
-2. **Read the map:** [README.md](README.md). Use its router (section 1) to pick the governing documents. Read them. Do not rely on memory of Spread; the documents change.
+2. **Read in tiers, stop early:** the rules card ([RULES_CARD.md](RULES_CARD.md), already in your agent file), then the map ([README.md](README.md)) and its task router (section 2), then the one pack the router names (for a spec, [packs/spec-writing.md](packs/spec-writing.md)). Open a long document only by the section the pack points to. Do not rely on memory of Spread; the documents change.
 3. **Classify the size** (section 3 below). It sets how much of the template to fill in.
 4. **Frame the problem and the budget.** One concrete story, then the non-goals.
-5. **List the rules that apply** from README section 3 and the governing documents, and say which part of the request touches each. If the request needs something a rule forbids (a new color, font, decorative style, glass or blur in the planner, a change to a do-not-touch path), do not quietly design around it. Write it under "Exceptions needed" for the owner to decide.
+5. **List the rules that apply** from [RULES_CARD.md](RULES_CARD.md) and the pack, and say which part of the request touches each. If the request needs something a rule forbids (a new color, font, decorative style, glass or blur in the planner, a change to a do-not-touch path), do not quietly design around it. Write it under "Exceptions needed" for the owner to decide.
 6. **Explore options** (size L: at least three distinct directions; size M: two). Distinct means different structure or interaction, not different colors. Describe each in a few lines, then choose one and say why. Record the rejected ones.
 7. **Describe the experience** as a breadboard: the places (screens, sheets, states), the affordances in each, and how they connect. Add every state: empty, loading, error, overflow, offline, first run, undo.
 8. **Describe the platform behavior:** widths, orientation, safe areas, Dark Mode, Dynamic Type or text zoom, Reduce Motion, Reduce Transparency, Increase Contrast, VoiceOver, haptics, tap and keyboard alternatives for any drag.
 9. **Describe the technical approach:** where the change lives, which store actions it uses, what it must not touch, whether it needs a flag, no data migration for UI work.
-10. **Write acceptance criteria** a person can observe, and the verification plan from README section 3.
+10. **Write acceptance criteria** a person can observe, and the verification plan from the card's Verify list.
 11. **Plan the prototype and the test.** Say what must be real and what can be faked, where it will be used, and the three questions to ask a tester.
 12. **List risks, rabbit holes and open questions,** each with a proposed default and who decides.
 13. **Run the self-check** in section 5 below, then deliver.
@@ -72,7 +74,7 @@ If unsure, choose the larger size.
 - Do not write code in a spec unless a few lines are needed to remove ambiguity.
 - No em dashes. Plain, direct sentences.
 - **Where to save:** `docs/design/specs/YYYY-MM-DD-<short-slug>.md`. A tool that cannot write to the repository returns the spec as one Markdown block and says the owner should save it at that path.
-- If the spec records a decision, also update the document the decision changes and the decision log in [README.md](README.md) section 8.
+- If the spec records a decision, also update the document the decision changes and the decision log in [DECISIONS.md](DECISIONS.md).
 
 ---
 
@@ -94,7 +96,7 @@ If unsure, choose the larger size.
 
 ## 6. Handing off to implementation
 
-- A spec is not approval to merge. Release authority stays with the owner (README section 3, Code boundaries).
-- Implementation follows the repo flow: a branch, focused tests added to the explicit lists, the checks in README section 3, and a pull request into `main`.
+- A spec is not approval to merge. Release authority stays with the owner ([RULES_CARD.md](RULES_CARD.md), Boundaries).
+- Implementation follows the repo flow: a branch, focused tests added to the explicit lists, the checks in the card's Verify list, and a pull request into `main`.
 - Prototype first when the open question is about feel (a gesture, a transition, how a sheet behaves). Throw the prototype away; write the real version afterward [Apple].
 - When the work lands, update the governing documents and the map in the same change.

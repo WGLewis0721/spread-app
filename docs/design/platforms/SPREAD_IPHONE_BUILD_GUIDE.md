@@ -2,6 +2,8 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
 
+> Summary: iPhone plus the shared baseline for every device: toolchain and repo rules (1), layout (3), haptics (5), dark palette (6a), App Store assets (8), test gates (9). Layout digest in [../packs/device-layout.md](../packs/device-layout.md).
+
 
 Researched 2026-10-21 from developer.apple.com, the Spread repo docs, and GitHub. This file covers single-screen iPhone and holds the **shared baseline** that applies to every device. iPad is in `SPREAD_IPAD_BUILD_GUIDE.md`. iPhone Duo is in `SPREAD_IPHONE_DUO_BUILD_GUIDE.md`.
 
