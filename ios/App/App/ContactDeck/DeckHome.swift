@@ -23,8 +23,6 @@ struct DeckHome: View {
     @State private var collection = "all"
     @State private var sheet: HomeSheet?
     @State private var noteContact: DeckContact?
-    @State private var pendingRemove: Set<UUID> = []
-    @State private var reviewingRemoval = false
     @State private var groupIDs: Set<UUID> = []
     @State private var groupName = ""
     @State private var orderedIDs: [UUID] = []
@@ -135,17 +133,11 @@ struct DeckHome: View {
                 case .unlock: UnlockView()
                 case .settings: settingsSheet
                 case .group: groupSheet
-                case .removed: removedSheet
+                case .removed: RecentlyRemovedView()
                 }
             }
             .sheet(item: $noteContact) { contact in NoteEditor(contact: contact, onSave: { save(); noteContact = nil }) }
             .sheet(isPresented: Binding(get: { shareURL != nil }, set: { if !$0 { if let shareURL { try? FileManager.default.removeItem(at: shareURL) }; shareURL = nil } })) { if let shareURL { NativeShare(items: [shareURL]) } }
-            .confirmationDialog("Remove \(pendingRemove.count) card(s)?", isPresented: $reviewingRemoval, titleVisibility: .visible) {
-                Button("Remove from Contact Deck", role: .destructive) { removeReviewed() }
-                Button("Keep cards", role: .cancel) { pendingRemove = [] }
-            } message: {
-                Text(removalWarning)
-            }
             .alert("Couldn't save that change", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
             .safeAreaInset(edge: .bottom) {
                 if let toast {
@@ -163,22 +155,13 @@ struct DeckHome: View {
             .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
         }
     }
-    private var removalWarning: String {
-        let names = records.filter { pendingRemove.contains($0.id) }
-            .prefix(5).map(\.name).joined(separator: ", ")
-        let extra = pendingRemove.count > 5 ? " and \(pendingRemove.count - 5) more." : "."
-        let previewWarning = "This preview removes cards only from Contact Deck, not iPhone Contacts. You can restore them from Recently removed."
-        let syncWarning = "Permanently deleting synced contacts can remove them across devices. Recovery depends on the account provider and available backups; an iCloud backup is not a guaranteed restore method."
-        return "Removing: \(names)\(extra)\n\n\(previewWarning)\n\n\(syncWarning)"
-    }
-
     private var selectionBar: some View {
         HStack(spacing: 16) {
             Text("\(selected.count) selected").font(.subheadline.monospacedDigit())
             Spacer(minLength: 8)
             Button("Group", systemImage: "rectangle.stack.badge.plus") { beginGrouping(selected) }
                 .disabled(selected.isEmpty)
-            Button("Remove", systemImage: "trash", role: .destructive) { reviewRemoval(selected) }
+            Button("Remove", systemImage: "trash", role: .destructive) { moveToBin(selected) }
                 .disabled(selected.isEmpty)
         }
         .labelStyle(.iconOnly)
@@ -247,27 +230,34 @@ struct DeckHome: View {
             }.navigationTitle("Group \(groupIDs.count) cards").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { sheet = nil } } }
         }
     }
-    private var removedSheet: some View {
-        NavigationStack {
-            List(records.filter { $0.removedAt != nil }) { contact in HStack { Text(contact.name); Spacer(); Button("Restore") { contact.removedAt = nil; save() } } }
-                .overlay { if records.allSatisfy({ $0.removedAt == nil }) { ContentUnavailableView("No removed cards", systemImage: "trash") } }
-                .navigationTitle("Recently removed").toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { sheet = nil } } }
-        }
-    }
     private func choose(_ value: String) {
         collection = value; query = ""; selected = []; selecting = false
         focusedID = contacts.first?.id
     }
-    private func reviewRemoval(_ ids: Set<UUID>) {
+    /// Photos-style soft removal: no confirmation until the user permanently empties the bin.
+    private func moveToBin(_ ids: Set<UUID>) {
         guard !ids.isEmpty else { return }
-        pendingRemove = ids
-        reviewingRemoval = true
+        undoIDs = ids
+        previousOrder = nil
+        for contact in records where ids.contains(contact.id) && contact.removedAt == nil {
+            contact.removedAt = Date()
+        }
+        do {
+            try context.save()
+            selected.removeAll()
+            selecting = false
+            toast = "Moved to Recently removed"
+        } catch {
+            context.rollback()
+            undoIDs.removeAll()
+            self.error = "Couldn't move cards to Recently removed. " + error.localizedDescription
+        }
     }
     private func droppedCard(_ action: DeckDropAction, _ ids: Set<UUID>) {
         guard !ids.isEmpty else { return }
         switch action {
         case .group: beginGrouping(ids)
-        case .remove: reviewRemoval(ids)
+        case .remove: moveToBin(ids)
         }
     }
     private func beginGrouping(_ ids: Set<UUID>) { groupIDs = ids; groupName = ""; sheet = .group }
@@ -307,7 +297,7 @@ struct DeckHome: View {
         case .note: noteContact = contact
         case .select: selected.insert(contact.id); selecting = true
         case .group: beginGrouping([contact.id])
-        case .remove: reviewRemoval([contact.id])
+        case .remove: moveToBin([contact.id])
         case .reachedOut: contact.lastReachedOut = Date(); save()
         case .snooze: contact.snoozedUntil = Date().addingTimeInterval(7 * 86_400); save()
         case .share: share(contact)
@@ -318,11 +308,6 @@ struct DeckHome: View {
             let destination = action == .email ? contact.email : digits
             if let url = URL(string: scheme + destination), !destination.isEmpty { openURL(url) { accepted in if !accepted { error = "The system couldn't open that action on this device." } } }
         }
-    }
-    private func removeReviewed() {
-        undoIDs = pendingRemove; previousOrder = nil
-        for contact in records where pendingRemove.contains(contact.id) { contact.removedAt = Date() }
-        save(); selected = []; selecting = false; pendingRemove = []; toast = "Cards removed"
     }
     private func undo() {
         if let previousOrder { orderedIDs = previousOrder; self.previousOrder = nil }
