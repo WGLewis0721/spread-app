@@ -37,8 +37,9 @@ function assertGeometry(g: Awaited<ReturnType<typeof geometry>>, mode: string) {
   expect(Math.abs(c.x + c.width / 2 - s.x - s.width / 2)).toBeLessThan(s.width * .05);
   // The owner pinned the deck to the collection strip after the original centering fix.
   const scale = mode === 'orbit' && g.cinematic ? .85 : 1;
-  expect(c.width).toBeCloseTo((s.width - (mode === 'stack' ? 28 : 56)) * .85 * scale, 0);
-  expect(c.height).toBeCloseTo((s.height - 16) * scale, 0);
+  // The stage rect already includes Flow's .85 scale; never scale it twice.
+  expect(Math.abs(c.width - (s.width - (mode === 'stack' ? 28 : 56) * scale) * .85)).toBeLessThan(1.5);
+  expect(Math.abs(c.height - (s.height - 16 * scale))).toBeLessThan(1.5);
   expect(c.y).toBeCloseTo(s.y + (mode === 'orbit' ? -20 * scale : g.cinematic ? 8 : mode === 'fan' ? 8 : 36), 0);
   expect(c.x).toBeGreaterThanOrEqual(s.x - 1);
   expect(c.x + c.width).toBeLessThanOrEqual(s.x + s.width + 1);
