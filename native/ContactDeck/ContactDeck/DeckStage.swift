@@ -48,7 +48,7 @@ struct DeckStage: View {
             .contentShape(Rectangle())
             .coordinateSpace(name: "deckStage")
             .onPreferenceChange(CardFrames.self) { frames = $0 }
-            .gesture(groupGesture.exclusively(before: browseGesture(stride: stride)), including: flippedID == nil && !voiceOver ? .all : .subviews)
+            .gesture(groupGesture(in: geometry.size).exclusively(before: browseGesture(stride: stride)), including: flippedID == nil && !voiceOver ? .all : .subviews)
             .sensoryFeedback(.selection, trigger: tick)
             .onChange(of: current) { _, value in
                 guard !grouping else { return }
@@ -58,6 +58,8 @@ struct DeckStage: View {
                 }
             }
         }
+        .clipped()
+        .mask { LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.92), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom) }
         .onAppear { position = Double(focus) }
         .task(id: focusedID) {
             guard !reduceMotion else { focusScale = 1; return }
@@ -146,7 +148,7 @@ struct DeckStage: View {
     }
     // The maximum distance makes movement cancel the hold before browsing wins.
     // A second drag exists only after the long press succeeds.
-    private var groupGesture: some Gesture {
+    private func groupGesture(in size: CGSize) -> some Gesture {
         LongPressGesture(minimumDuration: 0.46, maximumDistance: 10)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("deckStage")))
             .updating($holding) { value, state, _ in
@@ -172,7 +174,7 @@ struct DeckStage: View {
             }
             .onEnded { _ in
                 defer { withAnimation(spring) { grouping = false; groupTranslation = .zero }; groupPoint = nil }
-                guard hypot(groupTranslation.width, groupTranslation.height) > 26, let point = groupPoint, let target = frames.first(where: { !selected.contains($0.key) && $0.value.contains(point) })?.key else { return }
+                guard hypot(groupTranslation.width, groupTranslation.height) > 26, let point = groupPoint, CGRect(origin: .zero, size: size).contains(point), let target = frames.first(where: { !selected.contains($0.key) && $0.value.contains(point) })?.key else { return }
                 onGroup(selected.union([target]))
             }
     }
