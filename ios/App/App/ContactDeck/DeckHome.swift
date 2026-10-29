@@ -103,15 +103,28 @@ struct DeckHome: View {
                     }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button("Search", systemImage: "magnifyingglass") { search = true }.accessibilityIdentifier("search")
-                    Menu {
+                    Button(selecting ? "Done" : "Select", systemImage: selecting ? "checkmark" : "checkmark.circle") {
+                        if selecting {
+                            selected.removeAll()
+                            selecting = false
+                        } else {
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.23)) { selecting = true }
+                        }
+                    }.accessibilityIdentifier("selectCards")
+                    if !selecting {
+                        Button("Search", systemImage: "magnifyingglass") { search = true }.accessibilityIdentifier("search")
+                        Menu {
                         Button("Add contacts", systemImage: "person.crop.circle.badge.plus") { sheet = .importContacts }
                         Button("Shuffle", systemImage: "shuffle") { previousOrder = orderedIDs; withAnimation(reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.42, dampingFraction: 0.84)) { orderedIDs = all.map(\.id).shuffled() }; toast = "Deck shuffled" }
                         Button("Sort by name", systemImage: "textformat.abc") { orderedIDs = [] }
-                        Button("Select focused card", systemImage: "checkmark.circle") { if let focusedID { selected.insert(focusedID) } }
+                        Button("Select focused card", systemImage: "checkmark.circle") {
+                            if let focusedID { selected.insert(focusedID) }
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.23)) { selecting = true }
+                        }
                         Button("Recently removed", systemImage: "trash") { sheet = .removed }
                         Button("Settings", systemImage: "gearshape") { sheet = .settings }
-                    } label: { Label("Deck options", systemImage: "ellipsis.circle") }
+                        } label: { Label("Deck options", systemImage: "ellipsis.circle") }
+                    }
                 }
             }
             .sheet(isPresented: $search, onDismiss: { query = "" }) { searchSheet }
@@ -142,7 +155,11 @@ struct DeckHome: View {
                 OnboardingView(onSamples: { seedSamples(); onboarded = true }, onImport: { pendingOnboardingImport = true; onboarded = true })
             }
             .task { if testing && all.isEmpty { seedSamples() }; if onBack != nil { onboarded = true }; if focusedID == nil { focusedID = contacts.first?.id } }
-            .onChange(of: contacts.map(\.id)) { _, ids in if !ids.contains(focusedID ?? UUID()) { focusedID = ids.first }; selected.formIntersection(Set(ids)) }
+            .onChange(of: contacts.map(\.id)) { _, ids in
+                if !ids.contains(focusedID ?? UUID()) { focusedID = ids.first }
+                selected.formIntersection(Set(ids))
+            }
+            .preferredColorScheme(nil) // iOS Settings controls Light, Dark, and Automatic.
         }
     }
     private var selectionBar: some View {
