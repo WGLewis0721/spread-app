@@ -16,6 +16,7 @@ struct DeckStage: View {
     @State private var flippedID: UUID?
     @State private var grouping = false
     @State private var groupPoint: CGPoint?
+    @State private var groupTranslation: CGSize = .zero
     @State private var frames: [UUID: CGRect] = [:]
     @State private var tick = 0
     @State private var focusScale = 1.0
@@ -38,7 +39,7 @@ struct DeckStage: View {
                     let distance = Double(item.index) - current
                         card(contact, distance: distance, width: width, height: height)
                             .background(GeometryReader { g in Color.clear.preference(key: CardFrames.self, value: [contact.id: g.frame(in: .named("deckStage"))]) })
-                            .zIndex(100 - abs(distance))
+                            .zIndex(grouping && selected.contains(contact.id) ? 200 : 100 - abs(distance))
                             .accessibilityHidden(item.index != focus)
                 }
             }
@@ -115,6 +116,8 @@ struct DeckStage: View {
         .rotation3DEffect(.degrees(mode == .flow ? max(-57, min(57, -d * 54)) : 0), axis: (0, 1, 0), perspective: 0.45)
         .offset(x: mode == .stack ? d * 2 : d * Double(width) * (mode == .fan ? 0.31 : 0.42), y: mode == .stack ? d * 61 : mode == .fan ? abs(d) * 23 : 0)
         .opacity(reduceMotion ? (focused ? 1 : 0) : max(0, 1 - abs(d) * 0.25))
+        .offset(grouping && selectedCard ? groupTranslation : .zero)
+        .scaleEffect(grouping && selectedCard && !reduceMotion ? 1.025 : 1)
         .allowsHitTesting(abs(distance) < 2.5 && (!reduceMotion || focused))
     }
     private func browseGesture(stride: CGFloat) -> some Gesture {
@@ -142,14 +145,24 @@ struct DeckStage: View {
             .onChanged { value in
                 switch value {
                 case .second(true, let drag):
-                    if !grouping { grouping = true; if let focusedID { selected.insert(focusedID) }; tick += 1 }
+                    if !grouping {
+                        grouping = true
+                        let hit = drag.flatMap { value in
+                            frames.filter { $0.value.contains(value.startLocation) }.keys.min { left, right in
+                                abs((contacts.firstIndex { $0.id == left } ?? 0) - focus) < abs((contacts.firstIndex { $0.id == right } ?? 0) - focus)
+                            }
+                        } ?? focusedID
+                        if let hit { selected.insert(hit) }
+                        tick += 1
+                    }
                     groupPoint = drag?.location
+                    groupTranslation = drag?.translation ?? .zero
                 default: break
                 }
             }
             .onEnded { _ in
-                defer { grouping = false; groupPoint = nil }
-                guard let point = groupPoint, let target = frames.first(where: { !selected.contains($0.key) && $0.value.contains(point) })?.key else { return }
+                defer { withAnimation(spring) { grouping = false; groupTranslation = .zero }; groupPoint = nil }
+                guard hypot(groupTranslation.width, groupTranslation.height) > 26, let point = groupPoint, let target = frames.first(where: { !selected.contains($0.key) && $0.value.contains(point) })?.key else { return }
                 onGroup(selected.union([target]))
             }
     }

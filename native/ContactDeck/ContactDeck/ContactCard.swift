@@ -22,7 +22,7 @@ struct ContactFace: View {
                     }
                 }
             }
-            LinearGradient(stops: [.init(color: .clear, location: 0.28), .init(color: .black.opacity(0.24), location: 0.52), .init(color: .black.opacity(0.86), location: 1)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(stops: [.init(color: .clear, location: 0.28), .init(color: .black.opacity(0.56), location: 0.52), .init(color: .black.opacity(0.86), location: 1)], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 6) {
                 if contact.isSample { Text("SAMPLE CONTACT").font(.caption2.weight(.semibold)).foregroundStyle(.white.opacity(0.8)) }
                 Text(contact.name).font(.title.bold()).lineLimit(2).minimumScaleFactor(0.75)

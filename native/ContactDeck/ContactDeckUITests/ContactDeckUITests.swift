@@ -12,7 +12,7 @@ final class ContactDeckUITests: XCTestCase {
         XCTAssertLessThan(Date().timeIntervalSince(started), 25)
         attach(app, "native-first-interaction")
     }
-    @MainActor func testModesBrowseFlipSearchAndNotes() throws {
+    @MainActor func testModesBrowseFlipSearchNotesAndGrouping() throws {
         let app = XCUIApplication(); app.launchArguments = ["--uitesting"]; app.launch()
         let card = app.otherElements["focusedCard"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 10))
@@ -33,6 +33,14 @@ final class ContactDeckUITests: XCTestCase {
         app.buttons["Save"].tap()
         XCTAssertTrue(app.staticTexts["Ask about the workshop"].waitForExistence(timeout: 5))
         app.buttons["Flip back"].firstMatch.tap()
+        app.buttons["Deck options"].tap()
+        app.buttons["Select focused card"].tap()
+        app.buttons["Group"].tap()
+        let deckName = app.textFields["Deck name"]
+        XCTAssertTrue(deckName.waitForExistence(timeout: 5)); deckName.tap(); deckName.typeText("Test crew")
+        app.buttons["Create deck"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Test crew")).firstMatch.waitForExistence(timeout: 5))
+        attach(app, "native-grouped-deck")
     }
     @MainActor private func attach(_ app: XCUIApplication, _ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
