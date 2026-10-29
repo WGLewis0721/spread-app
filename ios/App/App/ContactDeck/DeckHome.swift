@@ -144,10 +144,7 @@ struct DeckHome: View {
                 Button("Remove from Contact Deck", role: .destructive) { removeReviewed() }
                 Button("Keep cards", role: .cancel) { pendingRemove = [] }
             } message: {
-                Text("You are removing: " + records.filter { pendingRemove.contains($0.id) }.prefix(5).map(\.name).joined(separator: ", ")
-                     + (pendingRemove.count > 5 ? " and \(pendingRemove.count - 5) more." : ".")
-                     + "\n\nThis preview removes cards only from Contact Deck, not iPhone Contacts. You can restore them from Recently removed."
-                     + "\n\nPermanent deletion from a synced address book can remove contacts across devices. Recovery depends on the account provider and available backups; an iCloud backup is not a guaranteed restore method.")
+                Text(removalWarning)
             }
             .alert("Couldn't save that change", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
             .safeAreaInset(edge: .bottom) {
@@ -166,6 +163,15 @@ struct DeckHome: View {
             .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
         }
     }
+    private var removalWarning: String {
+        let names = records.filter { pendingRemove.contains($0.id) }
+            .prefix(5).map(\.name).joined(separator: ", ")
+        let extra = pendingRemove.count > 5 ? " and \(pendingRemove.count - 5) more." : "."
+        let previewWarning = "This preview removes cards only from Contact Deck, not iPhone Contacts. You can restore them from Recently removed."
+        let syncWarning = "Permanently deleting synced contacts can remove them across devices. Recovery depends on the account provider and available backups; an iCloud backup is not a guaranteed restore method."
+        return "Removing: \(names)\(extra)\n\n\(previewWarning)\n\n\(syncWarning)"
+    }
+
     private var selectionBar: some View {
         HStack(spacing: 16) {
             Text("\(selected.count) selected").font(.subheadline.monospacedDigit())
