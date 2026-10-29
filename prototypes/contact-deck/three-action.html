@@ -474,7 +474,7 @@ function gesture(dir){
  if(!filtered().length)return;
  s.flippedId=null;springTo(Math.round(motion.position)+dir);
 }
-function exitCinematic(){if(!s.cinematic)return;s.cinematic=false;s.previewing=false;s.wokeAt=Date.now();s.last=s.wokeAt;render()}function interact(){s.last=Date.now();if(s.cinematic)exitCinematic()}function enterCinematic(force=false){if(s.cinematic||s.selectedIds.length||s.flippedId||(!force&&!s.idle)||s.modal||s.query||!filtered().length||document.visibilityState!=='visible'||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;s.cinematic=true;s.previewing=force;s.reveal=false;s.lastAdvance=Date.now();render()}function setView(v){interact();cancelMotion();s.view=v;s.flippedId=null;s.reveal=false;render();}function modal(type){interact();cancelMotion();returnFocus=document.activeElement;s.modal=type;overlay.classList.add('show');sheet.className='sheet'+(type==='detail'?' detail':'');buildSheet()}function close(){const type=s.modal;overlay.classList.remove('show');s.modal=null;if(type==='search')s.query='';setModalInert(false);interact();render();const target=returnFocus?.isConnected?returnFocus:track.querySelector('[tabindex="0"]');target?.focus({preventScroll:true})}function title(t){return `<div class="grab"></div><div class="sheet-head"><h2>${t}</h2><button class="text-btn" data-close>Done</button></div>`}function pill(label,attr,selected){return `<button class="pill ${selected?'active':''}" data-${attr}="${label}">${label}</button>`}function listRow(c){return `<button class="result deck-row" data-select="${c.id}" aria-label="Open ${c.name}, ${c.phone}"><span class="deck-row-copy"><strong class="result-name">${c.name}</strong><span class="result-sub">${c.phone}</span></span><span class="result-arrow" aria-hidden="true">›</span></button>`}function collectionName(){
+function exitCinematic(){if(!s.cinematic)return;s.cinematic=false;s.previewing=false;s.wokeAt=Date.now();s.last=s.wokeAt;render()}function interact(){s.last=Date.now();if(s.cinematic)exitCinematic()}function enterCinematic(force=false){if(s.cinematic||s.selectedIds.length||s.flippedId||(!force&&!s.idle)||s.modal||s.query||!filtered().length||document.visibilityState!=='visible'||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;s.cinematic=true;s.previewing=force;s.reveal=false;s.lastAdvance=Date.now();render()}function setView(v){interact();cancelMotion();s.view=v;s.flippedId=null;s.reveal=false;render();}function modal(type){interact();finishPointer(true);cancelMotion();returnFocus=document.activeElement;s.modal=type;overlay.classList.add('show');sheet.className='sheet'+(type==='detail'?' detail':'');buildSheet()}function close(){const type=s.modal;overlay.classList.remove('show');s.modal=null;if(type==='search')s.query='';setModalInert(false);interact();render();const target=returnFocus?.isConnected?returnFocus:track.querySelector('[tabindex="0"]');target?.focus({preventScroll:true})}function title(t){return `<div class="grab"></div><div class="sheet-head"><h2>${t}</h2><button class="text-btn" data-close>Done</button></div>`}function pill(label,attr,selected){return `<button class="pill ${selected?'active':''}" data-${attr}="${label}">${label}</button>`}function listRow(c){return `<button class="result deck-row" data-select="${c.id}" aria-label="Open ${c.name}, ${c.phone}"><span class="deck-row-copy"><strong class="result-name">${c.name}</strong><span class="result-sub">${c.phone}</span></span><span class="result-arrow" aria-hidden="true">›</span></button>`}function collectionName(){
  if(s.filter==='All')return 'All Contacts';
  if(s.filter==='Favorites')return 'Favorites';
  if(s.filter==='Reconnect')return 'A little hello';
@@ -753,6 +753,7 @@ function clearDrop(){s.dragId=null;for(const el of track.children){el.classList.
 function finishPointer(cancelled=false){
  endHold();if(!pressStart)return;
  const pointer=pressStart;pressStart=null;
+ if(pointer.moved)lastSwipe=Date.now();
  if(pointer.browsing){lastSwipe=Date.now();const projected=motion.position+Math.max(-2,Math.min(2,motion.velocity*.16));springTo(cancelled?pointer.base:Math.round(projected),cancelled?0:motion.velocity);}
  else if(pointer.held){lastLongHold=Date.now();if(!cancelled&&s.dragId&&s.selectedIds.length===1){s.selectedIds=[pointer.card,s.dragId];clearDrop();modal('create-deck')}else{clearDrop();render()}}
  motion.dragging=false;clearDrop();
@@ -768,7 +769,7 @@ arena.addEventListener('pointerdown',e=>{
 arena.addEventListener('pointermove',e=>{
  const p=pressStart;if(!p||p.pointer!==e.pointerId)return;
  const dx=e.clientX-p.x,dy=e.clientY-p.y,distance=Math.hypot(dx,dy);
- if(!p.held&&distance>10)endHold();
+ if(distance>10){p.moved=true;if(!p.held)endHold();}
  if(p.held){
    if(distance>22){
      const own=track.querySelector(`[data-id="${p.card}"]`);if(own){own.style.pointerEvents='none';own.style.translate=`calc(-50% + ${dx}px) ${dy-18}px`;}
@@ -784,8 +785,8 @@ arena.addEventListener('pointermove',e=>{
  motion.velocity=(next-p.lastPosition)/Math.max(.008,(now-p.last)/1000);p.lastPosition=next;p.last=now;motion.position=next;
  focusAt(next);drawMotion(next);
 });
-arena.addEventListener('pointerup',()=>finishPointer());
-arena.addEventListener('pointercancel',()=>finishPointer(true));
+arena.addEventListener('pointerup',e=>{if(pressStart?.pointer===e.pointerId)finishPointer()});
+arena.addEventListener('pointercancel',e=>{if(pressStart?.pointer===e.pointerId)finishPointer(true)});
 arena.addEventListener('lostpointercapture',()=>{if(pressStart)finishPointer(true)});
 window.addEventListener('blur',()=>finishPointer(true));
 new ResizeObserver(()=>{if(pressStart)finishPointer(true);updateFlowOrigin();drawMotion(motion.position)}).observe(track);

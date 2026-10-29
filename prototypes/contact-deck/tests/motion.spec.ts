@@ -124,3 +124,33 @@ test('Reduce Motion removes 3D travel and mirrors while keyboard browsing works'
   const hidden = await page.locator('.floor-reflection').evaluateAll(els => els.every(el => getComputedStyle(el).display === 'none' && el.hasAttribute('inert')));
   expect(hidden).toBe(true);
 });
+
+
+test('off-axis drags do not flip or select a card in any mode', async ({ page }) => {
+  for (const name of ['stack', 'fan', 'orbit']) {
+    await mode(page, name); const id = await page.locator(focused).getAttribute('data-id'); const p = await point(page);
+    await page.mouse.move(p.x,p.y); await page.mouse.down();
+    await page.mouse.move(p.x + (name === 'stack' ? 70 : 0), p.y + (name === 'stack' ? 0 : 70), { steps: 6 }); await page.mouse.up();
+    await expect(page.locator(focused)).toHaveAttribute('data-id',id!); await expect(page.locator('.is-flipped')).toHaveCount(0); await expect(page.locator('#selectionShelf')).toBeHidden();
+  }
+});
+
+test('a second pointer cannot finish the first pointer hold', async ({ page }) => {
+  const p = await point(page); const arena = page.locator('#arena');
+  await page.evaluate(({x,y}) => {
+    document.querySelector('.contact-card[tabindex="0"]')!.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,clientX:x,clientY:y,button:0,pointerId:77,pointerType:'touch'}));
+    document.querySelector('#arena')!.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,clientX:x,clientY:y,button:0,pointerId:88,pointerType:'touch'}));
+  }, p);
+  await page.waitForTimeout(510); await expect(page.locator('#selectionShelf')).toBeVisible();
+  await arena.dispatchEvent('pointerup',{ clientX:p.x,clientY:p.y,button:0,pointerId:77,pointerType:'touch' });
+});
+
+test('opening a sheet cancels a pending hold', async ({ page }) => {
+  const p = await point(page);
+  await page.evaluate(({x,y}) => {
+    document.querySelector('.contact-card[tabindex="0"]')!.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,clientX:x,clientY:y,button:0,pointerId:77,pointerType:'touch'}));
+    (document.querySelector('#searchTopBtn') as HTMLButtonElement).click();
+  }, p);
+  await page.waitForTimeout(510);
+  await expect(page.locator('#selectionShelf')).toBeHidden(); await expect(page.locator('#searchInput')).toBeVisible();
+});
