@@ -336,12 +336,12 @@ color:var(--ink);transition:translate .2s ease,filter .2s ease}
 .skin-current .search-results .deck-row{background:linear-gradient(145deg,#ffffffdc,#dfe9f5cc);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3)}
 @media(prefers-reduced-motion:reduce){.search-results .deck-row{transition:none}}
 
-/* Stable viewport layout: center cards within the available stage. */
+/* Center the carousel in the content stage; percentages resolve against the stage. */
 .screen .small-over,.screen .hint{display:none!important}
 .screen .app-head{padding:14px 22px 0}
 .screen .app-head .branding{font-size:34px;line-height:1.1}
 .screen .captionline{padding:12px 24px 0}
-.screen .arena{top:188px!important;bottom:128px!important}
+.screen .arena{top:198px!important;bottom:120px!important}
 .screen.cinematic .arena{top:62px!important;bottom:62px!important}
 .screen .arena .contact-card,.screen.cinematic .arena .contact-card{
 position:absolute;left:50%!important;top:50%!important;right:auto!important;
