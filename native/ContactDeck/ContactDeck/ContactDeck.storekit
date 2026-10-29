@@ -1,0 +1,16 @@
+{
+  "identifier": "ContactDeckLocalTesting",
+  "nonRenewingSubscriptions": [],
+  "products": [{
+    "displayPrice": "4.99",
+    "familyShareable": false,
+    "internalID": "complete",
+    "localizations": [{"description": "Unlimited contacts and an initials card style. One payment.", "displayName": "Contact Deck Complete", "locale": "en_US"}],
+    "productID": "com.graymatter.contactdeck.complete",
+    "referenceName": "Complete",
+    "type": "NonConsumable"
+  }],
+  "settings": {"_applicationInternalID": "", "_developerTeamID": "", "_failTransactionsEnabled": false, "_locale": "en_US", "_storefront": "USA", "_storeKitErrors": []},
+  "subscriptionGroups": [],
+  "version": {"major": 3, "minor": 0}
+}
