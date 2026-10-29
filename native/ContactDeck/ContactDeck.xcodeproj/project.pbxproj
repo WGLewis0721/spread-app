@@ -1,0 +1,545 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		410E1A3E26857F2D9F07EC6B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B8F6DC127013ED98C4624ECC /* PrivacyInfo.xcprivacy */; };
+		56AC0B4B98D3CE3AF4E5F7EC /* ContactDeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EA33E7D7137DFC69A839270 /* ContactDeckApp.swift */; };
+		61253D52810196F1F15B31B5 /* DeckHome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F295F03271295BB8424F9E /* DeckHome.swift */; };
+		827DF2D06ECA42B3AAE54EAF /* ContactCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D91808C3EC82C7C7A26A5C6 /* ContactCard.swift */; };
+		A41B96A0AA54FF4F69E88F2F /* PurchaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B39196D08D05628DA472896 /* PurchaseStore.swift */; };
+		B11544BD04812E3357A662C1 /* ContactDeckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B766E36F9DED91C5B689DB4 /* ContactDeckTests.swift */; };
+		D64B46759C959F188FF454B3 /* ContactDeckUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E2C3F7A80815D51FFE6BAA /* ContactDeckUITests.swift */; };
+		DB0C164019C1CFB76B05193B /* Contact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05787F766F9AF92219C73753 /* Contact.swift */; };
+		E1A9FB692AC8EA0EBB2898E3 /* DeckStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF7B29871C6EBD7837911F6 /* DeckStage.swift */; };
+		E37FDB044DA38A7440593F97 /* ContactDeck.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 79A24DE646784C2A93AA7DEC /* ContactDeck.storekit */; };
+		F65030C4C99ABD42A58C18FB /* ContactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1509B680215C8DA1765A1DC6 /* ContactPicker.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3E8F39DBC52BA01CA0C8E87D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 68E1A3FA77FB32148D5E7265 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 05A14ABA88C88E5D9BF01204;
+			remoteInfo = ContactDeck;
+		};
+		D1E45B8768C67EEFA959F31C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 68E1A3FA77FB32148D5E7265 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 05A14ABA88C88E5D9BF01204;
+			remoteInfo = ContactDeck;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		05787F766F9AF92219C73753 /* Contact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Contact.swift; sourceTree = "<group>"; };
+		0B766E36F9DED91C5B689DB4 /* ContactDeckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactDeckTests.swift; sourceTree = "<group>"; };
+		147725C04C6F6A686D469F64 /* ContactDeckUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ContactDeckUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1509B680215C8DA1765A1DC6 /* ContactPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactPicker.swift; sourceTree = "<group>"; };
+		29B2FF3C473A88DDDDAF1741 /* ContactDeck.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ContactDeck.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2B39196D08D05628DA472896 /* PurchaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseStore.swift; sourceTree = "<group>"; };
+		3D91808C3EC82C7C7A26A5C6 /* ContactCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactCard.swift; sourceTree = "<group>"; };
+		44F295F03271295BB8424F9E /* DeckHome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckHome.swift; sourceTree = "<group>"; };
+		4A6983835B2243527250AB74 /* ContactDeckTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ContactDeckTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		79A24DE646784C2A93AA7DEC /* ContactDeck.storekit */ = {isa = PBXFileReference; path = ContactDeck.storekit; sourceTree = "<group>"; };
+		7EA33E7D7137DFC69A839270 /* ContactDeckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactDeckApp.swift; sourceTree = "<group>"; };
+		7EF7B29871C6EBD7837911F6 /* DeckStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckStage.swift; sourceTree = "<group>"; };
+		7EF9FBD9A1C77C9635A3366A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B8F6DC127013ED98C4624ECC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B9E2C3F7A80815D51FFE6BAA /* ContactDeckUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactDeckUITests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1194BD3D7ECFF18515779881 /* ContactDeckUITests */ = {
+			isa = PBXGroup;
+			children = (
+				B9E2C3F7A80815D51FFE6BAA /* ContactDeckUITests.swift */,
+			);
+			path = ContactDeckUITests;
+			sourceTree = "<group>";
+		};
+		7FE5761EBF056109AAE32682 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				29B2FF3C473A88DDDDAF1741 /* ContactDeck.app */,
+				4A6983835B2243527250AB74 /* ContactDeckTests.xctest */,
+				147725C04C6F6A686D469F64 /* ContactDeckUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9FC3C0CB24531BFA3549AA31 = {
+			isa = PBXGroup;
+			children = (
+				EF103AE4D59813AA6776225C /* ContactDeck */,
+				BE41AADD9F07E0C39422936B /* ContactDeckTests */,
+				1194BD3D7ECFF18515779881 /* ContactDeckUITests */,
+				7FE5761EBF056109AAE32682 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BE41AADD9F07E0C39422936B /* ContactDeckTests */ = {
+			isa = PBXGroup;
+			children = (
+				0B766E36F9DED91C5B689DB4 /* ContactDeckTests.swift */,
+			);
+			path = ContactDeckTests;
+			sourceTree = "<group>";
+		};
+		EF103AE4D59813AA6776225C /* ContactDeck */ = {
+			isa = PBXGroup;
+			children = (
+				05787F766F9AF92219C73753 /* Contact.swift */,
+				3D91808C3EC82C7C7A26A5C6 /* ContactCard.swift */,
+				79A24DE646784C2A93AA7DEC /* ContactDeck.storekit */,
+				7EA33E7D7137DFC69A839270 /* ContactDeckApp.swift */,
+				1509B680215C8DA1765A1DC6 /* ContactPicker.swift */,
+				44F295F03271295BB8424F9E /* DeckHome.swift */,
+				7EF7B29871C6EBD7837911F6 /* DeckStage.swift */,
+				7EF9FBD9A1C77C9635A3366A /* Info.plist */,
+				B8F6DC127013ED98C4624ECC /* PrivacyInfo.xcprivacy */,
+				2B39196D08D05628DA472896 /* PurchaseStore.swift */,
+			);
+			path = ContactDeck;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		05A14ABA88C88E5D9BF01204 /* ContactDeck */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 633040FE406762FBEEFF5A4A /* Build configuration list for PBXNativeTarget "ContactDeck" */;
+			buildPhases = (
+				220BD4829DD79E76015BC9D2 /* Sources */,
+				69888D68E07662351D204848 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ContactDeck;
+			packageProductDependencies = (
+			);
+			productName = ContactDeck;
+			productReference = 29B2FF3C473A88DDDDAF1741 /* ContactDeck.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3A0B4C545AD8BECF79B9348C /* ContactDeckUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AE9D2F6A790E1436499766C9 /* Build configuration list for PBXNativeTarget "ContactDeckUITests" */;
+			buildPhases = (
+				2D36D7076F9C9C7BD2C05AA5 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F4265F6AF2D9242BA5418647 /* PBXTargetDependency */,
+			);
+			name = ContactDeckUITests;
+			packageProductDependencies = (
+			);
+			productName = ContactDeckUITests;
+			productReference = 147725C04C6F6A686D469F64 /* ContactDeckUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		8B04877299C882C47AC5E08C /* ContactDeckTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 483D20A49ABEE296F5005E34 /* Build configuration list for PBXNativeTarget "ContactDeckTests" */;
+			buildPhases = (
+				019C46E40E9E21BE5B170E46 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				96911BB177ED1473F9C65764 /* PBXTargetDependency */,
+			);
+			name = ContactDeckTests;
+			packageProductDependencies = (
+			);
+			productName = ContactDeckTests;
+			productReference = 4A6983835B2243527250AB74 /* ContactDeckTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		68E1A3FA77FB32148D5E7265 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					05A14ABA88C88E5D9BF01204 = {
+						DevelopmentTeam = "";
+					};
+					3A0B4C545AD8BECF79B9348C = {
+						DevelopmentTeam = "";
+						TestTargetID = 05A14ABA88C88E5D9BF01204;
+					};
+					8B04877299C882C47AC5E08C = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 67552B956F8ED6945C8E3A6C /* Build configuration list for PBXProject "ContactDeck" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 9FC3C0CB24531BFA3549AA31;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7FE5761EBF056109AAE32682 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				05A14ABA88C88E5D9BF01204 /* ContactDeck */,
+				8B04877299C882C47AC5E08C /* ContactDeckTests */,
+				3A0B4C545AD8BECF79B9348C /* ContactDeckUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		69888D68E07662351D204848 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E37FDB044DA38A7440593F97 /* ContactDeck.storekit in Resources */,
+				410E1A3E26857F2D9F07EC6B /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		019C46E40E9E21BE5B170E46 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B11544BD04812E3357A662C1 /* ContactDeckTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		220BD4829DD79E76015BC9D2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DB0C164019C1CFB76B05193B /* Contact.swift in Sources */,
+				827DF2D06ECA42B3AAE54EAF /* ContactCard.swift in Sources */,
+				56AC0B4B98D3CE3AF4E5F7EC /* ContactDeckApp.swift in Sources */,
+				F65030C4C99ABD42A58C18FB /* ContactPicker.swift in Sources */,
+				61253D52810196F1F15B31B5 /* DeckHome.swift in Sources */,
+				E1A9FB692AC8EA0EBB2898E3 /* DeckStage.swift in Sources */,
+				A41B96A0AA54FF4F69E88F2F /* PurchaseStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2D36D7076F9C9C7BD2C05AA5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D64B46759C959F188FF454B3 /* ContactDeckUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		96911BB177ED1473F9C65764 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 05A14ABA88C88E5D9BF01204 /* ContactDeck */;
+			targetProxy = 3E8F39DBC52BA01CA0C8E87D /* PBXContainerItemProxy */;
+		};
+		F4265F6AF2D9242BA5418647 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 05A14ABA88C88E5D9BF01204 /* ContactDeck */;
+			targetProxy = D1E45B8768C67EEFA959F31C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1253051C7CD790AE621885A7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.ContactDeckTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ContactDeck.app/ContactDeck";
+			};
+			name = Debug;
+		};
+		283A330B175C8A2EEA64F173 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		64C0A46A6729669CC77F29FC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9B6B407A0A5B02861030B228 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.ContactDeckUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ContactDeck;
+			};
+			name = Release;
+		};
+		9E2CA45199A60B29D4FB41EA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.ContactDeckUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ContactDeck;
+			};
+			name = Debug;
+		};
+		AFB42EC25F6D4BF4A5FE9636 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.ContactDeckTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ContactDeck.app/ContactDeck";
+			};
+			name = Release;
+		};
+		BB5FC83FFFC1A0A426E5D732 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ContactDeck/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.contactdeck;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		CAE8304A0E17B0618AE2169D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ContactDeck/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.contactdeck;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		483D20A49ABEE296F5005E34 /* Build configuration list for PBXNativeTarget "ContactDeckTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1253051C7CD790AE621885A7 /* Debug */,
+				AFB42EC25F6D4BF4A5FE9636 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		633040FE406762FBEEFF5A4A /* Build configuration list for PBXNativeTarget "ContactDeck" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CAE8304A0E17B0618AE2169D /* Debug */,
+				BB5FC83FFFC1A0A426E5D732 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		67552B956F8ED6945C8E3A6C /* Build configuration list for PBXProject "ContactDeck" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				283A330B175C8A2EEA64F173 /* Debug */,
+				64C0A46A6729669CC77F29FC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AE9D2F6A790E1436499766C9 /* Build configuration list for PBXNativeTarget "ContactDeckUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9E2CA45199A60B29D4FB41EA /* Debug */,
+				9B6B407A0A5B02861030B228 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 68E1A3FA77FB32148D5E7265 /* Project object */;
+}

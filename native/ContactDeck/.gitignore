@@ -1,4 +1,4 @@
 build/
 *.xcresult/
-ContactDeck.xcodeproj/
 *.png
+xcuserdata/

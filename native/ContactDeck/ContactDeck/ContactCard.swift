@@ -52,7 +52,7 @@ struct ContactFace: View {
                         Button("Suggest another day", systemImage: "moon") { onAction(contact, .snooze) }
                         Button("Remove from Contact Deck", systemImage: "trash", role: .destructive) { onAction(contact, .remove) }
                     } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44) }.accessibilityLabel("Card options")
-                }.buttonStyle(.bordered).buttonBorderShape(.circle).tint(.white)
+                }.buttonStyle(.bordered).buttonBorderShape(.circle).tint(.primary)
                 Spacer()
             }.padding(14)
         }.background(Color(.secondarySystemBackground))
@@ -62,7 +62,7 @@ struct ContactFace: View {
     private func action(_ title: String, _ symbol: String, _ action: ContactAction, disabled: Bool = false) -> some View {
         Button { onAction(contact, action) } label: {
             VStack(spacing: 6) {
-                Image(systemName: symbol).font(.body.weight(.medium)).frame(width: 46, height: 46).background(.thinMaterial, in: Circle())
+                Image(systemName: symbol).font(.body.weight(.medium)).frame(width: 46, height: 46).foregroundStyle(.primary).background(.regularMaterial, in: Circle())
                 Text(title).font(.caption2)
             }
         }.buttonStyle(.plain).disabled(disabled).accessibilityLabel("\(title) \(contact.name)")
@@ -87,7 +87,7 @@ struct ContactBack: View {
                         Label("Personal note", systemImage: "note.text")
                         Text(contact.note.isEmpty ? "Something to remember…" : contact.note).foregroundStyle(.secondary).multilineTextAlignment(.leading)
                     }.frame(maxWidth: .infinity, alignment: .leading)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).accessibilityLabel("Edit personal note")
                 Button("Share contact", systemImage: "square.and.arrow.up") { onAction(contact, .share) }.buttonStyle(.bordered)
                 if let date = contact.lastReachedOut { Text("You marked a reach-out \(date.formatted(date: .abbreviated, time: .omitted)).").font(.caption).foregroundStyle(.secondary) }
             }.padding(24)

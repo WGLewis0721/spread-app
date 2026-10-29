@@ -328,6 +328,46 @@ transition:transform .76s cubic-bezier(.22,.72,.19,1),opacity .76s ease,filter .
  .screen.skin-current .sectionlabel,.screen.skin-current .sheet-note{color:#bfcbdd}
 }
 @media(max-width:600px){.desktop{grid-template-columns:1fr}.editorial,.aside{display:none}}
+
+/* Review polish: system appearance, physical stage, no design-era controls. */
+:root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+body{background:#f2f2f7;color:#1c1c1e}
+.screen.skin-current{background:#f2f2f7;color:#1c1c1e;--ink:#1c1c1e;--soft:#e9e9ee;--panel:#fff;--card:#fff;--line:#d1d1d6;--accent:#007aff}
+.screen.skin-current:before{display:none}
+.screen .branding{color:var(--ink)}
+.screen .round,.screen .dock{background:color-mix(in srgb,var(--panel) 78%,transparent);color:var(--ink);border:1px solid color-mix(in srgb,var(--ink) 8%,transparent);box-shadow:0 3px 18px #00000008}
+.screen .navbtn{color:var(--ink)}.screen .navbtn.selected{background:var(--soft);color:var(--accent)}
+.screen .dock{grid-template-columns:repeat(3,1fr)}
+.screen .captionline{pointer-events:none}.screen .captionline .collection-control{pointer-events:auto}
+.screen .captionline strong,.screen .captionline span{color:var(--ink)}
+.screen .contact-card{transform-style:preserve-3d;transition:none;filter:brightness(var(--deck-brightness,1));transform-origin:center}
+.screen .track[data-mode$="-fan"] .contact-card{transform-origin:50% 50%}
+.screen .track.physics .contact-card{transition:none!important}
+.screen .icon-star,.screen .icon-more{width:44px;height:44px;padding:0}
+.screen .contact-card .action{width:44px;height:44px;padding:0}
+.screen .card-body{background:none!important}
+.screen .card-back{overflow:auto;padding:24px 20px}
+.screen .card-back h2{font-size:24px}.screen .back-details strong{font-size:15px}
+.screen .note-link{width:100%;max-height:84px;overflow:auto;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;border-radius:14px;color:var(--ink);background:var(--soft);font-size:14px;min-height:44px}
+.screen .field{background:var(--soft);color:var(--ink);border-color:var(--line);font-size:16px}
+.screen .note-field{height:180px;padding:15px;resize:vertical;line-height:1.5}
+.screen .sheet-note,.screen .sectionlabel,.screen .rowitem span{color:color-mix(in srgb,var(--ink) 70%,var(--panel))}
+.screen .sheet{padding-bottom:max(28px,env(safe-area-inset-bottom));overscroll-behavior:contain}
+.screen .mode-tile{background:var(--soft);color:var(--ink)}.screen .mode-tile.selected{background:var(--soft);border-color:var(--accent)}
+.screen .toast{bottom:calc(100px + env(safe-area-inset-bottom));font-size:14px}
+.screen .sheet-row{min-height:50px;background:none}
+.screen .search-results .deck-row{background:var(--panel)!important;color:var(--ink);border-color:var(--line);box-shadow:0 5px 14px #0000000e}
+.screen .result-sub{color:color-mix(in srgb,var(--ink) 65%,var(--panel))!important}
+.unlock-copy h3{font-size:32px;letter-spacing:-.04em}.unlock-copy p{font-size:16px;line-height:1.45}
+@media(min-width:751px){.desktop .device{height:min(850px,calc(100dvh - 80px))}}
+@media(min-width:751px) and (max-width:1100px){.desktop{display:flex;justify-content:center}.editorial{display:none}}
+@media(max-width:750px){.screen{--deck-top:calc(152px + env(safe-area-inset-top,0px))}.status{padding-top:env(safe-area-inset-top,10px);height:calc(50px + env(safe-area-inset-top,0px))}.dynamic,.home-indicator{display:none}.device{height:100svh;height:100dvh}}
+@media(max-height:540px){.screen{--deck-top:100px;--deck-bottom:82px}.status{display:none}.screen .app-head{padding-top:8px}.screen .captionline{padding-top:0}.screen .card-company,.screen .card-role,.screen .card-bottom{display:none}.screen .card-body{padding:8px 16px!important}.screen .card-name{font-size:21px}.screen .card-actions{margin-top:8px}.screen .back-details{margin:6px 0}.screen .back-monogram{display:none}.screen .card-back{padding:14px}.screen .card-back h2{margin:2px}.screen .back-details span{margin-top:2px}}
+@media(prefers-color-scheme:dark){body{background:#000;color:#f5f5f7}.screen.skin-current{background:#000;color:#f5f5f7;--ink:#f5f5f7;--soft:#2c2c2e;--panel:#1c1c1e;--card:#1c1c1e;--line:#48484a;--accent:#0a84ff}.screen .card-body{background:none!important}.screen .card-back{background:var(--panel)}}
+@media(prefers-reduced-transparency:reduce){.screen .dock,.screen .round,.screen .sheet,.screen .selection-shelf{background:var(--panel)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
+@media(prefers-contrast:more){.screen{--line:currentColor}.screen .card-actions button{background:#fff;color:#111}.screen .card-role,.screen .card-company{color:#fff}}
+@media(prefers-reduced-motion:reduce){.screen .contact-card{transition:opacity .16s ease!important;transform:none!important}.screen .contact-card:not([tabindex="0"]){visibility:hidden}.screen .floor-reflection{display:none!important}.screen .contact-card .card-face,.screen .contact-card .card-back{transition:opacity .16s ease!important}}
+
 </style></head><body>
 <div class="desktop"><aside class="editorial"><div class="eyebrow">Interaction study / v0.1</div><h1>Contact Deck,<br><em>in motion.</em></h1><p>Find, group, sort, and clean up contacts with cards you can touch. This preview uses only fictional data.</p><div class="mini-title">Three ways to browse</div><div class="feature"><span class="number">01</span> Stack — flip vertically like a Rolodex</div><div class="feature"><span class="number">02</span> Fan — sweep through a hand of cards</div><div class="feature"><span class="number">03</span> Flow — rotate an immersive Cover Flow</div><div class="mini-title">Try it</div><p style="font-size:13px">Swipe to browse, tap to flip, hold a card to select it, or open Views to change Stack, Fan, and Flow. Keyboard arrow keys also rotate the deck.</p></aside>
 <div class="device" aria-label="Interactive iPhone app prototype"><div id="screen" class="screen skin-current"><div class="cinematic-blackout" aria-hidden="true"></div><div class="status"><span>9:41</span><div class="dynamic" aria-hidden="true"></div><span class="signals">▂▄▆  ◢  ▰</span></div><header class="app-head"><div class="toprow"><div><div class="branding">Contact Deck</div></div><div class="toolrow"><button class="round" id="searchTopBtn" aria-label="Search contacts">⌕</button><button class="round" id="filterBtn" aria-label="Sort, shuffle and find duplicates">☷</button></div></div></header><div class="captionline"><button id="collectionBtn" class="collection-control" type="button" aria-label="Choose contact deck"><strong id="collectionTitle">ALL CONTACTS</strong> <span aria-hidden="true">⌄</span></button><span id="countLabel">01 / 08</span></div><main class="arena" id="arena" aria-label="Swipe to browse contact cards"><div class="ambient"></div><div class="track" id="track"></div><div class="fan-orb" id="fanOrb" role="slider" aria-label="Scrub contacts quickly" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1" tabindex="0"></div><div class="empty" id="empty"><b>No contacts found</b>Try another search or filter.</div></main><div id="selectionShelf" class="selection-shelf" hidden><span id="selectionCount">1 selected</span><button type="button" id="moveSelected">Move</button><button type="button" id="deleteSelected">Delete</button><button type="button" id="cancelSelected" aria-label="Cancel selection">×</button></div><div class="hint"><b id="hintArrow">↕</b><span id="hintText">Swipe up or down to browse</span></div><footer class="footer"><nav class="dock" aria-label="App navigation"><button class="navbtn selected" id="peopleTab" aria-label="Browse contacts">▦<small>Deck</small></button><button class="navbtn" id="historyTab" aria-label="Sample call history">◷<small>History</small></button><button class="navbtn" id="settingsTab" aria-label="Choose view">☷<small>Views</small></button></nav></footer><div class="home-indicator"></div><div class="overlay" id="overlay" role="presentation"><section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Contact options"></section></div><div class="toast" id="toast" role="status" aria-live="polite"></div><div class="cinema-heading" aria-hidden="true"><b id="cinemaViewLabel">CONTACT DECK / COVER FLOW</b><span>THE PEOPLE WHO MATTER</span></div><button id="idleWake" class="wake-layer" type="button" tabindex="-1" aria-label="Leave cinematic Cover Flow and return to contacts"><span>Touch anywhere to browse</span></button></div></div>
@@ -344,7 +384,9 @@ transition:transform .76s cubic-bezier(.22,.72,.19,1),opacity .76s ease,filter .
 {id:8,name:'Elena Martinez',role:'Physician',company:'Mercy Health',group:'Family',phone:'(502) 555-0182',email:'elena@example.com',city:'Louisville, KY',fav:true,img:48,t1:'#f5d3dd',t2:'#b78ebd'},
 {id:9,name:'Marcus Carter',role:'Software Engineer',company:'Apex Solutions',group:'Work',phone:'(334) 555-0123',email:'marcus@example.com',city:'Montgomery, AL',fav:false,img:12,t1:'#b9d5f6',t2:'#648db7'},
 {id:10,name:'Elena Martinez',role:'Physician',company:'Mercy Health',group:'Family',phone:'(502) 555-0182',email:'elena@example.com',city:'Louisville, KY',fav:false,img:48,t1:'#f5d3dd',t2:'#b78ebd'}];
-const s={view:'stack',skin:'current',idle:true,cinematic:false,lastAdvance:0,wokeAt:0,sort:'first',filter:'All',query:'',active:5,reveal:false,last:Date.now(),modal:null,includePhone:true,includeEmail:false,selectedIds:[],flippedId:null,decks:[],deletedIds:[],manualOrder:[],undoState:null,dragId:null,historyQuery:'',historySort:'newest'};
+const s={view:'orbit',skin:'current',idle:false,cinematic:false,lastAdvance:0,wokeAt:0,sort:'first',filter:'All',query:'',active:5,reveal:false,last:Date.now(),modal:null,includePhone:true,includeEmail:false,selectedIds:[],flippedId:null,decks:[],deletedIds:[],manualOrder:[],undoState:null,dragId:null,historyQuery:'',historySort:'newest',notes:{},reached:{},snoozed:{}};
+const motion={position:s.active,target:s.active,velocity:0,frame:0,dragging:false};
+let lastSwipe=0,returnFocus=null;
 /* User preferences are device-local; the sample contact records are never persisted. */
 const preferencesKey='people-contact-deck-preferences-v1';
 let savedPreferences='';
@@ -359,10 +401,11 @@ try{
  if(Array.isArray(prefs.decks))s.decks=prefs.decks.filter(d=>d&&typeof d.id==='string'&&typeof d.name==='string'&&Array.isArray(d.ids));
  if(Array.isArray(prefs.deletedIds))s.deletedIds=prefs.deletedIds.filter(Number.isInteger);
  if(Array.isArray(prefs.manualOrder))s.manualOrder=prefs.manualOrder.filter(Number.isInteger);
+ for(const key of ['notes','reached','snoozed'])if(prefs[key]&&typeof prefs[key]==='object'&&!Array.isArray(prefs[key]))s[key]=prefs[key];
  if(Array.isArray(prefs.favoriteIds)&&prefs.favoriteIds.every(id=>Number.isInteger(id)))for(const c of people)c.fav=prefs.favoriteIds.includes(c.id);
 }catch(_){/* iOS private browsing can block storage; browsing still works. */}
 function savePreferences(){
- const value=JSON.stringify({view:s.view,idle:s.idle,sort:s.sort,filter:s.filter,decks:s.decks,deletedIds:s.deletedIds,manualOrder:s.manualOrder,favoriteIds:people.filter(c=>c.fav).map(c=>c.id)});
+ const value=JSON.stringify({view:s.view,idle:s.idle,sort:s.sort,filter:s.filter,decks:s.decks,deletedIds:s.deletedIds,manualOrder:s.manualOrder,favoriteIds:people.filter(c=>c.fav).map(c=>c.id),notes:s.notes,reached:s.reached,snoozed:s.snoozed});
  if(value!==savedPreferences){try{window.localStorage.setItem(preferencesKey,value)}catch(_){/* storage optional */}savedPreferences=value}
 }
 
@@ -385,9 +428,10 @@ const $=id=>document.getElementById(id);const screen=$('screen'),track=$('track'
  let a=people.filter(c=>{
    if(s.deletedIds.includes(c.id))return false;
    if(s.filter==='Favorites'&&!c.fav)return false;
+   if(s.filter==='Reconnect'&&!reconnectPeople().some(x=>x.id===c.id))return false;
    if(s.filter.startsWith('deck:')){
       const d=s.decks.find(d=>d.id===s.filter.slice(5));if(!d||!d.ids.includes(c.id))return false;
-   }else if(!['All','Favorites'].includes(s.filter)&&c.group!==s.filter)return false;
+   }else if(!['All','Favorites','Reconnect'].includes(s.filter)&&c.group!==s.filter)return false;
    return [c.name,c.company,c.email,c.role,c.phone,c.city].join(' ').toLowerCase().includes(s.query.trim().toLowerCase());
  });
  if(s.sort==='shuffle'){
@@ -397,11 +441,36 @@ const $=id=>document.getElementById(id);const screen=$('screen'),track=$('track'
  else if(s.sort==='company')a.sort((x,y)=>x.company.localeCompare(y.company));
  else a.sort((x,y)=>x.name.localeCompare(y.name));
  return a;
-}function active(){let a=filtered();return a[Math.min(s.active,a.length-1)]||a[0]||null}function notice(msg){const x=$('toast');x.textContent=msg;x.classList.add('visible');clearTimeout(toastHandle);toastHandle=setTimeout(()=>x.classList.remove('visible'),2800)}function illustration(c){const skin=c.img%3===0?'#b87551':c.img%3===1?'#e6ae85':'#8b4e34';const shirt=c.img%2?'#345a75':'#dfefee';const hair=c.img%2?'#29232e':'#3c2825';return `<svg viewBox="0 0 286 230" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;"><ellipse cx="143" cy="240" rx="115" ry="87" fill="${shirt}"/><path d="M92 110 C78 49 100 24 147 30 C189 22 213 64 193 123 L187 158 L98 158Z" fill="${hair}"/><ellipse cx="143" cy="113" rx="50" ry="66" fill="${skin}"/><ellipse cx="94" cy="119" rx="8" ry="15" fill="${skin}"/><ellipse cx="192" cy="119" rx="8" ry="15" fill="${skin}"/><path d="M92 97 Q91 27 144 30 Q209 27 194 100 Q170 82 163 58 Q137 98 92 97" fill="${hair}"/><path d="M121 113 q8 -7 15 0 M151 113 q8 -7 15 0" fill="none" stroke="#47352f" stroke-width="3" stroke-linecap="round"/><path d="M134 146 Q145 155 156 146" fill="none" stroke="#763f41" stroke-width="3.5" stroke-linecap="round"/><path d="M125 175 L143 196 L163 175" fill="${skin}"/><path d="M48 230 Q57 184 114 180 L143 199 L172 180 Q227 186 238 230" fill="${shirt}"/></svg>`}function photo(c,cls='person-photo'){return `${illustration(c)}<img class="${cls}" src="${imgUrl(c)}" alt="" loading="lazy" onerror="this.style.display='none'">`};function card(c,dist,i){const visualView=s.view;let x=0,y=0,z=0,r=0,ry=0,scale=1,op=1;if(visualView==='stack'){y=dist*62;x=dist*2;z=-Math.abs(dist)*44;r=dist*.9;scale=1-Math.abs(dist)*.07;op=Math.abs(dist)>4?0:Math.max(.14,1-Math.abs(dist)*.24)}else if(visualView==='fan'){x=dist*99;y=Math.abs(dist)*25;z=-Math.abs(dist)*42;r=dist*12;scale=1-Math.abs(dist)*.075;op=Math.abs(dist)>3?0:Math.max(.14,1-Math.abs(dist)*.26)}else{x=dist*116;y=0;z=-Math.abs(dist)*125;ry=dist*-58;scale=1-Math.abs(dist)*.09;op=Math.abs(dist)>3?0:Math.max(.14,1-Math.abs(dist)*.24)}const depth=Math.abs(dist);const deckOpacity=Math.max(.12,1-depth*.22);const deckBrightness=Math.max(.52,1-depth*.12);const deckSaturation=Math.max(.55,1-depth*.12);const t=`translate3d(${x}px,${y}px,${z}px) rotate(${r}deg) rotateY(${ry}deg) scale(${Math.max(.5,scale)})`;const face=`<div class="poster">${photo(c)}<div class="edge-tab">${c.name.split(' ')[0]}</div></div><div class="card-top"><span class="icon-star ${c.fav?'on':''}" data-star="${c.id}" role="button" aria-label="Toggle favorite">${icon('star')}</span><span class="icon-more">${icon('more')}</span></div><div class="card-body"><div class="card-name">${c.name}</div><div class="card-role">${c.role}</div><div class="card-company">${c.company}</div><div class="card-actions"><div class="actiongroup"><span class="action primary" data-act="call">${icon('phone')}</span><span class="action-label">Call</span></div><div class="actiongroup"><span class="action" data-act="message">${icon('message')}</span><span class="action-label">Message</span></div><div class="actiongroup"><span class="action" data-act="video">${icon('video')}</span><span class="action-label">FaceTime</span></div><div class="actiongroup"><span class="action" data-act="export">${icon('share')}</span><span class="action-label">Share</span></div></div><div class="card-bottom"><span>◉ ${c.city}</span><span>CONTACT CARD ↗</span></div></div>`;return `<article class="contact-card ${dist?'distant':''} ${s.selectedIds.includes(c.id)?'is-selected':''} ${s.flippedId===c.id?'is-flipped':''}" data-id="${c.id}" tabindex="${dist===0?0:-1}" role="button" aria-label="Open ${c.name}'s contact" style="--tone1:${c.t1};--tone2:${c.t2};--deck-opacity:${deckOpacity};--deck-brightness:${deckBrightness};--deck-saturation:${deckSaturation};transform:${t};z-index:${100-Math.abs(dist)};opacity:${op};pointer-events:${Math.abs(dist)>3?'none':'auto'}"><div class="card-face">${face}</div><div class="floor-reflection" aria-hidden="true" inert><div class="card-face reflected-face">${face}</div></div><div class="card-back" aria-label="Contact details for ${c.name}"><div class="back-monogram">${initials(c)}</div><h2>${c.name}</h2><p>${c.role} · ${c.company}</p><div class="back-details"><span>PHONE</span><strong>${c.phone}</strong><span>EMAIL</span><strong>${c.email}</strong><span>LOCATION</span><strong>${c.city}</strong></div><div class="back-actions"><button type="button" data-card-action="share" aria-label="Share ${c.name} as a contact">Share contact</button><button type="button" data-card-action="close" aria-label="Flip ${c.name} back">Flip back</button></div></div></article>`}
-function render(){const a=filtered();if(s.active>=a.length)s.active=Math.max(0,a.length-1);const ix=s.active;$('empty').style.display=a.length?'none':'block';const list=a.map((c,i)=>{let d=i-ix;if(d>a.length/2)d-=a.length;if(d<-a.length/2)d+=a.length;return {c,d,i}}).filter(x=>Math.abs(x.d)<=3).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));const nextMode='normal';const prior=Array.from(track.children);const same=track.dataset.mode===nextMode+'-'+s.view&&prior.length===list.length&&prior.every(el=>list.some(x=>String(x.c.id)===el.dataset.id));if(!same){track.innerHTML=list.map(x=>card(x.c,x.d,x.i)).join('');track.dataset.mode=nextMode+'-'+s.view}else{const tpl=document.createElement('template');for(const item of list){tpl.innerHTML=card(item.c,item.d,item.i);const fresh=tpl.content.firstElementChild;const el=prior.find(node=>node.dataset.id===String(item.c.id));if(!el||!fresh)continue;el.className=fresh.className;el.style.transform=fresh.style.transform;el.style.zIndex=fresh.style.zIndex;el.style.opacity=fresh.style.opacity;el.style.pointerEvents=fresh.style.pointerEvents;el.tabIndex=fresh.tabIndex;for(const fav of el.querySelectorAll('[data-star]')){fav.classList.toggle('on',item.c.fav);fav.innerHTML=icon('star')}}}$('fanOrb').setAttribute('aria-valuemax',String(Math.max(1,a.length)));$('fanOrb').setAttribute('aria-valuenow',String(ix+1));$('countLabel').textContent=a.length?`${String(ix+1).padStart(2,'0')} / ${String(a.length).padStart(2,'0')}`:'00 / 00';$('collectionTitle').textContent=collectionName().toUpperCase();syncSelectionShelf();$('hintArrow').textContent=s.view==='stack'?'↕':'↔';$('hintText').textContent=s.view==='stack'?'Swipe up or down to browse':s.view==='fan'?'Swipe cards or drag the orb':'Swipe through Cover Flow';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===s.view));screen.className='screen skin-current'+(s.cinematic?' cinematic':'')+(s.selectedIds.length?' selecting':'');$('cinemaViewLabel').textContent='CONTACT DECK / '+(s.view==='orbit'?'COVER FLOW':s.view.toUpperCase());$('idleWake').tabIndex=s.cinematic?0:-1;document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('selected'));$('peopleTab').classList.add('selected');savePreferences()}
-function gesture(dir){const a=filtered();if(!a.length)return;s.flippedId=null;s.active=(s.active+dir+a.length)%a.length;s.reveal=false;render();}function exitCinematic(){if(!s.cinematic)return;s.cinematic=false;s.previewing=false;s.wokeAt=Date.now();s.last=s.wokeAt;render()}function interact(){s.last=Date.now();if(s.cinematic)exitCinematic()}function enterCinematic(force=false){if(s.cinematic||s.selectedIds.length||s.flippedId||(!force&&!s.idle)||s.modal||s.query||!filtered().length||document.visibilityState!=='visible'||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;s.cinematic=true;s.previewing=force;s.reveal=false;s.lastAdvance=Date.now();render()}function setView(v){interact();s.view=v;s.flippedId=null;s.reveal=false;render();}function modal(type){interact();s.modal=type;overlay.classList.add('show');sheet.className='sheet'+(type==='detail'?' detail':'');buildSheet()}function close(){overlay.classList.remove('show');s.modal=null;interact();render()}function title(t){return `<div class="grab"></div><div class="sheet-head"><h2>${t}</h2><button class="text-btn" data-close>Done</button></div>`}function pill(label,attr,selected){return `<button class="pill ${selected?'active':''}" data-${attr}="${label}">${label}</button>`}function listRow(c){return `<button class="result deck-row" data-select="${c.id}" aria-label="Open ${c.name}, ${c.phone}"><span class="deck-row-copy"><strong class="result-name">${c.name}</strong><span class="result-sub">${c.phone}</span></span><span class="result-arrow" aria-hidden="true">›</span></button>`}function collectionName(){
+}function active(){let a=filtered();return a[Math.min(s.active,a.length-1)]||a[0]||null}function notice(msg){const x=$('toast');x.textContent=msg;x.classList.add('visible');clearTimeout(toastHandle);toastHandle=setTimeout(()=>x.classList.remove('visible'),2800)}function illustration(c){const skin=c.img%3===0?'#b87551':c.img%3===1?'#e6ae85':'#8b4e34';const shirt=c.img%2?'#345a75':'#dfefee';const hair=c.img%2?'#29232e':'#3c2825';return `<svg viewBox="0 0 286 230" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;"><ellipse cx="143" cy="240" rx="115" ry="87" fill="${shirt}"/><path d="M92 110 C78 49 100 24 147 30 C189 22 213 64 193 123 L187 158 L98 158Z" fill="${hair}"/><ellipse cx="143" cy="113" rx="50" ry="66" fill="${skin}"/><ellipse cx="94" cy="119" rx="8" ry="15" fill="${skin}"/><ellipse cx="192" cy="119" rx="8" ry="15" fill="${skin}"/><path d="M92 97 Q91 27 144 30 Q209 27 194 100 Q170 82 163 58 Q137 98 92 97" fill="${hair}"/><path d="M121 113 q8 -7 15 0 M151 113 q8 -7 15 0" fill="none" stroke="#47352f" stroke-width="3" stroke-linecap="round"/><path d="M134 146 Q145 155 156 146" fill="none" stroke="#763f41" stroke-width="3.5" stroke-linecap="round"/><path d="M125 175 L143 196 L163 175" fill="${skin}"/><path d="M48 230 Q57 184 114 180 L143 199 L172 180 Q227 186 238 230" fill="${shirt}"/></svg>`}function photo(c,cls='person-photo'){return `${illustration(c)}<img class="${cls}" src="${imgUrl(c)}" alt="" loading="lazy" onerror="this.style.display='none'">`};function card(c,dist,i){const visualView=s.view;let x=0,y=0,z=0,r=0,ry=0,scale=1,op=1;if(visualView==='stack'){y=dist*62;x=dist*2;z=-Math.abs(dist)*44;r=dist*.9;scale=1-Math.abs(dist)*.07;op=Math.abs(dist)>4?0:Math.max(.14,1-Math.abs(dist)*.24)}else if(visualView==='fan'){x=dist*99;y=Math.abs(dist)*25;z=-Math.abs(dist)*42;r=dist*12;scale=1-Math.abs(dist)*.075;op=Math.abs(dist)>3?0:Math.max(.14,1-Math.abs(dist)*.26)}else{x=dist*116;y=0;z=-Math.abs(dist)*125;ry=dist*-58;scale=1-Math.abs(dist)*.09;op=Math.abs(dist)>3?0:Math.max(.14,1-Math.abs(dist)*.24)}const depth=Math.abs(dist);const deckOpacity=Math.max(.12,1-depth*.22);const deckBrightness=Math.max(.52,1-depth*.12);const deckSaturation=Math.max(.55,1-depth*.12);const t=`translate3d(${x}px,${y}px,${z}px) rotate(${r}deg) rotateY(${ry}deg) scale(${Math.max(.5,scale)})`;const face=`<div class="poster">${photo(c)}<div class="edge-tab">${c.name.split(' ')[0]}</div></div><div class="card-top"><button type="button" class="icon-star ${c.fav?'on':''}" data-star="${c.id}" tabindex="${dist===0?0:-1}" aria-pressed="${c.fav}" aria-label="Favorite ${c.name}">${icon('star')}</button><button type="button" class="icon-more" data-more="${c.id}" tabindex="${dist===0?0:-1}" aria-label="Options for ${c.name}">${icon('more')}</button></div><div class="card-body"><div class="card-name">${c.name}</div><div class="card-role">${c.role}</div><div class="card-company">${c.company}</div><div class="card-actions"><div class="actiongroup"><button type="button" class="action primary" tabindex="${dist===0?0:-1}" data-act="call" aria-label="Call ${c.name}">${icon('phone')}</button><span class="action-label">Call</span></div><div class="actiongroup"><button type="button" class="action" tabindex="${dist===0?0:-1}" data-act="message" aria-label="Message ${c.name}">${icon('message')}</button><span class="action-label">Message</span></div><div class="actiongroup"><button type="button" class="action" tabindex="${dist===0?0:-1}" data-act="video" aria-label="Note ${c.name}">${icon('more')}</button><span class="action-label">Note</span></div><div class="actiongroup"><button type="button" class="action" tabindex="${dist===0?0:-1}" data-act="export" aria-label="Share ${c.name}">${icon('share')}</button><span class="action-label">Share</span></div></div><div class="card-bottom"><span>◉ ${c.city}</span><span>CONTACT CARD ↗</span></div></div>`;return `<article class="contact-card ${dist?'distant':''} ${s.selectedIds.includes(c.id)?'is-selected':''} ${s.flippedId===c.id?'is-flipped':''}" data-id="${c.id}" tabindex="${dist===0?0:-1}" role="group" aria-label="${c.name}, contact card. Tap to flip; hold to select." style="--tone1:${c.t1};--tone2:${c.t2};--deck-opacity:${deckOpacity};--deck-brightness:${deckBrightness};--deck-saturation:${deckSaturation};transform:${t};z-index:${100-Math.abs(dist)};opacity:${op};pointer-events:${Math.abs(dist)>3?'none':'auto'}"><div class="card-face" aria-hidden="${s.flippedId===c.id}">${face}</div><div class="floor-reflection" aria-hidden="true" inert><div class="card-face reflected-face">${face}</div></div><div class="card-back" aria-hidden="${s.flippedId!==c.id}" aria-label="Contact details for ${c.name}"><div class="back-monogram">${initials(c)}</div><h2>${c.name}</h2><p>${c.role} · ${c.company}</p><div class="back-details"><span>PHONE</span><strong>${c.phone}</strong><span>EMAIL</span><strong>${c.email}</strong><span>LOCATION</span><strong>${c.city}</strong></div><button type="button" class="note-link" data-card-action="note">${s.notes[c.id]?escapeHTML(s.notes[c.id]):'Add a personal note'}</button><div class="back-actions"><button type="button" data-card-action="share" aria-label="Share ${c.name} as a contact">Share contact</button><button type="button" data-card-action="close" aria-label="Flip ${c.name} back">Flip back</button></div></div></article>`}
+function render(){const a=filtered();if(s.active>=a.length)s.active=Math.max(0,a.length-1);const ix=s.active;$('empty').style.display=a.length?'none':'block';const list=a.map((c,i)=>{let d=i-ix;if(d>a.length/2)d-=a.length;if(d<-a.length/2)d+=a.length;return {c,d,i}}).filter(x=>Math.abs(x.d)<=3).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));const nextMode='normal';const prior=new Map(Array.from(track.children).map(el=>[el.dataset.id,el]));
+for(const item of list){
+ const key=String(item.c.id),tpl=document.createElement('template');tpl.innerHTML=card(item.c,item.d,item.i);
+ const fresh=tpl.content.firstElementChild;let el=prior.get(key);
+ if(!el){el=fresh;track.append(el)}else{
+   el.className=fresh.className;el.style.cssText=fresh.style.cssText;el.tabIndex=fresh.tabIndex;el.setAttribute('aria-label',fresh.getAttribute('aria-label'));
+   el.querySelector('.card-face').setAttribute('aria-hidden',String(s.flippedId===item.c.id));
+   el.querySelector('.card-back').setAttribute('aria-hidden',String(s.flippedId!==item.c.id));
+   for(const fav of el.querySelectorAll('[data-star]')){fav.classList.toggle('on',item.c.fav);fav.setAttribute('aria-pressed',String(item.c.fav))}
+   el.querySelector('.note-link').textContent=s.notes[item.c.id]||'Add a personal note';
+ }
+ for(const button of el.querySelectorAll('button'))button.tabIndex=item.d===0&&!button.closest('.floor-reflection')?0:-1;
+ el.querySelector('.card-face').inert=s.flippedId===item.c.id;
+ el.querySelector('.card-back').inert=s.flippedId!==item.c.id;
+ prior.delete(key);
+}
+for(const el of prior.values())el.remove();
+track.dataset.mode=nextMode+'-'+s.view;
+if(!motion.dragging&&!motion.frame)motion.position=s.active;
+drawMotion(motion.position);
+$('fanOrb').setAttribute('aria-valuemax',String(Math.max(1,a.length)));$('fanOrb').setAttribute('aria-valuenow',String(ix+1));$('countLabel').textContent=a.length?`${String(ix+1).padStart(2,'0')} / ${String(a.length).padStart(2,'0')}`:'00 / 00';$('collectionTitle').textContent=collectionName().toUpperCase();syncSelectionShelf();$('hintArrow').textContent=s.view==='stack'?'↕':'↔';$('hintText').textContent=s.view==='stack'?'Swipe up or down to browse':s.view==='fan'?'Sweep through the fan':'Swipe through Cover Flow';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===s.view));screen.className='screen skin-current'+(s.cinematic?' cinematic':'')+(s.selectedIds.length?' selecting':'');$('cinemaViewLabel').textContent='CONTACT DECK / '+(s.view==='orbit'?'COVER FLOW':s.view.toUpperCase());$('idleWake').tabIndex=s.cinematic?0:-1;document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('selected'));$('peopleTab').classList.add('selected');savePreferences()}
+function gesture(dir){
+ if(!filtered().length)return;
+ s.flippedId=null;springTo(Math.round(motion.position)+dir);
+}
+function exitCinematic(){if(!s.cinematic)return;s.cinematic=false;s.previewing=false;s.wokeAt=Date.now();s.last=s.wokeAt;render()}function interact(){s.last=Date.now();if(s.cinematic)exitCinematic()}function enterCinematic(force=false){if(s.cinematic||s.selectedIds.length||s.flippedId||(!force&&!s.idle)||s.modal||s.query||!filtered().length||document.visibilityState!=='visible'||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;s.cinematic=true;s.previewing=force;s.reveal=false;s.lastAdvance=Date.now();render()}function setView(v){interact();cancelMotion();s.view=v;s.flippedId=null;s.reveal=false;render();}function modal(type){interact();cancelMotion();returnFocus=document.activeElement;s.modal=type;overlay.classList.add('show');sheet.className='sheet'+(type==='detail'?' detail':'');buildSheet()}function close(){const type=s.modal;overlay.classList.remove('show');s.modal=null;if(type==='search')s.query='';setModalInert(false);interact();render();const target=returnFocus?.isConnected?returnFocus:track.querySelector('[tabindex="0"]');target?.focus({preventScroll:true})}function title(t){return `<div class="grab"></div><div class="sheet-head"><h2>${t}</h2><button class="text-btn" data-close>Done</button></div>`}function pill(label,attr,selected){return `<button class="pill ${selected?'active':''}" data-${attr}="${label}">${label}</button>`}function listRow(c){return `<button class="result deck-row" data-select="${c.id}" aria-label="Open ${c.name}, ${c.phone}"><span class="deck-row-copy"><strong class="result-name">${c.name}</strong><span class="result-sub">${c.phone}</span></span><span class="result-arrow" aria-hidden="true">›</span></button>`}function collectionName(){
  if(s.filter==='All')return 'All Contacts';
  if(s.filter==='Favorites')return 'Favorites';
+ if(s.filter==='Reconnect')return 'A little hello';
  if(s.filter.startsWith('deck:'))return s.decks.find(d=>d.id===s.filter.slice(5))?.name||'All Contacts';
  return s.filter;
 }
@@ -412,6 +481,7 @@ function syncSelectionShelf(){
  if(n)screen.classList.add('selecting');else screen.classList.remove('selecting');
 }
 function setFilter(filter){
+ cancelMotion();
  const focus=active()?.id;s.filter=filter;s.query='';s.flippedId=null;clearSelection();
  const a=filtered(),ix=a.findIndex(c=>c.id===focus);s.active=ix>=0?ix:0;render();
 }
@@ -428,6 +498,7 @@ function openFlip(id){
  render();
 }
 function changeSort(sort){
+ cancelMotion();
  const id=active()?.id;
  if(sort==='shuffle'){
    const before={sort:s.sort,manualOrder:[...s.manualOrder]};
@@ -446,7 +517,7 @@ function noticeUndo(message,undo){
  const x=$('toast');x.textContent=message+'  ';
  const b=document.createElement('button');b.type='button';b.textContent='Undo';b.className='toast-undo';
  b.addEventListener('click',()=>{undo();x.classList.remove('visible');});
- x.appendChild(b);x.classList.add('visible');clearTimeout(toastHandle);toastHandle=setTimeout(()=>x.classList.remove('visible'),4500);
+ x.appendChild(b);x.classList.add('visible');clearTimeout(toastHandle);toastHandle=setTimeout(()=>x.classList.remove('visible'),12000);
 }
 function findDuplicates(){
  const candidates=people.filter(c=>!s.deletedIds.includes(c.id)),group=[];
@@ -502,17 +573,18 @@ async function shareContact(){
  const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),500);notice('Contact file saved');
 }
 function buildSheet(){
+ queueMicrotask(focusSheet);
  const c=active();
  const button=(name,key,attr)=>`<button class="rowitem sheet-row" ${attr}="${escapeHTML(key)}"><b>${escapeHTML(name)}</b><span aria-hidden="true">›</span></button>`;
  if(s.modal==='search'){
    sheet.innerHTML=title('Find someone')+`<input id="searchInput" class="field" type="search" placeholder="Name, number, company..." value="${escapeHTML(s.query)}" autocomplete="off" aria-label="Search contacts"><div class="search-results" id="searchResults">${filtered().map(listRow).join('')||'<p class="empty-message">No matches</p>'}</div>`;
    setTimeout(()=>$('searchInput')?.focus(),50);
  }else if(s.modal==='filters'){
-   sheet.innerHTML=title('Sort cards')+'<div class="sectionlabel">Order</div>'+[['first','First name'],['last','Last name'],['company','Company'],['shuffle','Shuffle cards']].map(([k,v])=>button(v,k,'data-sort')).join('')+`<div class="sectionlabel">Manage</div>${button('Review duplicates ('+findDuplicates().length+')','yes','data-open-duplicates')}`;
+   sheet.innerHTML=title('Sort cards')+'<div class="sectionlabel">Order</div>'+[['first','First name'],['last','Last name'],['company','Company'],['shuffle','Shuffle cards']].map(([k,v])=>button(v,k,'data-sort')).join('')+`<div class="sectionlabel">Manage</div>${button('Select focused card','yes','data-select-focused')}${button('Review duplicates ('+findDuplicates().length+')','yes','data-open-duplicates')}${button('Sample call history','yes','data-open-history')}${button('Contact Deck Complete','yes','data-open-unlock')}`;
  }else if(s.modal==='looks'){
-   sheet.innerHTML=title('Choose a view')+'<div class="sectionlabel">Browse</div><div class="mode-grid">'+[['stack','▤','Stack'],['fan','⋘','Fan'],['orbit','◉','Flow']].map(([k,ic,v])=>`<button class="mode-tile ${s.view===k?'selected':''}" data-viewset="${k}"><div class="tile-illustration">${ic}</div>${v}</button>`).join('')+'</div><div class="sectionlabel">Motion</div><div class="rowitem"><div><b>Cinematic idle</b><br><span>Let the deck revolve when you pause.</span></div><button aria-label="Toggle idle animation" class="switch '+(s.idle?'on':'')+'" data-idle></button></div><button type="button" class="primarybtn" data-preview-cinema>Preview idle animation</button><p class="sheet-note">Appearance follows system Light or Dark Mode. No themes.</p>';
+   sheet.innerHTML=title('Choose a view')+'<div class="sectionlabel">Browse</div><div class="mode-grid">'+[['stack','▤','Stack'],['fan','⋘','Fan'],['orbit','◉','Flow']].map(([k,ic,v])=>`<button class="mode-tile ${s.view===k?'selected':''}" data-viewset="${k}"><div class="tile-illustration">${ic}</div>${v}</button>`).join('')+'</div><div class="sectionlabel">Motion</div><div class="rowitem"><div><b>Cinematic idle</b><br><span>Let the deck revolve when you pause.</span></div><button aria-label="Toggle idle animation" class="switch '+(s.idle?'on':'')+'" data-idle></button></div><button type="button" class="primarybtn" data-preview-cinema>Preview idle animation</button><p class="sheet-note">Appearance follows your iPhone. Light and Dark only.</p>';
  }else if(s.modal==='collections'){
-   sheet.innerHTML=title('Your decks')+button('All Contacts ('+people.filter(c=>!s.deletedIds.includes(c.id)).length+')','All','data-collection')+button('Favorites','Favorites','data-collection')+s.decks.map(d=>button(d.name+' ('+d.ids.length+')','deck:'+d.id,'data-collection')).join('')+'<div class="sectionlabel">Organize</div>'+button('New deck','new','data-create')+button('Find duplicate cards','duplicates','data-open-duplicates');
+   sheet.innerHTML=title('Your decks')+button('A little hello · '+reconnectPeople().length,'Reconnect','data-collection')+button('All Contacts ('+people.filter(c=>!s.deletedIds.includes(c.id)).length+')','All','data-collection')+button('Favorites','Favorites','data-collection')+s.decks.map(d=>button(d.name+' ('+d.ids.length+')','deck:'+d.id,'data-collection')).join('')+'<div class="sectionlabel">Organize</div>'+button('New deck','new','data-create')+button('Find duplicate cards','duplicates','data-open-duplicates');
  }else if(s.modal==='move'){
    sheet.innerHTML=title('Move '+s.selectedIds.length+' card'+(s.selectedIds.length===1?'':'s'))+
      (s.decks.map(d=>button(d.name,d.id,'data-move-to')).join('')||'<p class="sheet-note">No custom decks yet.</p>')+button('Create new deck','new','data-create');
@@ -529,11 +601,27 @@ function buildSheet(){
    const entries=historyEntries().filter(x=>[x.name,x.date,x.direction].join(' ').toLowerCase().includes(s.historyQuery.toLowerCase()));
    entries.sort((a,b)=>s.historySort==='oldest'?a.date.localeCompare(b.date):b.date.localeCompare(a.date));
    sheet.innerHTML=title('Sample call history')+'<p class="sheet-note">Fictional sample records only. iOS does not give this preview access to Phone call history.</p><input id="historySearch" class="field" type="search" placeholder="Name or YYYY-MM-DD" value="'+escapeHTML(s.historyQuery)+'" aria-label="Find sample calls"><button type="button" class="subtle-action" data-history-sort>Sort: '+(s.historySort==='newest'?'Newest first':'Oldest first')+'</button><div id="historyResults">'+entries.map(e=>`<div class="rowitem history-row"><div><b>${escapeHTML(e.name)}</b><span>${escapeHTML(e.direction)}</span></div><small>${escapeHTML(e.date)}</small></div>`).join('')+'</div>';
+ }else if(s.modal==='card-options'&&c){
+   sheet.innerHTML=title(c.name)+button('Select card',c.id,'data-select-card')+button('Add a personal note',c.id,'data-edit-note')+button('Mark reached out',c.id,'data-mark-reached')+button('Suggest another day',c.id,'data-snooze');
+ }else if(s.modal==='note'&&c){
+   sheet.innerHTML=title('Personal note')+`<p class="sheet-note">${escapeHTML(c.name)} · saved only on this device</p><label class="visually-hidden" for="contactNote">Personal note</label><textarea class="field note-field" id="contactNote" maxlength="4000" placeholder="Something to remember…">${escapeHTML(s.notes[c.id]||'')}</textarea><button type="button" class="primarybtn" id="saveNote">Save note</button>`;
+ }else if(s.modal==='unlock'){
+   sheet.innerHTML=title('Contact Deck Complete')+'<div class="unlock-copy"><h3>Your people.<br>Room for everyone.</h3><p>One purchase for unlimited contacts and an optional initials card style. All three views stay free.</p><p class="sheet-note">Purchases are available in the native iPhone app. No purchase can be made in this preview. Sync is not available in this review build.</p><button type="button" class="secondarybtn" data-close>Keep browsing</button></div>';
  }else if(s.modal==='detail'&&c){
    sheet.innerHTML=`<div class="detail-hero" style="--tone1:${c.t1};--tone2:${c.t2}">${photo(c)}<button class="detail-close" data-close aria-label="Close details">×</button><div class="detail-name">${escapeHTML(c.name)}<small>${escapeHTML(c.role)} · ${escapeHTML(c.company)}</small></div></div><div class="detail-rows"><div class="detail-actions"><button data-demo="Call">☎<small>Call</small></button><button data-demo="Message">▤<small>Message</small></button><button data-demo="FaceTime">▣<small>FaceTime</small></button><button data-vcard>↗<small>Share</small></button></div><div class="info"><small>mobile</small>${escapeHTML(c.phone)}</div><div class="info"><small>work</small>${escapeHTML(c.email)}</div><div class="info"><small>location</small>${escapeHTML(c.city)}</div></div>`;
  }else if(s.modal==='export'&&c){
    sheet.innerHTML=title('Export contact card')+'<button class="primarybtn" data-vcard>Share contact (.vcf)</button><button class="secondarybtn" id="exportPNG">Save picture (.png)</button>';
  }
+}
+function setModalInert(value){
+ for(const el of screen.children)if(el!==overlay&&el.id!=='toast')el.inert=value;
+}
+function focusSheet(){
+ if(!s.modal)return;setModalInert(true);
+ const input=sheet.querySelector('input,textarea');(input||sheet.querySelector('button'))?.focus({preventScroll:true});
+}
+function reconnectPeople(){
+ const now=Date.now();return people.filter(c=>c.fav&&!s.deletedIds.includes(c.id)&&Number(s.snoozed[c.id]||0)<now&&(!s.reached[c.id]||now-Number(s.reached[c.id])>7*86400000)).slice(0,3);
 }
 function historyEntries(){
  return [
@@ -549,12 +637,13 @@ async function savePNG(){const c=active();if(!c)return;const cn=document.createE
 const touchTarget='.round,.cinema-shortcut,.modes button,.navbtn,.skin-tile,.mode-tile,.pill,.text-btn,.primarybtn,.switch,.contact-card .action,.contact-card .icon-star,.contact-card .icon-more,.fan-orb';
 function playEraFeedback(el){if(!el||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;el.classList.remove('tap-feedback');void el.offsetWidth;el.classList.add('tap-feedback');el.addEventListener('animationend',()=>el.classList.remove('tap-feedback'),{once:true})}
 $('screen').addEventListener('pointerdown',e=>{const el=e.target.closest(touchTarget);if(el&&!el.disabled)playEraFeedback(el)},{passive:true});
-track.addEventListener('click',e=>{if(Date.now()-s.wokeAt<400||Date.now()-lastLongHold<500)return;const el=e.target.closest('.contact-card');if(!el)return;interact();const id=Number(el.dataset.id),a=filtered(),ix=a.findIndex(c=>c.id===id);
+track.addEventListener('click',e=>{if(Date.now()-s.wokeAt<400||Date.now()-lastLongHold<500||Date.now()-lastSwipe<400)return;const el=e.target.closest('.contact-card');if(!el)return;interact();const id=Number(el.dataset.id),a=filtered(),ix=a.findIndex(c=>c.id===id);
+if(e.target.closest('[data-more]')){s.active=ix;modal('card-options');return;}
 if(e.target.closest('[data-star]')){const c=people.find(x=>x.id===id);c.fav=!c.fav;render();notice(c.fav?'Added to favorites':'Removed from favorites');return;}
-const action=e.target.closest('[data-card-action]');if(action){s.active=ix;if(action.dataset.cardAction==='share')shareContact();else openFlip(id);return;}
-if(e.target.closest('[data-act]')){s.active=ix;const type=e.target.closest('[data-act]').dataset.act;if(type==='export')shareContact();else notice('This sample cannot place real '+type+' calls');return;}
+const action=e.target.closest('[data-card-action]');if(action){s.active=ix;if(action.dataset.cardAction==='share')shareContact();else if(action.dataset.cardAction==='note')modal('note');else openFlip(id);return;}
+if(e.target.closest('[data-act]')){s.active=ix;const type=e.target.closest('[data-act]').dataset.act;if(type==='export')shareContact();else if(type==='video')modal('note');else notice('This sample cannot place real '+type+' calls');return;}
 if(s.selectedIds.length){toggleSelect(id);return;}
-if(ix!==s.active){s.active=ix;s.flippedId=null;render();return;}openFlip(id);
+if(ix!==s.active){let delta=ix-s.active;if(delta>a.length/2)delta-=a.length;if(delta<-a.length/2)delta+=a.length;springTo(Math.round(motion.position)+delta);return;}openFlip(id);
 });
 track.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('contact-card')){e.preventDefault();const id=Number(e.target.dataset.id);if(s.selectedIds.length)toggleSelect(id);else openFlip(id)}});document.querySelectorAll('[data-view]').forEach(x=>x.addEventListener('click',()=>setView(x.dataset.view)));$('searchTopBtn').onclick=()=>modal('search');
 $('filterBtn').onclick=()=>modal('filters');
@@ -566,6 +655,15 @@ $('moveSelected').onclick=()=>modal('move');
 $('deleteSelected').onclick=()=>modal('delete-review');
 $('cancelSelected').onclick=()=>{clearSelection();render()};
 function onSheetClick(e){
+ const option=e.target.closest('button');
+ if(option?.hasAttribute('data-select-focused')){const id=active()?.id;close();if(id)toggleSelect(id);return;}
+ if(option?.hasAttribute('data-select-card')){const id=Number(option.dataset.selectCard);close();toggleSelect(id);return;}
+ if(option?.hasAttribute('data-edit-note')){s.modal='note';buildSheet();return;}
+ if(option?.hasAttribute('data-mark-reached')){const id=active()?.id;if(id)s.reached[id]=Date.now();close();notice('Marked reached out');return;}
+ if(option?.hasAttribute('data-snooze')){const id=active()?.id;if(id)s.snoozed[id]=Date.now()+7*86400000;close();notice('We’ll suggest someone else');return;}
+ if(option?.hasAttribute('data-open-history')){s.modal='history';buildSheet();return;}
+ if(option?.hasAttribute('data-open-unlock')){s.modal='unlock';buildSheet();return;}
+ if(option?.id==='saveNote'){const c=active();if(c)s.notes[c.id]=$('contactNote').value;close();notice('Note saved on this device');return;}
  if(e.target===overlay||e.target.closest('[data-close]')){close();return;}
  const btn=e.target.closest('button');if(!btn)return;
  if(btn.dataset.collection){const f=btn.dataset.collection;close();setFilter(f);return;}
@@ -592,43 +690,93 @@ function onSheetInput(e){
 overlay.addEventListener('click',onSheetClick);
 overlay.addEventListener('input',onSheetInput);
 
-let orbStart=null;const orb=$('fanOrb');orb.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();orb.setPointerCapture(e.pointerId);orbStart={x:e.clientX,index:s.active,id:e.pointerId};interact()});orb.addEventListener('pointermove',e=>{if(!orbStart||orbStart.id!==e.pointerId)return;const n=filtered().length;if(!n)return;const steps=Math.round((e.clientX-orbStart.x)/17);s.active=((orbStart.index+steps)%n+n)%n;render()});orb.addEventListener('pointerup',()=>{orbStart=null;interact()});orb.addEventListener('pointercancel',()=>{orbStart=null});orb.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();gesture(e.key==='ArrowRight'?1:-1);interact()}});let start=null;const arena=$('arena');arena.addEventListener('pointerdown',e=>{if(e.button!==0)return;start={x:e.clientX,y:e.clientY,t:Date.now(),id:e.pointerId};interact()});arena.addEventListener('pointerup',e=>{if(pressStart?.held){start=null;return;}if(!start||start.id!==e.pointerId)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;const delta=s.view==='stack'?dy:dx;if(Math.abs(delta)>28){gesture(delta<0?1:-1);interact()}start=null});arena.addEventListener('pointercancel',()=>{start=null});
+// One gesture owner: possible hold → browsing OR selection → optional grouping.
 let lastLongHold=0,pressTimer=null,pressStart=null;
-function endHold(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
+const arena=$('arena');
+const wrap=(value,count)=>((value%count)+count)%count;
+function cancelMotion(){cancelAnimationFrame(motion.frame);motion.frame=0;motion.dragging=false;motion.position=s.active;motion.velocity=0;}
+function cardPose(distance){
+ const depth=Math.abs(distance),width=track.clientWidth;
+ const spacing=s.view==='stack'?2:s.view==='fan'?Math.min(110,width*.26):Math.min(140,width*.31);
+ const x=distance*spacing,y=s.view==='stack'?distance*62:s.view==='fan'?depth*25:0;
+ const z=-depth*(s.view==='orbit'?105:42),r=s.view==='fan'?distance*12:s.view==='stack'?distance*.9:0;
+ const ry=s.view==='orbit'?Math.max(-58,Math.min(58,distance*-54)):0;
+ const scale=Math.max(.55,1-depth*(s.view==='orbit'?.075:.07));
+ const pivot=s.view==='fan'?(track.querySelector('.contact-card')?.offsetHeight||500)/2:0;
+ return {transform:`translate3d(${x}px,${y}px,${z}px) translateY(${pivot}px) rotate(${r}deg) translateY(${-pivot}px) rotateY(${ry}deg) scale(${scale})`,opacity:depth>3?0:Math.max(0,1-depth*(s.view==='orbit'?.36:.28))};
+}
+function drawMotion(position){
+ const a=filtered(),n=a.length;if(!n)return;
+ const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ for(const el of track.children){
+   let d=a.findIndex(c=>String(c.id)===el.dataset.id)-wrap(position,n);if(d>n/2)d-=n;if(d<-n/2)d+=n;
+   const pose=cardPose(reduced?0:d),focus=Number(el.dataset.id)===active()?.id;
+   el.style.transform=pose.transform;el.style.opacity=String(reduced?(focus?1:0):pose.opacity);el.style.zIndex=String(Math.round(100-Math.abs(d)*10));
+   el.style.setProperty('--deck-brightness',String(Math.max(.55,1-Math.abs(d)*.12)));
+ }
+}
+function focusAt(position){const a=filtered();if(!a.length)return;const index=wrap(Math.round(position),a.length);if(index!==s.active){s.active=index;s.flippedId=null;render();}}
+function springTo(target,velocity=0){
+ cancelAnimationFrame(motion.frame);motion.dragging=false;motion.target=target;motion.velocity=velocity;s.flippedId=null;
+ if(motionQuery.matches){motion.frame=0;s.active=wrap(Math.round(target),filtered().length);motion.position=s.active;render();return;}
+ let last=performance.now();track.classList.add('physics');
+ function step(now){
+   const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
+   const acceleration=-210*(motion.position-motion.target)-24.35*motion.velocity;
+   motion.velocity+=acceleration*dt;motion.position+=motion.velocity*dt;
+   focusAt(motion.position);drawMotion(motion.position);
+   if(Math.abs(motion.position-motion.target)<.001&&Math.abs(motion.velocity)<.015){
+     motion.frame=0;motion.position=wrap(Math.round(target),filtered().length);motion.velocity=0;s.active=motion.position;render();track.classList.remove('physics');return;
+   }
+   motion.frame=requestAnimationFrame(step);
+ }
+ motion.frame=requestAnimationFrame(step);
+}
+function capturePointer(e){if(e.isTrusted)try{arena.setPointerCapture(e.pointerId)}catch(_){/* pointer may have been cancelled by the OS */}}
+function endHold(){clearTimeout(pressTimer);pressTimer=null;}
+function clearDrop(){s.dragId=null;for(const el of track.children){el.classList.remove('drop-target');el.style.removeProperty('translate')}}
+function finishPointer(cancelled=false){
+ endHold();if(!pressStart)return;
+ const pointer=pressStart;pressStart=null;
+ if(pointer.browsing){lastSwipe=Date.now();const projected=motion.position+Math.max(-2,Math.min(2,motion.velocity*.16));springTo(cancelled?pointer.base:Math.round(projected),cancelled?0:motion.velocity);}
+ else if(pointer.held){lastLongHold=Date.now();if(!cancelled&&s.dragId&&s.selectedIds.length===1){s.selectedIds=[pointer.card,s.dragId];clearDrop();modal('create-deck')}else{clearDrop();render()}}
+ motion.dragging=false;clearDrop();
+}
 arena.addEventListener('pointerdown',e=>{
- if(e.button!==0||s.cinematic||s.modal)return;
- const card=e.target.closest('.contact-card');
- if(!card||e.target.closest('[data-star],[data-act],[data-card-action]'))return;
- pressStart={id:Number(card.dataset.id),x:e.clientX,y:e.clientY,pointer:e.pointerId,held:false};
- endHold();pressTimer=setTimeout(()=>{
-   if(!pressStart||pressStart.pointer!==e.pointerId)return;
-   pressStart.held=true;lastLongHold=Date.now();
-   if(!s.selectedIds.includes(pressStart.id))toggleSelect(pressStart.id);
-   /* Real native haptic will be provided only after native iPhone integration. */
- },460);
+ if(e.button!==0||s.modal||s.cinematic||pressStart||e.target.closest('button,[data-act],[data-star]'))return;
+ const card=e.target.closest('.contact-card');if(!card)return;
+ cancelAnimationFrame(motion.frame);motion.frame=0;motion.dragging=true;
+ pressStart={pointer:e.pointerId,card:Number(card.dataset.id),x:e.clientX,y:e.clientY,last:performance.now(),base:motion.position,lastPosition:motion.position,browsing:false,held:false};
+ interact();
+ if(!s.flippedId)pressTimer=setTimeout(()=>{if(!pressStart)return;pressStart.held=true;motion.dragging=false;lastLongHold=Date.now();if(!s.selectedIds.includes(pressStart.card))toggleSelect(pressStart.card);capturePointer(e)},460);
 });
 arena.addEventListener('pointermove',e=>{
- if(!pressStart||pressStart.pointer!==e.pointerId)return;
- const distance=Math.hypot(e.clientX-pressStart.x,e.clientY-pressStart.y);
- if(!pressStart.held&&distance>12){endHold();return;}
- if(pressStart.held&&distance>26){
-    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.contact-card');
-    if(target&&Number(target.dataset.id)!==pressStart.id&&s.selectedIds.length===1){
-      s.dragId=Number(target.dataset.id);
-      for(const node of track.querySelectorAll('.contact-card'))node.classList.toggle('drop-target',Number(node.dataset.id)===s.dragId);
-    }
+ const p=pressStart;if(!p||p.pointer!==e.pointerId)return;
+ const dx=e.clientX-p.x,dy=e.clientY-p.y,distance=Math.hypot(dx,dy);
+ if(!p.held&&distance>10)endHold();
+ if(p.held){
+   if(distance>22){
+     const own=track.querySelector(`[data-id="${p.card}"]`);if(own){own.style.pointerEvents='none';own.style.translate=`calc(-50% + ${dx}px) ${dy-18}px`;}
+     const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.contact-card');s.dragId=target&&Number(target.dataset.id)!==p.card?Number(target.dataset.id):null;
+     for(const el of track.children)el.classList.toggle('drop-target',Number(el.dataset.id)===s.dragId);
+   }return;
  }
+ if(s.selectedIds.length||s.flippedId)return;
+ const main=s.view==='stack'?dy:dx,cross=s.view==='stack'?dx:dy;
+ if(!p.browsing&&Math.abs(main)>12&&Math.abs(main)>Math.abs(cross)*.8){p.browsing=true;capturePointer(e);track.classList.add('physics');s.flippedId=null;}
+ if(!p.browsing)return;e.preventDefault();
+ const stride=s.view==='stack'?150:Math.min(180,track.clientWidth*.43),next=p.base-main/stride,now=performance.now();
+ motion.velocity=(next-p.lastPosition)/Math.max(.008,(now-p.last)/1000);p.lastPosition=next;p.last=now;motion.position=next;
+ focusAt(next);drawMotion(next);
 });
-arena.addEventListener('pointerup',e=>{
- endHold();
- if(pressStart?.held&&pressStart.pointer===e.pointerId){
-   if(s.dragId&&s.selectedIds.length===1){const startId=pressStart.id,targetId=s.dragId;s.selectedIds=[startId,targetId];s.dragId=null;lastLongHold=Date.now();modal('create-deck');}
-   else{lastLongHold=Date.now();render();}
- }
- pressStart=null;
+arena.addEventListener('pointerup',()=>finishPointer());
+arena.addEventListener('pointercancel',()=>finishPointer(true));
+arena.addEventListener('lostpointercapture',()=>{if(pressStart)finishPointer(true)});
+window.addEventListener('blur',()=>finishPointer(true));
+overlay.addEventListener('keydown',e=>{
+ if(e.key!=='Tab')return;const nodes=Array.from(sheet.querySelectorAll('button,input,textarea,select,a[href]')).filter(el=>!el.disabled),first=nodes[0],last=nodes.at(-1);
+ if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}
 });
-arena.addEventListener('pointercancel',()=>{endHold();pressStart=null;s.dragId=null;});
-
-arena.addEventListener('wheel',e=>{e.preventDefault();if(Date.now()-s.last<220)return;gesture((s.view==='stack'?e.deltaY:e.deltaX||e.deltaY)>0?1:-1);interact()},{passive:false});window.addEventListener('keydown',e=>{if(s.cinematic){e.preventDefault();exitCinematic();return}if(s.modal){if(e.key==='Escape')close();return}if(e.key==='Escape'&&s.selectedIds.length){clearSelection();render();return}if(['ArrowRight','ArrowDown'].includes(e.key)){e.preventDefault();gesture(1);interact()}if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();gesture(-1);interact()}});function closeIfNeeded(){if(s.modal)close()}
-$('idleWake').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();exitCinematic()});$('idleWake').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();exitCinematic()});document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')exitCinematic();else s.last=Date.now()});const motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');if(motionQuery.addEventListener)motionQuery.addEventListener('change',()=>{if(motionQuery.matches)exitCinematic();s.last=Date.now()});for(const [id,name] of [['filterBtn','filter'],['searchTopBtn','search'],['peopleTab','people'],['historyTab','phone'],['settingsTab','looks']]){const el=$(id);const label=el.querySelector('small');el.innerHTML=icon(name)+(label?label.outerHTML:'')}setInterval(()=>{if(s.cinematic){if((!s.idle&&!s.previewing)||s.modal||s.query||document.visibilityState!=='visible'||motionQuery.matches){exitCinematic();return}if(Date.now()-s.lastAdvance>=3100){s.lastAdvance=Date.now();gesture(1)}return}if(s.idle&&!s.modal&&!s.query&&document.visibilityState==='visible'&&!motionQuery.matches&&Date.now()-s.last>=8000)enterCinematic()},500);render();})();
+arena.addEventListener('wheel',e=>{e.preventDefault();if(Date.now()-s.last<220)return;gesture((s.view==='stack'?e.deltaY:e.deltaX||e.deltaY)>0?1:-1);interact()},{passive:false});window.addEventListener('keydown',e=>{if(s.cinematic){e.preventDefault();exitCinematic();return}if(s.modal){if(e.key==='Escape'){e.preventDefault();close()}return}if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;if(e.key==='Escape'&&s.selectedIds.length){clearSelection();render();return}if(['ArrowRight','ArrowDown'].includes(e.key)){e.preventDefault();gesture(1);interact()}if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();gesture(-1);interact()}});function closeIfNeeded(){if(s.modal)close()}
+$('idleWake').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();exitCinematic()});$('idleWake').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();exitCinematic()});document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'){finishPointer(true);cancelMotion();exitCinematic();}else s.last=Date.now()});const motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');if(motionQuery.addEventListener)motionQuery.addEventListener('change',()=>{if(motionQuery.matches){cancelMotion();exitCinematic();render();}s.last=Date.now()});for(const [id,name] of [['filterBtn','filter'],['searchTopBtn','search'],['peopleTab','people'],['historyTab','phone'],['settingsTab','looks']]){const el=$(id);const label=el.querySelector('small');el.innerHTML=icon(name)+(label?label.outerHTML:'')}setInterval(()=>{if(s.cinematic){if((!s.idle&&!s.previewing)||s.modal||s.query||document.visibilityState!=='visible'||motionQuery.matches){exitCinematic();return}if(Date.now()-s.lastAdvance>=3100){s.lastAdvance=Date.now();gesture(1)}return}if(s.idle&&!s.modal&&!s.query&&document.visibilityState==='visible'&&!motionQuery.matches&&Date.now()-s.last>=8000)enterCinematic()},500);render();})();
 </script></body></html>

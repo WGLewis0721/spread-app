@@ -18,8 +18,13 @@ struct DeckStage: View {
     @State private var groupPoint: CGPoint?
     @State private var frames: [UUID: CGRect] = [:]
     @State private var tick = 0
+    @State private var focusScale = 1.0
     private var spring: Animation { reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.42, dampingFraction: 0.84) }
     private var focus: Int { contacts.firstIndex(where: { $0.id == focusedID }) ?? 0 }
+    private var visibleContacts: [IndexedContact] {
+        guard !contacts.isEmpty else { return [] }
+        return (max(0, focus - 3)..<min(contacts.count, focus + 4)).map { IndexedContact(index: $0, contact: contacts[$0]) }
+    }
     var body: some View {
         GeometryReader { geometry in
             let width = min(geometry.size.width * 0.79, 430.0)
@@ -28,22 +33,20 @@ struct DeckStage: View {
             let displacement = Double(mode == .stack ? drag.height : drag.width) / Double(stride)
             let current = DeckPhysics.rubberBand(position - displacement, count: contacts.count)
             ZStack {
-                ForEach(Array(contacts.enumerated()), id: \.element.id) { index, contact in
-                    let distance = Double(index) - current
-                    if abs(Double(index) - Double(focus)) <= 3 {
+                ForEach(visibleContacts) { item in
+                    let contact = item.contact
+                    let distance = Double(item.index) - current
                         card(contact, distance: distance, width: width, height: height)
                             .background(GeometryReader { g in Color.clear.preference(key: CardFrames.self, value: [contact.id: g.frame(in: .named("deckStage"))]) })
                             .zIndex(100 - abs(distance))
-                            .accessibilityHidden(index != focus)
-                    }
+                            .accessibilityHidden(item.index != focus)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .coordinateSpace(name: "deckStage")
             .onPreferenceChange(CardFrames.self) { frames = $0 }
-            .gesture(browseGesture(stride: stride), including: selected.isEmpty && flippedID == nil && !voiceOver ? .all : .subviews)
-            .simultaneousGesture(groupGesture, including: flippedID == nil && !voiceOver ? .all : .subviews)
+            .gesture(groupGesture.exclusively(before: browseGesture(stride: stride)), including: flippedID == nil && !voiceOver ? .all : .subviews)
             .sensoryFeedback(.selection, trigger: tick)
             .onChange(of: current) { _, value in
                 guard !grouping else { return }
@@ -54,6 +57,13 @@ struct DeckStage: View {
             }
         }
         .onAppear { position = Double(focus) }
+        .task(id: focusedID) {
+            guard !reduceMotion else { focusScale = 1; return }
+            withAnimation(.spring(response: 0.18, dampingFraction: 0.84)) { focusScale = 1.012 }
+            try? await Task.sleep(for: .milliseconds(80))
+            guard !Task.isCancelled else { return }
+            withAnimation(spring) { focusScale = 1 }
+        }
         .onChange(of: contacts.map(\.id)) { _, _ in position = Double(focus); flippedID = nil }
         .onChange(of: mode) { _, _ in position = Double(focus); flippedID = nil }
         .onChange(of: focusedID) { _, _ in if drag == .zero && !grouping { withAnimation(spring) { position = Double(focus) } } }
@@ -100,6 +110,7 @@ struct DeckStage: View {
             }
         }
         .scaleEffect(reduceMotion ? 1 : max(0.73, 1 - abs(d) * 0.065))
+        .scaleEffect(focused && !reduceMotion ? focusScale : 1)
         .rotationEffect(.degrees(mode == .fan ? d * 12 : mode == .stack ? d * 0.7 : 0), anchor: mode == .fan ? .bottom : .center)
         .rotation3DEffect(.degrees(mode == .flow ? max(-57, min(57, -d * 54)) : 0), axis: (0, 1, 0), perspective: 0.45)
         .offset(x: mode == .stack ? d * 2 : d * Double(width) * (mode == .fan ? 0.31 : 0.42), y: mode == .stack ? d * 61 : mode == .fan ? abs(d) * 23 : 0)
@@ -109,12 +120,12 @@ struct DeckStage: View {
     private func browseGesture(stride: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 12)
             .updating($drag) { value, state, transaction in
-                guard !grouping else { return }
+                guard !grouping, selected.isEmpty else { return }
                 transaction.animation = nil
                 state = value.translation
             }
             .onEnded { value in
-                guard !grouping, !contacts.isEmpty else { return }
+                guard !grouping, selected.isEmpty, !contacts.isEmpty else { return }
                 let translation = mode == .stack ? value.translation.height : value.translation.width
                 let prediction = mode == .stack ? value.predictedEndTranslation.height : value.predictedEndTranslation.width
                 let destination = DeckPhysics.destination(position: position, translation: translation, predicted: prediction, stride: stride, count: contacts.count)
@@ -155,3 +166,5 @@ private struct CardFrames: PreferenceKey {
     static var defaultValue: [UUID: CGRect] = [:]
     static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) { value.merge(nextValue(), uniquingKeysWith: { _, next in next }) }
 }
+
+private struct IndexedContact: Identifiable { let index: Int; let contact: DeckContact; var id: UUID { contact.id } }

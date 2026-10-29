@@ -29,6 +29,7 @@ struct DeckHome: View {
     @State private var toast: String?
     @State private var error: String?
     @State private var shareURL: URL?
+    @State private var pendingOnboardingImport = false
     private var testing: Bool { ProcessInfo.processInfo.arguments.contains("--uitesting") }
     private var all: [DeckContact] { records.filter { $0.removedAt == nil } }
     private var contacts: [DeckContact] {
@@ -84,7 +85,7 @@ struct DeckHome: View {
                     Button("Search", systemImage: "magnifyingglass") { search = true }.accessibilityIdentifier("search")
                     Menu {
                         Button("Add contacts", systemImage: "person.crop.circle.badge.plus") { sheet = .importContacts }
-                        Button("Shuffle", systemImage: "shuffle") { previousOrder = orderedIDs; orderedIDs = all.map(\.id).shuffled(); toast = "Deck shuffled" }
+                        Button("Shuffle", systemImage: "shuffle") { previousOrder = orderedIDs; withAnimation(reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.42, dampingFraction: 0.84)) { orderedIDs = all.map(\.id).shuffled() }; toast = "Deck shuffled" }
                         Button("Sort by name", systemImage: "textformat.abc") { orderedIDs = [] }
                         Button("Select focused card", systemImage: "checkmark.circle") { if let focusedID { selected.insert(focusedID) } }
                         Button("Recently removed", systemImage: "trash") { sheet = .removed }
@@ -116,8 +117,8 @@ struct DeckHome: View {
                     HStack { Text(toast).font(.callout); Spacer(); Button("Undo") { undo() } }.padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18)).padding(.horizontal)
                 }
             }
-            .fullScreenCover(isPresented: Binding(get: { !onboarded && !testing }, set: { if !$0 { onboarded = true } })) {
-                OnboardingView(onSamples: { seedSamples(); onboarded = true }, onImport: { onboarded = true; sheet = .importContacts })
+            .fullScreenCover(isPresented: Binding(get: { !onboarded && !testing }, set: { if !$0 { onboarded = true } }), onDismiss: { if pendingOnboardingImport { pendingOnboardingImport = false; sheet = .importContacts } }) {
+                OnboardingView(onSamples: { seedSamples(); onboarded = true }, onImport: { pendingOnboardingImport = true; onboarded = true })
             }
             .task { if testing && all.isEmpty { seedSamples() }; if focusedID == nil { focusedID = contacts.first?.id } }
             .onChange(of: contacts.map(\.id)) { _, ids in if !ids.contains(focusedID ?? UUID()) { focusedID = ids.first }; selected.formIntersection(Set(ids)) }
@@ -188,8 +189,9 @@ struct DeckHome: View {
     }
     private func seedSamples() {
         guard !records.contains(where: \.isSample) else { return }
-        for contact in SampleContacts.make() { context.insert(contact) }
-        save(); focusedID = all.first?.id
+        let samples = SampleContacts.make()
+        for contact in samples { context.insert(contact) }
+        save(); focusedID = samples.first?.id
     }
     private func importContacts(_ incoming: [CNContact]) {
         var remaining = purchase.unlocked ? Int.max : max(0, PurchaseStore.freeLimit - all.count)
@@ -209,7 +211,7 @@ struct DeckHome: View {
         }
         save()
         // A limit is explained only after an explicit import, never during play.
-        if reachedLimit { error = "Your first 12 contacts were kept. Unlock Complete in Settings to add everyone." }
+        if reachedLimit { error = "Your deck has 12 contacts. Unlock Complete in Settings to add everyone." }
     }
     private func action(_ contact: DeckContact, _ action: ContactAction) {
         switch action {

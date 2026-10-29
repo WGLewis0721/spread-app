@@ -23,7 +23,7 @@ jobs:
           xcrun simctl bootstatus "$DEVICE_ID" -b
       - name: Build and test Contact Deck on simulator
         run: |
-          xcodebuild test -project native/ContactDeck/ContactDeck.xcodeproj -scheme ContactDeck -destination "platform=iOS Simulator,id=$CONTACT_DECK_SIMULATOR" -derivedDataPath native/ContactDeck/build -resultBundlePath native/ContactDeck/results.xcresult CODE_SIGNING_ALLOWED=NO
+          xcodebuild test -project native/ContactDeck/ContactDeck.xcodeproj -scheme ContactDeck -parallel-testing-enabled NO -destination "platform=iOS Simulator,id=$CONTACT_DECK_SIMULATOR" -derivedDataPath native/ContactDeck/build -resultBundlePath native/ContactDeck/results.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Capture simulator screenshot
         if: always()
         run: |
@@ -31,11 +31,15 @@ jobs:
           xcrun simctl launch "$CONTACT_DECK_SIMULATOR" com.graymatter.contactdeck --uitesting
           sleep 2
           xcrun simctl io "$CONTACT_DECK_SIMULATOR" screenshot native/ContactDeck/native-flow.png
+          xcrun simctl ui "$CONTACT_DECK_SIMULATOR" appearance dark
+          sleep 1
+          xcrun simctl io "$CONTACT_DECK_SIMULATOR" screenshot native/ContactDeck/native-flow-dark.png
+          xcrun simctl ui "$CONTACT_DECK_SIMULATOR" appearance light
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: contact-deck-native-simulator
           path: |
             native/ContactDeck/results.xcresult
-            native/ContactDeck/native-flow.png
+            native/ContactDeck/native-flow*.png
             native/ContactDeck/ContactDeck.xcodeproj
