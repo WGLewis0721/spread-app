@@ -84,7 +84,7 @@ struct DeckStage: View {
             ZStack {
                 face.opacity(flipped ? 0 : 1).rotation3DEffect(.degrees(flipped && !reduceMotion ? 180 : 0), axis: (0, 1, 0))
                 ContactBack(contact: contact, onAction: onAction, onClose: { withAnimation(spring) { flippedID = nil } })
-                    .opacity(flipped ? 1 : 0).rotation3DEffect(.degrees(flipped || reduceMotion ? 0 : -180), axis: (0, 1, 0)).allowsHitTesting(flipped)
+                    .opacity(flipped ? 1 : 0).rotation3DEffect(.degrees(flipped || reduceMotion ? 0 : -180), axis: (0, 1, 0)).allowsHitTesting(flipped).accessibilityHidden(!flipped)
             }
             .frame(width: width, height: height)
             .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
