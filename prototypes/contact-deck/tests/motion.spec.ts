@@ -107,6 +107,10 @@ for (const size of [{ width: 390, height: 664 }, { width: 393, height: 852 }, { 
         });
         expect(g.overflow).toBe(false); expect(g.top).toBeGreaterThan(g.head - 4);
         expect(g.bottom).toBeLessThan(g.dock + 4); expect(g.dock).toBeLessThan(g.viewportHeight); expect(g.left).toBeGreaterThan(0); expect(g.right).toBeLessThan(g.width);
+        const targets = await page.locator(`${focused} > .card-face button`).evaluateAll(buttons => buttons.map(button => {
+          const r = button.getBoundingClientRect(); return { width: r.width, height: r.height };
+        }));
+        for (const target of targets) { expect(target.width).toBeGreaterThanOrEqual(44); expect(target.height).toBeGreaterThanOrEqual(44); }
         await info.attach(`${size.width}-${appearance}-${name}`, { body: await page.screenshot(), contentType: 'image/png' });
       }
     });
