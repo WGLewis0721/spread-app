@@ -27,7 +27,7 @@ struct DeckStage: View {
         guard !contacts.isEmpty else { return [] }
         return (max(0, focus - 3)..<min(contacts.count, focus + 4)).map { IndexedContact(index: $0, contact: contacts[$0]) }
     }
-    var body: some View {
+    private var scene: some View {
         GeometryReader { geometry in
             let width = min(geometry.size.width * 0.79, 430.0)
             let height = min(geometry.size.height * 0.78, 610.0)
@@ -58,7 +58,9 @@ struct DeckStage: View {
                 }
             }
         }
-        .clipped()
+    }
+    var body: some View {
+        scene.clipped()
         .mask { LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.92), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom) }
         .onAppear { position = Double(focus) }
         .task(id: focusedID) {
