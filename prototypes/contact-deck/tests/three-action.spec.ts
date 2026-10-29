@@ -9,8 +9,17 @@ const focused = '.contact-card[tabindex="0"]';
 test.beforeEach(async ({ page }) => {
   await page.route('https://i.pravatar.cc/**', route =>
     route.fulfill({ status: 200, contentType: 'image/png', body: '' }));
+  const errors: string[] = [];
+  page.on('pageerror', err => errors.push(err.message));
   await page.setContent(source);
   await expect(page.locator('.branding')).toHaveText('Contact Deck');
+  const diagnostic = await page.evaluate(() => ({
+    cards: document.querySelectorAll('.contact-card').length,
+    focusTabs: Array.from(document.querySelectorAll('.contact-card')).map(x => x.getAttribute('tabindex')),
+    stage: document.querySelector('#track')?.innerHTML.slice(0, 140),
+  }));
+  expect(page.locator(focused) && diagnostic.focusTabs.filter(x => x === '0').length,
+    'Initial deck state: '+JSON.stringify(diagnostic)+'; errors: '+errors.join('; ')).toBe(1);
 });
 
 async function holdFocused(page: import('@playwright/test').Page) {
