@@ -45,7 +45,6 @@ import { useBetaGate, type BetaGate } from "@/spread/components/use-beta-gate";
 import { signOut } from "@/lib/auth/client";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
-import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
 import { StudioStackProbe, useStudioPortal, useStudioStack } from "@/spread/components/studio/render";
 import { DayLayout, DialLayout, FanLayout, IconPicker, LayoutPicker, TabsLayout } from "@/spread/components/studio/layouts";
 import { DrawnTile, Illustration } from "@/spread/components/studio/doodles";
@@ -2178,7 +2177,6 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       {board ? null : renderActions(actions)}
       {board ? null : safetyNode}
       {board ? null : appearanceNode}
-      {STUDIO_FLAG ? <StudioCustomizeEntry /> : null}
       {native || LOCAL_FIRST_OPEN_ACCESS ? null : (
         <button
           type="button"

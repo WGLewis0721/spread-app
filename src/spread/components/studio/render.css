@@ -1101,6 +1101,16 @@
   line-height: 1;
 }
 [data-studio-appearance][data-studio-board="on"] .studio-role-spark { right: 7.6rem; top: 1.35rem; }
+/* A date range (a week away from this one) is longer than "This week": it keeps clear of the
+   arrows and wraps to a second line rather than running under them. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .studio-week-header .crown-readout { flex: 0 1 calc(100% - 6.6rem); width: calc(100% - 6.6rem); max-width: calc(100% - 6.6rem); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .studio-week-header .crown-readout > p[data-long] {
+  white-space: normal; overflow: visible; text-overflow: clip; text-wrap: balance; line-height: 1.05; letter-spacing: -0.02em;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .studio-week-header[data-studio-view="spread"] .crown-readout > p[data-long] { font-size: calc(1.7rem * var(--studio-type-scale)); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .studio-week-header[data-studio-view="week"] .crown-readout { position: absolute; left: 0; top: 50%; transform: translateY(-50%); flex: none; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme] .studio-week-header[data-studio-view="week"] .crown-readout > p[data-long] { font-size: calc(1.05rem * var(--studio-type-scale)); }
+
 
 /* Spread tab views (Settings > View): Fan, Dial, Tabs and Day, plus the Control Center style
    Settings tiles. Stack, the default, is the rules above. Every color on text here is an opaque
@@ -1536,6 +1546,55 @@
 /* Only the lit card carries the soft light behind its drawing. */
 [data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-illus::before { opacity: 0; }
 [data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item:first-child, .studio-fan-card[aria-pressed="true"], .studio-day-block[aria-pressed="true"]) .studio-illus::before { opacity: 1; }
+
+
+
+/* ===== Paper (light scheme) =====
+   Same markup as the dark board, tokens swapped: a plate is a sheet of paper with the spread's
+   rim, the lit one gets a soft ring instead of a glow, the drawings read as pencil. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item, .studio-fan-card, .studio-day-block) {
+  background:
+    radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--role) 12%, transparent), transparent 62%),
+    #fffdf8;
+  background-color: #fffdf8;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role) 62%, #ffffff);
+  color: #1f1d1a;
+  --ink: #1f1d1a; --secondary: #5f5b53; --tertiary: #66625a;
+  --line: rgba(23,23,23,.12); --fill: rgba(23,23,23,.06);
+  --accent: #1f1d1a; --on-accent: #fffdf8;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item:first-child, .studio-fan-card[aria-pressed="true"], .studio-day-block[aria-pressed="true"]) {
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--role) 82%, #000000),
+    0 0 0 4px color-mix(in srgb, var(--role) 26%, transparent);
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item > section, .studio-fan-card > *, .studio-day-block > *) { --role-ink: #1f1d1a; --role-ink-2: #5f5b53; --role-ink-3: #66625a; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] :is(.studio-fan-card, .studio-day-block) { --role-ink: #1f1d1a; --role-ink-2: #5f5b53; --role-ink-3: #66625a; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-role-stack input[aria-label$=" name"] { color: #1f1d1a; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] :is(.studio-hour-chip, .studio-day-doodle + .studio-day-block-hours) { color: color-mix(in srgb, var(--role) 52%, #000000); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] :is(.studio-role-stack .border-line, .studio-role-stack .border-t) { border-color: rgba(23,23,23,.12); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-drawn-section .task-fold-open > ul { background-color: #f3eddf; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-icon-doodle { background-color: #f3eddf; }
+
+/* Pencil: the crayon drawings keep their drawn lines but lose the chalk glow. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-illus { filter: invert(.9) hue-rotate(180deg) saturate(1.25) contrast(1.05); mix-blend-mode: multiply; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-illus::before { display: none; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-fx-steam path { stroke: #7d776b; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-fx-smoke circle { stroke: #8a8478; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-fx-shine, [data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-fx-shimmer { display: none; }
+
+/* Summary plate on paper. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"][data-studio-icons="drawn"] .studio-summary {
+  background: #fffdf8; background-color: #fffdf8;
+  box-shadow: inset 0 0 0 1px rgba(23,23,23,.14);
+  color: #1f1d1a; --ink: #1f1d1a; --secondary: #5f5b53; --tertiary: #66625a; --line: rgba(23,23,23,.12); --fill: rgba(23,23,23,.06);
+  --accent: #0a62c9; --on-accent: #ffffff;
+}
+
+/* Ink on paper: pencil for the tick circle and the strike. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-task-check::before { background: #4a463e; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-task-check[aria-checked="true"]::after { background: color-mix(in srgb, var(--role) 60%, #000000); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme="light"] .studio-view[data-icons="drawn"] .studio-task-row button.line-through > span:first-child::after { background: #4a463e; }
 
 
 /* Settings tiles: a fill on the sheet with a glossy tile for the icon, as in iOS Settings. */

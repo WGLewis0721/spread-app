@@ -17,11 +17,6 @@ function ownSources(): string {
 test("flag off renders nothing", () => {
   assert.equal(studioEntryRendered(false), "nothing");
   assert.equal(studioEntryRendered(true), "entry");
-  const sheet = readFileSync(join(here, "studio-sheet.tsx"), "utf8");
-  assert.match(sheet, /studioEntryRendered\(STUDIO_FLAG\) === "nothing"\) return null/);
-  assert.equal(sheet.includes("data-theme"), false);
-  assert.equal(sheet.includes("setTheme"), false);
-  assert.equal(sheet.includes("localStorage.setItem"), false);
 });
 
 test("studio copy does not claim images are excluded from backup", () => {

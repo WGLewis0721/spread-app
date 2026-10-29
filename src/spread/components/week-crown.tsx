@@ -161,7 +161,7 @@ export function WeekCrown({
         </svg>
         <div className="crown-sheen" />
         <div className="crown-readout">
-          <p className="truncate text-base font-semibold">{title}</p>
+          <p className="truncate text-base font-semibold" data-long={title.length > 12 ? "" : undefined}>{title}</p>
           {detail && onDetail ? (
             <button type="button" className="text-xs font-medium text-accent" onClick={onDetail}>
               {detail}
