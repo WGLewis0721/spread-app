@@ -1,213 +1,285 @@
 import SwiftUI
-import SwiftData
 
+enum DeckDropAction {
+    case group, remove
+}
+
+/// The regular card carousel remains the browse surface.
+/// A long press lifts the focused card, reveals contextual drop bins, and never deletes on release.
 struct DeckStage: View {
     let contacts: [DeckContact]
     let mode: BrowseMode
     @Binding var focusedID: UUID?
     @Binding var selected: Set<UUID>
+    @Binding var isSelecting: Bool
     let initialsOnly: Bool
     let onAction: (DeckContact, ContactAction) -> Void
-    let onGroup: (Set<UUID>) -> Void
+    let onDropAction: (DeckDropAction, Set<UUID>) -> Void
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @GestureState private var drag: CGSize = .zero
-    @GestureState private var holding = false
-    @State private var position = 0.0
+    @State private var position: Double = 0
     @State private var flippedID: UUID?
-    @State private var grouping = false
-    @State private var groupPoint: CGPoint?
-    @State private var groupTranslation: CGSize = .zero
-    @State private var frames: [UUID: CGRect] = [:]
+    @State private var liftedID: UUID?
+    @State private var liftTranslation: CGSize = .zero
+    @State private var dropHover: DeckDropAction?
     @State private var tick = 0
-    @State private var focusScale = 1.0
-    private var spring: Animation { reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.42, dampingFraction: 0.84) }
+
     private var focus: Int { contacts.firstIndex(where: { $0.id == focusedID }) ?? 0 }
+    private var snap: Animation {
+        reduceMotion ? .easeOut(duration: 0.12) : .interactiveSpring(response: 0.32, dampingFraction: 0.88)
+    }
     private var visibleContacts: [IndexedContact] {
         guard !contacts.isEmpty else { return [] }
-        return (max(0, focus - 3)..<min(contacts.count, focus + 4)).map { IndexedContact(index: $0, contact: contacts[$0]) }
+        return (max(0, focus - 4)..<min(contacts.count, focus + 5))
+            .map { IndexedContact(index: $0, contact: contacts[$0]) }
     }
-    private var scene: some View {
+
+    var body: some View {
         GeometryReader { geometry in
             let width = min(geometry.size.width * 0.79, 430.0)
             let height = min(geometry.size.height * 0.78, 610.0)
             let stride = DeckPhysics.stride(for: mode, width: geometry.size.width)
             let displacement = Double(mode == .stack ? drag.height : drag.width) / Double(stride)
             let current = DeckPhysics.rubberBand(position - displacement, count: contacts.count)
+
             ZStack {
                 ForEach(visibleContacts) { item in
-                    let contact = item.contact
                     let distance = Double(item.index) - current
-                        card(contact, distance: distance, width: width, height: height)
-                            .background(GeometryReader { g in Color.clear.preference(key: CardFrames.self, value: [contact.id: g.frame(in: .named("deckStage"))]) })
-                            .zIndex(grouping && selected.contains(contact.id) ? 200 : 100 - abs(distance))
-                            .accessibilityHidden(item.index != focus)
+                    card(item.contact, distance: distance, width: width, height: height)
+                        .zIndex(liftedID == item.contact.id ? 300 : 100 - abs(distance))
+                        .accessibilityHidden(item.index != focus)
+                }
+                if liftedID != nil {
+                    HStack(spacing: 14) {
+                        bin("Group", symbol: "rectangle.stack.badge.plus", action: .group, highlighted: dropHover == .group)
+                        bin("Remove", symbol: "trash", action: .remove, highlighted: dropHover == .remove)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 10)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .zIndex(500)
+                    .allowsHitTesting(false)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .coordinateSpace(name: "deckStage")
-            .onPreferenceChange(CardFrames.self) { frames = $0 }
-            .gesture(groupGesture(in: geometry.size).exclusively(before: browseGesture(stride: stride)), including: flippedID == nil && !voiceOver ? .all : .subviews)
+            .gesture(liftGesture(in: geometry.size).exclusively(before: browseGesture(stride: stride)),
+                     including: flippedID == nil && !voiceOver ? .all : .subviews)
             .sensoryFeedback(.selection, trigger: tick)
-            .onChange(of: current) { _, value in
-                guard !grouping else { return }
-                let index = min(contacts.count - 1, max(0, Int(value.rounded())))
-                if contacts.indices.contains(index), focusedID != contacts[index].id {
-                    focusedID = contacts[index].id; tick += 1
-                }
+        }
+        // Keep the focus constant during dragging. Changing it on every frame was
+        // restarting animations and invalidating the virtualized card window.
+        .onAppear { position = Double(focus) }
+        .onChange(of: contacts.map(\.id)) { _, _ in
+            position = Double(focus)
+            flippedID = nil
+        }
+        .onChange(of: mode) { _, _ in
+            position = Double(focus)
+            flippedID = nil
+        }
+        .onChange(of: focusedID) { _, _ in
+            guard liftedID == nil else { return }
+            withAnimation(snap) { position = Double(focus) }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(mode.title + " contact deck"))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: step(1)
+            case .decrement: step(-1)
+            @unknown default: break
             }
         }
+        .accessibilityAction(named: Text("Next contact")) { step(1) }
+        .accessibilityAction(named: Text("Previous contact")) { step(-1) }
     }
-    private var boundedScene: some View {
-        scene.clipped().mask(LinearGradient(
-            stops: [Gradient.Stop(color: Color.black, location: 0), Gradient.Stop(color: Color.black, location: 0.92), Gradient.Stop(color: Color.clear, location: 1)],
-            startPoint: .top, endPoint: .bottom))
+
+    private func bin(_ label: String, symbol: String, action: DeckDropAction, highlighted: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: symbol).font(.title3.weight(.semibold))
+            Text(label).font(.subheadline.weight(.semibold))
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 72)
+        .foregroundStyle(action == .remove ? (highlighted ? Color.white : Color.red) : (highlighted ? Color.white : Color.accentColor))
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(highlighted ? (action == .remove ? Color.red : Color.accentColor) : Color(.secondarySystemBackground))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(highlighted ? Color.primary.opacity(0.20) : Color.secondary.opacity(0.20), lineWidth: 1)
+        }
+        .scaleEffect(highlighted && !reduceMotion ? 1.04 : 1)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: highlighted)
+        .accessibilityLabel(label + " drop bin")
     }
-    private var lifecycleScene: some View {
-        boundedScene
-            .onAppear { position = Double(focus) }
-            .task(id: focusedID) {
-                guard !reduceMotion else { focusScale = 1; return }
-                withAnimation(.spring(response: 0.18, dampingFraction: 0.84)) { focusScale = 1.012 }
-                try? await Task.sleep(for: .milliseconds(80))
-                guard !Task.isCancelled else { return }
-                withAnimation(spring) { focusScale = 1 }
-            }
-            .onChange(of: contacts.map(\.id)) { _, _ in position = Double(focus); flippedID = nil }
-    }
-    private var statefulScene: some View {
-        lifecycleScene
-            .onChange(of: mode) { _, _ in position = Double(focus); flippedID = nil }
-            .onChange(of: focusedID) { _, _ in if drag == .zero && !grouping { withAnimation(spring) { position = Double(focus) } } }
-            .onChange(of: selected) { _, value in if !value.isEmpty { flippedID = nil } }
-            .onChange(of: holding) { _, active in
-                if !active && grouping {
-                    withAnimation(spring) { grouping = false; groupTranslation = .zero }
-                    groupPoint = nil
-                }
-            }
-    }
-    var body: some View {
-        statefulScene
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text(mode.title + " contact deck"))
-            .accessibilityAdjustableAction { direction in
-                switch direction {
-                case .increment: step(1)
-                case .decrement: step(-1)
-                @unknown default: break
-                }
-            }
-            .accessibilityAction(named: Text("Next contact")) { step(1) }
-            .accessibilityAction(named: Text("Previous contact")) { step(-1) }
-    }
+
     @ViewBuilder private func card(_ contact: DeckContact, distance: Double, width: CGFloat, height: CGFloat) -> some View {
         let focused = contact.id == focusedID
-        let d = reduceMotion ? 0 : distance
         let flipped = flippedID == contact.id
-        let selectedCard = selected.contains(contact.id)
+        let isSelected = selected.contains(contact.id)
+        let isLifted = liftedID == contact.id
         let face = ContactFace(contact: contact, initialsOnly: initialsOnly, focused: focused, flipped: flipped, onAction: onAction)
+
         VStack(spacing: 7) {
             ZStack {
-                face.opacity(flipped ? 0 : 1).rotation3DEffect(.degrees(flipped && !reduceMotion ? 180 : 0), axis: (0, 1, 0))
-                ContactBack(contact: contact, onAction: onAction, onClose: { withAnimation(spring) { flippedID = nil } })
-                    .opacity(flipped ? 1 : 0).rotation3DEffect(.degrees(flipped || reduceMotion ? 0 : -180), axis: (0, 1, 0)).allowsHitTesting(flipped).accessibilityHidden(!flipped)
+                face.opacity(flipped ? 0 : 1)
+                    .rotation3DEffect(.degrees(flipped && !reduceMotion ? 180 : 0), axis: (0, 1, 0))
+                ContactBack(contact: contact, onAction: onAction, onClose: { withAnimation(snap) { flippedID = nil } })
+                    .opacity(flipped ? 1 : 0)
+                    .rotation3DEffect(.degrees(flipped || reduceMotion ? 0 : -180), axis: (0, 1, 0))
+                    .allowsHitTesting(flipped)
+                    .accessibilityHidden(!flipped)
             }
             .frame(width: width, height: height)
             .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-            .overlay { if selectedCard { RoundedRectangle(cornerRadius: 30).strokeBorder(.tint, lineWidth: 3) } }
-            .shadow(color: .black.opacity(focused ? 0.22 : 0.08), radius: focused ? 22 : 9, y: focused ? 14 : 7)
+            .overlay {
+                if isSelected || isLifted {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .strokeBorder(Color.accentColor.opacity(0.45), lineWidth: 8)
+                        .blur(radius: 6)
+                        .padding(-2)
+                        .allowsHitTesting(false)
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .strokeBorder(Color.accentColor, lineWidth: 3)
+                        .allowsHitTesting(false)
+                    VStack {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 30, weight: .semibold))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(Color.white, Color.accentColor)
+                                .padding(14)
+                            Spacer()
+                        }
+                        Spacer()
+                    }
+                    .allowsHitTesting(false)
+                }
+            }
+            .shadow(color: isLifted ? Color.accentColor.opacity(0.38) : .black.opacity(focused ? 0.22 : 0.08),
+                    radius: isLifted ? 26 : focused ? 18 : 7, y: isLifted ? 16 : focused ? 12 : 6)
             .onTapGesture {
-                if !selected.isEmpty { if selectedCard { selected.remove(contact.id) } else { selected.insert(contact.id) } }
-                else if !focused { focusedID = contact.id }
-                else { withAnimation(spring) { flippedID = flipped ? nil : contact.id } }
+                if !selected.isEmpty {
+                    if isSelected { selected.remove(contact.id) } else { selected.insert(contact.id) }
+                } else if !focused {
+                    focusedID = contact.id
+                } else {
+                    withAnimation(snap) { flippedID = flipped ? nil : contact.id }
+                }
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(contact.name)
-            .accessibilityHint("Double tap to flip. Actions include favorite, note and select.")
-            .accessibilityAction(named: "Flip card") { withAnimation(spring) { flippedID = flipped ? nil : contact.id } }
-            .accessibilityAction(named: "Select card") { selected.insert(contact.id) }
-            .accessibilityAction(named: "Add note") { onAction(contact, .note) }
+            .accessibilityHint("Double tap to flip. Long press to select or drag into an action bin.")
+            .accessibilityAction(named: "Flip card") { withAnimation(snap) { flippedID = flipped ? nil : contact.id } }
+            .accessibilityAction(named: "Select card") { selected.insert(contact.id); isSelecting = true }
+            .accessibilityAction(named: "Group card") { onDropAction(.group, [contact.id]) }
+            .accessibilityAction(named: "Review removal") { onDropAction(.remove, [contact.id]) }
             .accessibilityIdentifier(focused ? "focusedCard" : "neighborCard")
-            if mode == .flow && !reduceMotion {
-                face.frame(width: width, height: height).clipShape(RoundedRectangle(cornerRadius: 30))
+
+            // Rendering every mirrored portrait on every drag frame is expensive.
+            if mode == .flow && !reduceMotion && abs(distance) < 1.6 {
+                face.frame(width: width, height: height)
+                    .clipShape(RoundedRectangle(cornerRadius: 30))
                     .scaleEffect(x: 1, y: -1)
-                    .mask(alignment: .top) { LinearGradient(stops: [.init(color: .black.opacity(0.20), location: 0), .init(color: .clear, location: 0.22)], startPoint: .top, endPoint: .bottom) }
-                    .frame(height: 55, alignment: .top).clipped().accessibilityHidden(true).allowsHitTesting(false)
+                    .mask(alignment: .top) {
+                        LinearGradient(stops: [.init(color: .black.opacity(0.20), location: 0),
+                                               .init(color: .clear, location: 0.22)],
+                                       startPoint: .top, endPoint: .bottom)
+                    }
+                    .frame(height: 55, alignment: .top)
+                    .clipped()
+                    .accessibilityHidden(true)
+                    .allowsHitTesting(false)
             }
         }
-        .scaleEffect(reduceMotion ? 1 : max(0.73, 1 - abs(d) * 0.065))
-        .scaleEffect(focused && !reduceMotion ? focusScale : 1)
-        .rotationEffect(.degrees(mode == .fan ? d * 12 : mode == .stack ? d * 0.7 : 0), anchor: mode == .fan ? .bottom : .center)
-        .rotation3DEffect(.degrees(mode == .flow ? max(-57, min(57, -d * 54)) : 0), axis: (0, 1, 0), perspective: 0.45)
-        .offset(x: mode == .stack ? d * 2 : d * Double(width) * (mode == .fan ? 0.31 : 0.42), y: mode == .stack ? d * 61 : mode == .fan ? abs(d) * 23 : 0)
-        .opacity(reduceMotion ? (focused ? 1 : 0) : max(0, 1 - abs(d) * 0.25))
-        .offset(grouping && selectedCard ? groupTranslation : .zero)
-        .scaleEffect(grouping && selectedCard && !reduceMotion ? 1.025 : 1)
+        .scaleEffect(reduceMotion ? 1 : max(0.73, 1 - abs(distance) * 0.065))
+        .scaleEffect(isLifted && !reduceMotion ? 1.045 : 1)
+        .rotationEffect(.degrees(mode == .fan ? distance * 12 : mode == .stack ? distance * 0.7 : 0),
+                        anchor: mode == .fan ? .bottom : .center)
+        .rotation3DEffect(.degrees(mode == .flow ? max(-57, min(57, -distance * 54)) : 0),
+                          axis: (0, 1, 0), perspective: 0.45)
+        .offset(x: mode == .stack ? distance * 2 : distance * Double(width) * (mode == .fan ? 0.31 : 0.42),
+                y: mode == .stack ? distance * 61 : mode == .fan ? abs(distance) * 23 : 0)
+        .opacity(reduceMotion ? (focused ? 1 : 0) : max(0, 1 - abs(distance) * 0.25))
+        .offset(isLifted ? liftTranslation : .zero)
         .allowsHitTesting(abs(distance) < 2.5 && (!reduceMotion || focused))
+        .animation(reduceMotion ? nil : .spring(response: 0.21, dampingFraction: 0.72), value: isLifted)
     }
+
     private func browseGesture(stride: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 12)
+        DragGesture(minimumDistance: 8)
             .updating($drag) { value, state, transaction in
-                guard !grouping, selected.isEmpty else { return }
+                guard liftedID == nil, selected.isEmpty else { return }
                 transaction.animation = nil
                 state = value.translation
             }
             .onEnded { value in
-                guard !grouping, selected.isEmpty, !contacts.isEmpty else { return }
+                guard liftedID == nil, selected.isEmpty, !contacts.isEmpty else { return }
                 let translation = mode == .stack ? value.translation.height : value.translation.width
                 let prediction = mode == .stack ? value.predictedEndTranslation.height : value.predictedEndTranslation.width
-                let destination = DeckPhysics.destination(position: position, translation: translation, predicted: prediction, stride: stride, count: contacts.count)
-                focusedID = contacts[destination].id
-                withAnimation(spring) { position = Double(destination) }
+                let destination = DeckPhysics.destination(position: position, translation: translation,
+                                                          predicted: prediction, stride: stride, count: contacts.count)
                 flippedID = nil
+                // Exactly one commit and one snap per gesture.
+                withAnimation(snap) {
+                    position = Double(destination)
+                    focusedID = contacts[destination].id
+                }
+                tick += 1
             }
     }
-    // The maximum distance makes movement cancel the hold before browsing wins.
-    // A second drag exists only after the long press succeeds.
-    private func groupGesture(in size: CGSize) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.46, maximumDistance: 10)
+
+    private func liftGesture(in size: CGSize) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.42, maximumDistance: 11)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("deckStage")))
-            .updating($holding) { value, state, _ in
-                if case .second(true, _) = value { state = true }
-            }
             .onChanged { value in
-                switch value {
-                case .second(true, let drag):
-                    if !grouping {
-                        grouping = true
-                        let hit = drag.flatMap { value in
-                            frames.filter { $0.value.contains(value.startLocation) }.keys.min { left, right in
-                                abs((contacts.firstIndex { $0.id == left } ?? 0) - focus) < abs((contacts.firstIndex { $0.id == right } ?? 0) - focus)
-                            }
-                        } ?? focusedID
-                        if let hit { selected.insert(hit) }
-                        tick += 1
-                    }
-                    groupPoint = drag?.location
-                    groupTranslation = drag?.translation ?? .zero
-                default: break
+                guard case .second(true, let movement) = value, let focusedID else { return }
+                if liftedID == nil {
+                    liftedID = focusedID
+                    flippedID = nil
+                    tick += 1
+                }
+                guard let movement else { return }
+                liftTranslation = movement.translation
+                let point = movement.location
+                if point.y > size.height - 120 && point.y < size.height && point.x > 0 && point.x < size.width {
+                    dropHover = point.x < size.width / 2 ? .group : .remove
+                } else {
+                    dropHover = nil
                 }
             }
-            .onEnded { _ in
-                defer { withAnimation(spring) { grouping = false; groupTranslation = .zero }; groupPoint = nil }
-                guard hypot(groupTranslation.width, groupTranslation.height) > 26, let point = groupPoint, CGRect(origin: .zero, size: size).contains(point), let target = frames.first(where: { !selected.contains($0.key) && $0.value.contains(point) })?.key else { return }
-                onGroup(selected.union([target]))
+            .onEnded { value in
+                defer {
+                    withAnimation(snap) { liftedID = nil; liftTranslation = .zero; dropHover = nil }
+                }
+                guard case .second(true, let movement) = value, let contactID = liftedID else { return }
+                if let movement, movement.translation.height > 36, let action = dropHover {
+                    onDropAction(action, [contactID])
+                } else {
+                    selected.insert(contactID)
+                    withAnimation(snap) { isSelecting = true }
+                }
             }
     }
+
     private func step(_ direction: Int) {
         guard !contacts.isEmpty else { return }
         let next = min(contacts.count - 1, max(0, focus + direction))
-        focusedID = contacts[next].id; flippedID = nil
-        withAnimation(spring) { position = Double(next) }
+        flippedID = nil
+        withAnimation(snap) { position = Double(next); focusedID = contacts[next].id }
         tick += 1
     }
 }
 
-private struct CardFrames: PreferenceKey {
-    static var defaultValue: [UUID: CGRect] = [:]
-    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) { value.merge(nextValue(), uniquingKeysWith: { _, next in next }) }
+private struct IndexedContact: Identifiable {
+    let index: Int
+    let contact: DeckContact
+    var id: UUID { contact.id }
 }
-
-private struct IndexedContact: Identifiable { let index: Int; let contact: DeckContact; var id: UUID { contact.id } }
