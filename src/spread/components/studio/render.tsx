@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import "./render.css";
 import { useSpread } from "@/lib/spread/store";
+import { useIconStyle } from "@/lib/spread/studio/icon-pref";
 import { STUDIO_APPEARANCE_ATTRIBUTE, STUDIO_FLAG, type StudioAppearanceV1 } from "@/lib/spread/studio/contract";
 import {
   resolveStudioScope,
@@ -121,6 +122,7 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
   const aspect = useImageAspect(scope.wallpaper);
   const viewport = useViewport();
   const [portal, setPortal] = useState<HTMLElement | null>(null);
+  const icons = useIconStyle();
   if (!scope.attribute) return children;
   // Cover height of the fixed wallpaper layer (it bleeds 24px past the viewport on every side).
   const wallpaperHeight = Math.max(viewport.h + 48, (viewport.w + 48) * aspect);
@@ -143,9 +145,20 @@ function StudioAppearanceScopeLive({ appearance, lookupId, catalog, wallpaper, g
       data-studio-dock={scope.parts.dock}
       data-studio-wallpaper={scope.wallpaper ? "on" : "off"}
       data-studio-board={scope.board ? "on" : "off"}
+      data-studio-icons={scope.board ? icons : "default"}
       style={style}
       ref={setPortal}
     >
+      {scope.board ? (
+        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true" focusable="false">
+          <defs>
+            <filter id="studio-rough" x="-5%" y="-20%" width="110%" height="140%">
+              <feTurbulence type="fractalNoise" baseFrequency="1" numOctaves="2" seed="4" result="n" />
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="1.4" />
+            </filter>
+          </defs>
+        </svg>
+      ) : null}
       <StudioPortalContext.Provider value={scope.board ? portal : null}>
         <StudioStackContext.Provider value={scope.board}>{children}</StudioStackContext.Provider>
       </StudioPortalContext.Provider>

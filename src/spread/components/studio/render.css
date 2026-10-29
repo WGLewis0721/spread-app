@@ -1352,22 +1352,25 @@
 }
 [data-studio-appearance][data-studio-board="on"] .studio-illus img { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; }
 
-/* The glow card: a near-black glass tinted from the top-left in the spread's color. */
+/* Surface and ink: a card is a plate (opaque, one hairline rim in the spread's color, no drop
+   shadow). Only the lit one (the front card, the chosen day block) gets the bright rim and the
+   spill of light. Every text color is opaque and every plate has an opaque background-color, so the
+   contrast audit reads the plate, never the wash. */
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item, .studio-fan-card, .studio-day-block) {
   background:
-    radial-gradient(120% 110% at 0% 0%, color-mix(in srgb, var(--role) 30%, transparent), transparent 58%),
-    radial-gradient(80% 90% at 100% 100%, color-mix(in srgb, var(--role) 20%, transparent), transparent 62%),
-    linear-gradient(180deg, #131b2c, #090d17);
-  background-color: #0b0f1c;
-  box-shadow:
-    inset 0 0 0 1.5px color-mix(in srgb, var(--role) 82%, #ffffff),
-    inset 0 0 26px color-mix(in srgb, var(--role) 24%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--role) 34%, transparent),
-    0 0 24px -2px color-mix(in srgb, var(--role) 58%, transparent);
+    radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--role) 16%, transparent), transparent 62%),
+    #0e1422;
+  background-color: #0e1422;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role) 55%, transparent);
   color: #ffffff;
   --ink: #ffffff; --secondary: #c9d1e1; --tertiary: #aeb8cb;
   --line: rgba(255,255,255,.14); --fill: rgba(255,255,255,.08);
   --accent: #ffffff; --on-accent: #0b0f1c;
+}
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item:first-child, .studio-fan-card[aria-pressed="true"], .studio-day-block[aria-pressed="true"]) {
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--role) 88%, #ffffff),
+    0 0 26px -2px color-mix(in srgb, var(--role) 62%, transparent);
 }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item > section, .studio-fan-card > *, .studio-day-block > *) { --role-ink: #ffffff; --role-ink-2: #c9d1e1; --role-ink-3: #aeb8cb; }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-fan-card, [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-block { --role-ink: #ffffff; --role-ink-2: #c9d1e1; --role-ink-3: #aeb8cb; color: #ffffff; }
@@ -1385,13 +1388,13 @@
    tasks on a glass inset to its left so no text ever sits on the drawing. */
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section { position: relative; }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section > div.ms-16.border-t { display: none; }
-[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-doodle { position: absolute; z-index: 1; right: 6.6rem; top: 0.5rem; width: 4.5rem; transition: width 380ms cubic-bezier(.32,.72,0,1), top 380ms cubic-bezier(.32,.72,0,1), right 380ms cubic-bezier(.32,.72,0,1); }
-[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-card:has(~ .task-fold) input[aria-label$=" name"], [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section input[aria-label$=" name"] { max-width: calc(100% - 7.2rem); }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-doodle { position: absolute; z-index: 1; right: 6.4rem; top: 0.65rem; width: 3.8rem; transition: width 380ms cubic-bezier(.32,.72,0,1), top 380ms cubic-bezier(.32,.72,0,1), right 380ms cubic-bezier(.32,.72,0,1); }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-card:has(~ .task-fold) input[aria-label$=" name"], [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section input[aria-label$=" name"] { max-width: calc(100% - 4.4rem); }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section:has(.task-fold-open) .studio-role-doodle { top: 4.4rem; right: 0.6rem; width: 42%; }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section:has(.task-fold-open) { min-height: 13rem; }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section .task-fold-open > ul {
-  position: relative; z-index: 2; width: 56%; margin: 0.25rem 0 0.75rem 1rem; border-radius: 1.1rem; overflow: hidden;
-  background-color: #161d2e; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+  position: relative; z-index: 2; width: 56%; margin: 0.25rem 0 0.75rem 1rem; border-radius: 0.75rem; overflow: hidden;
+  background-color: #080c16; box-shadow: none;
 }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section .task-fold-open > ul > li > div:first-child { margin-inline-start: 1rem; margin-inline-end: 1rem; }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section .task-fold-open > ul > li:first-child > div:first-child { display: none; }
@@ -1402,11 +1405,7 @@
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-fan-doodle { position: absolute; right: 0.4rem; top: 0.6rem; width: 9.4rem; opacity: clamp(0, calc(1 - var(--ea) * 1.6), 1); }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-doodle { width: 4.6rem; margin: -0.6rem 0 -0.6rem auto; }
 [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-doodle + .studio-day-block-hours { margin-left: 0.4rem; color: color-mix(in srgb, var(--role) 48%, #ffffff); }
-[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-block[aria-pressed="true"] { outline: none; box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--role) 70%, #ffffff),
-    inset 0 0 26px color-mix(in srgb, var(--role) 30%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--role) 50%, transparent),
-    0 0 30px color-mix(in srgb, var(--role) 70%, transparent); }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-block[aria-pressed="true"] { outline: none; }
 
 [data-studio-appearance][data-studio-board="on"] .studio-picker-head { margin: 1.25rem 0.25rem 0.5rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--secondary); }
 [data-studio-appearance][data-studio-board="on"] .studio-icon-preview { display: flex; align-items: center; gap: 0.4rem; min-width: 6rem; }
@@ -1454,6 +1453,113 @@
 [data-studio-appearance][data-studio-board="on"] .studio-fx-glow { animation: studio-fx-pulse 2.4s ease-in-out infinite; }
 [data-studio-appearance][data-studio-board="on"] .studio-fx-shimmer { stroke: #ffffff; stroke-width: 1.4; stroke-linecap: round; opacity: 0; animation: studio-fx-slide 3.4s ease-in-out infinite; }
 [data-studio-appearance][data-studio-board="on"] .studio-fx-speed path { stroke: #eef3ff; stroke-width: 1.5; stroke-linecap: round; opacity: 0; animation: studio-fx-dash 1.4s ease-in-out infinite; }
+
+/* ===== Surface and ink (hand-drawn look) =====
+   Four materials. Board: the flat canvas. Plate: content (cards, summary), opaque with a hairline
+   rim. Glass: controls only (arrows, view toggle, pause, dock, sheets), blurred and floating.
+   Ink: what a person wrote (drawings, ticks, strikes, the bar), never a container or a button.
+   Radii are concentric: inner radius = outer radius minus padding. One item is lit. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] {
+  --si-glass: rgba(38,46,68,.56); --si-glass-thick: rgba(20,26,40,.94); --si-glass-edge: rgba(255,255,255,.16);
+  --si-glass-hi: inset 0 1px 0 rgba(255,255,255,.2); --si-glass-shadow: 0 10px 30px rgba(0,0,0,.5);
+  --si-thumb: rgba(255,255,255,.18); --si-ink: #f3efe6; --si-ink-2: #aab3c5;
+  --si-primary: #ffd84a; --si-on-primary: #1a1500;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"][data-studio-scheme="light"] {
+  --si-glass: rgba(255,253,248,.62); --si-glass-thick: rgba(250,246,238,.96); --si-glass-edge: rgba(255,255,255,.75);
+  --si-glass-hi: inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 1px rgba(23,23,23,.07); --si-glass-shadow: 0 10px 30px rgba(23,23,23,.14);
+  --si-thumb: #ffffff; --si-ink: #2a2824; --si-ink-2: #68645d;
+  --si-primary: #171717; --si-on-primary: #f6f1e7;
+}
+
+/* Glass: the header arrows, the view toggle and the pause button. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] :is(.crown-cap, .studio-cc-back) {
+  background: var(--si-glass); border: 0;
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: inset 0 0 0 1px var(--si-glass-edge), var(--si-glass-hi), var(--si-glass-shadow);
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] [role="tablist"][aria-label="View"] {
+  background: var(--si-glass); border: 0;
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: inset 0 0 0 1px var(--si-glass-edge), var(--si-glass-hi), var(--si-glass-shadow);
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] [role="tablist"][aria-label="View"] [role="tab"][aria-selected="true"] { background: var(--si-thumb); color: var(--si-ink); box-shadow: none; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-stack-pause::before {
+  background: var(--si-glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: inset 0 0 0 1px var(--si-glass-edge), var(--si-glass-hi);
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-stack-pause[aria-pressed="true"] { color: var(--si-ink); }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-stack-pause[aria-pressed="true"]::before { background: var(--si-thumb); }
+
+/* The summary is a plate. It stays dark like the cards, so its type is light. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-summary {
+  background: #0e1422; background-color: #0e1422; border-radius: 1.75rem;
+  -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+  color: #ffffff; --ink: #ffffff; --secondary: #c9d1e1; --tertiary: #aeb8cb; --line: rgba(255,255,255,.14); --fill: rgba(255,255,255,.08);
+  --accent: #6db6ff; --on-accent: #0b0f1c;
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-summary .studio-sum-bar > * { filter: url(#studio-rough); }
+
+/* Dock: glass with a native selected thumb. The one primary action is solid. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .app-dock .glass {
+  background: var(--si-glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: inset 0 0 0 1px var(--si-glass-edge), var(--si-glass-hi), var(--si-glass-shadow);
+  --ink: var(--si-ink); --secondary: var(--si-ink-2); --tertiary: var(--si-ink-2);
+  --fill: color-mix(in srgb, var(--si-ink) 14%, transparent); --line: var(--si-glass-edge); --glass-line: var(--si-glass-edge);
+  --accent: var(--si-primary); --on-accent: var(--si-on-primary);
+  color: var(--si-ink);
+}
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .app-dock .glass .studio-readable-note { background: var(--si-thumb); box-shadow: none; --accent: var(--si-ink); --ink: var(--si-ink); color: var(--si-ink); }
+
+/* Sheets are glass: thick enough that the type keeps its contrast. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"][data-studio-material] .sheet {
+  background: var(--si-glass-thick);
+  -webkit-backdrop-filter: blur(30px) saturate(1.6); backdrop-filter: blur(30px) saturate(1.6);
+  box-shadow: inset 0 0 0 1px var(--si-glass-edge), var(--si-glass-hi), var(--si-glass-shadow);
+}
+
+/* Ink: the task circle, its tick and the strike are drawn with one roughness. */
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-check { position: relative; }
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-check > * { display: none; }
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-check::before, [data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-check::after { content: ""; grid-area: 1 / 1; width: 1.75rem; height: 1.75rem; }
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-check::before { background: #c9d1e1; -webkit-mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMiAyMic+PGZpbHRlciBpZD0ncicgeD0nLTEwJScgeT0nLTEwJScgd2lkdGg9JzEyMCUnIGhlaWdodD0nMTIwJSc+PGZlVHVyYnVsZW5jZSB0eXBlPSdmcmFjdGFsTm9pc2UnIGJhc2VGcmVxdWVuY3k9JzEnIG51bU9jdGF2ZXM9JzInIHNlZWQ9JzQnIHJlc3VsdD0nbicvPjxmZURpc3BsYWNlbWVudE1hcCBpbj0nU291cmNlR3JhcGhpYycgaW4yPSduJyBzY2FsZT0nMS40Jy8+PC9maWx0ZXI+PGcgZmlsdGVyPSd1cmwoI3IpJyBmaWxsPSdub25lJyBzdHJva2U9J2JsYWNrJyBzdHJva2Utd2lkdGg9JzEuOCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJz48cGF0aCBkPSdNMTEgM0M1IDMgMyA3IDMgMTFTNiAxOSAxMSAxOSAxOSAxNSAxOSAxMCAxNSAyLjUgMTAgMy41Jy8+PC9nPjwvc3ZnPg==") center / contain no-repeat; mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMiAyMic+PGZpbHRlciBpZD0ncicgeD0nLTEwJScgeT0nLTEwJScgd2lkdGg9JzEyMCUnIGhlaWdodD0nMTIwJSc+PGZlVHVyYnVsZW5jZSB0eXBlPSdmcmFjdGFsTm9pc2UnIGJhc2VGcmVxdWVuY3k9JzEnIG51bU9jdGF2ZXM9JzInIHNlZWQ9JzQnIHJlc3VsdD0nbicvPjxmZURpc3BsYWNlbWVudE1hcCBpbj0nU291cmNlR3JhcGhpYycgaW4yPSduJyBzY2FsZT0nMS40Jy8+PC9maWx0ZXI+PGcgZmlsdGVyPSd1cmwoI3IpJyBmaWxsPSdub25lJyBzdHJva2U9J2JsYWNrJyBzdHJva2Utd2lkdGg9JzEuOCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJz48cGF0aCBkPSdNMTEgM0M1IDMgMyA3IDMgMTFTNiAxOSAxMSAxOSAxOSAxNSAxOSAxMCAxNSAyLjUgMTAgMy41Jy8+PC9nPjwvc3ZnPg==") center / contain no-repeat; }
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-check[aria-checked="true"]::after { background: color-mix(in srgb, var(--role) 48%, #ffffff); -webkit-mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMiAyMic+PGZpbHRlciBpZD0ncicgeD0nLTEwJScgeT0nLTEwJScgd2lkdGg9JzEyMCUnIGhlaWdodD0nMTIwJSc+PGZlVHVyYnVsZW5jZSB0eXBlPSdmcmFjdGFsTm9pc2UnIGJhc2VGcmVxdWVuY3k9JzEnIG51bU9jdGF2ZXM9JzInIHNlZWQ9JzQnIHJlc3VsdD0nbicvPjxmZURpc3BsYWNlbWVudE1hcCBpbj0nU291cmNlR3JhcGhpYycgaW4yPSduJyBzY2FsZT0nMS40Jy8+PC9maWx0ZXI+PGcgZmlsdGVyPSd1cmwoI3IpJyBmaWxsPSdub25lJyBzdHJva2U9J2JsYWNrJyBzdHJva2Utd2lkdGg9JzIuNCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJz48cGF0aCBkPSdNNi41IDExLjVsMyAzIDYtNy41Jy8+PC9nPjwvc3ZnPg==") center / contain no-repeat; mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMiAyMic+PGZpbHRlciBpZD0ncicgeD0nLTEwJScgeT0nLTEwJScgd2lkdGg9JzEyMCUnIGhlaWdodD0nMTIwJSc+PGZlVHVyYnVsZW5jZSB0eXBlPSdmcmFjdGFsTm9pc2UnIGJhc2VGcmVxdWVuY3k9JzEnIG51bU9jdGF2ZXM9JzInIHNlZWQ9JzQnIHJlc3VsdD0nbicvPjxmZURpc3BsYWNlbWVudE1hcCBpbj0nU291cmNlR3JhcGhpYycgaW4yPSduJyBzY2FsZT0nMS40Jy8+PC9maWx0ZXI+PGcgZmlsdGVyPSd1cmwoI3IpJyBmaWxsPSdub25lJyBzdHJva2U9J2JsYWNrJyBzdHJva2Utd2lkdGg9JzIuNCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJz48cGF0aCBkPSdNNi41IDExLjVsMyAzIDYtNy41Jy8+PC9nPjwvc3ZnPg==") center / contain no-repeat; }
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-row button.line-through { text-decoration: none; }
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-row button.line-through > span:first-child { position: relative; flex: 0 1 auto; margin-inline-end: auto; }
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-task-row button.line-through > span:first-child::after {
+  content: ""; position: absolute; left: -2px; right: -2px; top: 50%; height: 6px; margin-top: -3px; background: #c9d1e1;
+  -webkit-mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgNicgcHJlc2VydmVBc3BlY3RSYXRpbz0nbm9uZSc+PHBhdGggZD0nTTEgM0MyNSAxIDYwIDUgOTkgMi41JyBmaWxsPSdub25lJyBzdHJva2U9J2JsYWNrJyBzdHJva2Utd2lkdGg9JzEuOCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyB2ZWN0b3ItZWZmZWN0PSdub24tc2NhbGluZy1zdHJva2UnLz48L3N2Zz4=") 0 0 / 100% 100% no-repeat; mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgNicgcHJlc2VydmVBc3BlY3RSYXRpbz0nbm9uZSc+PHBhdGggZD0nTTEgM0MyNSAxIDYwIDUgOTkgMi41JyBmaWxsPSdub25lJyBzdHJva2U9J2JsYWNrJyBzdHJva2Utd2lkdGg9JzEuOCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyB2ZWN0b3ItZWZmZWN0PSdub24tc2NhbGluZy1zdHJva2UnLz48L3N2Zz4=") 0 0 / 100% 100% no-repeat;
+}
+
+/* Only the lit card carries the soft light behind its drawing. */
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] .studio-illus::before { opacity: 0; }
+[data-studio-appearance][data-studio-board="on"][data-studio-icons="drawn"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item:first-child, .studio-fan-card[aria-pressed="true"], .studio-day-block[aria-pressed="true"]) .studio-illus::before { opacity: 1; }
+
+
+/* Settings tiles: a fill on the sheet with a glossy tile for the icon, as in iOS Settings. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] { --si-fill-solid: #1d2434; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"][data-studio-scheme="light"] { --si-fill-solid: #ece5d6; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-cc-tile { --tone: var(--si-fill-solid); border-radius: 1rem; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-cc-tile[data-tone="sky"] { --tc: #0a84ff; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-cc-tile[data-tone="butter"] { --tc: #5e5ce6; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-cc-tile[data-tone="lilac"] { --tc: #af52de; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-cc-tile[data-tone="peach"] { --tc: #ff9500; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-cc-tile[data-tone="sage"] { --tc: #34c759; }
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"] .studio-cc-tile .studio-cc-icon {
+  color: #ffffff; border-radius: 0.75rem; width: 2.25rem; height: 2.25rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tc, #0a84ff) 70%, #ffffff), var(--tc, #0a84ff) 30%, color-mix(in srgb, var(--tc, #0a84ff) 92%, #000000));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 4px 10px -2px color-mix(in srgb, var(--tc, #0a84ff) 45%, transparent);
+}
+
+
+/* The status pill and the Customize entry are fills too. */
+[data-studio-appearance][data-studio-board="on"][data-studio-scheme][data-studio-icons="drawn"][data-studio-material] .sheet :is(.bg-canvas, .bg-canvas.stack-rows, .bg-canvas[role="status"], .bg-canvas[role="list"], .bg-canvas[role="listbox"]) {
+  background: var(--si-fill-solid); border-radius: 1rem;
+  --secondary: color-mix(in srgb, var(--ink) 78%, var(--si-fill-solid)); --tertiary: color-mix(in srgb, var(--ink) 76%, var(--si-fill-solid));
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-studio-appearance][data-studio-board="on"] .studio-illus img.studio-motion { animation: none; }
   [data-studio-appearance][data-studio-board="on"] .studio-fx { display: none; }
