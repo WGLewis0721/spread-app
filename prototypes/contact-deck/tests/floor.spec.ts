@@ -20,10 +20,14 @@ for (const viewport of [{ width: 402, height: 874 }, { width: 393, height: 852 }
       const dock = await page.locator('.dock').boundingBox();
       await page.screenshot({ path: info.outputPath('normal.png') });
       await page.locator('#settingsTab').click();
-      // Start in-page sampling before dispatching the click: a slow browser RPC
-      // can otherwise miss the transition itself. Check interpolation, not headless FPS.
-      const recording = page.evaluate(async () => {
+      // Trigger and sample in the same browser task. Cross-process automation
+      // latency must not consume the recording window before the click arrives.
+      // Real pointer tests cover activation; this test measures interpolated paint.
+      const frames = await page.evaluate(async () => {
         const result: { t: number; x: number; y: number; width: number; height: number }[] = [];
+        const initial = document.querySelector('.contact-card[tabindex="0"]')!.getBoundingClientRect();
+        result.push({ t: 0, x: initial.x, y: initial.y, width: initial.width, height: initial.height });
+        (document.querySelector('[data-preview-cinema]') as HTMLButtonElement).click();
         const start = performance.now();
         while (performance.now() - start < 1500) {
           await new Promise(requestAnimationFrame);
@@ -32,8 +36,6 @@ for (const viewport of [{ width: 402, height: 874 }, { width: 393, height: 852 }
         }
         return result;
       });
-      await page.locator('[data-preview-cinema]').click();
-      const frames = await recording;
       const idle = await page.locator('.contact-card[tabindex="0"]').boundingBox();
       expect(idle!.height / normal!.height).toBeCloseTo(.85, 3);
       expect(idle!.width / normal!.width).toBeCloseTo(.85, 3);
