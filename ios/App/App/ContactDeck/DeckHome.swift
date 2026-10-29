@@ -18,6 +18,7 @@ struct DeckHome: View {
     @State private var query = ""
     @State private var search = false
     @State private var selected: Set<UUID> = []
+    @State private var selecting = false
     @State private var collection = "all"
     @State private var sheet: HomeSheet?
     @State private var noteContact: DeckContact?
@@ -56,7 +57,8 @@ struct DeckHome: View {
                         ForEach(decks) { deck in Button(deck.name) { choose(deck.id) } }
                     } label: { HStack(spacing: 5) { Text(collectionTitle).font(.subheadline.weight(.semibold)); Image(systemName: "chevron.down").font(.caption) } }
                     Spacer()
-                    Text("\((contacts.firstIndex(where: { $0.id == focusedID }) ?? -1) + 1) / \(contacts.count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    Text(selecting ? "\(selected.count) selected" : "\((contacts.firstIndex(where: { $0.id == focusedID }) ?? -1) + 1) / \(contacts.count)")
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }.padding(.horizontal, 24).padding(.top, 10)
                 if contacts.isEmpty {
                     ContentUnavailableView {
@@ -66,19 +68,30 @@ struct DeckHome: View {
                         Button("Add contacts") { sheet = .importContacts }
                         if all.isEmpty { Button("Try sample deck") { seedSamples() } }
                     }
+                } else if selecting {
+                    ContactSelectionSpread(contacts: contacts, selected: $selected,
+                                           initialsOnly: purchase.unlocked && initialsOnly)
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
                 } else {
-                    DeckStage(contacts: contacts, mode: mode, focusedID: $focusedID, selected: $selected, initialsOnly: purchase.unlocked && initialsOnly, onAction: action, onGroup: beginGrouping)
+                    DeckStage(contacts: contacts, mode: mode, focusedID: $focusedID,
+                              selected: $selected, isSelecting: $selecting,
+                              initialsOnly: purchase.unlocked && initialsOnly,
+                              onAction: action, onDropAction: droppedCard)
+                        .transition(.opacity)
                 }
-                if !selected.isEmpty { selectionBar }
+                if selecting { selectionBar }
                 else if let due = all.first(where: { $0.reconnectDue(now: Date()) }), collection == "all" {
                     Button { choose("reconnect"); focusedID = due.id } label: {
                         Label("A little hello to \(due.name.split(separator: " ").first.map(String.init) ?? due.name)?", systemImage: "hand.wave")
                             .font(.subheadline).lineLimit(1).padding(.vertical, 10)
                     }.buttonStyle(.plain).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
-                Picker("Deck view", selection: $mode) {
-                    ForEach(BrowseMode.allCases) { mode in Label(mode.title, systemImage: mode.symbol).tag(mode) }
-                }.pickerStyle(.segmented).padding(.horizontal, 28).padding(.bottom, 12).accessibilityIdentifier("modePicker")
+                if !selecting {
+                    Picker("Deck view", selection: $mode) {
+                        ForEach(BrowseMode.allCases) { mode in Label(mode.title, systemImage: mode.symbol).tag(mode) }
+                    }.pickerStyle(.segmented).padding(.horizontal, 28).padding(.bottom, 12)
+                        .accessibilityIdentifier("modePicker")
+                }
             }
             .background(Color(.systemBackground))
             .navigationTitle("Contact Deck").navigationBarTitleDisplayMode(.large)
