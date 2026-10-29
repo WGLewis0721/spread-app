@@ -405,6 +405,12 @@ function gesture(dir){const a=filtered();if(!a.length)return;s.flippedId=null;s.
  if(s.filter.startsWith('deck:'))return s.decks.find(d=>d.id===s.filter.slice(5))?.name||'All Contacts';
  return s.filter;
 }
+function syncSelectionShelf(){
+ const shelf=$('selectionShelf'),n=s.selectedIds.length;
+ shelf.hidden=n===0;
+ $('selectionCount').textContent=`${n} selected`;
+ if(n)screen.classList.add('selecting');else screen.classList.remove('selecting');
+}
 function setFilter(filter){
  const focus=active()?.id;s.filter=filter;s.query='';s.flippedId=null;clearSelection();
  const a=filtered(),ix=a.findIndex(c=>c.id===focus);s.active=ix>=0?ix:0;render();
