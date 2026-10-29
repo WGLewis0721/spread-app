@@ -384,6 +384,7 @@ function WeekScreen() {
   const [frontOpen, setFrontOpen] = useState(true);
   // Spread tab layout (Studio Board only): Stack is the default; the rest are chosen in Settings > View.
   const storedLayout = useSpreadLayout();
+  const viewIcons = useIconStyle();
   const [pickedRole, setPickedRole] = useState<string | null>(null);
   const [roleTab, setRoleTab] = useState("all");
   const [pickedDay, setPickedDay] = useState<string | null>(null);
@@ -1002,7 +1003,7 @@ function WeekScreen() {
                   ) : null}
                 />
               </div>
-              {stackOn ? <div key={layout} className="studio-view" data-layout={layout}>{viewNode}</div> : viewNode}
+              {stackOn ? <div key={layout} className="studio-view" data-layout={layout} data-icons={viewIcons}>{viewNode}</div> : viewNode}
               <div className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}>
                 <NewLifeBox onClick={() => setSheet("new")} />
               </div>
@@ -1361,10 +1362,11 @@ function RoleBlock({
   const foldOpen = stack ? stack.open : tasksOpen || taskMotion === "out";
 
   return (
-    <section id={`spread-role-${hat.id}`} tabIndex={-1} className="scroll-mt-48 print:break-inside-avoid">
+    <section id={`spread-role-${hat.id}`} tabIndex={-1} className={cn("scroll-mt-48 print:break-inside-avoid", drawnIcons && "studio-drawn-section")}>
+      {drawnIcons && <Illustration hat={hat} className="studio-role-doodle" />}
       {!first && <div className="ms-16 border-t border-line" />}
       <div className="studio-role-card relative overflow-hidden">
-        {stack && (drawnIcons ? <Illustration hat={hat} className="studio-role-doodle" /> : <RoleSpark hatId={hat.id} />)}
+        {stack && !drawnIcons && <RoleSpark hatId={hat.id} />}
         <div className="flex min-h-16 items-center gap-3 px-4 py-2">
         <button
           type="button"

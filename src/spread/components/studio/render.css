@@ -1337,28 +1337,80 @@
 [data-studio-appearance][data-studio-board="on"] .studio-cc-panel-head h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; }
 [data-studio-appearance][data-studio-board="on"] .studio-cc-back { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; color: var(--ink); background: color-mix(in srgb, var(--ink) 10%, transparent); }
 
-/* Hand-drawn icon pairs (Settings > View > Icons), built to docs/spread-studio/ICON_SPEC.md.
-   Glyph tile: glossy rounded square whose geometry, gradient and tinted shadow live in tile.ts.
-   Illustration: the owner's crayon art on its paper panel, radius 5.5% of the width. */
+/* Hand-drawn mode (Settings > View > Icons > Hand-drawn), after the owner's phone mockup: dark
+   glass cards with a glowing edge in the spread's color, white type, a glossy glyph tile, and the
+   crayon art drawn straight onto the dark like chalk (no paper). The art is the owner's board
+   illustrations converted to chalk-on-dark. Every text color is opaque and every card has an
+   opaque dark background-color, so the contrast audit reads the dark plate, never the glow. */
 [data-studio-appearance][data-studio-board="on"] .studio-drawn-tile-wrap { display: inline-grid; flex: none; line-height: 0; }
 [data-studio-appearance][data-studio-board="on"] .studio-drawn-tile-wrap svg { display: block; overflow: visible; }
-[data-studio-appearance][data-studio-board="on"] .studio-illus {
-  display: block; flex: none; aspect-ratio: 262 / 182; border-radius: 5.5% / 7.9%; overflow: hidden; pointer-events: none;
-  background-color: #faf4e6;
-  box-shadow: 0 1px 2px rgba(0,0,0,.16), 0 6px 14px rgba(0,0,0,.2), inset 0 0 0 0.5px rgba(0,0,0,.08);
+[data-studio-appearance][data-studio-board="on"] .studio-illus { position: relative; display: block; flex: none; aspect-ratio: 393 / 273; pointer-events: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-illus::before {
+  content: ""; position: absolute; inset: 8% 4% -4%; border-radius: 50%; z-index: 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--role, #5b8cff) 42%, transparent), transparent);
+  filter: blur(6px);
 }
-[data-studio-appearance][data-studio-board="on"] .studio-illus img { display: block; width: 100%; height: 100%; object-fit: cover; -webkit-user-drag: none; }
-[data-studio-appearance][data-studio-board="on"] .studio-role-doodle { position: absolute; right: 7.05rem; top: 0.6rem; width: 4.4rem; }
-[data-studio-appearance][data-studio-board="on"] .studio-role-card:has(.studio-role-doodle) input[aria-label$=" name"] { max-width: calc(100% - 7.5rem); }
-[data-studio-appearance][data-studio-board="on"] .studio-fan-doodle {
-  position: absolute; right: 0.85rem; top: 0.85rem; width: 8.6rem;
-  opacity: clamp(0, calc(1 - var(--ea) * 1.6), 1);
+[data-studio-appearance][data-studio-board="on"] .studio-illus img { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; }
+
+/* The glow card: a near-black glass tinted from the top-left in the spread's color. */
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item, .studio-fan-card, .studio-day-block) {
+  background:
+    radial-gradient(120% 110% at 0% 0%, color-mix(in srgb, var(--role) 30%, transparent), transparent 58%),
+    radial-gradient(80% 90% at 100% 100%, color-mix(in srgb, var(--role) 20%, transparent), transparent 62%),
+    linear-gradient(180deg, #131b2c, #090d17);
+  background-color: #0b0f1c;
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--role) 82%, #ffffff),
+    inset 0 0 26px color-mix(in srgb, var(--role) 24%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--role) 34%, transparent),
+    0 0 24px -2px color-mix(in srgb, var(--role) 58%, transparent);
+  color: #ffffff;
+  --ink: #ffffff; --secondary: #c9d1e1; --tertiary: #aeb8cb;
+  --line: rgba(255,255,255,.14); --fill: rgba(255,255,255,.08);
+  --accent: #ffffff; --on-accent: #0b0f1c;
 }
-[data-studio-appearance][data-studio-board="on"] .studio-day-doodle { width: 3.9rem; margin-left: auto; }
-[data-studio-appearance][data-studio-board="on"] .studio-day-doodle + .studio-day-block-hours { margin-left: 0.6rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] :is(.studio-role-stack > .week-seq-item > section, .studio-fan-card > *, .studio-day-block > *) { --role-ink: #ffffff; --role-ink-2: #c9d1e1; --role-ink-3: #aeb8cb; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-fan-card, [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-block { --role-ink: #ffffff; --role-ink-2: #c9d1e1; --role-ink-3: #aeb8cb; color: #ffffff; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-stack { background-color: transparent; overflow: visible; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-stack > .week-seq-item { margin-top: -1.2rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-stack > .week-seq-item:first-child { margin-top: 0; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-single { overflow: visible; background-color: transparent; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-single > .week-seq-item { border-radius: 1.75rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-stack .studio-role-card { overflow: visible; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-stack input[aria-label$=" name"] { color: #ffffff; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-hour-chip { color: color-mix(in srgb, var(--role) 48%, #ffffff); }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-stack .border-line, [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-stack .border-t { border-color: rgba(255,255,255,.12); }
+
+/* Art: beside the hours on a closed strip; large at the lower right of the open card, with the
+   tasks on a glass inset to its left so no text ever sits on the drawing. */
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section { position: relative; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section > div.ms-16.border-t { display: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-doodle { position: absolute; z-index: 1; right: 6.6rem; top: 0.5rem; width: 4.5rem; transition: width 380ms cubic-bezier(.32,.72,0,1), top 380ms cubic-bezier(.32,.72,0,1), right 380ms cubic-bezier(.32,.72,0,1); }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-role-card:has(~ .task-fold) input[aria-label$=" name"], [data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section input[aria-label$=" name"] { max-width: calc(100% - 7.2rem); }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section:has(.task-fold-open) .studio-role-doodle { top: 4.4rem; right: 0.6rem; width: 42%; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section:has(.task-fold-open) { min-height: 13rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section .task-fold-open > ul {
+  position: relative; z-index: 2; width: 56%; margin: 0.25rem 0 0.75rem 1rem; border-radius: 1.1rem; overflow: hidden;
+  background-color: #161d2e; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+}
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section .task-fold-open > ul > li > div:first-child { margin-inline-start: 1rem; margin-inline-end: 1rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section .task-fold-open > ul > li:first-child > div:first-child { display: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-drawn-section .task-fold-open div.ps-12 { padding-inline-start: 0.2rem; }
+
+
+/* Fan and Day cards take the same glass; their art floats in chalk. */
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-fan-doodle { position: absolute; right: 0.4rem; top: 0.6rem; width: 9.4rem; opacity: clamp(0, calc(1 - var(--ea) * 1.6), 1); }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-doodle { width: 4.6rem; margin: -0.6rem 0 -0.6rem auto; }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-doodle + .studio-day-block-hours { margin-left: 0.4rem; color: color-mix(in srgb, var(--role) 48%, #ffffff); }
+[data-studio-appearance][data-studio-board="on"] .studio-view[data-icons="drawn"] .studio-day-block[aria-pressed="true"] { outline: none; box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--role) 70%, #ffffff),
+    inset 0 0 26px color-mix(in srgb, var(--role) 30%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--role) 50%, transparent),
+    0 0 30px color-mix(in srgb, var(--role) 70%, transparent); }
+
 [data-studio-appearance][data-studio-board="on"] .studio-picker-head { margin: 1.25rem 0.25rem 0.5rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--secondary); }
 [data-studio-appearance][data-studio-board="on"] .studio-icon-preview { display: flex; align-items: center; gap: 0.4rem; min-width: 6rem; }
-[data-studio-appearance][data-studio-board="on"] .studio-icon-doodle { width: 3.4rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-icon-doodle { width: 3.6rem; border-radius: 0.6rem; background-color: #0b0f1c; --role: #34c759; }
 
 @media (prefers-reduced-motion: reduce) {
   [data-studio-appearance][data-studio-board="on"] :is(.studio-view, .studio-fan-card, .studio-tabpanel, .studio-tab, .studio-day-head, .studio-day-row, .studio-dial-name, .studio-glance-chip::before) { animation: none; }

@@ -77,3 +77,11 @@ Below target, with the reason:
 - **Family tile, 90.8%.** A spec optimized for Family alone reaches only 92.6%; the board's Family tile has rounder corners and a stronger glow than its siblings. The shared spec reaches 98% of what is attainable for it.
 - **Business tile, 94.2%.** Optimized alone it reaches 94.5%; the shared spec is at 99.7% of that.
 - Everything else is at or above 95%. Illustrations average 0.985 SSIM at reference size and 0.971 at the size they are shown in the app.
+
+## 6. Revision: chalk on dark glass (owner's phone mockup)
+
+The owner asked for the look of the phone mockup and the single Work card instead of paper panels.
+
+- **Cards in Hand-drawn mode** become dark glass (`#131b2c` to `#090d17`) tinted from two corners in the spread's color, with a glowing 1.5 px edge and outer glow in that color. Type is white; the hour count is the role color mixed with white. The open card puts its tasks on a glass inset at the left (`#161d2e`) and the art large at the right, so no text sits on a drawing. Fan and Day cards use the same glass.
+- **Illustrations** are the same board art converted to chalk on dark: paper keyed to transparent, dark outlines relit as light chalk through a tone curve, crayon color kept and lifted 18% in chroma, edges feathered so the drawing floats on the card, with a soft glow of the role color behind it. Exported at 1.5x (393 x 273) as RGBA WebP, 411 KB for all eleven.
+- Contrast: every card keeps an opaque dark `background-color`, so the audit reads the plate, not the glow. A probe with Hand-drawn on, over all five views in both schemes, finds no violations on any card (only the same six header items it also reports with Default icons when no wallpaper is set, which the real audit sets).
