@@ -14,6 +14,7 @@ struct DeckHome: View {
     @AppStorage("contactdeck.onboarded") private var onboarded = false
     @AppStorage("contactdeck.mode") private var mode: BrowseMode = .flow
     @AppStorage("contactdeck.initials") private var initialsOnly = false
+    @AppStorage("contactdeck.appearance") private var appearance = "system"
     @State private var focusedID: UUID?
     @State private var query = ""
     @State private var search = false
@@ -162,7 +163,7 @@ struct DeckHome: View {
                 if !ids.contains(focusedID ?? UUID()) { focusedID = ids.first }
                 selected.formIntersection(Set(ids))
             }
-            .preferredColorScheme(nil) // iOS Settings controls Light, Dark, and Automatic.
+            .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
         }
     }
     private var selectionBar: some View {
@@ -212,6 +213,16 @@ struct DeckHome: View {
                         Button("Restore purchases") { Task { await purchase.restore() } }
                         if let message = purchase.message { Text(message).foregroundStyle(.secondary) }
                     }
+                }
+                Section("Appearance") {
+                    Picker("Mode", selection: $appearance) {
+                        Text("System").tag("system")
+                        Text("Light").tag("light")
+                        Text("Dark").tag("dark")
+                    }
+                    .pickerStyle(.segmented)
+                    Text("Follows your iPhone's appearance unless Light or Dark is selected.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Sync") { Text("iCloud sync is not available in this review build. Your deck stays on this device.").foregroundStyle(.secondary) }
                 Section("Privacy") { Text("Calls and messages open their system apps. A handoff is never recorded as a completed conversation. Notes and favorites stay in this app. Contact Deck never edits or deletes the address book.").font(.callout) }
