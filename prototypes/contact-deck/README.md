@@ -219,3 +219,45 @@ checks and eight real-pixel reflection cases (all four eras at two phone sizes).
 Era screenshots cover Stack, Fan and Flow, including portrait/name separation.
 Test portraits exercise the illustrated offline fallback. Physical Safari and
 hardware safe-area verification remain outside this environment.
+
+## Visible Cover Flow floor (reference follow-up)
+
+The owner reported that the previous floor was not visible and supplied Apple's
+original Cover Flow as the reference. Reproduction found two distinct problems:
+
+- The old 34% reflection reflected a heavily darkened footer and an empty action
+  area. Its mean RGB contrast above black was only 13.34 in the floor test strip;
+  the old test accepted any small number of changed pixels.
+- Headless WebKit painted no native reflection with the card's overflow clipping,
+  and still omitted the angled cards after removing that clipping. Chromium's
+  native `-webkit-box-reflect` result did not establish Safari-engine behavior.
+
+Each card now has one clipped face and an explicit, vertically mirrored copy on
+its own floor. Both inherit the same card transform, depth fade and era styles.
+The copy is `aria-hidden`, inert and ignores pointers. Its dimensions match the
+source face; it uses a mask that starts at 78% opacity and fades into black over
+26% of the card height. No native box-reflect, canvas rasterization, screenshot
+assets or extra dependency is used. The invisible idle action row no longer
+reserves space, and the idle portrait has a lighter dim so its reflection contains
+useful detail. Normal browsing controls and the 85% idle scale remain intact.
+
+Regression checks measure broad-area floor contrast (>30 mean RGB levels and
+>65% of the strip at a 24-level contrast), independently disable each visible
+card's floor, verify matching mirror dimensions and vertical flip, check inert
+semantics, and require the fade to finish before the navigation dock. The old
+source fails the contrast threshold. Sizes include 402×874, 393×852 and 390×664.
+
+WebKit reflection checks are opt-in for environments with the browser installed:
+
+```sh
+PW_WEBKIT=1 npx playwright test --config=prototypes/contact-deck/playwright.config.ts prototypes/contact-deck/tests/reflections.spec.ts --project=mobile-webkit --workers=1
+```
+
+Run this rendering check serially: concurrent headless WebKit instances can
+throttle requestAnimationFrame and invalidate transition sampling. Linux WebKit
+coverage is useful engine evidence; it does not replace a physical iPhone check.
+
+Verified result: **43/43 Chromium checks and 12/12 WebKit reflection checks pass**;
+focused ESLint, inline JavaScript syntax, repository typecheck and production
+build pass. Transition recording begins before the preview click and requires an
+interpolated card size, rather than treating headless frame rate as device FPS.

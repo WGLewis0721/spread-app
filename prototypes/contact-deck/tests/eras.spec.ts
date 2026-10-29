@@ -19,7 +19,7 @@ for (const [skin, label] of [['current', 'Glass'], ['18', 'Modern'], ['7', 'Flat
     await page.locator('[data-close]').click();
     await page.waitForTimeout(800);
     await expect(page.locator('.contact-card[tabindex="0"]')).toHaveAttribute('data-id', contact!);
-    const actions = page.locator('.contact-card[tabindex="0"] .action');
+    const actions = page.locator('.contact-card[tabindex="0"] > .card-face .action');
     await expect(actions).toHaveCount(4);
     await expect(actions.locator('svg')).toHaveCount(4);
     for (const action of await actions.all()) {
@@ -45,8 +45,8 @@ for (const [skin, label] of [['current', 'Glass'], ['18', 'Modern'], ['7', 'Flat
       await page.waitForTimeout(850);
       if (skin === '7' || skin === '6') {
         const card = page.locator('.contact-card[tabindex="0"]');
-        const portrait = await card.locator('.poster').boundingBox();
-        const name = await card.locator('.card-name').boundingBox();
+        const portrait = await card.locator(':scope > .card-face .poster').boundingBox();
+        const name = await card.locator(':scope > .card-face .card-name').boundingBox();
         expect(name!.y - (portrait!.y + portrait!.height), `${label} ${view}: name clears portrait`).toBeGreaterThanOrEqual(8);
       }
       await page.screenshot({ path: info.outputPath(`${label}-${view}.png`) });

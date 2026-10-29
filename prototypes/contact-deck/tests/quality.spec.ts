@@ -74,7 +74,7 @@ for (const viewport of [{ width: 402, height: 874 }, { width: 393, height: 852 }
         assertGeometry(normal, mode);
         writeFileSync(info.outputPath('geometry.json'), JSON.stringify(normal, null, 2));
         // Explicitly verify all controls are contained in the focused card.
-        expect(await page.locator(`${focused} .card-actions`).evaluate(el => {
+        expect(await page.locator(`${focused} > .card-face .card-actions`).evaluate(el => {
           const a = el.getBoundingClientRect(), c = el.closest('.contact-card')!.getBoundingClientRect();
           return a.top >= c.top && a.bottom <= c.bottom && a.left >= c.left && a.right <= c.right;
         })).toBe(true);
@@ -141,7 +141,7 @@ test('real crossfade, automatic advancement, first touch wakes in each view', as
 });
 
 test('views, search, favorite, sort and export use the current controls', async ({ page }) => {
-  const star = page.locator(`${focused} [data-star]`);
+  const star = page.locator(`${focused} > .card-face [data-star]`);
   await expect(star).toHaveClass(/(?:^|\s)on(?:\s|$)/);
   await star.click();
   await expect(star).not.toHaveClass(/(?:^|\s)on(?:\s|$)/);
