@@ -336,26 +336,23 @@ color:var(--ink);transition:translate .2s ease,filter .2s ease}
 .skin-current .search-results .deck-row{background:linear-gradient(145deg,#ffffffdc,#dfe9f5cc);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3)}
 @media(prefers-reduced-motion:reduce){.search-results .deck-row{transition:none}}
 
-/* Compact masthead; cards 15% smaller without changing swipe geometry. */
+/* Stable viewport layout: center cards within the available stage. */
 .screen .small-over,.screen .hint{display:none!important}
 .screen .app-head{padding:14px 22px 0}
 .screen .app-head .branding{font-size:34px;line-height:1.1}
-.screen .app-head .toprow{align-items:center}
-.screen .captionline{padding:15px 24px 0}
-.screen .arena{top:146px;bottom:110px}
+.screen .captionline{padding:12px 24px 0}
+.screen .arena{top:188px!important;bottom:128px!important}
+.screen.cinematic .arena{top:62px!important;bottom:62px!important}
 .screen .arena .contact-card,.screen.cinematic .arena .contact-card{
-width:calc((100% - 28px)*.85);height:calc((100% - 20px)*.85);
-top:50%;left:50%;margin:0!important;translate:-50% -50%;
+position:absolute;left:50%!important;top:50%!important;right:auto!important;
+width:calc(85% - 12px)!important;height:85%!important;
+margin:0!important;translate:-50% -50%;border-radius:24px;
 }
 .screen .arena:has(.track[data-mode$="-fan"]) .contact-card,
-.screen .arena:has(.track[data-mode$="-orbit"]) .contact-card,
-.screen.cinematic .arena:has(.track[data-mode$="-fan"]) .contact-card,
-.screen.cinematic .arena:has(.track[data-mode$="-orbit"]) .contact-card{
-width:calc((100% - 56px)*.85);margin:0!important;translate:-50% -50%;
-}
-.screen.cinematic .arena{top:62px;bottom:62px}
-.screen .arena .contact-card .card-body{padding-bottom:15px}
+.screen .arena:has(.track[data-mode$="-orbit"]) .contact-card{width:calc(85% - 24px)!important}
+.screen .arena .contact-card .card-body{padding-bottom:16px}
 .screen .arena .contact-card .card-top{top:10px}
+.screen .fan-orb{bottom:14px}
 </style></head><body>
 <div class="desktop"><aside class="editorial"><div class="eyebrow">Interaction study / v0.1</div><h1>People,<br><em>in motion.</em></h1><p>A more human way to find, remember, and connect. The joy of a physical card deck, designed for the way iPhone works today.</p><div class="mini-title">Three ways to browse</div><div class="feature"><span class="number">01</span> Stack — flip vertically like a Rolodex</div><div class="feature"><span class="number">02</span> Fan — sweep through a hand of cards</div><div class="feature"><span class="number">03</span> Flow — rotate an immersive Cover Flow</div><div class="mini-title">Try it</div><p style="font-size:13px">Swipe on the phone, change the view, tap a card, or open Appearance. Keyboard arrow keys also rotate the deck.</p></aside>
 <div class="device" aria-label="Interactive iPhone app prototype"><div id="screen" class="screen skin-current"><div class="cinematic-blackout" aria-hidden="true"></div><div class="status"><span>9:41</span><div class="dynamic" aria-hidden="true"></div><span class="signals">▂▄▆  ◢  ▰</span></div><header class="app-head"><div class="toprow"><div><div class="branding">People<span style="color:#6186cf">.</span></div></div><div class="toolrow"><button class="round" id="filterBtn" aria-label="Sort and filter">☷</button></div></div></header><div class="captionline"><strong id="collectionTitle">ALL CONTACTS</strong><span id="countLabel">01 / 08</span></div><main class="arena" id="arena" aria-label="Swipe to browse contact cards"><div class="ambient"></div><div class="track" id="track"></div><div class="fan-orb" id="fanOrb" role="slider" aria-label="Scrub contacts quickly" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1" tabindex="0"></div><div class="empty" id="empty"><b>No contacts found</b>Try another search or filter.</div></main><div class="hint"><b id="hintArrow">↕</b><span id="hintText">Swipe up or down to browse</span></div><footer class="footer"><nav class="dock" aria-label="App navigation"><button class="navbtn selected" id="peopleTab" aria-label="People">▦<small>People</small></button><button class="navbtn" id="favoritesTab" aria-label="Favorites">☆<small>Favorites</small></button><button class="navbtn" id="searchTab" aria-label="Search">⌕<small>Search</small></button><button class="navbtn" id="settingsTab" aria-label="Appearance">☷<small>Looks</small></button></nav></footer><div class="home-indicator"></div><div class="overlay" id="overlay" role="presentation"><section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Contact options"></section></div><div class="toast" id="toast" role="status" aria-live="polite"></div><div class="cinema-heading" aria-hidden="true"><b>PEOPLE / COVER FLOW</b><span>THE PEOPLE WHO MATTER</span></div><button id="idleWake" class="wake-layer" type="button" tabindex="-1" aria-label="Leave cinematic Cover Flow and return to contacts"><span>Touch anywhere to browse</span></button></div></div>
