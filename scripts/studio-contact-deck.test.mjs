@@ -62,15 +62,40 @@ test("Photos-style selection is accessible and works with card dragging", () => 
   assert.match(stage, /Color\.accentColor\.opacity\(0\.45\)/);
 });
 
-test("all removal paths require a confirmation and never delete native Contacts", () => {
+test("removing a card moves it straight to the recycle bin with Undo", () => {
   const home = read("ios/App/App/ContactDeck/DeckHome.swift");
-  assert.match(home, /private func reviewRemoval\(_ ids: Set<UUID>\)/);
-  assert.match(home, /case \.remove: reviewRemoval\(ids\)/);
-  assert.match(home, /case \.remove: reviewRemoval\(\[contact\.id\]\)/);
-  assert.match(home, /confirmationDialog\("Remove/);
-  assert.match(home, /This preview removes cards only from Contact Deck, not iPhone Contacts/);
+  assert.match(home, /private func moveToBin\(_ ids: Set<UUID>\)/);
+  assert.match(home, /case \.remove: moveToBin\(ids\)/);
+  assert.match(home, /case \.remove: moveToBin\(\[contact\.id\]\)/);
   assert.match(home, /contact\.removedAt = Date\(\)/);
+  assert.match(home, /toast = "Moved to Recently removed"/);
+  assert.match(home, /contact\.removedAt = nil/);
+  assert.doesNotMatch(home, /reviewingRemoval|confirmationDialog\("Remove/);
   assert.doesNotMatch(home, /CNContactStore\(\)\.execute/);
+});
+
+test("Recently removed supports individual, bulk, drag, select all, restore, and Empty Bin", () => {
+  const home = read("ios/App/App/ContactDeck/DeckHome.swift");
+  const bin = read("ios/App/App/ContactDeck/RecentlyRemovedView.swift");
+  const grid = read("ios/App/App/ContactDeck/ContactSelectionSpread.swift");
+  const pbx = read("ios/App/App.xcodeproj/project.pbxproj");
+  assert.match(home, /case \.removed: RecentlyRemovedView\(\)/);
+  assert.match(bin, /Button\("Select"\)|Button\(selecting \? "Cancel" : "Select"\)/);
+  assert.match(bin, /ContactSelectionSpread\(contacts: removed, selected: \$selected/);
+  assert.match(bin, /selected = \[contact\.id\]/);
+  assert.match(grid, /selected = dragBase\.union\(ids\)/);
+  assert.match(grid, /selected = dragBase\.subtracting\(ids\)/);
+  assert.match(grid, /accessibilityIdentifier\("selectAllCards"\)/);
+  assert.match(bin, /Label\("Empty Bin", systemImage: "trash"\)/);
+  assert.match(bin, /requestPermanentDeletion\(Set\(removed\.map\(\\\.id\)\)\)/);
+  assert.match(bin, /Button\("Restore"/);
+  assert.match(bin, /Button\("Delete", systemImage: "trash", role: \.destructive\)/);
+  assert.match(bin, /context\.delete\(contact\)/);
+  assert.match(bin, /contact\.removedAt = nil/);
+  assert.match(bin, /Only delete records that are actually in this local recycle bin/);
+  assert.match(bin, /Original contacts in Apple's Contacts app are not deleted/);
+  assert.match(pbx, /RecentlyRemovedView\.swift in Sources/);
+  assert.doesNotMatch(bin, /CNContactStore|CNSaveRequest/);
 });
 
 test("system, light and dark appearance only; focus commits once per swipe", () => {
