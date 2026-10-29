@@ -1412,6 +1412,53 @@
 [data-studio-appearance][data-studio-board="on"] .studio-icon-preview { display: flex; align-items: center; gap: 0.4rem; min-width: 6rem; }
 [data-studio-appearance][data-studio-board="on"] .studio-icon-doodle { width: 3.6rem; border-radius: 0.6rem; background-color: #0b0f1c; --role: #34c759; }
 
+
+/* Living drawings: moving parts and chalk effects (doodles.tsx, doodle-motion.ts). One gentle
+   ease for everything natural; spins are linear; hearts use a two-beat pulse. */
+@keyframes studio-m-sway { from { transform: rotate(calc(var(--amp) * -1deg)); } to { transform: rotate(calc(var(--amp) * 1deg)); } }
+@keyframes studio-m-flutter { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(calc(var(--amp) * 1deg)); } 60% { transform: rotate(calc(var(--amp) * -0.6deg)); } }
+@keyframes studio-m-beat { 0%, 32%, 100% { transform: scale(1); } 12% { transform: scale(calc(1 + var(--amp))); } 22% { transform: scale(calc(1 + var(--amp) * 0.5)); } }
+@keyframes studio-m-bob { from { transform: translateY(0); } to { transform: translateY(calc(var(--amp) * 1%)); } }
+@keyframes studio-m-drift { from { transform: translateX(calc(var(--amp) * -0.5%)); } to { transform: translateX(calc(var(--amp) * 0.5%)); } }
+@keyframes studio-m-spin { to { transform: rotate(360deg); } }
+@keyframes studio-m-grow { from { transform: scaleY(calc(1 - var(--amp))); } to { transform: scaleY(1); } }
+@keyframes studio-m-nudge { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(calc(var(--amp) * 1%), calc(var(--amp) * -1%)); } }
+@keyframes studio-fx-rise { 0% { opacity: 0; transform: translateY(2px); } 25% { opacity: .85; } 100% { opacity: 0; transform: translateY(-9px); } }
+@keyframes studio-fx-puff { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 25% { opacity: .7; } 100% { opacity: 0; transform: translate(5px, -12px) scale(1.5); } }
+@keyframes studio-fx-twinkle { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0deg); } 45% { opacity: 1; transform: scale(1) rotate(45deg); } 70% { opacity: 0; transform: scale(.3) rotate(90deg); } }
+@keyframes studio-fx-sweep { 0%, 55% { transform: skewX(-22deg) translateX(0); opacity: 0; } 60% { opacity: .5; } 85% { opacity: .5; } 100% { transform: skewX(-22deg) translateX(var(--travel)); opacity: 0; } }
+@keyframes studio-fx-pulse { 0%, 100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes studio-fx-slide { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: .9; } 80% { opacity: .9; } 100% { opacity: 0; transform: translateY(var(--travel)); } }
+@keyframes studio-fx-dash { 0% { opacity: 0; transform: translateX(4px); } 40% { opacity: .9; } 100% { opacity: 0; transform: translateX(-4px); } }
+
+[data-studio-appearance][data-studio-board="on"] .studio-illus img.studio-motion {
+  position: absolute; z-index: 2; width: auto; height: auto; object-fit: fill; will-change: transform;
+  animation: studio-m-sway var(--dur) ease-in-out var(--delay) infinite alternate;
+}
+[data-studio-appearance][data-studio-board="on"] .studio-motion[data-kind="rock"] { animation-name: studio-m-sway; }
+[data-studio-appearance][data-studio-board="on"] .studio-motion[data-kind="flutter"] { animation-name: studio-m-flutter; animation-direction: normal; }
+[data-studio-appearance][data-studio-board="on"] .studio-motion[data-kind="beat"] { animation-name: studio-m-beat; animation-direction: normal; animation-timing-function: ease-out; }
+[data-studio-appearance][data-studio-board="on"] .studio-motion[data-kind="bob"] { animation-name: studio-m-bob; }
+[data-studio-appearance][data-studio-board="on"] .studio-motion[data-kind="drift"] { animation-name: studio-m-drift; }
+[data-studio-appearance][data-studio-board="on"] .studio-motion[data-kind="spin"] { animation-name: studio-m-spin; animation-timing-function: linear; animation-direction: normal; }
+[data-studio-appearance][data-studio-board="on"] .studio-motion[data-kind="grow"] { animation-name: studio-m-grow; }
+[data-studio-appearance][data-studio-board="on"] .studio-motion[data-kind="nudge"] { animation-name: studio-m-nudge; animation-direction: normal; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx * { transform-box: fill-box; transform-origin: center; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-steam > g { opacity: 0; animation: studio-fx-rise 2.7s ease-out infinite; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-steam path { fill: none; stroke: #f4f7ff; stroke-width: 1.9; stroke-linecap: round; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-steam path.studio-fx-halo { stroke: #ffffff; stroke-width: 4.6; opacity: .22; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-smoke circle { fill: none; stroke: #c6dcff; stroke-width: 1.4; opacity: 0; animation: studio-fx-puff 3.3s ease-out infinite; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-sparkle { fill: #ffe066; opacity: 0; animation: studio-fx-twinkle 2.6s ease-in-out infinite; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-shine { fill: #ffffff; opacity: 0; transform-box: view-box; transform-origin: 0 0; animation: studio-fx-sweep 6.5s ease-in-out infinite; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-glow { animation: studio-fx-pulse 2.4s ease-in-out infinite; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-shimmer { stroke: #ffffff; stroke-width: 1.4; stroke-linecap: round; opacity: 0; animation: studio-fx-slide 3.4s ease-in-out infinite; }
+[data-studio-appearance][data-studio-board="on"] .studio-fx-speed path { stroke: #eef3ff; stroke-width: 1.5; stroke-linecap: round; opacity: 0; animation: studio-fx-dash 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  [data-studio-appearance][data-studio-board="on"] .studio-illus img.studio-motion { animation: none; }
+  [data-studio-appearance][data-studio-board="on"] .studio-fx { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-studio-appearance][data-studio-board="on"] :is(.studio-view, .studio-fan-card, .studio-tabpanel, .studio-tab, .studio-day-head, .studio-day-row, .studio-dial-name, .studio-glance-chip::before) { animation: none; }
   [data-studio-appearance][data-studio-board="on"] :is(.studio-fan-card, .studio-fan-dots span, .studio-dial, .studio-dial-orbit, .studio-dial-knob, .studio-tab, .studio-tab-dot, .studio-glance-chip, .studio-glance-chip::before, .studio-day-block, .studio-stack-pause::before, .studio-role-stack > .week-seq-item) { transition: none; }

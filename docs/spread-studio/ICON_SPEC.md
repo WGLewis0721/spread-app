@@ -85,3 +85,27 @@ The owner asked for the look of the phone mockup and the single Work card instea
 - **Cards in Hand-drawn mode** become dark glass (`#131b2c` to `#090d17`) tinted from two corners in the spread's color, with a glowing 1.5 px edge and outer glow in that color. Type is white; the hour count is the role color mixed with white. The open card puts its tasks on a glass inset at the left (`#161d2e`) and the art large at the right, so no text sits on a drawing. Fan and Day cards use the same glass.
 - **Illustrations** are the same board art converted to chalk on dark: paper keyed to transparent, dark outlines relit as light chalk through a tone curve, crayon color kept and lifted 18% in chroma, edges feathered so the drawing floats on the card, with a soft glow of the role color behind it. Exported at 1.5x (393 x 273) as RGBA WebP, 411 KB for all eleven.
 - Contrast: every card keeps an opaque dark `background-color`, so the audit reads the plate, not the glow. A probe with Hand-drawn on, over all five views in both schemes, finds no violations on any card (only the same six header items it also reports with Default icons when no wallpaper is set, which the real audit sets).
+
+## 7. Living drawings
+
+Every illustration has small motion, all CSS, stopped entirely by Reduce Motion.
+
+**Moving parts** are cut out of the chalk art onto their own layers (a box plus a color filter, so a leaf layer takes only the green leaf, never what is behind it) and removed from the base image, so nothing is drawn twice. Each pivots where it grows from. Kinds: `sway` (rotate about the stem), `flutter` (a note tugged from its pin), `beat` (a two-beat heart pulse), `bob`, `drift` (clouds), `spin` (suns, 36 to 40 s a turn), `rock` (globe, stars), `grow` (bars from their base), `nudge` (arrow up and right). Translations are stored as % of the layer so motion scales with the drawing.
+
+**Chalk effects** are SVG over the art: rising steam with a soft halo, chimney smoke puffs, yellow sparkle twinkles, a glint sweeping a laptop screen, a pulsing glow (bulb, cross, star), a highlight sliding down a water bottle, and speed dashes by running shoes.
+
+| Drawing | Moves |
+|---|---|
+| Work | both plants sway, two sticky notes flutter, steam over the coffee, screen glint, sparkles |
+| Home | sun turns, chimney smoke drifts up, both trees sway, sparkles |
+| Personal | leaves sway, both hearts beat, steam over the mug, sparkles |
+| Health | three leaf groups sway (apple leaves included), both hearts beat, bottle shimmer, sparkles |
+| Fitness | sun turns, shoes bounce, speed dashes, bottle shimmer, sparkle |
+| Family | sun turns, heart beats, both trees sway, sparkles |
+| School | star rocks, globe rocks, pencils in the cup sway, the writing pencil scribbles, sparkles |
+| Project | bulb pulses and glows, sticky note swings, leaves sway, pencil scribbles, sparkles |
+| Church | sun turns, clouds drift apart and back, both trees sway, cross glows, sparkle |
+| Business | plant sways, chart arrow nudges up, bars grow, spark pulses, sparkles |
+| Custom | star rocks and glows, confetti sparkles |
+
+Pipeline (kept in the session scratchpad, reproducible): `spec.py` holds boxes, color filters, pivots and timings; `extract.py` cuts the layers and writes the base art; `gen_ts.py` writes `doodle-motion.ts`. Verified by freezing every animation at four moments in the running app and diffing the frames for each drawing. Assets: 360 KB base art plus 228 KB of layers.
