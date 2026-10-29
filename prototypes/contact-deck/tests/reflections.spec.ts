@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { pixels, changedPixels } from './png';
 const source = readFileSync(process.env.CONTACT_DECK_SOURCE || join(import.meta.dirname, '..', 'index.html'), 'utf8');
 for (const viewport of [{ width: 402, height: 874 }, { width: 393, height: 852 }]) {
-  test.describe(`Flow floor ${viewport.width}`, () => {
+  for (const skin of ['current', '18', '7', '6']) test.describe(`Flow floor ${viewport.width} skin ${skin}`, () => {
     test.use({ viewport, deviceScaleFactor: 1 });
     test('15% idle shrink, continuous anchor, and painted reflections on every visible card', async ({ page }, info) => {
       const errors: string[] = [];
@@ -13,6 +13,7 @@ for (const viewport of [{ width: 402, height: 874 }, { width: 393, height: 852 }
       await page.setContent(source);
       await page.locator('#settingsTab').click();
       await page.locator('[data-viewset="orbit"]').click();
+      await page.locator(`[data-skin="${skin}"]`).click();
       await page.locator('[data-close]').click();
       await page.waitForTimeout(850);
       const normal = await page.locator('.contact-card[tabindex="0"]').boundingBox();

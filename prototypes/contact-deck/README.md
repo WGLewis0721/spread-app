@@ -186,3 +186,36 @@ before the dock, transition-frame sampling, wake, Reduced Motion and existing
 search/export/favorite checks. The PNG decoder uses Node's built-in zlib; no new
 dependency. Inline JS syntax and focused ESLint checked. WebKit is not installed
 in the execution environment; physical Safari validation remains required.
+
+## Four approved design eras
+
+The existing Appearance > Design era controls now apply the four user-approved
+mockup directions to the working Contact Deck prototype:
+
+- **Glass · iOS 26**: full-bleed portrait, translucent circular actions, bright
+  edge highlights and a floating glass navigation pill.
+- **Modern · iOS 15–18**: full-bleed portrait, opaque pale-blue action circles,
+  system typography and a frosted edge-to-edge navigation bar.
+- **Flat · iOS 7–9**: white information panel below the portrait, lighter Helvetica
+  typography, blue outlined controls and a flat white navigation bar.
+- **Classic · iOS 4–6**: cream paper card, inset photo mount, leather-toned header,
+  beveled blue-gray controls and a glossy dark navigation bar.
+
+These are CSS interpretations of the approved mockups, including Glass; they do
+not use native UIKit material APIs. Shared inline SVG controls replace the main
+card/navigation emoji. The existing state, contact selection, gestures, view
+switching, idle rotation and local preference keys are preserved. Modern is the
+default for a fresh browser; saved era choices continue to win. No production app
+or native iOS source is changed.
+
+Visual review exposed overlapping Classic portrait/name regions at the shorter
+390×664 browser viewport. Flat and Classic portrait bounds now reserve the actual
+minimum information-panel height, with extra separation for the Classic frame.
+The outer deck sizing and positioning remain independent of era paint.
+
+Final suite: **39 Chromium Playwright tests** covering the existing 24 geometry
+combinations, interaction/Reduced Motion cases, four era material/persistence
+checks and eight real-pixel reflection cases (all four eras at two phone sizes).
+Era screenshots cover Stack, Fan and Flow, including portrait/name separation.
+Test portraits exercise the illustrated offline fallback. Physical Safari and
+hardware safe-area verification remain outside this environment.
