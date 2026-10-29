@@ -6,7 +6,7 @@
 .screen { --deck-top:152px; --deck-bottom:calc(99px + env(safe-area-inset-bottom, 0px)); }
 .arena { position:absolute; top:var(--deck-top); bottom:var(--deck-bottom); left:0; right:0; z-index:4; perspective:1000px; touch-action:none; overflow:clip; }
 .track { position:absolute; inset:0; transform-style:preserve-3d; overflow:clip; }
-.contact-card { position:absolute; left:50%; top:50%; width:calc((100% - 28px) * .85); height:calc((100% - var(--card-reserve, 0px)) * .85); margin:0; translate:-50% -50%; transform-origin:center; }
+.contact-card { position:absolute; left:50%; top:50%; width:calc((100% - 28px) * .85); height:calc(100% - var(--card-reserve, 0px) - 16px); margin:0; translate:-50% -50%; transform-origin:center; }
 .arena:has(.track[data-mode$="-fan"]) .contact-card, .arena:has(.track[data-mode$="-orbit"]) .contact-card { width:calc((100% - 56px) * .85); }
 .arena:has(.track[data-mode$="-fan"]) { --card-reserve:76px; }
 .fan-orb { position:absolute; bottom:10px; left:50%; width:56px; height:56px; z-index:12; }
