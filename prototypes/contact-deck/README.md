@@ -81,7 +81,7 @@ If validated, move Contact Deck into **its own repository**. Implement native iO
 **Verification gate:** Automated Chromium coverage is documented below. Physical iPhone Safari validation remains outstanding; do not describe browser tests as native or hardware acceptance.
 
 
-## Layout regression diagnosis and verification
+## Layout regression diagnosis and verification (historical 0a95e75)
 
 Baseline: PR #103 head `e9c8848d2567b0952894133347addc40fe21cadb`.
 Target: the existing Contact Deck interaction and era styling, with the owner's
@@ -161,3 +161,28 @@ Physical Safari, nonzero hardware safe-area insets, landscape and device Contact
 access are not validated by this suite. Remote portraits are deliberately replaced
 with failed image decoding during tests to exercise the existing illustrated
 fallback without network dependency; no sample-image service availability is claimed.
+
+
+## Cover Flow reflection refinement
+
+Verified against owner baseline `d6d6c483c855e5bdc762d04bb3480e42e7d6b58f`.
+The intervening owner commits pinned normal cards beneath/behind the collection
+strip and removed the Fan orb. Tests now preserve those current positions rather
+than enforcing the earlier historical centered geometry.
+
+The old idle rule changed both stage height and card dimensions: measured height
+ratios were 0.8125 at 402×874 and 0.8112 at 393×852. Its reflection mask faded in the
+wrong direction because the mask is applied before the image is mirrored.
+
+Flow now retains the same stage and DOM, animating the existing 3D track to 85%
+scale from its upper center. Focused-card width and height ratios are 0.85 at both
+phone sizes, the top anchor moves only 3px smoothly, and reflections fade directly
+below each visible card. Normal Flow screenshots compare pixel-identically to the
+baseline. Stack/Fan geometry and their owner-defined idle behavior are unchanged.
+
+Validation: **29/29 Chromium Playwright tests passed**, including real painted-pixel
+comparisons with individual reflections disabled, angled side cards, fade completion
+before the dock, transition-frame sampling, wake, Reduced Motion and existing
+search/export/favorite checks. The PNG decoder uses Node's built-in zlib; no new
+dependency. Inline JS syntax and focused ESLint checked. WebKit is not installed
+in the execution environment; physical Safari validation remains required.

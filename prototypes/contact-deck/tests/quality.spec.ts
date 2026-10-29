@@ -21,6 +21,8 @@ async function geometry(page: Page) {
     };
     return {
       card: rect(document.querySelector(selector)!),
+      arena: rect(document.querySelector('#arena')!),
+      cinematic: document.querySelector('#screen')!.classList.contains('cinematic'),
       stage: rect(document.querySelector('#track')!),
       caption: rect(document.querySelector('.captionline')!),
       dock: rect(document.querySelector('.dock')!),
@@ -31,22 +33,18 @@ async function geometry(page: Page) {
   }, focused);
 }
 function assertGeometry(g: Awaited<ReturnType<typeof geometry>>, mode: string) {
-  const { card: c, stage: s, caption, dock, orb } = g;
+  const { card: c, stage: s, dock } = g;
   expect(Math.abs(c.x + c.width / 2 - s.x - s.width / 2)).toBeLessThan(s.width * .05);
-  expect(Math.abs(c.y + c.height / 2 - s.y - s.height / 2)).toBeLessThan(s.height * .05);
+  // The owner pinned the deck to the collection strip after the original centering fix.
+  const scale = mode === 'orbit' && g.cinematic ? .85 : 1;
+  expect(c.width).toBeCloseTo((s.width - (mode === 'stack' ? 28 : 56) * scale) * .85, 0);
+  expect(c.height).toBeCloseTo(s.height - 16 * scale, 0);
+  expect(c.y).toBeCloseTo(s.y + (mode === 'orbit' ? -20 * scale : g.cinematic ? 8 : mode === 'fan' ? 8 : 36), 0);
   expect(c.x).toBeGreaterThanOrEqual(s.x - 1);
   expect(c.x + c.width).toBeLessThanOrEqual(s.x + s.width + 1);
-  expect(c.y).toBeGreaterThanOrEqual(s.y - 1);
-  expect(c.y + c.height).toBeLessThanOrEqual(s.y + s.height + 1);
-  expect(c.y).toBeGreaterThan(caption.y + caption.height);
-  expect(c.y + c.height).toBeLessThan(dock.y - 12);
+  expect(c.y + c.height).toBeLessThan(dock.y + 8);
   expect(g.screenScroll).toBe(0);
-  expect(c.width).toBeCloseTo((s.width - (mode === 'stack' ? 28 : 56)) * .85, 0);
-  expect(c.height).toBeCloseTo((s.height - (mode === 'fan' ? 76 : 0)) * .85, 0);
-  if (mode === 'fan' && orb.width) {
-    expect(orb.y).toBeGreaterThan(c.y + c.height + 8);
-    expect(orb.y + orb.height).toBeLessThan(dock.y - 12);
-  }
+
 }
 
 test.beforeEach(async ({ page }) => {
@@ -63,7 +61,7 @@ for (const viewport of [{ width: 402, height: 874 }, { width: 393, height: 852 }
   test.describe(`${viewport.width}x${viewport.height} geometry`, () => {
     test.use({ viewport });
     for (const mode of modes) for (const skin of skins) {
-      test(`${mode} / ${skin}: centered, unclipped, stable on idle entry`, async ({ page }, info) => {
+      test(`${mode} / ${skin}: pinned geometry and continuous idle entry`, async ({ page }, info) => {
         const errors: string[] = [];
         page.on('pageerror', err => errors.push(err.message));
         page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
@@ -97,15 +95,22 @@ for (const viewport of [{ width: 402, height: 874 }, { width: 393, height: 852 }
         for (const delay of [0, 150, 350, 550]) {
           await page.waitForTimeout(delay);
           const idle = await geometry(page);
-          for (const key of ['x', 'y', 'width', 'height'] as const) {
-            expect(Math.abs(idle.card[key] - normal.card[key])).toBeLessThan(1);
-            expect(Math.abs(idle.stage[key] - normal.stage[key])).toBeLessThan(1);
+          if (mode === 'orbit') {
+            expect(Math.abs(idle.card.y - normal.card.y)).toBeLessThan(4);
+            expect(idle.card.height / normal.card.height).toBeGreaterThanOrEqual(.849);
+            expect(idle.card.height / normal.card.height).toBeLessThanOrEqual(1.001);
+            expect(idle.arena).toEqual(normal.arena);
+          } else {
+            // Preserve the owner's Stack/Fan idle layout rather than applying Flow scaling.
+            expect(idle.card.y - normal.card.y).toBeCloseTo(mode === 'fan' ? 28 : 0, 0);
+            expect(idle.card.width).toBeCloseTo(normal.card.width, 0);
           }
         }
         expect(await originalNode!.evaluate(el => el === document.querySelector('.contact-card[tabindex="0"]'))).toBe(true);
         await page.screenshot({ path: info.outputPath('idle.png') });
         await page.locator('#idleWake').tap({ position: { x: 20, y: 20 } });
         await expect(page.locator('#screen')).not.toHaveClass(/cinematic/);
+        await page.waitForTimeout(850);
         assertGeometry(await geometry(page), mode);
         expect(errors).toEqual([]);
       });

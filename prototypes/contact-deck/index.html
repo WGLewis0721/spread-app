@@ -277,18 +277,17 @@ color:var(--ink);transition:translate .2s ease,filter .2s ease}
 .screen .arena:has(.track[data-mode$="-orbit"]) .contact-card{
 transition:transform .76s cubic-bezier(.22,.72,.19,1),opacity .76s ease,filter .76s ease}
 
-/* Classic Cover Flow idle: smaller artwork and a fading floor reflection.
-   Limited to cinematic Flow; Stack and Fan retain their existing layout. */
-.screen.cinematic .arena:has(.track[data-mode$="-orbit"]) .contact-card{
-width:calc((100% - 56px) * .85 * .85);
-height:calc((100% - var(--card-reserve, 0px) - 16px) * .85);
-top:42%;translate:-50% -50%;
--webkit-box-reflect:below 9px linear-gradient(to bottom,rgba(255,255,255,.34),rgba(255,255,255,.12) 36%,transparent 78%);
+/* Flow has one layout anchor in browse and idle. Scale the existing 3D scene
+   from its upper center; card transforms/DOM never change on idle entry. */
+.screen .arena:has(.track[data-mode$="-orbit"]) { top:calc(var(--deck-top) - 28px); padding-top:28px; }
+.screen .arena:has(.track[data-mode$="-orbit"]) .track { transform-origin:50% 0; scale:1; transition:scale .76s cubic-bezier(.22,.72,.19,1); }
+.screen.cinematic .arena:has(.track[data-mode$="-orbit"]) .track { scale:.85; }
+.screen.cinematic .arena:has(.track[data-mode$="-orbit"]) .contact-card {
+  /* Reflect is masked before mirroring: the source's bottom edge must be opaque. */
+  -webkit-box-reflect:below 7px linear-gradient(to bottom,transparent 76%,rgba(255,255,255,.34) 100%);
 }
-.screen.cinematic .arena:has(.track[data-mode$="-orbit"]),
-.screen.cinematic .arena:has(.track[data-mode$="-orbit"]) .track{overflow:visible}
-@supports not (-webkit-box-reflect:below 1px){
-.screen.cinematic .arena:has(.track[data-mode$="-orbit"]) .contact-card{box-shadow:0 16px 30px #0006}
+@media(prefers-reduced-motion:reduce) {
+  .screen .arena:has(.track[data-mode$="-orbit"]) .track { transition:none; }
 }
 </style></head><body>
 <div class="desktop"><aside class="editorial"><div class="eyebrow">Interaction study / v0.1</div><h1>People,<br><em>in motion.</em></h1><p>A more human way to find, remember, and connect. The joy of a physical card deck, designed for the way iPhone works today.</p><div class="mini-title">Three ways to browse</div><div class="feature"><span class="number">01</span> Stack — flip vertically like a Rolodex</div><div class="feature"><span class="number">02</span> Fan — sweep through a hand of cards</div><div class="feature"><span class="number">03</span> Flow — rotate an immersive Cover Flow</div><div class="mini-title">Try it</div><p style="font-size:13px">Swipe on the phone, change the view, tap a card, or open Appearance. Keyboard arrow keys also rotate the deck.</p></aside>
