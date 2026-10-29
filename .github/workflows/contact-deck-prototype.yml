@@ -1,0 +1,27 @@
+name: Contact Deck interaction preview
+
+on:
+  pull_request:
+    paths:
+      - 'prototypes/contact-deck/**'
+      - '.github/workflows/contact-deck-prototype.yml'
+  workflow_dispatch:
+
+jobs:
+  preview-interactions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config=prototypes/contact-deck/playwright.config.ts three-action.spec.ts --project=mobile-chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: contact-deck-three-action-failures
+          path: test-results/contact-deck
