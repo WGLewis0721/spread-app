@@ -1,0 +1,54 @@
+name: ContactDeck
+options:
+  bundleIdPrefix: com.graymatter
+  deploymentTarget:
+    iOS: '18.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.9'
+    DEVELOPMENT_TEAM: ''
+    CODE_SIGNING_ALLOWED: NO
+    TARGETED_DEVICE_FAMILY: '1,2'
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  ContactDeck:
+    type: application
+    platform: iOS
+    sources: [ContactDeck]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.graymatter.contactdeck
+        INFOPLIST_FILE: ContactDeck/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: '0.1.0'
+        CURRENT_PROJECT_VERSION: '1'
+  ContactDeckTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [ContactDeckTests]
+    dependencies:
+      - target: ContactDeck
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+  ContactDeckUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [ContactDeckUITests]
+    dependencies:
+      - target: ContactDeck
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  ContactDeck:
+    build:
+      targets:
+        ContactDeck: all
+    run:
+      config: Debug
+      storeKitConfiguration: ContactDeck/ContactDeck.storekit
+    test:
+      config: Debug
+      targets: [ContactDeckTests, ContactDeckUITests]
+      gatherCoverageData: true

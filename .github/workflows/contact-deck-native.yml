@@ -1,0 +1,41 @@
+name: Contact Deck native simulator
+on:
+  pull_request:
+    paths: ['native/ContactDeck/**', '.github/workflows/contact-deck-native.yml']
+permissions:
+  contents: read
+jobs:
+  native-simulator:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate isolated Xcode project
+        run: |
+          brew install xcodegen
+          cd native/ContactDeck
+          xcodegen generate
+      - name: Select available iPhone simulator
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for group in d["devices"].values() for x in group if "iPhone" in x["name"]))')
+          echo "CONTACT_DECK_SIMULATOR=$DEVICE_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+      - name: Build and test Contact Deck on simulator
+        run: |
+          xcodebuild test -project native/ContactDeck/ContactDeck.xcodeproj -scheme ContactDeck -destination "platform=iOS Simulator,id=$CONTACT_DECK_SIMULATOR" -derivedDataPath native/ContactDeck/build -resultBundlePath native/ContactDeck/results.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Capture simulator screenshot
+        if: always()
+        run: |
+          xcrun simctl install "$CONTACT_DECK_SIMULATOR" native/ContactDeck/build/Build/Products/Debug-iphonesimulator/ContactDeck.app
+          xcrun simctl launch "$CONTACT_DECK_SIMULATOR" com.graymatter.contactdeck --uitesting
+          sleep 2
+          xcrun simctl io "$CONTACT_DECK_SIMULATOR" screenshot native/ContactDeck/native-flow.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contact-deck-native-simulator
+          path: |
+            native/ContactDeck/results.xcresult
+            native/ContactDeck/native-flow.png
+            native/ContactDeck/ContactDeck.xcodeproj
