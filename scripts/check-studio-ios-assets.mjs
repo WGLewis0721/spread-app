@@ -13,19 +13,21 @@ const assets = readdirSync(output, { recursive: true })
 if (!assets.length) throw new Error("No compiled iOS JavaScript assets found");
 
 let appearanceAttributeFound = false;
-let editorLabelFound = false;
+let studioWeekInteractionFound = false;
 for (const relativePath of assets) {
   const contents = readFileSync(join(output, relativePath), "utf8");
   appearanceAttributeFound ||= contents.includes("data-studio-appearance");
-  editorLabelFound ||= contents.includes("Customize Spread");
+  // Apple-style Studio uses a three-detent Week control, not the retired Customize editor.
+  // This is a Studio-only interaction whose JSX is eliminated when VITE_SPREAD_STUDIO=0.
+  studioWeekInteractionFound ||= contents.includes("studio-week-grab-control");
 }
 
-if (!appearanceAttributeFound || !editorLabelFound) {
+if (!appearanceAttributeFound || !studioWeekInteractionFound) {
   throw new Error(
     "Studio enabled release verification failed: compiled iOS bundle lacks " +
-      [!appearanceAttributeFound && "data-studio-appearance", !editorLabelFound && "Customize Spread"]
+      [!appearanceAttributeFound && "data-studio-appearance", !studioWeekInteractionFound && "studio-week-grab-control"]
         .filter(Boolean)
         .join(" and "),
   );
 }
-console.log("Studio enabled iOS bundle verified: appearance scope + Customize editor present");
+console.log("Studio enabled iOS bundle verified: appearance scope + three-detent Week control present");

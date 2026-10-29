@@ -25,6 +25,13 @@
 		9A1C0000000000000000000C /* SpreadCloudPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C0000000000000000000B /* SpreadCloudPlugin.swift */; };
 		9A1C00000000000000000011 /* SpreadCloudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1C00000000000000000010 /* SpreadCloudCore */; };
 		9A1C00000000000000000103 /* SpreadSyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1C00000000000000000102 /* SpreadSyncEngine.swift */; };
+		D3C0B0000000000000000001 /* Contact.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000001 /* Contact.swift */; };
+		D3C0B0000000000000000002 /* ContactCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000002 /* ContactCard.swift */; };
+		D3C0B0000000000000000003 /* DeckStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000003 /* DeckStage.swift */; };
+		D3C0B0000000000000000004 /* ContactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000004 /* ContactPicker.swift */; };
+		D3C0B0000000000000000005 /* PurchaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000005 /* PurchaseStore.swift */; };
+		D3C0B0000000000000000006 /* DeckHome.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000006 /* DeckHome.swift */; };
+		D3C0B0000000000000000007 /* SpreadContactDeckPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000007 /* SpreadContactDeckPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +55,13 @@
 		9A1C0000000000000000000B /* SpreadCloudPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadCloudPlugin.swift; sourceTree = "<group>"; };
 		9A1C0000000000000000000E /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		9A1C00000000000000000102 /* SpreadSyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadSyncEngine.swift; sourceTree = "<group>"; };
+		D3C0A0000000000000000001 /* Contact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Contact.swift; sourceTree = "<group>"; };
+		D3C0A0000000000000000002 /* ContactCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactCard.swift; sourceTree = "<group>"; };
+		D3C0A0000000000000000003 /* DeckStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckStage.swift; sourceTree = "<group>"; };
+		D3C0A0000000000000000004 /* ContactPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactPicker.swift; sourceTree = "<group>"; };
+		D3C0A0000000000000000005 /* PurchaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseStore.swift; sourceTree = "<group>"; };
+		D3C0A0000000000000000006 /* DeckHome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckHome.swift; sourceTree = "<group>"; };
+		D3C0A0000000000000000007 /* SpreadContactDeckPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadContactDeckPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,6 +100,7 @@
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				9A1C00000000000000000001 /* SpreadBridgeViewController.swift */,
 				9A1C0000000000000000000D /* Cloud */,
+				D3C0C0000000000000000001 /* ContactDeck */,
 				9A1C0000000000000000000E /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -111,6 +126,20 @@
 				9A1C0000000000000000000B /* SpreadCloudPlugin.swift */,
 			);
 			path = Cloud;
+			sourceTree = "<group>";
+		};
+		D3C0C0000000000000000001 /* ContactDeck */ = {
+			isa = PBXGroup;
+			children = (
+				D3C0A0000000000000000001 /* Contact.swift */,
+				D3C0A0000000000000000002 /* ContactCard.swift */,
+				D3C0A0000000000000000003 /* DeckStage.swift */,
+				D3C0A0000000000000000004 /* ContactPicker.swift */,
+				D3C0A0000000000000000005 /* PurchaseStore.swift */,
+				D3C0A0000000000000000006 /* DeckHome.swift */,
+				D3C0A0000000000000000007 /* SpreadContactDeckPlugin.swift */,
+			);
+			path = ContactDeck;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -206,6 +235,13 @@
 				9A1C0000000000000000000A /* BackupStore.swift in Sources */,
 				9A1C0000000000000000000C /* SpreadCloudPlugin.swift in Sources */,
 				9A1C00000000000000000103 /* SpreadSyncEngine.swift in Sources */,
+				D3C0B0000000000000000001 /* Contact.swift in Sources */,
+				D3C0B0000000000000000002 /* ContactCard.swift in Sources */,
+				D3C0B0000000000000000003 /* DeckStage.swift in Sources */,
+				D3C0B0000000000000000004 /* ContactPicker.swift in Sources */,
+				D3C0B0000000000000000005 /* PurchaseStore.swift in Sources */,
+				D3C0B0000000000000000006 /* DeckHome.swift in Sources */,
+				D3C0B0000000000000000007 /* SpreadContactDeckPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

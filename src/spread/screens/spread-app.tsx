@@ -13,6 +13,7 @@ import { collectFullPayload, fullBackupText, parseAnyBackup, parseFullBackup, ty
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import { isNativeApp } from "@/lib/spread/native";
+import { openContactDeckPreview } from "@/lib/spread/contact-deck-preview";
 import { LOCAL_FIRST_OPEN_ACCESS } from "@/lib/spread/open-access";
 import { listPinned, prepareNativeStorage, readPinned, type PinnedCopy } from "@/lib/spread/native-mirror";
 import { ensureSafetyCopy } from "@/lib/spread/safety";
@@ -2150,6 +2151,24 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
         {native || LOCAL_FIRST_OPEN_ACCESS ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license ? "Signed in to the Spread beta." : "Not signed in."}
       </Dialog.Description>
       <LocalStatusRow />
+      {STUDIO_FLAG && native && (
+        <button
+          type="button"
+          aria-label="Open Contact Deck native preview"
+          className="mt-4 flex min-h-14 w-full items-center gap-3 rounded-3xl bg-canvas px-4 py-3 text-left active:bg-fill"
+          onClick={() => {
+            setSheet(null);
+            void openContactDeckPreview().catch(() => toast.error("Contact Deck couldn't open. Please try again."));
+          }}
+        >
+          <Users className="size-6 shrink-0" strokeWidth={1.9} aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-semibold">Contact Deck</span>
+            <span className="block text-xs text-secondary">Native iPhone preview</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-tertiary" strokeWidth={2.4} aria-hidden="true" />
+        </button>
+      )}
       {board ? null : profilesNode}
       {board ? <ControlCenter tiles={tiles} /> : null}
       <input
