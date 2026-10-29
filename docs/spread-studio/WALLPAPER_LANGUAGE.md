@@ -157,3 +157,11 @@ Studio Board only. The views keep their structure; this pass changes how they lo
 - **Haptics.** `src/lib/spread/studio/tick.ts` sends a selection tick when the Dial lands on a spread, the Fan settles, a tab or day is chosen. Native only, silent on the web and under Reduce Motion, lazy plugin import, never an error. This is the one part not exercised in a browser.
 - **Not changed:** structure, data, the appearance contract, any file under cloud, sync, backup or schema. Flag off renders exactly the baseline.
 
+
+## Hand-drawn icons (2026-10-28)
+
+Settings > View > Icons: Default (round badges) or Hand-drawn. Studio Board only, per device (`src/lib/spread/studio/icon-pref.ts`), not synced or part of a saved look.
+
+- Hand-drawn pairs each spread's mark on a glossy rounded tile with a crayon drawing of its category: Work, School, Home, Health, Family, Fitness, Business, Project, Church, Personal, and a Custom star for spreads with no category.
+- The drawings are original vector scenes in `doodles.tsx`, inspired by the owner's illustration boards, not traced or cropped from them. The crayon look is an SVG filter (turbulence displacement for wobbly edges, a grain mask for texture), so they are sharp at any size and add no image assets.
+- They appear on the role cards (in place of the sparkline), the Fan's front card, and the Day blocks. Outlines use `currentColor`, which is the card's proven ink. All drawings are `aria-hidden`; names and hours stay text.

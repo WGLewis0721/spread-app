@@ -4,6 +4,8 @@ import { CategoryBadge } from "@/spread/components/category-badge";
 import type { Allocation, Hat } from "@/lib/spread/model";
 import { SPREAD_LAYOUTS, dialSegments, segmentAt, type SpreadLayout } from "@/lib/spread/studio/layouts";
 import { selectionTick } from "@/lib/spread/studio/tick";
+import { ICON_STYLES, setIconStyle, useIconStyle, type IconStyle } from "@/lib/spread/studio/icon-pref";
+import { Doodle, DrawnTile } from "@/spread/components/studio/doodles";
 
 import { cn } from "@/lib/cn";
 
@@ -25,6 +27,8 @@ function spoken(hours: number) {
 }
 
 function RoleBadge({ hat, size = 36 }: { hat: Hat; size?: number }) {
+  const icons = useIconStyle();
+  if (icons === "drawn") return <DrawnTile hat={hat} size={size} />;
   return hat.category ? (
     <CategoryBadge category={hat.category} color={hat.color} size={size} />
   ) : (
@@ -43,6 +47,7 @@ const FAN_STEP = 96;
 export function FanLayout({ rows, selectedId, onSelect, children }: { rows: LayoutRow[]; selectedId: string; onSelect: (id: string) => void; children?: ReactNode }) {
   const count = rows.length;
   const at = Math.max(0, rows.findIndex((row) => row.hat.id === selectedId));
+  const drawn = useIconStyle() === "drawn";
   const host = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; id: number; lastX: number; lastT: number; v: number; moved: boolean } | null>(null);
   const suppress = useRef(false);
@@ -132,6 +137,7 @@ export function FanLayout({ rows, selectedId, onSelect, children }: { rows: Layo
               onClick={() => onSelect(row.hat.id)}
             >
               <span className="studio-fan-badge" aria-hidden="true"><RoleBadge hat={row.hat} size={40} /></span>
+              {drawn && <Doodle hat={row.hat} className="studio-doodle studio-fan-doodle" />}
               <span className="studio-fan-mini" aria-hidden="true">{hoursText(row.hours)}</span>
               <span className="studio-fan-label" aria-hidden="true">
                 <span className="studio-fan-name">{row.hat.name}</span>
@@ -368,6 +374,7 @@ export function DayLayout({
   children?: ReactNode;
 }) {
   const hats = new Map(rows.map((row) => [row.hat.id, row.hat]));
+  const drawn = useIconStyle() === "drawn";
   const blocks = allocations
     .filter((item) => item.day === selectedDay && item.hours > 0 && hats.has(item.hatId))
     .sort((a, b) => a.order - b.order);
@@ -428,6 +435,7 @@ export function DayLayout({
                   >
                     <span aria-hidden="true"><RoleBadge hat={hat} size={32} /></span>
                     <span className="studio-day-block-name">{hat.name}</span>
+                    {drawn && <Doodle hat={hat} className="studio-doodle studio-day-doodle" />}
                     <span className="studio-day-block-hours">{hoursText(block.hours)}</span>
                   </button>
                 </li>
@@ -478,6 +486,34 @@ export function LayoutPicker({ layout, onPick }: { layout: SpreadLayout; onPick:
           <LayoutGlyph layout={item.id} />
           <span className="studio-layout-text">
             <span className="studio-layout-name">{item.label}{item.id === "stack" ? <em>Default</em> : null}</span>
+            <span className="studio-layout-hint">{item.hint}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Settings > View > Icons: the round badges, or a hand-drawn tile and crayon drawing per spread. */
+export function IconPicker() {
+  const icons = useIconStyle();
+  const sample: Hat = { id: "sample", name: "Work", color: "#34C759", category: "work", defaultHours: 0 } as Hat;
+  return (
+    <div className="studio-layout-picker" role="radiogroup" aria-label="Spread icons">
+      {ICON_STYLES.map((item: { id: IconStyle; label: string; hint: string }) => (
+        <button
+          key={item.id}
+          type="button"
+          role="radio"
+          aria-checked={icons === item.id}
+          className="studio-layout-option studio-icon-option"
+          onClick={() => setIconStyle(item.id)}
+        >
+          <span className="studio-icon-preview" aria-hidden="true">
+            {item.id === "drawn" ? (<><DrawnTile hat={sample} size={30} /><Doodle hat={sample} className="studio-doodle studio-icon-doodle" /></>) : <CategoryBadge category="work" color="#34C759" size={30} />}
+          </span>
+          <span className="studio-layout-text">
+            <span className="studio-layout-name">{item.label}</span>
             <span className="studio-layout-hint">{item.hint}</span>
           </span>
         </button>

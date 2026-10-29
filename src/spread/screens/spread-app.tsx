@@ -47,7 +47,9 @@ import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "
 import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
 import { StudioStackProbe, useStudioPortal, useStudioStack } from "@/spread/components/studio/render";
-import { DayLayout, DialLayout, FanLayout, LayoutPicker, TabsLayout } from "@/spread/components/studio/layouts";
+import { DayLayout, DialLayout, FanLayout, IconPicker, LayoutPicker, TabsLayout } from "@/spread/components/studio/layouts";
+import { Doodle, DrawnTile } from "@/spread/components/studio/doodles";
+import { useIconStyle } from "@/lib/spread/studio/icon-pref";
 import { SPREAD_LAYOUTS } from "@/lib/spread/studio/layouts";
 import { setSpreadLayout, useSpreadLayout } from "@/lib/spread/studio/layout-pref";
 import { ControlCenter, type ControlTile } from "@/spread/components/studio/control-center";
@@ -1353,6 +1355,8 @@ function RoleBlock({
     }
   }
 
+  const iconStyle = useIconStyle();
+  const drawnIcons = Boolean(stack) && iconStyle === "drawn";
   const chevronOpen = stack ? stack.open : tasksOpen && taskMotion !== "out";
   const foldOpen = stack ? stack.open : tasksOpen || taskMotion === "out";
 
@@ -1360,7 +1364,7 @@ function RoleBlock({
     <section id={`spread-role-${hat.id}`} tabIndex={-1} className="scroll-mt-48 print:break-inside-avoid">
       {!first && <div className="ms-16 border-t border-line" />}
       <div className="studio-role-card relative overflow-hidden">
-        {stack && <RoleSpark hatId={hat.id} />}
+        {stack && (drawnIcons ? <Doodle hat={hat} className="studio-doodle studio-role-doodle" /> : <RoleSpark hatId={hat.id} />)}
         <div className="flex min-h-16 items-center gap-3 px-4 py-2">
         <button
           type="button"
@@ -1369,7 +1373,9 @@ function RoleBlock({
           className="relative grid size-11 shrink-0 place-items-center"
           onClick={togglePalette}
         >
-          {hat.category ? (
+          {drawnIcons ? (
+            <DrawnTile hat={hat} size={38} />
+          ) : hat.category ? (
             <CategoryBadge category={hat.category} color={hat.color} size={36} />
           ) : (
             <span className="grid size-9 place-items-center rounded-full text-white" style={{ backgroundColor: hat.color }}>
@@ -1942,6 +1948,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const week = buildWeekDocument(data);
   const board = useStudioStack();
   const layout = useSpreadLayout();
+  const iconStyle = useIconStyle();
   const profileList = useSpread((st) => st.profiles);
   const activeProfileId = useSpread((st) => st.activeId);
 
@@ -2112,9 +2119,11 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
   const tiles: ControlTile[] = [
     { id: "profiles", title: "Profiles", detail: `${activeName} · ${profileList.length} of ${PROFILE_LIMIT}`, icon: <Users className="size-5" strokeWidth={2.4} />, tone: "sky", wide: true, body: profilesNode },
     { id: "appearance", title: "Appearance", detail: theme === "system" ? "Automatic" : theme === "dark" ? "Dark" : "Light", icon: <Palette className="size-5" strokeWidth={2.4} />, tone: "butter", body: appearanceNode },
-    { id: "view", title: "View", detail: SPREAD_LAYOUTS.find((item) => item.id === layout)?.label ?? "Stack", icon: <LayoutGrid className="size-5" strokeWidth={2.4} />, tone: "lilac", body: (
+    { id: "view", title: "View", detail: `${SPREAD_LAYOUTS.find((item) => item.id === layout)?.label ?? "Stack"}${iconStyle === "drawn" ? " · Hand-drawn" : ""}`, icon: <LayoutGrid className="size-5" strokeWidth={2.4} />, tone: "lilac", body: (
       <div className="mt-4">
         <LayoutPicker layout={layout} onPick={setSpreadLayout} />
+        <h3 className="studio-picker-head">Icons</h3>
+        <IconPicker />
       </div>
     ) },
     { id: "share", title: "Share", detail: native ? "Copy, Word" : "Copy, Word, PDF", icon: <Share2 className="size-5" strokeWidth={2.4} />, tone: "peach", body: <div className="mt-4">{renderActions(shareActions)}</div> },
