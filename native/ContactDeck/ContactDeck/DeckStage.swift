@@ -59,32 +59,48 @@ struct DeckStage: View {
             }
         }
     }
-    var body: some View {
-        scene.clipped()
-        .mask { LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.92), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom) }
-        .onAppear { position = Double(focus) }
-        .task(id: focusedID) {
-            guard !reduceMotion else { focusScale = 1; return }
-            withAnimation(.spring(response: 0.18, dampingFraction: 0.84)) { focusScale = 1.012 }
-            try? await Task.sleep(for: .milliseconds(80))
-            guard !Task.isCancelled else { return }
-            withAnimation(spring) { focusScale = 1 }
-        }
-        .onChange(of: contacts.map(\.id)) { _, _ in position = Double(focus); flippedID = nil }
-        .onChange(of: mode) { _, _ in position = Double(focus); flippedID = nil }
-        .onChange(of: focusedID) { _, _ in if drag == .zero && !grouping { withAnimation(spring) { position = Double(focus) } } }
-        .onChange(of: selected) { _, value in if !value.isEmpty { flippedID = nil } }
-        .onChange(of: holding) { _, active in
-            if !active && grouping {
-                withAnimation(spring) { grouping = false; groupTranslation = .zero }
-                groupPoint = nil
+    private var boundedScene: some View {
+        scene.clipped().mask(LinearGradient(
+            stops: [Gradient.Stop(color: Color.black, location: 0), Gradient.Stop(color: Color.black, location: 0.92), Gradient.Stop(color: Color.clear, location: 1)],
+            startPoint: .top, endPoint: .bottom))
+    }
+    private var lifecycleScene: some View {
+        boundedScene
+            .onAppear { position = Double(focus) }
+            .task(id: focusedID) {
+                guard !reduceMotion else { focusScale = 1; return }
+                withAnimation(.spring(response: 0.18, dampingFraction: 0.84)) { focusScale = 1.012 }
+                try? await Task.sleep(for: .milliseconds(80))
+                guard !Task.isCancelled else { return }
+                withAnimation(spring) { focusScale = 1 }
             }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(mode.title) contact deck")
-        .accessibilityAdjustableAction { direction in step(direction == .increment ? 1 : -1) }
-        .accessibilityAction(named: "Next contact") { step(1) }
-        .accessibilityAction(named: "Previous contact") { step(-1) }
+            .onChange(of: contacts.map(\.id)) { _, _ in position = Double(focus); flippedID = nil }
+    }
+    private var statefulScene: some View {
+        lifecycleScene
+            .onChange(of: mode) { _, _ in position = Double(focus); flippedID = nil }
+            .onChange(of: focusedID) { _, _ in if drag == .zero && !grouping { withAnimation(spring) { position = Double(focus) } } }
+            .onChange(of: selected) { _, value in if !value.isEmpty { flippedID = nil } }
+            .onChange(of: holding) { _, active in
+                if !active && grouping {
+                    withAnimation(spring) { grouping = false; groupTranslation = .zero }
+                    groupPoint = nil
+                }
+            }
+    }
+    var body: some View {
+        statefulScene
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text(mode.title + " contact deck"))
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: step(1)
+                case .decrement: step(-1)
+                @unknown default: break
+                }
+            }
+            .accessibilityAction(named: Text("Next contact")) { step(1) }
+            .accessibilityAction(named: Text("Previous contact")) { step(-1) }
     }
     @ViewBuilder private func card(_ contact: DeckContact, distance: Double, width: CGFloat, height: CGFloat) -> some View {
         let focused = contact.id == focusedID
