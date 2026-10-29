@@ -114,7 +114,7 @@ for (const size of [{ width: 390, height: 664 }, { width: 393, height: 852 }, { 
 }
 
 test('Reduce Motion removes 3D travel and mirrors while keyboard browsing works', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' }); const id = await page.locator(focused).getAttribute('data-id');
+  await page.emulateMedia({ reducedMotion: 'reduce' }); await expect.poll(()=>page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true); const id = await page.locator(focused).getAttribute('data-id');
   await page.keyboard.press('ArrowRight'); await expect(page.locator(focused)).not.toHaveAttribute('data-id', id!);
   await expect(page.locator(focused)).toHaveCSS('transform', 'none');
   const hidden = await page.locator('.floor-reflection').evaluateAll(els => els.every(el => getComputedStyle(el).display === 'none' && el.hasAttribute('inert')));

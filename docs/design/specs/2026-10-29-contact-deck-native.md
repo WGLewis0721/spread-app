@@ -15,7 +15,7 @@ Secondary: Apple HIG [motion](https://developer.apple.com/design/human-interface
 ## Interaction contract
 
 - Browse starts after 12px on the mode's main axis. Moving more than 10px cancels the 460ms hold. A successful hold enters selection; subsequent drag may group; it cannot also browse or flip.
-- Flow uses shallow depth, continuous rotation toward center and precise snapping. Fan pivots at its bottom. Stack peels vertically and lifts the next card. Native spring damping 0.84; browser unit-mass stiffness 210, damping 24.35 (ratio 0.84). Motion interruption starts at the current position.
+- Flow uses shallow depth, continuous rotation toward center and precise snapping. Fan pivots at its bottom. Stack peels vertically and lifts the next card. Native spring damping 0.84; browser unit-mass stiffness 210, damping 24.35 (ratio 0.84), evaluated analytically from elapsed time so throttled frames do not slow settling. Motion interruption starts at the current position.
 - No browse gesture deletes. Removal shows affected names and requires confirmation. Browser Undo lasts 12 seconds. Native soft removal and Recently removed survive restart. Device address-book records are never mutated.
 - Card options, keyboard navigation and accessibility actions provide alternatives. Sheets trap browser focus and restore it. Reflections are inert/hidden to accessibility. Reduce Motion removes travel/rotation/mirrors, using short fades.
 - Notes are local. Reconnect uses favorites, recency of explicitly marked reach-outs, and snooze. Calls/messages opening never counts as a completed conversation.
