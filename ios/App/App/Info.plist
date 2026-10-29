@@ -15,6 +15,7 @@
   <key>ITSAppUsesNonExemptEncryption</key><false/>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>NSCameraUsageDescription</key><string>Spread uses the camera only when you choose Take Photo to attach a picture to a task. Photos stay on this device.</string>
+  <key>NSContactsUsageDescription</key><string>Contact Deck lets you choose contacts to add to your private on-device card collection. Your address book is not edited or deleted.</string>
   <key>NSUbiquitousContainers</key>
   <dict>
     <key>iCloud.com.graymatter.spread</key>
