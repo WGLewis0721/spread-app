@@ -62,7 +62,7 @@ struct ContactFace: View {
     private func action(_ title: String, _ symbol: String, _ action: ContactAction, disabled: Bool = false) -> some View {
         Button { onAction(contact, action) } label: {
             VStack(spacing: 6) {
-                Image(systemName: symbol).font(.body.weight(.medium)).frame(width: 46, height: 46).foregroundStyle(.primary).background(.regularMaterial, in: Circle())
+                Image(systemName: symbol).font(.body.weight(.medium)).frame(width: 46, height: 46).foregroundStyle(Color.primary).background(.regularMaterial, in: Circle())
                 Text(title).font(.caption2)
             }
         }.buttonStyle(.plain).disabled(disabled).accessibilityLabel("\(title) \(contact.name)")

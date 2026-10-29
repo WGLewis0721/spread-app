@@ -19,7 +19,7 @@ Secondary: Apple HIG [motion](https://developer.apple.com/design/human-interface
 - No browse gesture deletes. Removal shows affected names and requires confirmation. Browser Undo lasts 12 seconds. Native soft removal and Recently removed survive restart. Device address-book records are never mutated.
 - Card options, keyboard navigation and accessibility actions provide alternatives. Sheets trap browser focus and restore it. Reflections are inert/hidden to accessibility. Reduce Motion removes travel/rotation/mirrors, using short fades.
 - Notes are local. Reconnect uses favorites, recency of explicitly marked reach-outs, and snooze. Calls/messages opening never counts as a completed conversation.
-- First interaction: immediate deck in the browser, a single “Try the deck” action in native. Native UI test measures launch-to-useful-deck against 25 seconds.
+- First interaction: immediate deck in the browser, a single “Try the deck” action in native. Native UI test measures visible-welcome-to-useful-deck against 25 seconds; XCTest attachment and physical cold launch are separate.
 - Unlimited contacts and portrait/initials card style use one nonconsumable purchase. No automatic paywall while browsing; dismissal and restore are always available. Sync is unavailable and excluded from purchase copy until verified.
 
 ## Acceptance and release gates
