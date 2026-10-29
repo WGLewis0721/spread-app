@@ -20,28 +20,38 @@ for (const viewport of [{ width: 402, height: 874 }, { width: 393, height: 852 }
       const dock = await page.locator('.dock').boundingBox();
       await page.screenshot({ path: info.outputPath('normal.png') });
       await page.locator('#settingsTab').click();
-      // Trigger and sample in the same browser task. Cross-process automation
-      // latency must not consume the recording window before the click arrives.
-      // Real pointer tests cover activation; this test measures interpolated paint.
+      // Inspect actual engine interpolation on a controlled CSS timeline. A
+      // throttled headless WebKit frame clock is not a hardware FPS measurement.
       const frames = await page.evaluate(async () => {
-        const result: { t: number; x: number; y: number; width: number; height: number }[] = [];
-        const initial = document.querySelector('.contact-card[tabindex="0"]')!.getBoundingClientRect();
-        result.push({ t: 0, x: initial.x, y: initial.y, width: initial.width, height: initial.height });
+        const card = document.querySelector('.contact-card[tabindex="0"]')!;
+        const track = document.querySelector('#track')!;
+        const initial = card.getBoundingClientRect();
+        const result = [{ t: 0, x: initial.x, y: initial.y, width: initial.width, height: initial.height }];
+        void getComputedStyle(track).scale; // Commit the starting style before activation.
+        const fixed = Date.now(); Date.now = () => fixed; // Keep the same card during paint comparisons.
         (document.querySelector('[data-preview-cinema]') as HTMLButtonElement).click();
-        const start = performance.now();
-        while (performance.now() - start < 1500) {
-          await new Promise(requestAnimationFrame);
-          const r = document.querySelector('.contact-card[tabindex="0"]')!.getBoundingClientRect();
-          result.push({ t: performance.now() - start, x: r.x, y: r.y, width: r.width, height: r.height });
+        void getComputedStyle(track).scale;
+        const transition = track.getAnimations().find(animation =>
+          (animation as CSSTransition).transitionProperty === 'scale');
+        if (!transition) throw new Error('Flow idle must provide a scale transition');
+        transition.pause(); transition.currentTime = 0;
+        await transition.ready;
+        const duration = Number(transition.effect!.getTiming().duration);
+        for (const progress of [0, .25, .5, .75, 1]) {
+          transition.currentTime = duration * progress;
+          const r = card.getBoundingClientRect();
+          result.push({ t: duration * progress, x: r.x, y: r.y, width: r.width, height: r.height });
         }
+        transition.finish();
         return result;
       });
+      await page.waitForTimeout(1100); // Let the independent backdrop cross-fade complete.
       const idle = await page.locator('.contact-card[tabindex="0"]').boundingBox();
       expect(idle!.height / normal!.height).toBeCloseTo(.85, 3);
       expect(idle!.width / normal!.width).toBeCloseTo(.85, 3);
       expect(await page.locator('#arena').boundingBox()).toEqual(arena);
       expect(frames.length).toBeGreaterThanOrEqual(3);
-      expect(frames.some(f => f.height < normal!.height - 1 && f.height > idle!.height + 1), 'capture an interpolated size during the transition').toBe(true);
+      expect(frames.some(f => f.height < normal!.height - 1 && f.height > idle!.height + 1), 'engine interpolation must include a fractional scale').toBe(true);
       for (let i = 1; i < frames.length; i++) {
         expect(Math.abs(frames[i].y - frames[i - 1].y)).toBeLessThan(3.1);
         expect(frames[i].height).toBeLessThanOrEqual(frames[i - 1].height + .1);
