@@ -45,3 +45,43 @@ test("existing studio release process is still manually approved and uses same b
   assert.match(yaml, /EXPECTED_STUDIO_COMMIT/);
   assert.match(yaml, /submit_to_testflight: false/);
 });
+
+
+test("Photos-style selection is accessible and works with card dragging", () => {
+  const home = read("ios/App/App/ContactDeck/DeckHome.swift");
+  const spread = read("ios/App/App/ContactDeck/ContactSelectionSpread.swift");
+  const stage = read("ios/App/App/ContactDeck/DeckStage.swift");
+  assert.match(home, /ContactSelectionSpread\(contacts: contacts, selected: \$selected/);
+  assert.match(home, /accessibilityIdentifier\("selectCards"\)/);
+  assert.match(spread, /LazyVGrid\(columns: columns/);
+  assert.match(spread, /selected = dragBase\.union\(ids\)/);
+  assert.match(spread, /selected = dragBase\.subtracting\(ids\)/);
+  assert.match(spread, /accessibilityIdentifier\("selectionCard"\)/);
+  assert.match(stage, /liftGesture\(in: geometry\.size\)\.exclusively\(before: browseGesture/);
+  assert.match(stage, /onDropAction\(action, \[contactID\]\)/);
+  assert.match(stage, /Color\.accentColor\.opacity\(0\.45\)/);
+});
+
+test("all removal paths require a confirmation and never delete native Contacts", () => {
+  const home = read("ios/App/App/ContactDeck/DeckHome.swift");
+  assert.match(home, /private func reviewRemoval\(_ ids: Set<UUID>\)/);
+  assert.match(home, /case \.remove: reviewRemoval\(ids\)/);
+  assert.match(home, /case \.remove: reviewRemoval\(\[contact\.id\]\)/);
+  assert.match(home, /confirmationDialog\("Remove/);
+  assert.match(home, /This preview removes cards only from Contact Deck, not iPhone Contacts/);
+  assert.match(home, /contact\.removedAt = Date\(\)/);
+  assert.doesNotMatch(home, /CNContactStore\(\)\.execute/);
+});
+
+test("system, light and dark appearance only; focus commits once per swipe", () => {
+  const home = read("ios/App/App/ContactDeck/DeckHome.swift");
+  const stage = read("ios/App/App/ContactDeck/DeckStage.swift");
+  assert.match(home, /contactdeck\.appearance/);
+  for (const value of ["system", "light", "dark"]) {
+    assert.ok(home.includes('tag("' + value + '")'));
+  }
+  assert.match(home, /preferredColorScheme\(appearance == "light"/);
+  assert.doesNotMatch(stage, /onChange\(of: current\)/);
+  assert.match(stage, /Exactly one commit and one snap per gesture/);
+  assert.match(stage, /if mode == \.flow && !reduceMotion && abs\(distance\) < 1\.6/);
+});
