@@ -12,6 +12,7 @@ struct DeckStage: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @GestureState private var drag: CGSize = .zero
+    @GestureState private var holding = false
     @State private var position = 0.0
     @State private var flippedID: UUID?
     @State private var grouping = false
@@ -69,6 +70,12 @@ struct DeckStage: View {
         .onChange(of: mode) { _, _ in position = Double(focus); flippedID = nil }
         .onChange(of: focusedID) { _, _ in if drag == .zero && !grouping { withAnimation(spring) { position = Double(focus) } } }
         .onChange(of: selected) { _, value in if !value.isEmpty { flippedID = nil } }
+        .onChange(of: holding) { _, active in
+            if !active && grouping {
+                withAnimation(spring) { grouping = false; groupTranslation = .zero }
+                groupPoint = nil
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(mode.title) contact deck")
         .accessibilityAdjustableAction { direction in step(direction == .increment ? 1 : -1) }
@@ -142,6 +149,9 @@ struct DeckStage: View {
     private var groupGesture: some Gesture {
         LongPressGesture(minimumDuration: 0.46, maximumDistance: 10)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("deckStage")))
+            .updating($holding) { value, state, _ in
+                if case .second(true, _) = value { state = true }
+            }
             .onChanged { value in
                 switch value {
                 case .second(true, let drag):
