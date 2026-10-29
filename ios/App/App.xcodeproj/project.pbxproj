@@ -32,6 +32,7 @@
 		D3C0B0000000000000000005 /* PurchaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000005 /* PurchaseStore.swift */; };
 		D3C0B0000000000000000006 /* DeckHome.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000006 /* DeckHome.swift */; };
 		D3C0B0000000000000000007 /* SpreadContactDeckPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000007 /* SpreadContactDeckPlugin.swift */; };
+		D3C0B0000000000000000008 /* ContactSelectionSpread.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0A0000000000000000008 /* ContactSelectionSpread.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +63,7 @@
 		D3C0A0000000000000000005 /* PurchaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseStore.swift; sourceTree = "<group>"; };
 		D3C0A0000000000000000006 /* DeckHome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckHome.swift; sourceTree = "<group>"; };
 		D3C0A0000000000000000007 /* SpreadContactDeckPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadContactDeckPlugin.swift; sourceTree = "<group>"; };
+		D3C0A0000000000000000008 /* ContactSelectionSpread.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactSelectionSpread.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,6 +140,7 @@
 				D3C0A0000000000000000005 /* PurchaseStore.swift */,
 				D3C0A0000000000000000006 /* DeckHome.swift */,
 				D3C0A0000000000000000007 /* SpreadContactDeckPlugin.swift */,
+				D3C0A0000000000000000008 /* ContactSelectionSpread.swift */,
 			);
 			path = ContactDeck;
 			sourceTree = "<group>";
@@ -242,6 +245,7 @@
 				D3C0B0000000000000000005 /* PurchaseStore.swift in Sources */,
 				D3C0B0000000000000000006 /* DeckHome.swift in Sources */,
 				D3C0B0000000000000000007 /* SpreadContactDeckPlugin.swift in Sources */,
+				D3C0B0000000000000000008 /* ContactSelectionSpread.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
