@@ -18,6 +18,7 @@ struct DeckHome: View {
     @State private var query = ""
     @State private var search = false
     @State private var selected: Set<UUID> = []
+    @State private var selecting = false
     @State private var collection = "all"
     @State private var sheet: HomeSheet?
     @State private var noteContact: DeckContact?
@@ -56,7 +57,8 @@ struct DeckHome: View {
                         ForEach(decks) { deck in Button(deck.name) { choose(deck.id) } }
                     } label: { HStack(spacing: 5) { Text(collectionTitle).font(.subheadline.weight(.semibold)); Image(systemName: "chevron.down").font(.caption) } }
                     Spacer()
-                    Text("\((contacts.firstIndex(where: { $0.id == focusedID }) ?? -1) + 1) / \(contacts.count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    Text(selecting ? "\(selected.count) selected" : "\((contacts.firstIndex(where: { $0.id == focusedID }) ?? -1) + 1) / \(contacts.count)")
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }.padding(.horizontal, 24).padding(.top, 10)
                 if contacts.isEmpty {
                     ContentUnavailableView {
@@ -66,19 +68,30 @@ struct DeckHome: View {
                         Button("Add contacts") { sheet = .importContacts }
                         if all.isEmpty { Button("Try sample deck") { seedSamples() } }
                     }
+                } else if selecting {
+                    ContactSelectionSpread(contacts: contacts, selected: $selected,
+                                           initialsOnly: purchase.unlocked && initialsOnly)
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
                 } else {
-                    DeckStage(contacts: contacts, mode: mode, focusedID: $focusedID, selected: $selected, initialsOnly: purchase.unlocked && initialsOnly, onAction: action, onGroup: beginGrouping)
+                    DeckStage(contacts: contacts, mode: mode, focusedID: $focusedID,
+                              selected: $selected, isSelecting: $selecting,
+                              initialsOnly: purchase.unlocked && initialsOnly,
+                              onAction: action, onDropAction: droppedCard)
+                        .transition(.opacity)
                 }
-                if !selected.isEmpty { selectionBar }
+                if selecting { selectionBar }
                 else if let due = all.first(where: { $0.reconnectDue(now: Date()) }), collection == "all" {
                     Button { choose("reconnect"); focusedID = due.id } label: {
                         Label("A little hello to \(due.name.split(separator: " ").first.map(String.init) ?? due.name)?", systemImage: "hand.wave")
                             .font(.subheadline).lineLimit(1).padding(.vertical, 10)
                     }.buttonStyle(.plain).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
-                Picker("Deck view", selection: $mode) {
-                    ForEach(BrowseMode.allCases) { mode in Label(mode.title, systemImage: mode.symbol).tag(mode) }
-                }.pickerStyle(.segmented).padding(.horizontal, 28).padding(.bottom, 12).accessibilityIdentifier("modePicker")
+                if !selecting {
+                    Picker("Deck view", selection: $mode) {
+                        ForEach(BrowseMode.allCases) { mode in Label(mode.title, systemImage: mode.symbol).tag(mode) }
+                    }.pickerStyle(.segmented).padding(.horizontal, 28).padding(.bottom, 12)
+                        .accessibilityIdentifier("modePicker")
+                }
             }
             .background(Color(.systemBackground))
             .navigationTitle("Contact Deck").navigationBarTitleDisplayMode(.large)
@@ -90,15 +103,28 @@ struct DeckHome: View {
                     }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button("Search", systemImage: "magnifyingglass") { search = true }.accessibilityIdentifier("search")
-                    Menu {
+                    Button(selecting ? "Done" : "Select", systemImage: selecting ? "checkmark" : "checkmark.circle") {
+                        if selecting {
+                            selected.removeAll()
+                            selecting = false
+                        } else {
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.23)) { selecting = true }
+                        }
+                    }.accessibilityIdentifier("selectCards")
+                    if !selecting {
+                        Button("Search", systemImage: "magnifyingglass") { search = true }.accessibilityIdentifier("search")
+                        Menu {
                         Button("Add contacts", systemImage: "person.crop.circle.badge.plus") { sheet = .importContacts }
                         Button("Shuffle", systemImage: "shuffle") { previousOrder = orderedIDs; withAnimation(reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.42, dampingFraction: 0.84)) { orderedIDs = all.map(\.id).shuffled() }; toast = "Deck shuffled" }
                         Button("Sort by name", systemImage: "textformat.abc") { orderedIDs = [] }
-                        Button("Select focused card", systemImage: "checkmark.circle") { if let focusedID { selected.insert(focusedID) } }
+                        Button("Select focused card", systemImage: "checkmark.circle") {
+                            if let focusedID { selected.insert(focusedID) }
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.23)) { selecting = true }
+                        }
                         Button("Recently removed", systemImage: "trash") { sheet = .removed }
                         Button("Settings", systemImage: "gearshape") { sheet = .settings }
-                    } label: { Label("Deck options", systemImage: "ellipsis.circle") }
+                        } label: { Label("Deck options", systemImage: "ellipsis.circle") }
+                    }
                 }
             }
             .sheet(isPresented: $search, onDismiss: { query = "" }) { searchSheet }
@@ -113,11 +139,14 @@ struct DeckHome: View {
             }
             .sheet(item: $noteContact) { contact in NoteEditor(contact: contact, onSave: { save(); noteContact = nil }) }
             .sheet(isPresented: Binding(get: { shareURL != nil }, set: { if !$0 { if let shareURL { try? FileManager.default.removeItem(at: shareURL) }; shareURL = nil } })) { if let shareURL { NativeShare(items: [shareURL]) } }
-            .confirmationDialog("Remove \(pendingRemove.count) card(s) from Contact Deck?", isPresented: $reviewingRemoval, titleVisibility: .visible) {
-                Button("Remove \(pendingRemove.count) card(s)", role: .destructive) { removeReviewed() }
-                Button("Keep contacts", role: .cancel) { pendingRemove = [] }
+            .confirmationDialog("Remove \(pendingRemove.count) card(s)?", isPresented: $reviewingRemoval, titleVisibility: .visible) {
+                Button("Remove from Contact Deck", role: .destructive) { removeReviewed() }
+                Button("Keep cards", role: .cancel) { pendingRemove = [] }
             } message: {
-                Text(records.filter { pendingRemove.contains($0.id) }.map(\.name).joined(separator: ", ") + "\nYour iPhone contacts stay unchanged. Restore these cards any time in Recently removed.")
+                Text("You are removing: " + records.filter { pendingRemove.contains($0.id) }.prefix(5).map(\.name).joined(separator: ", ")
+                     + (pendingRemove.count > 5 ? " and \(pendingRemove.count - 5) more." : ".")
+                     + "\n\nThis preview removes cards only from Contact Deck, not iPhone Contacts. You can restore them from Recently removed."
+                     + "\n\nPermanent deletion from a synced address book can remove contacts across devices. Recovery depends on the account provider and available backups; an iCloud backup is not a guaranteed restore method.")
             }
             .alert("Couldn't save that change", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
             .safeAreaInset(edge: .bottom) {
@@ -129,17 +158,29 @@ struct DeckHome: View {
                 OnboardingView(onSamples: { seedSamples(); onboarded = true }, onImport: { pendingOnboardingImport = true; onboarded = true })
             }
             .task { if testing && all.isEmpty { seedSamples() }; if onBack != nil { onboarded = true }; if focusedID == nil { focusedID = contacts.first?.id } }
-            .onChange(of: contacts.map(\.id)) { _, ids in if !ids.contains(focusedID ?? UUID()) { focusedID = ids.first }; selected.formIntersection(Set(ids)) }
+            .onChange(of: contacts.map(\.id)) { _, ids in
+                if !ids.contains(focusedID ?? UUID()) { focusedID = ids.first }
+                selected.formIntersection(Set(ids))
+            }
+            .preferredColorScheme(nil) // iOS Settings controls Light, Dark, and Automatic.
         }
     }
     private var selectionBar: some View {
-        HStack {
-            Text("\(selected.count) selected").font(.subheadline)
-            Spacer()
-            Button("Group") { beginGrouping(selected) }
-            Button("Remove", role: .destructive) { pendingRemove = selected; reviewingRemoval = true }
-            Button("Done") { selected = [] }
-        }.padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20)).padding(.horizontal, 18)
+        HStack(spacing: 16) {
+            Text("\(selected.count) selected").font(.subheadline.monospacedDigit())
+            Spacer(minLength: 8)
+            Button("Group", systemImage: "rectangle.stack.badge.plus") { beginGrouping(selected) }
+                .disabled(selected.isEmpty)
+            Button("Remove", systemImage: "trash", role: .destructive) { reviewRemoval(selected) }
+                .disabled(selected.isEmpty)
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .padding(10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22))
+        .padding(.horizontal, 18)
+        .accessibilityElement(children: .contain)
     }
     private var searchSheet: some View {
         NavigationStack {
@@ -196,11 +237,26 @@ struct DeckHome: View {
                 .navigationTitle("Recently removed").toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { sheet = nil } } }
         }
     }
-    private func choose(_ value: String) { collection = value; query = ""; selected = []; focusedID = contacts.first?.id }
+    private func choose(_ value: String) {
+        collection = value; query = ""; selected = []; selecting = false
+        focusedID = contacts.first?.id
+    }
+    private func reviewRemoval(_ ids: Set<UUID>) {
+        guard !ids.isEmpty else { return }
+        pendingRemove = ids
+        reviewingRemoval = true
+    }
+    private func droppedCard(_ action: DeckDropAction, _ ids: Set<UUID>) {
+        guard !ids.isEmpty else { return }
+        switch action {
+        case .group: beginGrouping(ids)
+        case .remove: reviewRemoval(ids)
+        }
+    }
     private func beginGrouping(_ ids: Set<UUID>) { groupIDs = ids; groupName = ""; sheet = .group }
     private func addToDeck(_ deck: ContactDeck) {
         for contact in records where groupIDs.contains(contact.id) && !contact.deckIDs.contains(deck.id) { contact.deckIDs.append(deck.id) }
-        save(); selected = []; collection = deck.id; sheet = nil
+        save(); selected = []; selecting = false; collection = deck.id; sheet = nil
     }
     private func seedSamples() {
         guard !records.contains(where: \.isSample) else { return }
@@ -232,9 +288,9 @@ struct DeckHome: View {
         switch action {
         case .favorite: contact.favorite.toggle(); save()
         case .note: noteContact = contact
-        case .select: selected.insert(contact.id)
+        case .select: selected.insert(contact.id); selecting = true
         case .group: beginGrouping([contact.id])
-        case .remove: pendingRemove = [contact.id]; reviewingRemoval = true
+        case .remove: reviewRemoval([contact.id])
         case .reachedOut: contact.lastReachedOut = Date(); save()
         case .snooze: contact.snoozedUntil = Date().addingTimeInterval(7 * 86_400); save()
         case .share: share(contact)
@@ -249,7 +305,7 @@ struct DeckHome: View {
     private func removeReviewed() {
         undoIDs = pendingRemove; previousOrder = nil
         for contact in records where pendingRemove.contains(contact.id) { contact.removedAt = Date() }
-        save(); selected = []; pendingRemove = []; toast = "Cards removed"
+        save(); selected = []; selecting = false; pendingRemove = []; toast = "Cards removed"
     }
     private func undo() {
         if let previousOrder { orderedIDs = previousOrder; self.previousOrder = nil }
