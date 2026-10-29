@@ -160,8 +160,9 @@ Studio Board only. The views keep their structure; this pass changes how they lo
 
 ## Hand-drawn icons (2026-10-28)
 
-Settings > View > Icons: Default (round badges) or Hand-drawn. Studio Board only, per device (`src/lib/spread/studio/icon-pref.ts`), not synced or part of a saved look.
+Settings > View > Icons: Default (round badges) or Hand-drawn. Studio Board only, per device (`src/lib/spread/studio/icon-pref.ts`), not synced or part of a saved look. Full spec, method and scorecard: `ICON_SPEC.md`.
 
-- Hand-drawn pairs each spread's mark on a glossy rounded tile with a crayon drawing of its category: Work, School, Home, Health, Family, Fitness, Business, Project, Church, Personal, and a Custom star for spreads with no category.
-- The drawings are original vector scenes in `doodles.tsx`, inspired by the owner's illustration boards, not traced or cropped from them. The crayon look is an SVG filter (turbulence displacement for wobbly edges, a grain mask for texture), so they are sharp at any size and add no image assets.
-- They appear on the role cards (in place of the sparkline), the Fan's front card, and the Day blocks. Outlines use `currentColor`, which is the card's proven ink. All drawings are `aria-hidden`; names and hours stay text.
+- **Glyph tile** (`src/lib/spread/studio/tile.ts`, pure and tested): the app's own category mark on a glossy rounded square whose radius, gradient, tinted shadow and glyph size were measured on the owner's icon board and fitted across five tiles at once.
+- **Illustration**: the owner's crayon art for each category (ten plus Custom), cropped from the board at one shared 262 x 182 box, shown on a paper panel. The Fitness art had a Nike-style swoosh, which was inpainted out. A first pass drew the art as vector code; it could not reach the required similarity, so it was replaced.
+- Shown on role cards (in place of the sparkline), the Fan's front card and Day blocks. All art is decorative (`alt=""`, `aria-hidden`).
+- Verified per category against its board cell: illustrations 0.985 SSIM average (0.971 at in-app size), tiles 96.4% of the reference noise ceiling on average. Family (90.8%) and Business (94.2%) sit just below, and the spec explains why.

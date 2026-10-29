@@ -48,7 +48,7 @@ import { STUDIO_FLAG } from "@/lib/spread/studio/contract";
 import { StudioCustomizeEntry } from "@/spread/components/studio/studio-sheet";
 import { StudioStackProbe, useStudioPortal, useStudioStack } from "@/spread/components/studio/render";
 import { DayLayout, DialLayout, FanLayout, IconPicker, LayoutPicker, TabsLayout } from "@/spread/components/studio/layouts";
-import { Doodle, DrawnTile } from "@/spread/components/studio/doodles";
+import { DrawnTile, Illustration } from "@/spread/components/studio/doodles";
 import { useIconStyle } from "@/lib/spread/studio/icon-pref";
 import { SPREAD_LAYOUTS } from "@/lib/spread/studio/layouts";
 import { setSpreadLayout, useSpreadLayout } from "@/lib/spread/studio/layout-pref";
@@ -1364,7 +1364,7 @@ function RoleBlock({
     <section id={`spread-role-${hat.id}`} tabIndex={-1} className="scroll-mt-48 print:break-inside-avoid">
       {!first && <div className="ms-16 border-t border-line" />}
       <div className="studio-role-card relative overflow-hidden">
-        {stack && (drawnIcons ? <Doodle hat={hat} className="studio-doodle studio-role-doodle" /> : <RoleSpark hatId={hat.id} />)}
+        {stack && (drawnIcons ? <Illustration hat={hat} className="studio-role-doodle" /> : <RoleSpark hatId={hat.id} />)}
         <div className="flex min-h-16 items-center gap-3 px-4 py-2">
         <button
           type="button"

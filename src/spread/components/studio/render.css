@@ -1337,21 +1337,28 @@
 [data-studio-appearance][data-studio-board="on"] .studio-cc-panel-head h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; }
 [data-studio-appearance][data-studio-board="on"] .studio-cc-back { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; color: var(--ink); background: color-mix(in srgb, var(--ink) 10%, transparent); }
 
-/* Hand-drawn icons (Settings > View > Icons). A glossy tile glyph plus a crayon drawing per spread.
-   Drawings are aria-hidden SVG whose outlines use currentColor, set here to the card's proven ink. */
-[data-studio-appearance][data-studio-board="on"] .studio-doodle { display: block; pointer-events: none; overflow: visible; }
-[data-studio-appearance][data-studio-board="on"] .studio-drawn-tile { display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,.28)); }
-[data-studio-appearance][data-studio-board="on"] .studio-role-doodle { position: absolute; right: 6.6rem; top: 0.35rem; width: 4.8rem; height: 3.2rem; color: var(--role-ink); }
+/* Hand-drawn icon pairs (Settings > View > Icons), built to docs/spread-studio/ICON_SPEC.md.
+   Glyph tile: glossy rounded square whose geometry, gradient and tinted shadow live in tile.ts.
+   Illustration: the owner's crayon art on its paper panel, radius 5.5% of the width. */
+[data-studio-appearance][data-studio-board="on"] .studio-drawn-tile-wrap { display: inline-grid; flex: none; line-height: 0; }
+[data-studio-appearance][data-studio-board="on"] .studio-drawn-tile-wrap svg { display: block; overflow: visible; }
+[data-studio-appearance][data-studio-board="on"] .studio-illus {
+  display: block; flex: none; aspect-ratio: 262 / 182; border-radius: 5.5% / 7.9%; overflow: hidden; pointer-events: none;
+  background-color: #faf4e6;
+  box-shadow: 0 1px 2px rgba(0,0,0,.16), 0 6px 14px rgba(0,0,0,.2), inset 0 0 0 0.5px rgba(0,0,0,.08);
+}
+[data-studio-appearance][data-studio-board="on"] .studio-illus img { display: block; width: 100%; height: 100%; object-fit: cover; -webkit-user-drag: none; }
+[data-studio-appearance][data-studio-board="on"] .studio-role-doodle { position: absolute; right: 7.05rem; top: 0.6rem; width: 4.4rem; }
 [data-studio-appearance][data-studio-board="on"] .studio-role-card:has(.studio-role-doodle) input[aria-label$=" name"] { max-width: calc(100% - 7.5rem); }
 [data-studio-appearance][data-studio-board="on"] .studio-fan-doodle {
-  position: absolute; right: 0.9rem; top: 0.8rem; width: 9rem; height: 6rem; color: var(--role-ink);
+  position: absolute; right: 0.85rem; top: 0.85rem; width: 8.6rem;
   opacity: clamp(0, calc(1 - var(--ea) * 1.6), 1);
 }
-[data-studio-appearance][data-studio-board="on"] .studio-day-doodle { width: 3.9rem; height: 2.6rem; margin-left: auto; color: var(--role-ink); }
-[data-studio-appearance][data-studio-board="on"] .studio-day-doodle + .studio-day-block-hours { margin-left: 0.4rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-day-doodle { width: 3.9rem; margin-left: auto; }
+[data-studio-appearance][data-studio-board="on"] .studio-day-doodle + .studio-day-block-hours { margin-left: 0.6rem; }
 [data-studio-appearance][data-studio-board="on"] .studio-picker-head { margin: 1.25rem 0.25rem 0.5rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--secondary); }
-[data-studio-appearance][data-studio-board="on"] .studio-icon-preview { display: flex; align-items: center; gap: 0.15rem; min-width: 5.4rem; }
-[data-studio-appearance][data-studio-board="on"] .studio-icon-doodle { width: 3.5rem; height: 2.35rem; color: currentColor; }
+[data-studio-appearance][data-studio-board="on"] .studio-icon-preview { display: flex; align-items: center; gap: 0.4rem; min-width: 6rem; }
+[data-studio-appearance][data-studio-board="on"] .studio-icon-doodle { width: 3.4rem; }
 
 @media (prefers-reduced-motion: reduce) {
   [data-studio-appearance][data-studio-board="on"] :is(.studio-view, .studio-fan-card, .studio-tabpanel, .studio-tab, .studio-day-head, .studio-day-row, .studio-dial-name, .studio-glance-chip::before) { animation: none; }

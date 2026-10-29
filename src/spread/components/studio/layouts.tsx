@@ -5,7 +5,7 @@ import type { Allocation, Hat } from "@/lib/spread/model";
 import { SPREAD_LAYOUTS, dialSegments, segmentAt, type SpreadLayout } from "@/lib/spread/studio/layouts";
 import { selectionTick } from "@/lib/spread/studio/tick";
 import { ICON_STYLES, setIconStyle, useIconStyle, type IconStyle } from "@/lib/spread/studio/icon-pref";
-import { Doodle, DrawnTile } from "@/spread/components/studio/doodles";
+import { DrawnTile, Illustration } from "@/spread/components/studio/doodles";
 
 import { cn } from "@/lib/cn";
 
@@ -137,7 +137,7 @@ export function FanLayout({ rows, selectedId, onSelect, children }: { rows: Layo
               onClick={() => onSelect(row.hat.id)}
             >
               <span className="studio-fan-badge" aria-hidden="true"><RoleBadge hat={row.hat} size={40} /></span>
-              {drawn && <Doodle hat={row.hat} className="studio-doodle studio-fan-doodle" />}
+              {drawn && <Illustration hat={row.hat} className="studio-fan-doodle" />}
               <span className="studio-fan-mini" aria-hidden="true">{hoursText(row.hours)}</span>
               <span className="studio-fan-label" aria-hidden="true">
                 <span className="studio-fan-name">{row.hat.name}</span>
@@ -435,7 +435,7 @@ export function DayLayout({
                   >
                     <span aria-hidden="true"><RoleBadge hat={hat} size={32} /></span>
                     <span className="studio-day-block-name">{hat.name}</span>
-                    {drawn && <Doodle hat={hat} className="studio-doodle studio-day-doodle" />}
+                    {drawn && <Illustration hat={hat} className="studio-day-doodle" />}
                     <span className="studio-day-block-hours">{hoursText(block.hours)}</span>
                   </button>
                 </li>
@@ -510,7 +510,7 @@ export function IconPicker() {
           onClick={() => setIconStyle(item.id)}
         >
           <span className="studio-icon-preview" aria-hidden="true">
-            {item.id === "drawn" ? (<><DrawnTile hat={sample} size={30} /><Doodle hat={sample} className="studio-doodle studio-icon-doodle" /></>) : <CategoryBadge category="work" color="#34C759" size={30} />}
+            {item.id === "drawn" ? (<><DrawnTile hat={sample} size={30} /><Illustration hat={sample} className="studio-icon-doodle" /></>) : <CategoryBadge category="work" color="#34C759" size={30} />}
           </span>
           <span className="studio-layout-text">
             <span className="studio-layout-name">{item.label}</span>
