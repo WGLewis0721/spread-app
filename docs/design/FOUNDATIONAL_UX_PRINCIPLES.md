@@ -1,5 +1,7 @@
 # Spread | Foundational UX and Web Design Principles
 
+> Summary: core seven design fundamentals, ten UX-law checks and product-specific acceptance criteria. Read the law table and nonnegotiables for UI reviews.
+
 > Part of the Spread design brain. Start at [README.md](README.md) to select the correct design pack.
 
 **Status:** cross-surface design-review standard. Applies to the weekly planner, landing page, Studio experiments, and Contact Deck when those features are in scope. This document **does not authorize** a redesign, feature launch, theme, data migration, or merge of a feature branch.
