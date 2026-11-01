@@ -28,6 +28,7 @@ Rarely needed: [DECISIONS.md](DECISIONS.md) (open decisions and the decision log
 
 | If you are doing... | Read | Then, only if needed |
 | --- | --- | --- |
+| A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Continue with the task-specific pack below; this baseline never replaces product design authority |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
@@ -49,6 +50,7 @@ All paths are under `docs/design/`.
 
 | Path | Governs | Status and authority |
 | --- | --- | --- |
+| FOUNDATIONAL_UX_PRINCIPLES.md | Shared design fundamentals and measurable UX laws across planner, landing and opted-in experiments | Cross-product baseline; defers to the surface design system and shipped behavior |
 | RULES_CARD.md | The hard rules, in brief | Source of the generated card in agent files. Summarizes the rows below; they win if they differ |
 | DECISIONS.md | Open decisions and the decision log | Current |
 | PLAN_SPEC_PROTOCOL.md, specs/TEMPLATE.md | How every plan and spec is made and shaped | New 2026-10-28. Process authority; never overrides a design rule |
