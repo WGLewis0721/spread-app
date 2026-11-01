@@ -1,8 +1,8 @@
 # Spread design brain
 
-The one place to start for how Spread looks, feels or adapts to a device. This map tells you what to read for your task, and what not to.
+Start here for Spread's design rules and task-specific references.
 
-**Audience:** developers and GenAI agents. Do not look for design guidance anywhere else, and do not create design documents outside this folder.
+**Audience:** developers and coding agents. Keep design guidance in this folder.
 
 **Product model:** Responsibilities, then Hours, then Week, then Tasks. Spread is a local-first weekly planner (Capacitor around a React app). The planner and the public landing page have separate design rules.
 
@@ -10,17 +10,17 @@ The one place to start for how Spread looks, feels or adapts to a device. This m
 
 ## 1. Load only what you need
 
-Stop at the first tier that answers your question.
+Stop at the first sufficient tier.
 
 | Tier | What | Size budget | When |
 | --- | --- | --- | --- |
 | 0 | The rules card, already copied into `AGENTS.project.md`, `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` ([source](RULES_CARD.md)) | 3 KB | Always loaded. Small tweaks stop here |
 | 1 | This map | 9 KB | To pick a pack |
-| 2 | A task pack in [packs/](packs/): a digest of the rules, facts and checklist for one kind of task, with pointers to exact sections | 6.5 KB each | Almost every task |
-| 3 | The long reference documents, read **by section** using the pointers in the pack | n/a | Only when the pack says the detail matters |
+| 2 | Task pack in [packs/](packs/), with focused checklists and section pointers | 6.5 KB each | Almost every task |
+| 3 | Long reference docs, read only the relevant sections | n/a | Only when the pack says the detail matters |
 | Data | [tokens.json](tokens.json): every planner token for light and dark, generated from `src/styles.css` | 4 KB | Instead of reading CSS or prose for token values |
 
-Rarely needed: [DECISIONS.md](DECISIONS.md) (open decisions and the decision log), and the historical Unified UX record.
+Rarely needed: [DECISIONS.md](DECISIONS.md) and historical Unified UX.
 
 ---
 
@@ -28,6 +28,7 @@ Rarely needed: [DECISIONS.md](DECISIONS.md) (open decisions and the decision log
 
 | If you are doing... | Read | Then, only if needed |
 | --- | --- | --- |
+| A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
@@ -49,6 +50,7 @@ All paths are under `docs/design/`.
 
 | Path | Governs | Status and authority |
 | --- | --- | --- |
+| FOUNDATIONAL_UX_PRINCIPLES.md | Cross-product UX laws and checks | Baseline; surface authority wins |
 | RULES_CARD.md | The hard rules, in brief | Source of the generated card in agent files. Summarizes the rows below; they win if they differ |
 | DECISIONS.md | Open decisions and the decision log | Current |
 | PLAN_SPEC_PROTOCOL.md, specs/TEMPLATE.md | How every plan and spec is made and shaped | New 2026-10-28. Process authority; never overrides a design rule |
@@ -81,9 +83,9 @@ All paths are under `docs/design/`.
 
 ## 5. Studio (wallpaper-driven personalization)
 
-Not on `main`. It is on the branch `spread-studio` (no PR into `main` yet) behind `VITE_SPREAD_STUDIO`, default off, docs in `docs/spread-studio/` there. Rebuild spec: [specs/2026-10-28-studio-rebuild.md](specs/2026-10-28-studio-rebuild.md). On merge, move that folder to `docs/design/studio/` in the same pull request and add it to the router and the table above.
+Studio is on branch `spread-studio`, gated by `VITE_SPREAD_STUDIO` (off by default); its docs are in `docs/spread-studio/` there. See [the rebuild spec](specs/2026-10-28-studio-rebuild.md). If merged, move its docs to `docs/design/studio/` and update this map.
 
-Its one rule exception is narrow: with the flag on, a validated per-profile appearance may override scoped colors, system font stacks, material paint and control geometry inside `[data-studio-appearance]`. Flag-off output stays identical to the golden baseline. It does not authorize merging or releasing. Studio follows [platforms/APPLE_DESIGN_PRINCIPLES.md](platforms/APPLE_DESIGN_PRINCIPLES.md): the image decides a tint, a dim, a material thickness and a mode; layout never changes with the image.
+Only with the flag on may validated per-profile appearance override scoped colors, fonts, material and geometry in `[data-studio-appearance]`. Flag-off matches golden; this is not release approval. Per [Apple principles](platforms/APPLE_DESIGN_PRINCIPLES.md), wallpaper changes tint, dim, material and mode, never layout.
 
 ---
 
