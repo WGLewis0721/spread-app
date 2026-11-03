@@ -141,10 +141,15 @@ public struct SpreadLiveRoot: View {
                         Label(failure == "newer" ? "Update Spread to edit this plan" : "Changes are not saved on this device", systemImage: "exclamationmark.triangle")
                             .font(.headline).foregroundStyle(Chalk.yellow)
                         HStack {
-                            if failure != "newer" { Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }.frame(minHeight: 44) }
-                            Button("Back up") { recovery() }.frame(minHeight: 44)
+                            if failure != "newer" {
+                                Button { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } } label: { Text("Retry saving").tapTarget() }
+                                    .accessibilityIdentifier("retry-saving")
+                            }
+                            Button { recovery() } label: { Text("Back up").tapTarget() }
+                                .accessibilityIdentifier("back-up")
                         }
                     }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Chalk.surface)
+                    .accessibilityElement(children: .contain).accessibilityIdentifier("save-failure-banner")
                 }
                 if let snapshot = planner.snapshot {
                     HStack(spacing: 4) {
@@ -157,7 +162,7 @@ public struct SpreadLiveRoot: View {
                         ContentUnavailableView {
                             Label("Make room for what matters", systemImage: "square.stack")
                         } description: { Text("Name a responsibility, give it hours, then place those hours in your week.") }
-                        actions: { Button("Create responsibility") { editor = .newRole }.buttonStyle(.borderedProminent).frame(minHeight: 44) }
+                        actions: { Button { editor = .newRole } label: { Text("Create responsibility").tapTarget() }.buttonStyle(.borderedProminent) }
                     } else if destination == 1 {
                         SpreadLayoutsView(snapshot: snapshot, mode: $mode, selectedId: $selectedRole,
                             onManage: { editor = .role($0) }, onTask: { editor = .task($0) },
@@ -166,13 +171,15 @@ public struct SpreadLiveRoot: View {
                         week(snapshot)
                     }
                     if let undo = planner.undoId {
-                        Button("Undo last change") { Task { await planner.send(["type": "undo", "editId": undo]) } }
-                            .frame(minHeight: 44).frame(maxWidth: .infinity).background(Chalk.surface)
+                        Button { Task { await planner.send(["type": "undo", "editId": undo]) } } label: {
+                            Text("Undo last change").tapTarget().frame(maxWidth: .infinity)
+                        }
+                        .background(Chalk.surface).accessibilityIdentifier("undo-last-change")
                     }
                 } else {
                     ProgressView("Opening your plan…").frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Button("Try again") { Task { await planner.refresh() } }.frame(minHeight: 44)
-                    Button("Open existing planner") { recovery() }.frame(minHeight: 44)
+                    Button { Task { await planner.refresh() } } label: { Text("Try again").tapTarget() }
+                    Button { recovery() } label: { Text("Open existing planner").tapTarget() }
                 }
             }
             .accessibilityElement(children: .contain)
@@ -207,21 +214,40 @@ public struct SpreadLiveRoot: View {
         .accessibilityIdentifier(value == 0 ? "native-week" : "native-spread")
         .accessibilityAddTraits(destination == value ? .isSelected : [])
     }
+    // The title and profile name may never truncate. When the title, "Today" and More do not fit on
+    // one line at the current text size (large Dynamic Type, a long profile name), the actions
+    // move to their own row instead of squeezing the title.
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Spread").font(.system(.largeTitle, design: .serif).weight(.semibold))
+                .fixedSize(horizontal: true, vertical: true)
+            if let profile = planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId }) {
+                Text(profile.name).font(.caption).foregroundStyle(Chalk.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("active-profile-name")
+            }
+        }
+    }
+    private var headerActions: some View {
+        HStack(spacing: 0) {
+            Button { Task { await planner.send(["type": "changeWeek", "direction": "today"]) } } label: { Text("Today").fixedSize().tapTarget() }
+                .accessibilityIdentifier("today")
+            Menu {
+                Button("New responsibility") { editor = .newRole }
+                Button("Profiles") { editor = .profiles }
+                Button("Backup and restore") { recovery() }
+            } label: { Image(systemName: "ellipsis.circle").frame(width: 44, height: 44) }
+            .accessibilityLabel("More")
+        }
+    }
     private var header: some View {
         VStack(spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Spread").font(.system(.largeTitle, design: .serif).weight(.semibold))
-                    if let profile = planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId }) { Text(profile.name).font(.caption).foregroundStyle(Chalk.secondary).lineLimit(1) }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 8) { titleBlock; Spacer(minLength: 8); headerActions }
+                VStack(alignment: .leading, spacing: 4) {
+                    titleBlock
+                    HStack { Spacer(minLength: 0); headerActions }
                 }
-                Spacer()
-                Button { Task { await planner.send(["type": "changeWeek", "direction": "today"]) } } label: { Text("Today").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
-                Menu {
-                    Button("New responsibility") { editor = .newRole }
-                    Button("Profiles") { editor = .profiles }
-                    Button("Backup and restore") { recovery() }
-                } label: { Image(systemName: "ellipsis.circle").frame(width: 44, height: 44) }
-                .accessibilityLabel("More")
             }
             if let key = planner.snapshot?.weekKey {
                 WeekCrownView(title: "Your week", detail: PlannerDates.weekRange(base: key, offset: 0),
@@ -237,7 +263,10 @@ public struct SpreadLiveRoot: View {
                 HStack {
                     Text("Your week").font(.title2.bold())
                     Spacer()
-                    Button { showMonth.toggle() } label: { Text(showMonth ? "Week" : "Month").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }.buttonStyle(.plain)
+                    // The toggle's value is the mode on screen; its label is the mode it switches to.
+                    Button { showMonth.toggle() } label: { Text(showMonth ? "Week" : "Month").tapTarget() }.buttonStyle(.plain)
+                        .accessibilityIdentifier("week-month-toggle")
+                        .accessibilityValue(showMonth ? "Month" : "Week")
                 }
                 if showMonth { month(snapshot) }
                 else {
@@ -245,7 +274,7 @@ public struct SpreadLiveRoot: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Start with what matters").font(.headline)
                             Text("Choose a responsibility, set its hours, then place those hours on a day.").foregroundStyle(Chalk.secondary)
-                            Button("Plan responsibilities") { destination = 1 }.buttonStyle(.borderedProminent).frame(minHeight: 44)
+                            Button { destination = 1 } label: { Text("Plan responsibilities").tapTarget() }.buttonStyle(.borderedProminent)
                         }.padding(16)
                     }
                     if !snapshot.unplacedTasks.isEmpty {
@@ -254,10 +283,14 @@ public struct SpreadLiveRoot: View {
                             ForEach(snapshot.roles) { role in
                                 let tasks = snapshot.unplacedTasks.filter { $0.roleId == role.id }
                                 if !tasks.isEmpty {
-                                    DisclosureGroup("\(role.name) · \(tasks.count) tasks") {
+                                    DisclosureGroup {
                                         ForEach(allTrayTasks.contains(role.id) ? tasks : Array(tasks.prefix(6))) { task in taskRow(task) }
-                                        if tasks.count > 6 && !allTrayTasks.contains(role.id) { Button("Show \(tasks.count - 6) more") { allTrayTasks.insert(role.id) }.frame(minHeight: 44) }
-                                    }.frame(minHeight: 44)
+                                        if tasks.count > 6 && !allTrayTasks.contains(role.id) {
+                                            Button { allTrayTasks.insert(role.id) } label: { Text("Show \(tasks.count - 6) more").tapTarget() }
+                                        }
+                                    } label: {
+                                        Text("\(role.name) · \(tasks.count) tasks").frame(minHeight: 44, alignment: .leading)
+                                    }
                                 }
                             }
                         }.padding(16).overlay(RoundedRectangle(cornerRadius: 22).stroke(style: StrokeStyle(lineWidth: 1, dash: [6, 5])))
@@ -267,21 +300,29 @@ public struct SpreadLiveRoot: View {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("\(PlannerDates.weekday(weekKey: snapshot.weekKey, index: index)) \(PlannerDates.dayNumber(weekKey: snapshot.weekKey, index: index))").font(.headline)
-                                if selectedDate == iso { Text("Selected").font(.caption).foregroundStyle(Chalk.yellow) }
+                                if selectedDate == iso {
+                                    Text("Selected").font(.caption).foregroundStyle(Chalk.yellow)
+                                        .accessibilityIdentifier("selected-day-\(iso)")
+                                }
                             }
                             let allocations = snapshot.allocations.filter { $0.day == iso }.sorted { $0.order < $1.order }
                             if allocations.isEmpty { Text("Nothing planned").foregroundStyle(Chalk.secondary) }
                             ForEach(allocations) { allocation in
                                 if let role = snapshot.roles.first(where: { $0.id == allocation.roleId }) {
                                     Button { editor = .role(role) } label: {
-                                        HStack { Text(role.name); Spacer(); Text("\(allocation.hours.formatted())h") }.frame(minHeight: 44)
+                                        HStack { Text(role.name); Spacer(); Text("\(allocation.hours.formatted())h") }.frame(minHeight: 44).contentShape(Rectangle())
                                     }
+                                    .accessibilityElement(children: .ignore)
+                                    .accessibilityLabel(role.name).accessibilityValue("\(allocation.hours.formatted())h")
+                                    .accessibilityIdentifier("allocation-\(allocation.id)")
                                     ForEach(snapshot.tasks.filter { $0.allocationId == allocation.id }) { task in taskRow(task) }
                                 }
                             }
                         }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Chalk.surface, in: RoundedRectangle(cornerRadius: 22)).id(iso)
+                        .accessibilityElement(children: .contain).accessibilityIdentifier("day-card-\(iso)")
                     }
-                    Button("Review unfinished work") { editor = .review }.frame(minHeight: 44)
+                    Button { editor = .review } label: { Text("Review unfinished work").tapTarget() }
+                        .accessibilityIdentifier("review-unfinished")
                 }
             }.padding(20).frame(maxWidth: 760)
                 .frame(maxWidth: .infinity)
@@ -296,8 +337,11 @@ public struct SpreadLiveRoot: View {
             Button { Task { await planner.send(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id], completionHaptic: !task.done) } } label: {
                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle").frame(width: 44, height: 44)
             }.accessibilityLabel(task.done ? "Reopen \(task.text)" : "Complete \(task.text)")
-            Button { editor = .task(task) } label: { Text(task.text).strikethrough(task.done).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).multilineTextAlignment(.leading) }
+                .accessibilityIdentifier("task-check-\(task.id)")
+            Button { editor = .task(task) } label: { Text(task.text).strikethrough(task.done).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).multilineTextAlignment(.leading).contentShape(Rectangle()) }
+                .accessibilityIdentifier("task-row-\(task.id)")
             Button { editor = .move(task) } label: { Text(task.allocationId == nil ? "Place" : "Move").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
+                .accessibilityIdentifier("task-move-\(task.id)")
         }
     }
     private func month(_ snapshot: PlannerSnapshot) -> some View {
@@ -356,6 +400,7 @@ struct LiveEditor: View {
     var body: some View {
         NavigationStack {
             Form { content }
+                .scrollDismissesKeyboard(.immediately)
                 .navigationTitle(title)
                 .alert("Couldn’t complete the change", isPresented: Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })) { Button("OK") { planner.error = nil } } message: { Text(planner.error ?? "") }
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
@@ -368,7 +413,7 @@ struct LiveEditor: View {
                     }
                 }
                 .confirmationDialog("Delete this responsibility and its tasks from all weeks?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                    if case .role(let role) = sheet { Button("Delete responsibility", role: .destructive) { submit(["type": "removeRole", "roleId": role.id]) } }
+                    if case .role(let role) = sheet { Button("Delete responsibility", role: .destructive) { submit(["type": "removeRole", "roleId": role.id]) }.accessibilityIdentifier("confirm-delete-role") }
                 }
         }.tint(Chalk.yellow).preferredColorScheme(.dark)
     }
@@ -379,44 +424,48 @@ struct LiveEditor: View {
     @ViewBuilder private var content: some View {
         switch sheet {
         case .newRole:
-            TextField("Name", text: $name)
+            TextField("Name", text: $name).accessibilityIdentifier("role-name-field")
             Picker("Illustration", selection: $category) { ForEach(ChalkArtwork.categories, id: \.self) { Text($0.capitalized).tag($0) } }
             hourControl
             Button("Create responsibility") { submit(["type": "addRole", "name": name, "hours": hours, "category": category]) }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || planner.busy)
         case .role(let role):
             ChalkIllustration(category: role.category).frame(height: 100).frame(maxWidth: .infinity)
             Section("Responsibility") {
-                TextField("Name", text: $name)
+                TextField("Name", text: $name).accessibilityIdentifier("role-name-field")
                 Button("Save name") { submit(["type": "renameRole", "roleId": role.id, "name": name], close: false) }.disabled(name.isEmpty)
                 hourControl
                 Button("Save hours") { submit(["type": "setHours", "roleId": role.id, "hours": hours], close: false) }
             }
             Section("Place hours") {
                 Text("\(planner.snapshot?.remainingHours(for: role.id).formatted() ?? "0")h left in this week’s bank")
+                    .accessibilityIdentifier("bank-remaining")
                 dayPicker
                 Stepper("Place \(allocationHours.formatted())h", value: $allocationHours, in: 0.5...168, step: 0.5)
+                    .accessibilityIdentifier("place-hours-stepper")
                 Button("Place \(allocationHours.formatted())h") { submit(["type": "allocate", "roleId": role.id, "day": day, "hours": allocationHours], close: false) }
                     .disabled((planner.snapshot?.remainingHours(for: role.id) ?? 0) < allocationHours)
+                    .accessibilityIdentifier("place-hours-button")
             }
             Section("Placed hours") {
                 ForEach(planner.snapshot?.allocations.filter { $0.roleId == role.id } ?? []) { item in
                     Stepper("\(item.day) · \(item.hours.formatted())h", value: Binding(get: { item.hours }, set: { submit(["type": "allocationHours", "allocationId": item.id, "hours": $0], close: false) }), in: 0...168, step: 0.5)
+                        .accessibilityIdentifier("placed-\(item.id)")
                     Button("Remove hours from \(item.day)", role: .destructive) { submit(["type": "removeAllocation", "allocationId": item.id], close: false) }
                 }
             }
             Section("Tasks") {
-                TextField("New task", text: $taskText)
+                TextField("New task", text: $taskText).accessibilityIdentifier("new-task-field")
                 Button("Add task") { let text = taskText; Task { if await planner.send(["type": "addTask", "roleId": role.id, "text": text]) { taskText = "" } } }.disabled(taskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || planner.busy)
                 ForEach(planner.snapshot?.tasks(for: role.id) ?? []) { task in
                     NavigationLink(task.text) { LiveEditor(planner: planner, sheet: .task(task)) }
                 }
             }
-            Button("Delete responsibility", role: .destructive) { confirmDelete = true }
+            Button("Delete responsibility", role: .destructive) { confirmDelete = true }.accessibilityIdentifier("delete-role-button")
         case .newTask(let role):
             TextField("Task", text: $name)
             Button("Add task") { submit(["type": "addTask", "roleId": role, "text": name]) }.disabled(name.isEmpty)
         case .task(let task):
-            TextField("Task", text: $name, axis: .vertical)
+            TextField("Task", text: $name, axis: .vertical).accessibilityIdentifier("task-text-field")
             Button("Save task") { submit(["type": "editTask", "roleId": task.roleId, "taskId": task.id, "text": name]) }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             NavigationLink("Notes and attachments") { NativeTaskContentEditor(planner: planner, task: task) }
             NavigationLink("Place or move") { LiveEditor(planner: planner, sheet: .move(task)) }
@@ -435,29 +484,32 @@ struct LiveEditor: View {
             if open.isEmpty { Text("No unfinished work this week.") }
             ForEach(open) { task in
                 Toggle(task.text, isOn: Binding(get: { selected.contains(task.id) }, set: { if $0 { selected.insert(task.id) } else { selected.remove(task.id) } }))
+                    .accessibilityIdentifier("carry-\(task.id)")
             }
             Button("Move selected to next week") {
                 let picks = open.filter { selected.contains($0.id) }.map { ["roleId": $0.roleId, "taskId": $0.id] }
                 submit(["type": "carryOver", "picks": picks])
-            }.disabled(selected.isEmpty)
+            }.disabled(selected.isEmpty).accessibilityIdentifier("carry-selected")
         case .profiles:
             ForEach(planner.profiles) { profile in
                 Button { submit(["type": "switchProfile", "profileId": profile.id]) } label: {
-                    HStack { Text(profile.name); Spacer(); if profile.id == planner.state?.envelope.profileId { Image(systemName: "checkmark") } }
-                }.frame(minHeight: 44)
+                    HStack { Text(profile.name); Spacer(); if profile.id == planner.state?.envelope.profileId { Image(systemName: "checkmark") } }.tapTarget()
+                }
+                .accessibilityIdentifier("profile-\(profile.id)")
+                .accessibilityAddTraits(profile.id == planner.state?.envelope.profileId ? .isSelected : [])
             }
-            TextField("New profile name", text: $name)
+            TextField("New profile name", text: $name).accessibilityIdentifier("new-profile-field")
             Button("Create profile") { submit(["type": "addProfile", "name": name]) }.disabled(name.isEmpty || planner.profiles.count >= 10)
         }
     }
-    private var hourControl: some View { Stepper("\(hours.formatted()) hours", value: $hours, in: 0...168, step: 0.5) }
+    private var hourControl: some View { Stepper("\(hours.formatted()) hours", value: $hours, in: 0...168, step: 0.5).accessibilityIdentifier("hours-stepper") }
     private var dayPicker: some View {
         Picker("Day", selection: $day) {
             ForEach(0..<7, id: \.self) { i in
                 let iso = PlannerDates.dayISO(weekKey: planner.snapshot?.weekKey ?? "", index: i)
                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE")).tag(iso)
             }
-        }
+        }.accessibilityIdentifier("day-picker")
     }
     private func submit(_ action: [String: Any], close: Bool = true) {
         Task { if await planner.send(action), close { dismiss() } }

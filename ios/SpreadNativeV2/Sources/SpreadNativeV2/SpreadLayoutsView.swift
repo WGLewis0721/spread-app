@@ -11,6 +11,7 @@ struct SpreadLayoutsView: View {
     @State private var selectedDay: String = ""
     @State private var showModePicker = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .body) private var fanMinHeight: CGFloat = 290
 
     private var selectedRole: Responsibility? {
         snapshot.roles.first { $0.id == selectedId } ?? snapshot.roles.first
@@ -28,14 +29,16 @@ struct SpreadLayoutsView: View {
                     Spacer()
                     Button { showModePicker = true } label: {
                         Label(mode.title, systemImage: "square.stack")
-                            .font(.subheadline.weight(.medium))
+                            .font(.subheadline.weight(.medium)).tapTarget()
                     }
                     .buttonStyle(.bordered)
                     .accessibilityLabel("View, \(mode.title)")
+                    .accessibilityIdentifier("view-mode-button")
                 }
 
                 if let role = selectedRole {
-                    Button("Manage \(role.name)") { onManage(role) }.frame(minHeight: 44)
+                    Button { onManage(role) } label: { Text("Manage \(role.name)").tapTarget() }
+                        .accessibilityIdentifier("manage-selected")
                 }
                 switch mode {
                 case .stack: stack
@@ -88,6 +91,8 @@ struct SpreadLayoutsView: View {
                     .zIndex(selectedRole?.id == role.id ? 1 : 0)
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("stack-cards")
         .simultaneousGesture(DragGesture(minimumDistance: 12).onEnded { value in
             guard abs(value.translation.width) > 42, abs(value.translation.width) > abs(value.translation.height), !snapshot.roles.isEmpty else { return }
             let index = snapshot.roles.firstIndex(where: { $0.id == selectedRole?.id }) ?? 0
@@ -96,34 +101,37 @@ struct SpreadLayoutsView: View {
         })
     }
 
+    // The front card sets the fan's height (never a fixed, clipped frame), so a responsibility with
+    // many or long tasks cannot hide its content. The minimum scales with Dynamic Type.
     private var fan: some View {
-        VStack(spacing: 12) {
-            GeometryReader { geo in
-                let roles = snapshot.roles
-                let selectedIndex = roles.firstIndex(where: { $0.id == selectedRole?.id }) ?? 0
-                ZStack {
-                    ForEach(Array(roles.enumerated()), id: \.element.id) { index, role in
-                        let distance = index - selectedIndex
-                        card(role, expanded: distance == 0)
-                            .frame(width: min(geo.size.width * 0.78, 300))
-                            .rotationEffect(.degrees(Double(distance) * 7), anchor: .bottom)
-                            .offset(x: CGFloat(distance) * 40, y: CGFloat(abs(distance)) * 12)
-                            .zIndex(Double(roles.count - abs(distance)))
-                    }
+        let roles = snapshot.roles
+        let selectedIndex = roles.firstIndex(where: { $0.id == selectedRole?.id }) ?? 0
+        return VStack(spacing: 12) {
+            ZStack {
+                ForEach(Array(roles.enumerated()), id: \.element.id) { index, role in
+                    let distance = index - selectedIndex
+                    card(role, expanded: distance == 0, compact: true)
+                        .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.70, 300) }
+                        .rotationEffect(.degrees(Double(distance) * 7), anchor: .bottom)
+                        .offset(x: CGFloat(distance) * 40, y: CGFloat(abs(distance)) * 12)
+                        .zIndex(Double(roles.count - abs(distance)))
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .gesture(DragGesture(minimumDistance: 8).onEnded { value in
-                    guard abs(value.translation.width) > 42, abs(value.translation.width) > abs(value.translation.height), !roles.isEmpty else { return }
-                    let delta = value.translation.width < 0 ? 1 : -1
-                    let next = min(max(0, selectedIndex + delta), roles.count - 1)
-                    changeSelection(roles[next].id)
-                })
             }
-            .frame(height: 290).clipped()
+            .frame(maxWidth: .infinity, minHeight: fanMinHeight, alignment: .center)
+            .padding(.bottom, 24)
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("fan-cards")
+            .gesture(DragGesture(minimumDistance: 8).onEnded { value in
+                guard abs(value.translation.width) > 42, abs(value.translation.width) > abs(value.translation.height), !roles.isEmpty else { return }
+                let delta = value.translation.width < 0 ? 1 : -1
+                let next = min(max(0, selectedIndex + delta), roles.count - 1)
+                changeSelection(roles[next].id)
+            })
             if let role = selectedRole {
                 Text("Swipe the fan or select a card · \(role.name)")
                     .font(.caption).foregroundStyle(Chalk.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -175,10 +183,11 @@ struct SpreadLayoutsView: View {
             ScrollView(.horizontal) {
                 HStack {
                     ForEach(snapshot.roles) { role in
-                        Button(role.name) { changeSelection(role.id) }
+                        Button { changeSelection(role.id) } label: { Text(role.name).tapTarget() }
+                            .accessibilityIdentifier("role-tab-\(role.id)")
                             .buttonStyle(.bordered)
                             .tint(selectedRole?.id == role.id ? Chalk.yellow : Chalk.secondary)
-                            .frame(minHeight: 44)
+                            .accessibilityAddTraits(selectedRole?.id == role.id ? .isSelected : [])
                     }
                 }
             }
@@ -243,13 +252,15 @@ struct SpreadLayoutsView: View {
     }
 
     @ViewBuilder
-    private func card(_ role: Responsibility, expanded: Bool) -> some View {
+    private func card(_ role: Responsibility, expanded: Bool, compact: Bool = false) -> some View {
         ChalkRoleCard(
             role: role,
             remainingHours: snapshot.remainingHours(for: role.id),
             tasks: snapshot.tasks(for: role.id),
             expanded: expanded,
-            onSelect: { if selectedId == role.id { onManage(role) } else { changeSelection(role.id) } }, onTask: onTask, onToggle: onToggle
+            taskLimit: compact ? 3 : nil,
+            onSelect: { if selectedId == role.id { onManage(role) } else { changeSelection(role.id) } }, onTask: onTask, onToggle: onToggle,
+            onMore: { onManage(role) }
         )
     }
 

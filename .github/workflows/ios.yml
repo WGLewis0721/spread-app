@@ -30,7 +30,7 @@ concurrency:
 jobs:
   build-ios-shell:
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -349,8 +349,9 @@ jobs:
         timeout-minutes: 20
         run: |
           TEST_UDID=$(xcrun simctl list devices booted -j | python3 -c 'import json,sys; print(next(d["udid"] for ds in json.load(sys.stdin)["devices"].values() for d in ds if d["state"] == "Booted"))')
-          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -parallel-testing-enabled NO -test-timeouts-enabled YES -maximum-test-execution-time-allowance 600 -destination "platform=iOS Simulator,id=$TEST_UDID" -derivedDataPath artifacts/DerivedData -resultBundlePath artifacts/NativeJourneys.xcresult CODE_SIGNING_ALLOWED=NO
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -only-testing:SpreadNativeUITests/JourneyUITests -parallel-testing-enabled NO -test-timeouts-enabled YES -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$TEST_UDID" -derivedDataPath artifacts/DerivedData -resultBundlePath artifacts/NativeJourneys.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Archive unsigned native Release candidate
+        id: archive
         if: ${{ !cancelled() && steps.nativebuild.outcome == 'success' }}
         timeout-minutes: 12
         run: >
@@ -359,6 +360,21 @@ jobs:
           -derivedDataPath artifacts/ReleaseDerivedData
           -archivePath artifacts/SpreadNative.xcarchive
           CODE_SIGNING_ALLOWED=NO archive
+      - name: Preserve the unsigned Release archive for this commit
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent artifacts/SpreadNative.xcarchive artifacts/SpreadNative-unsigned-${GITHUB_SHA}.xcarchive.zip
+          shasum -a 256 artifacts/SpreadNative-unsigned-${GITHUB_SHA}.xcarchive.zip | tee artifacts/SpreadNative-unsigned-${GITHUB_SHA}.sha256
+          (cd artifacts/SpreadNative.xcarchive && find . -maxdepth 3 -name "*.app" -o -maxdepth 3 -name Info.plist | head -5)
+      - name: Upload unsigned Release archive (not signed, not distributable)
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: spread-native-unsigned-release-${{ github.sha }}
+          path: |
+            artifacts/SpreadNative-unsigned-*.xcarchive.zip
+            artifacts/SpreadNative-unsigned-*.sha256
+          retention-days: 30
       - name: Export actual UI screenshots
         if: always()
         run: |
