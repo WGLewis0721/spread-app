@@ -1,0 +1,131 @@
+{
+  "": {
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/master.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Chalk/ChalkboardViews.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ChalkboardViews.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ChalkboardViews.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ChalkboardViews~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ChalkboardViews.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/CrownTravel.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/CrownTravel.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/CrownTravel.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/CrownTravel~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/CrownTravel.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/DialGeometry.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/DialGeometry.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/DialGeometry.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/DialGeometry~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/DialGeometry.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Gestures/SpreadGestures.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadGestures.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadGestures.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadGestures~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadGestures.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Layouts/SpreadLayouts.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLayouts.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLayouts.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLayouts~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLayouts.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/LivePlanner.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/LivePlanner.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/LivePlanner.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/LivePlanner~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/LivePlanner.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/PlannerOrder.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerOrder.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerOrder.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerOrder~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerOrder.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/PlannerDates.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerDates.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerDates.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerDates~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerDates.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/PlannerSnapshot.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerSnapshot.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerSnapshot.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerSnapshot~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerSnapshot.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ManageSheets.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ManageSheets.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ManageSheets~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ManageSheets.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/TaskSheet.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/TaskSheet.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/TaskSheet.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/TaskSheet~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/TaskSheet.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/WeekExport.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekExport.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekExport.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekExport~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekExport.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLiveRoot.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLiveRoot.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLiveRoot~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLiveRoot.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/WeekCrownView.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekCrownView.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekCrownView.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekCrownView~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekCrownView.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadSurface.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadSurface.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadSurface~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadSurface.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadIcons.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadIcons.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadIcons.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadIcons~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadIcons.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadTheme.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadTheme.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadTheme~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadTheme.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthSurface.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/MonthSurface.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/MonthSurface.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/MonthSurface~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/MonthSurface.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/ToPlaceTray.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ToPlaceTray.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ToPlaceTray.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ToPlaceTray~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/ToPlaceTray.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/WeekSurface.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekSurface.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekSurface.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekSurface~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/WeekSurface.swiftdeps"
+  },
+  "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/DerivedSources/resource_bundle_accessor.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/resource_bundle_accessor.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/resource_bundle_accessor.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/resource_bundle_accessor~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/resource_bundle_accessor.swiftdeps"
+  }
+}

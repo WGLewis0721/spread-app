@@ -31,35 +31,55 @@ public enum FreeTimeMirror {
 
     public static let maxSuggestions = 3
 
+    /// One role with hours still unplaced. Kept as a named struct: a tuple chain here crashed the Swift type checker.
+    private struct OpenRole {
+        let roleId: String
+        let index: Int
+        let left: Double
+    }
+
     /// Roles that still have unplaced hours, paired with the lightest day still ahead.
+    /// Mirrors `suggestFreeTime`: biggest remainder first, ties by role order, at most three, deterministic.
     public static func suggestions(for snapshot: PlannerSnapshot, today: String) -> [Suggestion] {
-        let ahead = PlannerOrder.displayOffsets.map { offset in
-            PlannerDates.dayISO(weekKey: snapshot.weekKey, index: offset)
-        }.filter { $0 >= today }.sorted()
-        guard !ahead.isEmpty else { return [] }
+        var ahead: [String] = []
+        for offset in PlannerOrder.displayOffsets {
+            let iso: String = PlannerDates.dayISO(weekKey: snapshot.weekKey, index: offset)
+            if iso >= today { ahead.append(iso) }
+        }
+        ahead.sort()
+        guard let first = ahead.first else { return [] }
 
         var load: [String: Double] = [:]
         for day in ahead {
-            load[day] = snapshot.allocations.filter { $0.day == day }.reduce(0) { $0 + $1.hours }
+            var total: Double = 0
+            for allocation in snapshot.allocations where allocation.day == day { total += allocation.hours }
+            load[day] = total
         }
-        let open = snapshot.roles.enumerated().map { index, role in
-            (roleId: role.id, index: index, left: snapshot.remainingHours(for: role.id))
+
+        var open: [OpenRole] = []
+        for (index, role) in snapshot.roles.enumerated() {
+            let left: Double = snapshot.remainingHours(for: role.id)
+            if left > 0 { open.append(OpenRole(roleId: role.id, index: index, left: left)) }
         }
-        .filter { $0.left > 0 }
-        .sorted { $0.left == $1.left ? $0.index < $1.index : $0.left > $1.left }
+        open.sort { (a: OpenRole, b: OpenRole) -> Bool in
+            if a.left != b.left { return a.left > b.left }
+            return a.index < b.index
+        }
 
         var items: [Suggestion] = []
         for role in open.prefix(maxSuggestions) {
-            var best = ahead[0]
+            var best: String = first
             for day in ahead where (load[day] ?? 0) < (load[best] ?? 0) { best = day }
-            let hours = min(1, role.left)
-            items.append(Suggestion(roleId: role.roleId, day: best, dayLabel: PlannerDates.label(PlannerDates.date(best), pattern: "EEEE"), hours: hours))
+            let hours: Double = min(1, role.left)
+            let label: String = PlannerDates.label(PlannerDates.date(best), pattern: "EEEE")
+            items.append(Suggestion(roleId: role.roleId, day: best, dayLabel: label, hours: hours))
             load[best, default: 0] += hours
         }
         return items
     }
 }
 
+#if os(iOS)
 /// Per-device view convenience (where the person was). Not planner data, never backed up or synced.
 /// The keys match the React planner's `spread-view.<profile>` and `spread-crown-used`.
 enum SpreadViewMemory {
@@ -106,3 +126,4 @@ public enum SpreadLayoutPreference {
         UserDefaults.standard.set(layout.rawValue, forKey: SpreadViewMemory.layoutKey)
     }
 }
+#endif

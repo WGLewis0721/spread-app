@@ -15,4 +15,5 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 | 2026-10-28 | [Lock Screen and Home Screen widget, Live Activity later](2026-10-28-widget-live-activity.md) | Draft |
 | 2026-11-03 | [Spread 2.0 native SwiftUI vertical slice](2026-11-03-spread-2-native-vertical-slice.md) | In progress, Debug-only prototype |
 | 2026-11-03 | [Spread 2.0 native completion, integrated backlog](2026-11-03-spread-2-native-completion.md) | Ready for implementation; release gated |
+| 2026-11-03 | [Spread 2.0 native acceptance, remaining work after PR #117](2026-11-03-spread-2-native-acceptance-remaining.md) | Native release NO-GO; final-head evidence open |
 | 2026-11-03 | [Working-build SwiftUI parity spec (root)](../../../SPREAD_SWIFTUI_PARITY_SPEC.md) and [implementation instructions](../../../SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) | Owner direction; reference capture required; no merge/release authorization |
