@@ -1,0 +1,29 @@
+# Spread 2.0 — one-pass engineering execution prompt
+
+> Hand to a coding agent with GitHub checkout + Xcode/Simulator + test access. Canonical spec: [docs/design/specs/2026-11-03-spread-2-native-completion.md](design/specs/2026-11-03-spread-2-native-completion.md). Use the real repo, never invent file contents or test outcomes.
+
+You are the **lead iOS/React engineer and release-quality reviewer** for Spread. Own the entire 2.0 engineering backlog as **one cohesive, shippable PR**, without replacing the current design or introducing a second data store. Build and verify, do not stop after a plan or mockup.
+
+**Repository:** WGLewis0721/spread-app. **Baseline:** verified `main`, currently `35b6652` (verify newest). **Starting implementation:** draft PR #109 / `feature/spread-2-native-swiftui-slice`, currently `dcb3483` (verify newest). **Backlog:** issues #110 (data bridge), #111 (iOS persistence smoke), #112 (native visual fidelity); the attached combined spec supersedes their fragmentation but preserves their requirements. Make a new implementation branch from the latest migration branch and target your one final PR back to that branch; do not merge/deploy/ship that final PR without owner approval.
+
+## Non-negotiable product decisions
+- Remove Spread Studio from the new native experience; no backgrounds, wallpaper, custom themes or design editor.
+- Keep one **Chalkboard Design Language**, all 11 *original* hand-drawn illustrations, subtle optional artwork motion, all five responsibility layouts: **Stack, Fan, Dial, Tabs, Day**.
+- Restore the horizontal **ridged metallic Apple Watch-inspired Crown** navigating **weeks**; one calibrated week/detent, tactile haptics, arrows and accessibility actions; never substitute a circle dial.
+- Week/Spread are the primary destinations; Month belongs within Week; View selection belongs to Spread, not to Week. Match real source behavior, including the actual tap→result flows.
+- Preserve the React web product and existing local-first data, profiles, rich task contents, native mirror, backup/restore and optional iCloud. Never add a second planner engine or delete/migrate data casually.
+
+## Execute, not just design
+1. **Audit reality:** read AGENTS, RULES_CARD, the canonical spec and current Swift/TS source; record latest Git SHA and screen screenshots. Use the actual source as reference, not generic concept images.
+2. **Fix the broken iOS smoke first.** Run current PR and `main` under the same iOS simulator. Locate why the installed app did not write `spread-mirror-*.json`. Check WebView startup, restoration, profile creation, file permission, native writer and the harness. Repair root cause; retain the positive snapshot and relaunch gate, plus a negative-control test. Do not merely sleep longer or suppress failure.
+3. **Complete one safe adapter:** use the existing versioned TypeScript `native-v2-projection.ts` / Swift `NativeV2Envelope`. Implement strictly validated, serialized read/command/ack/error between native UI and **existing** `store.ts`; reject profile/week/revision mismatches, unknown commands and invalid allocation targets. No direct SwiftData or alternative writable state. Use current store for time-bank math, tasks, Undo and rollover.
+4. **Finish the real SwiftUI flows end to end:** first run, responsibilities, hours, Week, task add/edit, To place, placement/move, complete/Undo, Month, rollover, profile switching and restore safety. Use native sheets and dynamic type. No placeholder CTA, dummy data outside explicit debug fixtures, or faux success states.
+5. **Finish real Apple-level UI/UX:** maintain existing Chalkboard identity, precisely preserve 11 illustrations, five modes, selected role/week across modes, physical Crown physics, readable iPhone/iPad layout, tap-by-tap screen states. Apply Arooma lessons: first swipe always works, continuous position never diverges from selected data, interruptions/reversals safe, logo/header shift ≤1pt, no readiness shadow latency.
+6. **Prove it:** write ≥50 shared TypeScript ↔ Swift vectors, 100 Crown actions + 30 reversals, 100 rapid Fan/Stack gestures, 44×44pt targets, VoiceOver/Reduce Motion/large text, 390/820/1024pt layouts, p95 feedback ≤100ms target, hardware 60fps target. Use actual measured numbers. Compare 5 core tasks with current 1.0: ≤3 taps for placement/move where feasible and ≥20% faster on 4/5 journeys or document owner-approved alternative.
+7. **Report and hand off:** run every CI/native build including full shell smoke twice; attach before/tap/after real simulator/device screenshots, logs, exact commands/results, regression matrix, release-blocker list, measurable scorecard and rollback. Update docs, one PR and issue links. Do not claim TestFlight/App Store or production is live merely because the package built or Vercel deployed a React preview.
+
+## Work discipline
+Keep each commit focused but deliver **one coherent finished feature**. Do not ask the owner for missing decisions already resolved above. Where environmental credentials, signing or hardware access block a requirement, clearly state *blocked*, never fabricate the result or weaken its test. Do not force CI green, alter cloud/backup semantics, edit golden branches, merge into `main`, promote production or upload to TestFlight without fresh owner release approval after all gates.
+
+## Final answer required from you
+Return: PR URL, exact base/head SHA, files changed, implemented F1–F10 status, pass/fail test matrix, iPhone screenshots, quantified gesture/performance/usability results, residual risks, and one-line GO/NO-GO release verdict. No vague progress report and no incomplete demo passed off as 2.0.
