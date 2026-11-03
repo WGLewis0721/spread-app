@@ -13,6 +13,8 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.graymatter.spread
       vars:
+        # App Store Connect numeric Apple ID (not the bundle identifier).
+        APP_STORE_APPLE_ID: "6821191009"
         VITE_SPREAD_CLOUD_BACKUP: "0"
         VITE_SPREAD_CLOUD_SYNC: "0"
       node: 22
@@ -39,29 +41,19 @@ workflows:
           set -eu
           npm run ios:sync
           python3 scripts/app-store-preflight.py --bundle dist-ios
-      - name: Set unique build number and production push entitlement
+      - name: Select unused Apple build number and production push entitlement
         script: |
           set -eu
-          python3 - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          number = os.environ["BUILD_NUMBER"]
-          if not number.isdecimal() or int(number) < 1:
-              raise SystemExit("Codemagic must supply a positive numeric build number")
-          path = Path("ios/App/App.xcodeproj/project.pbxproj")
-          original = path.read_text()
-          modified, count = re.subn(
-              r"CURRENT_PROJECT_VERSION = [0-9]+;",
-              f"CURRENT_PROJECT_VERSION = {number};",
-              original,
-          )
-          if count != 2:
-              raise SystemExit(f"Expected 2 App build-number settings, found {count}")
-          path.write_text(modified)
-          print(f"Set App build number to {number} in temporary CI checkout")
-          PY
+          # BUILD_NUMBER is only a Codemagic workflow counter; it may be behind Apple.
+          # This query covers both App Store and TestFlight, across all versions.
+          # Fail closed if App Store Connect cannot be queried; never reuse a guessed number.
+          LATEST_APPLE_BUILD="$(app-store-connect get-latest-build-number \
+            --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+          python3 scripts/ios_build_number.py set \
+            --latest-apple "$LATEST_APPLE_BUILD" \
+            --codemagic-build "$BUILD_NUMBER" \
+            --project ios/App/App.xcodeproj/project.pbxproj \
+            --record /tmp/spread-ios-build-version.json
           /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
       - name: Apply App Store distribution signing
         script: xcode-project use-profiles
@@ -74,6 +66,14 @@ workflows:
           for ipa in build/ios/ipa/*.ipa; do
             test -f "$ipa" || { echo "No signed IPA found" >&2; exit 1; }
             python3 scripts/app-store-preflight.py --ipa "$ipa"
+            # Check the signed artifact and re-query Apple immediately before publishing.
+            # A concurrently uploaded higher build must stop this upload, not get a 409.
+            LATEST_APPLE_BEFORE_PUBLISH="$(app-store-connect get-latest-build-number \
+              --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+            python3 scripts/ios_build_number.py verify \
+              --ipa "$ipa" \
+              --record /tmp/spread-ios-build-version.json \
+              --latest-apple "$LATEST_APPLE_BEFORE_PUBLISH"
           done
     artifacts:
       - build/ios/ipa/*.ipa
