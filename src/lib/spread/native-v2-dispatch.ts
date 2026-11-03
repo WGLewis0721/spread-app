@@ -144,8 +144,15 @@ export function createNativeV2Dispatcher(sessionId: string) {
     const prior = requests.get(command.requestId);
     if (prior) {
       if (prior.fingerprint !== fingerprint) return fail("request-id-reused");
-      // Do not expose an old profile projection after switching profiles.
-      return { ...prior.reply, state: read() };
+      // Rich read receipts must never cross a profile/week boundary on replay.
+      const current = read();
+      if (
+        prior.reply.taskDetail &&
+        (current?.envelope.profileId !== command.expectedProfileId ||
+          current.envelope.snapshot.weekKey !== command.expectedWeek)
+      )
+        return fail("stale-context");
+      return { ...prior.reply, state: current };
     }
     if (requests.size >= 2048) return fail("session-capacity");
     const result = run(command, fail);

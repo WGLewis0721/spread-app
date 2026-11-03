@@ -269,3 +269,20 @@ test("native rich content reads and edits preserve notes, outline, table and pho
     router.dispose();
   }
 });
+
+test("replaying a rich read after a profile switch cannot expose the prior profile content", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const command = request({ type: "readTaskContent", roleId, taskId: "task" });
+    const first = await router.dispatch(command);
+    assert.equal(first.taskDetail!.content.blocks[0].type, "notes");
+    useSpread.setState({ activeId: "other-profile", data: defaultData() });
+    const replay = await router.dispatch(command);
+    assert.equal(replay.ok, false);
+    assert.equal(replay.error, "stale-context");
+    assert.equal(replay.taskDetail, undefined);
+    assert.equal(replay.state!.envelope.profileId, "other-profile");
+  } finally {
+    router.dispose();
+  }
+});

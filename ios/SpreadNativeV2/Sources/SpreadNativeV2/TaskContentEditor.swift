@@ -24,6 +24,7 @@ struct NativeTaskContentEditor: View {
     @State private var content = NativeTaskContent()
     @State private var loaded = false
     @State private var loadedRevision: Int?
+    @State private var loadedSessionId: String?
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var error: String?
     var body: some View {
@@ -101,10 +102,10 @@ struct NativeTaskContentEditor: View {
         }
     }
     private func load() async {
-        if await planner.send(["type": "readTaskContent", "roleId": task.roleId, "taskId": task.id]), let existing = planner.details[task.id] { content = existing; loadedRevision = planner.state?.revision; loaded = true }
+        if await planner.send(["type": "readTaskContent", "roleId": task.roleId, "taskId": task.id]), let existing = planner.details[task.id] { content = existing; loadedRevision = planner.state?.revision; loadedSessionId = planner.state?.sessionId; loaded = true }
     }
     private func save() async {
-        guard loadedRevision == planner.state?.revision else {
+        guard loadedRevision == planner.state?.revision, loadedSessionId == planner.state?.sessionId else {
             error = "This plan changed while you were editing. Copy any unsaved text, then reopen the task before saving."; return
         }
         do {

@@ -28,6 +28,7 @@ struct LiveReply: Decodable {
     @Published var profiles: [NativeProfile] = []
     @Published var details: [String: NativeTaskContent] = [:]
     @Published var error: String?
+    @Published var saveFailure: String?
     @Published var busy = false
     @Published var undoId: String?
     private let exchange: (String) async throws -> String
@@ -35,7 +36,14 @@ struct LiveReply: Decodable {
     public init(exchange: @escaping (String) async throws -> String) { self.exchange = exchange }
     var snapshot: PlannerSnapshot? { state?.envelope.snapshot }
     public func refresh() async {
-        do { _ = try await receive("null") } catch { self.error = error.localizedDescription }
+        let previous = tail
+        let task = Task { @MainActor in
+            _ = await previous?.value
+            do { _ = try await self.receive("null"); return true }
+            catch { self.error = error.localizedDescription; return false }
+        }
+        tail = task
+        _ = await task.value
     }
     private func receive(_ json: String, expectedRequestId: String? = nil) async throws -> LiveReply {
         let text = try await exchange(json)
@@ -44,11 +52,13 @@ struct LiveReply: Decodable {
         guard let value = reply.state, value.envelope.isSupported else {
             throw NSError(domain: "Spread", code: 1, userInfo: [NSLocalizedDescriptionKey: "Planner is still starting. Try again."])
         }
-        if state?.envelope.profileId != value.envelope.profileId || state?.envelope.snapshot.weekKey != value.envelope.snapshot.weekKey { details = [:] }
+        if state?.sessionId != value.sessionId || state?.envelope.profileId != value.envelope.profileId || state?.envelope.snapshot.weekKey != value.envelope.snapshot.weekKey { details = [:]; undoId = nil }
         state = value
         profiles = reply.profiles ?? []
         if let detail = reply.taskDetail { details[detail.taskId] = detail.content }
-        if reply.saveError != nil { error = "Couldn’t save on this device. Open Backup and restore before closing Spread." }
+        saveFailure = reply.saveError
+        if reply.saveError == "newer" { error = "This plan was saved by a newer Spread version. Update Spread before editing." }
+        else if reply.saveError != nil { error = "Couldn’t save on this device. Retry saving or open Backup and restore before closing Spread." }
         else if !reply.ok {
             switch reply.error {
             case "stale-profile", "stale-week", "stale-revision", "stale-session": error = "Your plan changed. Review the current plan and try again."
@@ -113,6 +123,16 @@ public struct SpreadLiveRoot: View {
         NavigationStack {
             VStack(spacing: 0) {
                 header
+                if let failure = planner.saveFailure {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(failure == "newer" ? "Update Spread to edit this plan" : "Changes are not saved on this device", systemImage: "exclamationmark.triangle")
+                            .font(.headline).foregroundStyle(Chalk.yellow)
+                        HStack {
+                            if failure != "newer" { Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }.frame(minHeight: 44) }
+                            Button("Back up") { recovery() }.frame(minHeight: 44)
+                        }
+                    }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Chalk.surface)
+                }
                 if let snapshot = planner.snapshot {
                     HStack(spacing: 4) {
                         destinationButton("Week", value: 0)
@@ -363,7 +383,7 @@ struct LiveEditor: View {
             }
             Section("Tasks") {
                 TextField("New task", text: $taskText)
-                Button("Add task") { let text = taskText; Task { if await planner.send(["type": "addTask", "roleId": role.id, "text": text]) { taskText = "" } } }.disabled(taskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("Add task") { let text = taskText; Task { if await planner.send(["type": "addTask", "roleId": role.id, "text": text]) { taskText = "" } } }.disabled(taskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || planner.busy)
                 ForEach(planner.snapshot?.tasks(for: role.id) ?? []) { task in
                     NavigationLink(task.text) { LiveEditor(planner: planner, sheet: .task(task)) }
                 }
