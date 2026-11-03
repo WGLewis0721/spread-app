@@ -21,7 +21,7 @@ const contentSchema = z.strictObject({
               z.strictObject({
                 id,
                 text: z.string().max(100000),
-                level: z.number().int().min(0).max(4),
+                level: z.number().min(0).max(4),
               }),
             )
             .max(10000),

@@ -51,6 +51,7 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
             guard let text = value as? String else { throw NSError(domain: "Spread", code: 3) }
             return text
         }
+        webView.endEditing(true)
         webView.accessibilityElementsHidden = true
         webView.isUserInteractionEnabled = false
         planner = model

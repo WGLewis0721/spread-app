@@ -314,3 +314,25 @@ test("rich-content commands reject values that the existing normalizer would dis
     router.dispose();
   }
 });
+
+test("legacy fractional outline levels accepted by the canonical model survive native edits", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const content = {
+      blocks: [
+        { id: "o", type: "outline", items: [{ id: "i", text: "Legacy indent", level: 2.5 }] },
+      ],
+    };
+    assert.equal(
+      (await router.dispatch(request({ type: "setTaskContent", roleId, taskId: "task", content })))
+        .ok,
+      true,
+    );
+    const read = await router.dispatch(
+      request({ type: "readTaskContent", roleId, taskId: "task" }),
+    );
+    assert.deepEqual(read.taskDetail!.content, content);
+  } finally {
+    router.dispose();
+  }
+});

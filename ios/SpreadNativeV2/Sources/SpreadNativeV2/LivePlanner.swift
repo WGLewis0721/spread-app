@@ -55,7 +55,7 @@ struct LiveReply: Decodable {
         if state?.sessionId != value.sessionId || state?.envelope.profileId != value.envelope.profileId || state?.envelope.snapshot.weekKey != value.envelope.snapshot.weekKey { details = [:]; undoId = nil }
         state = value
         profiles = reply.profiles ?? []
-        if let detail = reply.taskDetail { details[detail.taskId] = detail.content }
+        if let detail = reply.taskDetail { details = [detail.taskId: detail.content] }
         saveFailure = reply.saveError
         if reply.saveError == "newer" { error = "This plan was saved by a newer Spread version. Update Spread before editing." }
         else if reply.saveError != nil { error = "Couldn’t save on this device. Retry saving or open Backup and restore before closing Spread." }
