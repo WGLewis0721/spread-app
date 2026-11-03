@@ -13,54 +13,71 @@ struct WeekSurface: View {
     let onOpenRole: (String) -> Void
     let onOpenTask: (String, String) -> Void
     let onReview: () -> Void
+    /// -1 previous week, 1 next week. The root owns week changes so the Crown, keys, caps and this swipe share one path.
+    let onSwipeWeek: (Int) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var swipeShift: CGFloat = 0
-    @State private var swiping = false
+    /// Finger offset while a swipe is live. A `GestureState` returns to zero on end *and* on cancel, so an
+    /// interrupted swipe (a system drag lift, a scroll takeover) can never leave the week offset or dimmed.
+    @GestureState(resetTransaction: Transaction(animation: SpreadMotion.press)) private var swipeShift: CGFloat = 0
     @State private var width: CGFloat = 0
 
     private var today: String { PlannerDates.localISO() }
+    private var showsTray: Bool {
+        snapshot.tasks.contains(where: { $0.allocationId == nil }) || snapshot.tasks.contains(where: { !$0.done })
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Drag a spread onto a day, or tap one, then add it.")
-                .font(Spread.footnote)
-                .foregroundStyle(Spread.secondary)
-                .padding(.horizontal, 4)
-                .padding(.top, 8)
-
-            bubbleStrip
-
-            freeTime
-
-            if snapshot.tasks.contains(where: { $0.allocationId == nil }) || snapshot.tasks.contains(where: { !$0.done }) {
-                ToPlaceTray(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask)
+            // The caption and the role bubbles sit outside the swipe region: the bubble strip scrolls sideways,
+            // and a sideways scrub there must scroll the strip, never change the week.
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Drag a spread onto a day, or tap one, then add it.")
+                    .font(Spread.footnote)
+                    .foregroundStyle(Spread.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.top, 8)
+                bubbleStrip
             }
+            .padding(.horizontal, 16)
+            .modifier(WeekFollow(shift: swipeShift, enabled: !reduceMotion))
 
-            VStack(spacing: 12) {
-                ForEach(0..<7, id: \.self) { position in
-                    let iso = PlannerOrder.day(weekKey: snapshot.weekKey, displayPosition: position)
-                    DayCard(
-                        planner: planner,
-                        snapshot: snapshot,
-                        day: iso,
-                        selectedRole: selectedRole,
-                        isToday: iso == today,
-                        onOpenTask: onOpenTask,
-                        onOpenRole: onOpenRole
-                    )
-                    .id(iso)
-                    .accessibilityIdentifier("day-card-\(iso)")
+            // The swipe region. The gesture is measured on this fixed wrapper while the content inside follows the
+            // finger, so the drag never feeds back into itself: 64 points of travel is 64 points, on the first touch.
+            VStack(alignment: .leading, spacing: 16) {
+                freeTime
+                if showsTray {
+                    ToPlaceTray(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask)
+                }
+                VStack(spacing: 12) {
+                    ForEach(0..<7, id: \.self) { position in
+                        let iso = PlannerOrder.day(weekKey: snapshot.weekKey, displayPosition: position)
+                        DayCard(
+                            planner: planner,
+                            snapshot: snapshot,
+                            day: iso,
+                            selectedRole: selectedRole,
+                            isToday: iso == today,
+                            onOpenTask: onOpenTask,
+                            onOpenRole: onOpenRole
+                        )
+                        .id(iso)
+                        .accessibilityIdentifier("day-card-\(iso)")
+                    }
                 }
             }
+            .modifier(WeekFollow(shift: swipeShift, enabled: !reduceMotion))
+            .padding(.horizontal, 16)
+            .contentShape(Rectangle())
+            .background(GeometryReader { proxy in
+                Color.clear
+                    .onAppear { width = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, value in width = value }
+            })
+            .simultaneousGesture(swipeGesture)
         }
-        .padding(.horizontal, 16)
-        .background(GeometryReader { proxy in Color.clear.onAppear { width = proxy.size.width }.onChange(of: proxy.size.width) { _, value in width = value } })
         .id(snapshot.weekKey)
         .transition(weekTransition)
-        .offset(x: swiping && !reduceMotion ? swipeShift * 0.62 : 0)
-        .opacity(swiping && !reduceMotion ? 1 - min(0.55, abs(Double(swipeShift)) / 110) : 1)
-        .simultaneousGesture(swipeGesture)
         .accessibilityIdentifier("week-surface")
     }
 
@@ -74,15 +91,12 @@ struct WeekSurface: View {
 
     private var swipeGesture: some Gesture {
         DragGesture(minimumDistance: 10)
-            .onChanged { value in
-                swiping = true
-                swipeShift = WeekSwipeRules.shift(start: value.startLocation, current: value.location)
+            .updating($swipeShift) { value, state, _ in
+                state = WeekSwipeRules.shift(start: value.startLocation, current: value.location)
             }
             .onEnded { value in
-                swiping = false
-                swipeShift = 0
                 if let dir = WeekSwipeRules.direction(start: value.startLocation, end: value.location, width: width) {
-                    Task { await planner.send(["type": "changeWeek", "direction": dir]) }
+                    onSwipeWeek(dir)
                 }
             }
     }

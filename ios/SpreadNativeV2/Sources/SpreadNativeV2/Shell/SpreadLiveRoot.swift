@@ -24,6 +24,8 @@ public struct SpreadLiveRoot: View {
     @State private var gearTurn = false
     @State private var dismissedNotice: String?
     @State private var loadedProfile: String?
+    /// Counts week moves the store has acknowledged. The selection haptic listens to it, so it never fires at launch.
+    @State private var weekTick = 0
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -78,10 +80,15 @@ public struct SpreadLiveRoot: View {
         }
         .alert("Spread", isPresented: Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })) {
             Button("OK") { planner.error = nil }
-            Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
-            Button("Backup and restore") { recovery() }
+            if planner.errorOffersRetry {
+                Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
+            }
+            if planner.errorOffersBackup {
+                Button("Backup and restore") { recovery() }
+            }
         } message: { Text(planner.error ?? "") }
-        .sensoryFeedback(.selection, trigger: planner.snapshot?.weekKey)
+        // A light tick for an accepted week change only: not at launch, and not when a profile opens on its own week.
+        .sensoryFeedback(.selection, trigger: weekTick)
         .onKeyPress(.leftArrow) { _ in keyWeek(-1) }
         .onKeyPress(.rightArrow) { _ in keyWeek(1) }
         .simultaneousGesture(TapGesture().onEnded { foldBrand() })
@@ -130,7 +137,8 @@ public struct SpreadLiveRoot: View {
                             direction: weekDirection,
                             onOpenRole: { sheet = .role($0) },
                             onOpenTask: { sheet = .task($0, $1) },
-                            onReview: { sheet = .review }
+                            onReview: { sheet = .review },
+                            onSwipeWeek: { goWeek($0) }
                         )
                         .transition(.opacity)
                     }
@@ -153,6 +161,8 @@ public struct SpreadLiveRoot: View {
             }
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
+            // Without this the week's slide transition never plays: a changed week would just swap in place.
+            .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: snapshot.weekKey)
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
@@ -429,12 +439,12 @@ public struct SpreadLiveRoot: View {
 
     private func goWeek(_ delta: Int) {
         weekDirection = delta
-        Task { await planner.send(["type": "changeWeek", "direction": delta]) }
+        Task { if await planner.send(["type": "changeWeek", "direction": delta]) { weekTick += 1 } }
     }
 
     private func moveToToday() async {
         weekDirection = 0
-        await planner.send(["type": "changeWeek", "direction": "today"])
+        if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 }
     }
 
     private func keyWeek(_ delta: Int) -> KeyPress.Result {

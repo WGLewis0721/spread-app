@@ -30,7 +30,13 @@ struct LiveReply: Decodable {
     @Published var state: LiveState?
     @Published var profiles: [NativeProfile] = []
     @Published var details: [String: NativeTaskContent] = [:]
-    @Published var error: String?
+    @Published var error: String? {
+        didSet { if error == nil { errorOffersRetry = false; errorOffersBackup = false } }
+    }
+    /// Whether the alert for `error` is about saving. Only then does it offer Retry saving / Backup and restore;
+    /// a refusal such as "Place hours for this responsibility on that day first." gets a plain OK.
+    @Published var errorOffersRetry = false
+    @Published var errorOffersBackup = false
     @Published var saveFailure: String?
     @Published var recoveryNotice: String?
     @Published var busy = false
@@ -64,13 +70,20 @@ struct LiveReply: Decodable {
         if let detail = reply.taskDetail { details = [detail.taskId: detail.content] }
         recoveryNotice = reply.recoveryNotice
         saveFailure = reply.saveError
-        if reply.saveError == "newer" { error = "This plan was saved by a newer Spread version. Update Spread before editing." }
-        else if reply.saveError != nil { error = "Couldn’t save on this device. Retry saving or open Backup and restore before closing Spread." }
-        else if !reply.ok {
+        if reply.saveError == "newer" {
+            error = "This plan was saved by a newer Spread version. Update Spread before editing."
+            errorOffersRetry = false; errorOffersBackup = true
+        } else if reply.saveError != nil {
+            error = "Couldn’t save on this device. Retry saving or open Backup and restore before closing Spread."
+            errorOffersRetry = true; errorOffersBackup = true
+        } else if !reply.ok {
+            errorOffersRetry = false; errorOffersBackup = false
             switch reply.error {
             case "stale-profile", "stale-week", "stale-revision", "stale-session": error = "Your plan changed. Review the current plan and try again."
             case "ineligible-day": error = "Place hours for this responsibility on that day first."
-            case "save-failed", "save-unavailable": error = "Couldn’t save on this device. Retry saving or back up before closing Spread."
+            case "save-failed", "save-unavailable":
+                error = "Couldn’t save on this device. Retry saving or back up before closing Spread."
+                errorOffersRetry = true; errorOffersBackup = true
             default: error = "The change could not be completed. Your current plan is shown."
             }
         }

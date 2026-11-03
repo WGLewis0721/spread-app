@@ -18,6 +18,9 @@ struct WeekCrownView: View {
     @State private var travel = CrownTravel()
     @State private var translation: CGFloat = 0
     @State private var live = false
+    /// True while a finger is on the wheel. A `GestureState` resets on cancel as well as on end, so a drag that the
+    /// system interrupts (an alert, an edge gesture) can never leave the reducer holding detents for the next drag.
+    @GestureState private var gestureActive = false
     @State private var hintVisible = !UserDefaults.standard.bool(forKey: SpreadViewMemory.crownUsedKey)
 
     private let height: CGFloat = 61.6   // 3.85rem
@@ -87,6 +90,12 @@ struct WeekCrownView: View {
         .frame(height: height)
         .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .gesture(dragGesture)
+        .onChange(of: gestureActive) { _, active in
+            guard !active else { return }
+            travel.release()
+            live = false
+            withAnimation(reduceMotion ? nil : SpreadMotion.press) { translation = 0 }
+        }
         .shadow(color: Spread.shadow, radius: 8, y: 4)
         .onKeyPress(.leftArrow) { _ in move(-1); return .handled }
         .onKeyPress(.rightArrow) { _ in move(1); return .handled }
@@ -169,17 +178,13 @@ struct WeekCrownView: View {
     /// Finger tracking. A 64 point crossing commits one week; the ridges keep moving with the finger.
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 0)
+            .updating($gestureActive) { _, state, _ in state = true }
             .onChanged { value in
                 live = true
                 translation = value.translation.width
                 // Dragging right (positive) is the previous week, exactly as the React Crown.
                 let delta = travel.update(translation: Double(value.translation.width))
                 for _ in 0..<abs(delta) { step(delta > 0 ? -1 : 1) }
-            }
-            .onEnded { _ in
-                travel.release()
-                live = false
-                withAnimation(reduceMotion ? nil : SpreadMotion.press) { translation = 0 }
             }
     }
 

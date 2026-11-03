@@ -279,7 +279,6 @@ struct RoleRow: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(tasksOpen ? "Hide tasks for \(role.name)" : "Show tasks for \(role.name)")
-                .accessibilityAddTraits(tasksOpen ? .isExpanded : [])
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
