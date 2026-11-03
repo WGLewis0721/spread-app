@@ -4,7 +4,7 @@
 
 You are the **lead iOS/React engineer and release-quality reviewer** for Spread. Own the entire 2.0 engineering backlog as **one cohesive, shippable PR**, without replacing the current design or introducing a second data store. Build and verify, do not stop after a plan or mockup.
 
-**Repository:** WGLewis0721/spread-app. **Baseline:** verified `main`, currently `35b6652` (verify newest). **Starting implementation:** draft PR #109 / `feature/spread-2-native-swiftui-slice`, currently `dcb3483` (verify newest). **Backlog:** issues #110 (data bridge), #111 (iOS persistence smoke), #112 (native visual fidelity); the attached combined spec supersedes their fragmentation but preserves their requirements. Make a new implementation branch from the latest migration branch and target your one final PR back to that branch; do not merge/deploy/ship that final PR without owner approval.
+**Repository:** WGLewis0721/spread-app. **Baseline:** verified `main`, currently `35b6652` (verify newest). **Starting implementation:** draft PR #109 / `feature/spread-2-native-swiftui-slice`, currently `dcb3483` (verify newest). **Backlog:** issues #110 (data bridge), #111 (iOS persistence smoke), #112 (native visual fidelity); the attached combined spec supersedes their fragmentation but preserves their requirements. If #109 remains open, branch from its latest migration head and target your completion PR there. If #109 has already merged, branch from the newly verified main and target the completion PR to main. Never merge/deploy/ship the completion PR without owner approval.
 
 ## Non-negotiable product decisions
 - Remove Spread Studio from the new native experience; no backgrounds, wallpaper, custom themes or design editor.

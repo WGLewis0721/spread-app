@@ -9,7 +9,7 @@
 | Size / owner | L / engineering lead: Codex; design & motion review: Claude Code |
 | Status | **Implementation-ready specification; unverified native 2.0 release** |
 | Source of truth | Verified `main` baseline `35b6652` and [draft PR #109](https://github.com/WGLewis0721/spread-app/pull/109) at `dcb3483`; read current heads again before implementation |
-| Release permission | Current code authorized for merging/deployment *subject to passing release gates*; this spec does not authorize publishing an unfinished 2.0 native UI |
+| Release permission | Owner authorized integration of the existing foundation and a web deployment; full native 2.0 publishing still requires every G0–G5 gate and a separately verified candidate |
 
 ## 1. Problem
 
