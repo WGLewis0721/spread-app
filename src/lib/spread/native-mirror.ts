@@ -326,6 +326,29 @@ function timeout<T>(work: Promise<T>, ms: number): Promise<T | "timeout"> {
   });
 }
 
+/** Launch may stop waiting for a slow plugin, but persistence must still start when it answers.
+ * Cancellation gates restoration only; it never disables the future writer. */
+export async function prepareMirrorSession(
+  storage: KeyStore, adapter: MirrorAdapter, waitMs: number,
+  onWriter: (writer: MirrorWriter) => void,
+): Promise<{ restored: boolean }> {
+  let gaveUp = false;
+  const restoring = restoreIfEmpty(storage, adapter, () => gaveUp);
+  const start = (result: RestoreResult) => {
+    const next = createMirrorWriter(storage, adapter, { seq: result.seq });
+    onWriter(next);
+    next.schedule();
+  };
+  const result = await timeout(restoring, waitMs);
+  if (result === "timeout") {
+    gaveUp = true;
+    void restoring.then(start).catch(() => undefined);
+    return { restored: false };
+  }
+  start(result);
+  return { restored: result.restored };
+}
+
 /**
  * Run once at launch, before the planner reads web storage. Restores a snapshot if web storage
  * was emptied, then starts keeping the snapshot current. Never blocks launch for long and never
@@ -336,15 +359,7 @@ export function prepareNativeStorage(storage?: KeyStore, waitMs = 3000): Promise
     try {
       const target = storage ?? window.localStorage;
       const adapter = await filesystemAdapter();
-      let gaveUp = false;
-      const result = await timeout(restoreIfEmpty(target, adapter, () => gaveUp), waitMs);
-      if (result === "timeout") {
-        gaveUp = true;
-        return { restored: false };
-      }
-      writer = createMirrorWriter(target, adapter, { seq: result.seq });
-      writer.schedule();
-      return { restored: result.restored };
+      return await prepareMirrorSession(target, adapter, waitMs, (next) => { writer = next; });
     } catch {
       return { restored: false };
     }

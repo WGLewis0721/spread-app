@@ -15,6 +15,7 @@ struct LiveReply: Decodable {
     let ok: Bool
     let error: String?
     let undoId: String?
+    let requestId: String?
     let state: LiveState?
     let profiles: [NativeProfile]?
     let saveError: String?
@@ -34,9 +35,10 @@ struct LiveReply: Decodable {
     public func refresh() async {
         do { _ = try await receive("null") } catch { self.error = error.localizedDescription }
     }
-    private func receive(_ json: String) async throws -> LiveReply {
+    private func receive(_ json: String, expectedRequestId: String? = nil) async throws -> LiveReply {
         let text = try await exchange(json)
         let reply = try JSONDecoder().decode(LiveReply.self, from: Data(text.utf8))
+        if let expectedRequestId, reply.requestId != expectedRequestId { throw NSError(domain: "Spread", code: 4, userInfo: [NSLocalizedDescriptionKey: "Unmatched planner acknowledgement."]) }
         guard let value = reply.state, value.envelope.isSupported else {
             throw NSError(domain: "Spread", code: 1, userInfo: [NSLocalizedDescriptionKey: "Planner is still starting. Try again."])
         }
@@ -57,11 +59,15 @@ struct LiveReply: Decodable {
             self.busy = true
             defer { self.busy = false }
             do {
+                let requestId = UUID().uuidString
                 let request: [String: Any] = ["protocolVersion": 1, "sessionId": current.sessionId,
-                    "requestId": UUID().uuidString, "expectedProfileId": current.envelope.profileId,
+                    "requestId": requestId, "expectedProfileId": current.envelope.profileId,
                     "expectedWeek": current.envelope.snapshot.weekKey, "expectedRevision": current.revision, "action": action]
                 let bytes = try JSONSerialization.data(withJSONObject: request)
-                let reply = try await self.receive(String(decoding: bytes, as: UTF8.self))
+                let json = String(decoding: bytes, as: UTF8.self)
+                let reply: LiveReply
+                do { reply = try await self.receive(json, expectedRequestId: requestId) }
+                catch { reply = try await self.receive(json, expectedRequestId: requestId) } // Same correlation ID: safe after a lost ACK.
                 guard reply.ok else { return false }
                 self.undoId = reply.undoId
                 if completionHaptic { UISelectionFeedbackGenerator().selectionChanged() }
@@ -119,6 +125,7 @@ public struct SpreadLiveRoot: View {
             }
             .alert("Spread", isPresented: Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })) {
                 Button("OK") { planner.error = nil }
+                Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
                 Button("Backup and restore") { recovery() }
             } message: { Text(planner.error ?? "") }
         }
@@ -195,12 +202,12 @@ public struct SpreadLiveRoot: View {
     }
     private func month(_ snapshot: PlannerSnapshot) -> some View {
         let date = PreviewDates.date(snapshot.weekKey)
-        let calendar = Calendar(identifier: .gregorian)
+        let calendar = PreviewDates.calendar
         let start = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
         let days = calendar.range(of: .day, in: .month, for: start) ?? 1..<29
         let offset = (calendar.component(.weekday, from: start) + 5) % 7
         return VStack(spacing: 8) {
-            Text(start.formatted(.dateTime.month(.wide).year())).font(.headline)
+            Text(PreviewDates.label(start, pattern: "MMMM yyyy")).font(.headline)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
                 ForEach(["M", "T", "W", "T", "F", "S", "S"].indices, id: \.self) { i in Text(["M", "T", "W", "T", "F", "S", "S"][i]).font(.caption).accessibilityHidden(true) }
                 ForEach(0..<offset, id: \.self) { _ in Color.clear.frame(height: 44) }
@@ -210,7 +217,7 @@ public struct SpreadLiveRoot: View {
                         let weekday = (calendar.component(.weekday, from: selected) + 5) % 7
                         let monday = calendar.date(byAdding: .day, value: -weekday, to: selected) ?? selected
                         Task { if await planner.send(["type": "openWeek", "weekKey": PreviewDates.formatter.string(from: monday)]) { showMonth = false } }
-                    }.frame(minWidth: 44, minHeight: 44).accessibilityLabel(selected.formatted(date: .complete, time: .omitted))
+                    }.frame(minWidth: 44, minHeight: 44).accessibilityLabel(PreviewDates.label(selected, pattern: "EEEE MMMM d yyyy"))
                 }
             }
         }
@@ -306,6 +313,7 @@ struct LiveEditor: View {
             Button("Save task") { submit(["type": "editTask", "roleId": task.roleId, "taskId": task.id, "text": name]) }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             NavigationLink("Place or move") { LiveEditor(planner: planner, sheet: .move(task)) }
             Button(task.done ? "Reopen task" : "Complete task") { submit(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id]) }
+            Button("Delete task", role: .destructive) { submit(["type": "deleteTask", "roleId": task.roleId, "taskId": task.id]) }
         case .move(let task):
             Text(task.text)
             let eligible = planner.snapshot?.eligibleAllocations(for: task) ?? []
@@ -339,7 +347,7 @@ struct LiveEditor: View {
         Picker("Day", selection: $day) {
             ForEach(0..<7, id: \.self) { i in
                 let iso = PreviewDates.dayISO(weekKey: planner.snapshot?.weekKey ?? "", index: i)
-                Text(PreviewDates.date(iso).formatted(.dateTime.weekday(.wide))).tag(iso)
+                Text(PreviewDates.label(PreviewDates.date(iso), pattern: "EEEE")).tag(iso)
             }
         }
     }

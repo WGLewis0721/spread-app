@@ -2,13 +2,15 @@ import { z } from "zod";
 import { isSpreadCategory, shiftWeek, type SpreadData } from "./model.ts";
 import { getSaveFacts } from "./local-status.ts";
 import { projectNativeV2, type NativeV2Envelope } from "./native-v2-projection.ts";
-import { flushSpread, useSpread } from "./store.ts";
+import { flushSpread, retrySpreadSave, useSpread } from "./store.ts";
 
 const id = z.string().trim().min(1).max(200);
 const text = z.string().trim().min(1).max(10000);
 const hours = z.number().finite().min(0).max(168).multipleOf(0.5);
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const action = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("retrySave") }),
+  z.strictObject({ type: z.literal("deleteTask"), roleId: id, taskId: id }),
   z.strictObject({ type: z.literal("allocationHours"), allocationId: id, hours }),
   z.strictObject({ type: z.literal("removeAllocation"), allocationId: id }),
   z.strictObject({ type: z.literal("renameRole"), roleId: id, name: text }),
@@ -120,7 +122,8 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
     if (command.expectedWeek !== state.data.currentWeek) return fail("stale-week");
     if (command.expectedRevision !== revision) return fail("stale-revision");
-    if (getSaveFacts().failed) return fail("save-unavailable");
+    if (getSaveFacts().failed && command.action.type !== "retrySave")
+      return fail("save-unavailable");
     const a = command.action;
     const invalid =
       a.type === "switchProfile" && !state.profiles.some((p) => p.id === a.profileId)
@@ -131,6 +134,12 @@ export function createNativeV2Dispatcher(sessionId: string) {
     try {
       const mutate = () => {
         switch (a.type) {
+          case "retrySave":
+            if (!retrySpreadSave()) throw new Error("save-failed");
+            break;
+          case "deleteTask":
+            state.deleteTask(a.roleId, a.taskId);
+            break;
           case "allocationHours":
             state.setAllocationHours(a.allocationId, a.hours);
             break;
@@ -189,6 +198,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
       };
       if (
         [
+          "retrySave",
           "changeWeek",
           "openWeek",
           "undo",

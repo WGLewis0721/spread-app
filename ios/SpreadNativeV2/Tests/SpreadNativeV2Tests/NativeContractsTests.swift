@@ -139,3 +139,24 @@ extension NativeContractsTests {
         }
     }
 }
+
+extension NativeContractsTests {
+    func testHundredCrownGesturesAndThirtyReversals() {
+        var crown = CrownTravel()
+        var week = 0
+        for index in 0..<100 {
+            week += crown.update(translation: 63)
+            XCTAssertEqual(week, index)
+            week += crown.update(translation: 64)
+            XCTAssertEqual(week, index + 1)
+            if index < 30 {
+                week += crown.update(translation: 0)
+                XCTAssertEqual(week, index)
+                week += crown.update(translation: 64)
+                XCTAssertEqual(week, index + 1)
+            }
+            crown.release()
+        }
+        XCTAssertEqual(week, 100)
+    }
+}

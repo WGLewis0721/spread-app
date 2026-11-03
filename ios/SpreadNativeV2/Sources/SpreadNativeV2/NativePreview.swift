@@ -62,6 +62,15 @@ public struct SpreadNativeV2Preview: View {
 }
 
 enum PreviewDates {
+    static var calendar: Calendar {
+        var value = Calendar(identifier: .gregorian)
+        value.timeZone = TimeZone(secondsFromGMT: 0)!
+        return value
+    }
+    static func label(_ date: Date, pattern: String) -> String {
+        let f = DateFormatter(); f.calendar = calendar; f.timeZone = calendar.timeZone
+        f.locale = .current; f.dateFormat = pattern; return f.string(from: date)
+    }
     static let formatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = Calendar(identifier: .gregorian)
@@ -76,28 +85,28 @@ enum PreviewDates {
     }
 
     static func weekISO(base: String, offset: Int) -> String {
-        let shifted = Calendar(identifier: .gregorian).date(byAdding: .day, value: offset * 7, to: date(base)) ?? date(base)
+        let shifted = calendar.date(byAdding: .day, value: offset * 7, to: date(base)) ?? date(base)
         return formatter.string(from: shifted)
     }
 
     static func dayISO(weekKey: String, index: Int) -> String {
-        let day = Calendar(identifier: .gregorian).date(byAdding: .day, value: index, to: date(weekKey)) ?? date(weekKey)
+        let day = calendar.date(byAdding: .day, value: index, to: date(weekKey)) ?? date(weekKey)
         return formatter.string(from: day)
     }
 
     static func weekday(weekKey: String, index: Int) -> String {
         let d = date(dayISO(weekKey: weekKey, index: index))
-        return d.formatted(.dateTime.weekday(.abbreviated))
+        return label(d, pattern: "EEE")
     }
 
     static func dayNumber(weekKey: String, index: Int) -> String {
-        String(Calendar(identifier: .gregorian).component(.day, from: date(dayISO(weekKey: weekKey, index: index))))
+        String(calendar.component(.day, from: date(dayISO(weekKey: weekKey, index: index))))
     }
 
     static func weekRange(base: String, offset: Int) -> String {
         let monday = date(weekISO(base: base, offset: offset))
-        let sunday = Calendar(identifier: .gregorian).date(byAdding: .day, value: 6, to: monday) ?? monday
-        return "\(monday.formatted(.dateTime.month(.abbreviated).day())) – \(sunday.formatted(.dateTime.month(.abbreviated).day()))"
+        let sunday = calendar.date(byAdding: .day, value: 6, to: monday) ?? monday
+        return "\(label(monday, pattern: "MMM d")) – \(label(sunday, pattern: "MMM d"))"
     }
 }
 #endif

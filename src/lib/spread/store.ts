@@ -953,3 +953,9 @@ export async function saveBackup(data: SpreadData): Promise<SaveResult> {
   const blob = new Blob([await fullBackupText(payload)], { type: "application/octet-stream" });
   return saveFile(blob, `Spread-${data.currentWeek}.spread`);
 }
+
+/** Retry the existing in-memory plan after a storage failure; no alternate snapshot or migration. */
+export function retrySpreadSave(): boolean {
+  flushSpread();
+  return put(activeStore, JSON.stringify(useSpread.getState().data));
+}

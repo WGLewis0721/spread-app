@@ -203,3 +203,30 @@ test("profile switches invalidate commands and replay never leaks prior profile"
     router.dispose();
   }
 });
+
+test("100 accepted commands persist exactly once and storage recovery retries the same in-memory plan", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    for (let i = 0; i < 100; i++) {
+      const intent = request({ type: "addTask", roleId, text: `Task ${i}` });
+      assert.equal((await router.dispatch(intent)).ok, true);
+      assert.equal((await router.dispatch(intent)).ok, true);
+    }
+    assert.equal(router.read()!.envelope.snapshot.tasks.length, 101);
+    storage.failWhen = () => true;
+    assert.equal(
+      (
+        await router.dispatch(
+          request({ type: "editTask", roleId, taskId: "task", text: "Unsaved edit" }),
+        )
+      ).error,
+      "save-failed",
+    );
+    storage.failWhen = null;
+    assert.equal((await router.dispatch(request({ type: "retrySave" }))).ok, true);
+    assert.ok(storage.map.get(STORE_KEY)?.includes("Unsaved edit"));
+    assert.equal(router.read()!.envelope.snapshot.tasks.length, 101);
+  } finally {
+    router.dispose();
+  }
+});

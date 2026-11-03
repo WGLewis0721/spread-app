@@ -32,6 +32,9 @@ struct SpreadLayoutsView: View {
                     .accessibilityLabel("View, \(mode.title)")
                 }
 
+                if let role = selectedRole {
+                    Button("Manage \(role.name)") { onManage(role) }.frame(minHeight: 44)
+                }
                 switch mode {
                 case .stack: stack
                 case .fan: fan
@@ -106,7 +109,7 @@ struct SpreadLayoutsView: View {
                     changeSelection(roles[next].id)
                 })
             }
-            .frame(height: 290)
+            .frame(height: 290).clipped()
             if let role = selectedRole {
                 Text("Swipe the fan or select a card · \(role.name)")
                     .font(.caption).foregroundStyle(Chalk.secondary)
@@ -212,6 +215,10 @@ struct SpreadLayoutsView: View {
                             }
                             Spacer()
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { onManage(role) }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { onManage(role) }
                         .padding(12)
                         .background(Chalk.surface, in: RoundedRectangle(cornerRadius: 16))
                         .overlay(RoundedRectangle(cornerRadius: 16)

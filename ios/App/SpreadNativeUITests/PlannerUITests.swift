@@ -34,7 +34,14 @@ final class PlannerUITests: XCTestCase {
         task.tap(); task.typeText("Verify live task")
         tap("Add task")
         capture("05-task-created")
-        tap("Done"); tap("Week")
+        tap("Done")
+        for mode in ["Fan", "Dial", "Tabs", "Day", "Stack"] {
+            let view = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "View,")).firstMatch
+            if !view.isHittable { app.swipeDown() }
+            XCTAssertTrue(view.waitForExistence(timeout: 10)); view.tap()
+            tap(mode); capture("layout-" + mode)
+        }
+        tap("Week")
         capture("06-week-to-place")
         tap("Place")
         let day = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "0.5h")).firstMatch
