@@ -110,7 +110,7 @@ workflows:
           set -eu
           test "$CM_BRANCH" = "claude/spread-swiftui-parity-87llx2" || { echo "Internal candidate branch only" >&2; exit 1; }
           test "${CM_PULL_REQUEST:-false}" = false || { echo "No PR event can publish" >&2; exit 1; }
-          test "${CM_REPO_SLUG:-}" = "WGLewis0721/spread-app" || { echo "Unexpected repository" >&2; exit 1; }
+          test "$(printf "%s" "${CM_REPO_SLUG:-}" | tr "[:upper:]" "[:lower:]")" = "wglewis0721/spread-app" || { echo "Unexpected repository" >&2; exit 1; }
           test "$(git rev-parse HEAD)" = "$CM_COMMIT" || { echo "Checked-out SHA mismatch" >&2; exit 1; }
           CURRENT="$(git ls-remote https://github.com/WGLewis0721/spread-app.git refs/heads/claude/spread-swiftui-parity-87llx2 | cut -f1)"
           test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate branch changed during build; refuse upload" >&2; exit 1; }
@@ -162,6 +162,11 @@ workflows:
               --record /tmp/spread-ios-build-version.json \
               --latest-apple "$LATEST_BEFORE_UPLOAD"
           done
+      - name: Recheck exact source before internal TestFlight upload
+        script: |
+          set -eu
+          CURRENT="$(git ls-remote https://github.com/WGLewis0721/spread-app.git refs/heads/claude/spread-swiftui-parity-87llx2 | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Branch moved; refusing to publish stale candidate" >&2; exit 1; }
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
