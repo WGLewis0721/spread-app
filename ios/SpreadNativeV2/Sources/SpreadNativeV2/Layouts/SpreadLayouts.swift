@@ -280,10 +280,10 @@ struct DialLayout: View {
         .foregroundStyle(.white)
         .frame(width: side * 0.64, height: side * 0.64)
         .background(
-            RadialGradient(colors: [glow.opacity(0.52), Color(hex: 0x0B0B0C)], center: UnitPoint(x: 0.38, y: 0.24), startRadius: 0, endRadius: side * 0.42)
+            RadialGradient(colors: [glow.opacity(0.52), Color(hex6: 0x0B0B0C)], center: UnitPoint(x: 0.38, y: 0.24), startRadius: 0, endRadius: side * 0.42)
                 .clipShape(Circle())
         )
-        .background(Color(hex: 0x0B0B0C), in: Circle())
+        .background(Color(hex6: 0x0B0B0C), in: Circle())
         .position(x: side / 2, y: side / 2)
         .allowsHitTesting(false)
     }
