@@ -26,6 +26,12 @@
     "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadGestures~partial.swiftmodule",
     "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadGestures.swiftdeps"
   },
+  "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/HourStrip.swift": {
+    "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/HourStrip.d",
+    "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/HourStrip.swift.o",
+    "swiftmodule": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/HourStrip~partial.swiftmodule",
+    "swift-dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/HourStrip.swiftdeps"
+  },
   "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Layouts/SpreadLayouts.swift": {
     "dependencies": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLayouts.d",
     "object": "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLayouts.swift.o",

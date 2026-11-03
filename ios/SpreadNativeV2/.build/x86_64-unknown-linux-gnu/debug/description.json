@@ -99,6 +99,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/HourStrip.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Layouts/SpreadLayouts.swift"
         },
         {
@@ -186,6 +190,7 @@
         "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/CrownTravel.swift.o",
         "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/DialGeometry.swift.o",
         "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadGestures.swift.o",
+        "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/HourStrip.swift.o",
         "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadLayouts.swift.o",
         "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/LivePlanner.swift.o",
         "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/PlannerOrder.swift.o",
@@ -248,6 +253,10 @@
         {
           "kind" : "file",
           "name" : "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/SpreadGestures.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/HourStrip.swift.o"
         },
         {
           "kind" : "file",
@@ -328,6 +337,7 @@
         "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/CrownTravel.swift",
         "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/DialGeometry.swift",
         "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Gestures/SpreadGestures.swift",
+        "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/HourStrip.swift",
         "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Layouts/SpreadLayouts.swift",
         "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/LivePlanner.swift",
         "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/PlannerOrder.swift",
@@ -615,6 +625,7 @@
       "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/CrownTravel.swift",
       "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/DialGeometry.swift",
       "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Gestures/SpreadGestures.swift",
+      "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/HourStrip.swift",
       "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Layouts/SpreadLayouts.swift",
       "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/LivePlanner.swift",
       "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/PlannerOrder.swift",
@@ -870,6 +881,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/HourStrip.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/home/user/spread-app/ios/SpreadNativeV2/Sources/SpreadNativeV2/Layouts/SpreadLayouts.swift"
         },
         {
@@ -989,6 +1004,10 @@
         {
           "kind" : "file",
           "name" : "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/DialGeometry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/home/user/spread-app/ios/SpreadNativeV2/.build/x86_64-unknown-linux-gnu/debug/SpreadNativeV2.build/HourStrip.swift.o"
         },
         {
           "kind" : "file",

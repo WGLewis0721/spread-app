@@ -42,28 +42,33 @@ struct SpreadSurface: View {
     private var summary: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("\(SpreadHours.text(totalHours)) \(totalHours == 1 ? "hour" : "hours") across \(snapshot.roles.count) \(snapshot.roles.count == 1 ? "spread" : "spreads")")
-                .font(.system(size: 17))
+                .font(.system(.body))
                 .monospacedDigit()
             if totalHours > 0 {
-                HStack(spacing: 4) {
+                // One segment per responsibility, sized by its hours. Choosing one selects that responsibility in
+                // every layout (the selection is shared) and never switches the layout or writes planner data.
+                HourStripRow(spacing: 4) {
                     ForEach(snapshot.roles.filter { $0.hours > 0 }) { role in
+                        let chosen = selectedRole == role.id
                         Button {
                             selectedRole = role.id
-                            withAnimation(SpreadMotion.curve) { layout = .stack }
+                            tabSelection = role.id
                         } label: {
-                            Capsule().fill(Color(hex: role.color)).frame(height: 8)
-                                .frame(minHeight: 44)
+                            Capsule().fill(Color(hex: role.color)).frame(height: chosen ? 12 : 8)
+                                .frame(maxWidth: .infinity, minHeight: 44)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .frame(maxWidth: .infinity)
-                        .layoutPriority(role.hours)
-                        .accessibilityLabel("Jump to \(role.name), \(SpreadHours.spoken(role.hours))")
+                        .hourStripHours(role.hours)
+                        .accessibilityLabel("\(role.name), \(SpreadHours.spoken(role.hours))")
+                        .accessibilityAddTraits(chosen ? .isSelected : [])
+                        .accessibilityIdentifier("hour-segment-\(role.id)")
                     }
                 }
-                .frame(minHeight: 44)
+                .frame(height: 44)
+                .animation(SpreadMotion.cascade, value: selectedRole)
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel("\(SpreadHours.spoken(totalHours)) across responsibilities. Choose a colour to jump to its responsibility.")
+                .accessibilityLabel("\(SpreadHours.spoken(totalHours)) across responsibilities. Choose a colour to select its responsibility.")
             }
             Text(taskCount == 0 ? "List the work that fits." : "\(doneCount) of \(taskCount) done")
                 .font(Spread.footnote).foregroundStyle(Spread.secondary).monospacedDigit()
@@ -74,7 +79,7 @@ struct SpreadSurface: View {
                 Button(action: onRollover) {
                     HStack(spacing: 8) {
                         SpreadIcon(name: "icon-rollover", size: 22)
-                        Text("Rollover").font(.system(size: 15, weight: .semibold))
+                        Text("Rollover").font(.system(.subheadline, weight: .semibold))
                     }
                     .foregroundStyle(Spread.accent).frame(minHeight: 44)
                 }
@@ -82,7 +87,7 @@ struct SpreadSurface: View {
                 .accessibilityIdentifier("rollover")
                 if snapshot.tasks.contains(where: { !$0.done }) {
                     Button(action: onReview) {
-                        Text("Review open tasks").font(.system(size: 15, weight: .semibold))
+                        Text("Review open tasks").font(.system(.subheadline, weight: .semibold))
                             .foregroundStyle(Spread.accent).frame(minHeight: 44)
                     }
                     .buttonStyle(.plain)
@@ -104,7 +109,7 @@ struct SpreadSurface: View {
                         VStack(spacing: 4) {
                             LayoutGlyph(layout: item)
                                 .frame(width: 28, height: 28)
-                            Text(item.title).font(.system(size: 12, weight: .semibold))
+                            Text(item.title).font(.system(.caption, weight: .semibold))
                         }
                         .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
                         .padding(.horizontal, 12)
@@ -147,7 +152,7 @@ struct SpreadSurface: View {
             HStack(spacing: 12) {
                 SpreadIcon(name: "icon-new-life", size: 32, original: true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("New Spread").font(.system(size: 17, weight: .semibold))
+                    Text("New Spread").font(.system(.body, weight: .semibold))
                     Text("Make your own spreads.").font(Spread.footnote).foregroundStyle(Spread.secondary)
                 }
                 Spacer(minLength: 0)
@@ -239,7 +244,7 @@ struct RoleRow: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     TextField("Name", text: $name)
-                        .font(.system(size: 17))
+                        .font(.system(.body))
                         .focused($nameFocused)
                         .submitLabel(.done)
                         .onSubmit { commitName() }
@@ -255,13 +260,13 @@ struct RoleRow: View {
                     }
                     .transition(.opacity)
                     Button { adjusting = false } label: {
-                        Text("Done").font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent).frame(minHeight: 44)
+                        Text("Done").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent).frame(minHeight: 44)
                     }
                     .buttonStyle(.plain)
                 } else {
                     Button { adjusting = true } label: {
                         Text("\(SpreadHours.text(role.hours))h")
-                            .font(.system(size: 17)).foregroundStyle(Spread.secondary).monospacedDigit()
+                            .font(.system(.body)).foregroundStyle(Spread.secondary).monospacedDigit()
                             .frame(minWidth: 44, minHeight: 44)
                             .contentShape(Rectangle())
                     }
@@ -272,7 +277,7 @@ struct RoleRow: View {
 
                 Button { withAnimation(SpreadMotion.curve) { tasksOpen.toggle() } } label: {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.secondary)
+                        .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.secondary)
                         .rotationEffect(.degrees(tasksOpen ? 90 : 0))
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
@@ -295,7 +300,7 @@ struct RoleRow: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "minus.circle.fill").foregroundStyle(Spread.danger)
-                        Text("Remove \(role.name)").font(.system(size: 15, weight: .medium)).foregroundStyle(Spread.danger)
+                        Text("Remove \(role.name)").font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.danger)
                     }
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .padding(.horizontal, 16)
@@ -348,7 +353,7 @@ struct DayMarks: View {
                 let iso = PlannerDates.dayISO(weekKey: snapshot.weekKey, index: marksOrder[index])
                 let on = placed.contains(iso)
                 Text(PlannerOrder.dayMarks[index])
-                    .font(.system(size: 12, weight: on ? .semibold : .medium))
+                    .font(.system(.caption, weight: on ? Font.Weight.semibold : Font.Weight.medium))
                     .foregroundStyle(on ? Color(hex: role.color) : Spread.tertiary)
             }
         }
@@ -371,7 +376,7 @@ struct PalettePanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Colour").font(.system(size: 15, weight: .semibold))
+            Text("Colour").font(.system(.subheadline, weight: .semibold))
             HStack(spacing: 4) {
                 ForEach(Self.colors, id: \.self) { color in
                     Button {
@@ -433,7 +438,7 @@ struct TaskRow: View {
                 Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": task.id], completionHaptic: !task.done) }
             } label: {
                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 26, weight: .regular))
+                    .font(.system(.title2, weight: .regular))
                     .foregroundStyle(task.done ? Spread.accent : Spread.tertiary)
                     .frame(width: 56, height: 56)
                     .contentShape(Rectangle())
@@ -446,7 +451,7 @@ struct TaskRow: View {
             Button(action: onOpen) {
                 HStack(spacing: 8) {
                     Text(task.text.isEmpty ? "Untitled task" : task.text)
-                        .font(.system(size: 17))
+                        .font(.system(.body))
                         .strikethrough(task.done)
                         .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
                         .lineLimit(2)
@@ -454,9 +459,9 @@ struct TaskRow: View {
                     Spacer(minLength: 4)
                     if let dayISO, !isToday {
                         Text(PlannerDates.label(PlannerDates.date(dayISO), pattern: "EEE"))
-                            .font(.system(size: 12, weight: .semibold)).foregroundStyle(Spread.secondary)
+                            .font(.system(.caption, weight: .semibold)).foregroundStyle(Spread.secondary)
                     }
-                    Image(systemName: "chevron.right").font(.system(size: 13)).foregroundStyle(Spread.tertiary)
+                    Image(systemName: "chevron.right").font(.system(.footnote)).foregroundStyle(Spread.tertiary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
                 .contentShape(Rectangle())
@@ -468,7 +473,7 @@ struct TaskRow: View {
                 Button {
                     Task { await planner.send(["type": "assignTask", "roleId": roleId, "taskId": task.id, "allocationId": NSNull()]) }
                 } label: {
-                    Text("Not today").font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent)
+                    Text("Not today").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
                         .padding(.leading, 4).padding(.trailing, 12).frame(minHeight: 56)
                         .contentShape(Rectangle())
                 }
@@ -490,11 +495,11 @@ struct AddTaskRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Image(systemName: "plus").font(.system(size: 18, weight: .regular)).foregroundStyle(Spread.accent)
+            Image(systemName: "plus").font(.system(.body, weight: .regular)).foregroundStyle(Spread.accent)
                 .frame(width: 56, height: 56)
                 .accessibilityHidden(true)
             TextField(placeholder, text: $text)
-                .font(.system(size: 17))
+                .font(.system(.body))
                 .submitLabel(.done)
                 .onSubmit {
                     let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -537,5 +542,34 @@ struct StackLayout: View {
         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
         .accessibilityIdentifier("stack-cards")
     }
+}
+
+/// Lays the hour strip's segments side by side, each as wide as its hours say (see `HourStrip`).
+struct HourStripRow: Layout {
+    var spacing: CGFloat = 4
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        CGSize(width: proposal.width ?? 0, height: 44)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let hours: [Double] = subviews.map { $0[HourStripHours.self] }
+        let widths = HourStrip.widths(hours: hours, available: Double(bounds.width), spacing: Double(spacing), minimum: 44)
+        var x = bounds.minX
+        for (index, subview) in subviews.enumerated() {
+            let width = CGFloat(widths[index])
+            subview.place(at: CGPoint(x: x, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(width: width, height: bounds.height))
+            x += width + spacing
+        }
+    }
+}
+
+private struct HourStripHours: LayoutValueKey {
+    static let defaultValue: Double = 1
+}
+
+extension View {
+    /// The hours a strip segment stands for; `HourStripRow` sizes the segment by it.
+    func hourStripHours(_ hours: Double) -> some View { layoutValue(key: HourStripHours.self, value: hours) }
 }
 #endif

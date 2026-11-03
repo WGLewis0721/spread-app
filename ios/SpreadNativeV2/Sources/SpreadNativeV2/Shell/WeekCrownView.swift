@@ -123,21 +123,21 @@ struct WeekCrownView: View {
     private var readout: some View {
         VStack(spacing: 1) {
             Text(title)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(.callout, weight: .semibold))
                 .foregroundStyle(Spread.ink)
                 .lineLimit(1)
                 .truncationMode(.tail)
             if let detail {
                 if let onDetail {
                     Button(action: onDetail) {
-                        Text(detail).font(.system(size: 12, weight: .medium)).foregroundStyle(Spread.accent)
+                        Text(detail).font(.system(.caption, weight: .medium)).foregroundStyle(Spread.accent)
                             .tapTarget(minWidth: 44, minHeight: 28)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("week-crown-detail")
                 } else {
                     Text(detail)
-                        .font(.system(size: 12))
+                        .font(.system(.caption))
                         .foregroundStyle(Spread.secondary)
                         .lineLimit(1)
                         .monospacedDigit()

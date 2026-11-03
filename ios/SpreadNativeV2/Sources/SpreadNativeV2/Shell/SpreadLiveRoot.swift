@@ -28,6 +28,7 @@ public struct SpreadLiveRoot: View {
     @State private var weekTick = 0
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
 
     public init(planner: LivePlanner, recovery: @escaping () -> Void) {
@@ -213,7 +214,7 @@ public struct SpreadLiveRoot: View {
                 Spacer(minLength: 8)
                 if planner.profiles.count > 1, let active = activeProfileName {
                     Button { sheet = .more } label: {
-                        Text(active).font(.system(size: 15)).lineLimit(1)
+                        Text(active).font(.system(.subheadline)).lineLimit(1)
                             .padding(.horizontal, 12).frame(maxWidth: 200, minHeight: 44)
                             .background(Spread.fill, in: Capsule())
                     }
@@ -228,7 +229,7 @@ public struct SpreadLiveRoot: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 4)
-        .background(Spread.canvas.opacity(0.92))
+        .background(reduceTransparency ? Spread.canvas : Spread.canvas.opacity(0.92))
     }
 
     private var activeProfileName: String? {
@@ -242,7 +243,7 @@ public struct SpreadLiveRoot: View {
                 SpreadBrandMark(size: 34)
                 if !brandFolded {
                     Text("Spread")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(.subheadline, weight: .semibold))
                         .tracking(-0.45)
                         .transition(.opacity.combined(with: .move(edge: .leading)))
                 }
@@ -250,7 +251,7 @@ public struct SpreadLiveRoot: View {
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.spreadPress)
         .accessibilityLabel("Spread, home")
         .accessibilityIdentifier("brand-home")
     }
@@ -271,7 +272,7 @@ public struct SpreadLiveRoot: View {
                             .foregroundStyle(selected ? Spread.accent : Spread.secondary)
                         if !brandFolded {
                             Text(item.label)
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.system(.subheadline, weight: .medium))
                                 .foregroundStyle(selected ? Spread.ink : Spread.secondary)
                         }
                     }
@@ -281,7 +282,7 @@ public struct SpreadLiveRoot: View {
                     .shadow(color: selected ? Spread.shadow.opacity(0.6) : .clear, radius: 2, y: 1)
                     .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.spreadPress)
                 .accessibilityLabel(item.label)
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .accessibilityIdentifier(item == .week ? "native-week" : "native-spread")
@@ -341,11 +342,11 @@ public struct SpreadLiveRoot: View {
             HStack(spacing: 0) {
                 if destination == .week && !monthPlane && selectedRole != nil {
                     Button { selectedRole = nil } label: {
-                        Text("Done").font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.onAccent)
+                        Text("Done").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.onAccent)
                             .padding(.horizontal, 20).frame(minHeight: 44)
                             .background(Spread.accent, in: Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.spreadPress)
                     .padding(.trailing, 4)
                     dockDivider
                 }
@@ -355,7 +356,7 @@ public struct SpreadLiveRoot: View {
                     } label: {
                         ViewMorphIcon(boxes: !monthPlane, size: 24).frame(width: 44, height: 44).contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.spreadPress)
                     .accessibilityLabel(monthPlane ? "Week" : "Month")
                     .accessibilityIdentifier("week-month-toggle")
                     .accessibilityValue(monthPlane ? "Month" : "Week")
@@ -364,22 +365,22 @@ public struct SpreadLiveRoot: View {
                 if destination == .spread {
                     if editing {
                         Button { editing = false } label: {
-                            Text("Done").font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.onAccent)
+                            Text("Done").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.onAccent)
                                 .padding(.horizontal, 20).frame(minHeight: 44)
                                 .background(Spread.accent, in: Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.spreadPress)
                     } else {
                         Button { editing = true } label: {
                             HStack(spacing: 6) {
                                 SpreadIcon(name: "icon-edit", size: 22)
-                                Text("Edit").font(.system(size: 15, weight: .semibold))
+                                Text("Edit").font(.system(.subheadline, weight: .semibold))
                             }
                             .foregroundStyle(Spread.accent)
                             .padding(.horizontal, 14).frame(minHeight: 44)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.spreadPress)
                         .accessibilityIdentifier("edit-spreads")
                     }
                 }
@@ -387,15 +388,22 @@ public struct SpreadLiveRoot: View {
                     Button { openSettingsFromDock() } label: {
                         SettingsGears(turn: gearTurn, size: 30).frame(width: 44, height: 44).contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.spreadPress)
                     .accessibilityLabel("Settings")
                     .accessibilityIdentifier("open-more")
                 }
             }
             .padding(6)
-            .background(.ultraThinMaterial, in: Capsule())
-            .background(Spread.glass, in: Capsule())
-            .overlay(Capsule().stroke(Spread.glassStroke, lineWidth: 0.5))
+            .background {
+                // Reduce Transparency means opaque surfaces: the dock drops its material for the plain elevated surface.
+                if reduceTransparency {
+                    Capsule().fill(Spread.elevated)
+                } else {
+                    Capsule().fill(.ultraThinMaterial)
+                    Capsule().fill(Spread.glass)
+                }
+            }
+            .overlay(Capsule().stroke(Spread.glassStroke, lineWidth: reduceTransparency ? 1 : 0.5))
             .shadow(color: Spread.shadow, radius: 12, y: 6)
         }
         .padding(.horizontal, 16)
@@ -410,13 +418,13 @@ public struct SpreadLiveRoot: View {
     private func undoNotice(_ editId: String) -> some View {
         Button { Task { await planner.send(["type": "undo", "editId": editId]) } } label: {
             Text("Undo last change")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(.subheadline, weight: .semibold))
                 .foregroundStyle(Spread.accent)
                 .padding(.horizontal, 18).frame(minHeight: 44)
                 .background(Spread.elevated, in: Capsule())
                 .shadow(color: Spread.shadow, radius: 8, y: 3)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.spreadPress)
         .accessibilityIdentifier("undo-last-change")
     }
 
@@ -550,6 +558,7 @@ private struct RolloverConfirm: View {
         }
         .padding(24)
         .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
 }
 
@@ -574,6 +583,7 @@ private struct RoleDeleteConfirm: View {
         }
         .padding(24)
         .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
 }
 #endif

@@ -61,7 +61,7 @@ struct TaskSheet: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             TextField("Task title", text: $title)
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(.title2, weight: .bold))
                                 .submitLabel(.done)
                                 .onSubmit { commitTitle() }
                                 .accessibilityLabel("Task title")
@@ -83,7 +83,7 @@ struct TaskSheet: View {
                                 Button(role: .destructive) { confirmDelete = true } label: {
                                     HStack(spacing: 8) {
                                         SpreadIcon(name: "icon-trash", size: 22, original: true)
-                                        Text("Delete task").font(.system(size: 15, weight: .semibold))
+                                        Text("Delete task").font(.system(.subheadline, weight: .semibold))
                                     }
                                     .frame(maxWidth: .infinity, minHeight: 48)
                                 }
@@ -188,16 +188,16 @@ struct TaskSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(label(for: block.type))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(.footnote, weight: .medium))
                     .foregroundStyle(Spread.secondary)
                 Spacer()
                 if block.type == "notes" {
                     Button { expandedNote = block.id } label: {
-                        Text("Expand").font(.system(size: 13, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget(minWidth: 44)
+                        Text("Expand").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget(minWidth: 44)
                     }
                 }
                 Button { remove(block.id) } label: {
-                    Text("Remove").font(.system(size: 13, weight: .semibold)).foregroundStyle(Spread.danger).tapTarget(minWidth: 44)
+                    Text("Remove").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.danger).tapTarget(minWidth: 44)
                 }
                 .accessibilityIdentifier("remove-block-\(block.id)")
             }
@@ -225,9 +225,9 @@ struct TaskSheet: View {
     private func expandedNotes(_ block: NativeContentBlock) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Notes").font(.system(size: 13, weight: .medium)).foregroundStyle(Spread.secondary)
+                Text("Notes").font(.system(.footnote, weight: .medium)).foregroundStyle(Spread.secondary)
                 Spacer()
-                Button { expandedNote = nil } label: { Text("Done").font(.system(size: 15, weight: .semibold)).tapTarget() }
+                Button { expandedNote = nil } label: { Text("Done").font(.system(.subheadline, weight: .semibold)).tapTarget() }
             }
             TextEditor(text: Binding(get: { block.text ?? "" }, set: { var copy = block; copy.text = $0; update(copy) }))
                 .frame(minHeight: 360)
@@ -243,7 +243,7 @@ struct TaskSheet: View {
                 let item = items[index]
                 HStack(spacing: 6) {
                     Text(outlineMarker(index: index, level: Int(item.level)))
-                        .font(.system(size: 15, weight: .medium)).foregroundStyle(Spread.secondary)
+                        .font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.secondary)
                         .frame(width: 34 + CGFloat(item.level) * 16, alignment: .trailing)
                     TextField(item.level == 0 ? "Point" : "Detail", text: Binding(get: { item.text }, set: { value in
                         var copy = block
@@ -269,7 +269,7 @@ struct TaskSheet: View {
                 var copy = block
                 copy.items = (copy.items ?? []) + [NativeOutlineItem(id: UUID().uuidString, text: "", level: 0)]
                 update(copy)
-            } label: { Text("Add line").font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget() }
+            } label: { Text("Add line").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget() }
         }
     }
 
@@ -299,12 +299,12 @@ struct TaskSheet: View {
                         var copy = block
                         copy.cells = cells + [Array(repeating: "", count: cells.first?.count ?? 2)]
                         update(copy)
-                    } label: { Text("Add row").font(.system(size: 15, weight: .semibold)).tapTarget() }
+                    } label: { Text("Add row").font(.system(.subheadline, weight: .semibold)).tapTarget() }
                     Button {
                         var copy = block
                         copy.cells = cells.map { $0 + [""] }
                         update(copy)
-                    } label: { Text("Add column").font(.system(size: 15, weight: .semibold)).tapTarget() }
+                    } label: { Text("Add column").font(.system(.subheadline, weight: .semibold)).tapTarget() }
                 }
             }
         }
@@ -346,7 +346,7 @@ struct TaskSheet: View {
                 Button { showFormats = true } label: {
                     HStack(spacing: 8) {
                         SpreadIcon(name: "icon-add", size: 22)
-                        Text("Add").font(.system(size: 15, weight: .semibold))
+                        Text("Add").font(.system(.subheadline, weight: .semibold))
                     }
                     .foregroundStyle(Spread.accent).frame(minHeight: 44)
                 }
@@ -366,7 +366,7 @@ struct TaskSheet: View {
         HStack(spacing: 12) {
             SpreadIcon(name: icon, size: 24)
             VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.system(size: 17, weight: .semibold))
+                Text(label).font(.system(.body, weight: .semibold))
                 Text(detail).font(Spread.footnote).foregroundStyle(Spread.secondary)
             }
             Spacer(minLength: 0)

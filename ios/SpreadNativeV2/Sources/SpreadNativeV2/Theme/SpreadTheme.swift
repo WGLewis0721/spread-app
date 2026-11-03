@@ -12,9 +12,17 @@ public enum Spread {
     public static let canvas = dynamic(light: 0xF2F2F7, dark: 0x000000)
     public static let elevated = dynamic(light: 0xFFFFFF, dark: 0x1C1C1E)
     public static let ink = dynamic(light: 0x1D1D1F, dark: 0xF5F5F7)
-    public static let secondary = dynamic(light: 0x6E6E73, darkRGBA: (235, 235, 245, 0.60))
-    public static let tertiary = dynamic(light: 0x8E8E93, darkRGBA: (235, 235, 245, 0.38))
-    public static let line = dynamic(lightRGBA: (60, 60, 67, 0.14), darkRGBA: (84, 84, 88, 0.65))
+    // Increase Contrast ("stronger separators and ink", docs/design/packs/apple-native-feel.md) swaps in the
+    // ink value for secondary text and a stronger alpha for tertiary text and separators. No new hues.
+    public static let secondary = adaptive(
+        light: (110, 110, 115, 1), dark: (235, 235, 245, 0.60),
+        highLight: (29, 29, 31, 0.86), highDark: (245, 245, 247, 0.88))
+    public static let tertiary = adaptive(
+        light: (142, 142, 147, 1), dark: (235, 235, 245, 0.38),
+        highLight: (110, 110, 115, 1), highDark: (235, 235, 245, 0.72))
+    public static let line = adaptive(
+        light: (60, 60, 67, 0.14), dark: (84, 84, 88, 0.65),
+        highLight: (60, 60, 67, 0.46), highDark: (235, 235, 245, 0.55))
     public static let fill = dynamic(lightRGBA: (120, 120, 128, 0.16), dark: 0x2C2C2E)
     public static let segment = dynamic(light: 0xFFFFFF, dark: 0x3A3A3C)
 
@@ -30,7 +38,9 @@ public enum Spread {
     // MARK: Glass (floating dock, tab rail)
 
     public static let glass = dynamic(lightRGBA: (255, 255, 255, 0.78), darkRGBA: (44, 44, 46, 0.82))
-    public static let glassStroke = dynamic(lightRGBA: (0, 0, 0, 0.08), darkRGBA: (255, 255, 255, 0.12))
+    public static let glassStroke = adaptive(
+        light: (0, 0, 0, 0.08), dark: (255, 255, 255, 0.12),
+        highLight: (0, 0, 0, 0.38), highDark: (255, 255, 255, 0.50))
     public static let glassLine = dynamic(lightRGBA: (255, 255, 255, 0.90), darkRGBA: (255, 255, 255, 0.16))
     public static let shadow = dynamic(lightRGBA: (0, 0, 0, 0.10), darkRGBA: (0, 0, 0, 0.45))
 
@@ -63,15 +73,27 @@ public enum Spread {
 
     // MARK: Typography (styles.css: title 2.125rem, sheet 1.375rem, body 1.0625rem, callout, footnote)
 
-    public static let title = Font.system(size: 34, weight: .bold)
-    public static let sheetTitle = Font.system(size: 22, weight: .bold)
-    public static let body = Font.system(size: 17, weight: .regular)
-    public static let headline = Font.system(size: 16, weight: .semibold)
-    public static let callout = Font.system(size: 15, weight: .regular)
-    public static let footnote = Font.system(size: 13, weight: .regular)
-    public static let caption = Font.system(size: 12, weight: .regular)
+    public static let title = Font.system(.largeTitle, weight: .bold)
+    public static let sheetTitle = Font.system(.title2, weight: .bold)
+    public static let body = Font.system(.body, weight: .regular)
+    public static let headline = Font.system(.callout, weight: .semibold)
+    public static let callout = Font.system(.subheadline, weight: .regular)
+    public static let footnote = Font.system(.footnote, weight: .regular)
+    public static let caption = Font.system(.caption, weight: .regular)
 
     // MARK: Helpers
+
+    typealias RGBA = (Double, Double, Double, Double)
+
+    /// A colour that follows light/dark and, optionally, Increase Contrast (`accessibilityContrast == .high`).
+    private static func adaptive(light: RGBA, dark: RGBA, highLight: RGBA? = nil, highDark: RGBA? = nil) -> Color {
+        Color(uiColor: UIColor { trait in
+            let isDark = trait.userInterfaceStyle == .dark
+            let isHigh = trait.accessibilityContrast == .high
+            let c: RGBA = isDark ? (isHigh ? (highDark ?? dark) : dark) : (isHigh ? (highLight ?? light) : light)
+            return UIColor(red: CGFloat(c.0 / 255), green: CGFloat(c.1 / 255), blue: CGFloat(c.2 / 255), alpha: CGFloat(c.3))
+        })
+    }
 
     private static func dynamic(light: UInt32, dark: UInt32) -> Color {
         Color(uiColor: UIColor { trait in
@@ -180,5 +202,29 @@ extension View {
     func tapTarget(minWidth: CGFloat = 44, minHeight: CGFloat = 44, alignment: Alignment = .center) -> some View {
         frame(minWidth: minWidth, minHeight: minHeight, alignment: alignment).contentShape(Rectangle())
     }
+}
+
+/// The planner's `button:active` feedback: a small scale and a dip in opacity while pressed. It never delays the
+/// action, and Reduce Motion keeps the opacity change but drops the scale.
+struct SpreadPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        PressBody(configuration: configuration)
+    }
+
+    private struct PressBody: View {
+        let configuration: ButtonStyleConfiguration
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+        var body: some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
+                .opacity(configuration.isPressed ? 0.72 : 1)
+                .animation(reduceMotion ? nil : SpreadMotion.press, value: configuration.isPressed)
+        }
+    }
+}
+
+extension ButtonStyle where Self == SpreadPressStyle {
+    static var spreadPress: SpreadPressStyle { SpreadPressStyle() }
 }
 #endif

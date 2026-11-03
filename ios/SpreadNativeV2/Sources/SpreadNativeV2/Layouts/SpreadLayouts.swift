@@ -125,7 +125,7 @@ struct FanLayout: View {
             }
             if !front {
                 Text("\(SpreadHours.text(row.hours))h")
-                    .font(.system(size: 13, weight: .bold)).foregroundStyle(.white).monospacedDigit()
+                    .font(.system(.footnote, weight: .bold)).foregroundStyle(.white).monospacedDigit()
                     .frame(width: cardWidth, alignment: .trailing)
                     .padding(.trailing, 16)
                     .padding(.top, 60)
@@ -223,7 +223,7 @@ struct DialLayout: View {
             .frame(height: 300)
             if let selected {
                 Button { onOpenRole(selected.id) } label: {
-                    Text("Edit \(selected.role.name)").font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent)
+                    Text("Edit \(selected.role.name)").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
                         .frame(minHeight: 44)
                 }
                 .buttonStyle(.plain)
@@ -273,9 +273,9 @@ struct DialLayout: View {
             Text("\(SpreadHours.text(selected?.hours ?? 0))h")
                 .font(.system(size: 44, weight: .heavy)).monospacedDigit().tracking(-1.2)
             Text(selected?.role.name ?? "")
-                .font(.system(size: 17, weight: .bold)).lineLimit(1)
+                .font(.system(.body, weight: .bold)).lineLimit(1)
             Text("of \(SpreadHours.text(total))h")
-                .font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.78))
+                .font(.system(.footnote, weight: .semibold)).foregroundStyle(.white.opacity(0.78))
         }
         .foregroundStyle(.white)
         .frame(width: side * 0.64, height: side * 0.64)
@@ -362,7 +362,7 @@ struct TabsLayout: View {
         } label: {
             HStack(spacing: 8) {
                 if let color { Circle().fill(Color(hex: color)).frame(width: 10, height: 10) }
-                Text(title).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                Text(title).font(.system(.subheadline, weight: .semibold)).lineLimit(1)
             }
             .foregroundStyle(selected ? Color.white : Spread.ink)
             .padding(.horizontal, 16)
@@ -417,9 +417,9 @@ struct DayLayout: View {
                     Button { if day != selectedDay { withAnimation(reduceMotion ? nil : SpreadMotion.curve) { selectedDay = day } } } label: {
                         VStack(spacing: 2) {
                             Text(String(PlannerDates.label(PlannerDates.date(day), pattern: "EEE").prefix(3)))
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(.caption2, weight: .semibold))
                             Text(PlannerDates.label(PlannerDates.date(day), pattern: "d"))
-                                .font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                                .font(.system(.body, weight: .heavy)).monospacedDigit()
                         }
                         .foregroundStyle(isSelected ? Spread.canvas : Spread.ink)
                         .frame(maxWidth: .infinity, minHeight: 60)
@@ -440,7 +440,7 @@ struct DayLayout: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(selectedDay == today ? "Your day at a glance" : "\(label) at a glance")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(.title2, weight: .bold))
                 Text(dayTotal > 0 ? "\(SpreadHours.spoken(dayTotal)) planned across \(blocks.count) \(blocks.count == 1 ? "block" : "blocks")" : "Nothing planned yet. Place hours on the Week tab.")
                     .font(Spread.footnote).foregroundStyle(Spread.secondary)
             }
@@ -453,7 +453,7 @@ struct DayLayout: View {
                         let role = rows.first { $0.role.id == block.roleId }?.role
                         HStack(alignment: .top, spacing: 8) {
                             Text("\(SpreadHours.text(start))h")
-                                .font(.system(size: 11, weight: .semibold)).foregroundStyle(Spread.secondary)
+                                .font(.system(.caption2, weight: .semibold)).foregroundStyle(Spread.secondary)
                                 .frame(width: 42, alignment: .trailing).padding(.top, 14)
                             Circle().fill(Color(hex: role?.color ?? "#8E8E93")).frame(width: 12, height: 12).padding(.top, 14)
                             Button {
@@ -461,9 +461,9 @@ struct DayLayout: View {
                             } label: {
                                 HStack(spacing: 10) {
                                     if let role { RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 32) }
-                                    Text(role?.name ?? "").font(.system(size: 17, weight: .semibold)).lineLimit(1)
+                                    Text(role?.name ?? "").font(.system(.body, weight: .semibold)).lineLimit(1)
                                     Spacer(minLength: 4)
-                                    Text("\(SpreadHours.text(block.hours))h").font(.system(size: 15, weight: .semibold)).monospacedDigit()
+                                    Text("\(SpreadHours.text(block.hours))h").font(.system(.subheadline, weight: .semibold)).monospacedDigit()
                                 }
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 14)
@@ -478,10 +478,10 @@ struct DayLayout: View {
                         .transition(.opacity.combined(with: .offset(y: reduceMotion ? 0 : 14)))
                     }
                     HStack(spacing: 8) {
-                        Text("\(SpreadHours.text(dayTotal))h").font(.system(size: 11, weight: .semibold)).foregroundStyle(Spread.secondary)
+                        Text("\(SpreadHours.text(dayTotal))h").font(.system(.caption2, weight: .semibold)).foregroundStyle(Spread.secondary)
                             .frame(width: 42, alignment: .trailing)
                         Circle().strokeBorder(Spread.ink, lineWidth: 2).frame(width: 12, height: 12)
-                        Text("End of plan").font(.system(size: 12, weight: .semibold)).foregroundStyle(Spread.secondary)
+                        Text("End of plan").font(.system(.caption, weight: .semibold)).foregroundStyle(Spread.secondary)
                             .padding(.horizontal, 10).padding(.vertical, 3)
                             .background(Spread.elevated, in: Capsule())
                     }

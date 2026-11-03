@@ -114,9 +114,9 @@ struct WeekSurface: View {
                     } label: {
                         HStack(spacing: 8) {
                             Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
-                            Text(role.name).font(.system(size: 15, weight: .semibold))
+                            Text(role.name).font(.system(.subheadline, weight: .semibold))
                             Text("\(SpreadHours.text(left))h")
-                                .font(.system(size: 15)).foregroundStyle(Spread.secondary).monospacedDigit()
+                                .font(.system(.subheadline)).foregroundStyle(Spread.secondary).monospacedDigit()
                         }
                         .padding(.horizontal, 12)
                         .frame(minHeight: 44)
@@ -142,9 +142,9 @@ struct WeekSurface: View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Label {
-                    Text("Free time").font(.system(size: 14, weight: .semibold))
+                    Text("Free time").font(.system(.subheadline, weight: .semibold))
                 } icon: {
-                    Image(systemName: "clock").font(.system(size: 13, weight: .bold))
+                    Image(systemName: "clock").font(.system(.footnote, weight: .bold))
                 }
                 .foregroundStyle(Spread.accent)
                 .padding(.horizontal, 4)
@@ -157,13 +157,13 @@ struct WeekSurface: View {
                             Task { await planner.send(["type": "moveSpreadToDay", "roleId": item.roleId, "day": item.day, "hours": item.hours]) }
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: "plus").font(.system(size: 13, weight: .bold))
+                                Image(systemName: "plus").font(.system(.footnote, weight: .bold))
                                 Circle().fill(Color(hex: role?.color ?? "#8E8E93")).frame(width: 8, height: 8)
                                 Text(role?.name ?? "").foregroundStyle(Spread.ink)
                                 Text(String(item.dayLabel.prefix(3)))
                                 Text("\(SpreadHours.text(item.hours))h").opacity(0.7).monospacedDigit()
                             }
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(.subheadline, weight: .semibold))
                             .foregroundStyle(Spread.accent)
                             .padding(.horizontal, 14)
                             .frame(minHeight: 44)
@@ -203,14 +203,14 @@ struct DayCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Text(label)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(.body, weight: .semibold))
                     .accessibilityAddTraits(isToday ? .isHeader : [])
                 if isToday {
-                    Text("Today").font(.system(size: 12, weight: .semibold)).foregroundStyle(Spread.accent)
+                    Text("Today").font(.system(.caption, weight: .semibold)).foregroundStyle(Spread.accent)
                 }
                 Spacer()
                 Text(PlannerDates.label(PlannerDates.date(day), pattern: "MM/dd"))
-                    .font(.system(size: 12)).foregroundStyle(Spread.secondary).monospacedDigit()
+                    .font(.system(.caption)).foregroundStyle(Spread.secondary).monospacedDigit()
             }
             .padding(.horizontal, 4)
 
@@ -232,8 +232,8 @@ struct DayCard: View {
                     Task { await planner.send(["type": "moveSpreadToDay", "roleId": selectedRole, "day": day, "hours": 1]) }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "plus").font(.system(size: 14, weight: .bold))
-                        Text("Add \(name)").font(.system(size: 15, weight: .semibold))
+                        Image(systemName: "plus").font(.system(.subheadline, weight: .bold))
+                        Text("Add \(name)").font(.system(.subheadline, weight: .semibold))
                     }
                     .foregroundStyle(Spread.accent)
                     .frame(maxWidth: .infinity, minHeight: 44)
@@ -305,18 +305,18 @@ struct AllocationRow: View {
                         .accessibilityIdentifier("allocation-\(allocation.id)")
 
                     if tasks.isEmpty {
-                        Text(role.name).font(.system(size: 15, weight: .medium)).lineLimit(1)
+                        Text(role.name).font(.system(.subheadline, weight: .medium)).lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         Button { showTasks.toggle() } label: {
                             VStack(alignment: .leading, spacing: 0) {
-                                Text(role.name).font(.system(size: 15, weight: .medium)).lineLimit(1)
+                                Text(role.name).font(.system(.subheadline, weight: .medium)).lineLimit(1)
                                 HStack(spacing: 2) {
                                     Text("\(tasks.count) \(tasks.count == 1 ? "task" : "tasks")")
-                                    Image(systemName: "chevron.down").font(.system(size: 11, weight: .bold))
+                                    Image(systemName: "chevron.down").font(.system(.caption2, weight: .bold))
                                         .rotationEffect(.degrees(showTasks ? 180 : 0))
                                 }
-                                .font(.system(size: 12)).foregroundStyle(Spread.secondary)
+                                .font(.system(.caption)).foregroundStyle(Spread.secondary)
                             }
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                             .contentShape(Rectangle())
@@ -342,7 +342,7 @@ struct AllocationRow: View {
                             leaving = false
                         }
                     } label: {
-                        Image(systemName: "minus").font(.system(size: 14, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                        Image(systemName: "minus").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.tertiary)
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -389,16 +389,16 @@ struct HourStepper: View {
     var body: some View {
         HStack(spacing: 0) {
             Button { onChange(SpreadHours.clamp(value - 1)) } label: {
-                Image(systemName: "minus").font(.system(size: 13, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
+                Image(systemName: "minus").font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Decrease \(label)")
             Text("\(SpreadHours.text(value))h")
-                .font(.system(size: 15, weight: .semibold)).monospacedDigit()
+                .font(.system(.subheadline, weight: .semibold)).monospacedDigit()
                 .frame(minWidth: 32)
                 .accessibilityLabel("\(label), \(SpreadHours.spoken(value))")
             Button { onChange(SpreadHours.clamp(value + 1)) } label: {
-                Image(systemName: "plus").font(.system(size: 13, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
+                Image(systemName: "plus").font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Increase \(label)")

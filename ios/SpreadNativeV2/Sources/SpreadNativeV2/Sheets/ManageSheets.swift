@@ -33,12 +33,12 @@ struct NewSpreadSheet: View {
                         drafts.append(Draft(id: nextId))
                         nextId += 1
                     } label: {
-                        Text("Add another spread").font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent)
+                        Text("Add another spread").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .accessibilityIdentifier("add-another-spread")
                     Button { save() } label: {
-                        Text("Save spreads").font(.system(size: 17, weight: .semibold)).foregroundStyle(Spread.onAccent)
+                        Text("Save spreads").font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Spread.accent, in: Capsule())
                     }
@@ -57,14 +57,15 @@ struct NewSpreadSheet: View {
             }
         }
         .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     private func draftCard(_ index: Int) -> some View {
         let draft = drafts[index]
         return VStack(alignment: .leading, spacing: 10) {
-            Text("Spread \(index + 1)").font(.system(size: 13)).foregroundStyle(Spread.secondary)
+            Text("Spread \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
             TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }))
-                .font(.system(size: 17))
+                .font(.system(.body))
                 .padding(.horizontal, 14).frame(minHeight: 48)
                 .background(Spread.fill, in: RoundedRectangle(cornerRadius: 14))
                 .accessibilityLabel("Spread \(index + 1) name")
@@ -233,6 +234,7 @@ struct RoleSheet: View {
             }
         }
         .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     private func rename(_ role: Responsibility) {
@@ -266,7 +268,7 @@ struct CarryOverSheet: View {
                         } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: chosen.contains(where: { $0.id == task.id }) ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(size: 22))
+                                    .font(.system(.title2))
                                     .foregroundStyle(chosen.contains(where: { $0.id == task.id }) ? Spread.accent : Spread.tertiary)
                                 Text(task.text.isEmpty ? "Untitled task" : task.text).lineLimit(2)
                                 Spacer(minLength: 0)
@@ -301,6 +303,7 @@ struct CarryOverSheet: View {
             }
         }
         .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     private func move() {
@@ -386,7 +389,8 @@ struct ProfilesSheet: View {
                 }
             }
         }
-        .presentationDetents([.large])
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     private func rename(_ profile: NativeProfile) {
@@ -497,7 +501,8 @@ struct MoreSheet: View {
             .sheet(isPresented: $newSpread) { NewSpreadSheet(planner: planner) }
             .sheet(isPresented: $openTasks) { CarryOverSheet(planner: planner) }
         }
-        .presentationDetents([.large])
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 #endif

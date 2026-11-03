@@ -28,15 +28,15 @@ struct ToPlaceTray: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "tray").font(.system(size: 14, weight: .semibold)).foregroundStyle(Spread.secondary)
-                Text("To place").font(.system(size: 15, weight: .semibold))
+                Image(systemName: "tray").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.secondary)
+                Text("To place").font(.system(.subheadline, weight: .semibold))
                 Spacer()
                 if tasks.isEmpty {
                     Text("Drop a task here to take it off its day.")
                         .font(Spread.caption).foregroundStyle(Spread.secondary).multilineTextAlignment(.trailing)
                 } else {
                     Text("\(tasks.count)")
-                        .font(.system(size: 12, weight: .semibold)).monospacedDigit()
+                        .font(.system(.caption, weight: .semibold)).monospacedDigit()
                         .padding(.horizontal, 8).frame(minHeight: 24)
                         .background(Spread.fill, in: Capsule())
                         .accessibilityLabel("\(tasks.count) to place")
@@ -87,11 +87,11 @@ struct ToPlaceTray: View {
             } label: {
                 HStack(spacing: 12) {
                     Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
-                    Text(role.name).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                    Text(role.name).font(.system(.subheadline, weight: .semibold)).lineLimit(1)
                     Spacer(minLength: 4)
                     Text("\(mine.count) \(mine.count == 1 ? "task" : "tasks")")
                         .font(Spread.caption).foregroundStyle(Spread.secondary).monospacedDigit()
-                    Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                    Image(systemName: "chevron.down").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.tertiary)
                         .rotationEffect(.degrees(opened ? 180 : 0))
                 }
                 .padding(.horizontal, 16)
@@ -112,7 +112,7 @@ struct ToPlaceTray: View {
                     if !showAll {
                         Button { expandedMore.insert(role.id) } label: {
                             Text("Show \(mine.count - Self.groupPreview) more")
-                                .font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent)
+                                .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.plain)
@@ -144,7 +144,7 @@ struct TaskLine: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
                 Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 13, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                    .font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.tertiary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .draggable(SpreadDragPayload.task(id: task.id, roleId: task.roleId, label: task.text))
@@ -153,7 +153,7 @@ struct TaskLine: View {
 
                 Button { onOpenTask(task.roleId, task.id) } label: {
                     Text(task.text.isEmpty ? "Untitled task" : task.text)
-                        .font(.system(size: 15))
+                        .font(.system(.subheadline))
                         .strikethrough(task.done)
                         .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
                         .multilineTextAlignment(.leading)
@@ -166,7 +166,7 @@ struct TaskLine: View {
                 if !task.done {
                     Button { expanded.toggle() } label: {
                         Text(currentAllocation == nil ? "Place" : "Move to")
-                            .font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent)
+                            .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
                             .padding(.horizontal, 12).frame(minHeight: 44)
                             .contentShape(Rectangle())
                     }
@@ -196,7 +196,7 @@ struct TaskLine: View {
                                     Text(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEE"))
                                     Text("\(SpreadHours.text(allocation.hours))h").foregroundStyle(Spread.secondary).monospacedDigit()
                                 }
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(.subheadline, weight: .semibold))
                                 .padding(.horizontal, 14).frame(minHeight: 44)
                                 .background(Spread.fill, in: Capsule())
                                 .opacity(current ? 0.4 : 1)
@@ -211,7 +211,7 @@ struct TaskLine: View {
                                 Task { await planner.send(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": NSNull()]) }
                             } label: {
                                 Text("Take off this day")
-                                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.danger)
+                                    .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.danger)
                                     .padding(.horizontal, 14).frame(minHeight: 44)
                                     .background(Spread.fill, in: Capsule())
                             }
