@@ -37,7 +37,8 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
 
     /// A task is eligible only for an allocation of its own responsibility.
     public func eligibleAllocations(for task: PlannerTask) -> [DayAllocation] {
-        allocations.filter { $0.roleId == task.roleId && $0.hours > 0 }
+        guard !task.done else { return [] }
+        return allocations.filter { $0.roleId == task.roleId && $0.hours > 0 }
             .sorted { $0.day == $1.day ? $0.order < $1.order : $0.day < $1.day }
     }
 }

@@ -382,7 +382,7 @@ struct LiveEditor: View {
         case .move(let task):
             Text(task.text)
             let eligible = planner.snapshot?.eligibleAllocations(for: task) ?? []
-            if eligible.isEmpty { Text("Place hours for this responsibility on a day first.") }
+            if eligible.isEmpty { Text(task.done ? "Reopen this task before moving it." : "Place hours for this responsibility on a day first.") }
             ForEach(eligible) { allocation in
                 Button("\(allocation.day) · \(allocation.hours.formatted())h") { submit(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": allocation.id]) }.frame(minHeight: 44).accessibilityIdentifier("eligible-day-\(allocation.id)")
             }

@@ -27,8 +27,12 @@ export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): 
   const week = data.weeks[data.currentWeek];
   const boxes = new Map(week?.boxes.map((box) => [box.hatId, box]) ?? []);
   const roleIds = new Set(data.hats.map((hat) => hat.id));
-  const allocations = (week?.allocations ?? []).filter((allocation) => roleIds.has(allocation.hatId));
-  const allocationIds = new Set(allocations.map((allocation) => allocation.id));
+  const allocations = (week?.allocations ?? []).filter((allocation) =>
+    roleIds.has(allocation.hatId),
+  );
+  const allocationRoles = new Map(
+    allocations.map((allocation) => [allocation.id, allocation.hatId]),
+  );
 
   return {
     protocolVersion: 1,
@@ -56,7 +60,10 @@ export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): 
           text: task.text,
           done: task.done,
           // Match the current To place logic: a stale allocation link is not scheduled.
-          allocationId: task.allocationId && allocationIds.has(task.allocationId) ? task.allocationId : null,
+          allocationId:
+            task.allocationId && allocationRoles.get(task.allocationId) === hat.id
+              ? task.allocationId
+              : null,
         })),
       ),
     },

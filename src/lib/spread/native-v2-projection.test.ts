@@ -16,9 +16,20 @@ function source(): SpreadData {
       "2026-11-02": {
         boxes: [
           {
-            hatId: "work", hours: 7.5, tasks: [
-              { id: "task-placed", text: "Review roadmap", done: false, allocationId: "alloc-work",
-                content: { blocks: [{ id: "note-1", type: "notes", text: "Private notes must stay stored." }] } },
+            hatId: "work",
+            hours: 7.5,
+            tasks: [
+              {
+                id: "task-placed",
+                text: "Review roadmap",
+                done: false,
+                allocationId: "alloc-work",
+                content: {
+                  blocks: [
+                    { id: "note-1", type: "notes", text: "Private notes must stay stored." },
+                  ],
+                },
+              },
               { id: "task-stale", text: "Move later", done: false, allocationId: "deleted-link" },
               { id: "task-done", text: "Done", done: true },
             ],
@@ -31,7 +42,9 @@ function source(): SpreadData {
         ],
       },
       "2026-10-26": {
-        boxes: [{ hatId: "work", hours: 6, tasks: [{ id: "history", text: "Older work", done: false }] }],
+        boxes: [
+          { hatId: "work", hours: 6, tasks: [{ id: "history", text: "Older work", done: false }] },
+        ],
         allocations: [],
       },
     },
@@ -39,7 +52,15 @@ function source(): SpreadData {
 }
 
 test("native v2 JSON matches the fixture independently decoded by Swift", () => {
-  const expected = JSON.parse(readFileSync(new URL("../../../ios/SpreadNativeV2/Tests/SpreadNativeV2Tests/Fixtures/projection-v1.json", import.meta.url), "utf8"));
+  const expected = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../ios/SpreadNativeV2/Tests/SpreadNativeV2Tests/Fixtures/projection-v1.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
   assert.deepEqual(projectNativeV2(source(), "profile-1"), expected);
 });
 
@@ -64,12 +85,18 @@ test("native v2 projects only the selected week without changing historical data
   const data = source();
   const now = projectNativeV2(data, "p1");
   assert.equal(now.snapshot.weekKey, "2026-11-02");
-  assert.deepEqual(now.snapshot.tasks.map((t) => t.id), ["task-placed", "task-stale", "task-done"]);
+  assert.deepEqual(
+    now.snapshot.tasks.map((t) => t.id),
+    ["task-placed", "task-stale", "task-done"],
+  );
   data.currentWeek = shiftWeek("2026-11-02", -1);
   const before = structuredClone(data);
   const prior = projectNativeV2(data, "p1");
   assert.equal(prior.snapshot.weekKey, "2026-10-26");
-  assert.deepEqual(prior.snapshot.tasks.map((t) => t.id), ["history"]);
+  assert.deepEqual(
+    prior.snapshot.tasks.map((t) => t.id),
+    ["history"],
+  );
   assert.deepEqual(data, before);
 });
 
@@ -82,10 +109,13 @@ test("native v2 uses weekly bank hours and never substitutes category defaults",
 
 test("native v2 preserves real half-hour allocations and their ordering", () => {
   const allocations = projectNativeV2(source(), "p1").snapshot.allocations;
-  assert.deepEqual(allocations.map(({ id, day, hours, order }) => ({ id, day, hours, order })), [
-    { id: "alloc-work", day: "2026-11-04", hours: 2.5, order: 1 },
-    { id: "alloc-home", day: "2026-11-03", hours: 1, order: 0 },
-  ]);
+  assert.deepEqual(
+    allocations.map(({ id, day, hours, order }) => ({ id, day, hours, order })),
+    [
+      { id: "alloc-work", day: "2026-11-04", hours: 2.5, order: 1 },
+      { id: "alloc-home", day: "2026-11-03", hours: 1, order: 0 },
+    ],
+  );
 });
 
 test("native v2 turns missing links into To place without altering stored IDs", () => {
@@ -110,7 +140,13 @@ test("native v2 tolerates an uncreated week without writing it into storage", ()
 test("native v2 excludes orphan allocations, matches five categories, and falls back to custom art", () => {
   const data = source();
   data.hats.push({ id: "other", name: "Other", color: "#2277AA", defaultHours: 0 });
-  data.weeks[data.currentWeek].allocations.push({ id: "orphan", hatId: "removed-role", day: "2026-11-05", hours: 1, order: 2 });
+  data.weeks[data.currentWeek].allocations.push({
+    id: "orphan",
+    hatId: "removed-role",
+    day: "2026-11-05",
+    hours: 1,
+    order: 2,
+  });
   const snapshot = projectNativeV2(data, "p1").snapshot;
   assert.equal(snapshot.roles[2].category, "custom");
   assert.ok(!snapshot.allocations.some((a) => a.id === "orphan"));
@@ -118,5 +154,17 @@ test("native v2 excludes orphan allocations, matches five categories, and falls 
 
 test("native v2 is deterministic and does not change serialization across repeated reads", () => {
   const data = source();
-  assert.equal(JSON.stringify(projectNativeV2(data, "p1")), JSON.stringify(projectNativeV2(data, "p1")));
+  assert.equal(
+    JSON.stringify(projectNativeV2(data, "p1")),
+    JSON.stringify(projectNativeV2(data, "p1")),
+  );
+});
+
+test("legacy wrong-role links render in To place without rewriting the original record", () => {
+  const data = source();
+  data.weeks[data.currentWeek].boxes[0].tasks[0].allocationId = "alloc-home";
+  const original = JSON.stringify(data);
+  const rendered = projectNativeV2(data, "profile-1");
+  assert.equal(rendered.snapshot.tasks[0].allocationId, null);
+  assert.equal(JSON.stringify(data), original);
 });
