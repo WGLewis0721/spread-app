@@ -14,6 +14,14 @@ Spread is a local-first weekly planner. You name the responsibilities in your li
 
 Work goes on a branch, through a pull request, into `main`.
 
+## Spread 2.0 native checkpoint — November 3, 2026
+
+[PR #114](https://github.com/WGLewis0721/spread-app/pull/114) is merged at `6aa2355` and deployed to web production. It adds the live SwiftUI/WebKit planner, guarded commands against the existing TypeScript engine, native task/content/hour workflows, five Chalkboard layouts, the metallic week Crown and persistence/recovery protections. It introduces no second writable planner database.
+
+**Native release remains NO-GO:** main CI passes and the 820/1024-point native layout jobs pass, but the 390-point accessibility audit reports clipped text and the latest main installed-app persistence step fails. The actual 100-drag Crown test and unsigned Release archive pass; full journeys, Stack/Fan gestures, hardware and usability acceptance remain open. There has been no TestFlight/App Store upload. Continue on `fix/spread-native-acceptance-followup`; open the next implementation PR when its remaining fixes are ready.
+
+Use the [current engineering handoff and continuation prompt](docs/SPREAD_2_NATIVE_HANDOFF.md), [verification ledger](docs/evidence/issue-113/README.md), and [actual simulator screenshots](docs/evidence/issue-113/screenshots/b5a3eaf/README.md). Earlier fixture-only notes describe the pre-#114 foundation, not the current live implementation.
+
 ## Launch videos
 
 The [standalone launch-video workspace](tools/launch-video/README.md) preserves the approved version 7 Hallie film and a Grady male companion. It includes two editable Remotion compositions, source recordings, local assets, verified MP4s and reproducible build commands. Its dependencies and output are separate from the planner.

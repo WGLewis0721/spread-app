@@ -1,0 +1,71 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "685A6A40-2C52-4470-86B0-12E5FE717929",
+        "deviceName" : "Spread 820 pt",
+        "exportedFileName" : "8B4883EB-CD60-4834-8933-0414FE3D966A.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "viewport-820-month_0_7CB0087C-0A46-4375-BAFD-F483B8D3CC1A.png",
+        "timestamp" : 1793735121.561
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "685A6A40-2C52-4470-86B0-12E5FE717929",
+        "deviceName" : "Spread 820 pt",
+        "exportedFileName" : "D92A4DD6-0A19-4C1D-81A7-AD5B49536652.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "viewport-820-Day_0_62D4D5E9-3611-4B72-9E7F-685FC1233B5B.png",
+        "timestamp" : 1793735118.105
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "685A6A40-2C52-4470-86B0-12E5FE717929",
+        "deviceName" : "Spread 820 pt",
+        "exportedFileName" : "D7F9457D-5551-4BA6-9180-75BBDD1C038E.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "viewport-820-Tabs_0_1732D054-532F-4B56-9B12-246D0AEA575F.png",
+        "timestamp" : 1793735113.866
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "685A6A40-2C52-4470-86B0-12E5FE717929",
+        "deviceName" : "Spread 820 pt",
+        "exportedFileName" : "A8483C8B-C4DE-41FF-9118-1FD65AFBC7EE.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "viewport-820-Dial_0_228D0231-DC3D-4F80-BC53-EF165D55BD74.png",
+        "timestamp" : 1793735109.706
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "685A6A40-2C52-4470-86B0-12E5FE717929",
+        "deviceName" : "Spread 820 pt",
+        "exportedFileName" : "B883434E-41AD-4BBF-AF34-2DC829B4CB65.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "viewport-820-Fan_0_2557F96C-6FE8-4C38-94CA-0DCB13A89DB1.png",
+        "timestamp" : 1793735105.363
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "685A6A40-2C52-4470-86B0-12E5FE717929",
+        "deviceName" : "Spread 820 pt",
+        "exportedFileName" : "A0CC39F5-E47C-4C8A-B773-EEFB603F7071.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "viewport-820-Stack_0_0303BD7C-BE9B-43BB-9F81-C4FCEA852BF9.png",
+        "timestamp" : 1793735100.978
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "685A6A40-2C52-4470-86B0-12E5FE717929",
+        "deviceName" : "Spread 820 pt",
+        "exportedFileName" : "BD4718A0-23F2-484F-8CDE-21204EFE26E0.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "viewport-820-week_0_D81665EA-2CB8-4DC9-885D-8BA4B058A898.png",
+        "timestamp" : 1793735091.215
+      }
+    ],
+    "testIdentifier" : "PlannerUITests/testLayout820()",
+    "testIdentifierURL" : "test://com.apple.xcode/App/SpreadNativeUITests/PlannerUITests/testLayout820"
+  }
+]

@@ -1,5 +1,7 @@
 # Spread for iPhone: release candidate runbook
 
+> **November 3, 2026 update:** live Spread 2.0 SwiftUI hosting and its WebKit bridge merged in [PR #114](https://github.com/WGLewis0721/spread-app/pull/114), main `6aa2355`. Web production is deployed. Native acceptance is **NO-GO**: the latest full-shell persistence step fails and the 390-point audit reports clipped text; hardware and distribution gates remain open. Historical simulator passes below describe their recorded baseline, not acceptance of this native candidate. Read [the current handoff](SPREAD_2_NATIVE_HANDOFF.md) and [evidence ledger](evidence/issue-113/README.md) before packaging or describing release readiness. No TestFlight/App Store upload was performed.
+
 **Release automation (proposed, not yet executed):** The manual GitHub Actions + Fastlane internal-TestFlight pipeline and owner configuration are in [IOS_AUTOMATION.md](IOS_AUTOMATION.md). Existing security, physical-device and cloud release gates remain open.
 
 Spread 1.0 is the existing planner packaged with Capacitor for iPhone and iPad. It is local-first, has
