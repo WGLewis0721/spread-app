@@ -11,6 +11,10 @@ struct MonthSurface: View {
     let anchor: Date
     let onPick: (String) -> Void
 
+    /// Dots for every day of the month, from the planner (any week). Until they arrive, or if they cannot, the open
+    /// week's own dots are drawn so the grid is never empty.
+    @State private var marks: [String: NativeDayMark] = [:]
+
     private static let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     private var calendar: Calendar { PlannerDates.calendar }
 
@@ -47,7 +51,7 @@ struct MonthSurface: View {
             HStack(spacing: 6) {
                 ForEach(Self.weekdays, id: \.self) { label in
                     Text(label)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(.caption2, weight: .medium))
                         .foregroundStyle(Spread.secondary)
                         .frame(maxWidth: .infinity)
                         .accessibilityHidden(true)
@@ -62,32 +66,50 @@ struct MonthSurface: View {
         .padding(.horizontal, 4)
         .padding(.top, 16)
         .accessibilityIdentifier("month")
+        .task(id: marksKey) {
+            let parts = PlannerDates.calendar.dateComponents([.year, .month], from: anchor)
+            guard let year = parts.year, let month = parts.month else { return }
+            if let fresh = await planner.monthMarks(year: year, month: month - 1) { marks = fresh }
+        }
+    }
+
+    /// Changes whenever the month shown, the profile, or the plan itself changes, so the dots follow edits.
+    private var marksKey: String {
+        let parts = PlannerDates.calendar.dateComponents([.year, .month], from: anchor)
+        return "\(planner.state?.envelope.profileId ?? "")-\(parts.year ?? 0)-\(parts.month ?? 0)-\(planner.state?.revision ?? 0)"
+    }
+
+    /// The dots for one day: the planner's answer when it has one, else the open week's own allocations.
+    private func mark(for iso: String) -> NativeDayMark {
+        if let known = marks[iso] { return known }
+        var colors: [String] = []
+        for role in snapshot.roles where snapshot.allocations.contains(where: { $0.day == iso && $0.roleId == role.id && $0.hours > 0 }) {
+            colors.append(role.color)
+        }
+        return NativeDayMark(colors: Array(colors.prefix(3)), extra: max(0, colors.count - 3))
     }
 
     private func dayCell(_ cell: Cell, isToday: Bool) -> some View {
-        let roles = snapshot.roles.filter { role in
-            snapshot.allocations.contains { $0.day == cell.iso && $0.roleId == role.id && $0.hours > 0 }
-        }
-        let shownDots = roles.prefix(3)
-        let extra = max(0, roles.count - 3)
+        let dots: NativeDayMark = mark(for: cell.iso)
         let label = PlannerDates.label(cell.date, pattern: "EEEE MMMM d")
-        let count = roles.count
+        let count = dots.count
+        let extra = dots.extra
         return Button { onPick(cell.iso) } label: {
             VStack(spacing: 4) {
                 Text("\(cell.day)")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(.subheadline, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(isToday ? Spread.onAccent : (cell.inMonth ? Spread.ink : Spread.tertiary))
                     .frame(width: 28, height: 28)
                     .background(isToday ? Spread.accent : Color.clear, in: Circle())
                 HStack(spacing: 3) {
-                    ForEach(Array(shownDots), id: \.id) { role in
-                        Circle().fill(Color(hex: role.color)).frame(width: 6, height: 6)
+                    ForEach(Array(dots.colors.enumerated()), id: \.offset) { _, color in
+                        Circle().fill(Color(hex: color)).frame(width: 6, height: 6)
                     }
                 }
                 .frame(height: 6)
                 Text(extra > 0 ? "+\(extra)" : " ")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(.caption2, weight: .medium))
                     .foregroundStyle(Spread.secondary)
                     .frame(height: 12)
             }

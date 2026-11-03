@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { installBrowser } from "../../test-support/browser-env.ts";
-import { defaultData, STORE_KEY } from "./model.ts";
+import { defaultData, shiftWeek, STORE_KEY, weekDays } from "./model.ts";
 import { noteSaved } from "./local-status.ts";
 const storage = installBrowser();
 const { useSpread } = await import("./store.ts");
@@ -384,4 +384,223 @@ test("addRole with a real category stores it and an unknown category is refused 
   const bad = await router.dispatch(request({ type: "addRole", name: "Bogus", hours: 2, category: "bogus" }));
   assert.equal(bad.ok, false);
   assert.equal(useSpread.getState().data.hats.length, count, "a refused command writes nothing");
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// SwiftUI UX audit: the native intents added for the rebuilt shell had no coverage. These pin the data-safety
+// properties the audit requires: the right role/day/week, no write on a refusal, Undo for drags, reads that
+// change nothing.
+// ---------------------------------------------------------------------------------------------------------------
+
+const openWeekDays = () => weekDays(useSpread.getState().data.currentWeek).map((d) => d.date);
+const dataJSON = () => JSON.stringify(useSpread.getState().data);
+
+test("moveSpreadToDay adds hours for that role on a day of the open week and Undo takes them back", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const target = openWeekDays()[2];
+    const before = dataJSON();
+    const moved = await router.dispatch(request({ type: "moveSpreadToDay", roleId, day: target, hours: 1 }));
+    assert.equal(moved.ok, true);
+    assert.equal(typeof moved.undoId, "string", "a drag offers Undo");
+    const placed = router.read()!.envelope.snapshot.allocations.filter((a) => a.day === target);
+    assert.deepEqual(placed.map((a) => [a.roleId, a.hours]), [[roleId, 1]]);
+    const undone = await router.dispatch(request({ type: "undo", editId: moved.undoId }));
+    assert.equal(undone.ok, true);
+    assert.equal(dataJSON(), before, "Undo restores the exact prior plan");
+  } finally {
+    router.dispose();
+  }
+});
+
+test("moveSpreadToDay refuses a day outside the open week, an unknown role and a non-positive amount without any write", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const before = dataJSON();
+    const nextWeek = shiftWeek(useSpread.getState().data.currentWeek, 1);
+    const outside = await router.dispatch(request({ type: "moveSpreadToDay", roleId, day: nextWeek, hours: 1 }));
+    assert.deepEqual([outside.ok, outside.error], [false, "invalid-day"]);
+    const unknown = await router.dispatch(request({ type: "moveSpreadToDay", roleId: "nobody", day: openWeekDays()[1], hours: 1 }));
+    assert.deepEqual([unknown.ok, unknown.error], [false, "no-role"]);
+    const zero = await router.dispatch(request({ type: "moveSpreadToDay", roleId, day: openWeekDays()[1], hours: 0 }));
+    assert.deepEqual([zero.ok, zero.error], [false, "invalid-command"]);
+    assert.equal(dataJSON(), before);
+  } finally {
+    router.dispose();
+  }
+});
+
+test("moveAllocation keeps the role and hours, merges into the same role's allocation on the target day, and ignores other weeks", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const target = openWeekDays()[3];
+    const moved = await router.dispatch(request({ type: "moveAllocation", allocationId: "eligible", day: target }));
+    assert.equal(moved.ok, true);
+    assert.equal(typeof moved.undoId, "string");
+    let allocations = router.read()!.envelope.snapshot.allocations;
+    const mine = allocations.find((a) => a.id === "eligible")!;
+    assert.deepEqual([mine.roleId, mine.day, mine.hours], [roleId, target, 2]);
+    assert.equal(allocations.find((a) => a.id === "wrong")!.roleId, useSpread.getState().data.hats[1].id, "another role's hours do not move");
+    // Moving a second allocation of the same role onto that day folds the hours together.
+    const other = await router.dispatch(request({ type: "moveSpreadToDay", roleId, day: openWeekDays()[1], hours: 1 }));
+    assert.equal(other.ok, true);
+    const extra = router.read()!.envelope.snapshot.allocations.find((a) => a.day === openWeekDays()[1])!;
+    const merged = await router.dispatch(request({ type: "moveAllocation", allocationId: extra.id, day: target }));
+    assert.equal(merged.ok, true);
+    allocations = router.read()!.envelope.snapshot.allocations.filter((a) => a.roleId === roleId && a.day === target);
+    assert.deepEqual(allocations.map((a) => a.hours), [3], "one allocation, hours added");
+    const before = dataJSON();
+    const missing = await router.dispatch(request({ type: "moveAllocation", allocationId: "not-here", day: target }));
+    assert.deepEqual([missing.ok, missing.error], [false, "no-allocation"]);
+    assert.equal(dataJSON(), before);
+  } finally {
+    router.dispose();
+  }
+});
+
+test("setRoleColor and setRoleCategory change only that role, and malformed values never write", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const roles = () => router.read()!.envelope.snapshot.roles;
+    const sibling = roles()[1];
+    // Choosing a symbol also takes that symbol's preset colour (store behaviour, unchanged), so colour comes second.
+    assert.equal((await router.dispatch(request({ type: "setRoleCategory", roleId, category: "fitness" }))).ok, true);
+    assert.equal((await router.dispatch(request({ type: "setRoleColor", roleId, color: "#112233" }))).ok, true);
+    assert.deepEqual([roles()[0].color, roles()[0].category], ["#112233", "fitness"]);
+    assert.deepEqual(roles()[1], sibling, "the sibling responsibility is untouched");
+    const before = dataJSON();
+    for (const action of [
+      { type: "setRoleColor", roleId, color: "red" },
+      { type: "setRoleColor", roleId, color: "#12345" },
+      { type: "setRoleCategory", roleId, category: "bogus" },
+      { type: "setRoleColor", roleId: "nobody", color: "#112233" },
+    ]) {
+      const reply = await router.dispatch(request(action));
+      assert.equal(reply.ok, false);
+    }
+    assert.equal(dataJSON(), before);
+  } finally {
+    router.dispose();
+  }
+});
+
+test("rollover copies into next week once, asks before replacing it, and replaces only when forced", async () => {
+  const { router, request } = setup();
+  try {
+    const start = useSpread.getState().data.currentWeek;
+    const first = await router.dispatch(request({ type: "rollover", force: false }));
+    assert.deepEqual([first.ok, first.rollover], [true, "done"]);
+    assert.equal(useSpread.getState().data.currentWeek, shiftWeek(start, 1), "the new week opens");
+    // Back on the first week: next week now has content, so a plain rollover only asks.
+    useSpread.getState().openWeek(start);
+    const before = dataJSON();
+    const asked = await router.dispatch(request({ type: "rollover", force: false }));
+    assert.deepEqual([asked.ok, asked.rollover], [true, "confirm"]);
+    assert.equal(dataJSON(), before, "asking changes nothing");
+    const forced = await router.dispatch(request({ type: "rollover", force: true }));
+    assert.deepEqual([forced.ok, forced.rollover], [true, "done"]);
+    assert.equal(useSpread.getState().data.currentWeek, shiftWeek(start, 1));
+  } finally {
+    router.dispose();
+  }
+});
+
+test("removeProfile refuses the last profile and writes nothing", async () => {
+  const { router, request } = setup();
+  try {
+    useSpread.setState({ profiles: [{ id: "p1", name: "Me", store: STORE_KEY, theme: "system", accent: null }] as never });
+    const before = dataJSON();
+    const refused = await router.dispatch(request({ type: "removeProfile", profileId: "p1" }));
+    assert.deepEqual([refused.ok, refused.error], [false, "action-refused"]);
+    assert.equal(dataJSON(), before);
+    assert.equal(useSpread.getState().profiles.length, 1);
+  } finally {
+    router.dispose();
+  }
+});
+
+test("exportWeek is a read: it returns the week, changes nothing, offers no Undo and may be repeated", async () => {
+  const { router, request } = setup();
+  try {
+    const before = dataJSON();
+    const revision = router.read()!.revision;
+    const asked = request({ type: "exportWeek", format: "text" });
+    const first = await router.dispatch(asked);
+    const second = await router.dispatch(asked);
+    for (const reply of [first, second]) {
+      assert.equal(reply.ok, true);
+      assert.equal(reply.exported?.format, "text");
+      assert.ok((reply.exported?.content ?? "").includes(useSpread.getState().data.hats[0].name));
+      assert.equal(reply.undoId, undefined);
+    }
+    assert.equal(dataJSON(), before);
+    assert.equal(router.read()!.revision, revision, "a read does not advance the revision");
+  } finally {
+    router.dispose();
+  }
+});
+
+test("exportWeek HTML escapes user text and a stale week is refused", async () => {
+  const { router, request } = setup();
+  try {
+    const data = useSpread.getState().data;
+    const box = data.weeks[data.currentWeek].boxes[0];
+    box.tasks[0].text = "<script>alert(1)</script> & done";
+    const html = await router.dispatch(request({ type: "exportWeek", format: "html" }));
+    assert.equal(html.ok, true);
+    const content = html.exported?.content ?? "";
+    assert.ok(!content.includes("<script>alert(1)"), "no raw markup from a task title");
+    assert.ok(content.includes("&lt;script&gt;"));
+    const stale = await router.dispatch({ ...request({ type: "exportWeek", format: "text" }), expectedWeek: "2026-01-05" });
+    assert.deepEqual([stale.ok, stale.error], [false, "stale-week"]);
+  } finally {
+    router.dispose();
+  }
+});
+
+test("exportWeek Word output is a real zip (docx) package", async () => {
+  const { router, request } = setup();
+  try {
+    const reply = await router.dispatch(request({ type: "exportWeek", format: "docx" }));
+    assert.equal(reply.ok, true);
+    const bytes = Buffer.from(reply.exported?.content ?? "", "base64");
+    assert.equal(bytes.subarray(0, 2).toString("latin1"), "PK", "a docx file is a zip archive");
+  } finally {
+    router.dispose();
+  }
+});
+
+test("monthMarks reports role dots for any week of the month, reads only, and refuses another profile", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const data = useSpread.getState().data;
+    const start = data.currentWeek;
+    const [year, month] = [Number(start.slice(0, 4)), Number(start.slice(5, 7)) - 1];
+    // Plan something in the following week, then come back: the open week is not the week being asked about.
+    const state = useSpread.getState();
+    state.openWeek(shiftWeek(start, 1));
+    const later = weekDays(useSpread.getState().data.currentWeek)[3].date;
+    state.addAllocation(roleId, later, 2);
+    state.openWeek(start);
+    const before = dataJSON();
+    const revision = router.read()!.revision;
+    const reply = await router.dispatch(request({ type: "monthMarks", year, month }));
+    assert.equal(reply.ok, true);
+    const marks = reply.monthMarks!;
+    assert.ok(Object.keys(marks).length >= 28 && Object.keys(marks).length % 7 === 0, "a full month grid");
+    const hat = (id: string) => useSpread.getState().data.hats.find((h) => h.id === id)!.color;
+    assert.deepEqual(marks[start], { colors: [hat(roleId), hat(useSpread.getState().data.hats[1].id)], extra: 0 });
+    // The day in the other week still shows its dot, though only `start`'s week is open.
+    if (later.slice(0, 7) === start.slice(0, 7) || marks[later]) {
+      assert.deepEqual(marks[later]?.colors, [hat(roleId)]);
+    }
+    assert.equal(dataJSON(), before, "reading marks changes nothing");
+    assert.equal(router.read()!.revision, revision);
+    const wrongProfile = await router.dispatch({ ...request({ type: "monthMarks", year, month }), expectedProfileId: "someone-else" });
+    assert.deepEqual([wrongProfile.ok, wrongProfile.error], [false, "stale-profile"]);
+    const badMonth = await router.dispatch(request({ type: "monthMarks", year, month: 12 }));
+    assert.deepEqual([badMonth.ok, badMonth.error], [false, "invalid-command"]);
+  } finally {
+    router.dispose();
+  }
 });

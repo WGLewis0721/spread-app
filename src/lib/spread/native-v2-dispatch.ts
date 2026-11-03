@@ -5,6 +5,7 @@ import { projectNativeV2, type NativeV2Envelope } from "./native-v2-projection.t
 import { flushSpread, retrySpreadSave, useSpread } from "./store.ts";
 import { buildWeekDocument, weekDocumentText } from "./week-document.ts";
 import { weekDocumentHTML } from "./native-v2-export.ts";
+import { dayMarks, monthGrid } from "./month.ts";
 
 const id = z.string().trim().min(1).max(200);
 const text = z.string().trim().min(1).max(10000);
@@ -64,6 +65,12 @@ const action = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("removeProfile"), profileId: id }),
   z.strictObject({ type: z.literal("renameProfile"), profileId: id, name: text }),
   z.strictObject({ type: z.literal("exportWeek"), format: z.enum(["text", "html", "docx"]) }),
+  // Read-only: the role dots for every day of one calendar month (any week), as the original Month view drew them.
+  z.strictObject({
+    type: z.literal("monthMarks"),
+    year: z.number().int().min(1970).max(2200),
+    month: z.number().int().min(0).max(11),
+  }),
   z.strictObject({ type: z.literal("rollover"), force: z.boolean() }),
   z.strictObject({
     type: z.literal("moveSpreadToDay"),
@@ -140,6 +147,8 @@ export type NativeReply = {
   rollover?: "done" | "confirm" | "empty";
   /** Read-only export of the open week; never persisted and never part of planner state. */
   exported?: { format: "text" | "html" | "docx"; content: string };
+  /** Read-only role dots per ISO date for one month; never persisted and never part of planner state. */
+  monthMarks?: Record<string, { colors: string[]; extra: number }>;
   state: NativeRead | null;
 };
 
@@ -185,6 +194,8 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (disposed) return fail("closed-session");
     // Exports are reads: they are not replay-protected and never change planner state.
     if (command.action.type === "exportWeek") return exportWeek(command, command.action.format, fail);
+    if (command.action.type === "monthMarks")
+      return monthMarks(command, command.action.year, command.action.month, fail);
     const prior = requests.get(command.requestId);
     if (prior) {
       if (prior.fingerprint !== fingerprint) return fail("request-id-reused");
@@ -241,6 +252,22 @@ export function createNativeV2Dispatcher(sessionId: string) {
     }
     return { requestId: command.requestId, ok: true, state: read(), exported: { format, content } };
   }
+  /** Role dots for a month's grid, from the same helpers the original Month view used. A read: it is not
+   * replay-protected, ignores the open week and revision (the person may browse any month), and refuses
+   * when the profile has changed so one profile's plan can never be drawn into another's. */
+  function monthMarks(
+    command: NativeRequest,
+    year: number,
+    month: number,
+    fail: (error: string) => NativeReply,
+  ): NativeReply {
+    const state = useSpread.getState();
+    if (!state.ready || !state.activeId) return fail("not-ready");
+    if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
+    const marks: Record<string, { colors: string[]; extra: number }> = {};
+    for (const cell of monthGrid(year, month)) marks[cell.date] = dayMarks(state.data, cell.date);
+    return { requestId: command.requestId, ok: true, state: read(), monthMarks: marks };
+  }
   function run(command: NativeRequest, fail: (error: string) => NativeReply): NativeReply {
     const state = useSpread.getState();
     if (!state.ready || !state.activeId) return fail("not-ready");
@@ -251,6 +278,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
       return fail("save-unavailable");
     const a = command.action;
     if (a.type === "exportWeek") return fail("export-not-here");
+    if (a.type === "monthMarks") return fail("read-not-here");
     const invalid =
       a.type === "switchProfile" && !state.profiles.some((p) => p.id === a.profileId)
         ? "no-profile"

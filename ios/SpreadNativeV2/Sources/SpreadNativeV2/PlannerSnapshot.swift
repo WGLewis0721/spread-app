@@ -178,3 +178,18 @@ public enum SpreadV2Fixture {
         ]
     )
 }
+
+/// Role dots for one calendar day, as the original Month view drew them: up to three responsibility colours and
+/// a count of any further ones. It is a read-only answer from the planner; it is never written back.
+public struct NativeDayMark: Codable, Equatable, Sendable {
+    public let colors: [String]
+    public let extra: Int
+
+    public init(colors: [String], extra: Int) {
+        self.colors = colors
+        self.extra = extra
+    }
+
+    /// How many responsibilities are on the day (the dots shown plus the ones folded into "+N").
+    public var count: Int { colors.count + extra }
+}
