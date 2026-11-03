@@ -360,6 +360,19 @@ jobs:
           -derivedDataPath artifacts/ReleaseDerivedData
           -archivePath artifacts/SpreadNative.xcarchive
           CODE_SIGNING_ALLOWED=NO archive
+      - name: Verify Debug-only test hooks are absent from the Release binary
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
+        run: |
+          APP=$(find artifacts/SpreadNative.xcarchive/Products/Applications -maxdepth 1 -name '*.app' | head -1)
+          BIN="$APP/$(basename "$APP" .app)"
+          echo "Release binary: $BIN"
+          test -f "$BIN"
+          status=0
+          for hook in SpreadFailSaveMarker SpreadDisableMirror SpreadViewportWidth SpreadNativeV2Preview; do
+            if strings -a "$BIN" | grep -q -- "$hook"; then echo "::error::Debug-only launch hook $hook is present in the Release binary"; status=1; fi
+          done
+          [ $status -eq 0 ] && echo "No Debug-only launch hook strings in the Release binary"
+          exit $status
       - name: Preserve the unsigned Release archive for this commit
         if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
         run: |
