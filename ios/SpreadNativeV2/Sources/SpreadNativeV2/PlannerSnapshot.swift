@@ -120,6 +120,12 @@ public enum ChalkArtwork {
     public static func category(for raw: String) -> String {
         categories.contains(raw) ? raw : "custom"
     }
+
+    /// Resource URL is resolved from this package, not the host app or a network URL.
+    public static func resourceURL(for categoryName: String) -> URL? {
+        Bundle.module.url(forResource: category(for: categoryName),
+                          withExtension: "webp", subdirectory: "Chalk")
+    }
 }
 
 /// The fixture is deliberately unmistakable: it is only for Debug preview and cannot

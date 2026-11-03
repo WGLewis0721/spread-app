@@ -65,6 +65,16 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertEqual(ChalkArtwork.category(for: "unknown"), "custom")
     }
 
+    func testAllOriginalChalkAssetsAreBundledOffline() {
+        for category in ChalkArtwork.categories {
+            guard let url = ChalkArtwork.resourceURL(for: category) else {
+                XCTFail("Missing Chalk resource for \(category)")
+                continue
+            }
+            XCTAssertEqual(url.pathExtension.lowercased(), "webp")
+        }
+    }
+
     func testTaskCanOnlyTargetItsOwnResponsibilityAllocation() {
         let source = SpreadV2Fixture.week
         let task = source.tasks.first(where: { $0.id == "t-2" })!

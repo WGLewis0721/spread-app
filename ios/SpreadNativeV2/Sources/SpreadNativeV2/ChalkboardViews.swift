@@ -39,7 +39,7 @@ private enum ChalkImageLoader {
     static func image(category: String) -> UIImage? {
         let key = ChalkArtwork.category(for: category) as NSString
         if let loaded = cache.object(forKey: key) { return loaded }
-        guard let url = Bundle.module.url(forResource: key as String, withExtension: "webp", subdirectory: "Chalk"),
+        guard let url = ChalkArtwork.resourceURL(for: category),
               let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             return nil
