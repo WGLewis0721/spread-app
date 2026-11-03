@@ -220,6 +220,9 @@ public struct SpreadLiveRoot: View {
             Text(title).font(.headline).frame(maxWidth: .infinity, minHeight: 44)
                 .foregroundStyle(destination == value ? Chalk.canvas : Chalk.ink)
                 .background(destination == value ? Chalk.yellow : Color.clear, in: RoundedRectangle(cornerRadius: 12))
+                // A clear background is not hit-testable: without this the unselected segment's tap
+                // target shrinks to its text (44 x 20 pt in the 390 pt hierarchy).
+                .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(value == 0 ? "native-week" : "native-spread")
