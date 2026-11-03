@@ -228,8 +228,8 @@ public struct SpreadLiveRoot: View {
                     if snapshot.allocations.isEmpty && snapshot.tasks.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Start with what matters").font(.headline)
-                            Text("Name a responsibility, give it hours, then place those hours on a day.").foregroundStyle(Chalk.secondary)
-                            Button("Plan a responsibility") { editor = .newRole }.buttonStyle(.borderedProminent).frame(minHeight: 44)
+                            Text("Choose a responsibility, set its hours, then place those hours on a day.").foregroundStyle(Chalk.secondary)
+                            Button("Plan responsibilities") { destination = 1 }.buttonStyle(.borderedProminent).frame(minHeight: 44)
                         }.padding(16)
                     }
                     if !snapshot.unplacedTasks.isEmpty {

@@ -18,10 +18,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if ProcessInfo.processInfo.arguments.contains("-SpreadNativeV2Preview") {
             window?.rootViewController = UIHostingController(rootView: SpreadNativeV2Preview())
         } else {
-            window?.rootViewController = SpreadBridgeViewController()
+            window?.rootViewController = SpreadContainerViewController()
         }
         #else
-        window?.rootViewController = SpreadBridgeViewController()
+        window?.rootViewController = SpreadContainerViewController()
         #endif
         window?.makeKeyAndVisible()
 

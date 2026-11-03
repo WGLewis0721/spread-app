@@ -41,7 +41,7 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         }
     }
     @MainActor fileprivate func openNative() {
-        guard nativeHost == nil, let webView else { return }
+        guard nativeHost == nil, let webView, let stage = parent else { return }
         let model = planner ?? LivePlanner { [weak webView] message in
             guard let webView else { throw NSError(domain: "Spread", code: 2) }
             let value = try await webView.callAsyncJavaScript(
@@ -55,14 +55,14 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         planner = model
         let host = UIHostingController(rootView: SpreadLiveRoot(planner: model, recovery: { [weak self] in self?.openRecovery() }))
         host.overrideUserInterfaceStyle = .dark
-        addChild(host)
+        stage.addChild(host)
         host.view.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(host.view)
+        stage.view.addSubview(host.view)
         NSLayoutConstraint.activate([
-            host.view.topAnchor.constraint(equalTo: view.topAnchor), host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor), host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            host.view.topAnchor.constraint(equalTo: stage.view.topAnchor), host.view.bottomAnchor.constraint(equalTo: stage.view.bottomAnchor),
+            host.view.leadingAnchor.constraint(equalTo: stage.view.leadingAnchor), host.view.trailingAnchor.constraint(equalTo: stage.view.trailingAnchor)
         ])
-        host.didMove(toParent: self)
+        host.didMove(toParent: stage)
         nativeHost = host
         resumeButton?.removeFromSuperview()
     }
@@ -79,10 +79,11 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         button.layer.cornerRadius = 12
         button.addTarget(self, action: #selector(resumeNative), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(button)
+        let stage = parent?.view ?? view!
+        stage.addSubview(button)
         NSLayoutConstraint.activate([
-            button.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
-            button.centerXAnchor.constraint(equalTo: view.centerXAnchor), button.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            button.bottomAnchor.constraint(equalTo: stage.safeAreaLayoutGuide.bottomAnchor, constant: -8),
+            button.centerXAnchor.constraint(equalTo: stage.centerXAnchor), button.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             button.widthAnchor.constraint(greaterThanOrEqualToConstant: 220)
         ])
         resumeButton = button
@@ -97,5 +98,24 @@ private final class PlannerReadyHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, message.webView?.url?.scheme == "capacitor", message.webView?.url?.host == "localhost" else { return }
         Task { @MainActor [weak self] in self?.owner?.openNative() }
+    }
+}
+
+/// Capacitor's root view is WKWebView. Native UI must be a sibling, never its descendant.
+final class SpreadContainerViewController: UIViewController {
+    private let engine = SpreadBridgeViewController()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .systemBackground
+        addChild(engine)
+        engine.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(engine.view)
+        NSLayoutConstraint.activate([
+            engine.view.topAnchor.constraint(equalTo: view.topAnchor),
+            engine.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            engine.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            engine.view.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+        engine.didMove(toParent: self)
     }
 }
