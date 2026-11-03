@@ -5,7 +5,10 @@ struct SpreadLayoutsView: View {
     let snapshot: PlannerSnapshot
     @Binding var mode: SpreadLayout
     @Binding var selectedId: String
-    @State private var selectedDay: String = "2026-11-02"
+    var onManage: (Responsibility) -> Void = { _ in }
+    var onTask: (PlannerTask) -> Void = { _ in }
+    var onToggle: (PlannerTask) -> Void = { _ in }
+    @State private var selectedDay: String = ""
     @State private var showModePicker = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -31,6 +34,9 @@ struct SpreadLayoutsView: View {
                     .accessibilityLabel("View, \(mode.title)")
                 }
 
+                if let role = selectedRole {
+                    Button("Manage \(role.name)") { onManage(role) }.frame(minHeight: 44)
+                }
                 switch mode {
                 case .stack: stack
                 case .fan: fan
@@ -44,6 +50,8 @@ struct SpreadLayoutsView: View {
             .padding(.bottom, 24)
         }
         .background(Chalk.canvas)
+        .onAppear { selectedDay = snapshot.weekKey }
+        .onChange(of: snapshot.weekKey) { _, key in selectedDay = key }
         .sheet(isPresented: $showModePicker) {
             NavigationStack {
                 List(SpreadLayout.allCases) { item in
@@ -59,6 +67,9 @@ struct SpreadLayoutsView: View {
                     }
                     .foregroundStyle(.primary)
                     .frame(minHeight: 44)
+                    .accessibilityLabel(item.title)
+                    .accessibilityIdentifier("layout-\(item.rawValue)")
+                    .accessibilityAddTraits(mode == item ? .isSelected : [])
                 }
                 .navigationTitle("View")
                 .navigationBarTitleDisplayMode(.inline)
@@ -77,6 +88,12 @@ struct SpreadLayoutsView: View {
                     .zIndex(selectedRole?.id == role.id ? 1 : 0)
             }
         }
+        .simultaneousGesture(DragGesture(minimumDistance: 12).onEnded { value in
+            guard abs(value.translation.width) > 42, abs(value.translation.width) > abs(value.translation.height), !snapshot.roles.isEmpty else { return }
+            let index = snapshot.roles.firstIndex(where: { $0.id == selectedRole?.id }) ?? 0
+            let next = min(max(0, index + (value.translation.width < 0 ? 1 : -1)), snapshot.roles.count - 1)
+            changeSelection(snapshot.roles[next].id)
+        })
     }
 
     private var fan: some View {
@@ -97,13 +114,13 @@ struct SpreadLayoutsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 8).onEnded { value in
-                    guard abs(value.translation.width) > 42, !roles.isEmpty else { return }
+                    guard abs(value.translation.width) > 42, abs(value.translation.width) > abs(value.translation.height), !roles.isEmpty else { return }
                     let delta = value.translation.width < 0 ? 1 : -1
                     let next = min(max(0, selectedIndex + delta), roles.count - 1)
                     changeSelection(roles[next].id)
                 })
             }
-            .frame(height: 290)
+            .frame(height: 290).clipped()
             if let role = selectedRole {
                 Text("Swipe the fan or select a card · \(role.name)")
                     .font(.caption).foregroundStyle(Chalk.secondary)
@@ -174,13 +191,13 @@ struct SpreadLayoutsView: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
                     ForEach(0..<7, id: \.self) { index in
-                        let iso = PreviewDates.dayISO(weekKey: snapshot.weekKey, index: index)
+                        let iso = PlannerDates.dayISO(weekKey: snapshot.weekKey, index: index)
                         Button {
                             selectedDay = iso
                         } label: {
                             VStack(spacing: 5) {
-                                Text(PreviewDates.weekday(weekKey: snapshot.weekKey, index: index)).font(.caption)
-                                Text(PreviewDates.dayNumber(weekKey: snapshot.weekKey, index: index))
+                                Text(PlannerDates.weekday(weekKey: snapshot.weekKey, index: index)).font(.caption)
+                                Text(PlannerDates.dayNumber(weekKey: snapshot.weekKey, index: index))
                                     .font(.headline)
                             }
                             .frame(width: 45, height: 54)
@@ -209,6 +226,10 @@ struct SpreadLayoutsView: View {
                             }
                             Spacer()
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { onManage(role) }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { onManage(role) }
                         .padding(12)
                         .background(Chalk.surface, in: RoundedRectangle(cornerRadius: 16))
                         .overlay(RoundedRectangle(cornerRadius: 16)
@@ -228,7 +249,7 @@ struct SpreadLayoutsView: View {
             remainingHours: snapshot.remainingHours(for: role.id),
             tasks: snapshot.tasks(for: role.id),
             expanded: expanded,
-            onSelect: { changeSelection(role.id) }
+            onSelect: { if selectedId == role.id { onManage(role) } else { changeSelection(role.id) } }, onTask: onTask, onToggle: onToggle
         )
     }
 

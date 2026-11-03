@@ -24,12 +24,12 @@ on:
 
 concurrency:
   group: ios-shell-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-ios-shell:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,6 +42,7 @@ jobs:
       - run: swift test --package-path ios/App/SpreadCloudCore
       - run: npm run ios:sync
       - name: Build iPhone simulator app
+        id: nativebuild
         run: >
           xcodebuild
           -project ios/App/App.xcodeproj
@@ -258,58 +259,114 @@ jobs:
                       relaunch(wait=5)
               return None
 
-          first = wait_for_snapshot(1)
-          if first is None:
-              fail("The installed app never wrote a planner snapshot, so it did not reach the planner.%0A" + diagnose() + "%0AApp data files:%0A" + listing())
-          first_ids = profile_ids(first)
-          if len(first_ids) != 1:
-              fail(f"Expected one profile after first launch, found {first_ids}")
-          note(f"PASS first launch reached the planner. Profile {first_ids[0]}, snapshot seq {first['seq']}")
+          for cycle in range(2):
+              note(f"Persistence acceptance cycle {cycle + 1}/2")
+              if cycle:
+                  run(["xcrun", "simctl", "terminate", udid, bundle], timeout=60, check=False)
+                  run(["xcrun", "simctl", "uninstall", udid, bundle], timeout=120)
+                  run(["xcrun", "simctl", "install", udid, app], timeout=120)
+                  relaunch(wait=5)
+              first = wait_for_snapshot(1)
+              if first is None:
+                  fail("The installed app never wrote a planner snapshot, so it did not reach the planner.%0A" + diagnose() + "%0AApp data files:%0A" + listing())
+              first_ids = profile_ids(first)
+              if len(first_ids) != 1:
+                  fail(f"Expected one profile after first launch, found {first_ids}")
+              note(f"PASS first launch reached the planner. Profile {first_ids[0]}, snapshot seq {first['seq']}")
 
-          # Terminate and relaunch: the same profile must come back, not a fresh one.
-          relaunch(wait=5)
-          second = wait_for_snapshot(first["seq"] + 1, relaunch_once=True)
-          if second is None:
-              fail("The relaunched app did not write a newer snapshot, so termination survival is unproven.%0A" + diagnose())
-          if profile_ids(second) != first_ids:
-              fail(f"Profile changed across termination. before={first_ids} after={profile_ids(second)}")
-          note(f"PASS data survived app termination. The relaunched app wrote snapshot seq {second['seq']} (was {first['seq']}) for the same profile")
+              # Terminate and relaunch: the same profile must come back, not a fresh one.
+              relaunch(wait=5)
+              second = wait_for_snapshot(first["seq"] + 1, relaunch_once=True)
+              if second is None:
+                  fail("The relaunched app did not write a newer snapshot, so termination survival is unproven.%0A" + diagnose())
+              if profile_ids(second) != first_ids:
+                  fail(f"Profile changed across termination. before={first_ids} after={profile_ids(second)}")
+              note(f"PASS data survived app termination. The relaunched app wrote snapshot seq {second['seq']} (was {first['seq']}) for the same profile")
 
-          # Simulate iOS discarding the WebView's storage, then relaunch: the snapshot
-          # must put the planner back.
-          run(["xcrun", "simctl", "terminate", udid, bundle], timeout=60, check=False)
-          time.sleep(3)
-          wiped = []
-          for base, dirs, _files in os.walk(data_container()):
-              for name in list(dirs):
-                  if name == "LocalStorage":
-                      target = os.path.join(base, name)
-                      shutil.rmtree(target, ignore_errors=True)
-                      wiped.append(target)
-          note(f"Wiped WebView storage folders: {len(wiped)}")
-          # Rename the profile inside the snapshot. The name can only reappear in the planner if the
-          # app really restored it from the snapshot, since the WebView's own copy says "Me".
-          doc, path = newest_snapshot_with_path()
-          roster = json.loads(doc["entries"]["spread.profiles"])
-          roster[0]["name"] = "Restored"
-          doc["entries"]["spread.profiles"] = json.dumps(roster)
-          with open(path, "w") as handle:
-              json.dump(doc, handle)
-          relaunch(wait=5)
-          third = wait_for_snapshot(second["seq"] + 1, relaunch_once=True)
-          if third is None:
-              fail("The app did not write a newer snapshot after storage was wiped.%0A" + diagnose() + "%0AFiles:%0A" + listing())
-          if profile_ids(third) != first_ids:
-              fail(f"Planner was not restored after storage loss. before={first_ids} after={profile_ids(third)}. Wiped {wiped}. Files:%0A" + listing())
-          names = [row["name"] for row in json.loads(third["entries"]["spread.profiles"])]
-          if wiped and names != ["Restored"]:
-              fail(f"The renamed snapshot was not applied (names {names}), so the restore path did not run or the wipe did not clear storage")
-          if wiped:
-              note(f"PASS planner restored from the snapshot after WebView storage was wiped (marker name came back in snapshot seq {third['seq']})")
-          else:
-              note("No LocalStorage folder was found to wipe, so the restore path was not exercised. Files:%0A" + listing())
-          run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios-restored.png"], timeout=60)
+              # Simulate iOS discarding the WebView's storage, then relaunch: the snapshot
+              # must put the planner back.
+              run(["xcrun", "simctl", "terminate", udid, bundle], timeout=60, check=False)
+              time.sleep(3)
+              wiped = []
+              for base, dirs, _files in os.walk(data_container()):
+                  for name in list(dirs):
+                      if name == "LocalStorage":
+                          target = os.path.join(base, name)
+                          shutil.rmtree(target, ignore_errors=True)
+                          wiped.append(target)
+              note(f"Wiped WebView storage folders: {len(wiped)}")
+              # Rename the profile inside the snapshot. The name can only reappear in the planner if the
+              # app really restored it from the snapshot, since the WebView's own copy says "Me".
+              doc, path = newest_snapshot_with_path()
+              roster = json.loads(doc["entries"]["spread.profiles"])
+              roster[0]["name"] = "Restored"
+              doc["entries"]["spread.profiles"] = json.dumps(roster)
+              with open(path, "w") as handle:
+                  json.dump(doc, handle)
+              relaunch(wait=5)
+              third = wait_for_snapshot(second["seq"] + 1, relaunch_once=True)
+              if third is None:
+                  fail("The app did not write a newer snapshot after storage was wiped.%0A" + diagnose() + "%0AFiles:%0A" + listing())
+              if profile_ids(third) != first_ids:
+                  fail(f"Planner was not restored after storage loss. before={first_ids} after={profile_ids(third)}. Wiped {wiped}. Files:%0A" + listing())
+              names = [row["name"] for row in json.loads(third["entries"]["spread.profiles"])]
+              if wiped and names != ["Restored"]:
+                  fail(f"The renamed snapshot was not applied (names {names}), so the restore path did not run or the wipe did not clear storage")
+              if wiped:
+                  note(f"PASS planner restored from the snapshot after WebView storage was wiped (marker name came back in snapshot seq {third['seq']})")
+              else:
+                  note("No LocalStorage folder was found to wipe, so the restore path was not exercised. Files:%0A" + listing())
+              run(["xcrun", "simctl", "io", udid, "screenshot", f"artifacts/spread-ios-restored-cycle-{cycle + 1}.png"], timeout=60)
+
+              # Negative control: after proven startup, deliberately disable the actual writer.
+              run(["xcrun", "simctl", "terminate", udid, bundle], timeout=60, check=False)
+              for base, _dirs, files in os.walk(data_container()):
+                  for name in files:
+                      if name.startswith("spread-mirror-") and name.endswith(".json"):
+                          os.remove(os.path.join(base, name))
+              control = subprocess.Popen(["xcrun", "simctl", "launch", udid, bundle, "-SpreadDisableMirror"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              time.sleep(20)
+              if control.poll() is None:
+                  control.terminate()
+              if newest_snapshot() is not None:
+                  fail("Negative control unexpectedly wrote a mirror with the writer disabled")
+              note("PASS negative control: disabled writer produced no mirror")
+              relaunch(wait=5)
+              recovered = wait_for_snapshot(1)
+              if recovered is None or profile_ids(recovered) != first_ids:
+                  fail("Re-enabling the writer did not recover the same profile")
+              note("PASS writer re-enabled: genuine snapshot and original profile returned")
+
           PY
+      - name: Test actual native planning journey
+        if: ${{ !cancelled() && steps.nativebuild.outcome == 'success' }}
+        timeout-minutes: 20
+        run: |
+          TEST_UDID=$(xcrun simctl list devices booted -j | python3 -c 'import json,sys; print(next(d["udid"] for ds in json.load(sys.stdin)["devices"].values() for d in ds if d["state"] == "Booted"))')
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -parallel-testing-enabled NO -test-timeouts-enabled YES -maximum-test-execution-time-allowance 600 -destination "platform=iOS Simulator,id=$TEST_UDID" -derivedDataPath artifacts/DerivedData -resultBundlePath artifacts/NativeJourneys.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Archive unsigned native Release candidate
+        if: ${{ !cancelled() && steps.nativebuild.outcome == 'success' }}
+        timeout-minutes: 12
+        run: >
+          xcodebuild -project ios/App/App.xcodeproj -scheme App
+          -configuration Release -sdk iphoneos -destination 'generic/platform=iOS'
+          -derivedDataPath artifacts/ReleaseDerivedData
+          -archivePath artifacts/SpreadNative.xcarchive
+          CODE_SIGNING_ALLOWED=NO archive
+      - name: Export actual UI screenshots
+        if: always()
+        run: |
+          if [ -d artifacts/NativeJourneys.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/NativeJourneys.xcresult --output-path artifacts/native-screenshots
+          fi
+      - name: Upload native journey evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-journeys
+          path: |
+            artifacts/NativeJourneys.xcresult
+            artifacts/native-screenshots
       - name: Upload simulator smoke screenshot
         if: always()
         uses: actions/upload-artifact@v4

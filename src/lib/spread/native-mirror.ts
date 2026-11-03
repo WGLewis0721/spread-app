@@ -43,7 +43,12 @@ export function isMirrorKey(key: string): boolean {
 
 /** Keys that hold planner content (the roster or a profile's weeks), as opposed to settings. */
 export function isPlannerKey(key: string): boolean {
-  return key === PROFILES_KEY || key === "spread.people" || key === STORE_KEY || key.startsWith(`${STORE_KEY}.`);
+  return (
+    key === PROFILES_KEY ||
+    key === "spread.people" ||
+    key === STORE_KEY ||
+    key.startsWith(`${STORE_KEY}.`)
+  );
 }
 
 export function hasPlannerData(storage: KeyStore): boolean {
@@ -66,7 +71,13 @@ export function collectEntries(storage: KeyStore): Record<string, string> {
 }
 
 export function buildEnvelope(storage: KeyStore, seq: number, savedAt: Date): MirrorEnvelope {
-  return { kind: "spread-mirror", version: MIRROR_VERSION, seq, savedAt: savedAt.toISOString(), entries: collectEntries(storage) };
+  return {
+    kind: "spread-mirror",
+    version: MIRROR_VERSION,
+    seq,
+    savedAt: savedAt.toISOString(),
+    entries: collectEntries(storage),
+  };
 }
 
 export function parseEnvelope(text: string | null): MirrorEnvelope | null {
@@ -90,7 +101,13 @@ export function parseEnvelope(text: string | null): MirrorEnvelope | null {
     clean[key] = value;
   }
   if (!Object.keys(clean).some(isPlannerKey)) return null;
-  return { kind: "spread-mirror", version: MIRROR_VERSION, seq: file.seq, savedAt: file.savedAt, entries: clean };
+  return {
+    kind: "spread-mirror",
+    version: MIRROR_VERSION,
+    seq: file.seq,
+    savedAt: file.savedAt,
+    entries: clean,
+  };
 }
 
 export function newestEnvelope(texts: (string | null)[]): MirrorEnvelope | null {
@@ -98,7 +115,12 @@ export function newestEnvelope(texts: (string | null)[]): MirrorEnvelope | null 
   for (const text of texts) {
     const candidate = parseEnvelope(text);
     if (!candidate) continue;
-    if (!best || candidate.seq > best.seq || (candidate.seq === best.seq && candidate.savedAt > best.savedAt)) best = candidate;
+    if (
+      !best ||
+      candidate.seq > best.seq ||
+      (candidate.seq === best.seq && candidate.savedAt > best.savedAt)
+    )
+      best = candidate;
   }
   return best;
 }
@@ -127,10 +149,15 @@ export async function restoreIfEmpty(
   storage: KeyStore,
   adapter: MirrorAdapter,
   cancelled: () => boolean = () => false,
+  observed?: (snapshot: MirrorEnvelope) => void,
 ): Promise<RestoreResult> {
-  const [a, b] = await Promise.all([adapter.read("a").catch(() => null), adapter.read("b").catch(() => null)]);
+  const [a, b] = await Promise.all([
+    adapter.read("a").catch(() => null),
+    adapter.read("b").catch(() => null),
+  ]);
   const newest = newestEnvelope([a, b]);
   const seq = newest?.seq ?? 0;
+  if (newest) observed?.(newest);
   if (!newest || hasPlannerData(storage) || cancelled()) return { restored: false, seq };
   restoreEntries(storage, newest.entries);
   return { restored: hasPlannerData(storage), seq };
@@ -229,14 +256,26 @@ async function filesystemAdapter(): Promise<MirrorAdapter> {
   return {
     async read(slot) {
       try {
-        const result = await Filesystem.readFile({ path: path(slot), directory: Directory.Library, encoding: Encoding.UTF8 });
+        const result = await Filesystem.readFile({
+          path: path(slot),
+          directory: Directory.Library,
+          encoding: Encoding.UTF8,
+        });
         return typeof result.data === "string" ? result.data : null;
       } catch {
         return null;
       }
     },
     async write(slot, text) {
-      await Filesystem.writeFile({ path: path(slot), data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
+      // Only the Debug iOS harness injects this flag before document startup.
+      if ((window as Window & { __SpreadDisableMirror?: boolean }).__SpreadDisableMirror === true)
+        throw new Error("Mirror writer disabled by negative-control harness");
+      await Filesystem.writeFile({
+        path: path(slot),
+        data: text,
+        directory: Directory.Library,
+        encoding: Encoding.UTF8,
+      });
     },
   };
 }
@@ -251,15 +290,27 @@ export type PinnedCopy = { name: string; label: string; savedAt: string };
  * back and matches, so a caller that is about to do something destructive can refuse when it is
  * false. `entries` must already be copied, because the write happens later.
  */
-export async function pinSnapshot(label: string, entries: Record<string, string>): Promise<boolean> {
+export async function pinSnapshot(
+  label: string,
+  entries: Record<string, string>,
+): Promise<boolean> {
   try {
     const safe = label.replace(/[^a-z0-9-]/gi, "-");
     const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
     const savedAt = new Date().toISOString();
     const text = JSON.stringify({ kind: "spread-pinned", version: 1, label, savedAt, entries });
     const path = `${PINNED_PREFIX}${savedAt.replace(/[^0-9]/g, "")}-${safe}.json`;
-    await Filesystem.writeFile({ path, data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
-    const back = await Filesystem.readFile({ path, directory: Directory.Library, encoding: Encoding.UTF8 });
+    await Filesystem.writeFile({
+      path,
+      data: text,
+      directory: Directory.Library,
+      encoding: Encoding.UTF8,
+    });
+    const back = await Filesystem.readFile({
+      path,
+      directory: Directory.Library,
+      encoding: Encoding.UTF8,
+    });
     if (back.data !== text) return false;
     await prunePinned().catch(() => undefined);
     return true;
@@ -271,13 +322,18 @@ export async function pinSnapshot(label: string, entries: Record<string, string>
 async function pinnedFiles(): Promise<string[]> {
   const { Filesystem, Directory } = await import("@capacitor/filesystem");
   const { files } = await Filesystem.readdir({ path: "", directory: Directory.Library });
-  return files.map((file) => file.name).filter((name) => name.startsWith(PINNED_PREFIX) && name.endsWith(".json")).sort();
+  return files
+    .map((file) => file.name)
+    .filter((name) => name.startsWith(PINNED_PREFIX) && name.endsWith(".json"))
+    .sort();
 }
 
 async function prunePinned(): Promise<void> {
   const { Filesystem, Directory } = await import("@capacitor/filesystem");
   for (const name of pinsToDelete(await pinnedFiles())) {
-    await Filesystem.deleteFile({ path: name, directory: Directory.Library }).catch(() => undefined);
+    await Filesystem.deleteFile({ path: name, directory: Directory.Library }).catch(
+      () => undefined,
+    );
   }
 }
 
@@ -295,14 +351,30 @@ export async function listPinned(): Promise<PinnedCopy[]> {
   }
 }
 
-export async function readPinned(name: string): Promise<{ label: string; savedAt: string; entries: Record<string, string> } | null> {
+export async function readPinned(
+  name: string,
+): Promise<{ label: string; savedAt: string; entries: Record<string, string> } | null> {
   try {
     if (!name.startsWith(PINNED_PREFIX) || name.includes("/")) return null;
     const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
-    const read = await Filesystem.readFile({ path: name, directory: Directory.Library, encoding: Encoding.UTF8 });
-    const parsed = JSON.parse(String(read.data)) as { kind?: string; label?: string; savedAt?: string; entries?: Record<string, string> };
-    if (parsed.kind !== "spread-pinned" || !parsed.entries || typeof parsed.entries !== "object") return null;
-    return { label: String(parsed.label ?? ""), savedAt: String(parsed.savedAt ?? ""), entries: parsed.entries };
+    const read = await Filesystem.readFile({
+      path: name,
+      directory: Directory.Library,
+      encoding: Encoding.UTF8,
+    });
+    const parsed = JSON.parse(String(read.data)) as {
+      kind?: string;
+      label?: string;
+      savedAt?: string;
+      entries?: Record<string, string>;
+    };
+    if (parsed.kind !== "spread-pinned" || !parsed.entries || typeof parsed.entries !== "object")
+      return null;
+    return {
+      label: String(parsed.label ?? ""),
+      savedAt: String(parsed.savedAt ?? ""),
+      entries: parsed.entries,
+    };
   } catch {
     return null;
   }
@@ -324,25 +396,122 @@ function timeout<T>(work: Promise<T>, ms: number): Promise<T | "timeout"> {
   });
 }
 
+/** Launch may stop waiting for a slow plugin, but persistence must still start when it answers.
+ * Cancellation gates restoration only; it never disables the future writer. */
+export async function prepareMirrorSession(
+  storage: KeyStore,
+  adapter: MirrorAdapter,
+  waitMs: number,
+  onWriter: (writer: MirrorWriter) => void,
+  recovery?: {
+    protect(snapshot: MirrorEnvelope): Promise<boolean>;
+    notice(protectedCopy: boolean): void;
+  },
+): Promise<{ restored: boolean }> {
+  let gaveUp = false;
+  const hadData = hasPlannerData(storage);
+  let observed: MirrorEnvelope | null = null;
+  const restoring = restoreIfEmpty(
+    storage,
+    adapter,
+    () => gaveUp,
+    (snapshot) => {
+      observed = snapshot;
+    },
+  );
+  const start = async (result: RestoreResult) => {
+    if (observed && ((gaveUp && !hadData) || snapshotWouldLosePlannerEntries(observed, storage))) {
+      let protectedCopy = false;
+      try {
+        protectedCopy = (await recovery?.protect(observed)) ?? false;
+      } catch {
+        /* keep the old mirror */
+      }
+      recovery?.notice(protectedCopy);
+      if (!protectedCopy) return;
+    }
+    const next = createMirrorWriter(storage, adapter, { seq: result.seq });
+    onWriter(next);
+    next.schedule();
+  };
+  const result = await timeout(restoring, waitMs);
+  if (result === "timeout") {
+    gaveUp = true;
+    void restoring.then(start).catch(() => undefined);
+    return { restored: false };
+  }
+  await start(result);
+  return { restored: result.restored };
+}
+
+function snapshotWouldLosePlannerEntries(snapshot: MirrorEnvelope, storage: KeyStore): boolean {
+  const ids = (text: string | null | undefined): string[] => {
+    try {
+      const rows: unknown = JSON.parse(text ?? "[]");
+      return Array.isArray(rows)
+        ? rows.flatMap((row) => (row && typeof row.id === "string" ? [row.id] : []))
+        : [];
+    } catch {
+      return [];
+    }
+  };
+  const oldIds = ids(snapshot.entries[PROFILES_KEY]);
+  const currentIds = new Set(ids(storage.getItem(PROFILES_KEY)));
+  if (oldIds.some((id) => !currentIds.has(id))) return true;
+  return Object.entries(snapshot.entries).some(
+    ([key, value]) =>
+      isPlannerKey(key) &&
+      (storage.getItem(key) === null || (oldIds.length === 0 && storage.getItem(key) !== value)),
+  );
+}
+
+let recoveryNotice: string | null = null;
+const recoveryListeners = new Set<() => void>();
+export const getNativeRecoveryNotice = () => recoveryNotice;
+export function onNativeRecoveryNotice(listener: () => void) {
+  recoveryListeners.add(listener);
+  return () => {
+    recoveryListeners.delete(listener);
+  };
+}
+function announceRecovery(protectedCopy: boolean) {
+  recoveryNotice = protectedCopy
+    ? "An earlier plan was found and saved as a verified safety copy. Open Backup and restore to review it."
+    : "An earlier plan is protected in storage. Automatic backups are paused. Free storage and reopen Spread to recover it safely.";
+  for (const listener of recoveryListeners) {
+    try {
+      listener();
+    } catch {
+      /* presentation cannot break storage */
+    }
+  }
+}
+
 /**
  * Run once at launch, before the planner reads web storage. Restores a snapshot if web storage
  * was emptied, then starts keeping the snapshot current. Never blocks launch for long and never
  * throws: if anything goes wrong the planner simply opens from web storage as it always did.
  */
-export function prepareNativeStorage(storage?: KeyStore, waitMs = 3000): Promise<{ restored: boolean }> {
+export function prepareNativeStorage(
+  storage?: KeyStore,
+  waitMs = 3000,
+): Promise<{ restored: boolean }> {
   preparing ??= (async () => {
     try {
       const target = storage ?? window.localStorage;
       const adapter = await filesystemAdapter();
-      let gaveUp = false;
-      const result = await timeout(restoreIfEmpty(target, adapter, () => gaveUp), waitMs);
-      if (result === "timeout") {
-        gaveUp = true;
-        return { restored: false };
-      }
-      writer = createMirrorWriter(target, adapter, { seq: result.seq });
-      writer.schedule();
-      return { restored: result.restored };
+      return await prepareMirrorSession(
+        target,
+        adapter,
+        waitMs,
+        (next) => {
+          writer = next;
+        },
+        {
+          protect: (snapshot) => pinSnapshot("Recovered-native-plan", snapshot.entries),
+          notice: announceRecovery,
+        },
+      );
     } catch {
       return { restored: false };
     }

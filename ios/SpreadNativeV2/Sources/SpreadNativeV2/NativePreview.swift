@@ -12,7 +12,7 @@ public struct SpreadNativeV2Preview: View {
     public init() {}
 
     private var source: PlannerSnapshot {
-        let key = PreviewDates.weekISO(base: SpreadV2Fixture.week.weekKey, offset: weekShift)
+        let key = PlannerDates.weekISO(base: SpreadV2Fixture.week.weekKey, offset: weekShift)
         if weekShift == 0 { return SpreadV2Fixture.week }
         return PlannerSnapshot(weekKey: key, roles: SpreadV2Fixture.week.roles,
                                allocations: [], tasks: [])
@@ -53,7 +53,7 @@ public struct SpreadNativeV2Preview: View {
             }
             WeekCrownView(
                 title: weekShift == 0 ? "This week" : "Week \(weekShift > 0 ? "+" : "")\(weekShift)",
-                detail: PreviewDates.weekRange(base: SpreadV2Fixture.week.weekKey, offset: weekShift),
+                detail: PlannerDates.weekRange(base: SpreadV2Fixture.week.weekKey, offset: weekShift),
                 onMove: { weekShift += $0 },
                 onToday: { weekShift = 0 }
             )
@@ -61,43 +61,4 @@ public struct SpreadNativeV2Preview: View {
     }
 }
 
-enum PreviewDates {
-    static let formatter: DateFormatter = {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
-
-    static func date(_ iso: String) -> Date {
-        formatter.date(from: iso) ?? Date(timeIntervalSince1970: 0)
-    }
-
-    static func weekISO(base: String, offset: Int) -> String {
-        let shifted = Calendar(identifier: .gregorian).date(byAdding: .day, value: offset * 7, to: date(base)) ?? date(base)
-        return formatter.string(from: shifted)
-    }
-
-    static func dayISO(weekKey: String, index: Int) -> String {
-        let day = Calendar(identifier: .gregorian).date(byAdding: .day, value: index, to: date(weekKey)) ?? date(weekKey)
-        return formatter.string(from: day)
-    }
-
-    static func weekday(weekKey: String, index: Int) -> String {
-        let d = date(dayISO(weekKey: weekKey, index: index))
-        return d.formatted(.dateTime.weekday(.abbreviated))
-    }
-
-    static func dayNumber(weekKey: String, index: Int) -> String {
-        String(Calendar(identifier: .gregorian).component(.day, from: date(dayISO(weekKey: weekKey, index: index))))
-    }
-
-    static func weekRange(base: String, offset: Int) -> String {
-        let monday = date(weekISO(base: base, offset: offset))
-        let sunday = Calendar(identifier: .gregorian).date(byAdding: .day, value: 6, to: monday) ?? monday
-        return "\(monday.formatted(.dateTime.month(.abbreviated).day())) – \(sunday.formatted(.dateTime.month(.abbreviated).day()))"
-    }
-}
 #endif

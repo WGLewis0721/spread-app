@@ -54,13 +54,13 @@ struct WeekPreviewView: View {
                     .background(Chalk.surface, in: RoundedRectangle(cornerRadius: 18))
                 } else {
                     ForEach(0..<7, id: \.self) { index in
-                        let iso = PreviewDates.dayISO(weekKey: snapshot.weekKey, index: index)
+                        let iso = PlannerDates.dayISO(weekKey: snapshot.weekKey, index: index)
                         let items = snapshot.allocations.filter { $0.day == iso }
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text(PreviewDates.weekday(weekKey: snapshot.weekKey, index: index))
+                                Text(PlannerDates.weekday(weekKey: snapshot.weekKey, index: index))
                                     .font(.headline)
-                                Text(PreviewDates.dayNumber(weekKey: snapshot.weekKey, index: index))
+                                Text(PlannerDates.dayNumber(weekKey: snapshot.weekKey, index: index))
                                     .foregroundStyle(Chalk.secondary)
                                 Spacer()
                                 Text("\(items.reduce(0) { $0 + $1.hours }.formatted())h")

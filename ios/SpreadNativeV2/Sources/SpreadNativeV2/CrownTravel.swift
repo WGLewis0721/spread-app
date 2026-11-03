@@ -15,7 +15,8 @@ public struct CrownTravel: Sendable {
     /// Swift Int conversion truncates toward zero: sub-detent gestures never commit.
     public mutating func update(translation: Double) -> Int {
         guard translation.isFinite else { return 0 }
-        let whole = Int((translation / Self.pointsPerWeek).rounded(.towardZero))
+        let bounded = min(Double(Self.maxDetentsPerGesture), max(-Double(Self.maxDetentsPerGesture), translation / Self.pointsPerWeek))
+        let whole = Int(bounded.rounded(.towardZero))
         let target = min(Self.maxDetentsPerGesture, max(-Self.maxDetentsPerGesture, whole))
         let delta = target - crossed
         crossed = target

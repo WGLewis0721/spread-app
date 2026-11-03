@@ -119,3 +119,58 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(PlannerSnapshot.self, from: encoded), fixture)
     }
 }
+
+private struct ParityVector: Decodable {
+    let envelope: NativeV2Envelope
+    let remaining: Double
+    let eligible: [String]
+}
+
+extension NativeContractsTests {
+    func testSixtySharedPlannerVectors() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "parity-v1", withExtension: "json", subdirectory: "Fixtures"))
+        let vectors = try JSONDecoder().decode([ParityVector].self, from: Data(contentsOf: url))
+        XCTAssertEqual(vectors.count, 60)
+        for vector in vectors {
+            let snapshot = vector.envelope.snapshot
+            XCTAssertTrue(vector.envelope.isSupported)
+            XCTAssertEqual(snapshot.remainingHours(for: "r"), vector.remaining)
+            XCTAssertEqual(snapshot.eligibleAllocations(for: try XCTUnwrap(snapshot.tasks.first)).map(\.id), vector.eligible)
+        }
+    }
+}
+
+extension NativeContractsTests {
+    func testHundredCrownGesturesAndThirtyReversals() {
+        var crown = CrownTravel()
+        var week = 0
+        for index in 0..<100 {
+            week += crown.update(translation: 63)
+            XCTAssertEqual(week, index)
+            week += crown.update(translation: 64)
+            XCTAssertEqual(week, index + 1)
+            if index < 30 {
+                week += crown.update(translation: 0)
+                XCTAssertEqual(week, index)
+                week += crown.update(translation: 64)
+                XCTAssertEqual(week, index + 1)
+            }
+            crown.release()
+        }
+        XCTAssertEqual(week, 100)
+    }
+}
+
+extension NativeContractsTests {
+    func testMonthGridUsesUniqueCellsAndKeepsTheFirstSixDates() {
+        let cells = PlannerDates.monthCells(weekKey: "2026-11-02")
+        XCTAssertEqual(Set(cells.map(\.id)).count, cells.count)
+        XCTAssertEqual(cells.compactMap(\.day), Array(1...30))
+        XCTAssertEqual(cells[6].day, 1)
+    }
+    func testCalendarWeekMappingAtYearBoundaryAndLeapMonth() {
+        XCTAssertEqual(PlannerDates.weekKey(for: PlannerDates.date("2027-01-01")), "2026-12-28")
+        XCTAssertEqual(PlannerDates.weekKey(for: PlannerDates.date("2027-01-04")), "2027-01-04")
+        XCTAssertEqual(PlannerDates.monthCells(weekKey: "2028-02-07").compactMap(\.day).count, 29)
+    }
+}

@@ -1,28 +1,20 @@
-# Spread 2.0 — native SwiftUI vertical slice
+# Spread native SwiftUI
 
-**Implementation status:** Experimental / unshipped. Source branch `feature/spread-2-native-swiftui-slice`, base `main`. This is a **fixture-only, read-only** experience to verify native rendering, week Crown feel, and five view layouts. The approved Spread 1.0 and its persistent planner model remain untouched.
+The live app is `SpreadLiveRoot`, hosted by `ios/App/App/SpreadBridgeViewController.swift`. It uses the bundled React planner as its only engine. `LivePlanner` sends correlated, serialized requests through WebKit to `SpreadNativeHost`, which invokes the guarded TypeScript dispatcher and existing Zustand actions. Swift stores only a transient view projection and local editor drafts.
 
-## What is built
-- Isolated iOS 17 Swift package with Week and Spread SwiftUI destinations.
-- Horizontal ridged **metallic** Week Crown with 64pt detents, 3-detent drag cap, reversals, arrow and VoiceOver adjustable action.
-- **Five** responsibility layouts (Stack, Fan, Dial, Tabs, Day), all rendering one immutable `PlannerSnapshot`.
-- **11 original Chalkboard WebP** illustrations, copied **byte-for-byte** from `spread-studio/src/spread/assets/illustrations` as package resources; decoded through ImageIO; decorative only.
-- Fixed dark Chalkboard presentation; no Studio, theme choices, wallpaper, custom backgrounds, or personalization UI.
-- Pure Swift tests for Crown detents/reversals, role/Dial geometry, exact task eligibility and snapshot round trip.
-- **Versioned read-only bridge projection:** `src/lib/spread/native-v2-projection.ts` sends protocol v1 + active profile ID to `NativeV2Envelope`; both languages validate the same JSON fixture. Rich notes, photos and historical weeks remain in the React store, never in the flattened native payload.
+The application includes Week, Month, the original horizontal metallic Crown, five responsibility layouts, responsibility/hour/allocation management, task and rich-content editing, eligible-day placement, completion, Undo, unfinished work and profile switching. Backup/restore uses the established React recovery surface against the same profile data. There is no Studio or appearance editor. All eleven original category illustrations remain package resources.
 
-## Test the preview in Xcode
-1. Check out the feature branch and open `ios/App/App.xcodeproj`.
-2. Select **App** scheme, **Debug** configuration and an iOS 17+ simulator or device.
-3. Edit Scheme > Run > Arguments Passed On Launch: add `-SpreadNativeV2Preview`.
-4. Run. **Remove this argument** to launch the unchanged Capacitor planner. Release configuration ignores this argument.
-5. Independently, `cd ios/SpreadNativeV2 && swift test` checks the portable contracts (on macOS and Linux). Actual SwiftUI compilation, WebP ImageIO decoding, touch/haptics and frame timing still need an Xcode/device run.
+`SpreadNativeV2Preview` and `SpreadV2Fixture` are separate fixture-only Debug tools. Normal app startup uses the live WebKit host when its endpoint is ready. Release acceptance is tracked in the [issue 113 evidence ledger](../../docs/evidence/issue-113/README.md); compilation alone is not release approval.
 
-## Deliberate limitations and next gate
-- **No live planner bridge yet.** Screens use a hard-coded, clearly labeled November 2026 fixture. Tapping tasks opens a read-only explanatory sheet. An hour bank is *shown*, not edited, and Week navigation for another week shows empty allocations. This prevents a second editable store or writes to localStorage.
-- Add a **typed React planner adapter** behind a separate owner-reviewed change: `PlannerCommand` → existing `src/lib/spread/store.ts` actions → `PlannerSnapshot`. Enforce task-on-own-role-day, bank math, Undo, rollover, profile isolation and save error behavior in the existing store. Do not add SwiftData as a second live store.
-- Restore **animated cutout layers** from `doodle-motion.ts` only after preserved artwork fidelity, Reduce Motion and energy budgets are validated. Original static art is already included.
-- The current Week view is a native day-list scaffold. Month grid, task edit and move sheets, persistent role preference and all six full user journeys are NOT complete.
-- Before a merge: Xcode simulator compile, physical iPhone QA, dynamic type, VoiceOver, 100 Crown gestures + 30 reversals, original art comparison, data parity fixtures and cross-device layout checks.
+Verification:
 
-**Release gate:** No TestFlight upload, merge, production deployment or data-format change under this PR. Keep `main`/golden baseline immutable.
+```sh
+swift test --package-path ios/SpreadNativeV2
+xcodebuild -scheme SpreadNativeV2 -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+# From the repository root after npm run ios:sync:
+xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -destination 'platform=iOS Simulator,id=SIMULATOR_UDID' CODE_SIGNING_ALLOWED=NO
+```
+
+Shared fixtures cover 60 TS/Swift projections, bank arithmetic and eligible allocations. Swift reducer tests cover 100 Crown gestures and 30 reversals. The actual UI target captures screens from the installed app and includes a real 100-drag Crown test; results must be inspected separately from reducer tests. GitHub's iOS shell workflow retains positive mirror/relaunch/restore assertions and a disabled-writer negative control, then runs the UI target and exports screenshots.
+
+Rollback removes native hosting and restores the original React entry. No planner schema or user-data migration is needed. Retain the independent late-filesystem mirror-writer fix. Do not publish a native candidate until the documented release gates pass.

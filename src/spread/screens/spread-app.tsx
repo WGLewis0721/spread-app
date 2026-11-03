@@ -1,3 +1,4 @@
+import { installNativeV2Host } from "@/lib/spread/native-v2-host";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal, flushSync } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
@@ -88,6 +89,10 @@ export function SpreadApp() {
       live = false;
     };
   }, [boot]);
+
+  useEffect(() => {
+    if (ready && isNativeApp()) return installNativeV2Host();
+  }, [ready]);
 
   useEffect(
     () =>
