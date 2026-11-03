@@ -236,6 +236,8 @@ async function filesystemAdapter(): Promise<MirrorAdapter> {
       }
     },
     async write(slot, text) {
+      // Only the Debug iOS harness injects this flag before document startup.
+      if ((window as Window & { __SpreadDisableMirror?: boolean }).__SpreadDisableMirror === true) throw new Error("Mirror writer disabled by negative-control harness");
       await Filesystem.writeFile({ path: path(slot), data: text, directory: Directory.Library, encoding: Encoding.UTF8 });
     },
   };

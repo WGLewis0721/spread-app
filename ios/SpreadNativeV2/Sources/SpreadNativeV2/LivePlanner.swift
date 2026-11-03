@@ -232,6 +232,7 @@ struct LiveEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var hours = 1.0
+    @State private var allocationHours = 0.5
     @State private var category = "custom"
     @State private var day = ""
     @State private var selected = Set<String>()
@@ -242,6 +243,7 @@ struct LiveEditor: View {
         NavigationStack {
             Form { content }
                 .navigationTitle(title)
+                .alert("Couldn’t complete the change", isPresented: Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })) { Button("OK") { planner.error = nil } } message: { Text(planner.error ?? "") }
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
                 .onAppear {
                     day = planner.snapshot?.weekKey ?? ""
@@ -278,8 +280,15 @@ struct LiveEditor: View {
             Section("Place hours") {
                 Text("\(planner.snapshot?.remainingHours(for: role.id).formatted() ?? "0")h left in this week’s bank")
                 dayPicker
-                Button("Place 0.5h") { submit(["type": "allocate", "roleId": role.id, "day": day, "hours": 0.5], close: false) }
-                    .disabled((planner.snapshot?.remainingHours(for: role.id) ?? 0) < 0.5)
+                Stepper("Place \(allocationHours.formatted())h", value: $allocationHours, in: 0.5...168, step: 0.5)
+                Button("Place \(allocationHours.formatted())h") { submit(["type": "allocate", "roleId": role.id, "day": day, "hours": allocationHours], close: false) }
+                    .disabled((planner.snapshot?.remainingHours(for: role.id) ?? 0) < allocationHours)
+            }
+            Section("Placed hours") {
+                ForEach(planner.snapshot?.allocations.filter { $0.roleId == role.id } ?? []) { item in
+                    Stepper("\(item.day) · \(item.hours.formatted())h", value: Binding(get: { item.hours }, set: { submit(["type": "allocationHours", "allocationId": item.id, "hours": $0], close: false) }), in: 0...168, step: 0.5)
+                    Button("Remove hours from \(item.day)", role: .destructive) { submit(["type": "removeAllocation", "allocationId": item.id], close: false) }
+                }
             }
             Section("Tasks") {
                 TextField("New task", text: $taskText)

@@ -14,6 +14,11 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(SpreadCloudPlugin())
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-SpreadDisableMirror") {
+            webView?.configuration.userContentController.addUserScript(WKUserScript(source: "window.__SpreadDisableMirror = true;", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
+        #endif
         startup = Task { @MainActor [weak self] in
             for _ in 0..<60 {
                 guard let self, !Task.isCancelled else { return }

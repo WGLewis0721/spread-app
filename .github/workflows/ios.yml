@@ -29,7 +29,7 @@ concurrency:
 jobs:
   build-ios-shell:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -309,6 +309,26 @@ jobs:
           else:
               note("No LocalStorage folder was found to wipe, so the restore path was not exercised. Files:%0A" + listing())
           run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios-restored.png"], timeout=60)
+
+          # Negative control: after proven startup, deliberately disable the actual writer.
+          run(["xcrun", "simctl", "terminate", udid, bundle], timeout=60, check=False)
+          for base, _dirs, files in os.walk(data_container()):
+              for name in files:
+                  if name.startswith("spread-mirror-") and name.endswith(".json"):
+                      os.remove(os.path.join(base, name))
+          control = subprocess.Popen(["xcrun", "simctl", "launch", udid, bundle, "-SpreadDisableMirror"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+          time.sleep(20)
+          if control.poll() is None:
+              control.terminate()
+          if newest_snapshot() is not None:
+              fail("Negative control unexpectedly wrote a mirror with the writer disabled")
+          note("PASS negative control: disabled writer produced no mirror")
+          relaunch(wait=5)
+          recovered = wait_for_snapshot(1)
+          if recovered is None or profile_ids(recovered) != first_ids:
+              fail("Re-enabling the writer did not recover the same profile")
+          note("PASS writer re-enabled: genuine snapshot and original profile returned")
+
           PY
       - name: Test actual native planning journey
         run: |

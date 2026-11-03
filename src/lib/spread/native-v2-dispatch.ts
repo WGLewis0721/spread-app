@@ -9,6 +9,8 @@ const text = z.string().trim().min(1).max(10000);
 const hours = z.number().finite().min(0).max(168).multipleOf(0.5);
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const action = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("allocationHours"), allocationId: id, hours }),
+  z.strictObject({ type: z.literal("removeAllocation"), allocationId: id }),
   z.strictObject({ type: z.literal("renameRole"), roleId: id, name: text }),
   z.strictObject({ type: z.literal("removeRole"), roleId: id }),
   z.strictObject({ type: z.literal("switchProfile"), profileId: id }),
@@ -129,6 +131,12 @@ export function createNativeV2Dispatcher(sessionId: string) {
     try {
       const mutate = () => {
         switch (a.type) {
+          case "allocationHours":
+            state.setAllocationHours(a.allocationId, a.hours);
+            break;
+          case "removeAllocation":
+            state.removeAllocation(a.allocationId);
+            break;
           case "renameRole":
             state.renameHat(a.roleId, a.name);
             break;
@@ -222,6 +230,11 @@ export function createNativeV2Dispatcher(sessionId: string) {
 
 function validateTarget(a: NativeRequest["action"], data: SpreadData): string | null {
   const week = data.weeks[data.currentWeek];
+  if (
+    (a.type === "allocationHours" || a.type === "removeAllocation") &&
+    !week?.allocations.some((p) => p.id === a.allocationId)
+  )
+    return "no-allocation";
   if (a.type === "allocate") {
     const date = new Date(`${a.day}T12:00:00Z`);
     if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== a.day)
