@@ -72,7 +72,7 @@ struct NativeTaskContentEditor: View {
             ForEach((block.wrappedValue.items ?? []).indices, id: \.self) { index in
                 TextField("Outline line", text: Binding(get: { block.wrappedValue.items?[index].text ?? "" }, set: { block.wrappedValue.items?[index].text = $0 }), axis: .vertical)
                     .padding(.leading, CGFloat(block.wrappedValue.items?[index].level ?? 0) * 8)
-                Stepper("Indent \(block.wrappedValue.items?[index].level ?? 0)", value: Binding(get: { block.wrappedValue.items?[index].level ?? 0 }, set: { block.wrappedValue.items?[index].level = $0 }), in: 0...20)
+                Stepper("Indent \(block.wrappedValue.items?[index].level ?? 0)", value: Binding(get: { block.wrappedValue.items?[index].level ?? 0 }, set: { block.wrappedValue.items?[index].level = $0 }), in: 0...4)
             }
             Button("Add line") { block.wrappedValue.items?.append(NativeOutlineItem(id: UUID().uuidString, text: "", level: 0)) }
         case "table":

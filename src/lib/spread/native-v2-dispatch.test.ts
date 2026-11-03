@@ -286,3 +286,31 @@ test("replaying a rich read after a profile switch cannot expose the prior profi
     router.dispose();
   }
 });
+
+test("rich-content commands reject values that the existing normalizer would discard or clamp", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const original = storage.map.get(STORE_KEY);
+    for (const block of [
+      { id: "outline", type: "outline", items: [{ id: "item", text: "Too deep", level: 5 }] },
+      { id: "photo", type: "photo", src: "https://example.invalid/untrusted.jpg" },
+    ]) {
+      assert.equal(
+        (
+          await router.dispatch(
+            request({
+              type: "setTaskContent",
+              roleId,
+              taskId: "task",
+              content: { blocks: [block] },
+            }),
+          )
+        ).error,
+        "invalid-command",
+      );
+      assert.equal(storage.map.get(STORE_KEY), original);
+    }
+  } finally {
+    router.dispose();
+  }
+});

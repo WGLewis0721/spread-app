@@ -21,7 +21,7 @@ const contentSchema = z.strictObject({
               z.strictObject({
                 id,
                 text: z.string().max(100000),
-                level: z.number().int().min(0).max(20),
+                level: z.number().int().min(0).max(4),
               }),
             )
             .max(10000),
@@ -31,7 +31,14 @@ const contentSchema = z.strictObject({
           type: z.literal("table"),
           cells: z.array(z.array(z.string().max(100000)).max(100)).max(1000),
         }),
-        z.strictObject({ id, type: z.literal("photo"), src: z.string().max(20000000) }),
+        z.strictObject({
+          id,
+          type: z.literal("photo"),
+          src: z
+            .string()
+            .max(20000000)
+            .refine((value) => value === "" || value.startsWith("data:image/")),
+        }),
       ]),
     )
     .max(200),
