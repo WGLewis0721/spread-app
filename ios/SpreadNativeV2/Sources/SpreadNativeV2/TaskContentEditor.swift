@@ -47,6 +47,7 @@ struct NativeTaskContentEditor: View {
                 }
             }
         }
+        .scrollDismissesKeyboard(.immediately)
         .navigationTitle("Notes and attachments")
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
             Button("Save") { Task { await save() } }.disabled(!loaded || planner.busy)
@@ -67,11 +68,12 @@ struct NativeTaskContentEditor: View {
         switch block.wrappedValue.type {
         case "notes":
             TextEditor(text: Binding(get: { block.wrappedValue.text ?? "" }, set: { block.wrappedValue.text = $0 }))
-                .frame(minHeight: 120).accessibilityLabel("Notes")
+                .frame(minHeight: 120).accessibilityLabel("Notes").accessibilityIdentifier("content-notes")
         case "outline":
             ForEach((block.wrappedValue.items ?? []).indices, id: \.self) { index in
                 TextField("Outline line", text: Binding(get: { block.wrappedValue.items?[index].text ?? "" }, set: { block.wrappedValue.items?[index].text = $0 }), axis: .vertical)
                     .padding(.leading, CGFloat(block.wrappedValue.items?[index].level ?? 0) * 8)
+                    .accessibilityIdentifier("content-outline-\(index)")
                 Stepper("Indent \((block.wrappedValue.items?[index].level ?? 0).formatted())", value: Binding(get: { block.wrappedValue.items?[index].level ?? 0 }, set: { block.wrappedValue.items?[index].level = $0 }), in: 0...4)
             }
             Button("Add line") { block.wrappedValue.items?.append(NativeOutlineItem(id: UUID().uuidString, text: "", level: 0)) }
@@ -83,6 +85,7 @@ struct NativeTaskContentEditor: View {
                             ForEach((block.wrappedValue.cells?[row] ?? []).indices, id: \.self) { column in
                                 TextField("Row \(row + 1), column \(column + 1)", text: Binding(get: { block.wrappedValue.cells?[row][column] ?? "" }, set: { block.wrappedValue.cells?[row][column] = $0 }))
                                     .textFieldStyle(.roundedBorder).frame(width: 140, height: 44)
+                                    .accessibilityIdentifier("content-cell-\(row)-\(column)")
                             }
                         }
                     }

@@ -30,7 +30,7 @@ concurrency:
 jobs:
   build-ios-shell:
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -92,6 +92,49 @@ jobs:
                   raise subprocess.CalledProcessError(result.returncode, args, result.stdout, result.stderr)
               return result
 
+          import select
+
+          bundle = "com.graymatter.spread"
+
+          def note(message):
+              print(f"::notice::{message}", flush=True)
+
+          def app_running():
+              out = run(["xcrun", "simctl", "spawn", udid, "launchctl", "list"], timeout=45, check=False).stdout
+              return ("UIKitApplication:" + bundle) in out
+
+          def launch_app(extra=(), settle=150):
+              """Launch the app and return True only once the OS reports a process id (or the launch
+              command exits cleanly). Never kills the CLI on a fixed timer: a slow hosted simulator can
+              need minutes to deliver the request, and a killed request means the app never started."""
+              proc = subprocess.Popen(
+                  ["xcrun", "simctl", "launch", "--terminate-running-process", udid, bundle, *extra],
+                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+              )
+              deadline = time.time() + settle
+              seen = ""
+              launched = False
+              while time.time() < deadline:
+                  ready, _, _ = select.select([proc.stdout], [], [], 2)
+                  if ready:
+                      line = proc.stdout.readline()
+                      if not line:
+                          launched = proc.wait() == 0
+                          break
+                      seen += line
+                      if re.search(re.escape(bundle) + r": \d+", line):
+                          launched = True
+                          break
+                  elif proc.poll() is not None:
+                      launched = proc.returncode == 0
+                      break
+              if not launched and app_running():
+                  launched = True
+              if proc.poll() is None:
+                  proc.terminate()
+              note(f"launch {list(extra)}: launched={launched}, output={seen.strip()[:160]!r}")
+              return launched
+
           runtimes = json.loads(run(["xcrun", "simctl", "list", "runtimes", "-j"]).stdout)["runtimes"]
           runtime = next(r["identifier"] for r in reversed(runtimes) if ".iOS-" in r["identifier"] and r.get("isAvailable", True))
           device_types = json.loads(run(["xcrun", "simctl", "list", "devicetypes", "-j"]).stdout)["devicetypes"]
@@ -121,51 +164,27 @@ jobs:
           # but keep the CLI call open. Send it asynchronously, then prove the
           # resulting UI with a simulator screenshot instead of trusting the CLI
           # process to exit promptly.
-          launch = subprocess.Popen(
-              ["xcrun", "simctl", "launch", udid, "com.graymatter.spread"],
-              stdout=subprocess.PIPE,
-              stderr=subprocess.PIPE,
-              text=True,
-          )
-          time.sleep(15)
+          first_launch_ok = launch_app()
+          time.sleep(10)
           run(["xcrun", "simctl", "io", udid, "screenshot", "artifacts/spread-ios.png"], timeout=60)
-          if launch.poll() is None:
-              launch.terminate()
-              try:
-                  launch.wait(timeout=5)
-              except subprocess.TimeoutExpired:
-                  launch.kill()
-          else:
-              out, err = launch.communicate(timeout=5)
-              if out:
-                  print(out.strip())
-              if err:
-                  print(err.strip())
 
           # --- Persistence checks -------------------------------------------------
           # The planner keeps a snapshot of its storage in the app's Library folder
           # (see src/lib/spread/native-mirror.ts). Its presence proves the installed
           # app loaded its bundled web assets, skipped the web gate, created a profile
           # and could write through the Filesystem plugin, all with no server.
-          bundle = "com.graymatter.spread"
-
           # Workflow commands become annotations, which stay readable through the API
           # even when the raw job log is not.
-          def note(message):
-              print(f"::notice::{message}", flush=True)
-
           def fail(message):
               print(f"::error::{message}", flush=True)
               raise SystemExit(message)
 
           def diagnose():
               parts = []
-              try:
-                  parts.append(f"launch command exit code: {launch.poll()}")
-              except Exception as exc:
-                  parts.append(f"launch state unknown: {exc}")
-              state = run(["xcrun", "simctl", "listapps", udid], timeout=60, check=False).stdout
-              parts.append("installed: " + ("yes" if bundle in state else "NO"))
+              parts.append(f"first launch confirmed by the OS: {first_launch_ok}")
+              container = run(["xcrun", "simctl", "get_app_container", udid, bundle, "app"], timeout=60, check=False)
+              parts.append("installed: " + ("yes" if container.returncode == 0 and container.stdout.strip() else "NO or unknown"))
+              parts.append(f"app process running now: {app_running()}")
               logs = run(
                   ["xcrun", "simctl", "spawn", udid, "log", "show", "--last", "4m", "--style", "compact",
                    "--predicate", 'process == "App" AND (messageType == error OR messageType == fault)'],
@@ -236,14 +255,9 @@ jobs:
           def relaunch(wait=15):
               run(["xcrun", "simctl", "terminate", udid, bundle], timeout=60, check=False)
               time.sleep(3)
-              proc = subprocess.Popen(
-                  ["xcrun", "simctl", "launch", udid, bundle],
-                  stdout=subprocess.DEVNULL,
-                  stderr=subprocess.DEVNULL,
-              )
-              time.sleep(wait)
-              if proc.poll() is None:
-                  proc.terminate()
+              ok = launch_app()
+              time.sleep(wait)   # the launch is confirmed; this only gives the web app time to start its writer
+              return ok
 
           def wait_for_snapshot(min_seq, relaunch_once=False):
               """A snapshot at least as new as min_seq, or None. Never returns an older one, so a
@@ -325,10 +339,10 @@ jobs:
                   for name in files:
                       if name.startswith("spread-mirror-") and name.endswith(".json"):
                           os.remove(os.path.join(base, name))
-              control = subprocess.Popen(["xcrun", "simctl", "launch", udid, bundle, "-SpreadDisableMirror"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              control_launched = launch_app(("-SpreadDisableMirror",))
+              if not control_launched:
+                  fail(f"Cycle {cycle + 1}: the writer-disabled instance never launched, so the negative control would prove nothing.%0A" + diagnose())
               time.sleep(20)
-              if control.poll() is None:
-                  control.terminate()
               if newest_snapshot() is not None:
                   fail("Negative control unexpectedly wrote a mirror with the writer disabled")
               note("PASS negative control: disabled writer produced no mirror")
@@ -346,11 +360,12 @@ jobs:
           PY
       - name: Test actual native planning journey
         if: ${{ !cancelled() && steps.nativebuild.outcome == 'success' }}
-        timeout-minutes: 20
+        timeout-minutes: 40
         run: |
           TEST_UDID=$(xcrun simctl list devices booted -j | python3 -c 'import json,sys; print(next(d["udid"] for ds in json.load(sys.stdin)["devices"].values() for d in ds if d["state"] == "Booted"))')
-          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -parallel-testing-enabled NO -test-timeouts-enabled YES -maximum-test-execution-time-allowance 600 -destination "platform=iOS Simulator,id=$TEST_UDID" -derivedDataPath artifacts/DerivedData -resultBundlePath artifacts/NativeJourneys.xcresult CODE_SIGNING_ALLOWED=NO
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -only-testing:SpreadNativeUITests/JourneyUITests -parallel-testing-enabled NO -test-timeouts-enabled YES -maximum-test-execution-time-allowance 900 -destination "platform=iOS Simulator,id=$TEST_UDID" -derivedDataPath artifacts/DerivedData -resultBundlePath artifacts/NativeJourneys.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Archive unsigned native Release candidate
+        id: archive
         if: ${{ !cancelled() && steps.nativebuild.outcome == 'success' }}
         timeout-minutes: 12
         run: >
@@ -359,6 +374,34 @@ jobs:
           -derivedDataPath artifacts/ReleaseDerivedData
           -archivePath artifacts/SpreadNative.xcarchive
           CODE_SIGNING_ALLOWED=NO archive
+      - name: Verify Debug-only test hooks are absent from the Release binary
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
+        run: |
+          APP=$(find artifacts/SpreadNative.xcarchive/Products/Applications -maxdepth 1 -name '*.app' | head -1)
+          BIN="$APP/$(basename "$APP" .app)"
+          echo "Release binary: $BIN"
+          test -f "$BIN"
+          status=0
+          for hook in SpreadFailSaveMarker SpreadDisableMirror SpreadViewportWidth SpreadNativeV2Preview; do
+            if strings -a "$BIN" | grep -q -- "$hook"; then echo "::error::Debug-only launch hook $hook is present in the Release binary"; status=1; fi
+          done
+          [ $status -eq 0 ] && echo "No Debug-only launch hook strings in the Release binary"
+          exit $status
+      - name: Preserve the unsigned Release archive for this commit
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent artifacts/SpreadNative.xcarchive artifacts/SpreadNative-unsigned-${GITHUB_SHA}.xcarchive.zip
+          shasum -a 256 artifacts/SpreadNative-unsigned-${GITHUB_SHA}.xcarchive.zip | tee artifacts/SpreadNative-unsigned-${GITHUB_SHA}.sha256
+          (cd artifacts/SpreadNative.xcarchive && find . -maxdepth 3 -name "*.app" -o -maxdepth 3 -name Info.plist | head -5)
+      - name: Upload unsigned Release archive (not signed, not distributable)
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: spread-native-unsigned-release-${{ github.sha }}
+          path: |
+            artifacts/SpreadNative-unsigned-*.xcarchive.zip
+            artifacts/SpreadNative-unsigned-*.sha256
+          retention-days: 30
       - name: Export actual UI screenshots
         if: always()
         run: |

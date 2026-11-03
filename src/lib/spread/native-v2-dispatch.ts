@@ -68,7 +68,9 @@ const action = z.discriminatedUnion("type", [
     type: z.literal("addRole"),
     name: text,
     hours,
-    category: z.string().refine(isSpreadCategory),
+    // "custom" is the native picker's name for "no category": the same as the React default
+    // (a responsibility without a category), which the projection already shows as the custom artwork.
+    category: z.union([z.literal("custom"), z.string().refine(isSpreadCategory)]),
   }),
   z.strictObject({ type: z.literal("setHours"), roleId: id, hours }),
   z.strictObject({
@@ -244,7 +246,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
             if (!state.addProfile(a.name)) throw new Error("profile-limit");
             break;
           case "addRole":
-            state.addHat(a.name, a.hours, { category: a.category });
+            state.addHat(a.name, a.hours, a.category === "custom" ? undefined : { category: a.category });
             break;
           case "setHours":
             state.setHours(a.roleId, a.hours);

@@ -21,8 +21,28 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "spreadPlannerReady")
         webView?.configuration.userContentController.add(handler, name: "spreadPlannerReady")
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-SpreadDisableMirror") {
+        let launchArguments = ProcessInfo.processInfo.arguments
+        if launchArguments.contains("-SpreadDisableMirror") {
             webView?.configuration.userContentController.addUserScript(WKUserScript(source: "window.__SpreadDisableMirror = true;", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
+        // Debug-only fault injection for the installed-app failed-save test. The first localStorage
+        // write of a planner key whose value contains the marker throws QuotaExceededError, exactly
+        // what a full disk does. Later writes pass, so the real "Retry saving" path can recover.
+        if let index = launchArguments.firstIndex(of: "-SpreadFailSaveMarker"), launchArguments.indices.contains(index + 1),
+           let encoded = try? JSONEncoder().encode(launchArguments[index + 1]), let literal = String(data: encoded, encoding: .utf8) {
+            let script = """
+            (function () {
+              var marker = \(literal), left = 1, proto = Storage.prototype, original = proto.setItem;
+              proto.setItem = function (key, value) {
+                if (left > 0 && String(key).indexOf('spread') === 0 && String(value).indexOf(marker) !== -1) {
+                  left -= 1;
+                  throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+                }
+                return original.apply(this, arguments);
+              };
+            })();
+            """
+            webView?.configuration.userContentController.addUserScript(WKUserScript(source: script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
         #endif
         startup = Task { @MainActor [weak self] in

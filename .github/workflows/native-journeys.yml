@@ -1,0 +1,81 @@
+name: Native acceptance journeys
+# F1-F10 on one real dataset, 100 rapid Stack and Fan gestures, the 100-drag Crown run, and the
+# Dynamic Type / long-name / 44 pt checks. Each group runs on its own fresh simulator so a failure
+# in one cannot hide evidence from another. Results are the real xcresult and exported screenshots.
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'src/lib/spread/native-v2-*'
+      - 'src/lib/spread/native-mirror.ts'
+      - '.github/workflows/native-journeys.yml'
+      - 'scripts/native-simulator*'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-journeys-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  group:
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: journey
+            width: 390
+            tests: "JourneyUITests"
+          - name: gestures
+            width: 390
+            tests: "PlannerUITests/testStackHundredRapidSwipesKeepSelection PlannerUITests/testFanHundredRapidSwipesKeepSelection PlannerUITests/testSelectedRoleFallsBackAfterDeletion PlannerUITests/testFanKeepsLargeContentInsideItsFrame"
+          - name: crown
+            width: 390
+            tests: "PlannerUITests/testCrownHundredDragsWithThirtyReversals"
+          - name: accessibility
+            width: 390
+            tests: "PlannerUITests/testTargets44Everywhere PlannerUITests/testDynamicTypeLargestAccessibilitySize PlannerUITests/testLongProfileAndResponsibilityNames"
+          - name: reduce-motion
+            width: 390
+            reduce_motion: "1"
+            tests: "PlannerUITests/testReduceMotionKeepsFunction"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Create actual compatible simulator
+        run: node scripts/native-simulator.mjs ${{ matrix.width }}
+      - name: Turn on the system Reduce Motion setting and restart the simulator
+        if: ${{ matrix.reduce_motion == '1' }}
+        run: |
+          xcrun simctl spawn "$NATIVE_UDID" defaults write com.apple.Accessibility ReduceMotionEnabled -bool true
+          xcrun simctl shutdown "$NATIVE_UDID"
+          xcrun simctl boot "$NATIVE_UDID"
+          xcrun simctl bootstatus "$NATIVE_UDID" -b
+          xcrun simctl spawn "$NATIVE_UDID" defaults read com.apple.Accessibility ReduceMotionEnabled
+      - name: Run actual-app UI tests (${{ matrix.name }})
+        env:
+          SELECTED_TESTS: ${{ matrix.tests }}
+        run: |
+          ONLY=""
+          for t in $SELECTED_TESTS; do ONLY="$ONLY -only-testing:SpreadNativeUITests/$t"; done
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 900 \
+            $ONLY -resultBundlePath artifacts/${{ matrix.name }}.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Export actual screenshots and attachments
+        if: always()
+        run: |
+          if [ -d artifacts/${{ matrix.name }}.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/${{ matrix.name }}.xcresult --output-path artifacts/screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-journeys-${{ matrix.name }}
+          path: artifacts

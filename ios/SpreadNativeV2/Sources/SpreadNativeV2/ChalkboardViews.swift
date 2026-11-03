@@ -13,6 +13,14 @@ enum Chalk {
     static let yellow = Color(cssHex: "#F4CD58")
 }
 
+extension View {
+    /// A Button's hit region is its label. A `.frame(minHeight: 44)` placed *outside* the Button
+    /// leaves the real target at the text's own height. Apply this inside the label instead.
+    func tapTarget(minWidth: CGFloat = 44, minHeight: CGFloat = 44, alignment: Alignment = .center) -> some View {
+        frame(minWidth: minWidth, minHeight: minHeight, alignment: alignment).contentShape(Rectangle())
+    }
+}
+
 extension Color {
     init(cssHex: String) {
         let cleaned = cssHex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
@@ -74,9 +82,12 @@ struct ChalkRoleCard: View {
     let remainingHours: Double
     let tasks: [PlannerTask]
     let expanded: Bool
+    /// The fan shows a few tasks and links to the rest, so its card never outgrows the stack.
+    var taskLimit: Int? = nil
     let onSelect: () -> Void
     var onTask: (PlannerTask) -> Void = { _ in }
     var onToggle: (PlannerTask) -> Void = { _ in }
+    var onMore: () -> Void = {}
 
     var body: some View {
         let tint = Color(cssHex: role.color)
@@ -115,7 +126,8 @@ struct ChalkRoleCard: View {
                     Text("No tasks in this responsibility")
                         .font(.subheadline).foregroundStyle(Chalk.secondary)
                 } else {
-                    ForEach(tasks) { task in
+                    let shown = taskLimit.map { Array(tasks.prefix($0)) } ?? tasks
+                    ForEach(shown) { task in
                         HStack(spacing: 12) {
                             Button { onToggle(task) } label: {
                                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
@@ -125,11 +137,21 @@ struct ChalkRoleCard: View {
                             Button { onTask(task) } label: {
                                 Text(task.text).font(.body).foregroundStyle(Chalk.ink)
                                     .strikethrough(task.done).multilineTextAlignment(.leading)
+                                    .lineLimit(taskLimit == nil ? nil : 2)
                                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                    .contentShape(Rectangle())
                             }
+                            .accessibilityIdentifier("card-task-\(task.id)")
                             Spacer()
                         }
                         .frame(minHeight: 44)
+                    }
+                    if tasks.count > shown.count {
+                        Button { onMore() } label: {
+                            Text("\(tasks.count - shown.count) more · Manage").font(.subheadline)
+                                .foregroundStyle(Chalk.yellow).tapTarget(alignment: .leading).frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .accessibilityIdentifier("card-more-tasks")
                     }
                 }
             }

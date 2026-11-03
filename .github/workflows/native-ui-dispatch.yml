@@ -8,13 +8,13 @@ on:
         type: choice
         options: ["390", "820", "1024"]
       tests:
-        description: "Space-separated PlannerUITests method names, e.g. testCardGesturesStayOnSelectedRole testLayout390"
-        default: "testCardGesturesStayOnSelectedRole testLayout390"
+        description: "Space-separated test names: a PlannerUITests method (testLayout390), Class/method (JourneyUITests/testF04_PlaceAndMove) or a whole Class (JourneyUITests)"
+        default: "testLayout390"
         type: string
 permissions:
   contents: read
 concurrency:
-  group: native-ui-dispatch-${{ github.ref }}
+  group: native-ui-dispatch-${{ github.ref }}-${{ inputs.width }}-${{ inputs.tests }}
   cancel-in-progress: false
 jobs:
   ui:
@@ -36,10 +36,15 @@ jobs:
         run: |
           ONLY=""
           for t in $SELECTED_TESTS; do
-            case "$t" in (test[A-Za-z0-9]*) ONLY="$ONLY -only-testing:SpreadNativeUITests/PlannerUITests/$t" ;; (*) echo "Rejected test name: $t"; exit 1 ;; esac
+            case "$t" in
+              (test[A-Za-z0-9_]*) ONLY="$ONLY -only-testing:SpreadNativeUITests/PlannerUITests/$t" ;;
+              ([A-Z][A-Za-z0-9]*/test[A-Za-z0-9_]*|[A-Z][A-Za-z0-9]*) ONLY="$ONLY -only-testing:SpreadNativeUITests/$t" ;;
+              (*) echo "Rejected test name: $t"; exit 1 ;;
+            esac
           done
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 900 \
             $ONLY -resultBundlePath artifacts/Targeted.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Export actual screenshots
         if: always()
@@ -50,5 +55,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: native-ui-${{ inputs.width }}
+          name: native-ui-${{ inputs.width }}-${{ github.run_id }}
           path: artifacts
