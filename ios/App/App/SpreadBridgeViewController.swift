@@ -8,6 +8,7 @@ import WebKit
 /// SwiftUI owns presentation only. Backup/restore remains the established React workflow.
 final class SpreadBridgeViewController: CAPBridgeViewController {
     private var nativeHost: UIHostingController<SpreadLiveRoot>?
+    fileprivate var isShowingNative: Bool { nativeHost != nil }
     private var planner: LivePlanner?
     private var startup: Task<Void, Never>?
     private var resumeButton: UIButton?
@@ -64,6 +65,7 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         ])
         host.didMove(toParent: stage)
         nativeHost = host
+        stage.setNeedsStatusBarAppearanceUpdate()
         resumeButton?.removeFromSuperview()
     }
     @MainActor private func openRecovery() {
@@ -73,6 +75,7 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         nativeHost?.view.removeFromSuperview()
         nativeHost?.removeFromParent()
         nativeHost = nil
+        parent?.setNeedsStatusBarAppearanceUpdate()
         let button = UIButton(type: .system)
         button.setTitle("Return to native Spread", for: .normal)
         button.backgroundColor = .secondarySystemBackground
@@ -104,6 +107,7 @@ private final class PlannerReadyHandler: NSObject, WKScriptMessageHandler {
 /// Capacitor's root view is WKWebView. Native UI must be a sibling, never its descendant.
 final class SpreadContainerViewController: UIViewController {
     private let engine = SpreadBridgeViewController()
+    override var preferredStatusBarStyle: UIStatusBarStyle { engine.isShowingNative ? .lightContent : engine.preferredStatusBarStyle }
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
