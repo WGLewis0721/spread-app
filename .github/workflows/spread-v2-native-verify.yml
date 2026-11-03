@@ -1,0 +1,39 @@
+name: Spread 2.0 SwiftUI slice verification
+
+on:
+  pull_request:
+    paths:
+      - "ios/SpreadNativeV2/**"
+      - "ios/App/App.xcodeproj/project.pbxproj"
+      - "ios/App/App/SceneDelegate.swift"
+      - ".github/workflows/spread-v2-native-verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Swift version
+        run: swift --version
+      - name: Run Crown, hour and presentation unit tests
+        run: swift test --package-path ios/SpreadNativeV2
+
+  native-ios-compile:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode version
+        run: xcodebuild -version
+      - name: Compile SwiftUI package for iOS Simulator (not an app release)
+        working-directory: ios/SpreadNativeV2
+        run: |
+          xcodebuild -scheme SpreadNativeV2 \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO build
