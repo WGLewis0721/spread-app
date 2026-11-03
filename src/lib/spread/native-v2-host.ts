@@ -6,13 +6,18 @@ import { getSaveFacts } from "./local-status.ts";
  * WKWebView passes structured arguments; no command is ever interpolated into JS source.
  */
 export function installNativeV2Host() {
-  const router = createNativeV2Dispatcher(crypto.randomUUID());
+  let router = createNativeV2Dispatcher(crypto.randomUUID());
   const host = {
     async exchange(message: string): Promise<string> {
       try {
         const request: unknown = JSON.parse(message);
         const reply =
           request === null ? { ok: true, state: router.read() } : await router.dispatch(request);
+        if ("error" in reply && reply.error === "session-capacity") {
+          router.dispose();
+          router = createNativeV2Dispatcher(crypto.randomUUID());
+          reply.state = router.read();
+        }
         return JSON.stringify({
           ...reply,
           profiles: useSpread.getState().profiles.map(({ id, name }) => ({ id, name })),
@@ -29,6 +34,10 @@ export function installNativeV2Host() {
     },
   };
   Object.assign(window, { SpreadNativeHost: host });
+  const nativeWindow = window as unknown as {
+    webkit?: { messageHandlers?: { spreadPlannerReady?: { postMessage(value: null): void } } };
+  };
+  nativeWindow.webkit?.messageHandlers?.spreadPlannerReady?.postMessage(null);
   return () => {
     router.dispose();
     delete (window as Window & { SpreadNativeHost?: unknown }).SpreadNativeHost;

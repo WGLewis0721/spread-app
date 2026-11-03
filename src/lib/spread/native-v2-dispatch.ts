@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isSpreadCategory, shiftWeek, type SpreadData } from "./model.ts";
+import { isSpreadCategory, shiftWeek, type SpreadData, type TaskContent } from "./model.ts";
 import { getSaveFacts } from "./local-status.ts";
 import { projectNativeV2, type NativeV2Envelope } from "./native-v2-projection.ts";
 import { flushSpread, retrySpreadSave, useSpread } from "./store.ts";
@@ -8,7 +8,42 @@ const id = z.string().trim().min(1).max(200);
 const text = z.string().trim().min(1).max(10000);
 const hours = z.number().finite().min(0).max(168).multipleOf(0.5);
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const contentSchema = z.strictObject({
+  blocks: z
+    .array(
+      z.discriminatedUnion("type", [
+        z.strictObject({ id, type: z.literal("notes"), text: z.string().max(1000000) }),
+        z.strictObject({
+          id,
+          type: z.literal("outline"),
+          items: z
+            .array(
+              z.strictObject({
+                id,
+                text: z.string().max(100000),
+                level: z.number().int().min(0).max(20),
+              }),
+            )
+            .max(10000),
+        }),
+        z.strictObject({
+          id,
+          type: z.literal("table"),
+          cells: z.array(z.array(z.string().max(100000)).max(100)).max(1000),
+        }),
+        z.strictObject({ id, type: z.literal("photo"), src: z.string().max(20000000) }),
+      ]),
+    )
+    .max(200),
+});
 const action = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("readTaskContent"), roleId: id, taskId: id }),
+  z.strictObject({
+    type: z.literal("setTaskContent"),
+    roleId: id,
+    taskId: id,
+    content: contentSchema,
+  }),
   z.strictObject({ type: z.literal("retrySave") }),
   z.strictObject({ type: z.literal("deleteTask"), roleId: id, taskId: id }),
   z.strictObject({ type: z.literal("allocationHours"), allocationId: id, hours }),
@@ -65,6 +100,7 @@ export const nativeRequestSchema = z.strictObject({
 export type NativeRequest = z.infer<typeof nativeRequestSchema>;
 export type NativeRead = { sessionId: string; revision: number; envelope: NativeV2Envelope };
 export type NativeReply = {
+  taskDetail?: { taskId: string; content: TaskContent };
   requestId: string | null;
   ok: boolean;
   error?: string;
@@ -122,7 +158,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
     if (command.expectedWeek !== state.data.currentWeek) return fail("stale-week");
     if (command.expectedRevision !== revision) return fail("stale-revision");
-    if (getSaveFacts().failed && command.action.type !== "retrySave")
+    if (getSaveFacts().failed && !["retrySave", "readTaskContent"].includes(command.action.type))
       return fail("save-unavailable");
     const a = command.action;
     const invalid =
@@ -130,10 +166,25 @@ export function createNativeV2Dispatcher(sessionId: string) {
         ? "no-profile"
         : validateTarget(a, state.data);
     if (invalid) return fail(invalid);
+    if (a.type === "readTaskContent") {
+      const task = state.data.weeks[state.data.currentWeek].boxes
+        .find((b) => b.hatId === a.roleId)!
+        .tasks.find((t) => t.id === a.taskId)!;
+      return {
+        requestId: command.requestId,
+        ok: true,
+        state: read(),
+        taskDetail: { taskId: a.taskId, content: structuredClone(task.content ?? { blocks: [] }) },
+      };
+    }
     let undoId: string | null = null;
     try {
       const mutate = () => {
         switch (a.type) {
+          case "setTaskContent":
+            state.setTaskContent(a.roleId, a.taskId, a.content);
+            flushSpread();
+            break;
           case "retrySave":
             if (!retrySpreadSave()) throw new Error("save-failed");
             break;

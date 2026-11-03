@@ -8,13 +8,14 @@ final class PlannerUITests: XCTestCase {
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
     func tap(_ title: String) {
-        let button = app.buttons[title].firstMatch
+        let button = title == "Week" ? app.buttons["native-week"] : title == "Spread" ? app.buttons["native-spread"] : app.buttons[title].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 30), "Missing button: \(title)")
         button.tap()
     }
     func testRealPlannerJourney() throws {
         XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 60))
         capture("01-week-before")
+        if #available(iOS 17.0, *) { try app.performAccessibilityAudit(for: [.hitRegion, .textClipped, .sufficientElementDescription]) }
         tap("More"); tap("New responsibility")
         let name = app.textFields["Name"]
         XCTAssertTrue(name.waitForExistence(timeout: 10)); name.tap(); name.typeText("Native QA")
@@ -43,10 +44,16 @@ final class PlannerUITests: XCTestCase {
         }
         tap("Week")
         capture("06-week-to-place")
+        tap("Native QA · 1 tasks")
         tap("Place")
-        let day = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "0.5h")).firstMatch
+        let day = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "eligible-day-")).firstMatch
         XCTAssertTrue(day.waitForExistence(timeout: 10)); day.tap()
         capture("07-task-placed")
+        tap("Verify live task")
+        tap("Notes and attachments"); tap("Notes")
+        let notes = app.textViews["Notes"]
+        XCTAssertTrue(notes.waitForExistence(timeout: 10)); notes.tap(); notes.typeText("Native note survives the bridge")
+        capture("08-notes-before-save"); tap("Save"); tap("Done")
         tap("Complete Verify live task")
         capture("08-task-completed")
         tap("Undo last change")
@@ -57,4 +64,45 @@ final class PlannerUITests: XCTestCase {
         XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 60))
         capture("11-relaunch")
     }
+    func testCrownHundredDragsWithThirtyReversals() {
+        let crown = app.descendants(matching: .any).matching(identifier: "week-crown").firstMatch
+        XCTAssertTrue(crown.waitForExistence(timeout: 60))
+        let initial = crown.value as? String
+        func drag(_ delta: CGFloat) {
+            let old = crown.value as? String
+            let start = crown.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let end = start.withOffset(CGVector(dx: delta, dy: 0))
+            start.press(forDuration: 0.05, thenDragTo: end)
+            let changed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in (crown.value as? String) != old }, object: crown)
+            XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 10), .completed)
+        }
+        for _ in 0..<30 {
+            drag(70); drag(-70)
+            XCTAssertEqual(crown.value as? String, initial)
+        }
+        var values: [String?] = []
+        for _ in 0..<20 { values.append(crown.value as? String); drag(70) }
+        for value in values.reversed() { drag(-70); XCTAssertEqual(crown.value as? String, value) }
+        XCTAssertEqual(crown.value as? String, initial)
+        capture("crown-after-100-drags-30-reversals")
+    }
+
+    func testCardGesturesStayOnSelectedRole() {
+        XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 60))
+        tap("Spread")
+        for mode in ["Stack", "Fan"] {
+            let view = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "View,")).firstMatch
+            XCTAssertTrue(view.waitForExistence(timeout: 10)); view.tap(); tap(mode)
+            for _ in 0..<50 {
+                let work = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Work")).firstMatch
+                XCTAssertTrue(work.waitForExistence(timeout: 10)); work.swipeLeft()
+                XCTAssertTrue(app.buttons["Manage Home"].waitForExistence(timeout: 10))
+                let home = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Home")).firstMatch
+                home.swipeRight()
+                XCTAssertTrue(app.buttons["Manage Work"].waitForExistence(timeout: 10))
+            }
+            capture("100-rapid-gestures-" + mode)
+        }
+    }
+
 }

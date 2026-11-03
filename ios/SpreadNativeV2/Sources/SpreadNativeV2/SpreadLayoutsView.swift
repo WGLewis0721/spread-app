@@ -6,6 +6,8 @@ struct SpreadLayoutsView: View {
     @Binding var mode: SpreadLayout
     @Binding var selectedId: String
     var onManage: (Responsibility) -> Void = { _ in }
+    var onTask: (PlannerTask) -> Void = { _ in }
+    var onToggle: (PlannerTask) -> Void = { _ in }
     @State private var selectedDay: String = ""
     @State private var showModePicker = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -83,6 +85,12 @@ struct SpreadLayoutsView: View {
                     .zIndex(selectedRole?.id == role.id ? 1 : 0)
             }
         }
+        .simultaneousGesture(DragGesture(minimumDistance: 12).onEnded { value in
+            guard abs(value.translation.width) > 42, abs(value.translation.width) > abs(value.translation.height), !snapshot.roles.isEmpty else { return }
+            let index = snapshot.roles.firstIndex(where: { $0.id == selectedRole?.id }) ?? 0
+            let next = min(max(0, index + (value.translation.width < 0 ? 1 : -1)), snapshot.roles.count - 1)
+            changeSelection(snapshot.roles[next].id)
+        })
     }
 
     private var fan: some View {
@@ -103,7 +111,7 @@ struct SpreadLayoutsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 8).onEnded { value in
-                    guard abs(value.translation.width) > 42, !roles.isEmpty else { return }
+                    guard abs(value.translation.width) > 42, abs(value.translation.width) > abs(value.translation.height), !roles.isEmpty else { return }
                     let delta = value.translation.width < 0 ? 1 : -1
                     let next = min(max(0, selectedIndex + delta), roles.count - 1)
                     changeSelection(roles[next].id)
@@ -155,7 +163,7 @@ struct SpreadLayoutsView: View {
                 )
             }
             .frame(height: 300)
-            if let role = selectedRole { card(role, expanded: true); Button("Manage \(role.name)") { onManage(role) }.frame(minHeight: 44) }
+            if let role = selectedRole { card(role, expanded: true) }
         }
     }
 
@@ -171,7 +179,7 @@ struct SpreadLayoutsView: View {
                     }
                 }
             }
-            if let role = selectedRole { card(role, expanded: true); Button("Manage \(role.name)") { onManage(role) }.frame(minHeight: 44) }
+            if let role = selectedRole { card(role, expanded: true) }
         }
     }
 
@@ -238,7 +246,7 @@ struct SpreadLayoutsView: View {
             remainingHours: snapshot.remainingHours(for: role.id),
             tasks: snapshot.tasks(for: role.id),
             expanded: expanded,
-            onSelect: { if selectedId == role.id { onManage(role) } else { changeSelection(role.id) } }
+            onSelect: { if selectedId == role.id { onManage(role) } else { changeSelection(role.id) } }, onTask: onTask, onToggle: onToggle
         )
     }
 

@@ -11,9 +11,14 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
     private var planner: LivePlanner?
     private var startup: Task<Void, Never>?
     private var resumeButton: UIButton?
+    private var readyHandler: PlannerReadyHandler?
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(SpreadCloudPlugin())
+        let handler = PlannerReadyHandler(owner: self)
+        readyHandler = handler
+        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "spreadPlannerReady")
+        webView?.configuration.userContentController.add(handler, name: "spreadPlannerReady")
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-SpreadDisableMirror") {
             webView?.configuration.userContentController.addUserScript(WKUserScript(source: "window.__SpreadDisableMirror = true;", injectionTime: .atDocumentStart, forMainFrameOnly: true))
@@ -35,7 +40,7 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
             // Never obscure the established recovery surface if engine startup fails.
         }
     }
-    @MainActor private func openNative() {
+    @MainActor fileprivate func openNative() {
         guard nativeHost == nil, let webView else { return }
         let model = planner ?? LivePlanner { [weak webView] message in
             guard let webView else { throw NSError(domain: "Spread", code: 2) }
@@ -45,8 +50,11 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
             guard let text = value as? String else { throw NSError(domain: "Spread", code: 3) }
             return text
         }
+        webView.accessibilityElementsHidden = true
+        webView.isUserInteractionEnabled = false
         planner = model
         let host = UIHostingController(rootView: SpreadLiveRoot(planner: model, recovery: { [weak self] in self?.openRecovery() }))
+        host.overrideUserInterfaceStyle = .dark
         addChild(host)
         host.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(host.view)
@@ -59,6 +67,8 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         resumeButton?.removeFromSuperview()
     }
     @MainActor private func openRecovery() {
+        webView?.accessibilityElementsHidden = false
+        webView?.isUserInteractionEnabled = true
         nativeHost?.willMove(toParent: nil)
         nativeHost?.view.removeFromSuperview()
         nativeHost?.removeFromParent()
@@ -79,4 +89,13 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
     }
     @objc private func resumeNative() { openNative() }
     deinit { startup?.cancel() }
+}
+
+private final class PlannerReadyHandler: NSObject, WKScriptMessageHandler {
+    weak var owner: SpreadBridgeViewController?
+    init(owner: SpreadBridgeViewController) { self.owner = owner }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.frameInfo.isMainFrame, message.webView?.url?.scheme == "capacitor", message.webView?.url?.host == "localhost" else { return }
+        Task { @MainActor [weak self] in self?.owner?.openNative() }
+    }
 }

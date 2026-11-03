@@ -75,6 +75,8 @@ struct ChalkRoleCard: View {
     let tasks: [PlannerTask]
     let expanded: Bool
     let onSelect: () -> Void
+    var onTask: (PlannerTask) -> Void = { _ in }
+    var onToggle: (PlannerTask) -> Void = { _ in }
 
     var body: some View {
         let tint = Color(cssHex: role.color)
@@ -112,12 +114,16 @@ struct ChalkRoleCard: View {
                 } else {
                     ForEach(tasks) { task in
                         HStack(spacing: 12) {
-                            Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(task.done ? Chalk.yellow : Chalk.secondary)
-                            Text(task.text)
-                                .font(.subheadline)
-                                .foregroundStyle(Chalk.ink)
-                                .strikethrough(task.done)
+                            Button { onToggle(task) } label: {
+                                Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(task.done ? Chalk.yellow : Chalk.secondary)
+                                    .frame(width: 44, height: 44)
+                            }.accessibilityLabel(task.done ? "Reopen \(task.text)" : "Complete \(task.text)")
+                            Button { onTask(task) } label: {
+                                Text(task.text).font(.body).foregroundStyle(Chalk.ink)
+                                    .strikethrough(task.done).multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            }
                             Spacer()
                         }
                         .frame(minHeight: 44)

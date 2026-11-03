@@ -20,6 +20,7 @@ struct WeekCrownView: View {
                 Image(systemName: "chevron.left").font(.headline)
                     .frame(width: 44, height: 72)
             }
+            .foregroundStyle(Chalk.canvas)
             .accessibilityLabel("Previous week")
 
             wheel
@@ -28,6 +29,7 @@ struct WeekCrownView: View {
                 Image(systemName: "chevron.right").font(.headline)
                     .frame(width: 44, height: 72)
             }
+            .foregroundStyle(Chalk.canvas)
             .accessibilityLabel("Next week")
         }
         .foregroundStyle(Chalk.ink)
@@ -35,8 +37,9 @@ struct WeekCrownView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(LinearGradient(colors: [
-                    Color(cssHex: "#242932"), Color(cssHex: "#545961"),
-                    Color(cssHex: "#151920")
+                    Color.white, Color(cssHex: "#F2F2F4"), Color(cssHex: "#C8C8CD"),
+                    Color(cssHex: "#9A9AA0"), Color(cssHex: "#6D6D72"),
+                    Color(cssHex: "#B9B9BE"), Color(cssHex: "#F7F7F8")
                 ], startPoint: .top, endPoint: .bottom))
         )
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(Chalk.ink.opacity(0.27), lineWidth: 0.7))
@@ -52,10 +55,12 @@ struct WeekCrownView: View {
                     let count = Int(size.width / step) + 2
                     for index in 0...count {
                         let x = CGFloat(index) * step + offset
-                        var line = Path()
-                        line.move(to: CGPoint(x: x, y: 4))
-                        line.addLine(to: CGPoint(x: x, y: size.height - 4))
-                        context.stroke(line, with: .color(.white.opacity(index.isMultiple(of: 2) ? 0.24 : 0.1)), lineWidth: 2)
+                        let ridge = CGRect(x: x, y: 1, width: step, height: size.height - 2)
+                        context.fill(Path(ridge), with: .linearGradient(
+                            Gradient(colors: [Color(cssHex: "#6E6E73").opacity(0.65),
+                                Color(cssHex: "#D2D2D7").opacity(0.3), .white.opacity(0.8),
+                                Color(cssHex: "#AEAEB2").opacity(0.45)]),
+                            startPoint: CGPoint(x: x, y: 0), endPoint: CGPoint(x: x + step, y: 0)))
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -66,8 +71,8 @@ struct WeekCrownView: View {
                     Text(detail).font(.caption2).foregroundStyle(Chalk.secondary)
                 }
                 .padding(.horizontal, 8)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
+                .frame(width: max(100, geometry.size.width * 0.7))
+                .frame(minHeight: 54)
                 .background(Chalk.canvas.opacity(0.91), in: RoundedRectangle(cornerRadius: 14))
                 .allowsHitTesting(false)
             }
@@ -91,6 +96,7 @@ struct WeekCrownView: View {
             )
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Week navigation Crown")
+            .accessibilityIdentifier("week-crown")
             .accessibilityValue("\(title), \(detail)")
             .accessibilityHint("Swipe to adjust the week or use the previous and next buttons")
             .accessibilityAdjustableAction { direction in

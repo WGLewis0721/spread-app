@@ -13,6 +13,7 @@ struct LiveState: Decodable {
 }
 struct LiveReply: Decodable {
     let ok: Bool
+    let taskDetail: NativeTaskDetail?
     let error: String?
     let undoId: String?
     let requestId: String?
@@ -25,6 +26,7 @@ struct LiveReply: Decodable {
 @MainActor public final class LivePlanner: ObservableObject {
     @Published var state: LiveState?
     @Published var profiles: [NativeProfile] = []
+    @Published var details: [String: NativeTaskContent] = [:]
     @Published var error: String?
     @Published var busy = false
     @Published var undoId: String?
@@ -42,10 +44,19 @@ struct LiveReply: Decodable {
         guard let value = reply.state, value.envelope.isSupported else {
             throw NSError(domain: "Spread", code: 1, userInfo: [NSLocalizedDescriptionKey: "Planner is still starting. Try again."])
         }
+        if state?.envelope.profileId != value.envelope.profileId || state?.envelope.snapshot.weekKey != value.envelope.snapshot.weekKey { details = [:] }
         state = value
         profiles = reply.profiles ?? []
+        if let detail = reply.taskDetail { details[detail.taskId] = detail.content }
         if reply.saveError != nil { error = "Couldn’t save on this device. Open Backup and restore before closing Spread." }
-        else if !reply.ok { error = reply.error ?? "The change could not be saved. Please try again." }
+        else if !reply.ok {
+            switch reply.error {
+            case "stale-profile", "stale-week", "stale-revision", "stale-session": error = "Your plan changed. Review the current plan and try again."
+            case "ineligible-day": error = "Place hours for this responsibility on that day first."
+            case "save-failed", "save-unavailable": error = "Couldn’t save on this device. Retry saving or back up before closing Spread."
+            default: error = "The change could not be completed. Your current plan is shown."
+            }
+        }
         return reply
     }
     @discardableResult func send(_ action: [String: Any], completionHaptic: Bool = false) async -> Bool {
@@ -69,7 +80,7 @@ struct LiveReply: Decodable {
                 do { reply = try await self.receive(json, expectedRequestId: requestId) }
                 catch { reply = try await self.receive(json, expectedRequestId: requestId) } // Same correlation ID: safe after a lost ACK.
                 guard reply.ok else { return false }
-                self.undoId = reply.undoId
+                if action["type"] as? String != "readTaskContent" { self.undoId = reply.undoId }
                 if completionHaptic { UISelectionFeedbackGenerator().selectionChanged() }
                 return true
             } catch { self.error = error.localizedDescription; return false }
@@ -87,6 +98,8 @@ public struct SpreadLiveRoot: View {
     @State private var selectedRole = ""
     @State private var editor: LiveSheet?
     @State private var showMonth = false
+    @State private var selectedDate: String?
+    @State private var allTrayTasks = Set<String>()
     @Environment(\.scenePhase) private var scenePhase
     public init(planner: LivePlanner, recovery: @escaping () -> Void) { self.planner = planner; self.recovery = recovery }
     public var body: some View {
@@ -94,9 +107,12 @@ public struct SpreadLiveRoot: View {
             VStack(spacing: 0) {
                 header
                 if let snapshot = planner.snapshot {
-                    Picker("Destination", selection: $destination) {
-                        Text("Week").tag(0); Text("Spread").tag(1)
-                    }.pickerStyle(.segmented).padding(.horizontal, 20).padding(.vertical, 8)
+                    HStack(spacing: 4) {
+                        destinationButton("Week", value: 0)
+                        destinationButton("Spread", value: 1)
+                    }
+                    .padding(4).background(Chalk.surface, in: RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal, 20).padding(.vertical, 8)
                     if snapshot.roles.isEmpty {
                         ContentUnavailableView {
                             Label("Make room for what matters", systemImage: "square.stack")
@@ -104,7 +120,8 @@ public struct SpreadLiveRoot: View {
                         actions: { Button("Create responsibility") { editor = .newRole }.buttonStyle(.borderedProminent).frame(minHeight: 44) }
                     } else if destination == 1 {
                         SpreadLayoutsView(snapshot: snapshot, mode: $mode, selectedId: $selectedRole,
-                            onManage: { editor = .role($0) })
+                            onManage: { editor = .role($0) }, onTask: { editor = .task($0) },
+                            onToggle: { task in Task { await planner.send(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id], completionHaptic: !task.done) } })
                     } else {
                         week(snapshot)
                     }
@@ -134,11 +151,22 @@ public struct SpreadLiveRoot: View {
         .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await planner.refresh() } } }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in selectedRole = ""; editor = nil; planner.undoId = nil }
     }
+    private func destinationButton(_ title: String, value: Int) -> some View {
+        Button { destination = value } label: {
+            Text(title).font(.headline).frame(maxWidth: .infinity, minHeight: 44)
+                .foregroundStyle(destination == value ? Chalk.canvas : Chalk.ink)
+                .background(destination == value ? Chalk.yellow : Color.clear, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(value == 0 ? "native-week" : "native-spread")
+        .accessibilityAddTraits(destination == value ? .isSelected : [])
+    }
     private var header: some View {
         VStack(spacing: 8) {
             HStack {
                 Text("Spread").font(.system(.largeTitle, design: .serif).weight(.semibold))
                 Spacer()
+                Button("Today") { Task { await planner.send(["type": "changeWeek", "direction": "today"]) } }.frame(minWidth: 44, minHeight: 44)
                 Menu {
                     Button("New responsibility") { editor = .newRole }
                     Button("Profiles") { editor = .profiles }
@@ -166,13 +194,24 @@ public struct SpreadLiveRoot: View {
                     if !snapshot.unplacedTasks.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("To place", systemImage: "tray").font(.headline)
-                            ForEach(snapshot.unplacedTasks) { task in taskRow(task) }
+                            ForEach(snapshot.roles) { role in
+                                let tasks = snapshot.unplacedTasks.filter { $0.roleId == role.id }
+                                if !tasks.isEmpty {
+                                    DisclosureGroup("\(role.name) · \(tasks.count) tasks") {
+                                        ForEach(allTrayTasks.contains(role.id) ? tasks : Array(tasks.prefix(6))) { task in taskRow(task) }
+                                        if tasks.count > 6 && !allTrayTasks.contains(role.id) { Button("Show \(tasks.count - 6) more") { allTrayTasks.insert(role.id) }.frame(minHeight: 44) }
+                                    }.frame(minHeight: 44)
+                                }
+                            }
                         }.padding(16).overlay(RoundedRectangle(cornerRadius: 22).stroke(style: StrokeStyle(lineWidth: 1, dash: [6, 5])))
                     }
                     ForEach(0..<7, id: \.self) { index in
                         let iso = PreviewDates.dayISO(weekKey: snapshot.weekKey, index: index)
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("\(PreviewDates.weekday(weekKey: snapshot.weekKey, index: index)) \(PreviewDates.dayNumber(weekKey: snapshot.weekKey, index: index))").font(.headline)
+                            HStack {
+                                Text("\(PreviewDates.weekday(weekKey: snapshot.weekKey, index: index)) \(PreviewDates.dayNumber(weekKey: snapshot.weekKey, index: index))").font(.headline)
+                                if selectedDate == iso { Text("Selected").font(.caption).foregroundStyle(Chalk.yellow) }
+                            }
                             let allocations = snapshot.allocations.filter { $0.day == iso }.sorted { $0.order < $1.order }
                             if allocations.isEmpty { Text("Nothing planned").foregroundStyle(Chalk.secondary) }
                             ForEach(allocations) { allocation in
@@ -216,7 +255,7 @@ public struct SpreadLiveRoot: View {
                     Button(String(day)) {
                         let weekday = (calendar.component(.weekday, from: selected) + 5) % 7
                         let monday = calendar.date(byAdding: .day, value: -weekday, to: selected) ?? selected
-                        Task { if await planner.send(["type": "openWeek", "weekKey": PreviewDates.formatter.string(from: monday)]) { showMonth = false } }
+                        Task { if await planner.send(["type": "openWeek", "weekKey": PreviewDates.formatter.string(from: monday)]) { selectedDate = PreviewDates.formatter.string(from: selected); showMonth = false } }
                     }.frame(minWidth: 44, minHeight: 44).accessibilityLabel(PreviewDates.label(selected, pattern: "EEEE MMMM d yyyy"))
                 }
             }
@@ -311,6 +350,7 @@ struct LiveEditor: View {
         case .task(let task):
             TextField("Task", text: $name, axis: .vertical)
             Button("Save task") { submit(["type": "editTask", "roleId": task.roleId, "taskId": task.id, "text": name]) }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            NavigationLink("Notes and attachments") { NativeTaskContentEditor(planner: planner, task: task) }
             NavigationLink("Place or move") { LiveEditor(planner: planner, sheet: .move(task)) }
             Button(task.done ? "Reopen task" : "Complete task") { submit(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id]) }
             Button("Delete task", role: .destructive) { submit(["type": "deleteTask", "roleId": task.roleId, "taskId": task.id]) }
@@ -319,7 +359,7 @@ struct LiveEditor: View {
             let eligible = planner.snapshot?.eligibleAllocations(for: task) ?? []
             if eligible.isEmpty { Text("Place hours for this responsibility on a day first.") }
             ForEach(eligible) { allocation in
-                Button("\(allocation.day) · \(allocation.hours.formatted())h") { submit(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": allocation.id]) }.frame(minHeight: 44)
+                Button("\(allocation.day) · \(allocation.hours.formatted())h") { submit(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": allocation.id]) }.frame(minHeight: 44).accessibilityIdentifier("eligible-day-\(allocation.id)")
             }
             if task.allocationId != nil { Button("Take off this day") { submit(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": NSNull()]) } }
         case .review:

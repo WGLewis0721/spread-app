@@ -230,3 +230,42 @@ test("100 accepted commands persist exactly once and storage recovery retries th
     router.dispose();
   }
 });
+
+test("native rich content reads and edits preserve notes, outline, table and photo without snapshot writeback", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const before = storage.map.get(STORE_KEY);
+    const read = await router.dispatch(
+      request({ type: "readTaskContent", roleId, taskId: "task" }),
+    );
+    assert.equal(read.ok, true);
+    assert.equal(read.taskDetail!.content.blocks[0].type, "notes");
+    assert.equal(storage.map.get(STORE_KEY), before);
+    const content = {
+      blocks: [
+        { id: "n", type: "notes", text: "New note" },
+        { id: "o", type: "outline", items: [{ id: "i", text: "Outline", level: 2 }] },
+        { id: "b", type: "table", cells: [["A", "B"]] },
+        { id: "p", type: "photo", src: "data:image/jpeg;base64,aGVsbG8=" },
+      ],
+    };
+    const changed = await router.dispatch(
+      request({ type: "setTaskContent", roleId, taskId: "task", content }),
+    );
+    assert.equal(changed.ok, true);
+    const after = await router.dispatch(
+      request({ type: "readTaskContent", roleId, taskId: "task" }),
+    );
+    assert.deepEqual(after.taskDetail!.content, content);
+    assert.equal(
+      (await router.dispatch(request({ type: "undo", editId: changed.undoId }))).ok,
+      true,
+    );
+    const restored = await router.dispatch(
+      request({ type: "readTaskContent", roleId, taskId: "task" }),
+    );
+    assert.deepEqual(restored.taskDetail!.content, read.taskDetail!.content);
+  } finally {
+    router.dispose();
+  }
+});
