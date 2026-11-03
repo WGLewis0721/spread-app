@@ -1,0 +1,154 @@
+#if os(iOS)
+import SwiftUI
+import UIKit
+import ImageIO
+
+/// One fixed visual language. No Studio, wallpapers, appearance editor, or theme choices.
+enum Chalk {
+    static let canvas = Color(cssHex: "#0D1016")
+    static let surface = Color(cssHex: "#131B2C")
+    static let inset = Color(cssHex: "#161D2E")
+    static let ink = Color(cssHex: "#F5F0E5")
+    static let secondary = Color(cssHex: "#BDBFCA")
+    static let yellow = Color(cssHex: "#F4CD58")
+}
+
+extension Color {
+    init(cssHex: String) {
+        let cleaned = cssHex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        var number: UInt64 = 0
+        guard cleaned.count == 6, Scanner(string: cleaned).scanHexInt64(&number) else {
+            self = .gray
+            return
+        }
+        self = Color(
+            .sRGB,
+            red: Double((number >> 16) & 0xff) / 255,
+            green: Double((number >> 8) & 0xff) / 255,
+            blue: Double(number & 0xff) / 255,
+            opacity: 1
+        )
+    }
+}
+
+/// Apple ImageIO decodes the original static WebP files without regenerating their strokes.
+/// Exact binary assets were copied from spread-studio; missing assets never hide the text.
+private enum ChalkImageLoader {
+    static let cache = NSCache<NSString, UIImage>()
+
+    static func image(category: String) -> UIImage? {
+        let key = ChalkArtwork.category(for: category) as NSString
+        if let loaded = cache.object(forKey: key) { return loaded }
+        guard let url = ChalkArtwork.resourceURL(for: category),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            return nil
+        }
+        let decoded = UIImage(cgImage: cgImage)
+        cache.setObject(decoded, forKey: key)
+        return decoded
+    }
+}
+
+struct ChalkIllustration: View {
+    let category: String
+
+    var body: some View {
+        Group {
+            if let image = ChalkImageLoader.image(category: category) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                // The card's accessible textual content remains visible.
+                Color.clear
+            }
+        }
+        .frame(maxWidth: 135, maxHeight: 96)
+        .accessibilityHidden(true)
+    }
+}
+
+struct ChalkRoleCard: View {
+    let role: Responsibility
+    let remainingHours: Double
+    let tasks: [PlannerTask]
+    let expanded: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        let tint = Color(cssHex: role.color)
+        VStack(alignment: .leading, spacing: 10) {
+            Button(action: onSelect) {
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(tint.gradient)
+                        .overlay(Text(String(role.name.prefix(1))).font(.headline).foregroundStyle(.white))
+                        .frame(width: 38, height: 38)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(role.name)
+                            .font(.headline)
+                            .foregroundStyle(Chalk.ink)
+                        Text("\(role.hours.formatted())h planned · \(remainingHours.formatted())h left")
+                            .font(.caption)
+                            .foregroundStyle(Chalk.secondary)
+                    }
+                    Spacer(minLength: 4)
+                    ChalkIllustration(category: role.category)
+                        .frame(width: expanded ? 92 : 72, height: 56)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(minHeight: 56)
+            .accessibilityLabel("\(role.name), \(role.hours.formatted()) hours planned, \(remainingHours.formatted()) hours remaining")
+            .accessibilityHint("Shows tasks for this responsibility")
+            if expanded {
+                Rectangle().fill(Chalk.ink.opacity(0.13)).frame(height: 1)
+                if tasks.isEmpty {
+                    Text("No tasks in this responsibility")
+                        .font(.subheadline).foregroundStyle(Chalk.secondary)
+                } else {
+                    ForEach(tasks) { task in
+                        HStack(spacing: 12) {
+                            Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(task.done ? Chalk.yellow : Chalk.secondary)
+                            Text(task.text)
+                                .font(.subheadline)
+                                .foregroundStyle(Chalk.ink)
+                                .strikethrough(task.done)
+                            Spacer()
+                        }
+                        .frame(minHeight: 44)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(
+                    LinearGradient(
+                        colors: [Chalk.surface, tint.opacity(0.17).blended(with: Chalk.surface), Chalk.canvas],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22).stroke(tint.opacity(0.7), lineWidth: 1.5)
+        )
+        .shadow(color: tint.opacity(0.13), radius: 8, y: 3)
+    }
+}
+
+private extension Color {
+    func blended(with background: Color) -> Color {
+        // Color is already composited at opacity in the gradient. This fixed
+        // helper keeps the card paint simple and avoids dynamic appearance modes.
+        self
+    }
+}
+#endif
