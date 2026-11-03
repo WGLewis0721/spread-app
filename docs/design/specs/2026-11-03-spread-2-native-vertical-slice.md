@@ -1,5 +1,7 @@
 # Spec: Spread 2.0 SwiftUI vertical slice (implementation)
 
+> Part of the [Spread design brain](../README.md). Follow [PLAN_SPEC_PROTOCOL.md](../PLAN_SPEC_PROTOCOL.md). This is a prototype branch, not release approval.
+
 | | |
 |---|---|
 | Request | Translate the approved Chalkboard native spec into SwiftUI and begin migration |
