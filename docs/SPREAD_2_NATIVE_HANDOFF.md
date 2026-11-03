@@ -109,57 +109,54 @@ For a web regression, restore the last verified READY baseline deployment `dpl_G
 
 **Assessment: web checkpoint deployed; native 2.0 NO-GO.** Confirmed iPhone clipping, failing latest persistence step, incomplete installed-flow/gesture evidence, incomplete preservation of Release archive output, and hardware/usability gates remain. The unsigned Release archive and actual 100-drag Crown test now pass. No decision is needed to continue implementation and diagnosis. Native distribution requires a verified candidate and explicit owner acceptance.
 
+## Follow-up status (PR #115, November 3, 2026)
+
+Merged on owner instruction while the macOS simulator jobs were still running; **none of the three fixes below has simulator confirmation yet**. Re-query the runs on the merge commit before building on them. Native release remains **NO-GO**.
+
+| Item | What changed | Evidence / caveat |
+| --- | --- | --- |
+| 390-pt clipped date | `WeekCrownView.swift`: pill sizes from its text (no fixed 72-pt frames), chevrons `minHeight: 72`, pill text hidden from accessibility because the wheel element exposes the same value. Audit unchanged | Real audit issue from run 41704798803: "Text of this SwiftUI.AccessibilityNode may be clipped at larger Dynamic Type sizes" on `Nov 2 – Nov 8`, frame 74.3x13.3 |
+| Stack swipe after first Work swipe | `ChalkboardViews.swift`: card header is a tap element with button trait and default action, not a `Button` | Failure hierarchy (run 41704823131, `testCardGesturesStayOnSelectedRole`) shows selection stayed on Work. Button-swallows-drag is a **hypothesis**; if the test still fails, suspect UIScrollView touch handling next |
+| Persistence cycle 2 | `ios.yml`: re-enable check reports missing snapshot vs changed profile separately, retries one launch, saves screenshot/logs/file listing | Cycle 2 waited about 2m37s, which fits "no snapshot written". Root cause **unproven** |
+| Dispatch | `ios.yml` gained `workflow_dispatch`; `native-ui-dispatch.yml` (width + test names) added | Dispatchable only once on `main`; use it now for fast single-test runs |
+
+Month spacing was reviewed on the 820-pt screenshot: columns align with headers; no change made. Fan was not exercised because Stack failed first.
+
+## Remaining work in dependency order
+
+1. Read results of the post-merge runs (ios shell, layout 390/820/1024). Fix whatever still fails; do not weaken audits. Use `native-ui-dispatch.yml` for `testCardGesturesStayOnSelectedRole` and `testLayout390`.
+2. Persistence: two clean fresh-install cycles on the final head. If the re-enable step still fails, the new failure text says whether it was a missing snapshot (launch/writer start) or a profile change.
+3. F1-F10 against one real dataset. Split accessibility audits out of `testRealPlannerJourney` so functional evidence still runs. Add stable identifier for the Month/Week toggle; assert Month dates/selection; assert task, allocation and content identifiers after relaunch; profile isolation and switch-back; unfinished-work carry and Undo; backup/restore, offline and failed-save/retry through the existing recovery interface.
+4. 100 rapid Stack and 100 rapid Fan gestures with correct selection; selected-role fallback; large content inside Fan's fixed frame. Rerun the passing 100-drag/30-reversal Crown test after any Crown change.
+5. Dynamic Type, long names, orientations, Reduce Motion, 44x44 targets (text buttons whose frame is outside the label).
+6. Final-head unsigned Release archive preserved as an artifact; screen-by-screen screenshots at 390/820/1024.
+7. Hardware p95 <=100 ms, 60 FPS, VoiceOver and the ten-person usability study stay unverified unless run; record the blocker.
+8. Open one further implementation PR with SHAs, F1-F10 matrix, artifacts, measurements and factual GO/NO-GO. No TestFlight/release without explicit owner acceptance.
+
 ## Copy/paste continuation prompt
 
 ```text
 Continue Spread 2.0 engineering in WGLewis0721/spread-app, issue #113.
-Read docs/SPREAD_2_NATIVE_HANDOFF.md first, then AGENTS.md,
-AGENTS.project.md, the native completion spec and engineering prompt.
+Read docs/SPREAD_2_NATIVE_HANDOFF.md (including "Follow-up status (PR #115)"),
+CLAUDE.md, AGENTS.project.md, the native completion spec and engineering prompt.
 
-PR #114 is already merged at 6aa23557907d6262aa16b5767e4dee41374f0ab9;
-its final premerge head was b5a3eaf19283dab1c3127e654390fb5ec36309dc.
-The web production deployment is READY at thespreadapp.com. Work on
-fix/spread-native-acceptance-followup. Preserve all merged implementation.
-Do not rebuild the architecture or reopen #114. The TypeScript planner and
-existing storage/actions are the only authoritative data source. Preserve
-rich contents, profiles, history, recovery safety, eleven original artworks,
-five layouts and the horizontal metallic Crown. No Studio or theme editor.
+PR #114 and PR #115 are merged to main. #115's three fixes (390-pt Crown clipping,
+Stack swipe, persistence diagnostics) were merged BEFORE simulator results arrived and are
+unverified. Start by reading the runs on the current main/merge commit: iOS shell, Native
+layout acceptance 390/820/1024. Download native-journeys and xcresult artifacts and read
+the real failure hierarchy/attachments; do not guess. Work on a new branch from main.
+Preserve the merged architecture: the TypeScript planner is the only authoritative data
+source; no Studio/theme editor; keep rich contents, profiles, history, recovery safety,
+eleven artworks, five layouts and the horizontal metallic Crown. Never weaken accessibility
+audits or lower test minimums.
 
-Completed: live SwiftUI/WebKit command bridge; guarded serialized/replayed
-commands; authoritative refresh and truthful save failure/retry; native
-responsibility/hour/task/content/Week/Month/profile/review controls; delayed
-mirror-start and recovered-plan protection fixes; actual Xcode UI tests and
-screenshot/layout workflows. Local planner tests: 420 pass, scripts: 208 pass
-with 4 existing skips. Main CI and preflight pass. Final-head Swift package
-tests: 18 pass and iOS package compiles. Shared parity cases: 60 pass in TS/Swift.
-Production DB failure was an inactive Supabase project, resumed and verified
-with migrations intact. See handoff for exact deployment/run/artifact IDs.
-
-Native release is NO-GO. Main iOS run 41704823131 completed: simulator build and unsigned Release
-archive PASS. Actual 100-drag Crown/30-reversal UI test PASSES. UI total is
-1 pass / 3 fail / 2 skip: Stack cannot find Manage Home after first Work swipe;
-390-point layout and the real journey fail initial clipped-text audits. Persistence
-both cycles reach seq 1→2→3, restore and negative controls, but cycle 2 fails
-Re-enabling the writer did not recover the same profile. Diagnose that exact
-assertion; it does not distinguish no snapshot from a different profile.
-Layout run 41704798803 passes 820/1024 but fails 390 Text clipped on initial
-Week, associated date label Nov 2–Nov 8, PlannerUITests.swift:123. Inspect real
-xcresults, fix and rerun without suppressing audits. Current Month screenshot
-also needs visual column-spacing review. Existing persistence evidence from
-older commits does not satisfy twice-passing final-candidate acceptance.
-
-Finish all F1–F10 against real state. Strengthen task/content/allocation
-relaunch assertions, Month toggle/date selection, unfinished-work carry/Undo,
-profile isolation, backup/restore and offline/save failure. Retain/rerun the passing 100 Crown gestures/30 reversals and complete 100 rapid
-Stack/Fan gestures, accessibility,
-Dynamic Type/Reduce Motion, 44pt targets and final-head Release archive evidence. Publish actual
-screen-by-screen simulator evidence with exact commits and measured results.
-Use GitHub macOS runners when local Xcode is absent. Hardware p95/FPS,
-VoiceOver and usability-study gates remain explicitly unverified unless run.
-
-Work through fixes, not another foundation or planning-only PR. Open one
-follow-up implementation PR when remaining fixes/checks are reviewable, as
-the owner requested. Do not merge it or upload/release a native binary under
-the old checkpoint approval. Keep docs and evidence accurate; never claim
-10/10 journeys or GO from package compilation or web deployment alone.
+Then: confirm or redo the Crown/Stack/persistence fixes; finish F1-F10 on one real dataset
+(split audits from functional steps); strengthen relaunch, Month, profile, carry/Undo,
+backup/restore, offline and save-failure assertions; run 100 rapid Stack and Fan gestures;
+Dynamic Type/Reduce Motion/44pt checks; preserve the final-head unsigned Release archive and
+screen-by-screen evidence. No Xcode locally: use macOS runners; .github/workflows/
+native-ui-dispatch.yml runs chosen PlannerUITests methods at 390/820/1024.
+Hardware p95/FPS, VoiceOver and usability study stay unverified unless actually run.
+Native release is NO-GO. Open one implementation PR when reviewable; do not merge it or
+upload a binary without explicit owner instruction.
 ```
