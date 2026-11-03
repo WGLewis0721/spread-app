@@ -1,0 +1,55 @@
+name: Native layout acceptance
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'src/lib/spread/native-v2-*'
+      - '.github/workflows/native-layout-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-layout-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  viewport:
+    runs-on: macos-15
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - width: 390
+            type: com.apple.CoreSimulator.SimDeviceType.iPhone-15
+          - width: 820
+            type: com.apple.CoreSimulator.SimDeviceType.iPad-Air-5th-generation
+          - width: 1024
+            type: com.apple.CoreSimulator.SimDeviceType.iPad-Pro-12-9-inch-6th-generation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Create actual simulator
+        run: |
+          NATIVE_RUNTIME=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; print(next(r["identifier"] for r in reversed(json.load(sys.stdin)["runtimes"]) if ".iOS-" in r["identifier"] and r.get("isAvailable",False)))')
+          NATIVE_UDID=$(xcrun simctl create 'Spread layout ${{ matrix.width }}' '${{ matrix.type }}' "$NATIVE_RUNTIME")
+          echo "NATIVE_UDID=$NATIVE_UDID" >> "$GITHUB_ENV"
+          xcrun simctl bootstatus "$NATIVE_UDID" -b
+      - name: Build and audit native viewport
+        run: |
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO -only-testing:SpreadNativeUITests/PlannerUITests/testLayout${{ matrix.width }} -resultBundlePath artifacts/Layout${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Export actual layout screenshots
+        if: always()
+        run: |
+          if [ -d artifacts/Layout${{ matrix.width }}.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/Layout${{ matrix.width }}.xcresult --output-path artifacts/screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-layout-${{ matrix.width }}
+          path: artifacts

@@ -102,6 +102,13 @@ public struct SpreadLiveRoot: View {
     @State private var allTrayTasks = Set<String>()
     @Environment(\.scenePhase) private var scenePhase
     public init(planner: LivePlanner, recovery: @escaping () -> Void) { self.planner = planner; self.recovery = recovery }
+    private var verificationWidth: CGFloat? {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "-SpreadViewportWidth"), args.indices.contains(index + 1), let width = Double(args[index + 1]), (320...1366).contains(width) { return CGFloat(width) }
+        #endif
+        return nil
+    }
     public var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -135,6 +142,8 @@ public struct SpreadLiveRoot: View {
                     Button("Open existing planner") { recovery() }.frame(minHeight: 44)
                 }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("native-content")
             .background(Chalk.canvas).foregroundStyle(Chalk.ink)
             .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $editor) { sheet in
@@ -146,9 +155,13 @@ public struct SpreadLiveRoot: View {
                 Button("Backup and restore") { recovery() }
             } message: { Text(planner.error ?? "") }
         }
+        .frame(width: verificationWidth)
         .tint(Chalk.yellow).preferredColorScheme(.dark)
         .task { await planner.refresh() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await planner.refresh() } } }
+        .onChange(of: planner.snapshot?.roles.count) { _, _ in
+            if let editor, case .newRole = editor { destination = 1; selectedRole = planner.snapshot?.roles.last?.id ?? "" }
+        }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in selectedRole = ""; editor = nil; planner.undoId = nil }
     }
     private func destinationButton(_ title: String, value: Int) -> some View {
@@ -182,6 +195,7 @@ public struct SpreadLiveRoot: View {
         }.padding(.horizontal, 20).padding(.top, 8)
     }
     private func week(_ snapshot: PlannerSnapshot) -> some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -191,6 +205,13 @@ public struct SpreadLiveRoot: View {
                 }
                 if showMonth { month(snapshot) }
                 else {
+                    if snapshot.allocations.isEmpty && snapshot.tasks.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Start with what matters").font(.headline)
+                            Text("Name a responsibility, give it hours, then place those hours on a day.").foregroundStyle(Chalk.secondary)
+                            Button("Plan a responsibility") { editor = .newRole }.buttonStyle(.borderedProminent).frame(minHeight: 44)
+                        }.padding(16)
+                    }
                     if !snapshot.unplacedTasks.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("To place", systemImage: "tray").font(.headline)
@@ -222,12 +243,16 @@ public struct SpreadLiveRoot: View {
                                     ForEach(snapshot.tasks.filter { $0.allocationId == allocation.id }) { task in taskRow(task) }
                                 }
                             }
-                        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Chalk.surface, in: RoundedRectangle(cornerRadius: 22))
+                        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Chalk.surface, in: RoundedRectangle(cornerRadius: 22)).id(iso)
                     }
                     Button("Review unfinished work") { editor = .review }.frame(minHeight: 44)
                 }
             }.padding(20).frame(maxWidth: 760)
                 .frame(maxWidth: .infinity)
+        }
+        .onChange(of: selectedDate) { _, date in
+            if let date { proxy.scrollTo(date, anchor: .top) }
+        }
         }
     }
     private func taskRow(_ task: PlannerTask) -> some View {

@@ -67,6 +67,9 @@ struct SpreadLayoutsView: View {
                     }
                     .foregroundStyle(.primary)
                     .frame(minHeight: 44)
+                    .accessibilityLabel(item.title)
+                    .accessibilityIdentifier("layout-\(item.rawValue)")
+                    .accessibilityAddTraits(mode == item ? .isSelected : [])
                 }
                 .navigationTitle("View")
                 .navigationBarTitleDisplayMode(.inline)

@@ -8,6 +8,10 @@ final class PlannerUITests: XCTestCase {
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
     func tap(_ title: String) {
+        if ["Stack", "Fan", "Dial", "Tabs", "Day"].contains(title) {
+            let button = app.buttons["layout-" + title.lowercased()]
+            XCTAssertTrue(button.waitForExistence(timeout: 30)); button.tap(); return
+        }
         let button = title == "Week" ? app.buttons["native-week"] : title == "Spread" ? app.buttons["native-spread"] : app.buttons[title].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 30), "Missing button: \(title)")
         button.tap()
@@ -23,10 +27,8 @@ final class PlannerUITests: XCTestCase {
         tap("Create responsibility")
         tap("Spread")
         capture("03-spread-after-create")
-        // Stack cards select on first tap and open their real editor on the second.
-        let role = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Native QA")).firstMatch
-        for _ in 0..<5 { if role.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(role.exists); role.tap(); role.tap()
+        XCTAssertTrue(app.staticTexts["Responsibilities"].waitForExistence(timeout: 10))
+        tap("Manage Native QA")
         XCTAssertTrue(app.buttons["Place 0.5h"].waitForExistence(timeout: 10))
         capture("04-hours-before-placement")
         tap("Place 0.5h")
@@ -103,6 +105,30 @@ final class PlannerUITests: XCTestCase {
             }
             capture("100-rapid-gestures-" + mode)
         }
+    }
+
+    func testLayout390() throws { try auditLayout(width: 390) }
+    func testLayout820() throws { try auditLayout(width: 820) }
+    func testLayout1024() throws { try auditLayout(width: 1024) }
+    private func auditLayout(width: Int) throws {
+        guard app.frame.width >= CGFloat(width) else { throw XCTSkip("Viewport requires the matching iPad destination; verified in the layout matrix.") }
+        app.terminate()
+        app.launchArguments = ["-SpreadViewportWidth", String(width)]
+        app.launch()
+        XCTAssertTrue(app.buttons["native-spread"].waitForExistence(timeout: 60))
+        let content = app.otherElements["native-content"].firstMatch
+        XCTAssertTrue(content.exists)
+        XCTAssertEqual(content.frame.width, CGFloat(width), accuracy: 1)
+        capture("viewport-\(width)-week")
+        if #available(iOS 17.0, *) { try app.performAccessibilityAudit(for: [.hitRegion, .textClipped, .sufficientElementDescription]) }
+        tap("Spread")
+        for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] {
+            let view = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "View,")).firstMatch
+            XCTAssertTrue(view.waitForExistence(timeout: 10)); view.tap(); tap(mode)
+            capture("viewport-\(width)-" + mode)
+        }
+        tap("Week"); tap("Month"); capture("viewport-\(width)-month")
+        if #available(iOS 17.0, *) { try app.performAccessibilityAudit(for: [.hitRegion, .textClipped, .sufficientElementDescription]) }
     }
 
 }
