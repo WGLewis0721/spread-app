@@ -1,87 +1,24 @@
 import { installNativeV2Host } from "@/lib/spread/native-v2-host";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type CSSProperties,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal, flushSync } from "react-dom";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronRight, Check, List, LockKeyhole, Minus, Moon, Plus, Sun, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/cn";
-import {
-  formatWeek,
-  isoDate,
-  parseKey,
-  remainingHours,
-  ROLE_COLORS,
-  SPREAD_CATEGORIES,
-  THEME_KEY,
-  weekDays,
-  weekKey,
-  type Hat,
-  type SpreadCategory,
-} from "@/lib/spread/model";
+import { formatWeek, isoDate, parseKey, remainingHours, ROLE_COLORS, SPREAD_CATEGORIES, THEME_KEY, weekDays, weekKey, type Hat, type SpreadCategory } from "@/lib/spread/model";
 import { dominantMonth, formatMonth, shiftMonth, type MonthCursor } from "@/lib/spread/month";
-import {
-  ACCENTS,
-  consumeArrival,
-  onSaveFailure,
-  saveBackup,
-  useSpread,
-  type ThemeChoice,
-} from "@/lib/spread/store";
+import { ACCENTS, consumeArrival, onSaveFailure, saveBackup, useSpread, type ThemeChoice } from "@/lib/spread/store";
 import { PROFILE_LIMIT } from "@/lib/spread/profiles";
-import {
-  collectFullPayload,
-  fullBackupText,
-  parseAnyBackup,
-  parseFullBackup,
-  type ParsedBackup,
-} from "@/lib/spread/backup";
+import { collectFullPayload, fullBackupText, parseAnyBackup, parseFullBackup, type ParsedBackup } from "@/lib/spread/backup";
 import { buildWeekDocument, weekDocumentText, type WeekDocument } from "@/lib/spread/week-document";
 import { saveFile, type SaveResult } from "@/lib/spread/save-file";
 import { isNativeApp } from "@/lib/spread/native";
-import {
-  listPinned,
-  prepareNativeStorage,
-  readPinned,
-  type PinnedCopy,
-} from "@/lib/spread/native-mirror";
+import { listPinned, prepareNativeStorage, readPinned, type PinnedCopy } from "@/lib/spread/native-mirror";
 import { ensureSafetyCopy } from "@/lib/spread/safety";
-import {
-  acknowledgeBackup,
-  backupAvailable,
-  backupNow,
-  currentBackupStatus,
-  listBackups,
-  readBackupText,
-  refreshBackupStatus,
-  setBackupEnabled,
-  startCloudBackup,
-  useCloudBackup,
-} from "@/lib/spread/cloud-backup";
+import { acknowledgeBackup, backupAvailable, backupNow, currentBackupStatus, listBackups, readBackupText, refreshBackupStatus, setBackupEnabled, startCloudBackup, useCloudBackup } from "@/lib/spread/cloud-backup";
 import type { RemoteBackup } from "@/lib/spread/cloud";
-import {
-  linkAddCopy,
-  linkAdopt,
-  linkChoices,
-  linkUpload,
-  resolveBlockedSync,
-  resolveSyncConflict,
-  restoreDiscardedChange,
-  startSyncManager,
-  syncAvailable,
-  syncNowAction,
-  unlink,
-  uploadAgain,
-  useCloudSync,
-} from "@/lib/spread/cloud-sync";
+import { linkAddCopy, linkAdopt, linkChoices, linkUpload, resolveBlockedSync, resolveSyncConflict, restoreDiscardedChange, startSyncManager, syncAvailable, syncNowAction, unlink, uploadAgain, useCloudSync } from "@/lib/spread/cloud-sync";
 import { describeConflict, describeSync } from "@/lib/spread/sync-labels";
 import { canKeepBoth } from "@/lib/spread/sync-state";
 import type { LinkChoice } from "@/lib/spread/sync-link";
@@ -105,13 +42,7 @@ import { LandingWaitlist } from "@/spread/components/landing-waitlist";
 import { BetaAccessCard } from "@/spread/components/beta-access";
 import { useBetaGate, type BetaGate } from "@/spread/components/use-beta-gate";
 import { signOut } from "@/lib/auth/client";
-import {
-  HourGrid,
-  HowItWorks,
-  ListVersusSpread,
-  PrivacyFacts,
-  WeekBand,
-} from "@/spread/components/landing-sections";
+import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 
 type Sheet = "more" | "new" | "icloud" | null;
 
@@ -150,14 +81,7 @@ export function SpreadApp() {
           .then(() => startSyncManager())
           .catch(() => {
             // iCloud features are optional: the planner is unaffected. Try once more shortly.
-            if (live)
-              window.setTimeout(
-                () =>
-                  void startCloudBackup()
-                    .then(() => startSyncManager())
-                    .catch(() => undefined),
-                10_000,
-              );
+            if (live) window.setTimeout(() => void startCloudBackup().then(() => startSyncManager()).catch(() => undefined), 10_000);
           });
       void bring();
     });
@@ -191,9 +115,7 @@ export function SpreadApp() {
       <Toaster
         position="top-center"
         // Under the status bar and Dynamic Island on the phone; the web keeps the default.
-        offset={
-          hydrated && isNativeApp() ? "calc(env(safe-area-inset-top, 0px) + 12px)" : undefined
-        }
+        offset={hydrated && isNativeApp() ? "calc(env(safe-area-inset-top, 0px) + 12px)" : undefined}
         theme={!hydrated || theme === "system" ? "system" : theme}
         toastOptions={{
           style: {
@@ -204,9 +126,7 @@ export function SpreadApp() {
           },
         }}
       />
-      {hydrated &&
-        ready &&
-        (license ? <WeekScreen /> : gate.checking ? null : <UnlockScreen gate={gate} />)}
+      {hydrated && ready && (license ? <WeekScreen /> : gate.checking ? null : <UnlockScreen gate={gate} />)}
     </>
   );
 }
@@ -239,16 +159,11 @@ function UnlockScreen({ gate }: { gate: BetaGate }) {
     const run = () => {
       setTheme(next);
       if (!known) {
-        try {
-          localStorage.setItem(THEME_KEY, next);
-        } catch {
-          /* private mode: this visit only */
-        }
+        try { localStorage.setItem(THEME_KEY, next); } catch { /* private mode: this visit only */ }
       }
     };
     const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
-    if (doc.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-      doc.startViewTransition(() => flushSync(run));
+    if (doc.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) doc.startViewTransition(() => flushSync(run));
     else run();
   }
   function keepTheme() {
@@ -266,85 +181,35 @@ function UnlockScreen({ gate }: { gate: BetaGate }) {
           <a href="#how">How it works</a>
           <a href="#story">Story</a>
           <div className="site-theme" role="group" aria-label="Appearance">
-            <button
-              type="button"
-              aria-pressed={!dark}
-              aria-label="Light mode"
-              onClick={() => chooseTheme("light")}
-            >
-              <Sun size={15} strokeWidth={1.8} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              aria-pressed={dark}
-              aria-label="Dark mode"
-              onClick={() => chooseTheme("dark")}
-            >
-              <Moon size={15} strokeWidth={1.8} aria-hidden="true" />
-            </button>
+            <button type="button" aria-pressed={!dark} aria-label="Light mode" onClick={() => chooseTheme("light")}><Sun size={15} strokeWidth={1.8} aria-hidden="true" /></button>
+            <button type="button" aria-pressed={dark} aria-label="Dark mode" onClick={() => chooseTheme("dark")}><Moon size={15} strokeWidth={1.8} aria-hidden="true" /></button>
           </div>
-          <a href="#start" className="site-nav-cta">
-            Open Spread
-          </a>
+          <a href="#start" className="site-nav-cta">Open Spread</a>
         </div>
       </nav>
 
       <section id="top" className="site-hero">
         <div className="site-hero-copy">
           <p className="site-kicker">A weekly planner for real life</p>
-          <h1>
-            <span className="site-line">
-              <span>A little more room</span>
-            </span>
-            <span className="site-line">
-              <span>
-                for <em>what matters.</em>
-              </span>
-            </span>
-          </h1>
-          <p className="site-lede">
-            Work. Home. Yourself. Give every part of your life a place in your week—with a planner
-            that starts with your time.
-          </p>
+          <h1><span className="site-line"><span>A little more room</span></span><span className="site-line"><span>for <em>what matters.</em></span></span></h1>
+          <p className="site-lede">Work. Home. Yourself. Give every part of your life a place in your week—with a planner that starts with your time.</p>
           <div className="site-hero-actions">
-            <a href="#start" className="site-button">
-              Start this week <ChevronRight size={17} aria-hidden="true" />
-            </a>
-            <a href="#how" className="site-text-link">
-              See how it works <span aria-hidden="true">↗</span>
-            </a>
+            <a href="#start" className="site-button">Start this week <ChevronRight size={17} aria-hidden="true" /></a>
+            <a href="#how" className="site-text-link">See how it works <span aria-hidden="true">↗</span></a>
           </div>
           <p className="site-hero-note">Private beta. On your device. At your pace.</p>
         </div>
 
         <SpreadStack />
-        <div className="site-principle">
-          <span className="site-principle-intro">A simple change in order.</span>
-          <p>
-            <span>Responsibilities</span>
-            <span aria-hidden="true">→</span>
-            <span>Hours</span>
-            <span aria-hidden="true">→</span>
-            <span>Week</span>
-            <span aria-hidden="true">→</span>
-            <span>Tasks</span>
-          </p>
-        </div>
+        <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
       </section>
 
       <HowItWorks
         heading={
           <div className="site-section-heading">
             <p className="site-kicker">How Spread works</p>
-            <h2>
-              A full life.
-              <br />
-              <em>A considered week.</em>
-            </h2>
-            <p>
-              Start with what matters. Decide how much time it gets. Then decide what you will do
-              with that time.
-            </p>
+            <h2>A full life.<br /><em>A considered week.</em></h2>
+            <p>Start with what matters. Decide how much time it gets. Then decide what you will do with that time.</p>
           </div>
         }
       />
@@ -355,95 +220,39 @@ function UnlockScreen({ gate }: { gate: BetaGate }) {
         <div className="site-story-lead">
           <p className="site-kicker">An ordinary beginning</p>
           <h2>Before Spread was an app, it was a piece of paper.</h2>
-          <p>
-            Spread grew out of a season of life when there never seemed to be enough hours for
-            everything that mattered. It’s the tool I wish I’d had back then.
-          </p>
+          <p>Spread grew out of a season of life when there never seemed to be enough hours for everything that mattered. It’s the tool I wish I’d had back then.</p>
         </div>
-        <div className="site-story-object">
-          <PaperToProduct />
-        </div>
-        <div className="site-story-detail">
-          <blockquote>
-            “On Sundays, I would sit down, look at everything I was responsible for, and set aside
-            an hour or two for each responsibility.”
-          </blockquote>
-          <p className="site-story-attribution">The Sunday ritual that became Spread</p>
-          <details className="site-story-more">
-            <summary>Read the full story</summary>
-            <div>
-              <p>
-                While I was working toward my bachelor’s degree in computer science, I had a lot
-                competing for my time. I was working, holding leadership positions in multiple
-                organizations, founding an organization of my own, keeping up with school, and
-                eventually supporting a family.
-              </p>
-              <p>
-                And I wasn’t alone. A lot of my peers were wearing just as many hats. We were always
-                saying we had “a lot going on” or that we were “spread too thin.”
-              </p>
-              <p>
-                On Sundays, I would sit down, look at everything I was responsible for, and set
-                aside an hour or two for each responsibility during the week. I’d draw boxes for
-                those blocks of time, write down what I wanted to accomplish, and list the specific
-                tasks that would get me there.
-              </p>
-              <p>
-                Years later, while researching Spread, I realized that the system I had built for
-                myself shared a lot with Stephen Covey’s approach to weekly planning and the idea of
-                time boxing.
-              </p>
-            </div>
-          </details>
-        </div>
+        <div className="site-story-object"><PaperToProduct /></div>
+        <div className="site-story-detail"><blockquote>“On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility.”</blockquote><p className="site-story-attribution">The Sunday ritual that became Spread</p><details className="site-story-more">
+          <summary>Read the full story</summary>
+          <div>
+            <p>While I was working toward my bachelor’s degree in computer science, I had a lot competing for my time. I was working, holding leadership positions in multiple organizations, founding an organization of my own, keeping up with school, and eventually supporting a family.</p>
+            <p>And I wasn’t alone. A lot of my peers were wearing just as many hats. We were always saying we had “a lot going on” or that we were “spread too thin.”</p>
+            <p>On Sundays, I would sit down, look at everything I was responsible for, and set aside an hour or two for each responsibility during the week. I’d draw boxes for those blocks of time, write down what I wanted to accomplish, and list the specific tasks that would get me there.</p>
+            <p>Years later, while researching Spread, I realized that the system I had built for myself shared a lot with Stephen Covey’s approach to weekly planning and the idea of time boxing.</p>
+          </div>
+        </details></div>
       </section>
 
       <section className="site-philosophy">
         <p className="site-kicker">The idea behind Spread</p>
         <h2>Your time should follow what matters.</h2>
-        <p>
-          A to-do list can make everything look equally important. Spread starts one step earlier:
-          what needs your attention this week, and how much time are you actually willing to give
-          it?
-        </p>
-        <p>
-          That is close to Stephen Covey’s role-based weekly planning: plan around the important
-          parts of your life instead of only reacting to the next task. Spread combines that idea
-          with time boxing—simply setting aside a specific amount of time for something.
-        </p>
+        <p>A to-do list can make everything look equally important. Spread starts one step earlier: what needs your attention this week, and how much time are you actually willing to give it?</p>
+        <p>That is close to Stephen Covey’s role-based weekly planning: plan around the important parts of your life instead of only reacting to the next task. Spread combines that idea with time boxing—simply setting aside a specific amount of time for something.</p>
         <ListVersusSpread />
       </section>
 
       <section className="site-privacy">
-        <div>
-          <span className="privacy-mark">
-            <LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" />
-          </span>
-        </div>
-        <div>
-          <p className="site-kicker">Private by design</p>
-          <h2>Your life doesn’t need another account.</h2>
-          <p>
-            Beta testers sign in once to open the web planner; the iPhone app needs no account. Your
-            planning stays on this device. Profiles, backup and restore help you keep different
-            parts of life separate without turning Spread into another cloud workspace.
-          </p>
-        </div>
+        <div><span className="privacy-mark"><LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" /></span></div>
+        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>Beta testers sign in once to open the web planner; the iPhone app needs no account. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
         <PrivacyFacts />
       </section>
 
       <section id="start" className="site-start">
         <div className="site-start-copy">
           <p className="site-kicker">Start where you are</p>
-          <h2>
-            You have 168 hours.
-            <br />
-            <em>Make them yours.</em>
-          </h2>
-          <p>
-            Spread is in private beta. Approved testers sign in below to open the planner.
-            Everything you plan stays on your device.
-          </p>
+          <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
+          <p>Spread is in private beta. Approved testers sign in below to open the planner. Everything you plan stays on your device.</p>
           <HourGrid />
         </div>
         <div className="site-start-card">
@@ -452,15 +261,7 @@ function UnlockScreen({ gate }: { gate: BetaGate }) {
       </section>
 
       <LandingWaitlist />
-      <footer className="site-footer">
-        <a href="#top" className="site-brand">
-          <BrandMark size={28} />
-          <span>Spread</span>
-        </a>
-        <span>A little room for what matters.</span>
-        <a href="https://thespreadapp.com/privacy.html">Privacy policy</a>
-        <span>Made by Gray Matter</span>
-      </footer>
+      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><a href="https://thespreadapp.com/privacy.html">Privacy policy</a><span>Made by Gray Matter</span></footer>
     </main>
   );
 }
@@ -527,30 +328,14 @@ function brandCollapsed() {
 
 function SettingsGears({ turn }: { turn: boolean }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className={cn("gears size-9 text-ink", turn && "gears-turn")}
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" className={cn("gears size-9 text-ink", turn && "gears-turn")} aria-hidden="true">
       <Gear className="gear gear-lg" cx={8.2} cy={8.2} r={4.15} teeth={8} />
       <Gear className="gear gear-sm" cx={16.1} cy={16.1} r={3.25} teeth={6} />
     </svg>
   );
 }
 
-function Gear({
-  className,
-  cx,
-  cy,
-  r,
-  teeth,
-}: {
-  className: string;
-  cx: number;
-  cy: number;
-  r: number;
-  teeth: number;
-}) {
+function Gear({ className, cx, cy, r, teeth }: { className: string; cx: number; cy: number; r: number; teeth: number }) {
   const tooth = 1.75;
   return (
     <g className={className}>
@@ -584,12 +369,8 @@ function WeekScreen() {
   const [editing, setEditing] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const profileId = useSpread((s) => s.activeId);
-  const [view, setView] = useState<"spread" | "week">(
-    () => readViewContext(safeStorage(), useSpread.getState().activeId).view,
-  );
-  const [plane, setPlane] = useState<"week" | "month">(
-    () => readViewContext(safeStorage(), useSpread.getState().activeId).plane,
-  );
+  const [view, setView] = useState<"spread" | "week">(() => readViewContext(safeStorage(), useSpread.getState().activeId).view);
+  const [plane, setPlane] = useState<"week" | "month">(() => readViewContext(safeStorage(), useSpread.getState().activeId).plane);
   // Which profile `view` and `plane` belong to. Until a newly opened profile's place is loaded, its
   // key is not written, so one profile's view can never be saved under another's.
   const [viewOwner, setViewOwner] = useState(profileId);
@@ -631,9 +412,7 @@ function WeekScreen() {
   const [shift, setShift] = useState(0);
   const [dir, setDir] = useState<-1 | 1 | 0>(0);
   const [arrive] = useState(consumeArrival);
-  const [brand, setBrand] = useState<"full" | "folding" | "mark">(() =>
-    brandCollapsed() ? "mark" : "full",
-  );
+  const [brand, setBrand] = useState<"full" | "folding" | "mark">(() => (brandCollapsed() ? "mark" : "full"));
   const brandOnce = useRef(brand === "mark");
   const [printDoc, setPrintDoc] = useState<WeekDocument | null>(null);
   const profiles = useSpread((s) => s.profiles);
@@ -643,11 +422,8 @@ function WeekScreen() {
   const range = formatWeek(data.currentWeek);
   const isCurrent = data.currentWeek === weekKey();
   const now = new Date();
-  const onThisMonth =
-    monthCursor.year === now.getFullYear() && monthCursor.month === now.getMonth();
-  const boxByHat = new Map(
-    data.weeks[data.currentWeek]?.boxes.map((box) => [box.hatId, box]) ?? [],
-  );
+  const onThisMonth = monthCursor.year === now.getFullYear() && monthCursor.month === now.getMonth();
+  const boxByHat = new Map(data.weeks[data.currentWeek]?.boxes.map((box) => [box.hatId, box]) ?? []);
   const rows = data.hats.map((hat) => {
     const box = boxByHat.get(hat.id) ?? {
       hatId: hat.id,
@@ -672,8 +448,7 @@ function WeekScreen() {
     setMonthDir(direction);
     setMonthCursor((cursor) => shiftMonth(cursor.year, cursor.month, direction));
   }, []);
-  const monthChrome =
-    view === "week" && ((plane === "month" && motion !== "to-week") || motion === "to-month");
+  const monthChrome = view === "week" && ((plane === "month" && motion !== "to-week") || motion === "to-month");
   const showWeekLayer = plane === "week" || motion !== null;
   const showMonthLayer = plane === "month" || motion !== null;
 
@@ -681,14 +456,11 @@ function WeekScreen() {
     if (motionTimer.current) window.clearTimeout(motionTimer.current);
     setMotion(next);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    motionTimer.current = window.setTimeout(
-      () => {
-        setPlane(next === "to-month" ? "month" : "week");
-        setMotion(null);
-        motionTimer.current = null;
-      },
-      reduced ? 0 : 420,
-    );
+    motionTimer.current = window.setTimeout(() => {
+      setPlane(next === "to-month" ? "month" : "week");
+      setMotion(null);
+      motionTimer.current = null;
+    }, reduced ? 0 : 420);
   }
 
   function openMonth() {
@@ -716,23 +488,10 @@ function WeekScreen() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (
-        event.defaultPrevented ||
-        event.metaKey ||
-        event.altKey ||
-        event.ctrlKey ||
-        sheet ||
-        motion
-      )
-        return;
+      if (event.defaultPrevented || event.metaKey || event.altKey || event.ctrlKey || sheet || motion) return;
       // Arrow keys belong to whichever control has focus, not global week navigation.
       const target = event.target as HTMLElement | null;
-      if (
-        target?.closest(
-          "button, input, textarea, select, [role='tab'], [role='group'], [contenteditable='true']",
-        )
-      )
-        return;
+      if (target?.closest("button, input, textarea, select, [role='tab'], [role='group'], [contenteditable='true']")) return;
       if (monthChrome) {
         if (event.key === "ArrowLeft") goMonth(-1);
         if (event.key === "ArrowRight") goMonth(1);
@@ -833,13 +592,8 @@ function WeekScreen() {
 
   return (
     <div className="min-h-dvh">
-      {printDoc &&
-        typeof document !== "undefined" &&
-        createPortal(<WeekPaper doc={printDoc} />, document.body)}
-      <div
-        className="mx-auto w-full max-w-xl"
-        style={{ "--spread-header": `${headerH}px` } as CSSProperties}
-      >
+      {printDoc && typeof document !== "undefined" && createPortal(<WeekPaper doc={printDoc} />, document.body)}
+      <div className="mx-auto w-full max-w-xl" style={{ "--spread-header": `${headerH}px` } as CSSProperties}>
         <header ref={headerRef} className="bar-fade no-print sticky top-0 z-20 px-4 pt-safe pb-3">
           <div className="mb-3 flex items-center gap-3">
             <button type="button" className="brand" aria-label="Spread, home" onClick={goHome}>
@@ -865,22 +619,8 @@ function WeekScreen() {
             )}
           </div>
           <WeekCrown
-            title={
-              monthChrome
-                ? formatMonth(monthCursor.year, monthCursor.month)
-                : isCurrent
-                  ? "This week"
-                  : range
-            }
-            detail={
-              monthChrome
-                ? onThisMonth
-                  ? undefined
-                  : "Back to this month"
-                : isCurrent
-                  ? range
-                  : "Back to this week"
-            }
+            title={monthChrome ? formatMonth(monthCursor.year, monthCursor.month) : isCurrent ? "This week" : range}
+            detail={monthChrome ? (onThisMonth ? undefined : "Back to this month") : isCurrent ? range : "Back to this week"}
             onDetail={
               monthChrome
                 ? onThisMonth
@@ -956,10 +696,7 @@ function WeekScreen() {
                   <SpreadIcon name={icon} size={24} className="text-inherit" />
                 </span>
                 {brand !== "mark" && (
-                  <span
-                    className={cn("brand-clip", brand === "folding" && "is-folding")}
-                    style={{ "--lockup-gap": "6px" } as CSSProperties}
-                  >
+                  <span className={cn("brand-clip", brand === "folding" && "is-folding")} style={{ "--lockup-gap": "6px" } as CSSProperties}>
                     <span className="tab-word">{label}</span>
                   </span>
                 )}
@@ -980,32 +717,8 @@ function WeekScreen() {
           {view === "week" ? (
             <div className="layer-stack">
               {showWeekLayer && (
-                <div
-                  className={
-                    motion === "to-month"
-                      ? "layer-out"
-                      : motion === "to-week"
-                        ? "layer-in"
-                        : undefined
-                  }
-                >
-                  <div
-                    key={data.currentWeek}
-                    className={
-                      profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : undefined
-                    }
-                    style={
-                      profilePlay
-                        ? undefined
-                        : dir !== 0
-                          ? weekFrom(dir)
-                          : viewPlay
-                            ? weekFrom(1)
-                            : shift !== 0
-                              ? followStyle(shift)
-                              : undefined
-                    }
-                  >
+                <div className={motion === "to-month" ? "layer-out" : motion === "to-week" ? "layer-in" : undefined}>
+                  <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(1) : shift !== 0 ? followStyle(shift) : undefined}>
                     <div className={profilePlay ? "cascade-item" : undefined}>
                       <WeeklyView
                         onTurn={setGesture}
@@ -1020,23 +733,12 @@ function WeekScreen() {
                 </div>
               )}
               {showMonthLayer && (
-                <div
-                  className={
-                    motion === "to-month"
-                      ? "layer-in"
-                      : motion === "to-week"
-                        ? "layer-out"
-                        : undefined
-                  }
-                >
+                <div className={motion === "to-month" ? "layer-in" : motion === "to-week" ? "layer-out" : undefined}>
                   <SpreadBubbleStrip
                     hats={data.hats}
                     hoursFor={(id) => {
                       const week = data.weeks[data.currentWeek];
-                      const bank =
-                        week?.boxes.find((box) => box.hatId === id)?.hours ??
-                        data.hats.find((hat) => hat.id === id)?.defaultHours ??
-                        0;
+                      const bank = week?.boxes.find((box) => box.hatId === id)?.hours ?? data.hats.find((hat) => hat.id === id)?.defaultHours ?? 0;
                       return remainingHours(bank, week?.allocations ?? [], id);
                     }}
                   />
@@ -1046,12 +748,7 @@ function WeekScreen() {
                     style={monthDir !== 0 ? weekFrom(monthDir) : followStyle(monthShift)}
                   >
                     <div className="week-seq-item">
-                      <MonthView
-                        year={monthCursor.year}
-                        month={monthCursor.month}
-                        data={data}
-                        onPick={pickDay}
-                      />
+                      <MonthView year={monthCursor.year} month={monthCursor.month} data={data} onPick={pickDay} />
                     </div>
                   </div>
                 </div>
@@ -1059,38 +756,13 @@ function WeekScreen() {
             </div>
           ) : rows.length === 0 ? (
             <div className={profilePlay ? "cascade" : undefined}>
-              <p className={cn("px-1 pt-8 text-sm text-secondary", profilePlay && "cascade-item")}>
-                Nothing on this week yet.
-              </p>
-              <div
-                className={profilePlay ? "cascade-item" : undefined}
-                style={profilePlay ? { animationDelay: "45ms" } : undefined}
-              >
+              <p className={cn("px-1 pt-8 text-sm text-secondary", profilePlay && "cascade-item")}>Nothing on this week yet.</p>
+              <div className={profilePlay ? "cascade-item" : undefined} style={profilePlay ? { animationDelay: "45ms" } : undefined}>
                 <NewLifeBox onClick={() => setSheet("new")} />
               </div>
             </div>
           ) : (
-            <div
-              key={data.currentWeek}
-              className={
-                profilePlay
-                  ? "cascade"
-                  : dir !== 0 || viewPlay
-                    ? "week-seq"
-                    : arrive
-                      ? "enter"
-                      : undefined
-              }
-              style={
-                profilePlay
-                  ? undefined
-                  : dir !== 0
-                    ? weekFrom(dir)
-                    : viewPlay
-                      ? weekFrom(-1)
-                      : followStyle(shift)
-              }
-            >
+            <div key={data.currentWeek} className={profilePlay ? "cascade" : dir !== 0 || viewPlay ? "week-seq" : arrive ? "enter" : undefined} style={profilePlay ? undefined : dir !== 0 ? weekFrom(dir) : viewPlay ? weekFrom(-1) : followStyle(shift)}>
               <div className={cn("week-seq-item", profilePlay && "cascade-item")}>
                 <Summary
                   rows={rows}
@@ -1102,11 +774,7 @@ function WeekScreen() {
               </div>
               <div className="mt-6 overflow-hidden rounded-[22px] bg-elevated">
                 {rows.map(({ hat, box }, index) => (
-                  <div
-                    key={hat.id}
-                    className={cn("week-seq-item", profilePlay && "cascade-item")}
-                    style={{ animationDelay: `${(index + 1) * 45}ms` }}
-                  >
+                  <div key={hat.id} className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(index + 1) * 45}ms` }}>
                     <RoleBlock
                       hat={hat}
                       hours={box.hours}
@@ -1119,10 +787,7 @@ function WeekScreen() {
                   </div>
                 ))}
               </div>
-              <div
-                className={cn("week-seq-item", profilePlay && "cascade-item")}
-                style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}
-              >
+              <div className={cn("week-seq-item", profilePlay && "cascade-item")} style={{ animationDelay: `${(rows.length + 1) * 45}ms` }}>
                 <NewLifeBox onClick={() => setSheet("new")} />
               </div>
             </div>
@@ -1131,12 +796,7 @@ function WeekScreen() {
       </div>
 
       <div className="app-dock no-print pointer-events-none fixed inset-x-0 z-30 flex justify-center px-4 pb-safe">
-        <div
-          className={cn(
-            "glass pointer-events-auto flex items-center rounded-full p-1.5",
-            view === "week" ? "" : "gap-1",
-          )}
-        >
+        <div className={cn("glass pointer-events-auto flex items-center rounded-full p-1.5", view === "week" ? "" : "gap-1")}>
           {view === "week" && !monthChrome && picked && (
             <button
               type="button"
@@ -1146,9 +806,7 @@ function WeekScreen() {
               Done
             </button>
           )}
-          {view === "week" && !monthChrome && picked && (
-            <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />
-          )}
+          {view === "week" && !monthChrome && picked && <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />}
           {view === "week" && (
             <button
               type="button"
@@ -1159,28 +817,25 @@ function WeekScreen() {
               <ViewMorphIcon boxes={!monthChrome} />
             </button>
           )}
-          {view === "week" && (
-            <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />
-          )}
-          {view === "spread" &&
-            (editing ? (
-              <button
-                type="button"
-                className="h-11 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent"
-                onClick={() => setEditing(false)}
-              >
-                Done
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
-                onClick={() => setEditing(true)}
-              >
-                <SpreadIcon name="icon-edit.svg" size={24} />
-                Edit
-              </button>
-            ))}
+          {view === "week" && <span className="mx-1 h-6 w-px bg-[var(--glass-line)]" aria-hidden="true" />}
+          {view === "spread" && (editing ? (
+            <button
+              type="button"
+              className="h-11 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent"
+              onClick={() => setEditing(false)}
+            >
+              Done
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-accent active:opacity-70"
+              onClick={() => setEditing(true)}
+            >
+              <SpreadIcon name="icon-edit.svg" size={24} />
+              Edit
+            </button>
+          ))}
           {!(view === "spread" && editing) && (
             <button
               type="button"
@@ -1198,11 +853,7 @@ function WeekScreen() {
         </div>
       </div>
 
-      <AppSheet
-        sheet={sheet}
-        setSheet={setSheet}
-        onPrint={() => setPrintDoc(buildWeekDocument(useSpread.getState().data))}
-      />
+      <AppSheet sheet={sheet} setSheet={setSheet} onPrint={() => setPrintDoc(buildWeekDocument(useSpread.getState().data))} />
       <RemoveDialog hat={removing} onClose={() => setRemoveId(null)} />
       <RolloverDialog
         open={rolloverAsk}
@@ -1214,11 +865,7 @@ function WeekScreen() {
       />
       <CarryOverSheet open={carryAsk} onClose={() => setCarryAsk(false)} />
       {openTask && (
-        <TaskSheet
-          hatId={openTask.hatId}
-          taskId={openTask.taskId}
-          onClose={() => setOpenTask(null)}
-        />
+        <TaskSheet hatId={openTask.hatId} taskId={openTask.taskId} onClose={() => setOpenTask(null)} />
       )}
     </div>
   );
@@ -1247,15 +894,7 @@ type Row = {
   box: { hours: number; tasks: { done: boolean }[] };
 };
 
-function Summary({
-  rows,
-  onRollover,
-  onReview,
-}: {
-  rows: Row[];
-  onRollover: () => void;
-  onReview?: () => void;
-}) {
+function Summary({ rows, onRollover, onReview }: { rows: Row[]; onRollover: () => void; onReview?: () => void }) {
   const totalHours = rows.reduce((sum, row) => sum + Number(row.box.hours || 0), 0);
   const taskCount = rows.reduce((sum, row) => sum + row.box.tasks.length, 0);
   const done = rows.reduce((sum, row) => sum + row.box.tasks.filter((task) => task.done).length, 0);
@@ -1287,18 +926,12 @@ function Summary({
                 if (!target) return;
                 target.scrollIntoView({
                   block: "center",
-                  behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-                    ? "auto"
-                    : "smooth",
+                  behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
                 });
                 target.focus({ preventScroll: true });
               }}
             >
-              <span
-                className="block h-2 w-full rounded-full"
-                style={{ backgroundColor: row.hat.color }}
-                aria-hidden="true"
-              />
+              <span className="block h-2 w-full rounded-full" style={{ backgroundColor: row.hat.color }} aria-hidden="true" />
             </button>
           ))}
         </div>
@@ -1310,20 +943,12 @@ function Summary({
         <p className="mt-1 text-xs text-caution">If the hours don’t fit, something is lying.</p>
       )}
       <div className="mt-1 flex flex-wrap items-center gap-x-6">
-        <button
-          type="button"
-          className="flex min-h-11 items-center gap-2 text-sm font-semibold text-accent"
-          onClick={onRollover}
-        >
+        <button type="button" className="flex min-h-11 items-center gap-2 text-sm font-semibold text-accent" onClick={onRollover}>
           <SpreadIcon name="icon-rollover.svg" size={24} />
           Rollover
         </button>
         {onReview && (
-          <button
-            type="button"
-            className="flex min-h-11 items-center text-sm font-semibold text-accent"
-            onClick={onReview}
-          >
+          <button type="button" className="flex min-h-11 items-center text-sm font-semibold text-accent" onClick={onReview}>
             Review open tasks
           </button>
         )}
@@ -1341,10 +966,7 @@ const DAY_MARKS = ["M", "Tu", "W", "Th", "F", "Sa", "Su"] as const;
 
 function DayMarks({ hatId, name, color }: { hatId: string; name: string; color: string }) {
   const data = useSpread((s) => s.data);
-  const placed =
-    data.weeks[data.currentWeek]?.allocations.filter(
-      (item) => item.hatId === hatId && item.hours > 0,
-    ) ?? [];
+  const placed = data.weeks[data.currentWeek]?.allocations.filter((item) => item.hatId === hatId && item.hours > 0) ?? [];
   if (placed.length === 0) return null;
   const days = weekDays(data.currentWeek).slice().reverse();
   const used = new Set(placed.map((item) => item.day));
@@ -1356,11 +978,7 @@ function DayMarks({ hatId, name, color }: { hatId: string; name: string; color: 
         return (
           <span
             key={day.date}
-            className={
-              on
-                ? "text-xs font-semibold leading-none"
-                : "text-xs font-medium leading-none text-tertiary"
-            }
+            className={on ? "text-xs font-semibold leading-none" : "text-xs font-medium leading-none text-tertiary"}
             style={on ? { color } : undefined}
           >
             {DAY_MARKS[index]}
@@ -1442,88 +1060,72 @@ function RoleBlock({
   }
 
   return (
-    <section
-      id={`spread-role-${hat.id}`}
-      tabIndex={-1}
-      className="scroll-mt-48 print:break-inside-avoid"
-    >
+    <section id={`spread-role-${hat.id}`} tabIndex={-1} className="scroll-mt-48 print:break-inside-avoid">
       {!first && <div className="ms-16 border-t border-line" />}
       <div className="relative overflow-hidden">
         <div className="flex min-h-16 items-center gap-3 px-4 py-2">
-          <button
-            type="button"
-            aria-label={`Color for ${hat.name}`}
-            aria-expanded={paletteOn && palettePhase !== "out"}
-            className="relative grid size-11 shrink-0 place-items-center"
-            onClick={togglePalette}
-          >
-            {hat.category ? (
-              <CategoryBadge category={hat.category} color={hat.color} size={36} />
-            ) : (
-              <span
-                className="grid size-9 place-items-center rounded-full text-white"
-                style={{ backgroundColor: hat.color }}
-              >
-                <List className="size-[18px]" strokeWidth={3} />
-              </span>
-            )}
-            {editing && (
-              <span className="absolute bottom-0 end-0 grid size-5 place-items-center rounded-full bg-elevated">
-                <SpreadIcon name="icon-palette.svg" size={14} />
-              </span>
-            )}
-          </button>
-          <div className="min-w-0 flex-1">
-            <input
-              value={name}
-              aria-label={`${hat.name} name`}
-              onChange={(event) => setName(event.target.value)}
-              onBlur={() => {
-                if (!name.trim()) setName(hat.name);
-                else renameHat(hat.id, name);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") event.currentTarget.blur();
-              }}
-              className="w-full min-w-0 truncate bg-transparent text-[17px] font-normal tracking-[-0.02em] outline-none"
-            />
-            <DayMarks hatId={hat.id} name={hat.name} color={hat.color} />
-          </div>
-          {adjusting ? (
-            <Stepper
-              value={hours}
-              label={`${hat.name} hours`}
-              onChange={(value) => setHours(hat.id, value)}
-              onClose={() => setAdjusting(false)}
-            />
+        <button
+          type="button"
+          aria-label={`Color for ${hat.name}`}
+          aria-expanded={paletteOn && palettePhase !== "out"}
+          className="relative grid size-11 shrink-0 place-items-center"
+          onClick={togglePalette}
+        >
+          {hat.category ? (
+            <CategoryBadge category={hat.category} color={hat.color} size={36} />
           ) : (
-            <button
-              type="button"
-              className="grid h-11 min-w-8 shrink-0 place-items-center text-[17px] font-normal text-secondary tabular-nums"
-              aria-label={`${hat.name}, ${hourChip(hours)} hours. Adjust`}
-              onClick={() => setAdjusting(true)}
-            >
-              {hourChip(hours)}h
-            </button>
+            <span className="grid size-9 place-items-center rounded-full text-white" style={{ backgroundColor: hat.color }}>
+              <List className="size-[18px]" strokeWidth={3} />
+            </span>
           )}
+          {editing && (
+            <span className="absolute bottom-0 end-0 grid size-5 place-items-center rounded-full bg-elevated">
+              <SpreadIcon name="icon-palette.svg" size={14} />
+            </span>
+          )}
+        </button>
+        <div className="min-w-0 flex-1">
+          <input
+            value={name}
+            aria-label={`${hat.name} name`}
+            onChange={(event) => setName(event.target.value)}
+            onBlur={() => {
+              if (!name.trim()) setName(hat.name);
+              else renameHat(hat.id, name);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            className="w-full min-w-0 truncate bg-transparent text-[17px] font-normal tracking-[-0.02em] outline-none"
+          />
+          <DayMarks hatId={hat.id} name={hat.name} color={hat.color} />
+        </div>
+        {adjusting ? (
+          <Stepper
+            value={hours}
+            label={`${hat.name} hours`}
+            onChange={(value) => setHours(hat.id, value)}
+            onClose={() => setAdjusting(false)}
+          />
+        ) : (
           <button
             type="button"
-            aria-expanded={tasksOpen && taskMotion !== "out"}
-            aria-label={
-              tasksOpen && taskMotion !== "out"
-                ? `Hide tasks for ${hat.name}`
-                : `Show tasks for ${hat.name}`
-            }
-            className="grid size-11 shrink-0 place-items-center text-secondary"
-            onClick={toggleTasks}
+            className="grid h-11 min-w-8 shrink-0 place-items-center text-[17px] font-normal text-secondary tabular-nums"
+            aria-label={`${hat.name}, ${hourChip(hours)} hours. Adjust`}
+            onClick={() => setAdjusting(true)}
           >
-            <ChevronRight
-              className={cn(
-                "size-5 transition-transform duration-300",
-                tasksOpen && taskMotion !== "out" && "rotate-90",
-              )}
-            />
+            {hourChip(hours)}h
           </button>
+        )}
+        <button
+          type="button"
+          aria-expanded={tasksOpen && taskMotion !== "out"}
+          aria-label={tasksOpen && taskMotion !== "out" ? `Hide tasks for ${hat.name}` : `Show tasks for ${hat.name}`}
+          className="grid size-11 shrink-0 place-items-center text-secondary"
+          onClick={toggleTasks}
+        >
+          <ChevronRight className={cn("size-5 transition-transform duration-300", tasksOpen && taskMotion !== "out" && "rotate-90")} />
+        </button>
         </div>
         {editing && (
           <div className="border-t border-line px-4">
@@ -1533,10 +1135,7 @@ function RoleBlock({
               className="flex min-h-11 w-full items-center gap-2 text-left text-sm font-medium text-danger"
               onClick={onRemove}
             >
-              <span
-                className="grid size-7 place-items-center rounded-full bg-danger text-on-danger"
-                aria-hidden="true"
-              >
+              <span className="grid size-7 place-items-center rounded-full bg-danger text-on-danger" aria-hidden="true">
                 <Minus className="size-4" strokeWidth={3} />
               </span>
               Remove {hat.name}
@@ -1545,12 +1144,7 @@ function RoleBlock({
         )}
       </div>
       {paletteOn && (
-        <div
-          className={cn(
-            "border-t border-line px-4 py-3",
-            palettePhase === "out" ? "cascade cascade-out" : "cascade",
-          )}
-        >
+        <div className={cn("border-t border-line px-4 py-3", palettePhase === "out" ? "cascade cascade-out" : "cascade")}>
           <div className="flex items-center gap-2">
             <SpreadIcon name="icon-palette.svg" size={24} />
             <p className="text-sm font-medium">Color</p>
@@ -1571,10 +1165,7 @@ function RoleBlock({
                     className="size-7 rounded-full"
                     style={{
                       backgroundColor: color,
-                      outline:
-                        hat.color.toLowerCase() === color.toLowerCase()
-                          ? "2px solid var(--ink)"
-                          : undefined,
+                      outline: hat.color.toLowerCase() === color.toLowerCase() ? "2px solid var(--ink)" : undefined,
                       outlineOffset: 2,
                     }}
                   />
@@ -1582,10 +1173,7 @@ function RoleBlock({
               ))}
           </div>
           <p className="mt-2 text-xs text-secondary">
-            Symbol
-            {hat.category
-              ? ` · ${SPREAD_CATEGORIES.find((item) => item.id === hat.category)?.label}`
-              : ""}
+            Symbol{hat.category ? ` · ${SPREAD_CATEGORIES.find((item) => item.id === hat.category)?.label}` : ""}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {SPREAD_CATEGORIES.map((item, index) => (
@@ -1612,34 +1200,23 @@ function RoleBlock({
         </div>
       )}
       <div className={cn("task-fold", (tasksOpen || taskMotion === "out") && "task-fold-open")}>
-        <ul
-          className={
-            taskMotion === "in"
-              ? "cascade"
-              : taskMotion === "out"
-                ? "cascade cascade-out"
-                : undefined
-          }
-        >
-          {tasks.map((task, index) => (
-            <TaskRow
-              key={task.id}
-              hatId={hat.id}
-              task={task}
-              delay={taskMotion === "idle" ? undefined : `${index * 32}ms`}
-              onOpen={() => onOpenTask(task.id)}
-            />
-          ))}
-          <li
-            className={taskMotion === "idle" ? undefined : "cascade-item"}
-            style={taskMotion === "idle" ? undefined : { animationDelay: `${tasks.length * 32}ms` }}
-          >
-            <AddTaskRow
-              placeholder={tasks.length === 0 ? "What matters most here?" : "Add a task"}
-              onAdd={(text) => addTask(hat.id, text)}
-            />
-          </li>
-        </ul>
+      <ul className={taskMotion === "in" ? "cascade" : taskMotion === "out" ? "cascade cascade-out" : undefined}>
+        {tasks.map((task, index) => (
+          <TaskRow
+            key={task.id}
+            hatId={hat.id}
+            task={task}
+            delay={taskMotion === "idle" ? undefined : `${index * 32}ms`}
+            onOpen={() => onOpenTask(task.id)}
+          />
+        ))}
+        <li className={taskMotion === "idle" ? undefined : "cascade-item"} style={taskMotion === "idle" ? undefined : { animationDelay: `${tasks.length * 32}ms` }}>
+          <AddTaskRow
+            placeholder={tasks.length === 0 ? "What matters most here?" : "Add a task"}
+            onAdd={(text) => addTask(hat.id, text)}
+          />
+        </li>
+      </ul>
       </div>
     </section>
   );
@@ -1658,11 +1235,7 @@ function Stepper({
 }) {
   const shown = Number.isInteger(value) ? String(value) : value.toFixed(1);
   return (
-    <div
-      className="flex shrink-0 items-center rounded-full bg-fill"
-      role="group"
-      aria-label={label}
-    >
+    <div className="flex shrink-0 items-center rounded-full bg-fill" role="group" aria-label={label}>
       <button
         type="button"
         className="grid size-11 place-items-center rounded-full active:opacity-60 disabled:opacity-30"
@@ -1716,10 +1289,7 @@ function TaskRow({
   const assignTask = useSpread((s) => s.assignTask);
   const undoable = useSpread((s) => s.undoable);
   const undoEdit = useSpread((s) => s.undoEdit);
-  const day =
-    placedOn && !task.done
-      ? weekDays(currentWeek).find((item) => item.date === placedOn)
-      : undefined;
+  const day = placedOn && !task.done ? weekDays(currentWeek).find((item) => item.date === placedOn) : undefined;
   const isToday = day?.date === isoDate(new Date());
   function notToday() {
     const id = undoable(() => {
@@ -1728,10 +1298,7 @@ function TaskRow({
     if (id) showUndoToast("Not today. It’s back in To place.", () => undoEdit(id));
   }
   return (
-    <li
-      className={delay ? "cascade-item" : undefined}
-      style={delay ? { animationDelay: delay } : undefined}
-    >
+    <li className={delay ? "cascade-item" : undefined} style={delay ? { animationDelay: delay } : undefined}>
       <div className="ms-[4.75rem] border-t border-line" />
       <div className="flex min-h-14 items-center ps-12">
         <button
@@ -1748,10 +1315,7 @@ function TaskRow({
           {task.done ? (
             <SpreadIcon name="icon-check.svg" size={28} />
           ) : (
-            <span
-              className="size-7 rounded-full border-2"
-              style={{ borderColor: "var(--tertiary)" }}
-            />
+            <span className="size-7 rounded-full border-2" style={{ borderColor: "var(--tertiary)" }} />
           )}
         </button>
         <button
@@ -1772,12 +1336,7 @@ function TaskRow({
           <ChevronRight className="size-5 shrink-0 text-tertiary" />
         </button>
         {isToday && (
-          <button
-            type="button"
-            className="h-14 shrink-0 pe-4 ps-1 text-sm font-semibold text-accent"
-            aria-label={`Not today: ${task.text}`}
-            onClick={notToday}
-          >
+          <button type="button" className="h-14 shrink-0 pe-4 ps-1 text-sm font-semibold text-accent" aria-label={`Not today: ${task.text}`} onClick={notToday}>
             Not today
           </button>
         )}
@@ -1786,13 +1345,7 @@ function TaskRow({
   );
 }
 
-function AddTaskRow({
-  placeholder,
-  onAdd,
-}: {
-  placeholder: string;
-  onAdd: (text: string) => void;
-}) {
+function AddTaskRow({ placeholder, onAdd }: { placeholder: string; onAdd: (text: string) => void }) {
   const [value, setValue] = useState("");
   return (
     <form
@@ -1822,15 +1375,7 @@ function AddTaskRow({
   );
 }
 
-function AppSheet({
-  sheet,
-  setSheet,
-  onPrint,
-}: {
-  sheet: Sheet;
-  setSheet: (sheet: Sheet) => void;
-  onPrint: () => void;
-}) {
+function AppSheet({ sheet, setSheet, onPrint }: { sheet: Sheet; setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
   const [open, setOpen] = useState(false);
   const closing = useRef(false);
   if (sheet && !open && !closing.current) setOpen(true);
@@ -1856,12 +1401,7 @@ function AppSheet({
     <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
       <Dialog.Portal>
         <Dialog.Overlay className="scrim no-print fixed inset-0 z-40 bg-scrim" />
-        <Dialog.Content
-          className={cn(
-            "sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none",
-            sheet === "more" && "sheet-stack",
-          )}
-        >
+        <Dialog.Content className={cn("sheet no-print fixed inset-x-0 z-50 mx-auto w-full max-w-xl overflow-y-auto bg-elevated px-5 pt-3 pb-safe outline-none", sheet === "more" && "sheet-stack")}>
           {sheet === "more" && <MoreSheet setSheet={go} onPrint={onPrint} />}
           {sheet === "new" && <NewLifeSheet onClose={close} />}
           {sheet === "icloud" && <ICloudSheet onBack={() => go("more")} />}
@@ -1899,13 +1439,10 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
     if (profile.id === shown || picked) return;
     setPicked(profile.id);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.setTimeout(
-      () => {
-        switchProfile(profile.id);
-        onSwitched(profile.name);
-      },
-      reduced ? 0 : 260,
-    );
+    window.setTimeout(() => {
+      switchProfile(profile.id);
+      onSwitched(profile.name);
+    }, reduced ? 0 : 260);
   }
 
   return (
@@ -1941,10 +1478,7 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
                   }}
                   className="h-full min-w-0 flex-1 bg-transparent px-4 text-base outline-none"
                 />
-                <Check
-                  className={cn("size-4 shrink-0 text-accent", profiles.length < 2 && "mr-4")}
-                  aria-hidden="true"
-                />
+                <Check className={cn("size-4 shrink-0 text-accent", profiles.length < 2 && "mr-4")} aria-hidden="true" />
                 {profiles.length > 1 && (
                   <button
                     type="button"
@@ -1959,22 +1493,12 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
             );
           }
           return (
-            <div
-              key={profile.id}
-              className={cn(
-                "flex h-12 items-center",
-                selected && "bg-fill",
-                edge && "border-b border-line",
-              )}
-            >
+            <div key={profile.id} className={cn("flex h-12 items-center", selected && "bg-fill", edge && "border-b border-line")}>
               <button
                 type="button"
                 role="option"
                 aria-selected={selected}
-                className={cn(
-                  "flex h-full min-w-0 flex-1 items-center px-4 text-left text-base",
-                  selected && "font-semibold",
-                )}
+                className={cn("flex h-full min-w-0 flex-1 items-center px-4 text-left text-base", selected && "font-semibold")}
                 onClick={() => choose(profile)}
               >
                 <span className="flex-1 truncate">{profile.name}</span>
@@ -2001,9 +1525,7 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
                 event.preventDefault();
                 if (!addProfile(name)) return;
                 const current = useSpread.getState();
-                const who =
-                  current.profiles.find((profile) => profile.id === current.activeId)?.name ??
-                  name.trim();
+                const who = current.profiles.find((profile) => profile.id === current.activeId)?.name ?? name.trim();
                 setName("");
                 setAdding(false);
                 onSwitched(who);
@@ -2024,33 +1546,23 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
               </button>
             </form>
           ) : (
-            <button
-              type="button"
-              className="flex h-12 w-full items-center gap-3 px-4 text-left text-base text-accent"
-              onClick={() => setAdding(true)}
-            >
+            <button type="button" className="flex h-12 w-full items-center gap-3 px-4 text-left text-base text-accent" onClick={() => setAdding(true)}>
               <Plus className="size-5" strokeWidth={2.7} />
               Add profile
             </button>
           ))}
       </div>
-      <p className="mt-2 px-1 text-xs text-tertiary">
-        Each profile keeps its own spreads and weeks.
-      </p>
+      <p className="mt-2 px-1 text-xs text-tertiary">Each profile keeps its own spreads and weeks.</p>
       <AlertDialog.Root open={dropping !== null} onOpenChange={(open) => !open && setDropId(null)}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
           <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-            <AlertDialog.Title className="text-center text-base font-semibold">
-              Remove {dropping?.name}?
-            </AlertDialog.Title>
+            <AlertDialog.Title className="text-center text-base font-semibold">Remove {dropping?.name}?</AlertDialog.Title>
             <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
               This profile’s spreads and weeks are deleted. The others stay.
             </AlertDialog.Description>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">
-                Cancel
-              </AlertDialog.Cancel>
+              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
               <AlertDialog.Action
                 className="h-11 rounded-full bg-danger text-sm font-semibold text-on-danger"
                 onClick={() => {
@@ -2063,9 +1575,7 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
                     return;
                   }
                   const current = useSpread.getState();
-                  const who = current.profiles.find(
-                    (profile) => profile.id === current.activeId,
-                  )?.name;
+                  const who = current.profiles.find((profile) => profile.id === current.activeId)?.name;
                   if (who) onSwitched(who);
                 }}
               >
@@ -2080,16 +1590,9 @@ function ProfilesSection({ onSwitched }: { onSwitched: (name: string) => void })
 }
 
 /** Apply a confirmed restore. Returns what to tell the person and whether the sheet can close. */
-async function applyRestore(
-  backup: ParsedBackup,
-  select?: string[],
-): Promise<{ ok: boolean; message: string }> {
+async function applyRestore(backup: ParsedBackup, select?: string[]): Promise<{ ok: boolean; message: string }> {
   if (!(await ensureSafetyCopy("pre-restore"))) {
-    return {
-      ok: false,
-      message:
-        "Couldn’t save a safety copy first, so nothing was changed. Free some space and try again.",
-    };
+    return { ok: false, message: "Couldn’t save a safety copy first, so nothing was changed. Free some space and try again." };
   }
   const state = useSpread.getState();
   if (backup.kind === "full") {
@@ -2105,19 +1608,12 @@ async function applyRestore(
               : "Couldn’t add the profiles. Nothing was changed.",
       };
     }
-    const skipped =
-      result.skipped.length > 0
-        ? ` ${result.skipped.length === 1 ? `“${result.skipped[0]}” was damaged in the backup and was not restored.` : `${result.skipped.length} profiles were damaged in the backup and were not restored.`}`
-        : "";
+    const skipped = result.skipped.length > 0 ? ` ${result.skipped.length === 1 ? `“${result.skipped[0]}” was damaged in the backup and was not restored.` : `${result.skipped.length} profiles were damaged in the backup and were not restored.`}` : "";
     const base = result.added === 1 ? "Profile restored." : `${result.added} profiles restored.`;
     return { ok: true, message: `${base}${skipped}` };
   }
   if (!state.replaceData(backup.data)) {
-    return {
-      ok: false,
-      message:
-        "This profile syncs with iCloud, so a restore would change your other devices too. Turn sync off for it first, or restore into a new profile.",
-    };
+    return { ok: false, message: "This profile syncs with iCloud, so a restore would change your other devices too. Turn sync off for it first, or restore into a new profile." };
   }
   return { ok: true, message: "Backup restored." };
 }
@@ -2132,13 +1628,7 @@ function keyStoreOf(entries: Record<string, string>) {
   };
 }
 
-function MoreSheet({
-  setSheet,
-  onPrint,
-}: {
-  setSheet: (sheet: Sheet) => void;
-  onPrint: () => void;
-}) {
+function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
   const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
   const setTheme = useSpread((s) => s.setTheme);
@@ -2149,10 +1639,7 @@ function MoreSheet({
   const fileRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<ParsedBackup | null>(null);
   const [copies, setCopies] = useState<PinnedCopy[] | null>(null);
-  const [pickedCopy, setPickedCopy] = useState<{
-    copy: PinnedCopy;
-    entries: Record<string, string>;
-  } | null>(null);
+  const [pickedCopy, setPickedCopy] = useState<{ copy: PinnedCopy; entries: Record<string, string> } | null>(null);
   const week = buildWeekDocument(data);
 
   const native = isNativeApp();
@@ -2166,16 +1653,7 @@ function MoreSheet({
     }
   };
 
-  const allActions: {
-    label: string;
-    icon?:
-      | "icon-share.svg"
-      | "icon-export.svg"
-      | "icon-print.svg"
-      | "icon-backup.svg"
-      | "icon-restore.svg";
-    run: () => void;
-  }[] = [
+  const allActions: { label: string; icon?: "icon-share.svg" | "icon-export.svg" | "icon-print.svg" | "icon-backup.svg" | "icon-restore.svg"; run: () => void }[] = [
     {
       label: "Copy last week",
       run: () => {
@@ -2203,9 +1681,7 @@ function MoreSheet({
         void import("@/lib/spread/week-docx")
           .then(({ weekDocxBlob }) => weekDocxBlob(snapshot))
           .then((blob) => saveFile(blob, `Spread-${name}.docx`))
-          .then((result) =>
-            finished(result, native ? "Word document exported." : "Word document saved."),
-          )
+          .then((result) => finished(result, native ? "Word document exported." : "Word document saved."))
           .catch(() => toast("Couldn’t make the Word document."));
       },
     },
@@ -2221,20 +1697,14 @@ function MoreSheet({
       label: "Back Up Spread",
       icon: "icon-backup.svg",
       run: () => {
-        void saveBackup(data).then((result) =>
-          finished(result, native ? "Backup exported." : "Backup saved."),
-        );
+        void saveBackup(data).then((result) => finished(result, native ? "Backup exported." : "Backup saved."));
       },
     },
     { label: "Restore Spread", icon: "icon-restore.svg", run: () => fileRef.current?.click() },
-    ...(backupAvailable() || syncAvailable()
-      ? [{ label: syncAvailable() ? "iCloud" : "iCloud Backup", run: () => setSheet("icloud") }]
-      : []),
+    ...(backupAvailable() || syncAvailable() ? [{ label: syncAvailable() ? "iCloud" : "iCloud Backup", run: () => setSheet("icloud") }] : []),
   ];
   // WKWebView can't print.
-  const actions = native
-    ? allActions.filter((action) => action.label !== "Print / Save PDF")
-    : allActions;
+  const actions = native ? allActions.filter((action) => action.label !== "Print / Save PDF") : allActions;
 
   return (
     <>
@@ -2252,13 +1722,7 @@ function MoreSheet({
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        {native
-          ? backupAvailable()
-            ? "Saved on this device."
-            : "Everything stays on this device."
-          : license
-            ? "Signed in to the Spread beta."
-            : "Not signed in."}
+        {native ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license ? "Signed in to the Spread beta." : "Not signed in."}
       </Dialog.Description>
       <LocalStatusRow />
       <ProfilesSection
@@ -2310,26 +1774,15 @@ function MoreSheet({
           <button
             type="button"
             className="mt-3 flex h-12 w-full items-center justify-between rounded-3xl bg-canvas px-4 text-left text-base active:bg-fill"
-            onClick={() =>
-              void listPinned().then((found) => setCopies(copies === null ? found : null))
-            }
+            onClick={() => void listPinned().then((found) => setCopies(copies === null ? found : null))}
           >
             Restore from a safety copy
-            <ChevronRight
-              className={cn("size-4 text-tertiary", copies !== null && "rotate-90")}
-              strokeWidth={2.7}
-            />
+            <ChevronRight className={cn("size-4 text-tertiary", copies !== null && "rotate-90")} strokeWidth={2.7} />
           </button>
           {copies !== null && (
-            <div
-              className="mt-2 overflow-hidden rounded-3xl bg-canvas"
-              role="list"
-              aria-label="Safety copies on this device"
-            >
+            <div className="mt-2 overflow-hidden rounded-3xl bg-canvas" role="list" aria-label="Safety copies on this device">
               {copies.length === 0 ? (
-                <p className="px-4 py-3 text-sm text-secondary">
-                  No safety copies yet. One is saved before anything is replaced.
-                </p>
+                <p className="px-4 py-3 text-sm text-secondary">No safety copies yet. One is saved before anything is replaced.</p>
               ) : (
                 copies.map((copy) => (
                   <button
@@ -2345,17 +1798,8 @@ function MoreSheet({
                     }
                   >
                     <span>
-                      <span className="block text-base">
-                        {new Date(copy.savedAt).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      <span className="block text-xs text-secondary">
-                        Saved before {copy.label.replace(/^pre-/, "").replace(/-/g, " ")}
-                      </span>
+                      <span className="block text-base">{new Date(copy.savedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                      <span className="block text-xs text-secondary">Saved before {copy.label.replace(/^pre-/, "").replace(/-/g, " ")}</span>
                     </span>
                     <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
                   </button>
@@ -2368,11 +1812,7 @@ function MoreSheet({
       <div className="mt-5">
         <Segmented value={theme} onChange={setTheme} />
       </div>
-      <div
-        className="mt-4 flex gap-3 overflow-x-auto px-1 py-1"
-        role="listbox"
-        aria-label="Accent color"
-      >
+      <div className="mt-4 flex gap-3 overflow-x-auto px-1 py-1" role="listbox" aria-label="Accent color">
         {ACCENTS.map((item) => (
           <button
             key={item.id}
@@ -2383,10 +1823,7 @@ function MoreSheet({
             className="size-8 shrink-0 rounded-full"
             style={{
               backgroundColor: item.color,
-              boxShadow:
-                (accent ?? "blue") === item.id
-                  ? "0 0 0 2px var(--elevated), 0 0 0 4px var(--ink)"
-                  : undefined,
+              boxShadow: (accent ?? "blue") === item.id ? "0 0 0 2px var(--elevated), 0 0 0 4px var(--ink)" : undefined,
             }}
             onClick={() => setAccent(item.id)}
           />
@@ -2398,28 +1835,19 @@ function MoreSheet({
           className="mt-4 h-12 w-full rounded-full text-base font-semibold text-danger"
           onClick={() => {
             // The session is a server cookie, so ask the server to end it; this reloads the page.
-            signOut("/").catch(() =>
-              toast.error("Couldn't sign out. Check your connection and try again."),
-            );
+            signOut("/").catch(() => toast.error("Couldn't sign out. Check your connection and try again."));
           }}
         >
           Sign out
         </button>
       )}
-      <AlertDialog.Root
-        open={pickedCopy !== null}
-        onOpenChange={(open) => !open && setPickedCopy(null)}
-      >
+      <AlertDialog.Root open={pickedCopy !== null} onOpenChange={(open) => !open && setPickedCopy(null)}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
           <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-            <AlertDialog.Title className="text-center text-base font-semibold">
-              Use this safety copy?
-            </AlertDialog.Title>
+            <AlertDialog.Title className="text-center text-base font-semibold">Use this safety copy?</AlertDialog.Title>
             <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-              “Put everything back” replaces all your profiles with the ones in this copy, even when
-              all ten are in use. A new safety copy of what is here now is saved first. “Add as
-              profiles” keeps what you have and adds the copy’s profiles beside it.
+              “Put everything back” replaces all your profiles with the ones in this copy, even when all ten are in use. A new safety copy of what is here now is saved first. “Add as profiles” keeps what you have and adds the copy’s profiles beside it.
             </AlertDialog.Description>
             <div className="mt-5 grid gap-2">
               <AlertDialog.Action
@@ -2435,16 +1863,10 @@ function MoreSheet({
                     const result = useSpread.getState().rollbackToCopy(chosen.entries);
                     setPickedCopy(null);
                     if (result.ok) {
-                      toast(
-                        `Put everything back (${result.profiles} ${result.profiles === 1 ? "profile" : "profiles"}).`,
-                      );
+                      toast(`Put everything back (${result.profiles} ${result.profiles === 1 ? "profile" : "profiles"}).`);
                       setSheet(null);
                     } else {
-                      toast(
-                        result.reason === "rollback-failed"
-                          ? "Couldn’t finish, and couldn’t fully undo it. Quit and reopen Spread, which will finish putting things back."
-                          : "Couldn’t put it back. Nothing was changed.",
-                      );
+                      toast(result.reason === "rollback-failed" ? "Couldn’t finish, and couldn’t fully undo it. Quit and reopen Spread, which will finish putting things back." : "Couldn’t put it back. Nothing was changed.");
                     }
                   });
                 }}
@@ -2457,15 +1879,7 @@ function MoreSheet({
                   const chosen = pickedCopy;
                   if (!chosen) return;
                   void (async () => {
-                    const shaped = await parseFullBackup(
-                      await fullBackupText(
-                        collectFullPayload(
-                          keyStoreOf(chosen.entries),
-                          new Date(chosen.copy.savedAt),
-                          null,
-                        ),
-                      ),
-                    );
+                    const shaped = await parseFullBackup(await fullBackupText(collectFullPayload(keyStoreOf(chosen.entries), new Date(chosen.copy.savedAt), null)));
                     if (!shaped) toast("That safety copy can’t be read.");
                     else setBackup({ kind: "full", ...shaped });
                     setPickedCopy(null);
@@ -2474,9 +1888,7 @@ function MoreSheet({
               >
                 Add as profiles
               </AlertDialog.Action>
-              <AlertDialog.Cancel className="h-11 rounded-full text-sm font-semibold text-secondary">
-                Cancel
-              </AlertDialog.Cancel>
+              <AlertDialog.Cancel className="h-11 rounded-full text-sm font-semibold text-secondary">Cancel</AlertDialog.Cancel>
             </div>
           </AlertDialog.Content>
         </AlertDialog.Portal>
@@ -2507,36 +1919,22 @@ function RestoreDialog({
   onClose: () => void;
   onConfirm: (selection?: string[]) => void;
 }) {
-  if (backup?.kind === "full")
-    return <RestoreFullDialog backup={backup} onClose={onClose} onConfirm={onConfirm} />;
+  if (backup?.kind === "full") return <RestoreFullDialog backup={backup} onClose={onClose} onConfirm={onConfirm} />;
   const names = backup?.summary.spreads ?? [];
-  const listed =
-    names.length === 0
-      ? "No spreads"
-      : names.length <= 4
-        ? names.join(", ")
-        : `${names.slice(0, 3).join(", ")}, and ${names.length - 3} more`;
+  const listed = names.length === 0 ? "No spreads" : names.length <= 4 ? names.join(", ") : `${names.slice(0, 3).join(", ")}, and ${names.length - 3} more`;
   return (
     <AlertDialog.Root open={backup !== null} onOpenChange={(open) => !open && onClose()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
         <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-          <AlertDialog.Title className="text-center text-base font-semibold">
-            Restore this backup?
-          </AlertDialog.Title>
+          <AlertDialog.Title className="text-center text-base font-semibold">Restore this backup?</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-            {listed}. {backup?.summary.weeks ?? 0} {backup?.summary.weeks === 1 ? "week" : "weeks"},{" "}
-            {backup?.summary.tasks ?? 0} {backup?.summary.tasks === 1 ? "task" : "tasks"}.{" "}
-            {backup?.summary.range}. This replaces this profile’s weeks.
+            {listed}. {backup?.summary.weeks ?? 0} {backup?.summary.weeks === 1 ? "week" : "weeks"}, {backup?.summary.tasks ?? 0}{" "}
+            {backup?.summary.tasks === 1 ? "task" : "tasks"}. {backup?.summary.range}. This replaces this profile’s weeks.
           </AlertDialog.Description>
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">
-              Cancel
-            </AlertDialog.Cancel>
-            <AlertDialog.Action
-              className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
-              onClick={() => onConfirm()}
-            >
+            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => onConfirm()}>
               Restore
             </AlertDialog.Action>
           </div>
@@ -2569,26 +1967,15 @@ function BackupDisclosure() {
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[70] bg-scrim" />
         <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[70] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-          <AlertDialog.Title className="text-center text-base font-semibold">
-            Back up to iCloud?
-          </AlertDialog.Title>
+          <AlertDialog.Title className="text-center text-base font-semibold">Back up to iCloud?</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-            Spread can keep dated copies of all your profiles, tasks and photos in your iCloud
-            Drive, so you can get them back on a new phone. Only you can see them. Nothing is
-            uploaded until you choose. You can turn this off any time in Settings, and the copies
-            stay in iCloud until you delete them.
+            Spread can keep dated copies of all your profiles, tasks and photos in your iCloud Drive, so you can get them back on a new phone. Only you can see them. Nothing is uploaded until you choose. You can turn this off any time in Settings, and the copies stay in iCloud until you delete them.
           </AlertDialog.Description>
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <AlertDialog.Cancel
-              className="h-11 rounded-full bg-fill text-sm font-semibold"
-              onClick={() => acknowledgeBackup(false)}
-            >
+            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={() => acknowledgeBackup(false)}>
               Not now
             </AlertDialog.Cancel>
-            <AlertDialog.Action
-              className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
-              onClick={() => acknowledgeBackup(true)}
-            >
+            <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => acknowledgeBackup(true)}>
               Turn on
             </AlertDialog.Action>
           </div>
@@ -2598,13 +1985,7 @@ function BackupDisclosure() {
   );
 }
 
-function ICloudMain({
-  onBack,
-  go,
-}: {
-  onBack: () => void;
-  go: (view: "link" | "conflicts") => void;
-}) {
+function ICloudMain({ onBack, go }: { onBack: () => void; go: (view: "link" | "conflicts") => void }) {
   const state = useCloudBackup();
   const status = currentBackupStatus(state);
   const [backups, setBackups] = useState<RemoteBackup[] | null>(null);
@@ -2633,9 +2014,7 @@ function ICloudMain({
       if (!parsed) toast("That backup is damaged, so it was not opened.");
       else setPicked(parsed);
     } catch {
-      toast(
-        "Couldn’t open that backup. If it is still downloading from iCloud, try again in a moment.",
-      );
+      toast("Couldn’t open that backup. If it is still downloading from iCloud, try again in a moment.");
     }
     setBusy(false);
   }
@@ -2644,120 +2023,79 @@ function ICloudMain({
   return (
     <>
       <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={onBack}
-          className="grid size-11 place-items-center rounded-full text-secondary"
-        >
+        <button type="button" aria-label="Back" onClick={onBack} className="grid size-11 place-items-center rounded-full text-secondary">
           <ChevronRight className="size-5 rotate-180" strokeWidth={2.7} />
         </button>
         <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
         <span />
       </div>
-      <Dialog.Title className="text-2xl font-bold tracking-tight">
-        {syncAvailable() ? "iCloud" : "iCloud Backup"}
-      </Dialog.Title>
+      <Dialog.Title className="text-2xl font-bold tracking-tight">{syncAvailable() ? "iCloud" : "iCloud Backup"}</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
         Spread keeps a copy of everything in your own iCloud. It is never sent anywhere else.
       </Dialog.Description>
       {syncAvailable() && <SyncSection go={go} />}
-      {backupAvailable() && (
-        <>
-          <h3 className="mt-6 text-sm font-semibold text-secondary">Backup</h3>
-          <div className="mt-2 rounded-3xl bg-canvas px-4 py-3" role="status" aria-live="polite">
-            <p
-              className={cn("text-base font-semibold", status.tone === "problem" && "text-danger")}
-            >
-              {status.title}
-            </p>
-            {status.detail ? (
-              <p className="mt-0.5 text-sm text-secondary">{status.detail}</p>
-            ) : null}
-          </div>
-          <div className="stack-rows mt-4 overflow-hidden rounded-3xl bg-canvas">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={state.enabled}
-              className="flex h-12 w-full items-center justify-between border-b border-line px-4 text-left text-base active:bg-fill"
-              onClick={() => setBackupEnabled(!state.enabled)}
-            >
-              Back up automatically
-              <span
-                className={cn(
-                  "flex h-7 w-12 items-center rounded-full p-0.5 transition-colors",
-                  state.enabled ? "bg-accent" : "bg-fill",
-                )}
-                aria-hidden="true"
+      {backupAvailable() && <>
+      <h3 className="mt-6 text-sm font-semibold text-secondary">Backup</h3>
+      <div className="mt-2 rounded-3xl bg-canvas px-4 py-3" role="status" aria-live="polite">
+        <p className={cn("text-base font-semibold", status.tone === "problem" && "text-danger")}>{status.title}</p>
+        {status.detail ? <p className="mt-0.5 text-sm text-secondary">{status.detail}</p> : null}
+      </div>
+      <div className="stack-rows mt-4 overflow-hidden rounded-3xl bg-canvas">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={state.enabled}
+          className="flex h-12 w-full items-center justify-between border-b border-line px-4 text-left text-base active:bg-fill"
+          onClick={() => setBackupEnabled(!state.enabled)}
+        >
+          Back up automatically
+          <span className={cn("flex h-7 w-12 items-center rounded-full p-0.5 transition-colors", state.enabled ? "bg-accent" : "bg-fill")} aria-hidden="true">
+            <span className="block size-6 rounded-full bg-white transition-transform" style={{ transform: state.enabled ? "translateX(20px)" : "none" }} />
+          </span>
+        </button>
+        <button
+          type="button"
+          disabled={!state.enabled || state.runner.busy}
+          className="flex h-12 w-full items-center border-b border-line px-4 text-left text-base active:bg-fill disabled:text-tertiary"
+          onClick={() => void backupNow().then(() => refreshBackupStatus())}
+        >
+          Back up now
+        </button>
+        <button type="button" disabled={busy} className="flex h-12 w-full items-center px-4 text-left text-base active:bg-fill disabled:text-tertiary" onClick={() => void openList()}>
+          Restore from iCloud
+        </button>
+      </div>
+      {backups !== null && (
+        <div className="mt-4 overflow-hidden rounded-3xl bg-canvas" role="list" aria-label="Backups in iCloud">
+          {rows.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-secondary">No backups found yet.</p>
+          ) : (
+            rows.slice(0, 30).map((item) => (
+              <button
+                key={`${item.deviceId}/${item.name}`}
+                type="button"
+                role="listitem"
+                disabled={busy}
+                className="flex w-full items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-left active:bg-fill last:border-b-0"
+                onClick={() => void choose(item)}
               >
-                <span
-                  className="block size-6 rounded-full bg-white transition-transform"
-                  style={{ transform: state.enabled ? "translateX(20px)" : "none" }}
-                />
-              </span>
-            </button>
-            <button
-              type="button"
-              disabled={!state.enabled || state.runner.busy}
-              className="flex h-12 w-full items-center border-b border-line px-4 text-left text-base active:bg-fill disabled:text-tertiary"
-              onClick={() => void backupNow().then(() => refreshBackupStatus())}
-            >
-              Back up now
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              className="flex h-12 w-full items-center px-4 text-left text-base active:bg-fill disabled:text-tertiary"
-              onClick={() => void openList()}
-            >
-              Restore from iCloud
-            </button>
-          </div>
-          {backups !== null && (
-            <div
-              className="mt-4 overflow-hidden rounded-3xl bg-canvas"
-              role="list"
-              aria-label="Backups in iCloud"
-            >
-              {rows.length === 0 ? (
-                <p className="px-4 py-3 text-sm text-secondary">No backups found yet.</p>
-              ) : (
-                rows.slice(0, 30).map((item) => (
-                  <button
-                    key={`${item.deviceId}/${item.name}`}
-                    type="button"
-                    role="listitem"
-                    disabled={busy}
-                    className="flex w-full items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-left active:bg-fill last:border-b-0"
-                    onClick={() => void choose(item)}
-                  >
-                    <span>
-                      <span className="block text-base">
-                        {new Date(item.createdAt).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      <span className="block text-xs text-secondary">
-                        {item.own ? "This device" : "Another device"}
-                        {item.pin
-                          ? ` · saved before ${item.pin.replace(/^pre-/, "").replace(/-/g, " ")}`
-                          : ""}{" "}
-                        · {formatBytes(item.bytes)}
-                        {item.downloaded ? "" : " · in iCloud"}
-                      </span>
-                    </span>
-                    <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
-                  </button>
-                ))
-              )}
-            </div>
+                <span>
+                  <span className="block text-base">
+                    {new Date(item.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </span>
+                  <span className="block text-xs text-secondary">
+                    {item.own ? "This device" : "Another device"}
+                    {item.pin ? ` · saved before ${item.pin.replace(/^pre-/, "").replace(/-/g, " ")}` : ""} · {formatBytes(item.bytes)}
+                    {item.downloaded ? "" : " · in iCloud"}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
+              </button>
+            ))
           )}
-        </>
+        </div>
       )}
+      </>}
       <RestoreDialog
         backup={picked}
         onClose={() => setPicked(null)}
@@ -2777,12 +2115,7 @@ function ICloudMain({
 function SubHeader({ onBack }: { onBack: () => void }) {
   return (
     <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
-      <button
-        type="button"
-        aria-label="Back"
-        onClick={onBack}
-        className="grid size-11 place-items-center rounded-full text-secondary"
-      >
+      <button type="button" aria-label="Back" onClick={onBack} className="grid size-11 place-items-center rounded-full text-secondary">
         <ChevronRight className="size-5 rotate-180" strokeWidth={2.7} />
       </button>
       <div className="mx-auto h-1 w-9 rounded-full bg-fill" aria-hidden="true" />
@@ -2793,9 +2126,7 @@ function SubHeader({ onBack }: { onBack: () => void }) {
 
 function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
   const state = useCloudSync();
-  const profileName = useSpread(
-    (s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? "this profile",
-  );
+  const profileName = useSpread((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? "this profile");
   const [confirmOff, setConfirmOff] = useState(false);
   const [confirmAgain, setConfirmAgain] = useState(false);
   const said = describeSync({
@@ -2808,22 +2139,16 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
     lastSyncAt: state.view?.lastSyncAt ?? null,
     lastError: state.view?.lastError ?? null,
     quotaExceeded: state.native?.quotaExceeded ?? false,
-    damaged:
-      (state.view?.damaged ?? 0) +
-      (state.native?.damagedRecords ?? 0) +
-      (state.native?.needsRepair ? 1 : 0),
+    damaged: (state.view?.damaged ?? 0) + (state.native?.damagedRecords ?? 0) + (state.native?.needsRepair ? 1 : 0),
     blocked: Boolean(state.view?.blocked),
     now: new Date(state.now),
   });
-  const rowClass =
-    "flex h-12 w-full items-center justify-between px-4 text-left text-base active:bg-fill disabled:text-tertiary";
+  const rowClass = "flex h-12 w-full items-center justify-between px-4 text-left text-base active:bg-fill disabled:text-tertiary";
   return (
     <>
       <h3 className="mt-5 text-sm font-semibold text-secondary">Sync · {profileName}</h3>
       <div className="mt-2 rounded-3xl bg-canvas px-4 py-3" role="status" aria-live="polite">
-        <p className={cn("text-base font-semibold", said.tone === "problem" && "text-danger")}>
-          {said.title}
-        </p>
+        <p className={cn("text-base font-semibold", said.tone === "problem" && "text-danger")}>{said.title}</p>
         {said.detail ? <p className="mt-0.5 text-sm text-secondary">{said.detail}</p> : null}
       </div>
       <div className="stack-rows mt-3 overflow-hidden rounded-3xl bg-canvas">
@@ -2836,57 +2161,31 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
           <>
             {state.view?.blocked && (
               <>
-                <button
-                  type="button"
-                  className={cn(rowClass, "border-b border-line")}
-                  onClick={() => void resolveBlockedSync("restore")}
-                >
+                <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => void resolveBlockedSync("restore")}>
                   Put my last synced planner back
                 </button>
-                <button
-                  type="button"
-                  className={cn(rowClass, "border-b border-line text-danger")}
-                  onClick={() => void resolveBlockedSync("keep-deletion")}
-                >
+                <button type="button" className={cn(rowClass, "border-b border-line text-danger")} onClick={() => void resolveBlockedSync("keep-deletion")}>
                   I cleared it on purpose
                 </button>
               </>
             )}
-            {((state.view?.conflicts.length ?? 0) > 0 ||
-              (state.view?.discarded.length ?? 0) > 0) && (
-              <button
-                type="button"
-                className={cn(rowClass, "border-b border-line")}
-                onClick={() => go("conflicts")}
-              >
+            {((state.view?.conflicts.length ?? 0) > 0 || (state.view?.discarded.length ?? 0) > 0) && (
+              <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => go("conflicts")}>
                 {(state.view?.conflicts.length ?? 0) > 0
                   ? `Review ${state.view?.conflicts.length} ${state.view?.conflicts.length === 1 ? "change" : "changes"}`
                   : `Set-aside changes (${state.view?.discarded.length})`}
                 <ChevronRight className="size-4 text-tertiary" strokeWidth={2.7} />
               </button>
             )}
-            <button
-              type="button"
-              disabled={Boolean(state.paused)}
-              className={cn(rowClass, "border-b border-line")}
-              onClick={() => void syncNowAction()}
-            >
+            <button type="button" disabled={Boolean(state.paused)} className={cn(rowClass, "border-b border-line")} onClick={() => void syncNowAction()}>
               Sync now
             </button>
             {state.paused && (
-              <button
-                type="button"
-                className={cn(rowClass, "border-b border-line")}
-                onClick={() => setConfirmAgain(true)}
-              >
+              <button type="button" className={cn(rowClass, "border-b border-line")} onClick={() => setConfirmAgain(true)}>
                 Upload this profile to this iCloud again
               </button>
             )}
-            <button
-              type="button"
-              className={cn(rowClass, "text-danger")}
-              onClick={() => setConfirmOff(true)}
-            >
+            <button type="button" className={cn(rowClass, "text-danger")} onClick={() => setConfirmOff(true)}>
               Turn off sync for this profile
             </button>
           </>
@@ -2896,21 +2195,13 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
           <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-            <AlertDialog.Title className="text-center text-base font-semibold">
-              Upload {profileName} again?
-            </AlertDialog.Title>
+            <AlertDialog.Title className="text-center text-base font-semibold">Upload {profileName} again?</AlertDialog.Title>
             <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-              This sends {profileName} from this device to the iCloud account that is signed in now.
-              Nothing on this device changes.
+              This sends {profileName} from this device to the iCloud account that is signed in now. Nothing on this device changes.
             </AlertDialog.Description>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">
-                Cancel
-              </AlertDialog.Cancel>
-              <AlertDialog.Action
-                className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
-                onClick={() => void uploadAgain()}
-              >
+              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
+              <AlertDialog.Action className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => void uploadAgain()}>
                 Upload
               </AlertDialog.Action>
             </div>
@@ -2921,17 +2212,12 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
           <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-            <AlertDialog.Title className="text-center text-base font-semibold">
-              Turn off sync for {profileName}?
-            </AlertDialog.Title>
+            <AlertDialog.Title className="text-center text-base font-semibold">Turn off sync for {profileName}?</AlertDialog.Title>
             <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-              Everything stays on this device. Your other devices keep what they have. The copy
-              already in iCloud is not deleted.
+              Everything stays on this device. Your other devices keep what they have. The copy already in iCloud is not deleted.
             </AlertDialog.Description>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">
-                Cancel
-              </AlertDialog.Cancel>
+              <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
               <AlertDialog.Action
                 className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
                 onClick={() => {
@@ -2949,9 +2235,7 @@ function SyncSection({ go }: { go: (view: "link" | "conflicts") => void }) {
 }
 
 function SyncLinkView({ onBack }: { onBack: () => void }) {
-  const profileName = useSpread(
-    (s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? "this profile",
-  );
+  const profileName = useSpread((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? "this profile");
   const [choices, setChoices] = useState<LinkChoice[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -2981,95 +2265,51 @@ function SyncLinkView({ onBack }: { onBack: () => void }) {
     setBusy(false);
   }
 
-  const rowClass =
-    "flex w-full flex-col items-start gap-0.5 border-b border-line px-4 py-3 text-left active:bg-fill disabled:text-tertiary last:border-b-0";
+  const rowClass = "flex w-full flex-col items-start gap-0.5 border-b border-line px-4 py-3 text-left active:bg-fill disabled:text-tertiary last:border-b-0";
   return (
     <>
       <SubHeader onBack={onBack} />
       <Dialog.Title className="text-2xl font-bold tracking-tight">Sync {profileName}</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        Spread never combines profiles that were made separately. Every choice below keeps
-        everything you have, and a copy is saved first.
+        Spread never combines profiles that were made separately. Every choice below keeps everything you have, and a copy is saved first.
       </Dialog.Description>
       {failed ? (
-        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">
-          Couldn’t reach iCloud. Check that you are signed in and online, then try again.
-        </p>
+        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Couldn’t reach iCloud. Check that you are signed in and online, then try again.</p>
       ) : choices === null ? (
-        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">
-          Looking in iCloud…
-        </p>
+        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Looking in iCloud…</p>
       ) : (
         <div className="mt-4 overflow-hidden rounded-3xl bg-canvas">
           {choices.map((choice, index) => {
             if (choice.kind === "upload") {
               return (
-                <button
-                  key={index}
-                  type="button"
-                  disabled={busy}
-                  className={rowClass}
-                  onClick={() => void run(linkUpload, "iCloud Sync is on.")}
-                >
+                <button key={index} type="button" disabled={busy} className={rowClass} onClick={() => void run(linkUpload, "iCloud Sync is on.")}>
                   <span className="text-base">Upload {profileName} to iCloud</span>
-                  <span className="text-xs text-secondary">
-                    Nothing from this profile has been uploaded yet. It stays on this device too.
-                  </span>
+                  <span className="text-xs text-secondary">Nothing from this profile has been uploaded yet. It stays on this device too.</span>
                 </button>
               );
             }
             if (choice.kind === "adopt") {
               return (
-                <button
-                  key={index}
-                  type="button"
-                  disabled={busy}
-                  className={rowClass}
-                  onClick={() => void run(() => linkAdopt(choice.cloud), "iCloud Sync is on.")}
-                >
-                  <span className="text-base">
-                    Use “{choice.cloud.name || "iCloud profile"}” from iCloud
-                  </span>
-                  <span className="text-xs text-secondary">
-                    {choice.cloud.tasks} {choice.cloud.tasks === 1 ? "task" : "tasks"},{" "}
-                    {choice.cloud.weeks} {choice.cloud.weeks === 1 ? "week" : "weeks"}. This profile
-                    is empty, so it becomes that one.
-                  </span>
+                <button key={index} type="button" disabled={busy} className={rowClass} onClick={() => void run(() => linkAdopt(choice.cloud), "iCloud Sync is on.")}>
+                  <span className="text-base">Use “{choice.cloud.name || "iCloud profile"}” from iCloud</span>
+                  <span className="text-xs text-secondary">{choice.cloud.tasks} {choice.cloud.tasks === 1 ? "task" : "tasks"}, {choice.cloud.weeks} {choice.cloud.weeks === 1 ? "week" : "weeks"}. This profile is empty, so it becomes that one.</span>
                 </button>
               );
             }
             if (choice.kind === "add-copy") {
               return (
-                <button
-                  key={index}
-                  type="button"
-                  disabled={busy || choice.needsSlot}
-                  className={rowClass}
-                  onClick={() => void run(() => linkAddCopy(choice.cloud), "Profile added.")}
-                >
-                  <span className="text-base">
-                    Add “{choice.cloud.name || "iCloud profile"}” as a new profile
-                  </span>
+                <button key={index} type="button" disabled={busy || choice.needsSlot} className={rowClass} onClick={() => void run(() => linkAddCopy(choice.cloud), "Profile added.")}>
+                  <span className="text-base">Add “{choice.cloud.name || "iCloud profile"}” as a new profile</span>
                   <span className="text-xs text-secondary">
-                    {choice.needsSlot
-                      ? "This device has no room for another profile. Remove one first."
-                      : `${choice.cloud.tasks} ${choice.cloud.tasks === 1 ? "task" : "tasks"}, ${choice.cloud.weeks} ${choice.cloud.weeks === 1 ? "week" : "weeks"}. ${profileName} is left as it is.`}
+                    {choice.needsSlot ? "This device has no room for another profile. Remove one first." : `${choice.cloud.tasks} ${choice.cloud.tasks === 1 ? "task" : "tasks"}, ${choice.cloud.weeks} ${choice.cloud.weeks === 1 ? "week" : "weeks"}. ${profileName} is left as it is.`}
                   </span>
                 </button>
               );
             }
             return (
-              <button
-                key={index}
-                type="button"
-                disabled={busy}
-                className={rowClass}
-                onClick={() => void run(linkUpload, "iCloud Sync is on.")}
-              >
+              <button key={index} type="button" disabled={busy} className={rowClass} onClick={() => void run(linkUpload, "iCloud Sync is on.")}>
                 <span className="text-base">Upload {profileName} as its own iCloud profile</span>
-                <span className="text-xs text-secondary">
-                  Kept apart from the profiles already in iCloud.
-                </span>
+                <span className="text-xs text-secondary">Kept apart from the profiles already in iCloud.</span>
               </button>
             );
           })}
@@ -3087,9 +2327,7 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
   const lookup = (id: string) => hats.find((hat) => hat.id === id)?.name ?? null;
   async function choose(id: string, choice: "local" | "remote" | "both") {
     setBusy(true);
-    await resolveSyncConflict(id, choice).catch(() =>
-      toast("Couldn’t save that choice. Try again."),
-    );
+    await resolveSyncConflict(id, choice).catch(() => toast("Couldn’t save that choice. Try again."));
     setBusy(false);
   }
   return (
@@ -3097,13 +2335,10 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
       <SubHeader onBack={onBack} />
       <Dialog.Title className="text-2xl font-bold tracking-tight">Your choice</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        These were changed on two devices in ways Spread can’t combine. Whichever you pick, the
-        version you don’t pick is kept for 30 days below, so you can put it back.
+        These were changed on two devices in ways Spread can’t combine. Whichever you pick, the version you don’t pick is kept for 30 days below, so you can put it back.
       </Dialog.Description>
       {conflicts.length === 0 ? (
-        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">
-          Nothing needs your choice.
-        </p>
+        <p className="mt-4 rounded-3xl bg-canvas px-4 py-3 text-sm text-secondary">Nothing needs your choice.</p>
       ) : (
         conflicts.map((conflict) => {
           const card = describeConflict(conflict, lookup);
@@ -3118,29 +2353,14 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
                 </div>
               ))}
               <div className="mt-3 grid gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent"
-                  onClick={() => void choose(conflict.id, "local")}
-                >
+                <button type="button" disabled={busy} className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent" onClick={() => void choose(conflict.id, "local")}>
                   Keep this device’s
                 </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="h-11 rounded-full bg-fill text-sm font-semibold"
-                  onClick={() => void choose(conflict.id, "remote")}
-                >
+                <button type="button" disabled={busy} className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={() => void choose(conflict.id, "remote")}>
                   Use the other device’s
                 </button>
                 {canKeepBoth(conflict) && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    className="h-11 rounded-full bg-fill text-sm font-semibold"
-                    onClick={() => void choose(conflict.id, "both")}
-                  >
+                  <button type="button" disabled={busy} className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={() => void choose(conflict.id, "both")}>
                     Keep both
                   </button>
                 )}
@@ -3154,26 +2374,12 @@ function SyncConflictsView({ onBack }: { onBack: () => void }) {
           <h3 className="mt-6 text-sm font-semibold text-secondary">Set aside (kept 30 days)</h3>
           <div className="mt-2 overflow-hidden rounded-3xl bg-canvas">
             {discarded.map((entry, index) => (
-              <div
-                key={`${entry.id}-${entry.at}`}
-                className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 text-sm last:border-b-0"
-              >
+              <div key={`${entry.id}-${entry.at}`} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 text-sm last:border-b-0">
                 <span className="min-w-0">
-                  <span className="block truncate">
-                    {entry.item.deleted
-                      ? "Deleted item"
-                      : String(entry.item.fields.text ?? entry.item.fields.name ?? "Change")}
-                  </span>
-                  <span className="block text-xs text-secondary">
-                    {entry.side === "icloud" ? "From the other device" : "From this device"}
-                  </span>
+                  <span className="block truncate">{entry.item.deleted ? "Deleted item" : String(entry.item.fields.text ?? entry.item.fields.name ?? "Change")}</span>
+                  <span className="block text-xs text-secondary">{entry.side === "icloud" ? "From the other device" : "From this device"}</span>
                 </span>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="h-9 shrink-0 rounded-full bg-fill px-4 text-sm font-semibold"
-                  onClick={() => void restoreDiscardedChange(index)}
-                >
+                <button type="button" disabled={busy} className="h-9 shrink-0 rounded-full bg-fill px-4 text-sm font-semibold" onClick={() => void restoreDiscardedChange(index)}>
                   Put back
                 </button>
               </div>
@@ -3199,37 +2405,24 @@ function RestoreFullDialog({
   const restorable = profiles.filter((item) => item.readable);
   const damaged = profiles.filter((item) => !item.readable);
   const mustChoose = restorable.length > room;
-  const [chosen, setChosen] = useState<string[]>(() =>
-    restorable.slice(0, room).map((item) => item.id),
-  );
+  const [chosen, setChosen] = useState<string[]>(() => restorable.slice(0, room).map((item) => item.id));
   const count = mustChoose ? chosen.length : restorable.length;
   const names = restorable.map((item) => item.name);
-  const listed =
-    names.length <= 3
-      ? names.join(", ")
-      : `${names.slice(0, 2).join(", ")}, and ${names.length - 2} more`;
+  const listed = names.length <= 3 ? names.join(", ") : `${names.slice(0, 2).join(", ")}, and ${names.length - 2} more`;
   return (
     <AlertDialog.Root open onOpenChange={(open) => !open && onClose()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
         <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-[60] mx-auto max-h-[80vh] max-w-xs -translate-y-1/2 overflow-y-auto rounded-3xl bg-elevated p-5 outline-none">
-          <AlertDialog.Title className="text-center text-base font-semibold">
-            {mustChoose ? "Choose profiles to restore" : "Add these profiles?"}
-          </AlertDialog.Title>
+          <AlertDialog.Title className="text-center text-base font-semibold">{mustChoose ? "Choose profiles to restore" : "Add these profiles?"}</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
             {mustChoose
               ? `This device has room for ${room}. Pick which of the ${restorable.length} to restore. The rest stay in the backup file.`
               : `${listed}. ${backup.summary.weeks} ${backup.summary.weeks === 1 ? "week" : "weeks"}, ${backup.summary.tasks} ${backup.summary.tasks === 1 ? "task" : "tasks"}. Nothing that has content on this device changes. An empty profile may be filled; the others are added with “restored” in their names.`}
-            {damaged.length > 0
-              ? ` ${damaged.length === 1 ? `“${damaged[0].name}” is damaged and can’t be restored.` : `${damaged.length} profiles are damaged and can’t be restored.`}`
-              : ""}
+            {damaged.length > 0 ? ` ${damaged.length === 1 ? `“${damaged[0].name}” is damaged and can’t be restored.` : `${damaged.length} profiles are damaged and can’t be restored.`}` : ""}
           </AlertDialog.Description>
           {mustChoose && (
-            <div
-              className="mt-3 overflow-hidden rounded-2xl bg-canvas"
-              role="group"
-              aria-label="Profiles in the backup"
-            >
+            <div className="mt-3 overflow-hidden rounded-2xl bg-canvas" role="group" aria-label="Profiles in the backup">
               {restorable.map((item) => {
                 const on = chosen.includes(item.id);
                 return (
@@ -3240,18 +2433,11 @@ function RestoreFullDialog({
                     aria-checked={on}
                     disabled={!on && chosen.length >= room}
                     className="flex w-full items-center justify-between gap-3 border-b border-line px-3 py-2.5 text-left text-sm last:border-b-0 disabled:text-tertiary"
-                    onClick={() =>
-                      setChosen((now) =>
-                        on ? now.filter((id) => id !== item.id) : [...now, item.id],
-                      )
-                    }
+                    onClick={() => setChosen((now) => (on ? now.filter((id) => id !== item.id) : [...now, item.id]))}
                   >
                     <span>
                       {item.name}
-                      <span className="block text-xs text-secondary">
-                        {item.tasks} {item.tasks === 1 ? "task" : "tasks"}, {item.weeks}{" "}
-                        {item.weeks === 1 ? "week" : "weeks"}
-                      </span>
+                      <span className="block text-xs text-secondary">{item.tasks} {item.tasks === 1 ? "task" : "tasks"}, {item.weeks} {item.weeks === 1 ? "week" : "weeks"}</span>
                     </span>
                     {on ? <Check className="size-4 text-accent" strokeWidth={3} /> : null}
                   </button>
@@ -3260,9 +2446,7 @@ function RestoreFullDialog({
             </div>
           )}
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">
-              Cancel
-            </AlertDialog.Cancel>
+            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
             <AlertDialog.Action
               disabled={count === 0}
               className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-50"
@@ -3300,24 +2484,14 @@ function copyTextFallback(text: string) {
   return ok;
 }
 
-function Segmented({
-  value,
-  onChange,
-}: {
-  value: ThemeChoice;
-  onChange: (theme: ThemeChoice) => void;
-}) {
+function Segmented({ value, onChange }: { value: ThemeChoice; onChange: (theme: ThemeChoice) => void }) {
   const options: { value: ThemeChoice; label: string }[] = [
     { value: "system", label: "System" },
     { value: "light", label: "Light" },
     { value: "dark", label: "Dark" },
   ];
   return (
-    <div
-      className="grid grid-cols-3 rounded-full bg-fill p-1"
-      role="radiogroup"
-      aria-label="Appearance"
-    >
+    <div className="grid grid-cols-3 rounded-full bg-fill p-1" role="radiogroup" aria-label="Appearance">
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -3342,9 +2516,9 @@ function Segmented({
 
 function NewLifeSheet({ onClose }: { onClose: () => void }) {
   const addHat = useSpread((s) => s.addHat);
-  const [rows, setRows] = useState<
-    { key: number; name: string; hours: number; category: SpreadCategory | null }[]
-  >([{ key: 1, name: "", hours: 2, category: null }]);
+  const [rows, setRows] = useState<{ key: number; name: string; hours: number; category: SpreadCategory | null }[]>([
+    { key: 1, name: "", hours: 2, category: null },
+  ]);
   const [nextKey, setNextKey] = useState(2);
   const ready = rows.some((row) => row.name.trim());
 
@@ -3353,8 +2527,7 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
       onSubmit={(event) => {
         event.preventDefault();
         for (const row of rows) {
-          if (row.name.trim())
-            addHat(row.name, row.hours, row.category ? { category: row.category } : undefined);
+          if (row.name.trim()) addHat(row.name, row.hours, row.category ? { category: row.category } : undefined);
         }
         onClose();
       }}
@@ -3377,9 +2550,7 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
               placeholder="Parent, shop, study"
               onChange={(event) =>
                 setRows((current) =>
-                  current.map((item) =>
-                    item.key === row.key ? { ...item, name: event.target.value } : item,
-                  ),
+                  current.map((item) => (item.key === row.key ? { ...item, name: event.target.value } : item)),
                 )
               }
               className="mt-2 h-12 w-full rounded-2xl bg-fill px-4 text-base outline-none placeholder:text-tertiary"
@@ -3390,17 +2561,13 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
                 value={row.hours}
                 label={`Hours for spread ${index + 1}`}
                 onChange={(hours) =>
-                  setRows((current) =>
-                    current.map((item) => (item.key === row.key ? { ...item, hours } : item)),
-                  )
+                  setRows((current) => current.map((item) => (item.key === row.key ? { ...item, hours } : item)))
                 }
               />
             </div>
             <p className="mt-3 text-xs text-secondary">
               Symbol
-              {row.category
-                ? ` · ${SPREAD_CATEGORIES.find((item) => item.id === row.category)?.label}`
-                : ""}
+              {row.category ? ` · ${SPREAD_CATEGORIES.find((item) => item.id === row.category)?.label}` : ""}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {SPREAD_CATEGORIES.map((item) => {
@@ -3415,9 +2582,7 @@ function NewLifeSheet({ onClose }: { onClose: () => void }) {
                     style={selected ? { boxShadow: "0 0 0 2px var(--ink)" } : undefined}
                     onClick={() =>
                       setRows((current) =>
-                        current.map((entry) =>
-                          entry.key === row.key ? { ...entry, category: item.id } : entry,
-                        ),
+                        current.map((entry) => (entry.key === row.key ? { ...entry, category: item.id } : entry)),
                       )
                     }
                   >
@@ -3464,17 +2629,12 @@ function RolloverDialog({
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-50 bg-scrim" />
         <AlertDialog.Content className="pop no-print fixed inset-x-4 top-1/2 z-50 mx-auto max-w-xs -translate-y-1/2 rounded-3xl bg-elevated p-5 outline-none">
-          <AlertDialog.Title className="text-center text-base font-semibold">
-            Replace next week?
-          </AlertDialog.Title>
+          <AlertDialog.Title className="text-center text-base font-semibold">Replace next week?</AlertDialog.Title>
           <AlertDialog.Description className="mt-1 text-center text-sm text-secondary">
-            Next week already has tasks or days. Rollover will replace that week. This week stays as
-            it is.
+            Next week already has tasks or days. Rollover will replace that week. This week stays as it is.
           </AlertDialog.Description>
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">
-              Cancel
-            </AlertDialog.Cancel>
+            <AlertDialog.Cancel className="h-11 rounded-full bg-fill text-sm font-semibold">Cancel</AlertDialog.Cancel>
             <AlertDialog.Action
               className="flex h-11 items-center justify-center gap-1.5 rounded-full bg-accent text-sm font-semibold text-on-accent"
               onClick={onConfirm}
@@ -3547,11 +2707,7 @@ function CarryOverSheet({ open, onClose }: { open: boolean; onClose: () => void 
 
   function confirm() {
     const moved = carryOver(chosen.map((item) => ({ hatId: item.hatId, taskId: item.task.id })));
-    toast(
-      moved === 0
-        ? "Nothing to move."
-        : `${moved} ${moved === 1 ? "task" : "tasks"} moved to next week.`,
-    );
+    toast(moved === 0 ? "Nothing to move." : `${moved} ${moved === 1 ? "task" : "tasks"} moved to next week.`);
     setOff(new Set());
     onClose();
   }
@@ -3564,8 +2720,7 @@ function CarryOverSheet({ open, onClose }: { open: boolean; onClose: () => void 
           <Grabber />
           <Dialog.Title className="text-lg font-semibold">Open tasks</Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-secondary">
-            Pick what moves to next week. The rest stays here. Next week’s own tasks and days are
-            not touched.
+            Pick what moves to next week. The rest stays here. Next week’s own tasks and days are not touched.
           </Dialog.Description>
           <ul className="mt-4 overflow-hidden rounded-3xl bg-canvas">
             {items.map((item, index) => {
@@ -3587,37 +2742,21 @@ function CarryOverSheet({ open, onClose }: { open: boolean; onClose: () => void 
                       })
                     }
                   >
-                    <span
-                      className="grid size-6 shrink-0 place-items-center rounded-full border-2"
-                      style={{ borderColor: on ? "var(--accent)" : "var(--tertiary)" }}
-                    >
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full border-2" style={{ borderColor: on ? "var(--accent)" : "var(--tertiary)" }}>
                       {on && <Check className="size-4 text-accent" aria-hidden="true" />}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-base">
-                      {item.task.text || "Untitled task"}
-                    </span>
-                    <span className="shrink-0 text-xs text-secondary">
-                      {hats.get(item.hatId)?.name}
-                    </span>
+                    <span className="min-w-0 flex-1 truncate text-base">{item.task.text || "Untitled task"}</span>
+                    <span className="shrink-0 text-xs text-secondary">{hats.get(item.hatId)?.name}</span>
                   </button>
                 </li>
               );
             })}
           </ul>
           <div className="mt-4 grid grid-cols-2 gap-2 pb-2">
-            <button
-              type="button"
-              className="h-11 rounded-full bg-fill text-sm font-semibold"
-              onClick={onClose}
-            >
+            <button type="button" className="h-11 rounded-full bg-fill text-sm font-semibold" onClick={onClose}>
               Not now
             </button>
-            <button
-              type="button"
-              disabled={chosen.length === 0}
-              className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-40"
-              onClick={confirm}
-            >
+            <button type="button" disabled={chosen.length === 0} className="h-11 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-40" onClick={confirm}>
               Move {chosen.length}
             </button>
           </div>
@@ -3632,9 +2771,7 @@ function LocalStatusRow() {
   const status = deriveLocalStatus(facts, new Date());
   return (
     <div className="mt-3 rounded-2xl bg-canvas px-4 py-3" role="status">
-      <p className={cn("text-sm font-semibold", status.tone === "problem" && "text-danger")}>
-        {status.title}
-      </p>
+      <p className={cn("text-sm font-semibold", status.tone === "problem" && "text-danger")}>{status.title}</p>
       <p className="mt-0.5 text-xs text-secondary">{status.detail}</p>
     </div>
   );

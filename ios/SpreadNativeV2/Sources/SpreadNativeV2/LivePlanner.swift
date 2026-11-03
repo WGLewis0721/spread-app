@@ -49,9 +49,11 @@ struct LiveReply: Decodable {
     @discardableResult func send(_ action: [String: Any], completionHaptic: Bool = false) async -> Bool {
         let previous = tail
         let originProfile = state?.envelope.profileId
+        let originWeek = state?.envelope.snapshot.weekKey
         let task = Task { @MainActor in
             _ = await previous?.value
             guard let current = self.state, current.envelope.profileId == originProfile else { return false }
+            if action["type"] as? String != "changeWeek", current.envelope.snapshot.weekKey != originWeek { self.error = "The week changed. Please choose the task again."; return false }
             self.busy = true
             defer { self.busy = false }
             do {

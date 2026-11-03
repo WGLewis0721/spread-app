@@ -119,3 +119,23 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(PlannerSnapshot.self, from: encoded), fixture)
     }
 }
+
+private struct ParityVector: Decodable {
+    let envelope: NativeV2Envelope
+    let remaining: Double
+    let eligible: [String]
+}
+
+extension NativeContractsTests {
+    func testSixtySharedPlannerVectors() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "parity-v1", withExtension: "json", subdirectory: "Fixtures"))
+        let vectors = try JSONDecoder().decode([ParityVector].self, from: Data(contentsOf: url))
+        XCTAssertEqual(vectors.count, 60)
+        for vector in vectors {
+            let snapshot = vector.envelope.snapshot
+            XCTAssertTrue(vector.envelope.isSupported)
+            XCTAssertEqual(snapshot.remainingHours(for: "r"), vector.remaining)
+            XCTAssertEqual(snapshot.eligibleAllocations(for: try XCTUnwrap(snapshot.tasks.first)).map(\.id), vector.eligible)
+        }
+    }
+}
