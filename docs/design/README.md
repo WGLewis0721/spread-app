@@ -30,6 +30,7 @@ Rarely needed: [DECISIONS.md](DECISIONS.md) and historical Unified UX.
 | --- | --- | --- |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
+| SwiftUI working-build parity | [root spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) + [instructions](../../SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) | Capture the original app first |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
 | Layout for iPhone, iPad or iPhone Duo; safe areas; dark palette; App Store screenshots | [packs/device-layout.md](packs/device-layout.md) | The device guide sections named in the pack |
@@ -58,6 +59,7 @@ All paths are under `docs/design/`.
 | specs/ (README.md is the index) | One spec per request | Plans, not approval |
 | packs/ | One digest per kind of task | Derived. The long documents win if they differ |
 | tokens.json | Planner tokens, light and dark | Generated from `src/styles.css` |
+| [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native UI parity | Owner direction |
 | planner/SPREAD_DESIGN_SYSTEM.md | Planner visuals and patterns | Highest for planner UI. Includes the 2026-10-08 HIG polish and the reference lock |
 | planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | The Unified UX pass and its result matrix | Historical record, not a design authority. Its Duo section is superseded by the Duo guide |
 | landing/DESIGN.md | Landing page | Highest for the landing page only, never for planner decisions. Frozen as `golden/2026-09-28-full-landing-modes` |

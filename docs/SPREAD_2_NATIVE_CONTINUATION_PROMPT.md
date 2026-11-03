@@ -1,5 +1,7 @@
 # Spread 2.0 native: handoff after PR #117 (November 3, 2026)
 
+> **New visual-design direction:** Use the root [SwiftUI working-build parity spec](../SPREAD_SWIFTUI_PARITY_SPEC.md) and [outside-in execution instructions](../SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) for all future native UI/UX changes. The old working app's observable design and behavior supersede this document's earlier assumptions about a native redesign. Preserve this document as implementation history.
+
 Read this first, then the [remaining-work spec](design/specs/2026-11-03-spread-2-native-acceptance-remaining.md) and the [PR #117 evidence record](evidence/issue-113/pr-117-acceptance.md). Older context: [SPREAD_2_NATIVE_HANDOFF.md](SPREAD_2_NATIVE_HANDOFF.md) (its own continuation prompt is superseded by this one), [native completion spec](design/specs/2026-11-03-spread-2-native-completion.md), `CLAUDE.md`, `AGENTS.project.md`.
 
 **Native 2.0 release: NO-GO.** Master issue: [#113](https://github.com/WGLewis0721/spread-app/issues/113). Repository: `WGLewis0721/spread-app`.

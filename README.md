@@ -2,6 +2,8 @@
 
 # Spread
 
+**Current native design direction:** [Working-build → SwiftUI parity spec](SPREAD_SWIFTUI_PARITY_SPEC.md) · [Outside-in migration instructions](SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md). The previously working installed app, once pinned to its exact build, is the UI/UX reference. This is a native reimplementation, **not a rollback or a new design**; no release is authorized by these docs.
+
 The weekly role spread. Roles first. Hours second. Tasks last.
 
 Spread is a local-first weekly planner. You name the responsibilities in your life, give each one some hours, put those hours on real days, and only then add the tasks. No account; your planning stays on your device.

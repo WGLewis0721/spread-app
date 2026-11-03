@@ -32,3 +32,4 @@ Resolve an open decision here and in its source document together, then move the
 | 2026-10-28 | All design documents consolidated under `docs/design/`; Apple design principles added | README.md |
 | 2026-10-28 | Plan and spec protocol, spec template and AI tool entry points added; docs link check added to CI | PLAN_SPEC_PROTOCOL.md, AI_TOOL_SETUP.md |
 | 2026-10-28 | Docs restructured in tiers so agents load less: rules card synced into the always-loaded files, task packs, generated `tokens.json`, size budgets | README.md, packs/, RULES_CARD.md |
+| 2026-11-03 | Native SwiftUI must reproduce the observed pre-migration working app from outer shell to inner behavior, retaining the 11 original Chalkboard assets and five owner-approved modes; no rollback or new design language | [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) and [execution instructions](../../SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) |

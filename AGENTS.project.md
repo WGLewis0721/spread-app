@@ -5,6 +5,7 @@ These apply to any agent or tool working in this repository, alongside `AGENTS.m
 ## Before you change anything
 
 - Read `README.md` for how the planner works and where it deploys.
+- **Native SwiftUI design/migration tasks:** read root `SPREAD_SWIFTUI_PARITY_SPEC.md` and `SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md` first. The owner-approved pre-migration installed app is the observable UI/UX reference; current SwiftUI is a candidate, not a replacement design authority. Follow the outside-in capture and comparison gates before changing native presentation. No rollback/merge/release authority is implied.
 - Read `APP_STORE_RELEASE_PLAN.md` before any iOS packaging, TestFlight, App Store, native storage/share, pricing, or CloudKit work. It fixes the 1.0 direction as Capacitor + the existing React app, local-first, no account required, paid-app commerce. For iCloud backup/sync, migrations, attachments, iPad and the related release gates read `docs/ICLOUD_PLAN.md` too, and never ship a cloud feature outside its `cloud.*` flag until its gate has passed.
 - **Design work:** the block below is generated from `docs/design/RULES_CARD.md`. Do not edit it here; run `npm run docs:sync`. Landing page rules, planner rules and device notes are in the packs the router names.
 
