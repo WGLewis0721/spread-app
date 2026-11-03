@@ -97,8 +97,8 @@ struct WeekCrownView: View {
             withAnimation(reduceMotion ? nil : SpreadMotion.press) { translation = 0 }
         }
         .shadow(color: Spread.shadow, radius: 8, y: 4)
-        .onKeyPress(.leftArrow) { _ in move(-1); return .handled }
-        .onKeyPress(.rightArrow) { _ in move(1); return .handled }
+        .onKeyPress(.leftArrow) { move(-1); return .handled }
+        .onKeyPress(.rightArrow) { move(1); return .handled }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(title). Adjust to change weeks.")
         .accessibilityAdjustableAction { direction in

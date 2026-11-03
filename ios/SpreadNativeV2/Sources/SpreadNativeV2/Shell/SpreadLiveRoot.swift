@@ -36,7 +36,12 @@ public struct SpreadLiveRoot: View {
         self.recovery = recovery
     }
 
-    public var body: some View {
+    // The body is split into three short layers. One long modifier chain with closures in it exceeds the Swift
+    // type-checker's budget ("unable to type-check this expression in reasonable time").
+    public var body: some View { presented }
+
+    /// The planner layers and the standing accessibility identity.
+    private var layers: some View {
         ZStack(alignment: .bottom) {
             Spread.canvas.ignoresSafeArea()
             if let snapshot = planner.snapshot {
@@ -51,53 +56,75 @@ public struct SpreadLiveRoot: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("native-content")
         .accessibilityValue(reduceMotion ? "reduce-motion" : "motion")
-        .task { await planner.refresh() }
-        .task(id: planner.undoId) {
-            // The Undo notice is offered for six seconds (the store keeps its own rule for what can be undone).
-            guard planner.undoId != nil else { return }
-            try? await Task.sleep(nanoseconds: UInt64(SpreadUndo.seconds * 1_000_000_000))
-            if !Task.isCancelled { planner.undoId = nil }
+    }
+
+    /// Everything that reacts to the planner or the system: refresh, the Undo window, profile and view memory.
+    private var observed: some View {
+        layers
+            .task { await planner.refresh() }
+            .task(id: planner.undoId) { await expireUndo() }
+            .task { await foldBrandAfterFirstLook() }
+            .onChange(of: scenePhase) { _, phase in refreshWhenActive(phase) }
+            .onChange(of: planner.state?.envelope.profileId) { _, profile in openProfile(profile) }
+            .onChange(of: destination) { _, _ in persistView() }
+            .onChange(of: monthPlane) { _, _ in persistView() }
+            .onChange(of: layout) { _, value in SpreadLayoutPreference.write(value) }
+            .onChange(of: planner.snapshot?.weekKey) { _, _ in weekChanged() }
+    }
+
+    /// Sheets, the error alert, the week tick and the keyboard/first-touch hooks.
+    private var presented: some View {
+        observed
+            .sheet(item: $sheet) { current in sheetContent(current) }
+            .alert("Spread", isPresented: errorShown) { errorActions } message: { Text(planner.error ?? "") }
+            // A light tick for an accepted week change only: not at launch, and not when a profile opens on its own week.
+            .sensoryFeedback(.selection, trigger: weekTick)
+            .onKeyPress(.leftArrow) { keyWeek(-1) }
+            .onKeyPress(.rightArrow) { keyWeek(1) }
+            .simultaneousGesture(TapGesture().onEnded { foldBrand() })
+    }
+
+    private var errorShown: Binding<Bool> {
+        Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })
+    }
+
+    @ViewBuilder private var errorActions: some View {
+        Button("OK") { planner.error = nil }
+        if planner.errorOffersRetry {
+            Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
         }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await planner.refresh() } }
+        if planner.errorOffersBackup {
+            Button("Backup and restore") { recovery() }
         }
-        .onChange(of: planner.state?.envelope.profileId) { _, profile in
-            // Each profile opens where its own person left off, and nothing from the last profile carries over.
-            let remembered = SpreadViewMemory.read(profileId: profile)
-            destination = remembered.destination
-            monthPlane = false
-            selectedRole = nil
-            focusDay = nil
-            editing = false
-            sheet = nil
-            loadedProfile = profile
-        }
-        .onChange(of: destination) { _, _ in persistView() }
-        .onChange(of: monthPlane) { _, _ in persistView() }
-        .onChange(of: layout) { _, value in SpreadLayoutPreference.write(value) }
-        .onChange(of: planner.snapshot?.weekKey) { _, _ in weekChanged() }
-        .sheet(item: $sheet) { current in
-            sheetContent(current)
-        }
-        .alert("Spread", isPresented: Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })) {
-            Button("OK") { planner.error = nil }
-            if planner.errorOffersRetry {
-                Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
-            }
-            if planner.errorOffersBackup {
-                Button("Backup and restore") { recovery() }
-            }
-        } message: { Text(planner.error ?? "") }
-        // A light tick for an accepted week change only: not at launch, and not when a profile opens on its own week.
-        .sensoryFeedback(.selection, trigger: weekTick)
-        .onKeyPress(.leftArrow) { _ in keyWeek(-1) }
-        .onKeyPress(.rightArrow) { _ in keyWeek(1) }
-        .simultaneousGesture(TapGesture().onEnded { foldBrand() })
-        .task {
-            // The brand folds to its mark after a short look, as the web planner did (3.5 s or first touch).
-            try? await Task.sleep(nanoseconds: 3_500_000_000)
-            foldBrand()
-        }
+    }
+
+    /// The Undo notice is offered for six seconds (the store keeps its own rule for what can be undone).
+    private func expireUndo() async {
+        guard planner.undoId != nil else { return }
+        try? await Task.sleep(nanoseconds: UInt64(SpreadUndo.seconds * 1_000_000_000))
+        if !Task.isCancelled { planner.undoId = nil }
+    }
+
+    /// The brand folds to its mark after a short look, as the web planner did (3.5 s or first touch).
+    private func foldBrandAfterFirstLook() async {
+        try? await Task.sleep(nanoseconds: 3_500_000_000)
+        foldBrand()
+    }
+
+    private func refreshWhenActive(_ phase: ScenePhase) {
+        if phase == .active { Task { await planner.refresh() } }
+    }
+
+    /// Each profile opens where its own person left off, and nothing from the last profile carries over.
+    private func openProfile(_ profile: String?) {
+        let remembered = SpreadViewMemory.read(profileId: profile)
+        destination = remembered.destination
+        monthPlane = false
+        selectedRole = nil
+        focusDay = nil
+        editing = false
+        sheet = nil
+        loadedProfile = profile
     }
 
     // MARK: Opening and engine state
