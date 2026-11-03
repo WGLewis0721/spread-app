@@ -143,6 +143,11 @@ public enum ChalkArtwork {
         categories.contains(raw) ? raw : "custom"
     }
 
+    /// Categories that have an original category glyph (`category-glyph-*`). "custom" uses the list mark.
+    static let categoryGlyphNames: Set<String> = [
+        "work", "school", "home", "health", "family", "fitness", "business", "project", "church", "personal"
+    ]
+
     /// Resource URL is resolved from this package, not the host app or a network URL.
     public static func resourceURL(for categoryName: String) -> URL? {
         Bundle.module.url(forResource: category(for: categoryName),

@@ -1,0 +1,233 @@
+#if os(iOS)
+import SwiftUI
+
+/// The To place tray (`ToPlaceTray` in weekly-view.tsx): a dashed, tinted-on-hover container, grouped by
+/// responsibility because a task can only go on its own role's days. Groups start open while there are at
+/// most five tasks; past a group's first six, "Show N more" reveals the rest. Dropping a task here takes it
+/// off its day.
+struct ToPlaceTray: View {
+    @ObservedObject var planner: LivePlanner
+    let snapshot: PlannerSnapshot
+    let onOpenTask: (String, String) -> Void
+
+    @State private var toggled: [String: Bool] = [:]
+    @State private var expandedMore: Set<String> = []
+    @State private var targeted = false
+
+    static let openAllUpTo = 5
+    static let groupPreview = 6
+
+    private var tasks: [PlannerTask] { snapshot.unplacedTasks }
+    private var groups: [(role: Responsibility, tasks: [PlannerTask])] {
+        snapshot.roles.compactMap { role in
+            let mine = tasks.filter { $0.roleId == role.id }
+            return mine.isEmpty ? nil : (role, mine)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "tray").font(.system(size: 14, weight: .semibold)).foregroundStyle(Spread.secondary)
+                Text("To place").font(.system(size: 15, weight: .semibold))
+                Spacer()
+                if tasks.isEmpty {
+                    Text("Drop a task here to take it off its day.")
+                        .font(Spread.caption).foregroundStyle(Spread.secondary).multilineTextAlignment(.trailing)
+                } else {
+                    Text("\(tasks.count)")
+                        .font(.system(size: 12, weight: .semibold)).monospacedDigit()
+                        .padding(.horizontal, 8).frame(minHeight: 24)
+                        .background(Spread.fill, in: Capsule())
+                        .accessibilityLabel("\(tasks.count) to place")
+                }
+            }
+            .padding(.horizontal, 4)
+
+            if !groups.isEmpty {
+                VStack(spacing: 0) {
+                    let all = groups
+                    ForEach(all.indices, id: \.self) { index in
+                        groupView(all[index].role, all[index].tasks, first: index == 0)
+                    }
+                }
+                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, tasks.isEmpty ? 8 : 12)
+        .background(
+            RoundedRectangle(cornerRadius: Spread.radiusCard)
+                .fill(targeted ? Spread.accent.opacity(0.10) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Spread.radiusCard)
+                .strokeBorder(targeted ? Spread.accent : Spread.tertiary.opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
+        )
+        .dropDestination(for: SpreadDragPayload.self) { items, _ in
+            guard let item = items.first, item.kind == .task else { return false }
+            Task { await planner.send(["type": "assignTask", "roleId": item.roleId, "taskId": item.itemId, "allocationId": NSNull()]) }
+            return true
+        } isTargeted: { targeted = $0 }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("To place")
+        .accessibilityIdentifier("to-place-tray")
+    }
+
+    private func isOpen(_ role: Responsibility, count: Int) -> Bool {
+        toggled[role.id] ?? (tasks.count <= Self.openAllUpTo)
+    }
+
+    @ViewBuilder private func groupView(_ role: Responsibility, _ mine: [PlannerTask], first: Bool) -> some View {
+        let opened = isOpen(role, count: mine.count)
+        VStack(spacing: 0) {
+            if !first { Rectangle().fill(Spread.line).frame(height: 0.5) }
+            Button {
+                toggled[role.id] = !opened
+            } label: {
+                HStack(spacing: 12) {
+                    Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
+                    Text(role.name).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text("\(mine.count) \(mine.count == 1 ? "task" : "tasks")")
+                        .font(Spread.caption).foregroundStyle(Spread.secondary).monospacedDigit()
+                    Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                        .rotationEffect(.degrees(opened ? 180 : 0))
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 48)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(opened ? "Expanded" : "Collapsed")
+            .accessibilityIdentifier("tray-role-\(role.id)")
+
+            if opened {
+                let showAll = expandedMore.contains(role.id) || mine.count <= Self.groupPreview
+                let shown = showAll ? mine : Array(mine.prefix(Self.groupPreview))
+                VStack(spacing: 0) {
+                    ForEach(shown) { task in
+                        TaskLine(planner: planner, snapshot: snapshot, task: task, currentAllocation: nil, onOpenTask: onOpenTask)
+                    }
+                    if !showAll {
+                        Button { expandedMore.insert(role.id) } label: {
+                            Text("Show \(mine.count - Self.groupPreview) more")
+                                .font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent)
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("tray-show-more-\(role.id)")
+                    }
+                }
+                .padding(.leading, 16)
+            }
+        }
+    }
+}
+
+/// One task row. The grip is a native drag handle; the text opens the task sheet; Place (or Move to) is the tap
+/// path to the same change, offering only this responsibility's eligible days as chips.
+struct TaskLine: View {
+    @ObservedObject var planner: LivePlanner
+    let snapshot: PlannerSnapshot
+    let task: PlannerTask
+    /// The allocation the task sits on, when it is on a day (`Move to`), or nil in the To place tray.
+    let currentAllocation: DayAllocation?
+    let onOpenTask: (String, String) -> Void
+
+    @State private var expanded = false
+
+    private var role: Responsibility? { snapshot.roles.first { $0.id == task.roleId } }
+    private var choices: [DayAllocation] { snapshot.eligibleAllocations(for: task) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 13, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .draggable(SpreadDragPayload.task(id: task.id, roleId: task.roleId, label: task.text))
+                    .accessibilityLabel("Move task \(task.text)")
+                    .accessibilityIdentifier("task-grip-\(task.id)")
+
+                Button { onOpenTask(task.roleId, task.id) } label: {
+                    Text(task.text.isEmpty ? "Untitled task" : task.text)
+                        .font(.system(size: 15))
+                        .strikethrough(task.done)
+                        .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("task-row-\(task.id)")
+
+                if !task.done {
+                    Button { expanded.toggle() } label: {
+                        Text(currentAllocation == nil ? "Place" : "Move to")
+                            .font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.accent)
+                            .padding(.horizontal, 12).frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityValue(expanded ? "Days shown" : "Days hidden")
+                    .accessibilityIdentifier("task-move-\(task.id)")
+                }
+            }
+            if expanded && !task.done {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 8) {
+                        if choices.isEmpty {
+                            Text("This responsibility isn’t on a day yet. Add it to a day first.")
+                                .font(Spread.footnote).foregroundStyle(Spread.tertiary)
+                                .frame(minHeight: 44)
+                        }
+                        ForEach(choices) { allocation in
+                            let current = allocation.id == currentAllocation?.id
+                            Button {
+                                Task {
+                                    if await planner.send(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": allocation.id]) {
+                                        expanded = false
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Text(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEE"))
+                                    Text("\(SpreadHours.text(allocation.hours))h").foregroundStyle(Spread.secondary).monospacedDigit()
+                                }
+                                .font(.system(size: 15, weight: .semibold))
+                                .padding(.horizontal, 14).frame(minHeight: 44)
+                                .background(Spread.fill, in: Capsule())
+                                .opacity(current ? 0.4 : 1)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(current)
+                            .accessibilityLabel("\(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE")), \(SpreadHours.spoken(allocation.hours))")
+                            .accessibilityIdentifier("eligible-day-\(allocation.id)")
+                        }
+                        if currentAllocation != nil {
+                            Button {
+                                Task { await planner.send(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": NSNull()]) }
+                            } label: {
+                                Text("Take off this day")
+                                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(Spread.danger)
+                                    .padding(.horizontal, 14).frame(minHeight: 44)
+                                    .background(Spread.fill, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 44)
+                    .padding(.bottom, 8)
+                }
+                .scrollIndicators(.hidden)
+            }
+            Rectangle().fill(Spread.line).frame(height: 0.5).padding(.leading, 44)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(task.text)
+        .accessibilityAddTraits(task.done ? .isSelected : [])
+    }
+}
+#endif
