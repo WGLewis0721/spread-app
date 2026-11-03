@@ -7,15 +7,17 @@
 | Request | Finish the entire native 2.0 backlog together, with real flows and quantified Apple-quality UI/UX |
 | Surface | Native iPhone first; responsive iPad; React web stays supported |
 | Size / owner | L / engineering lead: Codex; design & motion review: Claude Code |
-| Status | **Implementation-ready specification; unverified native 2.0 release** |
-| Source of truth | Verified `main` baseline `35b6652` and [draft PR #109](https://github.com/WGLewis0721/spread-app/pull/109) at `dcb3483`; read current heads again before implementation |
-| Release permission | Owner authorized integration of the existing foundation and a web deployment; full native 2.0 publishing still requires every G0–G5 gate and a separately verified candidate |
+| Status | **Live implementation merged in PR #114; native release NO-GO, acceptance incomplete** |
+| Source of truth | Current merged main `6aa23557907d6262aa16b5767e4dee41374f0ab9`; follow-up `fix/spread-native-acceptance-followup`. [Current handoff](../../SPREAD_2_NATIVE_HANDOFF.md) and [evidence](../../evidence/issue-113/README.md); re-query current heads before continuing |
+| Release permission | Owner authorized the #114 checkpoint merge and web deployment, both completed. Open a follow-up PR when remaining fixes are ready; native publishing still requires the G0–G5 evidence and separately accepted candidate |
 
 ## 1. Problem
 
-A person needs to see responsibilities, decide available hours, distribute those hours across a week, and turn them into doable tasks. Current React/Capacitor behavior contains mature scheduling logic but navigation/interaction polish and native tactility fall short. The SwiftUI migration on PR #109 is currently fixture-only. The user expects each tap to produce the correct next state, with instant, physical and unambiguous feedback.
+A person needs to see responsibilities, decide available hours, distribute those hours across a week, and turn them into doable tasks. Current React/Capacitor behavior contains mature scheduling logic but navigation/interaction polish and native tactility fall short. At specification creation, the SwiftUI migration on PR #109 was fixture-only. The user expects each tap to produce the correct next state, with instant, physical and unambiguous feedback.
 
-## 2. Evidence / verified state
+The fixture-only state described at specification creation has since been replaced by the live implementation merged in #114. The [handoff](../../SPREAD_2_NATIVE_HANDOFF.md) records the current code and incomplete acceptance; the requirements below remain unchanged.
+
+## 2. Evidence at specification creation (historical)
 
 - [Repo] `main`: `src/lib/spread/model.ts`, `store.ts`, `task-schedule.ts`, `task-rollover.ts`, `native-mirror.ts`, `profiles.ts`. These are authoritative; rich task content and prior weeks must survive.
 - [Repo] Native slice on #109: `ios/SpreadNativeV2` Swift package; 11 original `.webp` category illustrations; fixed Chalkboard styles; Stack, Fan, Dial, Tabs and Day; horizontal metal Crown; debug-only fixture launch via `-SpreadNativeV2Preview`.

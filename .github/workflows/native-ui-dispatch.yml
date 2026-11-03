@@ -1,0 +1,54 @@
+name: Native UI tests (targeted)
+on:
+  workflow_dispatch:
+    inputs:
+      width:
+        description: "Viewport width in points (390 iPhone, 820 iPad Air, 1024 iPad Pro)"
+        default: "390"
+        type: choice
+        options: ["390", "820", "1024"]
+      tests:
+        description: "Space-separated PlannerUITests method names, e.g. testCardGesturesStayOnSelectedRole testLayout390"
+        default: "testCardGesturesStayOnSelectedRole testLayout390"
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: native-ui-dispatch-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  ui:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Create actual compatible simulator
+        run: node scripts/native-simulator.mjs ${{ inputs.width }}
+      - name: Run selected actual-app UI tests
+        env:
+          SELECTED_TESTS: ${{ inputs.tests }}
+        run: |
+          ONLY=""
+          for t in $SELECTED_TESTS; do
+            case "$t" in (test[A-Za-z0-9]*) ONLY="$ONLY -only-testing:SpreadNativeUITests/PlannerUITests/$t" ;; (*) echo "Rejected test name: $t"; exit 1 ;; esac
+          done
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            $ONLY -resultBundlePath artifacts/Targeted.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Export actual screenshots
+        if: always()
+        run: |
+          if [ -d artifacts/Targeted.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/Targeted.xcresult --output-path artifacts/screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-ui-${{ inputs.width }}
+          path: artifacts

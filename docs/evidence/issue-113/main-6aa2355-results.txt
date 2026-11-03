@@ -1,0 +1,23 @@
+Selected, unaltered GitHub Actions log lines (ANSI color codes removed).
+Run: https://github.com/WGLewis0721/spread-app/actions/runs/41704823131
+Commit: 6aa23557907d6262aa16b5767e4dee41374f0ab9
+Job: 126157221406
+Full logs and xcresult artifacts remain authoritative. Test durations are not latency/FPS.
+
+build-ios-shell	Run swift test --package-path ios/App/SpreadCloudCore	2026-11-03T19:39:27.2190900Z 	 Executed 6 tests, with 0 failures (0 unexpected) in 0.014 (0.014) seconds
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:50:56.4128780Z ##[notice]Persistence acceptance cycle 1/2
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:51:08.2238500Z ##[notice]PASS first launch reached the planner. Profile dmoz5lv4, snapshot seq 1
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:51:21.3297730Z ##[notice]PASS data survived app termination. The relaunched app wrote snapshot seq 2 (was 1) for the same profile
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:51:39.9693030Z ##[notice]PASS planner restored from the snapshot after WebView storage was wiped (marker name came back in snapshot seq 3)
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:52:05.6392240Z ##[notice]PASS negative control: disabled writer produced no mirror
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:52:23.3716660Z ##[notice]PASS writer re-enabled: genuine snapshot and original profile returned
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:52:23.3900910Z ##[notice]Persistence acceptance cycle 2/2
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:52:49.5324370Z ##[notice]PASS first launch reached the planner. Profile mepmppmj, snapshot seq 1
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:53:02.2817260Z ##[notice]PASS data survived app termination. The relaunched app wrote snapshot seq 2 (was 1) for the same profile
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:53:18.1485440Z ##[notice]PASS planner restored from the snapshot after WebView storage was wiped (marker name came back in snapshot seq 3)
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:53:41.2763010Z ##[notice]PASS negative control: disabled writer produced no mirror
+build-ios-shell	Install and launch Spread in iPhone Simulator	2026-11-03T19:56:18.9703100Z ##[error]Re-enabling the writer did not recover the same profile
+build-ios-shell	Test actual native planning journey	2026-11-03T20:03:54.7317880Z 	 Executed 6 tests, with 2 tests skipped and 3 failures (0 unexpected) in 352.802 (352.814) seconds
+build-ios-shell	Test actual native planning journey	2026-11-03T20:03:54.7977930Z 	 Executed 6 tests, with 2 tests skipped and 3 failures (0 unexpected) in 352.802 (352.815) seconds
+build-ios-shell	Test actual native planning journey	2026-11-03T20:03:54.8131630Z 	 Executed 6 tests, with 2 tests skipped and 3 failures (0 unexpected) in 352.802 (352.821) seconds
+build-ios-shell	Archive unsigned native Release candidate	2026-11-03T20:06:03.0050400Z ** ARCHIVE SUCCEEDED **

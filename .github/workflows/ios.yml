@@ -1,6 +1,7 @@
 name: iOS shell
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "capacitor.config.json"
@@ -332,10 +333,15 @@ jobs:
                   fail("Negative control unexpectedly wrote a mirror with the writer disabled")
               note("PASS negative control: disabled writer produced no mirror")
               relaunch(wait=5)
-              recovered = wait_for_snapshot(1)
-              if recovered is None or profile_ids(recovered) != first_ids:
-                  fail("Re-enabling the writer did not recover the same profile")
-              note("PASS writer re-enabled: genuine snapshot and original profile returned")
+              started = time.time()
+              recovered = wait_for_snapshot(1, relaunch_once=True)
+              waited = int(time.time() - started)
+              if recovered is None:
+                  run(["xcrun", "simctl", "io", udid, "screenshot", f"artifacts/spread-ios-reenable-failed-cycle-{cycle + 1}.png"], timeout=60, check=False)
+                  fail(f"Cycle {cycle + 1}: re-enabled writer produced NO snapshot after {waited}s and one relaunch (missing snapshot, not a profile change).%0A" + diagnose() + "%0AApp data files:%0A" + listing())
+              if profile_ids(recovered) != first_ids:
+                  fail(f"Cycle {cycle + 1}: re-enabled writer wrote seq {recovered['seq']} but the profile changed. before={first_ids} after={profile_ids(recovered)}")
+              note(f"PASS writer re-enabled in {waited}s: genuine snapshot seq {recovered['seq']} and original profile {first_ids[0]} returned")
 
           PY
       - name: Test actual native planning journey

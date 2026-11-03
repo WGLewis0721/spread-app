@@ -9,6 +9,21 @@ shell is work in progress; an installed/TestFlight/App Store build is not yet
 accepted. This roadmap owns milestone order and status; the App Store release
 plan owns the detailed acceptance checklist.
 
+## Spread 2.0 native checkpoint — November 3, 2026
+
+- [x] Merge the live SwiftUI/WebKit implementation in [#114](https://github.com/WGLewis0721/spread-app/pull/114), main `6aa2355`, with the existing TypeScript planner/storage authoritative.
+- [x] Preserve eleven original illustrations, all five responsibility layouts and the horizontal metallic Crown; implement native responsibility/hour/task/content/Week/Month/profile/review controls.
+- [x] Fix delayed mirror-writer startup and protect recovered earlier plans before replacement; retain truthful save/recovery handling.
+- [x] Resume the inactive production Supabase project, retain migrations and deploy verified web main.
+- [x] Run final-head Swift package tests/compilation and capture actual 820-point Week/five-layout/Month screenshots; 820/1024 layout jobs pass.
+- [ ] Resolve 390-point clipped date text and the latest main installed-app persistence failure; prove two clean persistence cycles and negative controls on the final candidate.
+- [x] Build the unsigned native Release archive and pass the actual 100-drag Crown/30-reversal test on merged main.
+- [ ] Complete F1–F10 installed-app acceptance, fix the first Stack swipe failure, finish Stack/Fan/restore/profile/rich-content regressions and preserve final Release archive evidence.
+- [ ] Complete physical-device accessibility/performance and comparative usability gates; obtain native release acceptance.
+- [ ] Open the follow-up implementation PR when its fixes and evidence are ready. No native binary has been uploaded.
+
+Current native verdict: **NO-GO**. Exact runs, completed code, remaining work and a copy/paste continuation prompt are in [the engineering handoff](docs/SPREAD_2_NATIVE_HANDOFF.md). Web deployment is not native release acceptance.
+
 ## Achievement 0 — Friends-Test Golden ✅
 
 - [x] Freeze the current app at commit `e4b68e6f124d249f0015cd7a5e5600ad0838bb84`.
