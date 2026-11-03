@@ -144,7 +144,9 @@ Month spacing was reviewed on the 820-pt screenshot: columns align with headers;
 7. Hardware p95 <=100 ms, 60 FPS, VoiceOver and the ten-person usability study stay unverified unless run; record the blocker.
 8. Open one further implementation PR with SHAs, F1-F10 matrix, artifacts, measurements and factual GO/NO-GO. No TestFlight/release without explicit owner acceptance.
 
-## Copy/paste continuation prompt
+## Copy/paste continuation prompt (superseded)
+
+> **Superseded** by [SPREAD_2_NATIVE_CONTINUATION_PROMPT.md](SPREAD_2_NATIVE_CONTINUATION_PROMPT.md), which reflects PR #117 and the remaining-work spec. The text below is kept for history and its statements about unverified fixes are out of date.
 
 ```text
 Continue Spread 2.0 engineering in WGLewis0721/spread-app, issue #113.
