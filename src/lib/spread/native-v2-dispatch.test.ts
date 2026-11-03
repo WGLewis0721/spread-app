@@ -359,3 +359,29 @@ test("rich read replay cannot bind stale content to a newer revision in the same
     router.dispose();
   }
 });
+
+test("addRole with the native default illustration 'custom' creates a responsibility without a category", async () => {
+  const { router, request } = setup();
+  const before = router.read()!.envelope.snapshot.roles.length;
+  const reply = await router.dispatch(request({ type: "addRole", name: "No illustration", hours: 1, category: "custom" }));
+  assert.equal(reply.ok, true);
+  const roles = router.read()!.envelope.snapshot.roles;
+  assert.equal(roles.length, before + 1);
+  const added = roles[roles.length - 1];
+  assert.equal(added.name, "No illustration");
+  assert.equal(added.category, "custom");
+  const stored = useSpread.getState().data.hats.find((hat) => hat.name === "No illustration");
+  assert.ok(stored, "the responsibility is stored");
+  assert.equal("category" in stored, false, "custom stores no category, like the React default");
+});
+
+test("addRole with a real category stores it and an unknown category is refused without a write", async () => {
+  const { router, request } = setup();
+  const good = await router.dispatch(request({ type: "addRole", name: "Fitness block", hours: 2, category: "fitness" }));
+  assert.equal(good.ok, true);
+  assert.equal(useSpread.getState().data.hats.find((hat) => hat.name === "Fitness block")?.category, "fitness");
+  const count = useSpread.getState().data.hats.length;
+  const bad = await router.dispatch(request({ type: "addRole", name: "Bogus", hours: 2, category: "bogus" }));
+  assert.equal(bad.ok, false);
+  assert.equal(useSpread.getState().data.hats.length, count, "a refused command writes nothing");
+});

@@ -191,6 +191,7 @@ struct SpreadLayoutsView: View {
                     }
                 }
             }
+            .accessibilityIdentifier("role-tabs")
             if let role = selectedRole { card(role, expanded: true) }
         }
     }
@@ -209,12 +210,16 @@ struct SpreadLayoutsView: View {
                                 Text(PlannerDates.dayNumber(weekKey: snapshot.weekKey, index: index))
                                     .font(.headline)
                             }
-                            .frame(width: 45, height: 54)
+                            // A minimum, not a fixed size: the chips grow with Dynamic Type inside the scrolling row.
+                            .padding(.horizontal, 4)
+                            .frame(minWidth: 45, minHeight: 54)
                             .foregroundStyle(selectedDay == iso ? Chalk.canvas : Chalk.ink)
                             .background(selectedDay == iso ? Chalk.yellow : Chalk.surface,
                                         in: RoundedRectangle(cornerRadius: 12))
                         }
-                        .accessibilityLabel(iso)
+                        .accessibilityLabel(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d"))
+                        .accessibilityAddTraits(selectedDay == iso ? .isSelected : [])
+                        .accessibilityIdentifier("day-chip-\(iso)")
                     }
                 }
             }

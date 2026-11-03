@@ -11,7 +11,8 @@ class NativeUITestCase: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
     override func tearDownWithError() throws {
-        guard let run = testRun, !run.hasSucceeded, app.state != .notRunning else { return }
+        // `hasSucceeded` is not final inside tearDown, so count the recorded failures instead.
+        guard let run = testRun, run.totalFailureCount > 0, app.state != .notRunning else { return }
         attach(app.debugDescription, "hierarchy-at-failure")
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "screen-at-failure"; shot.lifetime = .keepAlways; add(shot)
@@ -95,8 +96,17 @@ class NativeUITestCase: XCTestCase {
     func goWeek() { tapID("native-week") }
     func goSpread() { tapID("native-spread") }
     func chooseMode(_ mode: String) { tapID("view-mode-button"); tapID("layout-" + mode.lowercased()) }
+    /// Reveals a tab in the horizontally scrolling row (offscreen tabs are not reachable until scrolled).
+    func revealTab(_ name: String) {
+        let tab = app.buttons[name].firstMatch
+        var swipes = 0
+        while (!tab.exists || !tab.isHittable) && swipes < 8 {
+            el("role-tabs").swipeLeft(); swipes += 1
+        }
+    }
     func selectRole(_ name: String) {
         goSpread(); chooseMode("Tabs")
+        revealTab(name)
         tapButton(name)
         XCTAssertTrue(eventually { self.el("manage-selected").label == "Manage \(name)" }, "Responsibility \(name) did not become the selection")
     }
@@ -646,7 +656,15 @@ final class PlannerUITests: NativeUITestCase {
     /// Responsibility names in display order, read from the Tabs row.
     func roleNames() -> [String] {
         goSpread(); chooseMode("Tabs")
-        return elements(prefix: "role-tab-").map { $0.label }
+        var names: [String] = []
+        for _ in 0..<8 {
+            let before = names.count
+            for label in elements(prefix: "role-tab-").map({ $0.label }) where !names.contains(label) { names.append(label) }
+            if names.count == before { break }
+            el("role-tabs").swipeLeft()
+        }
+        for _ in 0..<8 { el("role-tabs").swipeRight() }
+        return names
     }
 
     private func rapidSwipes(mode: String, container: String, steps: Int = 100) {
