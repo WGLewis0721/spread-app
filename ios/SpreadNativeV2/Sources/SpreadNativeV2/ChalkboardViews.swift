@@ -81,29 +81,32 @@ struct ChalkRoleCard: View {
     var body: some View {
         let tint = Color(cssHex: role.color)
         VStack(alignment: .leading, spacing: 10) {
-            Button(action: onSelect) {
-                HStack(spacing: 12) {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(tint.gradient)
-                        .overlay(Text(String(role.name.prefix(1))).font(.headline).foregroundStyle(.white))
-                        .frame(width: 38, height: 38)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(role.name)
-                            .font(.headline)
-                            .foregroundStyle(Chalk.ink)
-                        Text("\(role.hours.formatted())h planned · \(remainingHours.formatted())h left")
-                            .font(.caption)
-                            .foregroundStyle(Chalk.secondary)
-                    }
-                    Spacer(minLength: 4)
-                    ChalkIllustration(category: role.category)
-                        .frame(width: expanded ? 92 : 72, height: 56)
+            // Not a Button: a Button claims the touch and the Stack/Fan swipe on the card never fires.
+            // The tap gesture, button trait and action keep the same tap and VoiceOver behavior.
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(tint.gradient)
+                    .overlay(Text(String(role.name.prefix(1))).font(.headline).foregroundStyle(.white))
+                    .frame(width: 38, height: 38)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(role.name)
+                        .font(.headline)
+                        .foregroundStyle(Chalk.ink)
+                    Text("\(role.hours.formatted())h planned · \(remainingHours.formatted())h left")
+                        .font(.caption)
+                        .foregroundStyle(Chalk.secondary)
                 }
-                .contentShape(Rectangle())
+                Spacer(minLength: 4)
+                ChalkIllustration(category: role.category)
+                    .frame(width: expanded ? 92 : 72, height: 56)
             }
-            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onSelect)
             .frame(minHeight: 56)
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(.default, onSelect)
             .accessibilityLabel("\(role.name), \(role.hours.formatted()) hours planned, \(remainingHours.formatted()) hours remaining")
             .accessibilityHint("Shows tasks for this responsibility")
             if expanded {
