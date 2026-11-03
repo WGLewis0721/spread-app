@@ -34,7 +34,7 @@ The existing **main** deployment was rebuilt as `dpl_GAFPJzEC3iMAn2wtiGXh8vKPXdF
 
 | Check | Observed result |
 | --- | --- |
-| Local planner suite with CI Node 22 | 412 pass, zero failures/skips; includes 60 shared vectors, live-host round trip, 100 commands exactly once, save recovery and delayed mirror startup |
+| Local planner suite with CI Node 22 | 420 pass, zero failures/skips; includes 60 shared vectors, live-host round trip, 100 commands exactly once, save recovery and delayed mirror startup |
 | TypeScript typecheck | Pass |
 | ESLint | Zero errors; seven existing warnings |
 | Production bundle build | Pass locally; no local DATABASE_URL, so local migration invocation skips and does not verify production |
@@ -64,6 +64,12 @@ The native package's Crown unit test exercises 100 gestures and 30 reversals. Th
 
 ## Release and rollback
 
-No merge or native release has occurred. Passing compilation does not satisfy the specification's full G0–G5 gates. A GO requires actual installed-app journey/screenshots, twice-passing persistence/negative control, accessibility/layout/gesture acceptance and the required hardware/usability evidence or an explicit owner decision about those unmet gates.
+The owner explicitly requested merging completed work and deploying main on November 3, 2026, with remaining fixes continuing in a follow-up PR. This is a web deployment authorization; native acceptance and device gates remain open. Passing compilation does not satisfy the specification's full G0–G5 gates. A GO requires actual installed-app journey/screenshots, twice-passing persistence/negative control, accessibility/layout/gesture acceptance and the required hardware/usability evidence or an explicit owner decision about those unmet gates.
 
 Rollback: revert the single PR to restore default React/Capacitor presentation, or remove native hosting in `SpreadBridgeViewController` while keeping the existing engine. No user data is migrated or deleted. The delayed-startup mirror fix is independent and should be retained if reverting presentation. Web rollback uses the last verified production deployment. TestFlight requires a corrected binary; no automatic App Store downgrade is assumed.
+
+## Partial-merge checkpoint authorized by owner
+
+This checkpoint includes live native code, the tested data-protection fixes, and calendar target/identity corrections. Local premerge validation: 420 planner tests pass, TypeScript passes, ESLint has zero errors/seven existing warnings, and the production bundle builds. Script tests: 208 pass/four skips. Native end-to-end and layout runs have exposed defects and are not represented as green. The follow-up must finish acceptance, screenshots and unsigned Release archive verification before a native release GO. No TestFlight upload is triggered by merging main; that workflow remains manual.
+
+Additional data protection: delayed mirror reads preserve a recovered earlier plan as a verified existing safety copy before starting a writer. Failure to protect the earlier plan pauses mirror replacement, including on subsequent launches. Native recovery notices expose the decision to the user. Rich read retries are bound to profile, week and revision, and replay receipts retain hashes/metadata rather than historical snapshots or photo payloads.

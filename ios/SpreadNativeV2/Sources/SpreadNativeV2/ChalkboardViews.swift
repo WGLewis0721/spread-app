@@ -136,12 +136,13 @@ struct ChalkRoleCard: View {
             RoundedRectangle(cornerRadius: 22)
                 .fill(
                     LinearGradient(
-                        colors: [Chalk.surface, tint.opacity(0.17).blended(with: Chalk.surface), Chalk.canvas],
+                        colors: [Chalk.surface, tint.opacity(0.17), Chalk.canvas],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
         )
+        .background(Chalk.surface, in: RoundedRectangle(cornerRadius: 22))
         .overlay(
             RoundedRectangle(cornerRadius: 22).stroke(tint.opacity(0.7), lineWidth: 1.5)
         )
@@ -149,11 +150,4 @@ struct ChalkRoleCard: View {
     }
 }
 
-private extension Color {
-    func blended(with background: Color) -> Color {
-        // Color is already composited at opacity in the gradient. This fixed
-        // helper keeps the card paint simple and avoids dynamic appearance modes.
-        self
-    }
-}
 #endif

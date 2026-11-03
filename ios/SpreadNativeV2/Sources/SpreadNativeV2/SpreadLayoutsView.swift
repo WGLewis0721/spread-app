@@ -191,13 +191,13 @@ struct SpreadLayoutsView: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
                     ForEach(0..<7, id: \.self) { index in
-                        let iso = PreviewDates.dayISO(weekKey: snapshot.weekKey, index: index)
+                        let iso = PlannerDates.dayISO(weekKey: snapshot.weekKey, index: index)
                         Button {
                             selectedDay = iso
                         } label: {
                             VStack(spacing: 5) {
-                                Text(PreviewDates.weekday(weekKey: snapshot.weekKey, index: index)).font(.caption)
-                                Text(PreviewDates.dayNumber(weekKey: snapshot.weekKey, index: index))
+                                Text(PlannerDates.weekday(weekKey: snapshot.weekKey, index: index)).font(.caption)
+                                Text(PlannerDates.dayNumber(weekKey: snapshot.weekKey, index: index))
                                     .font(.headline)
                             }
                             .frame(width: 45, height: 54)

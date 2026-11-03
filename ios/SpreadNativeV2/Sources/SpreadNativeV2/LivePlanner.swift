@@ -20,6 +20,7 @@ struct LiveReply: Decodable {
     let state: LiveState?
     let profiles: [NativeProfile]?
     let saveError: String?
+    let recoveryNotice: String?
 }
 
 /// Read-only observable projection; all mutations are awaited intents to the React store.
@@ -29,6 +30,7 @@ struct LiveReply: Decodable {
     @Published var details: [String: NativeTaskContent] = [:]
     @Published var error: String?
     @Published var saveFailure: String?
+    @Published var recoveryNotice: String?
     @Published var busy = false
     @Published var undoId: String?
     private let exchange: (String) async throws -> String
@@ -56,6 +58,7 @@ struct LiveReply: Decodable {
         state = value
         profiles = reply.profiles ?? []
         if let detail = reply.taskDetail { details = [detail.taskId: detail.content] }
+        recoveryNotice = reply.recoveryNotice
         saveFailure = reply.saveError
         if reply.saveError == "newer" { error = "This plan was saved by a newer Spread version. Update Spread before editing." }
         else if reply.saveError != nil { error = "Couldn’t save on this device. Retry saving or open Backup and restore before closing Spread." }
@@ -110,6 +113,7 @@ public struct SpreadLiveRoot: View {
     @State private var showMonth = false
     @State private var selectedDate: String?
     @State private var allTrayTasks = Set<String>()
+    @State private var dismissedRecovery: String?
     @Environment(\.scenePhase) private var scenePhase
     public init(planner: LivePlanner, recovery: @escaping () -> Void) { self.planner = planner; self.recovery = recovery }
     private var verificationWidth: CGFloat? {
@@ -123,6 +127,15 @@ public struct SpreadLiveRoot: View {
         NavigationStack {
             VStack(spacing: 0) {
                 header
+                if let notice = planner.recoveryNotice, dismissedRecovery != notice {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(notice, systemImage: "exclamationmark.shield").foregroundStyle(Chalk.yellow)
+                        HStack {
+                            Button { recovery() } label: { Text("Backup and restore").frame(minHeight: 44).contentShape(Rectangle()) }
+                            Button { dismissedRecovery = notice } label: { Text("Got it").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
+                        }
+                    }.padding(12).background(Chalk.surface)
+                }
                 if let failure = planner.saveFailure {
                     VStack(alignment: .leading, spacing: 8) {
                         Label(failure == "newer" ? "Update Spread to edit this plan" : "Changes are not saved on this device", systemImage: "exclamationmark.triangle")
@@ -197,9 +210,12 @@ public struct SpreadLiveRoot: View {
     private var header: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Spread").font(.system(.largeTitle, design: .serif).weight(.semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Spread").font(.system(.largeTitle, design: .serif).weight(.semibold))
+                    if let profile = planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId }) { Text(profile.name).font(.caption).foregroundStyle(Chalk.secondary).lineLimit(1) }
+                }
                 Spacer()
-                Button("Today") { Task { await planner.send(["type": "changeWeek", "direction": "today"]) } }.frame(minWidth: 44, minHeight: 44)
+                Button { Task { await planner.send(["type": "changeWeek", "direction": "today"]) } } label: { Text("Today").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
                 Menu {
                     Button("New responsibility") { editor = .newRole }
                     Button("Profiles") { editor = .profiles }
@@ -208,7 +224,7 @@ public struct SpreadLiveRoot: View {
                 .accessibilityLabel("More")
             }
             if let key = planner.snapshot?.weekKey {
-                WeekCrownView(title: "Your week", detail: PreviewDates.weekRange(base: key, offset: 0),
+                WeekCrownView(title: "Your week", detail: PlannerDates.weekRange(base: key, offset: 0),
                     onMove: { delta in Task { for _ in 0..<abs(delta) { await planner.send(["type": "changeWeek", "direction": delta > 0 ? 1 : -1], completionHaptic: true) } } },
                     onToday: { Task { await planner.send(["type": "changeWeek", "direction": "today"]) } })
             }
@@ -221,7 +237,7 @@ public struct SpreadLiveRoot: View {
                 HStack {
                     Text("Your week").font(.title2.bold())
                     Spacer()
-                    Button(showMonth ? "Week" : "Month") { showMonth.toggle() }.frame(minHeight: 44)
+                    Button { showMonth.toggle() } label: { Text(showMonth ? "Week" : "Month").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }.buttonStyle(.plain)
                 }
                 if showMonth { month(snapshot) }
                 else {
@@ -247,10 +263,10 @@ public struct SpreadLiveRoot: View {
                         }.padding(16).overlay(RoundedRectangle(cornerRadius: 22).stroke(style: StrokeStyle(lineWidth: 1, dash: [6, 5])))
                     }
                     ForEach(0..<7, id: \.self) { index in
-                        let iso = PreviewDates.dayISO(weekKey: snapshot.weekKey, index: index)
+                        let iso = PlannerDates.dayISO(weekKey: snapshot.weekKey, index: index)
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Text("\(PreviewDates.weekday(weekKey: snapshot.weekKey, index: index)) \(PreviewDates.dayNumber(weekKey: snapshot.weekKey, index: index))").font(.headline)
+                                Text("\(PlannerDates.weekday(weekKey: snapshot.weekKey, index: index)) \(PlannerDates.dayNumber(weekKey: snapshot.weekKey, index: index))").font(.headline)
                                 if selectedDate == iso { Text("Selected").font(.caption).foregroundStyle(Chalk.yellow) }
                             }
                             let allocations = snapshot.allocations.filter { $0.day == iso }.sorted { $0.order < $1.order }
@@ -281,27 +297,34 @@ public struct SpreadLiveRoot: View {
                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle").frame(width: 44, height: 44)
             }.accessibilityLabel(task.done ? "Reopen \(task.text)" : "Complete \(task.text)")
             Button { editor = .task(task) } label: { Text(task.text).strikethrough(task.done).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).multilineTextAlignment(.leading) }
-            Button(task.allocationId == nil ? "Place" : "Move") { editor = .move(task) }.frame(minWidth: 44, minHeight: 44)
+            Button { editor = .move(task) } label: { Text(task.allocationId == nil ? "Place" : "Move").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
         }
     }
     private func month(_ snapshot: PlannerSnapshot) -> some View {
-        let date = PreviewDates.date(snapshot.weekKey)
-        let calendar = PreviewDates.calendar
+        let date = PlannerDates.date(snapshot.weekKey)
+        let calendar = PlannerDates.calendar
         let start = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
-        let days = calendar.range(of: .day, in: .month, for: start) ?? 1..<29
-        let offset = (calendar.component(.weekday, from: start) + 5) % 7
         return VStack(spacing: 8) {
-            Text(PreviewDates.label(start, pattern: "MMMM yyyy")).font(.headline)
+            Text(PlannerDates.label(start, pattern: "MMMM yyyy")).font(.headline)
+            HStack(spacing: 0) {
+                ForEach(0..<7, id: \.self) { index in
+                    Text(["M", "T", "W", "T", "F", "S", "S"][index])
+                        .font(.caption).frame(maxWidth: .infinity).accessibilityHidden(true)
+                }
+            }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
-                ForEach(["M", "T", "W", "T", "F", "S", "S"].indices, id: \.self) { i in Text(["M", "T", "W", "T", "F", "S", "S"][i]).font(.caption).accessibilityHidden(true) }
-                ForEach(0..<offset, id: \.self) { _ in Color.clear.frame(height: 44) }
-                ForEach(Array(days), id: \.self) { day in
-                    let selected = calendar.date(byAdding: .day, value: day - 1, to: start) ?? start
-                    Button(String(day)) {
-                        let weekday = (calendar.component(.weekday, from: selected) + 5) % 7
-                        let monday = calendar.date(byAdding: .day, value: -weekday, to: selected) ?? selected
-                        Task { if await planner.send(["type": "openWeek", "weekKey": PreviewDates.formatter.string(from: monday)]) { selectedDate = PreviewDates.formatter.string(from: selected); showMonth = false } }
-                    }.frame(minWidth: 44, minHeight: 44).accessibilityLabel(PreviewDates.label(selected, pattern: "EEEE MMMM d yyyy"))
+                ForEach(PlannerDates.monthCells(weekKey: snapshot.weekKey)) { cell in
+                    if let day = cell.day, let selected = cell.date {
+                        Button {
+                            Task { if await planner.send(["type": "openWeek", "weekKey": PlannerDates.weekKey(for: selected)]) { selectedDate = PlannerDates.formatter.string(from: selected); showMonth = false } }
+                        } label: {
+                            Text(String(day)).font(.body).lineLimit(1).minimumScaleFactor(0.7)
+                                .frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(PlannerDates.label(selected, pattern: "EEEE MMMM d yyyy"))
+                        .accessibilityIdentifier("month-day-" + PlannerDates.formatter.string(from: selected))
+                    } else { Color.clear.frame(height: 44).accessibilityHidden(true) }
                 }
             }
         }
@@ -431,8 +454,8 @@ struct LiveEditor: View {
     private var dayPicker: some View {
         Picker("Day", selection: $day) {
             ForEach(0..<7, id: \.self) { i in
-                let iso = PreviewDates.dayISO(weekKey: planner.snapshot?.weekKey ?? "", index: i)
-                Text(PreviewDates.label(PreviewDates.date(iso), pattern: "EEEE")).tag(iso)
+                let iso = PlannerDates.dayISO(weekKey: planner.snapshot?.weekKey ?? "", index: i)
+                Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE")).tag(iso)
             }
         }
     }

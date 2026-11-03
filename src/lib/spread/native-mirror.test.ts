@@ -58,7 +58,9 @@ class FakeFiles implements MirrorAdapter {
 
 const week = JSON.stringify({ hats: [], weeks: {}, currentWeek: "2026-09-28" });
 const planner = {
-  "spread.profiles": JSON.stringify([{ id: "p1", name: "Me", store: "spread.v1.p1", theme: "system", accent: null }]),
+  "spread.profiles": JSON.stringify([
+    { id: "p1", name: "Me", store: "spread.v1.p1", theme: "system", accent: null },
+  ]),
   "spread.profile": "p1",
   "spread.v1.p1": week,
   "spread.theme": "dark",
@@ -75,7 +77,10 @@ test("only planner keys are mirrored, and settings alone do not count as planner
   assert.equal(isPlannerKey("spread.profiles"), true);
   assert.equal(isPlannerKey("spread.theme"), false);
   assert.equal(isPlannerKey("spread.recovery.spread.v1.abc"), false);
-  assert.equal(hasPlannerData(new FakeStorage({ "spread.theme": "dark", "spread-accent": "blue" })), false);
+  assert.equal(
+    hasPlannerData(new FakeStorage({ "spread.theme": "dark", "spread-accent": "blue" })),
+    false,
+  );
   assert.equal(hasPlannerData(new FakeStorage(planner)), true);
 });
 
@@ -87,7 +92,10 @@ test("collectEntries skips keys that belong to other code", () => {
 test("a snapshot written by the writer restores into empty storage, byte for byte", async () => {
   const storage = new FakeStorage(planner);
   const files = new FakeFiles();
-  const writer = createMirrorWriter(storage, files, { seq: 0, now: () => new Date("2026-10-01T12:00:00Z") });
+  const writer = createMirrorWriter(storage, files, {
+    seq: 0,
+    now: () => new Date("2026-10-01T12:00:00Z"),
+  });
   writer.schedule();
   await writer.flush();
   assert.equal(files.writes.length, 1);
@@ -104,7 +112,10 @@ test("a snapshot never overwrites storage that still has planner data", async ()
   writer.schedule();
   await writer.flush();
 
-  const live = new FakeStorage({ ...planner, "spread.v1.p1": JSON.stringify({ hats: [], weeks: {}, currentWeek: "2026-10-05" }) });
+  const live = new FakeStorage({
+    ...planner,
+    "spread.v1.p1": JSON.stringify({ hats: [], weeks: {}, currentWeek: "2026-10-05" }),
+  });
   const result = await restoreIfEmpty(live, files);
   assert.equal(result.restored, false);
   assert.equal(JSON.parse(live.getItem("spread.v1.p1") ?? "{}").currentWeek, "2026-10-05");
@@ -126,7 +137,10 @@ test("slots alternate, so the older good copy survives an interrupted write", as
   const files = new FakeFiles();
   const writer = createMirrorWriter(storage, files, { seq: 0 });
   for (let round = 0; round < 3; round += 1) {
-    storage.setItem("spread.v1.p1", JSON.stringify({ hats: [], weeks: {}, currentWeek: `2026-10-0${round + 1}` }));
+    storage.setItem(
+      "spread.v1.p1",
+      JSON.stringify({ hats: [], weeks: {}, currentWeek: `2026-10-0${round + 1}` }),
+    );
     writer.schedule();
     await writer.flush();
   }
@@ -191,7 +205,10 @@ test("the sequence continues from the restored snapshot, so new writes beat old 
   const { seq } = await restoreIfEmpty(new FakeStorage(planner), files);
   assert.equal(seq, 2);
   const next = createMirrorWriter(storage, files, { seq });
-  storage.setItem("spread.v1.p1", JSON.stringify({ hats: [], weeks: {}, currentWeek: "2026-11-02" }));
+  storage.setItem(
+    "spread.v1.p1",
+    JSON.stringify({ hats: [], weeks: {}, currentWeek: "2026-11-02" }),
+  );
   next.schedule();
   await next.flush();
   const newest = newestEnvelope([files.files.get("a") ?? null, files.files.get("b") ?? null]);
@@ -200,7 +217,13 @@ test("the sequence continues from the restored snapshot, so new writes beat old 
 });
 
 test("damaged or foreign snapshots are rejected", () => {
-  const good = { kind: "spread-mirror", version: 1, seq: 1, savedAt: "2026-10-01T00:00:00.000Z", entries: { "spread.v1": week } };
+  const good = {
+    kind: "spread-mirror",
+    version: 1,
+    seq: 1,
+    savedAt: "2026-10-01T00:00:00.000Z",
+    entries: { "spread.v1": week },
+  };
   assert.ok(parseEnvelope(JSON.stringify(good)));
   assert.equal(parseEnvelope(null), null);
   assert.equal(parseEnvelope("not json"), null);
@@ -208,31 +231,170 @@ test("damaged or foreign snapshots are rejected", () => {
   assert.equal(parseEnvelope(JSON.stringify({ ...good, version: 2 })), null);
   assert.equal(parseEnvelope(JSON.stringify({ ...good, seq: "1" })), null);
   assert.equal(parseEnvelope(JSON.stringify({ ...good, entries: { "spread.v1": 5 } })), null);
-  assert.equal(parseEnvelope(JSON.stringify({ ...good, entries: { "other.key": "x", "spread.v1": week } })), null);
-  assert.equal(parseEnvelope(JSON.stringify({ ...good, entries: { "spread.theme": "dark" } })), null, "settings alone are not a planner");
+  assert.equal(
+    parseEnvelope(JSON.stringify({ ...good, entries: { "other.key": "x", "spread.v1": week } })),
+    null,
+  );
+  assert.equal(
+    parseEnvelope(JSON.stringify({ ...good, entries: { "spread.theme": "dark" } })),
+    null,
+    "settings alone are not a planner",
+  );
 });
 
 test("slow native startup still starts the writer without restoring over a live plan", async () => {
   const { prepareMirrorSession } = await import("./native-mirror.ts");
   const values = new Map<string, string>();
   const storage = {
-    get length() { return values.size; }, key: (i: number) => [...values.keys()][i] ?? null,
-    getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => { values.set(k, v); },
+    get length() {
+      return values.size;
+    },
+    key: (i: number) => [...values.keys()][i] ?? null,
+    getItem: (k: string) => values.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      values.set(k, v);
+    },
   };
   let release!: (value: string) => void;
-  const delayed = new Promise<string>((resolve) => { release = resolve; });
+  const delayed = new Promise<string>((resolve) => {
+    release = resolve;
+  });
   const writes: string[] = [];
+  const protectedCopies: import("./native-mirror.ts").MirrorEnvelope[] = [];
   let ready!: (writer: import("./native-mirror.ts").MirrorWriter) => void;
-  const writerReady = new Promise<import("./native-mirror.ts").MirrorWriter>((resolve) => { ready = resolve; });
-  const result = await prepareMirrorSession(storage, { read: async () => delayed, write: async (_slot, text) => { writes.push(text); } }, 1, ready);
+  const writerReady = new Promise<import("./native-mirror.ts").MirrorWriter>((resolve) => {
+    ready = resolve;
+  });
+  const result = await prepareMirrorSession(
+    storage,
+    {
+      read: async () => delayed,
+      write: async (_slot, text) => {
+        writes.push(text);
+      },
+    },
+    1,
+    ready,
+    {
+      protect: async (snapshot) => {
+        protectedCopies.push(snapshot);
+        return true;
+      },
+      notice: (protectedCopy) => assert.equal(protectedCopy, true),
+    },
+  );
   assert.equal(result.restored, false);
   storage.setItem("spread.profiles", JSON.stringify([{ id: "live", name: "Edited after launch" }]));
-  release(JSON.stringify({ kind: "spread-mirror", version: 1, seq: 41, savedAt: "2026-11-03T00:00:00Z", entries: { "spread.profiles": JSON.stringify([{ id: "old", name: "Old snapshot" }]) } }));
+  release(
+    JSON.stringify({
+      kind: "spread-mirror",
+      version: 1,
+      seq: 41,
+      savedAt: "2026-11-03T00:00:00Z",
+      entries: { "spread.profiles": JSON.stringify([{ id: "old", name: "Old snapshot" }]) },
+    }),
+  );
   const writer = await writerReady;
   await writer.flush();
+  assert.equal(protectedCopies.length, 1);
+  assert.equal(JSON.parse(protectedCopies[0].entries["spread.profiles"])[0].id, "old");
   assert.equal(writes.length, 1);
   const written = JSON.parse(writes[0]);
   assert.equal(written.seq, 42);
   assert.equal(JSON.parse(written.entries["spread.profiles"])[0].id, "live");
   assert.equal(JSON.parse(storage.getItem("spread.profiles")!)[0].name, "Edited after launch");
+});
+
+test("an unprotected earlier profile cannot be overwritten, including after another launch", async () => {
+  const { prepareMirrorSession } = await import("./native-mirror.ts");
+  const original = JSON.stringify({
+    kind: "spread-mirror",
+    version: 1,
+    seq: 19,
+    savedAt: "2026-11-03T00:00:00Z",
+    entries: planner,
+  });
+  const files = new FakeFiles();
+  files.files.set("a", original);
+  const current = new FakeStorage({
+    "spread.profiles": JSON.stringify([{ id: "new" }]),
+    "spread.v1.new": week,
+  });
+  let notices = 0;
+  for (let launch = 0; launch < 2; launch++) {
+    await prepareMirrorSession(current, files, 50, () => assert.fail("writer must stay paused"), {
+      protect: async (snapshot) => {
+        assert.equal(snapshot.entries["spread.v1.p1"], week);
+        return false;
+      },
+      notice: (protectedCopy) => {
+        assert.equal(protectedCopy, false);
+        notices++;
+      },
+    });
+  }
+  assert.equal(notices, 2);
+  assert.equal(files.files.get("a"), original);
+  assert.equal(files.writes.length, 0);
+});
+
+test("an existing authoritative profile can refresh its mirror without a recovery copy", async () => {
+  const { prepareMirrorSession } = await import("./native-mirror.ts");
+  const storage = new FakeStorage(planner);
+  const files = new FakeFiles();
+  files.files.set("a", JSON.stringify(buildEnvelopeForTest()));
+  storage.setItem(
+    "spread.v1.p1",
+    JSON.stringify({ currentWeek: "2026-11-02", hats: [], weeks: {} }),
+  );
+  let writer: import("./native-mirror.ts").MirrorWriter | null = null;
+  await prepareMirrorSession(
+    storage,
+    files,
+    50,
+    (value) => {
+      writer = value;
+    },
+    {
+      protect: async () => {
+        assert.fail("normal edits do not require a recovery copy");
+      },
+      notice: () => assert.fail("normal startup must stay quiet"),
+    },
+  );
+  await (writer as unknown as import("./native-mirror.ts").MirrorWriter).flush();
+  assert.equal(files.writes.length, 1);
+});
+
+function buildEnvelopeForTest() {
+  return {
+    kind: "spread-mirror",
+    version: 1,
+    seq: 3,
+    savedAt: "2026-11-03T00:00:00Z",
+    entries: planner,
+  };
+}
+
+test("legacy mirrors with no roster are preserved before replacing their only data key", async () => {
+  const { prepareMirrorSession } = await import("./native-mirror.ts");
+  const original = JSON.stringify({
+    kind: "spread-mirror",
+    version: 1,
+    seq: 3,
+    savedAt: "2026-11-03T00:00:00Z",
+    entries: { "spread.v1": "old private plan" },
+  });
+  const storage = new FakeStorage({ "spread.v1": "new plan" });
+  const files = new FakeFiles();
+  files.files.set("a", original);
+  await prepareMirrorSession(storage, files, 50, () => assert.fail("unsafe writer"), {
+    protect: async (snapshot) => {
+      assert.equal(snapshot.entries["spread.v1"], "old private plan");
+      return false;
+    },
+    notice: () => {},
+  });
+  assert.equal(files.files.get("a"), original);
+  assert.equal(files.writes.length, 0);
 });

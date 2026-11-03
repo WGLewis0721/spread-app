@@ -41,6 +41,10 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
             // Never obscure the established recovery surface if engine startup fails.
         }
     }
+    @MainActor fileprivate func engineChanged() {
+        if nativeHost != nil { Task { await planner?.refresh() } }
+        else { openNative() }
+    }
     @MainActor fileprivate func openNative() {
         guard nativeHost == nil, let webView, let stage = parent else { return }
         let model = planner ?? LivePlanner { [weak webView] message in
@@ -101,7 +105,7 @@ private final class PlannerReadyHandler: NSObject, WKScriptMessageHandler {
     init(owner: SpreadBridgeViewController) { self.owner = owner }
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, message.webView?.url?.scheme == "capacitor", message.webView?.url?.host == "localhost" else { return }
-        Task { @MainActor [weak self] in self?.owner?.openNative() }
+        Task { @MainActor [weak self] in self?.owner?.engineChanged() }
     }
 }
 

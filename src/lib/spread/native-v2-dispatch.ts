@@ -134,7 +134,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
       ? { sessionId, revision, envelope: projectNativeV2(state.data, state.activeId) }
       : null;
   }
-  function execute(raw: unknown): NativeReply {
+  async function execute(raw: unknown): Promise<NativeReply> {
     const parsed = nativeRequestSchema.safeParse(raw);
     if (!parsed.success)
       return { requestId: null, ok: false, error: "invalid-command", state: read() };
@@ -147,23 +147,43 @@ export function createNativeV2Dispatcher(sessionId: string) {
     });
     if (disposed) return fail("closed-session");
     if (command.sessionId !== sessionId) return fail("stale-session");
-    const fingerprint = JSON.stringify(command);
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(JSON.stringify(command)),
+    );
+    const fingerprint = Array.from(new Uint8Array(digest), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+    if (disposed) return fail("closed-session");
     const prior = requests.get(command.requestId);
     if (prior) {
       if (prior.fingerprint !== fingerprint) return fail("request-id-reused");
-      // Rich read receipts must never cross a profile/week boundary on replay.
-      const current = read();
-      if (
-        prior.reply.taskDetail &&
-        (current?.envelope.profileId !== command.expectedProfileId ||
-          current.envelope.snapshot.weekKey !== command.expectedWeek)
-      )
-        return fail("stale-context");
-      return { ...prior.reply, state: current };
+      // Reads are safe to reconstruct only while their exact context remains current.
+      // Never retain rich payloads or historical projections in replay receipts.
+      if (command.action.type === "readTaskContent") {
+        const current = read();
+        if (
+          current?.envelope.profileId !== command.expectedProfileId ||
+          current.envelope.snapshot.weekKey !== command.expectedWeek ||
+          current.revision !== command.expectedRevision
+        )
+          return fail("stale-context");
+        return run(command, fail);
+      }
+      return { ...prior.reply, state: read() };
     }
     if (requests.size >= 2048) return fail("session-capacity");
     const result = run(command, fail);
-    requests.set(command.requestId, { fingerprint, reply: result });
+    requests.set(command.requestId, {
+      fingerprint,
+      reply: {
+        requestId: result.requestId,
+        ok: result.ok,
+        error: result.error,
+        undoId: result.undoId,
+        state: null,
+      },
+    });
     return result;
   }
   function run(command: NativeRequest, fail: (error: string) => NativeReply): NativeReply {
@@ -292,7 +312,10 @@ export function createNativeV2Dispatcher(sessionId: string) {
         copy = null;
       }
       const pending = chain.then(() => execute(copy));
-      chain = pending.catch(() => undefined);
+      chain = pending.then(
+        () => undefined,
+        () => undefined,
+      );
       return pending;
     },
     dispose() {

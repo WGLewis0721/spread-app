@@ -160,3 +160,17 @@ extension NativeContractsTests {
         XCTAssertEqual(week, 100)
     }
 }
+
+extension NativeContractsTests {
+    func testMonthGridUsesUniqueCellsAndKeepsTheFirstSixDates() {
+        let cells = PlannerDates.monthCells(weekKey: "2026-11-02")
+        XCTAssertEqual(Set(cells.map(\.id)).count, cells.count)
+        XCTAssertEqual(cells.compactMap(\.day), Array(1...30))
+        XCTAssertEqual(cells[6].day, 1)
+    }
+    func testCalendarWeekMappingAtYearBoundaryAndLeapMonth() {
+        XCTAssertEqual(PlannerDates.weekKey(for: PlannerDates.date("2027-01-01")), "2026-12-28")
+        XCTAssertEqual(PlannerDates.weekKey(for: PlannerDates.date("2027-01-04")), "2027-01-04")
+        XCTAssertEqual(PlannerDates.monthCells(weekKey: "2028-02-07").compactMap(\.day).count, 29)
+    }
+}

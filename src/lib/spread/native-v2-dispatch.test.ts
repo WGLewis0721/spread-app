@@ -336,3 +336,26 @@ test("legacy fractional outline levels accepted by the canonical model survive n
     router.dispose();
   }
 });
+
+test("rich read replay cannot bind stale content to a newer revision in the same week", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const original = request({ type: "readTaskContent", roleId, taskId: "task" });
+    assert.equal((await router.dispatch(original)).ok, true);
+    const content = { blocks: [{ id: "n", type: "notes", text: "New authoritative notes" }] };
+    assert.equal(
+      (await router.dispatch(request({ type: "setTaskContent", roleId, taskId: "task", content })))
+        .ok,
+      true,
+    );
+    const replay = await router.dispatch(original);
+    assert.equal(replay.error, "stale-context");
+    assert.equal(replay.taskDetail, undefined);
+    const fresh = await router.dispatch(
+      request({ type: "readTaskContent", roleId, taskId: "task" }),
+    );
+    assert.deepEqual(fresh.taskDetail!.content, content);
+  } finally {
+    router.dispose();
+  }
+});

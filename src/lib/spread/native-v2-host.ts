@@ -1,3 +1,4 @@
+import { getNativeRecoveryNotice, onNativeRecoveryNotice } from "./native-mirror.ts";
 import { createNativeV2Dispatcher } from "./native-v2-dispatch.ts";
 import { useSpread } from "./store.ts";
 import { getSaveFacts } from "./local-status.ts";
@@ -22,6 +23,7 @@ export function installNativeV2Host() {
           ...reply,
           profiles: useSpread.getState().profiles.map(({ id, name }) => ({ id, name })),
           saveError: getSaveFacts().failed,
+          recoveryNotice: getNativeRecoveryNotice(),
         });
       } catch {
         return JSON.stringify({
@@ -37,8 +39,13 @@ export function installNativeV2Host() {
   const nativeWindow = window as unknown as {
     webkit?: { messageHandlers?: { spreadPlannerReady?: { postMessage(value: null): void } } };
   };
-  nativeWindow.webkit?.messageHandlers?.spreadPlannerReady?.postMessage(null);
+  const signal = () => {
+    nativeWindow.webkit?.messageHandlers?.spreadPlannerReady?.postMessage(null);
+  };
+  signal();
+  const stopRecovery = onNativeRecoveryNotice(signal);
   return () => {
+    stopRecovery();
     router.dispose();
     delete (window as Window & { SpreadNativeHost?: unknown }).SpreadNativeHost;
   };
