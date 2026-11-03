@@ -9,6 +9,10 @@ const text = z.string().trim().min(1).max(10000);
 const hours = z.number().finite().min(0).max(168).multipleOf(0.5);
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const action = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("renameRole"), roleId: id, name: text }),
+  z.strictObject({ type: z.literal("removeRole"), roleId: id }),
+  z.strictObject({ type: z.literal("switchProfile"), profileId: id }),
+  z.strictObject({ type: z.literal("addProfile"), name: text }),
   z.strictObject({
     type: z.literal("changeWeek"),
     direction: z.union([z.literal(-1), z.literal(1), z.literal("today")]),
@@ -116,12 +120,27 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (command.expectedRevision !== revision) return fail("stale-revision");
     if (getSaveFacts().failed) return fail("save-unavailable");
     const a = command.action;
-    const invalid = validateTarget(a, state.data);
+    const invalid =
+      a.type === "switchProfile" && !state.profiles.some((p) => p.id === a.profileId)
+        ? "no-profile"
+        : validateTarget(a, state.data);
     if (invalid) return fail(invalid);
     let undoId: string | null = null;
     try {
       const mutate = () => {
         switch (a.type) {
+          case "renameRole":
+            state.renameHat(a.roleId, a.name);
+            break;
+          case "removeRole":
+            state.removeHat(a.roleId);
+            break;
+          case "switchProfile":
+            state.switchProfile(a.profileId);
+            break;
+          case "addProfile":
+            if (!state.addProfile(a.name)) throw new Error("profile-limit");
+            break;
           case "addRole":
             state.addHat(a.name, a.hours, { category: a.category });
             break;
@@ -160,7 +179,18 @@ export function createNativeV2Dispatcher(sessionId: string) {
             break;
         }
       };
-      if (["changeWeek", "openWeek", "undo", "addRole"].includes(a.type)) mutate();
+      if (
+        [
+          "changeWeek",
+          "openWeek",
+          "undo",
+          "addRole",
+          "switchProfile",
+          "addProfile",
+          "removeRole",
+        ].includes(a.type)
+      )
+        mutate();
       else undoId = state.undoable(mutate);
       if (getSaveFacts().failed) return fail("save-failed");
       return { requestId: command.requestId, ok: true, undoId, state: read() };

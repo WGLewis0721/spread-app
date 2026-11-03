@@ -107,8 +107,7 @@ struct WeekCrownView: View {
 
     private func commit(_ count: Int) {
         onMove(count)
-        // One tick per *committed detent*, never a timer or animation frame.
-        for _ in 0..<abs(count) { UISelectionFeedbackGenerator().selectionChanged() }
+        // The live adapter emits feedback after the store acknowledges the detent.
     }
 }
 #endif

@@ -1,0 +1,339 @@
+#if os(iOS)
+import SwiftUI
+import UIKit
+
+public struct NativeProfile: Decodable, Identifiable {
+    public let id: String
+    public let name: String
+}
+struct LiveState: Decodable {
+    let sessionId: String
+    let revision: Int
+    let envelope: NativeV2Envelope
+}
+struct LiveReply: Decodable {
+    let ok: Bool
+    let error: String?
+    let undoId: String?
+    let state: LiveState?
+    let profiles: [NativeProfile]?
+    let saveError: String?
+}
+
+/// Read-only observable projection; all mutations are awaited intents to the React store.
+@MainActor public final class LivePlanner: ObservableObject {
+    @Published var state: LiveState?
+    @Published var profiles: [NativeProfile] = []
+    @Published var error: String?
+    @Published var busy = false
+    @Published var undoId: String?
+    private let exchange: (String) async throws -> String
+    private var tail: Task<Bool, Never>?
+    public init(exchange: @escaping (String) async throws -> String) { self.exchange = exchange }
+    var snapshot: PlannerSnapshot? { state?.envelope.snapshot }
+    public func refresh() async {
+        do { _ = try await receive("null") } catch { self.error = error.localizedDescription }
+    }
+    private func receive(_ json: String) async throws -> LiveReply {
+        let text = try await exchange(json)
+        let reply = try JSONDecoder().decode(LiveReply.self, from: Data(text.utf8))
+        guard let value = reply.state, value.envelope.isSupported else {
+            throw NSError(domain: "Spread", code: 1, userInfo: [NSLocalizedDescriptionKey: "Planner is still starting. Try again."])
+        }
+        state = value
+        profiles = reply.profiles ?? []
+        if reply.saveError != nil { error = "Couldn’t save on this device. Open Backup and restore before closing Spread." }
+        else if !reply.ok { error = reply.error ?? "The change could not be saved. Please try again." }
+        return reply
+    }
+    @discardableResult func send(_ action: [String: Any], completionHaptic: Bool = false) async -> Bool {
+        let previous = tail
+        let originProfile = state?.envelope.profileId
+        let task = Task { @MainActor in
+            _ = await previous?.value
+            guard let current = self.state, current.envelope.profileId == originProfile else { return false }
+            self.busy = true
+            defer { self.busy = false }
+            do {
+                let request: [String: Any] = ["protocolVersion": 1, "sessionId": current.sessionId,
+                    "requestId": UUID().uuidString, "expectedProfileId": current.envelope.profileId,
+                    "expectedWeek": current.envelope.snapshot.weekKey, "expectedRevision": current.revision, "action": action]
+                let bytes = try JSONSerialization.data(withJSONObject: request)
+                let reply = try await self.receive(String(decoding: bytes, as: UTF8.self))
+                guard reply.ok else { return false }
+                self.undoId = reply.undoId
+                if completionHaptic { UISelectionFeedbackGenerator().selectionChanged() }
+                return true
+            } catch { self.error = error.localizedDescription; return false }
+        }
+        tail = task
+        return await task.value
+    }
+}
+
+public struct SpreadLiveRoot: View {
+    @ObservedObject var planner: LivePlanner
+    let recovery: () -> Void
+    @State private var destination = 0
+    @State private var mode = SpreadLayout.stack
+    @State private var selectedRole = ""
+    @State private var editor: LiveSheet?
+    @State private var showMonth = false
+    @Environment(\.scenePhase) private var scenePhase
+    public init(planner: LivePlanner, recovery: @escaping () -> Void) { self.planner = planner; self.recovery = recovery }
+    public var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                header
+                if let snapshot = planner.snapshot {
+                    Picker("Destination", selection: $destination) {
+                        Text("Week").tag(0); Text("Spread").tag(1)
+                    }.pickerStyle(.segmented).padding(.horizontal, 20).padding(.vertical, 8)
+                    if snapshot.roles.isEmpty {
+                        ContentUnavailableView {
+                            Label("Make room for what matters", systemImage: "square.stack")
+                        } description: { Text("Name a responsibility, give it hours, then place those hours in your week.") }
+                        actions: { Button("Create responsibility") { editor = .newRole }.buttonStyle(.borderedProminent).frame(minHeight: 44) }
+                    } else if destination == 1 {
+                        SpreadLayoutsView(snapshot: snapshot, mode: $mode, selectedId: $selectedRole,
+                            onManage: { editor = .role($0) })
+                    } else {
+                        week(snapshot)
+                    }
+                    if let undo = planner.undoId {
+                        Button("Undo last change") { Task { await planner.send(["type": "undo", "editId": undo]) } }
+                            .frame(minHeight: 44).frame(maxWidth: .infinity).background(Chalk.surface)
+                    }
+                } else {
+                    ProgressView("Opening your plan…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Button("Try again") { Task { await planner.refresh() } }.frame(minHeight: 44)
+                    Button("Open existing planner") { recovery() }.frame(minHeight: 44)
+                }
+            }
+            .background(Chalk.canvas).foregroundStyle(Chalk.ink)
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(item: $editor) { sheet in
+                LiveEditor(planner: planner, sheet: sheet)
+            }
+            .alert("Spread", isPresented: Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })) {
+                Button("OK") { planner.error = nil }
+                Button("Backup and restore") { recovery() }
+            } message: { Text(planner.error ?? "") }
+        }
+        .tint(Chalk.yellow).preferredColorScheme(.dark)
+        .task { await planner.refresh() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await planner.refresh() } } }
+        .onChange(of: planner.state?.envelope.profileId) { _, _ in selectedRole = ""; editor = nil; planner.undoId = nil }
+    }
+    private var header: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text("Spread").font(.system(.largeTitle, design: .serif).weight(.semibold))
+                Spacer()
+                Menu {
+                    Button("New responsibility") { editor = .newRole }
+                    Button("Profiles") { editor = .profiles }
+                    Button("Backup and restore") { recovery() }
+                } label: { Image(systemName: "ellipsis.circle").frame(width: 44, height: 44) }
+                .accessibilityLabel("More")
+            }
+            if let key = planner.snapshot?.weekKey {
+                WeekCrownView(title: "Your week", detail: PreviewDates.weekRange(base: key, offset: 0),
+                    onMove: { delta in Task { for _ in 0..<abs(delta) { await planner.send(["type": "changeWeek", "direction": delta > 0 ? 1 : -1], completionHaptic: true) } } },
+                    onToday: { Task { await planner.send(["type": "changeWeek", "direction": "today"]) } })
+            }
+        }.padding(.horizontal, 20).padding(.top, 8)
+    }
+    private func week(_ snapshot: PlannerSnapshot) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Your week").font(.title2.bold())
+                    Spacer()
+                    Button(showMonth ? "Week" : "Month") { showMonth.toggle() }.frame(minHeight: 44)
+                }
+                if showMonth { month(snapshot) }
+                else {
+                    if !snapshot.unplacedTasks.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("To place", systemImage: "tray").font(.headline)
+                            ForEach(snapshot.unplacedTasks) { task in taskRow(task) }
+                        }.padding(16).overlay(RoundedRectangle(cornerRadius: 22).stroke(style: StrokeStyle(lineWidth: 1, dash: [6, 5])))
+                    }
+                    ForEach(0..<7, id: \.self) { index in
+                        let iso = PreviewDates.dayISO(weekKey: snapshot.weekKey, index: index)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("\(PreviewDates.weekday(weekKey: snapshot.weekKey, index: index)) \(PreviewDates.dayNumber(weekKey: snapshot.weekKey, index: index))").font(.headline)
+                            let allocations = snapshot.allocations.filter { $0.day == iso }.sorted { $0.order < $1.order }
+                            if allocations.isEmpty { Text("Nothing planned").foregroundStyle(Chalk.secondary) }
+                            ForEach(allocations) { allocation in
+                                if let role = snapshot.roles.first(where: { $0.id == allocation.roleId }) {
+                                    Button { editor = .role(role) } label: {
+                                        HStack { Text(role.name); Spacer(); Text("\(allocation.hours.formatted())h") }.frame(minHeight: 44)
+                                    }
+                                    ForEach(snapshot.tasks.filter { $0.allocationId == allocation.id }) { task in taskRow(task) }
+                                }
+                            }
+                        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Chalk.surface, in: RoundedRectangle(cornerRadius: 22))
+                    }
+                    Button("Review unfinished work") { editor = .review }.frame(minHeight: 44)
+                }
+            }.padding(20).frame(maxWidth: 760)
+                .frame(maxWidth: .infinity)
+        }
+    }
+    private func taskRow(_ task: PlannerTask) -> some View {
+        HStack(alignment: .top, spacing: 4) {
+            Button { Task { await planner.send(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id], completionHaptic: !task.done) } } label: {
+                Image(systemName: task.done ? "checkmark.circle.fill" : "circle").frame(width: 44, height: 44)
+            }.accessibilityLabel(task.done ? "Reopen \(task.text)" : "Complete \(task.text)")
+            Button { editor = .task(task) } label: { Text(task.text).strikethrough(task.done).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).multilineTextAlignment(.leading) }
+            Button(task.allocationId == nil ? "Place" : "Move") { editor = .move(task) }.frame(minWidth: 44, minHeight: 44)
+        }
+    }
+    private func month(_ snapshot: PlannerSnapshot) -> some View {
+        let date = PreviewDates.date(snapshot.weekKey)
+        let calendar = Calendar(identifier: .gregorian)
+        let start = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+        let days = calendar.range(of: .day, in: .month, for: start) ?? 1..<29
+        let offset = (calendar.component(.weekday, from: start) + 5) % 7
+        return VStack(spacing: 8) {
+            Text(start.formatted(.dateTime.month(.wide).year())).font(.headline)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
+                ForEach(["M", "T", "W", "T", "F", "S", "S"].indices, id: \.self) { i in Text(["M", "T", "W", "T", "F", "S", "S"][i]).font(.caption).accessibilityHidden(true) }
+                ForEach(0..<offset, id: \.self) { _ in Color.clear.frame(height: 44) }
+                ForEach(Array(days), id: \.self) { day in
+                    let selected = calendar.date(byAdding: .day, value: day - 1, to: start) ?? start
+                    Button(String(day)) {
+                        let weekday = (calendar.component(.weekday, from: selected) + 5) % 7
+                        let monday = calendar.date(byAdding: .day, value: -weekday, to: selected) ?? selected
+                        Task { if await planner.send(["type": "openWeek", "weekKey": PreviewDates.formatter.string(from: monday)]) { showMonth = false } }
+                    }.frame(minWidth: 44, minHeight: 44).accessibilityLabel(selected.formatted(date: .complete, time: .omitted))
+                }
+            }
+        }
+    }
+}
+
+enum LiveSheet: Identifiable {
+    case newRole, role(Responsibility), newTask(String), task(PlannerTask), move(PlannerTask), review, profiles
+    var id: String {
+        switch self { case .newRole: return "newRole"; case .role(let r): return "role-" + r.id
+        case .newTask(let r): return "newTask-" + r; case .task(let t): return "task-" + t.id
+        case .move(let t): return "move-" + t.id; case .review: return "review"; case .profiles: return "profiles" }
+    }
+}
+
+struct LiveEditor: View {
+    @ObservedObject var planner: LivePlanner
+    let sheet: LiveSheet
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var hours = 1.0
+    @State private var category = "custom"
+    @State private var day = ""
+    @State private var selected = Set<String>()
+    @State private var addingTask = false
+    @State private var taskText = ""
+    @State private var confirmDelete = false
+    var body: some View {
+        NavigationStack {
+            Form { content }
+                .navigationTitle(title)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+                .onAppear {
+                    day = planner.snapshot?.weekKey ?? ""
+                    switch sheet {
+                    case .role(let r): name = r.name; hours = r.hours
+                    case .task(let t): name = t.text
+                    default: break
+                    }
+                }
+                .confirmationDialog("Delete this responsibility and its tasks from all weeks?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                    if case .role(let role) = sheet { Button("Delete responsibility", role: .destructive) { submit(["type": "removeRole", "roleId": role.id]) } }
+                }
+        }.tint(Chalk.yellow).preferredColorScheme(.dark)
+    }
+    private var title: String {
+        switch sheet { case .newRole: return "New responsibility"; case .role: return "Responsibility"
+        case .newTask, .task: return "Task"; case .move: return "Place task"; case .review: return "Unfinished work"; case .profiles: return "Profiles" }
+    }
+    @ViewBuilder private var content: some View {
+        switch sheet {
+        case .newRole:
+            TextField("Name", text: $name)
+            Picker("Illustration", selection: $category) { ForEach(ChalkArtwork.categories, id: \.self) { Text($0.capitalized).tag($0) } }
+            hourControl
+            Button("Create responsibility") { submit(["type": "addRole", "name": name, "hours": hours, "category": category]) }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || planner.busy)
+        case .role(let role):
+            ChalkIllustration(category: role.category).frame(height: 100).frame(maxWidth: .infinity)
+            Section("Responsibility") {
+                TextField("Name", text: $name)
+                Button("Save name") { submit(["type": "renameRole", "roleId": role.id, "name": name], close: false) }.disabled(name.isEmpty)
+                hourControl
+                Button("Save hours") { submit(["type": "setHours", "roleId": role.id, "hours": hours], close: false) }
+            }
+            Section("Place hours") {
+                Text("\(planner.snapshot?.remainingHours(for: role.id).formatted() ?? "0")h left in this week’s bank")
+                dayPicker
+                Button("Place 0.5h") { submit(["type": "allocate", "roleId": role.id, "day": day, "hours": 0.5], close: false) }
+                    .disabled((planner.snapshot?.remainingHours(for: role.id) ?? 0) < 0.5)
+            }
+            Section("Tasks") {
+                TextField("New task", text: $taskText)
+                Button("Add task") { let text = taskText; Task { if await planner.send(["type": "addTask", "roleId": role.id, "text": text]) { taskText = "" } } }.disabled(taskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                ForEach(planner.snapshot?.tasks(for: role.id) ?? []) { task in
+                    NavigationLink(task.text) { LiveEditor(planner: planner, sheet: .task(task)) }
+                }
+            }
+            Button("Delete responsibility", role: .destructive) { confirmDelete = true }
+        case .newTask(let role):
+            TextField("Task", text: $name)
+            Button("Add task") { submit(["type": "addTask", "roleId": role, "text": name]) }.disabled(name.isEmpty)
+        case .task(let task):
+            TextField("Task", text: $name, axis: .vertical)
+            Button("Save task") { submit(["type": "editTask", "roleId": task.roleId, "taskId": task.id, "text": name]) }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            NavigationLink("Place or move") { LiveEditor(planner: planner, sheet: .move(task)) }
+            Button(task.done ? "Reopen task" : "Complete task") { submit(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id]) }
+        case .move(let task):
+            Text(task.text)
+            let eligible = planner.snapshot?.eligibleAllocations(for: task) ?? []
+            if eligible.isEmpty { Text("Place hours for this responsibility on a day first.") }
+            ForEach(eligible) { allocation in
+                Button("\(allocation.day) · \(allocation.hours.formatted())h") { submit(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": allocation.id]) }.frame(minHeight: 44)
+            }
+            if task.allocationId != nil { Button("Take off this day") { submit(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": NSNull()]) } }
+        case .review:
+            let open = planner.snapshot?.tasks.filter { !$0.done } ?? []
+            if open.isEmpty { Text("No unfinished work this week.") }
+            ForEach(open) { task in
+                Toggle(task.text, isOn: Binding(get: { selected.contains(task.id) }, set: { if $0 { selected.insert(task.id) } else { selected.remove(task.id) } }))
+            }
+            Button("Move selected to next week") {
+                let picks = open.filter { selected.contains($0.id) }.map { ["roleId": $0.roleId, "taskId": $0.id] }
+                submit(["type": "carryOver", "picks": picks])
+            }.disabled(selected.isEmpty)
+        case .profiles:
+            ForEach(planner.profiles) { profile in
+                Button { submit(["type": "switchProfile", "profileId": profile.id]) } label: {
+                    HStack { Text(profile.name); Spacer(); if profile.id == planner.state?.envelope.profileId { Image(systemName: "checkmark") } }
+                }.frame(minHeight: 44)
+            }
+            TextField("New profile name", text: $name)
+            Button("Create profile") { submit(["type": "addProfile", "name": name]) }.disabled(name.isEmpty || planner.profiles.count >= 10)
+        }
+    }
+    private var hourControl: some View { Stepper("\(hours.formatted()) hours", value: $hours, in: 0...168, step: 0.5) }
+    private var dayPicker: some View {
+        Picker("Day", selection: $day) {
+            ForEach(0..<7, id: \.self) { i in
+                let iso = PreviewDates.dayISO(weekKey: planner.snapshot?.weekKey ?? "", index: i)
+                Text(PreviewDates.date(iso).formatted(.dateTime.weekday(.wide))).tag(iso)
+            }
+        }
+    }
+    private func submit(_ action: [String: Any], close: Bool = true) {
+        Task { if await planner.send(action), close { dismiss() } }
+    }
+}
+#endif

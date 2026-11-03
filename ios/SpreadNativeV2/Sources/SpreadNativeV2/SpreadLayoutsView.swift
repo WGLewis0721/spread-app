@@ -5,7 +5,8 @@ struct SpreadLayoutsView: View {
     let snapshot: PlannerSnapshot
     @Binding var mode: SpreadLayout
     @Binding var selectedId: String
-    @State private var selectedDay: String = "2026-11-02"
+    var onManage: (Responsibility) -> Void = { _ in }
+    @State private var selectedDay: String = ""
     @State private var showModePicker = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -44,6 +45,8 @@ struct SpreadLayoutsView: View {
             .padding(.bottom, 24)
         }
         .background(Chalk.canvas)
+        .onAppear { selectedDay = snapshot.weekKey }
+        .onChange(of: snapshot.weekKey) { _, key in selectedDay = key }
         .sheet(isPresented: $showModePicker) {
             NavigationStack {
                 List(SpreadLayout.allCases) { item in
@@ -149,7 +152,7 @@ struct SpreadLayoutsView: View {
                 )
             }
             .frame(height: 300)
-            if let role = selectedRole { card(role, expanded: true) }
+            if let role = selectedRole { card(role, expanded: true); Button("Manage \(role.name)") { onManage(role) }.frame(minHeight: 44) }
         }
     }
 
@@ -165,7 +168,7 @@ struct SpreadLayoutsView: View {
                     }
                 }
             }
-            if let role = selectedRole { card(role, expanded: true) }
+            if let role = selectedRole { card(role, expanded: true); Button("Manage \(role.name)") { onManage(role) }.frame(minHeight: 44) }
         }
     }
 
@@ -228,7 +231,7 @@ struct SpreadLayoutsView: View {
             remainingHours: snapshot.remainingHours(for: role.id),
             tasks: snapshot.tasks(for: role.id),
             expanded: expanded,
-            onSelect: { changeSelection(role.id) }
+            onSelect: { if selectedId == role.id { onManage(role) } else { changeSelection(role.id) } }
         )
     }
 
