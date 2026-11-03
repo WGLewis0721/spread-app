@@ -2,7 +2,7 @@
 
 # Spread
 
-**Current native design direction:** [Working-build → SwiftUI parity spec](SPREAD_SWIFTUI_PARITY_SPEC.md) · [Outside-in migration instructions](SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md). The previously working installed app, once pinned to its exact build, is the UI/UX reference. This is a native reimplementation, **not a rollback or a new design**; no release is authorized by these docs.
+**Current native design direction:** [Working-build → SwiftUI parity spec](SPREAD_SWIFTUI_PARITY_SPEC.md) · [Outside-in migration instructions](SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) · [Claude implementation-only handoff](CLAUDE_SWIFTUI_HANDOFF.md). The previously working installed app, once pinned to its exact build, is the UI/UX reference. This is a native reimplementation, **not a rollback or a new design**; no release is authorized by these docs.
 
 The weekly role spread. Roles first. Hours second. Tasks last.
 

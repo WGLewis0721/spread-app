@@ -1,6 +1,6 @@
 # Spread — Native SwiftUI Parity Migration: Execution Instructions
 
-**Read first:** [SPREAD_SWIFTUI_PARITY_SPEC.md](SPREAD_SWIFTUI_PARITY_SPEC.md) at the repository root. That spec governs **appearance and interaction parity** for this migration; older 2.0 completion specs still provide testing and data-integration history but do not authorize an unrelated new look.
+**Read first:** [SPREAD_SWIFTUI_PARITY_SPEC.md](SPREAD_SWIFTUI_PARITY_SPEC.md) at the repository root. **Implementation-only Claude delegation:** [CLAUDE_SWIFTUI_HANDOFF.md](CLAUDE_SWIFTUI_HANDOFF.md) contains the exact ordered coding checklist and explicitly defers smoke tests, measurements and release validation until separately authorized; the release gates below still apply before any ship. That spec governs **appearance and interaction parity** for this migration; older 2.0 completion specs still provide testing and data-integration history but do not authorize an unrelated new look.
 
 ## Mandate
 
