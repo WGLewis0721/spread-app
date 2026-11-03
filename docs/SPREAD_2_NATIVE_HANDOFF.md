@@ -10,6 +10,17 @@ Remaining work continues on `fix/spread-native-acceptance-followup`, branched fr
 
 **Web production: deployed and smoke-verified. Native 2.0 release: NO-GO.** There has been no TestFlight/App Store upload. Passing web CI or an iPad layout audit does not prove all ten native journeys.
 
+## Update: PR #117 (November 3, 2026, supersedes the unverified caveats below)
+
+[PR #117](https://github.com/WGLewis0721/spread-app/pull/117) continues from `ae7ffbb` and is rebased on `a19e841`. Full record with run IDs: [evidence/issue-113/pr-117-acceptance.md](evidence/issue-113/pr-117-acceptance.md). Native release stays **NO-GO**.
+
+- **Checked against real runs on `ae7ffbb`:** the Stack-swipe fix is **confirmed** (100 Stack + 100 Fan swipes passed at 390 pt, run 41713277871). The 390-pt clipping fix is **not** confirmed: the audit still failed, flagging the Crown pill title, and earlier runs flagged other texts one at a time because the old test stopped at its first issue. Persistence cycle 2 was **not** shown to be data loss: the latest shell run failed in cycle 1 because the harness killed `simctl launch` after a fixed 15 s on a simulator that took 9 minutes to boot, so the app never started. The launch is now confirmed from the OS and the negative control fails if its flagged instance never launched.
+- **A real product bug was found by the first run of the new journeys and fixed:** the native New responsibility default illustration `custom` was rejected by the TypeScript `addRole` schema, so first-run creation failed. `custom` now means no category (the React default), with tests (`test:spread` 422 passing, `--min 422`).
+- **Audits are separate and complete:** per-width tests record every issue and ignore none. At 390 pt the only remaining required-audit failures on `11fe25e` were the Day-mode weekday chips (fixed frame), fixed in `697f1d3`. Header, Crown pill, Month dates and 44 pt text-button hit regions were fixed.
+- **Suite and CI:** F01–F10 on one dataset, 100 rapid Stack and 100 rapid Fan swipes with selection asserted after every swipe, selected-role fallback, large content in Fan, Dynamic Type AX-XXXL, long names, iPad orientations, Reduce Motion and a 44x44 enumerator are implemented in `PlannerUITests.swift`. They run in `native-journeys.yml` and `native-layout-acceptance.yml` on separate simulators. `ios.yml` preserves the unsigned Release archive as an artifact and fails if Debug-only launch hooks appear in the Release binary.
+- **Still unverified:** hardware p95 and 60 FPS, VoiceOver, the ten-person study, file-picker restore, offline, the photo block, continuous finger tracking, and the final-head F1–F10 matrix and two clean persistence cycles (see the PR's checks for those results). No computer or device could be attached to this session.
+- **Debug-only hooks** (`-SpreadFailSaveMarker`, `-SpreadDisableMirror`, `-SpreadViewportWidth`, `-SpreadNativeV2Preview`) are `#if DEBUG`; the Release archive check enforces it.
+
 ## Work completed in merged code
 
 - A live `SpreadLiveRoot` SwiftUI app uses the bundled React planner through WebKit. The TypeScript planner, Zustand actions and existing persistence remain authoritative. Swift holds a render projection and editor drafts, with no second writable planner database.
@@ -111,7 +122,7 @@ For a web regression, restore the last verified READY baseline deployment `dpl_G
 
 ## Follow-up status (PR #115, November 3, 2026)
 
-Merged on owner instruction while the macOS simulator jobs were still running; **none of the three fixes below has simulator confirmation yet**. Re-query the runs on the merge commit before building on them. Native release remains **NO-GO**.
+Merged on owner instruction while the macOS simulator jobs were still running; **at that time none of the three fixes below had simulator confirmation. Their results are now in the PR #117 update above**. Re-query the runs on the merge commit before building on them. Native release remains **NO-GO**.
 
 | Item | What changed | Evidence / caveat |
 | --- | --- | --- |

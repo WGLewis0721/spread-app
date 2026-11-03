@@ -4,6 +4,8 @@ PR: [114](https://github.com/WGLewis0721/spread-app/pull/114), **merged November
 
 **Web: deployed and verified. Native release: NO-GO.** This ledger was refreshed at approximately 20:07 UTC on November 3. See [the full engineering handoff and continuation prompt](../../SPREAD_2_NATIVE_HANDOFF.md) for exact next actions. In-progress results below must be re-queried.
 
+> **Update, November 3 (PR #117):** the newest, run-ID-level record is [pr-117-acceptance.md](pr-117-acceptance.md). It supersedes the "unproven" and "in progress" statements below where they differ: Stack-swipe fix confirmed, 390-pt clipping not yet fixed on `ae7ffbb` and now audited screen by screen, persistence misses traced to the harness's fixed launch timers, and a first-run `addRole` bug found and fixed.
+
 ## Actual application changes
 
 `SpreadBridgeViewController` keeps the bundled Capacitor/WebKit planner alive, waits for its restored store endpoint, then embeds `SpreadLiveRoot`. This is live SwiftUI, not the fixture preview. Normal app startup now presents the live UI when the engine is ready. `-SpreadNativeV2Preview` remains an explicitly separate Debug fixture route. The WebView remains the only planner and storage owner; there is no SwiftData/UserDefaults planner, new database, migration, or full-projection writeback.
