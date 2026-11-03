@@ -49,10 +49,12 @@ struct WeekCrownView: View {
     // clipping the title and dates inside a fixed-height frame.
     private var wheel: some View {
         VStack(spacing: 3) {
+            // Neither line has a line limit or a scale factor: at larger Dynamic Type the text wraps and
+            // the pill grows, so nothing is ever truncated.
             Text(title).font(.headline).foregroundStyle(Chalk.ink)
-                .lineLimit(1).minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
             Text(detail).font(.caption2).foregroundStyle(Chalk.secondary)
-                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .multilineTextAlignment(.center)
         .padding(.horizontal, 12).padding(.vertical, 9)

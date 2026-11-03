@@ -83,6 +83,12 @@ class NativeUITestCase: XCTestCase {
         field.typeText(text)
     }
     func fieldText(_ id: String) -> String { (el(id).value as? String) ?? "" }
+    /// A Form row's switch sits at the trailing edge; tapping the row centre can miss it.
+    func flip(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
+        let toggle = el(id)
+        XCTAssertTrue(toggle.waitForExistence(timeout: 20), "Missing switch \(id)", file: file, line: line)
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+    }
 
     // MARK: navigation
 
@@ -113,7 +119,12 @@ class NativeUITestCase: XCTestCase {
         let f = DateFormatter(); f.calendar = utc; f.timeZone = utc.timeZone; f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "MMM d"
         return "\(f.string(from: monday)) – \(f.string(from: addDays(monday, 6)))"
     }
-    var thisMonday: Date { monday(of: Date()) }
+    /// The planner derives "this week" from the device's local calendar day, so take today's
+    /// year-month-day locally and treat it as a date-only UTC value like the planner's week keys.
+    var thisMonday: Date {
+        let local = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        return monday(of: utc.date(from: local)!)
+    }
 
     // MARK: accessibility audits (never ignore an issue: the handler only records it)
 
@@ -239,7 +250,8 @@ final class JourneyUITests: NativeUITestCase {
         wednesday.tap()
         tapID("place-hours-button")
         XCTAssertTrue(eventually { self.el("bank-remaining").label == "1h left in this week’s bank" }, "Bank did not show 1h: \(el("bank-remaining").label)")
-        XCTAssertEqual(elements(prefix: "placed-").count, 2, "Expected exactly two placed-hours rows")
+        let placedRows = app.steppers.matching(NSPredicate(format: "identifier BEGINSWITH %@", "placed-")).count
+        XCTAssertEqual(placedRows, 2, "Expected exactly two placed-hours rows")
         capture("F02-02-two-allocations")
         tapButton("Done")
         // A second responsibility with its own Monday allocation, so wrong-role days can be refused later.
@@ -385,6 +397,14 @@ final class JourneyUITests: NativeUITestCase {
         XCTAssertEqual(elements(prefix: "month-day-").count, days, "Month grid must show every date exactly once")
         XCTAssertTrue(el("month-day-\(iso(first))").exists)
         XCTAssertTrue(el("month-day-\(iso(addDays(first, days - 1)))").exists)
+        // The open week is marked (value), every other date is not.
+        for offset in 0..<7 {
+            XCTAssertEqual(el("month-day-\(iso(addDays(thisMonday, offset)))").value as? String, "In the open week", "Open-week date \(offset) is not marked")
+        }
+        let outside = addDays(thisMonday, 14)
+        if utc.component(.month, from: outside) == utc.component(.month, from: first) {
+            XCTAssertEqual((el("month-day-\(iso(outside))").value as? String) ?? "", "", "A date outside the open week must not be marked")
+        }
         capture("F08-01-month")
         // Pick a date in this month: Week returns, that week is open and the day is marked.
         let pick = addDays(first, 14)
@@ -420,7 +440,7 @@ final class JourneyUITests: NativeUITestCase {
         tapID("review-unfinished")
         XCTAssertTrue(el("carry-\(b)").waitForExistence(timeout: 20), "Review does not list \(Dataset.taskB)")
         XCTAssertFalse(el("carry-\(taskId(Dataset.taskA))").exists, "A completed task must not be offered")
-        el("carry-\(b)").tap()
+        flip("carry-\(b)")
         capture("F09-01-review-selected")
         tapID("carry-selected")
         XCTAssertTrue(eventually { !self.el("task-row-\(b)").exists }, "Carried task is still in this week")
@@ -428,7 +448,7 @@ final class JourneyUITests: NativeUITestCase {
         tapID("undo-last-change")
         XCTAssertTrue(eventually { self.el("task-row-\(b)").exists }, "Undo did not bring the task back")
         // Carry again for real.
-        tapID("review-unfinished"); el("carry-\(b)").tap(); tapID("carry-selected")
+        tapID("review-unfinished"); flip("carry-\(b)"); tapID("carry-selected")
         XCTAssertTrue(eventually { !self.el("task-row-\(b)").exists })
         XCTAssertTrue(el("task-row-\(c)").exists, "The unselected task must stay")
         tapButton("Next week")
@@ -629,14 +649,14 @@ final class PlannerUITests: NativeUITestCase {
         return elements(prefix: "role-tab-").map { $0.label }
     }
 
-    private func rapidSwipes(mode: String, container: String) {
+    private func rapidSwipes(mode: String, container: String, steps: Int = 100) {
         let names = roleNames()
         XCTAssertGreaterThanOrEqual(names.count, 2, "Need two responsibilities to swipe between")
         tapButton(names[0])
         chooseMode(mode)
         XCTAssertEqual(selectedRoleLabel, "Manage \(names[0])")
         var index = 0
-        for step in 0..<100 {
+        for step in 0..<steps {
             // Walk both ways so reversals and both ends are exercised.
             let forward = index == 0 ? true : (index == names.count - 1 ? false : step % 3 != 2)
             let area = el(container)
@@ -647,11 +667,28 @@ final class PlannerUITests: NativeUITestCase {
             let expected = "Manage \(names[index])"
             XCTAssertTrue(eventually(6) { self.selectedRoleLabel == expected }, "\(mode) swipe \(step + 1): expected \(expected), found \(self.selectedRoleLabel)")
         }
-        capture("100-rapid-swipes-\(mode.lowercased())")
+        capture("\(steps)-rapid-swipes-\(mode.lowercased())")
     }
 
     func testStackHundredRapidSwipesKeepSelection() { rapidSwipes(mode: "Stack", container: "stack-cards") }
     func testFanHundredRapidSwipesKeepSelection() { rapidSwipes(mode: "Fan", container: "fan-cards") }
+
+    /// Reduce Motion: every gesture still works without animation. The Debug build reports what the
+    /// system setting did to the app; if it is not in effect the test is skipped, never passed.
+    func testReduceMotionKeepsFunction() throws {
+        let state = (app.otherElements["native-content"].firstMatch.value as? String) ?? ""
+        guard state == "reduce-motion" else { throw XCTSkip("Reduce Motion was not in effect in the app (state '\(state)'): not verified") }
+        rapidSwipes(mode: "Stack", container: "stack-cards", steps: 20)
+        rapidSwipes(mode: "Fan", container: "fan-cards", steps: 20)
+        goWeek()
+        let before = crownValue
+        tapButton("Next week")
+        XCTAssertTrue(eventually { self.crownValue != before }, "The Crown arrows must work with Reduce Motion")
+        let from = el("week-crown").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: -70, dy: 0)))
+        XCTAssertTrue(eventually { self.crownValue == before }, "A drag must still move one week with Reduce Motion")
+        capture("reduce-motion-verified")
+    }
 
     /// A selected responsibility that no longer exists falls back to the first one in every mode.
     func testSelectedRoleFallsBackAfterDeletion() {

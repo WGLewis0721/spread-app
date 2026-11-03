@@ -115,6 +115,16 @@ public struct SpreadLiveRoot: View {
     @State private var allTrayTasks = Set<String>()
     @State private var dismissedRecovery: String?
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Debug builds report whether the system Reduce Motion setting reached the app, so a UI test
+    /// can prove the setting was really on instead of assuming it.
+    private var motionState: String {
+        #if DEBUG
+        return reduceMotion ? "reduce-motion" : "motion"
+        #else
+        return ""
+        #endif
+    }
     public init(planner: LivePlanner, recovery: @escaping () -> Void) { self.planner = planner; self.recovery = recovery }
     private var verificationWidth: CGFloat? {
         #if DEBUG
@@ -184,6 +194,7 @@ public struct SpreadLiveRoot: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("native-content")
+            .accessibilityValue(motionState)
             .background(Chalk.canvas).foregroundStyle(Chalk.ink)
             .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $editor) { sheet in
@@ -348,6 +359,8 @@ public struct SpreadLiveRoot: View {
         let date = PlannerDates.date(snapshot.weekKey)
         let calendar = PlannerDates.calendar
         let start = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+        // The open week is marked by weight, a fill and the selected trait, never by colour alone.
+        let openWeek = Set((0..<7).map { PlannerDates.dayISO(weekKey: snapshot.weekKey, index: $0) })
         return VStack(spacing: 8) {
             Text(PlannerDates.label(start, pattern: "MMMM yyyy")).font(.headline)
             HStack(spacing: 0) {
@@ -359,15 +372,24 @@ public struct SpreadLiveRoot: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
                 ForEach(PlannerDates.monthCells(weekKey: snapshot.weekKey)) { cell in
                     if let day = cell.day, let selected = cell.date {
+                        let iso = PlannerDates.formatter.string(from: selected)
+                        let inOpenWeek = openWeek.contains(iso)
                         Button {
-                            Task { if await planner.send(["type": "openWeek", "weekKey": PlannerDates.weekKey(for: selected)]) { selectedDate = PlannerDates.formatter.string(from: selected); showMonth = false } }
+                            Task { if await planner.send(["type": "openWeek", "weekKey": PlannerDates.weekKey(for: selected)]) { selectedDate = iso; showMonth = false } }
                         } label: {
-                            Text(String(day)).font(.body).lineLimit(1).minimumScaleFactor(0.7)
-                                .frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                            // A seven-column grid cannot grow without bound: date numbers scale up to the largest
+                            // standard size and are never shrunk or truncated. Names and labels scale fully.
+                            Text(String(day)).font(.body.weight(inOpenWeek ? .bold : .regular))
+                                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                                .background(inOpenWeek ? Chalk.surface : Color.clear, in: RoundedRectangle(cornerRadius: 10))
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(PlannerDates.label(selected, pattern: "EEEE MMMM d yyyy"))
-                        .accessibilityIdentifier("month-day-" + PlannerDates.formatter.string(from: selected))
+                        .accessibilityValue(inOpenWeek ? "In the open week" : "")
+                        .accessibilityAddTraits(inOpenWeek ? .isSelected : [])
+                        .accessibilityIdentifier("month-day-" + iso)
                     } else { Color.clear.frame(height: 44).accessibilityHidden(true) }
                 }
             }
