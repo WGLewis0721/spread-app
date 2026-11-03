@@ -5,6 +5,7 @@ on:
       - 'ios/**'
       - 'src/lib/spread/native-v2-*'
       - '.github/workflows/native-layout-acceptance.yml'
+      - 'scripts/native-simulator*'
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,14 +34,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run ios:sync
-      - name: Create actual simulator
-        run: |
-          NATIVE_RUNTIME=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; print(next(r["identifier"] for r in reversed(json.load(sys.stdin)["runtimes"]) if ".iOS-" in r["identifier"] and r.get("isAvailable",False)))')
-          xcrun simctl list devicetypes -j > native-device-types.json
-          NATIVE_TYPE=$(python3 -c 'import json; ds=json.load(open("native-device-types.json"))["devicetypes"]; target="${{ matrix.type }}"; matches=[d for d in ds if d["identifier"]==target]; matches=matches or [d for d in ds if "iPad Pro" in d["name"] and "12.9" in d["name"]] if ${{ matrix.width }}==1024 else matches; assert matches, "Required device type unavailable"; print(matches[-1]["identifier"])')
-          NATIVE_UDID=$(xcrun simctl create 'Spread layout ${{ matrix.width }}' "$NATIVE_TYPE" "$NATIVE_RUNTIME")
-          echo "NATIVE_UDID=$NATIVE_UDID" >> "$GITHUB_ENV"
-          xcrun simctl bootstatus "$NATIVE_UDID" -b
+      - name: Create actual compatible simulator
+        run: node scripts/native-simulator.mjs ${{ matrix.width }}
       - name: Build and audit native viewport
         run: |
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO -only-testing:SpreadNativeUITests/PlannerUITests/testLayout${{ matrix.width }} -resultBundlePath artifacts/Layout${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
