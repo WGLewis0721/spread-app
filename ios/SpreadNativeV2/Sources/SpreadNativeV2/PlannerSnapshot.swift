@@ -21,7 +21,9 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
 
     public func remainingHours(for roleId: String) -> Double {
         guard let role = roles.first(where: { $0.id == roleId }) else { return 0 }
-        return max(0, role.hours - placedHours(for: roleId))
+        // Match model.ts remainingHours exactly, including overbooked legacy weeks.
+        // JavaScript Math.round breaks .5 ties toward +infinity.
+        return floor((role.hours - placedHours(for: roleId)) * 2 + 0.5) / 2
     }
 
     public func tasks(for roleId: String) -> [PlannerTask] {
@@ -36,6 +38,7 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
     /// A task is eligible only for an allocation of its own responsibility.
     public func eligibleAllocations(for task: PlannerTask) -> [DayAllocation] {
         allocations.filter { $0.roleId == task.roleId && $0.hours > 0 }
+            .sorted { $0.day == $1.day ? $0.order < $1.order : $0.day < $1.day }
     }
 }
 
@@ -60,12 +63,14 @@ public struct DayAllocation: Codable, Equatable, Identifiable, Sendable {
     public let roleId: String
     public let day: String // ISO date YYYY-MM-DD, never a guessed calendar time
     public let hours: Double
+    public let order: Int
 
-    public init(id: String, roleId: String, day: String, hours: Double) {
+    public init(id: String, roleId: String, day: String, hours: Double, order: Int = 0) {
         self.id = id
         self.roleId = roleId
         self.day = day
         self.hours = hours
+        self.order = order
     }
 }
 
@@ -82,6 +87,22 @@ public struct PlannerTask: Codable, Equatable, Identifiable, Sendable {
         self.text = text
         self.done = done
         self.allocationId = allocationId
+    }
+}
+
+/// Versioned identity envelope, shared by native-v2-projection.ts and its JSON fixture.
+/// This is a view-only transport; it must never be persisted as a planner record.
+public struct NativeV2Envelope: Codable, Equatable, Sendable {
+    public let protocolVersion: Int
+    public let profileId: String
+    public let snapshot: PlannerSnapshot
+
+    public var isSupported: Bool { protocolVersion == 1 && !profileId.isEmpty }
+
+    public init(protocolVersion: Int = 1, profileId: String, snapshot: PlannerSnapshot) {
+        self.protocolVersion = protocolVersion
+        self.profileId = profileId
+        self.snapshot = snapshot
     }
 }
 

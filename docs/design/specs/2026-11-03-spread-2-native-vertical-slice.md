@@ -31,6 +31,11 @@
 | Data | 0 loss/duplication, 0 role-day violations, exact Undo and rollover | 50 deterministic TS↔Swift fixtures |
 | Scope | 0 Studio/background/editor routes | Navigation inventory |
 
+## Added wire protocol boundary
+- `src/lib/spread/native-v2-projection.ts` maps an active profile and selected week to a **read-only, versioned** `NativeV2Envelope`. It preserves stable role, task, and allocation IDs and each allocation's `order`.
+- `ios/SpreadNativeV2/Tests/SpreadNativeV2Tests/Fixtures/projection-v1.json` is checked by TypeScript and decoded by Swift. Neither language may persist the flattened projection as the full planner because task notes/photos and historical weeks are deliberately omitted.
+- Source-of-truth parity for the wire protocol is unit-tested; live JS↔Swift transport and persistence safety are still unimplemented.
+
 ## Blockers before a live-data branch
 1. Map TypeScript week box/task/allocation JSON to the native immutable snapshot, retaining IDs and exact week key.
 2. Implement typed adapter dispatch to current Zustand actions; no duplicated scheduling logic.

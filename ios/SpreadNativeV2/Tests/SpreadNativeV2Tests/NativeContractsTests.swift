@@ -90,6 +90,29 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertEqual(source.remainingHours(for: "unknown"), 0)
     }
 
+    func testReadOnlyProjectionJSONHasExactTypeScriptWireShape() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "projection-v1",
+                                                    withExtension: "json", subdirectory: "Fixtures"))
+        let envelope = try JSONDecoder().decode(NativeV2Envelope.self, from: Data(contentsOf: url))
+        XCTAssertTrue(envelope.isSupported)
+        XCTAssertEqual(envelope.profileId, "profile-1")
+        XCTAssertEqual(envelope.snapshot.weekKey, "2026-11-02")
+        XCTAssertEqual(envelope.snapshot.roles.first?.hours, 7.5)
+        XCTAssertEqual(envelope.snapshot.allocations.first?.order, 1)
+        XCTAssertEqual(envelope.snapshot.unplacedTasks.map(\.id), ["task-stale"])
+        XCTAssertEqual(envelope.snapshot.eligibleAllocations(for: envelope.snapshot.tasks[0]).map(\.id), ["alloc-work"])
+        XCTAssertEqual(envelope.snapshot.remainingHours(for: "work"), 5)
+        XCTAssertEqual(try JSONDecoder().decode(NativeV2Envelope.self,
+                    from: JSONEncoder().encode(envelope)), envelope)
+    }
+
+    func testLegacyOverbookedWeekMatchesJavaScriptHourArithmetic() {
+        let snapshot = PlannerSnapshot(weekKey: "2026-11-02",
+            roles: [Responsibility(id: "x", name: "X", category: "work", color: "#FFFFFF", hours: 2)],
+            allocations: [DayAllocation(id: "a", roleId: "x", day: "2026-11-02", hours: 2.5)], tasks: [])
+        XCTAssertEqual(snapshot.remainingHours(for: "x"), -0.5)
+    }
+
     func testSnapshotJSONRoundTripDoesNotMutateRecords() throws {
         let fixture = SpreadV2Fixture.week
         let encoded = try JSONEncoder().encode(fixture)

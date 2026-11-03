@@ -9,6 +9,7 @@
 - **11 original Chalkboard WebP** illustrations, copied **byte-for-byte** from `spread-studio/src/spread/assets/illustrations` as package resources; decoded through ImageIO; decorative only.
 - Fixed dark Chalkboard presentation; no Studio, theme choices, wallpaper, custom backgrounds, or personalization UI.
 - Pure Swift tests for Crown detents/reversals, role/Dial geometry, exact task eligibility and snapshot round trip.
+- **Versioned read-only bridge projection:** `src/lib/spread/native-v2-projection.ts` sends protocol v1 + active profile ID to `NativeV2Envelope`; both languages validate the same JSON fixture. Rich notes, photos and historical weeks remain in the React store, never in the flattened native payload.
 
 ## Test the preview in Xcode
 1. Check out the feature branch and open `ios/App/App.xcodeproj`.

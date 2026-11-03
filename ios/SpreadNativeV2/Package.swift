@@ -8,6 +8,6 @@ let package = Package(
     products: [.library(name: "SpreadNativeV2", targets: ["SpreadNativeV2"])],
     targets: [
         .target(name: "SpreadNativeV2", resources: [.copy("Resources/Chalk")]),
-        .testTarget(name: "SpreadNativeV2Tests", dependencies: ["SpreadNativeV2"])
+        .testTarget(name: "SpreadNativeV2Tests", dependencies: ["SpreadNativeV2"], resources: [.copy("Fixtures")])
     ]
 )
