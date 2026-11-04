@@ -262,7 +262,7 @@ workflows:
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
             -only-testing:SpreadNativeUITests/DuoUITests \
             -only-testing:SpreadNativeUITests/PlannerUITests/testCrownHundredDragsWithThirtyReversals \
-            -only-testing:SpreadNativeUITests/SpreadFlowUITests/testFlow3_CrownCapsRoundTripAndToday \
+            -only-testing:SpreadNativeUITests/SpreadFlowUITests \
             -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
           xcrun xcresulttool export attachments --path artifacts/Duo.xcresult --output-path artifacts/duo-screenshots
           DUO_TOOLS="$(mktemp -d /tmp/spread-duo-tools.XXXXXX)"

@@ -78,7 +78,7 @@ struct NewSpreadSheet: View {
                 RoleBadge(category: draft.category, color: colorHex, size: 48)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Spread \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
-                    TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }))
+                    TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }), prompt: Spread.fieldPrompt("Parent, shop, study"))
                         .font(.system(.body))
                         .padding(.horizontal, 12).frame(minHeight: 44)
                         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Spread.inset))
@@ -163,7 +163,7 @@ struct RoleSheet: View {
                     }
                         .listRowBackground(Spread.elevated)
                     Section("Responsibility") {
-                        TextField("Name", text: $name)
+                        TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"))
                             .submitLabel(.done)
                             .onSubmit { rename(role) }
                             .accessibilityIdentifier("role-name-field")
@@ -388,7 +388,7 @@ struct ProfilesSheet: View {
                             .accessibilityLabel("Open \(profile.name)")
                             .accessibilityAddTraits(active ? .isSelected : [])
                             .accessibilityIdentifier("profile-\(profile.id)")
-                            TextField("Name", text: Binding(get: { names[profile.id] ?? profile.name }, set: { names[profile.id] = $0 }))
+                            TextField("Name", text: Binding(get: { names[profile.id] ?? profile.name }, set: { names[profile.id] = $0 }), prompt: Spread.fieldPrompt("Name"))
                                 .submitLabel(.done)
                                 .onSubmit { rename(profile) }
                                 .accessibilityLabel("Name for \(profile.name)")
@@ -405,7 +405,7 @@ struct ProfilesSheet: View {
                 }
                     .listRowBackground(Spread.elevated)
                 Section("New profile") {
-                    TextField("New profile name", text: $newName)
+                    TextField("New profile name", text: $newName, prompt: Spread.fieldPrompt("New profile name"))
                         .submitLabel(.done)
                         .onSubmit { create() }
                         .accessibilityIdentifier("new-profile-field")

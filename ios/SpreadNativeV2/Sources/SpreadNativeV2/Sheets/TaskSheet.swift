@@ -62,7 +62,7 @@ struct TaskSheet: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             taskHeader(task)
-                            TextField("Task title", text: $title)
+                            TextField("Task title", text: $title, prompt: Spread.fieldPrompt("Task title"))
                                 .font(.system(.title2, weight: .bold))
                                 .submitLabel(.done)
                                 .onSubmit { commitTitle() }
@@ -313,7 +313,7 @@ struct TaskSheet: View {
                         var copy = block
                         copy.items?[index].text = value
                         update(copy)
-                    }))
+                    }), prompt: Spread.fieldPrompt(item.level == 0 ? "Point" : "Detail"))
                     .accessibilityIdentifier("content-outline-\(index)")
                     Button {
                         var copy = block
@@ -350,7 +350,7 @@ struct TaskSheet: View {
                                 var copy = block
                                 copy.cells?[row][column] = text
                                 update(copy)
-                            }))
+                            }), prompt: Spread.fieldPrompt("Row \(row + 1), column \(column + 1)"))
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 140, height: 44)
                             .accessibilityLabel("Row \(row + 1), column \(column + 1)")

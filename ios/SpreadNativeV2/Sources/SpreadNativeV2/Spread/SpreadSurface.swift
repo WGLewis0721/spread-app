@@ -378,7 +378,7 @@ struct RoleRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 if isOpen || editing {
                     // Renaming lives on the open card (and in Edit mode), so a tap on a compact card always opens it.
-                    TextField("Name", text: $name, axis: .vertical)
+                    TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"), axis: .vertical)
                         .lineLimit(1...3)
                         .font(.system(.title3, weight: .semibold))
                         .focused($nameFocused)
@@ -390,12 +390,12 @@ struct RoleRow: View {
                 } else {
                     Text(role.name)
                         .font(.system(.title3, weight: .semibold))
-                        .lineLimit(1)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("role-name-\(role.id)")
                 }
                 Text(summaryLine)
                     .font(.system(.footnote)).foregroundStyle(Spread.secondary)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -719,14 +719,23 @@ struct TaskRow: View {
 struct AddTaskRow: View {
     let placeholder: String
     let onAdd: (String) -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var text = ""
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+        if typeSize.isAccessibilitySize {
+            Text(placeholder)
+                .font(.system(.body)).foregroundStyle(Spread.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 56).padding(.top, 12)
+                .accessibilityHidden(true)
+        }
         HStack(spacing: 0) {
             Image(systemName: "plus").font(.system(.body, weight: .regular)).foregroundStyle(Spread.accent)
                 .frame(width: 56, height: 56)
                 .accessibilityHidden(true)
-            TextField(placeholder, text: $text)
+            TextField(placeholder, text: $text, prompt: typeSize.isAccessibilitySize ? nil : Spread.fieldPrompt(placeholder))
                 .font(.system(.body))
                 .submitLabel(.done)
                 .onSubmit { submit() }
@@ -744,6 +753,7 @@ struct AddTaskRow: View {
                 .accessibilityIdentifier("add-task-button")
                 .transition(.opacity)
             }
+        }
         }
         .padding(.leading, 12)
         .overlay(alignment: .top) { Rectangle().fill(Spread.line).frame(height: 0.5).padding(.leading, 56) }
@@ -788,6 +798,9 @@ struct StackLayout: View {
             }
         }
         .animation(reduceMotion ? nil : SpreadMotion.curve, value: focusedId)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Responsibilities in Stack view")
+        .accessibilityValue(snapshot.roles.first(where: { $0.id == focusedId })?.name ?? "")
         .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { value in
             guard abs(value.translation.width) > abs(value.translation.height) * 1.5,
                   abs(value.translation.width) >= 64,

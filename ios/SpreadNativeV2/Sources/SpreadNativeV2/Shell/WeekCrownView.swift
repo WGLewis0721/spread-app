@@ -15,6 +15,7 @@ struct WeekCrownView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var travel = CrownTravel()
     @State private var translation: CGFloat = 0
     @State private var live = false
@@ -147,7 +148,7 @@ struct WeekCrownView: View {
         .padding(.vertical, 2)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Spread.crownRecess))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Spread.crownRecessStroke, lineWidth: 1))
-        .padding(.horizontal, 50)
+        .padding(.horizontal, typeSize.isAccessibilitySize ? 8 : 50)
         .padding(.vertical, 7)
     }
 
@@ -158,7 +159,7 @@ struct WeekCrownView: View {
             Text(title)
                 .font(.system(.callout, weight: .semibold))
                 .foregroundStyle(Spread.ink)
-                .lineLimit(2).minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
             if let detail {
                 Text(detail).font(.system(.caption, weight: .medium))
                     .foregroundStyle(onDetail == nil ? Spread.secondary : Spread.accent)
@@ -188,10 +189,10 @@ struct WeekCrownView: View {
                     .font(.system(.body, weight: .bold))
                     .foregroundStyle(Spread.ink.opacity(0.92))
                     .frame(width: 44)
-                    .padding(leading ? .leading : .trailing, 50)
+                    .padding(leading ? .leading : .trailing, typeSize.isAccessibilitySize ? 8 : 50)
                     .allowsHitTesting(false)
             }
-            .frame(width: 94, height: height)
+            .frame(width: typeSize.isAccessibilitySize ? 52 : 94, height: height)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

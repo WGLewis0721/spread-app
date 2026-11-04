@@ -112,6 +112,9 @@ public enum Spread {
     public static let footnote = Font.system(.footnote, weight: .regular)
     public static let caption = Font.system(.caption, weight: .regular)
 
+    /// Instructions in an empty editable field must stay readable on the native inset surfaces.
+    public static func fieldPrompt(_ label: String) -> Text { Text(label).foregroundStyle(secondary) }
+
     // MARK: Helpers
 
     typealias RGBA = (Double, Double, Double, Double)

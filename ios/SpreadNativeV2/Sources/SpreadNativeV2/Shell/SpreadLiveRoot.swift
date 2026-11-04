@@ -141,10 +141,13 @@ public struct SpreadLiveRoot: View {
         let isMonth = destination == .week && monthPlane
         return VStack(spacing: 0) {
             // The header is sticky, as the web header was: it stays put while the surface scrolls under it.
-            header(snapshot, isMonth: isMonth)
+            if !typeSize.isAccessibilitySize { header(snapshot, isMonth: isMonth) }
             ScrollViewReader { proxy in
             ScrollView {
             VStack(spacing: 0) {
+                // Large text and long profile names must remain reachable instead of consuming
+                // the entire viewport in a sticky header.
+                if typeSize.isAccessibilitySize { header(snapshot, isMonth: isMonth) }
                 notices
                     .padding(.horizontal, 16)
                 if snapshot.roles.isEmpty {

@@ -16,6 +16,7 @@ struct MonthSurface: View {
     @State private var marks: [String: NativeDayMark] = [:]
 
     private static let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private static let weekdayNames = ["Sun": "Sunday", "Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday", "Thu": "Thursday", "Fri": "Friday", "Sat": "Saturday"]
     private var calendar: Calendar { PlannerDates.calendar }
 
     private struct Cell: Identifiable {
@@ -50,11 +51,11 @@ struct MonthSurface: View {
         VStack(spacing: 8) {
             HStack(spacing: 6) {
                 ForEach(Self.weekdays, id: \.self) { label in
-                    Text(label)
-                        .font(.system(.caption2, weight: .medium))
-                        .foregroundStyle(Spread.secondary)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityHidden(true)
+                    ViewThatFits(in: .horizontal) {
+                        weekdayHeading(label, fullName: Self.weekdayNames[label] ?? label)
+                        weekdayHeading(String(label.prefix(2)), fullName: Self.weekdayNames[label] ?? label)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
@@ -72,6 +73,15 @@ struct MonthSurface: View {
             guard let year = parts.year, let month = parts.month else { return }
             if let fresh = await planner.monthMarks(year: year, month: month - 1) { marks = fresh }
         }
+    }
+
+    private func weekdayHeading(_ text: String, fullName: String) -> some View {
+        Text(text)
+            .font(.system(.caption2, weight: .medium))
+            .foregroundStyle(Spread.secondary)
+            .fixedSize(horizontal: true, vertical: false)
+            .accessibilityLabel(fullName)
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// Changes whenever the month shown, the profile, or the plan itself changes, so the dots follow edits.

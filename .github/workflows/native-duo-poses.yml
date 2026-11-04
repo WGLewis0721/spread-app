@@ -41,7 +41,7 @@ jobs:
         run: |
           set -eu
           AD="$RUNNER_TEMP/spread-duo-tools/node_modules/.bin/agent-device"
-          ad() { "$AD" "$@" --platform ios --udid "$NATIVE_UDID" --session spread-duo-poses; }
+          ad() { "$AD" "$@" --platform ios --udid "$NATIVE_UDID" --ios-simulator-device-set "$HOME/Library/Developer/CoreSimulator/Devices" --session spread-duo-poses; }
           xcrun simctl launch --terminate-running-process "$NATIVE_UDID" com.graymatter.spread -spread.native.appearance dark
           ad open com.graymatter.spread --json > artifacts/session.json
           ready=0

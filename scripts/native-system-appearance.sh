@@ -5,7 +5,12 @@ appearance_tool="${1:?agent-device executable required}"
 appearance_udid="${2:?simulator UDID required}"
 appearance_dir="artifacts/duo-system"
 mkdir -p "$appearance_dir"
-ad() { "$appearance_tool" "$@" --platform ios --udid "$appearance_udid" --session spread-duo-system; }
+ad() {
+  # Query the running simulator guest directly. Headless CI's CoreDevice service does not report
+  # the Duo panel table, even though the runtime and app are available in the default device set.
+  "$appearance_tool" "$@" --platform ios --udid "$appearance_udid" \
+    --ios-simulator-device-set "$HOME/Library/Developer/CoreSimulator/Devices" --session spread-duo-system
+}
 trap 'xcrun simctl ui "$appearance_udid" appearance light >/dev/null' EXIT
 
 # This is the real app preference, also exercised through More by DuoUITests. No fake view or scheme.

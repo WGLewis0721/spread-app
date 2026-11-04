@@ -1,74 +1,35 @@
-# Native release candidate continuation
+# Native release candidate
 
-Current branch: `fix/swiftui-finish`, based on main `3852a9f` (PR #119 and #120 merged).
-Owner objective (November 3, America/Chicago): a paid-app candidate tonight, with iPhone, iPad and iPhone Duo as major targets.
+Branch: `fix/swiftui-finish`. Authoritative main: `3852a9f` (PRs #119 and #120).
+Implementation and release evidence are tracked in PR #121. Main, the web deployment and golden branches are unchanged.
 
-## Implementation
+## Scope
 
-- Reserve the dock in the vertical layout using its measured content height; no hardcoded bottom spacer.
-- Keep whole layout names in a scrolling control, and its accessibility container in every size.
-- Compact empty days; choose one or two day columns from available space, with one column at accessibility text sizes.
-- Allow phone landscape; use the iOS 27.1 SDK in the shipping and new manual candidate workflows.
-- Restore Stack swipes and keyboard/VoiceOver selection; bound Fan to one selection per swipe; reset deleted selections.
-- Softer, pixel-aligned Crown ribs; stable wheel height and a 44pt return-to-week control; expose acknowledged Crown state.
-- Add the profile/task entrance cascade, without delaying interaction or moving under Reduce Motion.
-- Explain empty/insufficient banks inside the serialized dispatcher; test no writes, replay behavior and exact bank use.
-- Share sixty deterministic Free time vectors between TypeScript and Swift; no planner schema/store changes.
-- Flush rich content on Done before dismissing; show the allocation date and responsibility hours on the task sheet.
-- Keep appearance consistent through the native container and status bar; test actual device appearance instead of an ignored launch flag.
-- Preserve rollover confirmation from More, and wrap the full color palette at narrow widths.
-- Adapt the existing F1–F10 journeys to the current controls. Repair 390pt simulator selection; retain historical before captures outside the current-code acceptance matrix.
-- Restore Studio cutout-local pivots, layer-relative translation, CSS easing/keyframes and seven decorative FX, sharing one paused/reduced-motion-aware clock.
-- Confirm destructive responsibility removal; keep appearance controls and day-mark hit regions at least 44pt.
+The candidate preserves the local-first planner and its serialized writer. It finishes the native Week, Month and five Spread layouts, Crown navigation, task/role/profile editing, rich-content save, appearance, measured dock layout and adaptive type. It adds no accounts, schema migration, cloud surface, accent picker or native backup rewrite.
 
-## Verification
+The latest fixes give Stack one accessibility identity, keep large-text headers scrollable, allow Crown and responsibility text to wrap, improve field prompt contrast and label Month weekday headings. Test navigation explicitly opens Week, searches restored list offsets and scrolls above the keyboard. iPad rotation requires matching window axes and captures the whole display. Duo automation queries the simulator guest panel table through an explicit device-set path because headless CoreDevice did not report displays.
 
-Planner tests: 437 pass locally. Script suite: 210 pass / 4 existing skips. TypeScript typecheck passed.
-Initial candidate `de56e46`: native iOS compile, portable Swift contracts and the main CI checks passed.
-The 1024pt iPad tour and orientation test passed. Its hit-region audit found ten reports, all the same 14.5pt day-mark region; this revision enlarges it within the existing illustration band.
-The 820pt dark-large-text tour timed out in the accessibility query; its other tours completed. Initial captures labeled dark actually rendered light. This revision checks the rendered appearance and tests the real preference controls and live system changes.
-The 390pt layout job failed before launch because the simulator service timed out; discovery now retries that transient error.
-This revision passed 28 portable Swift tests. Initial iPhone flow checks passed placement/Undo, Crown, Month/day selection and Move to. Full journeys exposed inherited SwiftUI accessibility identifiers and lazy-list navigation failures; this revision gives named surfaces their own accessibility containers and scrolls lazy rows before requiring them. Native UI reruns, actual Duo results and a signed artifact remain pending.
-No claim of physical-device, fold-pose, reference-image or App Store acceptance for this new binary.
+## Verified baseline: `317b195`
 
-## Build route
+- Native iOS compilation, 28 portable Swift contracts, planner/script checks, bridge simulations and App Store preflight passed.
+- Crown: 100 real drags including 30 reversal pairs passed. Fan: 100 swipes passed. The separate Stack stress check failed after selecting an offscreen child with an inherited container identifier; this revision fixes that identity and asserts uniqueness.
+- Actual Duo: all five layouts, Week, Month and More passed rendered Light and Dark checks. The preference relaunch check failed querying an offscreen System row; this revision scrolls it into view. Live OS System changes and hinge poses have not passed yet.
+- 1024pt iPad viewport and required accessibility audit passed. 390pt, 820pt and 1024pt visual tours passed, including rendered dark checks. Existing rotated app-rectangle exports are not valid landscape screenshots; fresh full-screen captures are required.
+- Create-flow checks failed with Save covered by the keyboard. Placement/Undo, Crown caps/Today, Month/day selection and Move to passed in the 390pt flow run. This revision corrects scrolling and includes all five core flows in the Codemagic signing gate.
+- Largest-text and extended accessibility checks remain unresolved. Fresh audits must validate the wrapping, scroll layout, prompt and weekday fixes. No contrast reports are waived.
 
-`spread-release-candidate` in `codemagic.yaml` is manual, selects only this exact branch tip, uses Xcode 27.1,
-runs actual Duo modes/appearance/rotation tests, then builds an App Store-eligible signed IPA and uploads to App Store Connect.
-It never submits for App Review or releases the app. The existing PR119 internal-only workflow is untouched.
-Codemagic is connected. Existing main build 16 completed signing/upload; that is not this candidate.
-Candidate run `6aeaa7bfa87b4d255fde5ec8` passed its checks/bundle step, then was deliberately stopped before signing/upload to correct navigation failures found in the parallel UI suite.
+Local follow-up: script suite 214 pass / 4 existing skips; TypeScript typecheck and docs check passed; lint has no errors and 7 existing warnings. Changed SwiftUI and XCTest code still needs fresh native compilation and UI results.
 
-## Scope retained
+## Release gates
 
-No accent picker, Stack auto-turn, custom sheet stack, cloud surface or native backup rewrite was added.
-The original engine remains the only writer; protected recovery and all golden branches are unchanged.
-Physical haptics, fold/occlusion poses, exact-reference spring/FX calibration and comparison to the owner's original binary remain explicit gates.
+`spread-release-candidate` uses Xcode 27.1, requires the exact branch tip and cloud flags off, runs portable/source/bundle checks, actual Duo appearance checks, Crown stress and all five core flows, then verifies live System appearance through OS readback and the rendered accessibility root. Only passing gates permit build-number allocation, App Store signing, IPA validation and upload. Keep the branch fixed while a candidate is running.
 
-## Capture integrity follow-up
+Codemagic candidate #5 (`6aeabc3ba87b4d255fde62fd`, source `317b195`) failed before signing: the Crown flow inherited Month mode from a prior test. No replacement candidate has been signed or uploaded. Earlier candidate runs also stopped at UI gates. Existing main build 16 is not this candidate.
 
-The first Duo test run passed its assertions, but its exported files labeled portrait and landscape had the same 1398×2034 dimensions and its dark-labeled captures remained light. Those files do not verify rotation, dark mode, or fold poses. New tests assert the actual rendered appearance. Automated captures and audits also wait for SwiftUI transitions to settle.
+The actual Duo pose workflow built and installed the app, but fold state failed because the simulator display table was unavailable through CoreDevice. The explicit guest query fix requires a fresh run. Physical haptics, occlusion poses, exact-reference animation calibration and comparison with the owner's reference binary remain unverified.
 
-The extended 820pt audit produced 289 reports: 168 contrast reports, 105 Dynamic Type reports on blank calendar placeholders, 14 on day abbreviations, and 2 on the fixed-size Dial number. The focused follow-up removes blank text placeholders, keeps adjacent-month dates at readable contrast, and uses scalable type for the Dial and day labels. Remaining contrast reports require a settled capture and re-audit; they are not waived.
+## Apple state
 
-Candidate `94e7e9b`: native compile, CI and 28 portable contracts passed. The 390pt dark and dark-large-text tours passed rendered-appearance assertions. The real Duo mode/appearance test passed; its separate preference round-trip failed finding Light after reopening More, so Codemagic run `6aeaa952a87b4d255fde5f29` stopped at the test gate with no signed IPA/upload. The follow-up compacts More choices and searches restored list offsets in both directions.
+Read-only Codemagic audit `6aeab859a87b4d255fde6222` reported version 1.0 `PENDING_DEVELOPER_RELEASE` and uploaded builds 7–16 `VALID`. It did not identify the approved build. The existing approval has not been removed and no app has been released.
 
-Largest-text captures showed the Crown date/hint and destination rail exceeding available space. The follow-up permits Crown readout growth, wraps its hint, stacks the destination choices at accessibility sizes, and separates the Dial role label at those sizes. Card selection uses a full-card background button instead of inheriting a gesture onto static day marks. System sheet grabbers are excluded from the custom-button target check, alongside system navigation bars.
-
-PR #123 verifies the actual simulator hinge and orientation using pinned, provenance-checked CI tooling, with state readback and unmodified screenshots. A passed XCUIDevice orientation assignment is not rotation evidence.
-
-The rendered dark capture from `94e7e9b` confirmed that a safe-area inset still lets scroll content draw beneath the floating dock. The follow-up puts content and dock in separate vertical layout regions, sized from their actual contents, so visible task fields and card controls stay above the dock.
-
-Candidate `dc2f870`: native compile, 28 portable Swift tests, planner/script checks, bridge simulations and App Store preflight passed. Codemagic run `6aeab1d1a87b4d255fde60dd` passed the actual Duo test of all five modes plus Week, Month and More in forced Light and Dark. Its separate preference test passed Dark and Light choices but failed when changing the device to Dark after selecting System. The test gate prevented signing/upload. The focused follow-up removes the duplicate SwiftUI appearance override, leaving the native container as the sole appearance owner for the canvas, sheets and status bar. It also verifies the selected preference, waits for sheet transitions and captures both live System changes. These changes require a fresh native compile and Duo run.
-
-The same candidate's 1024pt screen and orientation tests passed, but inspection of its exported screenshot found a stretched Crown: the decorative Canvas accepted the parent's proposed height after the dock became a real layout sibling. The follow-up preserves the wheel's intrinsic vertical size while allowing larger text to grow it, and asserts a 120pt ceiling at standard text size in viewport and Duo acceptance. Its remaining hit-region reports all identify static day marks whose accessibility frame follows 14.5pt glyphs despite the 44pt visual layout region; an explicit accessibility content shape now matches that region. The view-mode swipe failure was caused by the stretched header putting the rail outside the visible scroll region. Fresh captures and audits are required.
-
-Candidate `fc3dfaf`: native compilation and 28 portable Swift contracts passed. Codemagic `6aeab6bda87b4d255fde61d1` passed all Duo modes in both appearances and the new compact-Crown size assertion. Dark/Light preference choices passed; the XCTest-only System change still reported `device: dark, rendered: light`. It was cancelled after the failed gate, with no signed IPA/upload. The follow-up moves live System acceptance to a real `simctl ui` change, OS readback, and an unfiltered accessibility snapshot assertion, while preserving UI preference/relaunch checks. The external snapshot verifier rejects missing roots, opposite appearance and mixed panel values (four regression tests; script total 214 pass / 4 existing skips).
-
-The Crown stress test completed 30 reversal pairs but failed the longer outward-and-return sequence. Drags across the central return-to-week button could also activate that button. The follow-up gives the drag priority after 8pt of movement, leaving taps available, and adds the full 100-drag/30-reversal test to the Codemagic signing gate. Selected day marks use readable ink and an underline, avoiding low-contrast responsibility colors as small text while keeping the responsibility data unchanged.
-
-The first pinned-tool hinge run built/installed the actual Duo app, then its initial accessibility wait timed out during an automation-runner restart. The follow-up gives that cold start a bounded retry and preserves a failure screenshot. No hinge pose has passed yet.
-
-Apple status was read through the existing integration in `6aeab859a87b4d255fde6222`: version 1.0 is `PENDING_DEVELOPER_RELEASE`; uploaded builds 7 through 16 are `VALID`. This does not identify the approved build, and does not approve this changed native candidate. The separate read-only workflow lives in PR #124.
-
-The `fc3dfaf` 1024pt viewport test and required accessibility audit now pass across all modes. Its orientation/export step is still running. Long layout, journey and visual matrices now finish their current run before queuing the newest revision, preserving the evidence instead of discarding it during release fixes. The next candidate's changed Crown behavior is independently gated by the full drag stress test and the cap/return-to-today flow before signing. Local script verification is 214 pass / 4 existing skips; lint has no errors and the same 7 existing warnings; docs and YAML syntax checks pass.
+A changed binary needs its own App Review. Candidate publishing uploads only: it does not submit for review or release. Do not describe a compile, old approval or successful upload as acceptance of this candidate.

@@ -28,10 +28,10 @@ class NativeUITestCase: XCTestCase {
     }
     func relaunch() { launch(app.launchArguments) }
 
-    func capture(_ name: String) {
+    func capture(_ name: String, wholeScreen: Bool = false) {
         // SwiftUI transitions can still be rendering after XCTest reports the process idle.
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: wholeScreen ? XCUIScreen.main.screenshot() : app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
     func attach(_ text: String, _ name: String) {
@@ -58,16 +58,43 @@ class NativeUITestCase: XCTestCase {
         }
         return condition()
     }
-    /// Search the active list in both directions: iOS can restore its offset when a sheet reopens.
-    /// Use the list's own scrolling area so a downward search does not start on the sheet chrome.
+    /// Drag within the visible scrolling viewport, above the keyboard and away from sticky chrome.
+    /// An app-wide swipe starts inside the keyboard on a phone and cannot reveal a covered Save button.
+    func scrollPage(up: Bool) {
+        let keyboard = app.keyboards.firstMatch
+        func visibleFrame(_ element: XCUIElement) -> CGRect {
+            var frame = element.frame.intersection(app.frame)
+            if keyboard.exists { frame.size.height = max(0, min(frame.maxY, keyboard.frame.minY) - frame.minY) }
+            return frame
+        }
+        let candidates = (app.collectionViews.allElementsBoundByIndex + app.scrollViews.allElementsBoundByIndex)
+            .filter { $0.exists && $0.isHittable && visibleFrame($0).height > 60 }
+        let scroller = candidates.max { visibleFrame($0).height < visibleFrame($1).height } ?? app
+        let frame = visibleFrame(scroller)
+        guard frame.height > 30 else { return }
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let startY = frame.minY + frame.height * (up ? 0.78 : 0.22)
+        let endY = frame.minY + frame.height * (up ? 0.22 : 0.78)
+        let start = origin.withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: startY - app.frame.minY))
+        let end = origin.withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: endY - app.frame.minY))
+        start.press(forDuration: 0.05, thenDragTo: end)
+    }
+    /// Search both sides of restored offsets. Prefer the target's actual position when it is laid out;
+    /// lazy List rows require a bounded scan whose return leg extends beyond the starting offset.
     func scrollIntoView(_ element: XCUIElement, maxSwipes: Int = 8) {
-        let list = app.collectionViews.firstMatch
-        let scroller = list.exists ? list : app
-        var swipes = 0
-        while (!element.exists || !element.isHittable) && swipes < maxSwipes { scroller.swipeUp(); swipes += 1 }
-        if list.exists {
-            swipes = 0
-            while (!element.exists || !element.isHittable) && swipes < maxSwipes { list.swipeDown(); swipes += 1 }
+        for step in 0..<(maxSwipes * 3) {
+            if element.exists && element.isHittable { return }
+            var up = step < maxSwipes
+            if element.exists {
+                let frame = element.frame
+                let scrollViews = app.scrollViews.allElementsBoundByIndex.filter { $0.exists && $0.isHittable && $0.frame.height > 60 }
+                if let viewport = scrollViews.max(by: { $0.frame.height < $1.frame.height }) {
+                    if frame.midY < viewport.frame.minY { up = false }
+                    else if frame.midY > viewport.frame.maxY { up = true }
+                }
+                if app.keyboards.firstMatch.exists && frame.maxY > app.keyboards.firstMatch.frame.minY { up = true }
+            }
+            scrollPage(up: up)
         }
     }
     @discardableResult func tapID(_ id: String, timeout: TimeInterval = 30, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
@@ -107,7 +134,15 @@ class NativeUITestCase: XCTestCase {
 
     // MARK: navigation
 
-    func goWeek() { tapID("native-week") }
+    func goWeek() {
+        tapID("native-week")
+        let toggle = el("week-month-toggle")
+        if toggle.exists && (toggle.value as? String) == "Month" { tapID("week-month-toggle") }
+        XCTAssertTrue(eventually {
+            let toggle = self.el("week-month-toggle")
+            return toggle.exists && (toggle.value as? String) == "Week"
+        }, "The Week surface did not open")
+    }
     func goSpread() { tapID("native-spread") }
     func chooseMode(_ mode: String) {
         let button = el("layout-" + mode.lowercased())
@@ -132,7 +167,7 @@ class NativeUITestCase: XCTestCase {
         // Done exists, otherwise the next tap can land on a still-present sheet behind that chrome.
         RunLoop.current.run(until: Date().addingTimeInterval(0.7))
         for _ in 0..<4 {
-            let button = ["Done", "Close", "Cancel"].map { app.navigationBars.buttons[$0].firstMatch }.first { $0.exists && $0.isHittable }
+            let button = ["Done", "Close", "Cancel"].flatMap { app.navigationBars.buttons[$0].allElementsBoundByIndex }.first { $0.exists && $0.isHittable }
             guard let button else { return }
             button.tap()
             RunLoop.current.run(until: Date().addingTimeInterval(0.6))
@@ -195,9 +230,9 @@ class NativeUITestCase: XCTestCase {
     /// Audits the top of a scrolling screen and then what is revealed by scrolling.
     func auditScrolled(_ screen: String, types: XCUIAccessibilityAuditType = NativeUITestCase.requiredAudits) throws {
         try audit(screen + "-top", types: types)
-        app.swipeUp()
+        scrollPage(up: true)
         try audit(screen + "-scrolled", types: types)
-        app.swipeDown()
+        scrollPage(up: false)
     }
 
     /// Every visible button must offer at least 44 x 44 points (system bars and keyboards excluded).
@@ -479,6 +514,7 @@ final class PlannerUITests: NativeUITestCase {
     // MARK: Crown (unchanged semantics: 100 real drags including 30 reversals)
 
     func testCrownHundredDragsWithThirtyReversals() {
+        goWeek()
         let crown = app.descendants(matching: .any).matching(identifier: "week-crown").firstMatch
         XCTAssertTrue(crown.waitForExistence(timeout: 60))
         let initial = crown.value as? String
@@ -522,6 +558,7 @@ final class PlannerUITests: NativeUITestCase {
         XCTAssertGreaterThanOrEqual(names.count, 2, "Need two responsibilities to swipe between")
         tapButton(names[0])
         chooseMode(mode)
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: container).count, 1, "The swipe surface must have one accessibility identity")
         XCTAssertEqual(selectedRoleLabel, "Manage \(names[0])")
         var index = 0
         for step in 0..<steps {
@@ -625,6 +662,7 @@ final class PlannerUITests: NativeUITestCase {
     }
     private func layout(width: Int) throws {
         try startAtWidth(width)
+        goWeek()
         capture("viewport-\(width)-week")
         goSpread()
         for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] { chooseMode(mode); capture("viewport-\(width)-" + mode.lowercased()) }
@@ -640,6 +678,7 @@ final class PlannerUITests: NativeUITestCase {
     func testAudit1024() throws { try auditEverything(width: 1024) }
     private func auditEverything(width: Int, types: XCUIAccessibilityAuditType = NativeUITestCase.requiredAudits, label: String = "") throws {
         try startAtWidth(width)
+        goWeek()
         let tag = "\(width)\(label)"
         try auditScrolled("\(tag)-week", types: types)
         goSpread()
@@ -692,6 +731,7 @@ final class PlannerUITests: NativeUITestCase {
         }
         tapID("open-more"); tapID("manage-profiles")
         typeInto("new-profile-field", profile); tapButton("Create profile")
+        closeNativeSheets()
         XCTAssertTrue(eventually { self.el("brand-home").label.hasSuffix("Profile " + profile) }, "Long profile name was not kept in the accessible header")
         tapID("open-more"); tapID("more-new-spread")
         typeInto("role-name-field", role); tapID("save-spreads")
@@ -702,15 +742,18 @@ final class PlannerUITests: NativeUITestCase {
         capture("long-names-spread")
     }
 
-    /// iPad supports every orientation (Info.plist). The phone build is portrait-only by design.
+    /// iPad supports every orientation; full-screen captures avoid XCTest's rotated app-rect crop.
     func testIPadOrientations() throws {
         defer { XCUIDevice.shared.orientation = .portrait }
+        goWeek()
         for (name, orientation) in [("landscape-left", UIDeviceOrientation.landscapeLeft), ("landscape-right", .landscapeRight), ("portrait-upside-down", .portraitUpsideDown)] {
             XCUIDevice.shared.orientation = orientation
+            XCTAssertTrue(eventually { orientation.isLandscape ? self.app.frame.width > self.app.frame.height : self.app.frame.height > self.app.frame.width }, "Window did not adopt the requested orientation")
             XCTAssertTrue(app.buttons["native-spread"].waitForExistence(timeout: 20))
-            capture("orientation-\(name)-week")
+            capture("orientation-\(name)-week", wholeScreen: true)
+            attach(app.debugDescription, "orientation-hierarchy-" + name)
             try audit("orientation-\(name)-week")
-            goSpread(); chooseMode("Fan"); capture("orientation-\(name)-fan")
+            goSpread(); chooseMode("Fan"); capture("orientation-\(name)-fan", wholeScreen: true)
             goWeek()
         }
     }
@@ -946,7 +989,9 @@ final class DuoUITests: NativeUITestCase {
         }
         relaunch()
         tapID("open-more")
-        XCTAssertTrue(eventually { self.el("appearance-system").isSelected }, "System preference did not survive a relaunch")
+        let system = el("appearance-system")
+        scrollIntoView(system)
+        XCTAssertTrue(eventually { system.exists && system.isSelected }, "System preference did not survive a relaunch")
         closeNativeSheets()
         // Live System changes are asserted by native-system-appearance.sh using simctl readback and
         // the actual rendered root. XCUIDevice's reported setting alone does not prove an OS change.
