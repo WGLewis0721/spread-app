@@ -607,6 +607,13 @@ struct MoreSheet: View {
                                 .buttonStyle(.spreadPress)
                                 .accessibilityLabel(weekFocusEnabled ? "Calendar design: New preview" : "Calendar design: Classic")
                                 .accessibilityIdentifier("calendar-design-picker")
+                                .confirmationDialog("Calendar design", isPresented: $showCalendarPicker, titleVisibility: .visible) {
+                                    Button("Classic (current)") { weekFocusEnabled = false }
+                                    Button("Week + Month (preview)") { weekFocusEnabled = true }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("The new calendar is an opt-in preview. Existing tasks, hours and planning data are unchanged. Choose Classic anytime to return.")
+                                }
                             }
                             .padding(6)
                             .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
@@ -689,13 +696,6 @@ struct MoreSheet: View {
             }
             .sheet(isPresented: $newSpread) { NewSpreadSheet(planner: planner) }
             .sheet(isPresented: $openTasks) { CarryOverSheet(planner: planner) }
-            .confirmationDialog("Calendar design", isPresented: $showCalendarPicker, titleVisibility: .visible) {
-                Button("Classic (current)") { weekFocusEnabled = false }
-                Button("Week + Month (preview)") { weekFocusEnabled = true }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("The new calendar is an opt-in preview. Existing tasks, hours and planning data are unchanged. Choose Classic anytime to return.")
-            }
             .confirmationDialog("Replace next week?", isPresented: $confirmRollover, titleVisibility: .visible) {
                 Button("Replace", role: .destructive) { Task { await planner.send(["type": "rollover", "force": true]) } }
                 Button("Cancel", role: .cancel) {}
