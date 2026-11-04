@@ -47,7 +47,7 @@ export function dominantMonth(key: string): MonthCursor {
   return { year: best.year, month: best.month };
 }
 
-export function dayMarks(data: SpreadData, date: string): { colors: string[]; extra: number } {
+export function dayMarks(data: SpreadData, date: string, preferredRoleId?: string): { colors: string[]; extra: number } {
   const allocations = data.weeks[weekKey(parseKey(date))]?.allocations ?? [];
   const colorsByHat = new Map(data.hats.map((hat) => [hat.id, hat.color]));
   const colors: string[] = [];
@@ -59,6 +59,16 @@ export function dayMarks(data: SpreadData, date: string): { colors: string[]; ex
     if (!color) continue;
     seen.add(item.hatId);
     colors.push(color);
+  }
+  // The owner-selected responsibility has priority in the visible three dots.
+  // Colors remain the real stored role data; no duplicated role or invented marker.
+  const selectedColor = preferredRoleId && seen.has(preferredRoleId) ? colorsByHat.get(preferredRoleId) : undefined;
+  if (selectedColor) {
+    const index = colors.indexOf(selectedColor);
+    if (index > 0) {
+      colors.splice(index, 1);
+      colors.unshift(selectedColor);
+    }
   }
   if (colors.length <= 3) return { colors, extra: 0 };
   return { colors: colors.slice(0, 3), extra: colors.length - 3 };

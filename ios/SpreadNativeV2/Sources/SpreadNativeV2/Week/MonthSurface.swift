@@ -10,6 +10,11 @@ struct MonthSurface: View {
     /// Any date inside the month being shown (the first of it, by convention).
     let anchor: Date
     let onPick: (String) -> Void
+    /// Optional in the new opt-in Week; the Classic Month stays unchanged.
+    var selectedRole: String? = nil
+    var onLongPressAdd: ((String) -> Void)? = nil
+    var onSwipeMonth: ((Int) -> Void)? = nil
+    var mondayFirst: Bool = false
 
     /// Dots for every day of the month, from the planner (any week). Until they arrive, or if they cannot, the open
     /// week's own dots are drawn so the grid is never empty.
@@ -31,7 +36,8 @@ struct MonthSurface: View {
         let first = calendar.date(from: calendar.dateComponents([.year, .month], from: anchor)) ?? anchor
         let daysInMonth = calendar.range(of: .day, in: .month, for: first)?.count ?? 30
         // Sunday is weekday 1 in the Gregorian calendar, so the lead count equals the grid column.
-        let lead = calendar.component(.weekday, from: first) - 1
+        let weekday = calendar.component(.weekday, from: first) - 1
+        let lead = mondayFirst ? (weekday + 6) % 7 : weekday
         let rows = Int((Double(lead + daysInMonth) / 7).rounded(.up))
         return (0..<(rows * 7)).map { index in
             let date = calendar.date(byAdding: .day, value: index - lead, to: first) ?? first
@@ -50,7 +56,7 @@ struct MonthSurface: View {
         let today = PlannerDates.localISO()
         VStack(spacing: 8) {
             HStack(spacing: 6) {
-                ForEach(Self.weekdays, id: \.self) { label in
+                ForEach(mondayFirst ? Array(Self.weekdays.dropFirst()) + [Self.weekdays[0]] : Self.weekdays, id: \.self) { label in
                     ViewThatFits(in: .horizontal) {
                         weekdayHeading(label, fullName: Self.weekdayNames[label] ?? label)
                         weekdayHeading(String(label.prefix(2)), fullName: Self.weekdayNames[label] ?? label)
@@ -66,12 +72,19 @@ struct MonthSurface: View {
         }
         .padding(.horizontal, 4)
         .padding(.top, 16)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 65).onEnded { gesture in
+                guard let onSwipeMonth,
+                      abs(gesture.translation.width) > abs(gesture.translation.height) * 1.6 else { return }
+                onSwipeMonth(gesture.translation.width < 0 ? 1 : -1)
+            }
+        )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("month")
         .task(id: marksKey) {
             let parts = PlannerDates.calendar.dateComponents([.year, .month], from: anchor)
             guard let year = parts.year, let month = parts.month else { return }
-            if let fresh = await planner.monthMarks(year: year, month: month - 1) { marks = fresh }
+            if let fresh = await planner.monthMarks(year: year, month: month - 1, selectedRoleId: selectedRole) { marks = fresh }
         }
     }
 
@@ -87,7 +100,7 @@ struct MonthSurface: View {
     /// Changes whenever the month shown, the profile, or the plan itself changes, so the dots follow edits.
     private var marksKey: String {
         let parts = PlannerDates.calendar.dateComponents([.year, .month], from: anchor)
-        return "\(planner.state?.envelope.profileId ?? "")-\(parts.year ?? 0)-\(parts.month ?? 0)-\(planner.state?.revision ?? 0)"
+        return "\(planner.state?.envelope.profileId ?? "")-\(parts.year ?? 0)-\(parts.month ?? 0)-\(planner.state?.revision ?? 0)-\(selectedRole ?? "")"
     }
 
     /// The dots for one day: the planner's answer when it has one, else the open week's own allocations.
@@ -96,6 +109,11 @@ struct MonthSurface: View {
         var colors: [String] = []
         for role in snapshot.roles where snapshot.allocations.contains(where: { $0.day == iso && $0.roleId == role.id && $0.hours > 0 }) {
             colors.append(role.color)
+        }
+        if let selectedRole, let selected = snapshot.roles.first(where: { $0.id == selectedRole }),
+           let index = colors.firstIndex(of: selected.color), index > 0 {
+            colors.remove(at: index)
+            colors.insert(selected.color, at: 0)
         }
         return NativeDayMark(colors: Array(colors.prefix(3)), extra: max(0, colors.count - 3))
     }
@@ -117,7 +135,9 @@ struct MonthSurface: View {
                     .background(isToday ? Spread.accent : Color.clear, in: Circle())
                 HStack(spacing: 3) {
                     ForEach(Array(dots.colors.enumerated()), id: \.offset) { _, color in
-                        Circle().fill(Color(hex: color)).frame(width: 6, height: 6)
+                        Circle().fill(Color(hex: color))
+                            .frame(width: color == snapshot.roles.first(where: { $0.id == selectedRole })?.color ? 8 : 6,
+                                   height: color == snapshot.roles.first(where: { $0.id == selectedRole })?.color ? 8 : 6)
                     }
                 }
                 .frame(height: 6)
@@ -141,6 +161,8 @@ struct MonthSurface: View {
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.spreadPress)
+        .onLongPressGesture(minimumDuration: 0.45) { onLongPressAdd?(cell.iso) }
+        .accessibilityAction(named: "Add task to this day") { onLongPressAdd?(cell.iso) }
         .accessibilityLabel("\(isToday ? "Today, " : "")\(inOpenWeek ? "Open week, " : "")\(label). \(count == 0 ? "No responsibilities scheduled." : "\(count) \(count == 1 ? "responsibility" : "responsibilities") scheduled.")")
         .accessibilityAddTraits(isToday ? .isSelected : [])
         .accessibilityIdentifier("month-day-\(cell.iso)")

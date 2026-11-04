@@ -13,6 +13,7 @@ public struct SpreadLiveRoot: View {
 
     @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false
     @State private var focusSelectedDay: String?
+    @State private var spreadSidebarExpanded = true
     @State private var destination: SpreadDestination = .spread
     @State private var monthPlane = false
     @State private var monthAnchor = PlannerDates.date(PlannerDates.currentWeekKey())
@@ -179,6 +180,44 @@ public struct SpreadLiveRoot: View {
                     onOpenTask: { sheet = .task($0, $1) },
                     onNewRole: { sheet = .newRole }
                 )
+            } else if weekFocusEnabled && destination == .spread {
+                HStack(alignment: .top, spacing: 8) {
+                    ResponsibilitySidebar(
+                        snapshot: snapshot,
+                        selectedRole: $selectedRole,
+                        expanded: spreadSidebarExpanded,
+                        onAdd: { sheet = .newRole },
+                        onToggle: {
+                            withAnimation(reduceMotion ? nil : SpreadMotion.curve) {
+                                spreadSidebarExpanded.toggle()
+                            }
+                        }
+                    )
+                    .frame(width: spreadSidebarExpanded ? 86 : 56)
+                    ScrollView {
+                        notices.padding(.horizontal, 4)
+                        if snapshot.roles.isEmpty {
+                            emptyPlan
+                        } else {
+                            SpreadSurface(
+                                planner: planner,
+                                snapshot: snapshot,
+                                layout: $layout,
+                                editing: $editing,
+                                selectedRole: $selectedRole,
+                                onOpenRole: { sheet = .role($0) },
+                                onOpenTask: { sheet = .task($0, $1) },
+                                onNewRole: { sheet = .newRole },
+                                onRollover: { Task { await rollover() } },
+                                onReview: { sheet = .review }
+                            )
+                            .id(planner.state?.envelope.profileId)
+                        }
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .scrollIndicators(.hidden)
+                }
+                .padding(.horizontal, 8)
             } else {
             ScrollViewReader { proxy in
             ScrollView {

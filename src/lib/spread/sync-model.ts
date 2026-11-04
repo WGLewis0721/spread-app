@@ -16,7 +16,7 @@
  * a stand-in spread) instead, so a merge can lose a place for something but never the thing.
  */
 import { ID_LIST_SUFFIX, type Json } from "./merge.ts";
-import { normalizeData, type Allocation, type Box, type Hat, type SpreadData, type Task, type WeekData } from "./model.ts";
+import { normalizeData, type Allocation, type Box, type DeletedTask, type Hat, type SpreadData, type Task, type WeekData } from "./model.ts";
 
 export type PlainItem = { id: string; fields: Record<string, Json> };
 
@@ -45,6 +45,10 @@ export function flatten(data: SpreadData, profileName: string): PlainItem[] {
   }
   for (const [week, body] of Object.entries(data.weeks)) {
     put(out, weekItem(week), { [ids("boxes")]: body.boxes.map((box) => box.hatId), [ids("allocations")]: body.allocations.map((a) => a.id) });
+    for (const [dayKey, taskIds] of Object.entries(body.dayTaskOrder ?? {})) {
+      put(out, "day-order:" + week + ":" + dayKey,
+        { week, dayKey, [ids("taskOrder")]: taskIds });
+    }
     for (const box of body.boxes) {
       put(out, boxItem(week, box.hatId), { hours: box.hours, [ids("tasks")]: box.tasks.map((task) => task.id) });
       for (const task of box.tasks) {
@@ -61,6 +65,14 @@ export function flatten(data: SpreadData, profileName: string): PlainItem[] {
     for (const alloc of body.allocations) {
       put(out, allocItem(alloc.id), { hatId: alloc.hatId, day: alloc.day, hours: alloc.hours, order: alloc.order, week });
     }
+  }
+  // A soft-deleted task must survive sync and recoveries with its rich content intact.
+  // New item types stay optional so existing cloud profiles retain their original format.
+  for (const removed of data.deletedTasks ?? []) {
+    put(out, "deleted-task:" + removed.id, {
+      hatId: removed.hatId, weekKey: removed.weekKey,
+      deletedAt: removed.deletedAt, task: json(removed.task),
+    });
   }
   return out;
 }
@@ -157,10 +169,32 @@ export function assemble(live: PlainItem[], currentWeek: string): { data: Spread
       void _week;
       return rest as Allocation;
     });
-    weeks[week] = { boxes, allocations };
+    const dayTaskOrder: Record<string, string[]> = {};
+    for (const [id, fields] of byId) {
+      if (!id.startsWith("day-order:" + week + ":")) continue;
+      const key = text(fields.dayKey);
+      if (key) dayTaskOrder[key] = list(fields[ids("taskOrder")]);
+    }
+    weeks[week] = { boxes, allocations, ...(Object.keys(dayTaskOrder).length ? { dayTaskOrder } : {}) };
   }
 
   const hats = inOrder(list(profile?.[ids("hats")]), hatMap) as Hat[];
   const name = profile && typeof profile.name === "string" ? profile.name : null;
-  return { data: normalizeData({ hats, weeks, currentWeek }), name };
+  const deletedTasks: DeletedTask[] = [];
+  for (const [id, fields] of byId) {
+    if (!id.startsWith("deleted-task:")) continue;
+    const task = fields.task;
+    if (!task || typeof task !== "object" || Array.isArray(task)) continue;
+    const candidate = task as { [key: string]: Json };
+    if (typeof candidate.id !== "string" || typeof candidate.text !== "string") continue;
+    const deletedAt = num(fields.deletedAt, -1);
+    const weekKey = text(fields.weekKey);
+    const hatId = text(fields.hatId);
+    if (deletedAt < 0 || !/^\d{4}-\d{2}-\d{2}$/.test(weekKey) || !hatId) continue;
+    deletedTasks.push({
+      id: id.slice("deleted-task:".length), hatId, weekKey, deletedAt,
+      task: candidate as unknown as Task,
+    });
+  }
+  return { data: normalizeData({ hats, weeks, currentWeek, ...(deletedTasks.length ? { deletedTasks } : {}) }), name };
 }
