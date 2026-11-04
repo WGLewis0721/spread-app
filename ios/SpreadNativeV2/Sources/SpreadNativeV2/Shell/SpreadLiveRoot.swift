@@ -628,7 +628,7 @@ public struct SpreadLiveRoot: View {
         case .review:
             CarryOverSheet(planner: planner)
         case .more:
-            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, layout: $layout, appearance: $appearance)
+            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, appearance: $appearance)
         case .profiles:
             ProfilesSheet(planner: planner)
         case .confirmRollover:
