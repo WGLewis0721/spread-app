@@ -101,30 +101,43 @@ struct SpreadSurface: View {
             if totalHours > 0 {
                 // One segment per responsibility, sized by its hours. Choosing one selects that responsibility in
                 // every layout (the selection is shared) and never switches the layout or writes planner data.
-                HourStripRow(spacing: 4) {
-                    ForEach(snapshot.roles.filter { $0.hours > 0 }) { role in
-                        let chosen = selectedRole == role.id
-                        Button {
-                            selectedRole = role.id
-                            tabSelection = role.id
-                        } label: {
-                            Capsule().fill(Color(hex: role.color))
-                                .frame(height: chosen ? 12 : 8)
-                                .shadow(color: Color(hex: role.color).opacity(chosen ? 0.55 : 0), radius: 6)
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .contentShape(Rectangle())
+                // Fitts's Law: the hour bar must not shrink each role's target
+                // below 44pt in a dense plan. A horizontal scroll keeps the
+                // proportional bar AND usable targets on a narrow/resized scene.
+                // Its width comes from this container, never the device model.
+                GeometryReader { geometry in
+                    let visibleRoles = snapshot.roles.filter { $0.hours > 0 }
+                    let minWidth = CGFloat(visibleRoles.count) * 44
+                        + CGFloat(max(0, visibleRoles.count - 1)) * 4
+                    ScrollView(.horizontal) {
+                        HourStripRow(spacing: 4) {
+                            ForEach(visibleRoles) { role in
+                                let chosen = selectedRole == role.id
+                                Button {
+                                    selectedRole = role.id
+                                    tabSelection = role.id
+                                } label: {
+                                    Capsule().fill(Color(hex: role.color))
+                                        .frame(height: chosen ? 12 : 8)
+                                        .shadow(color: Color(hex: role.color).opacity(chosen ? 0.55 : 0), radius: 6)
+                                        .frame(maxWidth: .infinity, minHeight: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .hourStripHours(role.hours)
+                                .accessibilityLabel("\(role.name), \(SpreadHours.spoken(role.hours))")
+                                .accessibilityAddTraits(chosen ? .isSelected : [])
+                                .accessibilityIdentifier("hour-segment-\(role.id)")
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .hourStripHours(role.hours)
-                        .accessibilityLabel("\(role.name), \(SpreadHours.spoken(role.hours))")
-                        .accessibilityAddTraits(chosen ? .isSelected : [])
-                        .accessibilityIdentifier("hour-segment-\(role.id)")
+                        .frame(width: max(geometry.size.width, minWidth), height: 44)
                     }
+                    .scrollIndicators(.automatic)
                 }
                 .frame(height: 44)
-                .animation(SpreadMotion.cascade, value: selectedRole)
+                .animation(reduceMotion ? nil : SpreadMotion.cascade, value: selectedRole)
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel("\(SpreadHours.spoken(totalHours)) across responsibilities. Choose a colour to select its responsibility.")
+                .accessibilityLabel("\(SpreadHours.spoken(totalHours)) across responsibilities. Scroll to access every responsibility.")
             }
 
             if taskCount == 0 {
