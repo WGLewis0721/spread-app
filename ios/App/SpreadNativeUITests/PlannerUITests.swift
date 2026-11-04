@@ -461,6 +461,7 @@ final class JourneyUITests: NativeUITestCase {
 
     func testF09_CarryUnfinishedWork() throws {
         try requireDataset(); launch(); selectRole(Dataset.role)
+        tapID("hour-summary") // Compact summary holds the existing Review action.
         tapID("review-unfinished")
         // Keep every unrelated task and Charlie in this week; carry only Bravo.
         for toggle in elements(prefix: "carry-") {
@@ -545,6 +546,26 @@ final class JourneyUITests: NativeUITestCase {
 // MARK: - Planner screens: Crown, layouts, gestures, audits
 
 final class PlannerUITests: NativeUITestCase {
+    /// Approved Nov 4 summary: one small status strip, without losing planning actions.
+    func testCompactWeeklySummaryDisclosesItsPlanningActions() throws {
+        launch(); goSpread()
+        let summary = el("hour-summary")
+        XCTAssertTrue(summary.waitForExistence(timeout: 20), "The weekly status is missing")
+        XCTAssertTrue(summary.isHittable)
+        XCTAssertLessThanOrEqual(summary.frame.height, 100, "Weekly summary must remain compact on iPhone")
+        XCTAssertTrue(summary.label.contains("scheduled"), "Speak scheduled hours, not a decorative chart")
+        XCTAssertTrue(summary.label.contains("remaining to plan"), "Speak unplaced hours")
+        XCTAssertFalse(el("rollover").exists, "Rollover belongs in the expandable details")
+
+        tapID("hour-summary")
+        XCTAssertTrue(el("weekly-hours-details").waitForExistence(timeout: 10))
+        XCTAssertTrue(el("rollover").waitForExistence(timeout: 10), "Preserve Rollover")
+        capture("compact-weekly-summary-expanded")
+        tapID("hour-summary")
+        XCTAssertFalse(el("rollover").exists, "The disclosure must collapse")
+        capture("compact-weekly-summary-collapsed")
+    }
+
     override func setUpWithError() throws {
         try super.setUpWithError()
         launch()
