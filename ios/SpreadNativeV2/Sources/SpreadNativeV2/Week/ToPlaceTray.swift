@@ -87,7 +87,8 @@ struct ToPlaceTray: View {
             } label: {
                 HStack(spacing: 12) {
                     Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
-                    Text(role.name).font(.system(.subheadline, weight: .semibold)).lineLimit(1)
+                    Text(role.name).font(.system(.subheadline, weight: .semibold))
+                        .lineLimit(3).fixedSize(horizontal: false, vertical: true).layoutPriority(1)
                     Spacer(minLength: 4)
                     Text("\(mine.count) \(mine.count == 1 ? "task" : "tasks")")
                         .font(Spread.caption).foregroundStyle(Spread.secondary).monospacedDigit()
@@ -154,6 +155,7 @@ struct TaskLine: View {
                         .strikethrough(task.done)
                         .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
                         .multilineTextAlignment(.leading)
+                        .lineLimit(4).fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         .contentShape(Rectangle())
                 }
