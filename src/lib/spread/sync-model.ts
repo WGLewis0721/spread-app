@@ -190,7 +190,7 @@ export function assemble(live: PlainItem[], currentWeek: string): { data: Spread
     const deletedAt = num(fields.deletedAt, -1);
     const weekKey = text(fields.weekKey);
     const hatId = text(fields.hatId);
-    if (deletedAt < 0 || !/^\\d{4}-\\d{2}-\\d{2}$/.test(weekKey) || !hatId) continue;
+    if (deletedAt < 0 || !/^\d{4}-\d{2}-\d{2}$/.test(weekKey) || !hatId) continue;
     deletedTasks.push({
       id: id.slice("deleted-task:".length), hatId, weekKey, deletedAt,
       task: candidate as unknown as Task,
