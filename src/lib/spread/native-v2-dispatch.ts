@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isSpreadCategory, shiftWeek, type SpreadData, type TaskContent } from "./model.ts";
+import { isSpreadCategory, remainingHours, shiftWeek, type SpreadData, type TaskContent } from "./model.ts";
 import { getSaveFacts } from "./local-status.ts";
 import { projectNativeV2, type NativeV2Envelope } from "./native-v2-projection.ts";
 import { flushSpread, retrySpreadSave, useSpread } from "./store.ts";
@@ -473,6 +473,18 @@ function validateTarget(a: NativeRequest["action"], data: SpreadData): string | 
       date.getUTCDay() !== 1
     )
       return "invalid-week";
+  }
+  // Native writes must explain a bank refusal before calling the existing clamping action. Re-evaluate
+  // against the current store inside the serialized dispatcher, never against a stale Swift projection.
+  if (a.type === "allocate" || a.type === "moveSpreadToDay" || a.type === "allocationHours") {
+    const allocation = a.type === "allocationHours"
+      ? week?.allocations.find((item) => item.id === a.allocationId) : undefined;
+    const roleId = a.type === "allocationHours" ? allocation!.hatId : a.roleId;
+    const bank = week?.boxes.find((box) => box.hatId === roleId)?.hours ?? 0;
+    const left = remainingHours(bank, week?.allocations ?? [], roleId);
+    const increase = a.type === "allocationHours" ? a.hours - allocation!.hours : a.hours;
+    if (increase > 0 && left <= 0) return "bank-empty";
+    if (increase > left && increase > 0) return "bank-exceeded";
   }
   if (
     a.type === "assignTask" &&

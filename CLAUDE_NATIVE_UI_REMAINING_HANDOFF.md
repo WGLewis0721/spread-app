@@ -28,7 +28,7 @@
 ## Working rules you will trip over
 
 - **Work on a new branch** and open a **draft** PR to `main`. Do **not** push to `claude/spread-swiftui-parity-87llx2`: the owner's Codemagic workflow only builds that branch at its exact tip and refuses a moved tip.
-- **A push cancels the visual tour** that is running, and a docs-only push re-triggers it (path filters match the whole PR diff). Push once, then wait for the run. Heavy macOS workflows start on every push; cancel the ones you do not need and say so.
+- **The long journey, layout and visual matrices finish the current run, then queue the latest revision** so their evidence is retained. A docs-only push can re-trigger them (path filters match the whole PR diff). Batch changes and wait for results; the Codemagic candidate still requires an unmoved branch tip through upload.
 - Verification on this project is **CI on macOS runners**: build, run the UI tests, export the screenshots from the `.xcresult`, download the artifacts. Typecheck, lint, tests and build are necessary, not sufficient.
 - Look at every screenshot yourself, and **measure** it (for dark: canvas luminance under 80). If you cannot view the owner's images, say "reference comparison UNVERIFIED". Never fake a comparison.
 - Evidence under any folder named `screenshots` needs `git add -f` (`.gitignore` excludes it).

@@ -47,7 +47,7 @@ struct FanLayout: View {
                         let dx = value.translation.width
                         let steps = Int((-(dx + value.predictedEndTranslation.width - dx) / step).rounded())
                         drag = 0
-                        let clamped = max(-2, min(2, steps))
+                        let clamped = max(-1, min(1, steps))
                         if clamped != 0 { move(clamped) }
                     }
             )
@@ -134,11 +134,11 @@ struct FanLayout: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.role.name)
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.system(.title, weight: .bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text("\(SpreadHours.text(row.hours))h")
-                    .font(.system(size: 18, weight: .bold)).foregroundStyle(Spread.secondary).monospacedDigit()
+                    .font(.system(.headline, weight: .bold)).foregroundStyle(Spread.secondary).monospacedDigit()
             }
             .foregroundStyle(Spread.ink)
             .padding(.horizontal, 20)
@@ -175,6 +175,7 @@ struct DialLayout: View {
     let snapshot: PlannerSnapshot
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var roles: [Responsibility] { rows.map(\.role) }
     private var arcs: [DialArc] { DialGeometry.arcs(for: roles) }
@@ -185,7 +186,9 @@ struct DialLayout: View {
         VStack(spacing: 12) {
             GeometryReader { proxy in
                 let side = min(280, proxy.size.width * 0.8)
-                let center = CGPoint(x: proxy.size.width / 2, y: side / 2)
+                // Every part is drawn in the dial's square, then the whole square is centered in
+                // the page. Mixing the page width into this point displaced the ring and knob.
+                let center = CGPoint(x: side / 2, y: side / 2)
                 ZStack {
                     tickRing(center: center, side: side)
                     ForEach(arcs, id: \.id) { arc in
@@ -224,6 +227,11 @@ struct DialLayout: View {
                 .accessibilityIdentifier("dial")
             }
             .frame(height: 300)
+            if typeSize.isAccessibilitySize {
+                Text(selected?.role.name ?? "")
+                    .font(.headline).multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -267,11 +275,14 @@ struct DialLayout: View {
         let glow = Color(hex: selected?.role.color ?? "#8E8E93")
         return VStack(spacing: 2) {
             Text("\(SpreadHours.text(selected?.hours ?? 0))h")
-                .font(.system(size: 44, weight: .heavy)).monospacedDigit().tracking(-1.2)
+                .font(.system(typeSize.isAccessibilitySize ? .title3 : .largeTitle, weight: .heavy)).monospacedDigit().tracking(-1.2)
+                .lineLimit(1).minimumScaleFactor(0.65)
                 .contentTransition(.numericText())
                 .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.42), value: selected?.hours)
-            Text(selected?.role.name ?? "")
-                .font(.system(.body, weight: .bold)).lineLimit(1)
+            if !typeSize.isAccessibilitySize {
+                Text(selected?.role.name ?? "")
+                    .font(.system(.body, weight: .bold)).lineLimit(1)
+            }
             Text("of \(SpreadHours.text(total))h")
                 .font(.system(.footnote, weight: .semibold)).foregroundStyle(.white.opacity(0.78))
         }
@@ -341,6 +352,7 @@ struct TabsLayout: View {
         }
         .onAppear { lastIndex = index }
         .onChange(of: tab) { _, _ in lastIndex = index }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("tabs-panel")
     }
 
@@ -357,23 +369,28 @@ struct TabsLayout: View {
         let selected = tab == id
         let tint: Color? = color.map { Color(hex: $0) }
         return Button {
-            tab = id
+            withAnimation(reduceMotion ? nil : SpreadMotion.curve) { tab = id }
         } label: {
             HStack(spacing: 8) {
                 if let color { RoleBadge(category: category == "custom" ? nil : category, color: color, size: 26) }
                 Text(title).font(.system(.subheadline, weight: .semibold)).lineLimit(1)
             }
-            .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+            .foregroundStyle(selected && color == nil ? Spread.onAccent : Spread.ink)
             .padding(.leading, color == nil ? 16 : 9).padding(.trailing, 16)
             .frame(minHeight: 44)
             .background {
                 if selected {
-                    Capsule().fill(tint.map { AnyShapeStyle($0) } ?? AnyShapeStyle(Spread.accentGradient))
+                    if let tint {
+                        Capsule().fill(Spread.elevated)
+                        Capsule().fill(tint.opacity(0.18))
+                    } else {
+                        Capsule().fill(Spread.accentGradient)
+                    }
                 } else {
                     Capsule().fill(Spread.inset)
                 }
             }
-            .overlay(Capsule().strokeBorder(Spread.line, lineWidth: selected ? 0 : 0.5))
+            .overlay(Capsule().strokeBorder(selected ? (tint ?? Spread.accent) : Spread.line, lineWidth: selected ? 1.5 : 0.5))
         }
         .buttonStyle(.spreadPress)
         // The chosen tab lifts a little and settles with a spring; no tab is ever drawn below its 44 pt target.
@@ -423,7 +440,8 @@ struct DayLayout: View {
                     Button { if day != selectedDay { withAnimation(reduceMotion ? nil : SpreadMotion.curve) { selectedDay = day } } } label: {
                         VStack(spacing: 2) {
                             Text(String(PlannerDates.label(PlannerDates.date(day), pattern: "EEE").prefix(3)))
-                                .font(.system(.caption2, weight: .semibold))
+                                .font(.system(.footnote, weight: .semibold))
+                                .lineLimit(1).minimumScaleFactor(0.5)
                             Text(PlannerDates.label(PlannerDates.date(day), pattern: "d"))
                                 .font(.system(.body, weight: .heavy)).monospacedDigit()
                         }
@@ -518,6 +536,7 @@ struct DayLayout: View {
                     .spreadCard(edge: Color(hex: role.color), active: true)
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("day-layout")
     }
 }

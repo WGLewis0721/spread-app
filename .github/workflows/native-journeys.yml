@@ -15,6 +15,7 @@ permissions:
   contents: read
 concurrency:
   group: native-journeys-${{ github.ref }}
+  # Retain long simulator evidence; the newest revision queues behind the current acceptance run.
   cancel-in-progress: false
 jobs:
   group:
@@ -24,6 +25,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: reported-fixes
+            width: 390
+            tests: "PlannerUITests/testDialArcSelectionAndPreferencePersistence PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally"
           - name: journey
             width: 390
             tests: "JourneyUITests"

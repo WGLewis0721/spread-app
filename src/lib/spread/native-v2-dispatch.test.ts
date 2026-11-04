@@ -604,3 +604,38 @@ test("monthMarks reports role dots for any week of the month, reads only, and re
     router.dispose();
   }
 });
+
+// Refusals are checked inside the serialized dispatcher: no partial write and no stale native-bank race.
+for (const type of ["allocate", "moveSpreadToDay", "allocationHours"] as const) {
+  test(`${type}: empty and insufficient banks explain refusal without a write`, async () => {
+    const { router, request, roleId } = setup();
+    try {
+      const make = (hours: number) => type === "allocationHours"
+        ? { type, allocationId: "eligible", hours: hours + 2 }
+        : { type, roleId, day: openWeekDays()[2], hours };
+      const before = dataJSON();
+      const tooMuch = await router.dispatch(request(make(6.5)));
+      assert.equal(tooMuch.error, "bank-exceeded");
+      assert.equal(dataJSON(), before);
+      const exact = await router.dispatch(request(make(6)));
+      assert.equal(exact.ok, true);
+      const empty = dataJSON();
+      assert.equal((await router.dispatch(request(make(0.5)))).error,
+        type === "allocationHours" ? undefined : "bank-empty");
+      // Reducing an allocation returns hours to the bank, even when that bank was empty.
+      if (type !== "allocationHours") assert.equal(dataJSON(), empty);
+    } finally { router.dispose(); }
+  });
+}
+
+test("queued native placement cannot overspend a bank or replay a refused command into a later plan", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const command = request({ type: "moveSpreadToDay", roleId, day: openWeekDays()[2], hours: 6.5 });
+    assert.equal((await router.dispatch(command)).error, "bank-exceeded");
+    await router.dispatch(request({ type: "setHours", roleId, hours: 9 }));
+    assert.equal((await router.dispatch(command)).error, "bank-exceeded");
+    assert.equal((await router.dispatch(request({ type: "moveSpreadToDay", roleId, day: openWeekDays()[2], hours: 6.5 }))).ok, true);
+    assert.equal(router.read()!.envelope.snapshot.allocations.filter((a) => a.roleId === roleId).reduce((n, a) => n + a.hours, 0), 8.5);
+  } finally { router.dispose(); }
+});

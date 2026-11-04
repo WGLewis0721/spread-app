@@ -78,7 +78,7 @@ struct NewSpreadSheet: View {
                 RoleBadge(category: draft.category, color: colorHex, size: 48)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Spread \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
-                    TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }))
+                    TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }), prompt: Spread.fieldPrompt("Parent, shop, study"))
                         .font(.system(.body))
                         .padding(.horizontal, 12).frame(minHeight: 44)
                         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Spread.inset))
@@ -149,6 +149,7 @@ struct RoleSheet: View {
     @State private var name = ""
     @State private var placeDay = ""
     @State private var placeHours = 1.0
+    @State private var confirmRemoval = false
 
     private var role: Responsibility? { planner.snapshot?.roles.first { $0.id == roleId } }
 
@@ -162,7 +163,7 @@ struct RoleSheet: View {
                     }
                         .listRowBackground(Spread.elevated)
                     Section("Responsibility") {
-                        TextField("Name", text: $name)
+                        TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"))
                             .submitLabel(.done)
                             .onSubmit { rename(role) }
                             .accessibilityIdentifier("role-name-field")
@@ -233,11 +234,7 @@ struct RoleSheet: View {
                     }
                         .listRowBackground(Spread.elevated)
                     Section {
-                        Button("Remove responsibility", role: .destructive) {
-                            Task {
-                                if await planner.send(["type": "removeRole", "roleId": role.id]) { dismiss() }
-                            }
-                        }
+                        Button("Remove responsibility", role: .destructive) { confirmRemoval = true }
                         .accessibilityIdentifier("delete-role-button")
                     } footer: {
                         Text("The hours and tasks for this spread leave every week.")
@@ -263,6 +260,17 @@ struct RoleSheet: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .confirmationDialog("Remove \(role?.name ?? "this responsibility")?", isPresented: $confirmRemoval, titleVisibility: .visible) {
+            Button("Remove responsibility", role: .destructive) {
+                Task {
+                    if await planner.send(["type": "removeRole", "roleId": roleId]) { dismiss() }
+                }
+            }
+            .accessibilityIdentifier("confirm-delete-role")
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The hours and tasks for this spread leave every week.")
+        }
     }
 
     private func rename(_ role: Responsibility) {
@@ -380,7 +388,7 @@ struct ProfilesSheet: View {
                             .accessibilityLabel("Open \(profile.name)")
                             .accessibilityAddTraits(active ? .isSelected : [])
                             .accessibilityIdentifier("profile-\(profile.id)")
-                            TextField("Name", text: Binding(get: { names[profile.id] ?? profile.name }, set: { names[profile.id] = $0 }))
+                            TextField("Name", text: Binding(get: { names[profile.id] ?? profile.name }, set: { names[profile.id] = $0 }), prompt: Spread.fieldPrompt("Name"))
                                 .submitLabel(.done)
                                 .onSubmit { rename(profile) }
                                 .accessibilityLabel("Name for \(profile.name)")
@@ -397,7 +405,7 @@ struct ProfilesSheet: View {
                 }
                     .listRowBackground(Spread.elevated)
                 Section("New profile") {
-                    TextField("New profile name", text: $newName)
+                    TextField("New profile name", text: $newName, prompt: Spread.fieldPrompt("New profile name"))
                         .submitLabel(.done)
                         .onSubmit { create() }
                         .accessibilityIdentifier("new-profile-field")
@@ -458,6 +466,7 @@ struct MoreSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var newSpread = false
     @State private var openTasks = false
+    @State private var confirmRollover = false
 
     /// Exports run on the store, then hand the result to the system: print/PDF, the share sheet, or text.
     private func exportWeek(_ format: String) {
@@ -482,34 +491,47 @@ struct MoreSheet: View {
                         .accessibilityIdentifier("more-new-spread")
                     Button { openTasks = true } label: { Label("Review open tasks", systemImage: "tray").frame(minHeight: 44, alignment: .leading) }
                     Button {
-                        Task { _ = await planner.send(["type": "rollover", "force": false]) }
+                        Task {
+                            if await planner.send(["type": "rollover", "force": false]), planner.rolloverOutcome == "confirm" {
+                                confirmRollover = true
+                            }
+                        }
                     } label: { Label("Rollover to next week", systemImage: "arrow.right.square").frame(minHeight: 44, alignment: .leading) }
                     .accessibilityIdentifier("more-rollover")
                 }
                     .listRowBackground(Spread.elevated)
-                Section("Spread view") {
-                    ForEach(SpreadLayout.allCases) { item in
-                        Button { layout = item } label: {
-                            HStack {
-                                Text(item.title)
-                                Spacer()
-                                if layout == item { Image(systemName: "checkmark").foregroundStyle(Spread.accent) }
+                Section("Spread layout") {
+                    FlowRow(spacing: 6) {
+                        ForEach(SpreadLayout.allCases) { item in
+                            Button { layout = item } label: {
+                                Text(item.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                                    .padding(.horizontal, 14).frame(minWidth: 44, minHeight: 44)
+                                    .spreadChip(selected: layout == item)
                             }
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
+                            .buttonStyle(.spreadPress)
+                            .accessibilityAddTraits(layout == item ? .isSelected : [])
+                            .accessibilityIdentifier("more-layout-\(item.rawValue)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(layout == item ? .isSelected : [])
-                        .accessibilityIdentifier("more-layout-\(item.rawValue)")
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Spread layout")
+                    .accessibilityIdentifier("view-mode-button")
                 }
                     .listRowBackground(Spread.elevated)
                 Section("Appearance") {
-                    Picker("Appearance", selection: $appearance) {
-                        ForEach(SpreadAppearance.allCases) { item in Text(item.title).tag(item) }
+                    FlowRow(spacing: 6) {
+                        ForEach(SpreadAppearance.allCases) { item in
+                            Button { appearance = item } label: {
+                                Text(item.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                                    .padding(.horizontal, 16).frame(minWidth: 44, minHeight: 44)
+                                    .spreadChip(selected: appearance == item)
+                            }
+                            .buttonStyle(.spreadPress)
+                            .accessibilityAddTraits(appearance == item ? .isSelected : [])
+                            .accessibilityIdentifier("appearance-" + item.rawValue)
+                        }
                     }
-                    .pickerStyle(.segmented)
-                    .frame(minHeight: 44)
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("appearance-picker")
                 }
                     .listRowBackground(Spread.elevated)
@@ -522,7 +544,7 @@ struct MoreSheet: View {
                         }
                         .frame(minHeight: 44)
                     }
-                    Button("Manage profiles") { dismiss(); showProfiles() }
+                    Button("Manage profiles") { showProfiles() }
                         .accessibilityIdentifier("manage-profiles")
                 }
                     .listRowBackground(Spread.elevated)
@@ -547,10 +569,17 @@ struct MoreSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Done").tapTarget() }
+                        .accessibilityIdentifier("close-more")
                 }
             }
             .sheet(isPresented: $newSpread) { NewSpreadSheet(planner: planner) }
             .sheet(isPresented: $openTasks) { CarryOverSheet(planner: planner) }
+            .confirmationDialog("Replace next week?", isPresented: $confirmRollover, titleVisibility: .visible) {
+                Button("Replace", role: .destructive) { Task { await planner.send(["type": "rollover", "force": true]) } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Next week already has tasks or days. This week stays as it is.")
+            }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)

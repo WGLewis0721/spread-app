@@ -86,16 +86,17 @@ private struct ListMark: Shape {
 /// The two-gear settings control. Drawn from the React `SettingsGears` geometry (24-unit viewBox) and turned
 /// when pressed: the large gear clockwise by 45 degrees, the small one counter-clockwise by 60 degrees.
 struct SettingsGears: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let turn: Bool
     var size: CGFloat = 36
 
     var body: some View {
         ZStack {
-            gear(cx: 8.2, cy: 8.2, radius: 4.15, teeth: 8, angle: turn ? 45 : 0)
-            gear(cx: 16.1, cy: 16.1, radius: 3.25, teeth: 6, angle: turn ? -60 : 0)
+            gear(cx: 8.2, cy: 8.2, radius: 4.15, teeth: 8, angle: turn && !reduceMotion ? 45 : 0)
+            gear(cx: 16.1, cy: 16.1, radius: 3.25, teeth: 6, angle: turn && !reduceMotion ? -60 : 0)
         }
         .frame(width: size, height: size)
-        .animation(SpreadMotion.gear, value: turn)
+        .animation(reduceMotion ? nil : SpreadMotion.gear, value: turn)
         .accessibilityHidden(true)
     }
 

@@ -15,6 +15,7 @@ struct WeekCrownView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var travel = CrownTravel()
     @State private var translation: CGFloat = 0
     @State private var live = false
@@ -26,7 +27,8 @@ struct WeekCrownView: View {
     /// 3.85rem, growing with Dynamic Type so the recessed readout never clips its text.
     @ScaledMetric(relativeTo: .callout) private var height: CGFloat = 62
     private let radius: CGFloat = 18.4   // 1.15rem
-    private let knurlPeriod: CGFloat = 16
+    private let knurlPeriod: CGFloat = 22
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         VStack(spacing: 8) {
@@ -35,6 +37,9 @@ struct WeekCrownView: View {
                 Text("Drag the Crown to change weeks.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
                     .accessibilityAddTraits(.updatesFrequently)
             }
         }
@@ -52,11 +57,12 @@ struct WeekCrownView: View {
                 let light = colorScheme == .dark ? Spread.toothLightDark : Spread.toothLightLight
                 var x = -knurlPeriod + shift
                 while x < size.width + knurlPeriod {
-                    let rect = CGRect(x: x + 1.25, y: 0, width: 12.5, height: size.height)
+                    let alignedX = ((x + 1) * displayScale).rounded() / displayScale
+                    let rect = CGRect(x: alignedX, y: 0, width: 20, height: size.height)
                     let gradient = Gradient(stops: [
-                        .init(color: dark, location: 0), .init(color: mid, location: 0.38),
-                        .init(color: light, location: 0.5), .init(color: mid, location: 0.64),
-                        .init(color: dark, location: 1),
+                        .init(color: dark.opacity(0.25), location: 0), .init(color: mid.opacity(0.35), location: 0.38),
+                        .init(color: light.opacity(0.38), location: 0.5), .init(color: mid.opacity(0.35), location: 0.64),
+                        .init(color: dark.opacity(0.25), location: 1),
                     ])
                     context.fill(
                         Path(roundedRect: rect, cornerRadius: 2.2),
@@ -88,9 +94,14 @@ struct WeekCrownView: View {
                 cap(label: "Next week", direction: 1, leading: false)
             }
         }
-        .frame(height: height)
+        .frame(minHeight: height)
+        // The decorative Canvas accepts all proposed space. Keep the wheel at its content's
+        // ideal height, including larger readout text, instead of splitting the screen with the list.
+        .fixedSize(horizontal: false, vertical: true)
         .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-        .gesture(dragGesture)
+        // A drag across the readout must cancel its "Back to this week" button. Otherwise a
+        // sequence away from today can reset to today while the same finger is changing weeks.
+        .highPriorityGesture(dragGesture)
         .onChange(of: gestureActive) { _, active in
             guard !active else { return }
             travel.release()
@@ -109,6 +120,7 @@ struct WeekCrownView: View {
             @unknown default: break
             }
         }
+        .accessibilityValue(title + (detail.map { ", " + $0 } ?? ""))
         .accessibilityIdentifier("week-crown")
     }
 
@@ -122,42 +134,40 @@ struct WeekCrownView: View {
     }
 
     private var readout: some View {
+        HStack(spacing: 0) {
+            Color.clear.frame(width: 44).allowsHitTesting(false).accessibilityHidden(true)
+            if let onDetail {
+                Button(action: onDetail) { readoutLabels.contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("week-crown-detail")
+            } else {
+                readoutLabels.accessibilityHidden(true)
+            }
+            Color.clear.frame(width: 44).allowsHitTesting(false).accessibilityHidden(true)
+        }
+        .padding(.vertical, 2)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Spread.crownRecess))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Spread.crownRecessStroke, lineWidth: 1))
+        .padding(.horizontal, typeSize.isAccessibilitySize ? 8 : 50)
+        .padding(.vertical, 7)
+    }
+
+    /// The whole central readout is a 44pt action when returning to this week. Giving that action both
+    /// lines avoids an undersized detail target without growing the Crown or shifting the page header.
+    private var readoutLabels: some View {
         VStack(spacing: 1) {
             Text(title)
                 .font(.system(.callout, weight: .semibold))
                 .foregroundStyle(Spread.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .truncationMode(.tail)
+                .fixedSize(horizontal: false, vertical: true)
             if let detail {
-                if let onDetail {
-                    Button(action: onDetail) {
-                        Text(detail).font(.system(.caption, weight: .medium)).foregroundStyle(Spread.accent)
-                            .tapTarget(minWidth: 44, minHeight: 28)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("week-crown-detail")
-                } else {
-                    Text(detail)
-                        .font(.system(.caption))
-                        .foregroundStyle(Spread.secondary)
-                        .lineLimit(1)
-                        .monospacedDigit()
-                }
+                Text(detail).font(.system(.caption, weight: .medium))
+                    .foregroundStyle(onDetail == nil ? Spread.secondary : Spread.accent)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.horizontal, 44)
-        .padding(.vertical, 2)
-        .frame(maxWidth: .infinity)
-        // The recess fills the space between the end caps and leaves the ribbed shoulders visible, as in the specimen.
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Spread.crownRecess))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Spread.crownRecessStroke, lineWidth: 1))
-        .padding(.horizontal, 50)
-        .padding(.vertical, 7)
-        .allowsHitTesting(onDetail != nil)
-        // The Crown's own label already says the week; hide the readout only while it is purely a label. When it offers
-        // "Back to this week", that button must stay reachable by VoiceOver, Switch Control and UI tests.
-        .accessibilityHidden(onDetail == nil)
+        .frame(maxWidth: .infinity, minHeight: 44)
     }
 
     /// Metal caps: a narrow shaded edge drawn over a 44 pt hit region that moves one week.
@@ -179,10 +189,10 @@ struct WeekCrownView: View {
                     .font(.system(.body, weight: .bold))
                     .foregroundStyle(Spread.ink.opacity(0.92))
                     .frame(width: 44)
-                    .padding(leading ? .leading : .trailing, 50)
+                    .padding(leading ? .leading : .trailing, typeSize.isAccessibilitySize ? 8 : 50)
                     .allowsHitTesting(false)
             }
-            .frame(width: 94, height: height)
+            .frame(width: typeSize.isAccessibilitySize ? 52 : 94, height: height)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -192,7 +202,7 @@ struct WeekCrownView: View {
 
     /// Finger tracking. A 64 point crossing commits one week; the ridges keep moving with the finger.
     private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
+        DragGesture(minimumDistance: 8)
             .updating($gestureActive) { _, state, _ in state = true }
             .onChanged { value in
                 live = true

@@ -30,7 +30,7 @@ public struct SpreadLiveRoot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     public init(planner: LivePlanner, recovery: @escaping () -> Void) {
         self.planner = planner
@@ -43,20 +43,22 @@ public struct SpreadLiveRoot: View {
 
     /// The planner layers and the standing accessibility identity.
     private var layers: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Spread.canvas.ignoresSafeArea()
-            if let snapshot = planner.snapshot {
-                content(snapshot)
-            } else {
-                opening
+            VStack(spacing: 0) {
+                if let snapshot = planner.snapshot {
+                    content(snapshot)
+                } else {
+                    opening
+                }
+                dock
             }
-            dock
         }
         .foregroundStyle(Spread.ink)
         .tint(Spread.accent)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("native-content")
-        .accessibilityValue(reduceMotion ? "reduce-motion" : "motion")
+        .modifier(PlannerAccessibilityState())
     }
 
     /// Everything that reacts to the planner or the system: refresh, the Undo window, profile and view memory.
@@ -76,7 +78,6 @@ public struct SpreadLiveRoot: View {
     /// Sheets, the error alert, the week tick and the keyboard/first-touch hooks.
     private var presented: some View {
         observed
-            .preferredColorScheme(appearance.scheme)
             .sheet(item: $sheet) { current in sheetContent(current) }
             .alert("Spread", isPresented: errorShown) { errorActions } message: { Text(planner.error ?? "") }
             // A light tick for an accepted week change only: not at launch, and not when a profile opens on its own week.
@@ -114,7 +115,7 @@ public struct SpreadLiveRoot: View {
     private func openProfile(_ profile: String?) {
         let remembered = SpreadViewMemory.read(profileId: profile)
         destination = remembered.destination
-        monthPlane = false
+        monthPlane = remembered.monthPlane
         selectedRole = nil
         focusDay = nil
         editing = false
@@ -140,10 +141,13 @@ public struct SpreadLiveRoot: View {
         let isMonth = destination == .week && monthPlane
         return VStack(spacing: 0) {
             // The header is sticky, as the web header was: it stays put while the surface scrolls under it.
-            header(snapshot, isMonth: isMonth)
+            if !typeSize.isAccessibilitySize { header(snapshot, isMonth: isMonth) }
             ScrollViewReader { proxy in
             ScrollView {
             VStack(spacing: 0) {
+                // Large text and long profile names must remain reachable instead of consuming
+                // the entire viewport in a sticky header.
+                if typeSize.isAccessibilitySize { header(snapshot, isMonth: isMonth) }
                 notices
                     .padding(.horizontal, 16)
                 if snapshot.roles.isEmpty {
@@ -179,12 +183,13 @@ public struct SpreadLiveRoot: View {
                         onRollover: { Task { await rollover() } },
                         onReview: { sheet = .review }
                     )
+                    .id(planner.state?.envelope.profileId)
                     .transition(.opacity)
                 }
-                Color.clear.frame(height: 120) // room for the floating dock
+                Color.clear.frame(height: 16)
             }
             // iPhone keeps a 640 pt reading column; iPad (regular width) opens up so it is not a narrow strip.
-            .frame(maxWidth: sizeClass == .regular ? 880 : 640)
+            .frame(maxWidth: destination == .spread ? 720 : 1120)
             .frame(maxWidth: .infinity)
             // Without this the week's slide transition never plays: a changed week would just swap in place.
             .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: snapshot.weekKey)
@@ -283,8 +288,9 @@ public struct SpreadLiveRoot: View {
                         Text(active)
                             .font(.system(.caption))
                             .foregroundStyle(Spread.secondary)
-                            .lineLimit(1)
-                            .frame(maxWidth: 110, alignment: .leading)
+                            .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                            .frame(maxWidth: 160, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("active-profile-name")
                     }
                 }
@@ -300,7 +306,8 @@ public struct SpreadLiveRoot: View {
     /// The Spread/Week switch: a recessed trough with one lit segment. Month is a mode inside Week, so there are
     /// two segments only, and both always show their label (an icon alone is not a destination).
     private var destinationRail: some View {
-        HStack(spacing: 2) {
+        let arrangement = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 2)) : AnyLayout(HStackLayout(spacing: 2))
+        return arrangement {
             ForEach(SpreadDestination.allCases) { item in
                 let selected = destination == item
                 Button {
@@ -330,7 +337,7 @@ public struct SpreadLiveRoot: View {
         .padding(3)
         .background(Capsule().fill(Spread.inset))
         .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 0.5))
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: false)
     }
 
     // MARK: Notices
@@ -625,6 +632,15 @@ private struct RoleDeleteConfirm: View {
         .padding(24)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
+    }
+}
+/// Reports the environment inside the appearance override, so acceptance tests verify what rendered.
+private struct PlannerAccessibilityState: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        content.accessibilityValue("\(reduceMotion ? "reduce-motion" : "motion");\(scheme == .dark ? "dark" : "light")")
     }
 }
 #endif

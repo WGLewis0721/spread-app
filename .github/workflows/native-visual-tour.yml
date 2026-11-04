@@ -1,5 +1,5 @@
 name: Native visual tour
-# Real simulator screenshots of every main surface in dark and light (and large text), for before/after design
+# Real simulator screenshots of every current main surface in dark and light (and large text), for design
 # evidence. It builds a simulator app only (never a distributable, never signed, never uploaded). Artifacts are the
 # exported attachments from the XCUITest result bundle.
 on:
@@ -13,7 +13,8 @@ on:
   workflow_dispatch:
 concurrency:
   group: native-visual-tour-${{ github.ref }}
-  cancel-in-progress: true
+  # Retain long simulator evidence; the newest revision queues behind the current acceptance run.
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -25,21 +26,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { variant: after, width: 390, before_ref: "" }
-          - { variant: before, width: 390, before_ref: "b1ae53ad8820de01fb57a891c86c7bd26335f6b8" }
-          - { variant: after, width: 820, before_ref: "" }
-          - { variant: flows, width: 390, before_ref: "", tests: "SpreadFlowUITests" }
+          - { variant: after, width: 390 }
+          - { variant: after, width: 820 }
+          - { variant: after, width: 1024 }
+          - { variant: flows, width: 390, tests: "SpreadFlowUITests" }
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: "BEFORE variant, native sources as they were before the visual redesign"
-        if: ${{ matrix.before_ref != '' }}
-        run: |
-          # Only the SwiftUI sources are rewound. The tour test, the project and the workflow stay as they are, so
-          # the BEFORE and AFTER screenshots come from the same steps on the same simulator.
-          git checkout ${{ matrix.before_ref }} -- ios/SpreadNativeV2/Sources
-          git status --short | head -5
       - uses: actions/setup-node@v4
         with:
           node-version: 22

@@ -18,7 +18,7 @@ workflows:
         VITE_SPREAD_CLOUD_BACKUP: "0"
         VITE_SPREAD_CLOUD_SYNC: "0"
       node: 22
-      xcode: 26.5
+      xcode: 27.1
     scripts:
       - name: Require main and local-only release settings
         script: |
@@ -35,6 +35,7 @@ workflows:
           npm run typecheck
           npm run lint
           npm run test:spread
+          swift test --package-path ios/SpreadNativeV2
           swift test --package-path ios/App/SpreadCloudCore
       - name: Bundle Spread and synchronize the Capacitor app
         script: |
@@ -84,6 +85,37 @@ workflows:
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
+
+  spread-store-status:
+    name: Spread - App Store status (read only)
+    max_build_duration: 10
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      vars:
+        APP_STORE_APPLE_ID: "6821191009"
+      xcode: 27.1
+    scripts:
+      - name: Read current Apple versions and uploaded builds
+        script: |
+          set -eu
+          mkdir -p artifacts/store-status
+          app-store-connect apps app-store-versions --platform IOS --json "$APP_STORE_APPLE_ID" > artifacts/store-status/versions.json
+          app-store-connect apps builds --json "$APP_STORE_APPLE_ID" > artifacts/store-status/builds.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for name in ("versions", "builds"):
+              data = json.loads(Path(f"artifacts/store-status/{name}.json").read_text())
+              rows = data if isinstance(data, list) else data.get("data", [data])
+              allowed = ("versionString", "appStoreState", "appVersionState", "version", "processingState", "expired", "uploadedDate", "platform")
+              summary = [{"id": row.get("id"), **{key: value for key, value in row.get("attributes", row).items() if key in allowed}} for row in rows]
+              Path(f"artifacts/store-status/{name}-summary.json").write_text(json.dumps(summary, indent=2))
+              print(name, json.dumps(summary))
+          PY
+    artifacts:
+      - artifacts/store-status/*-summary.json
 
   spread-pr119-internal-testflight:
     name: Spread PR #119 - manually approved INTERNAL TestFlight candidate
@@ -176,5 +208,98 @@ workflows:
         auth: integration
         # Upload to App Store Connect / TestFlight only; no external beta review or App Store review.
         # Internal tester assignment still requires verification in App Store Connect.
+        submit_to_testflight: false
+        submit_to_app_store: false
+
+  spread-release-candidate:
+    name: Spread - iPhone iPad Duo release candidate
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.graymatter.spread
+      vars:
+        APP_STORE_APPLE_ID: "6821191009"
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 27.1
+    scripts:
+      - name: Guard exact candidate and local-first configuration
+        script: |
+          set -eu
+          case "$CM_BRANCH" in
+            main|fix/swiftui-finish) ;;
+            *) echo "Build must use main or the release candidate branch" >&2; exit 1 ;;
+          esac
+          test "${CM_PULL_REQUEST:-false}" = false || { echo "Manual runs only" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate moved" >&2; exit 1; }
+      - name: Verify and bundle the candidate
+        script: |
+          set -eu
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:spread
+          npm run test:scripts
+          npm run docs:check
+          swift test --package-path ios/SpreadNativeV2
+          swift test --package-path ios/App/SpreadCloudCore
+          python3 scripts/app-store-preflight.py
+          npm run ios:sync
+          python3 scripts/app-store-preflight.py --bundle dist-ios
+      - name: Real Duo simulator - modes and rendered appearance
+        script: |
+          set -eu
+          mkdir -p artifacts
+          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/duo-env"
+          node scripts/native-simulator.mjs duo
+          . "$GITHUB_ENV"
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -only-testing:SpreadNativeUITests/DuoUITests \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testCrownHundredDragsWithThirtyReversals \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testDialArcSelectionAndPreferencePersistence \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally \
+            -only-testing:SpreadNativeUITests/SpreadFlowUITests \
+            -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
+          xcrun xcresulttool export attachments --path artifacts/Duo.xcresult --output-path artifacts/duo-screenshots
+          DUO_TOOLS="$(mktemp -d /tmp/spread-duo-tools.XXXXXX)"
+          npm install --prefix "$DUO_TOOLS" --ignore-scripts --no-save --no-audit --no-fund agent-device@0.21.36
+          bash scripts/native-system-appearance.sh "$DUO_TOOLS/node_modules/.bin/agent-device" "$NATIVE_UDID"
+      - name: Select unused Apple build number and signing
+        script: |
+          set -eu
+          LATEST_APPLE_BUILD="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+          python3 scripts/ios_build_number.py set --latest-apple "$LATEST_APPLE_BUILD" \
+            --codemagic-build "$BUILD_NUMBER" --project ios/App/App.xcodeproj/project.pbxproj \
+            --record artifacts/build-version.json
+          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
+          xcode-project use-profiles
+      - name: Build App Store eligible signed IPA
+        script: |
+          set -eu
+          xcode-project build-ipa --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" --scheme App
+          for ipa in build/ios/ipa/*.ipa; do
+            test -f "$ipa" || exit 1
+            python3 scripts/app-store-preflight.py --ipa "$ipa"
+            LATEST_APPLE="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+            python3 scripts/ios_build_number.py verify --ipa "$ipa" --record artifacts/build-version.json --latest-apple "$LATEST_APPLE"
+          done
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate moved; refusing upload" >&2; exit 1; }
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - artifacts/**
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
         submit_to_testflight: false
         submit_to_app_store: false

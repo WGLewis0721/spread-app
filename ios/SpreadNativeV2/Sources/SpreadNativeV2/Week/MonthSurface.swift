@@ -16,6 +16,7 @@ struct MonthSurface: View {
     @State private var marks: [String: NativeDayMark] = [:]
 
     private static let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private static let weekdayNames = ["Sun": "Sunday", "Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday", "Thu": "Thursday", "Fri": "Friday", "Sat": "Saturday"]
     private var calendar: Calendar { PlannerDates.calendar }
 
     private struct Cell: Identifiable {
@@ -50,11 +51,11 @@ struct MonthSurface: View {
         VStack(spacing: 8) {
             HStack(spacing: 6) {
                 ForEach(Self.weekdays, id: \.self) { label in
-                    Text(label)
-                        .font(.system(.caption2, weight: .medium))
-                        .foregroundStyle(Spread.secondary)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityHidden(true)
+                    ViewThatFits(in: .horizontal) {
+                        weekdayHeading(label, fullName: Self.weekdayNames[label] ?? label)
+                        weekdayHeading(String(label.prefix(2)), fullName: Self.weekdayNames[label] ?? label)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
@@ -65,12 +66,22 @@ struct MonthSurface: View {
         }
         .padding(.horizontal, 4)
         .padding(.top, 16)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("month")
         .task(id: marksKey) {
             let parts = PlannerDates.calendar.dateComponents([.year, .month], from: anchor)
             guard let year = parts.year, let month = parts.month else { return }
             if let fresh = await planner.monthMarks(year: year, month: month - 1) { marks = fresh }
         }
+    }
+
+    private func weekdayHeading(_ text: String, fullName: String) -> some View {
+        Text(text)
+            .font(.system(.caption2, weight: .medium))
+            .foregroundStyle(Spread.secondary)
+            .fixedSize(horizontal: true, vertical: false)
+            .accessibilityLabel(fullName)
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// Changes whenever the month shown, the profile, or the plan itself changes, so the dots follow edits.
@@ -100,8 +111,9 @@ struct MonthSurface: View {
                 Text("\(cell.day)")
                     .font(.system(.subheadline, weight: .semibold))
                     .monospacedDigit()
+                    .lineLimit(1).minimumScaleFactor(0.6)
                     .foregroundStyle(isToday ? Spread.onAccent : (cell.inMonth ? Spread.ink : Spread.tertiary))
-                    .frame(width: 28, height: 28)
+                    .frame(minWidth: 28, minHeight: 28)
                     .background(isToday ? Spread.accent : Color.clear, in: Circle())
                 HStack(spacing: 3) {
                     ForEach(Array(dots.colors.enumerated()), id: \.offset) { _, color in
@@ -109,10 +121,14 @@ struct MonthSurface: View {
                     }
                 }
                 .frame(height: 6)
-                Text(extra > 0 ? "+\(extra)" : " ")
-                    .font(.system(.caption2, weight: .medium))
-                    .foregroundStyle(Spread.secondary)
-                    .frame(height: 12)
+                if extra > 0 {
+                    Text("+\(extra)")
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(Spread.secondary)
+                        .frame(minHeight: 12)
+                } else {
+                    Color.clear.frame(height: 12).accessibilityHidden(true)
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 56)
             .padding(.vertical, 4)
@@ -122,7 +138,6 @@ struct MonthSurface: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(inOpenWeek ? Spread.accent.opacity(0.75) : Spread.line, lineWidth: inOpenWeek ? 1.5 : 0.5)
             )
-            .opacity(cell.inMonth ? 1 : 0.55)
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.spreadPress)

@@ -20,6 +20,7 @@ struct SpreadSurface: View {
     @State private var tabSelection = "all"
     @State private var daySelection = PlannerDates.localISO()
     @State private var dropOpen = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var totalHours: Double { snapshot.roles.reduce(0) { $0 + $1.hours } }
     private var taskCount: Int { snapshot.tasks.count }
@@ -28,13 +29,25 @@ struct SpreadSurface: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             summary
-            layoutPicker
             layoutBody
             manageRow
             newSpread
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
+        .onChange(of: tabSelection) { _, id in
+            if snapshot.roles.contains(where: { $0.id == id }) { selectedRole = id }
+        }
+        .onChange(of: snapshot.roles.map(\.id)) { _, ids in
+            if let selectedRole, !ids.contains(selectedRole) { self.selectedRole = ids.first }
+            if tabSelection != "all", !ids.contains(tabSelection) { tabSelection = "all" }
+        }
+        .onChange(of: snapshot.weekKey) { _, key in
+            if !PlannerOrder.displayOffsets.map({ PlannerDates.dayISO(weekKey: key, index: $0) }).contains(daySelection) {
+                daySelection = PlannerOrder.day(weekKey: key, displayPosition: 0)
+            }
+        }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("spread-surface")
     }
 
@@ -128,52 +141,6 @@ struct SpreadSurface: View {
         .spreadCard()
     }
 
-    // MARK: Layout picker
-
-    /// The five presentation modes as one recessed rail with a lit selection. It fits 390 pt without scrolling and
-    /// scrolls only when large text needs the room.
-    private var layoutPicker: some View {
-        ViewThatFits(in: .horizontal) {
-            layoutRail
-            ScrollView(.horizontal) { layoutRail }
-                .scrollIndicators(.hidden)
-        }
-    }
-
-    private var layoutRail: some View {
-        HStack(spacing: 4) {
-            ForEach(SpreadLayout.allCases) { item in
-                let selected = layout == item
-                Button { withAnimation(SpreadMotion.curve) { layout = item } } label: {
-                    VStack(spacing: 4) {
-                        LayoutGlyph(layout: item, tint: selected ? Spread.onAccent : Spread.secondary)
-                            .frame(width: 26, height: 26)
-                        Text(item.title).font(.system(.caption, weight: .semibold))
-                    }
-                    .foregroundStyle(selected ? Spread.onAccent : Spread.secondary)
-                    .padding(.horizontal, 6)
-                    .frame(minWidth: 62, maxWidth: .infinity, minHeight: 56)
-                    .background {
-                        if selected { RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Spread.accentGradient) }
-                    }
-                    .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.spreadPress)
-                .accessibilityLabel(item.title)
-                .accessibilityAddTraits(selected ? .isSelected : [])
-                .accessibilityIdentifier("layout-\(item.rawValue)")
-            }
-        }
-        .padding(4)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Spread.inset))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
-        // A real container element: the five mode buttons stay individually reachable inside it, and the group
-        // itself has the stable identifier the UI tests and VoiceOver landmarks use.
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Spread view")
-        .accessibilityIdentifier("view-mode-button")
-    }
-
     // MARK: Layout bodies
 
     @ViewBuilder private var layoutBody: some View {
@@ -197,7 +164,7 @@ struct SpreadSurface: View {
     private var managedRole: Responsibility? {
         let id: String?
         switch layout {
-        case .stack: id = nil
+        case .stack: id = selectedRole ?? snapshot.roles.first?.id
         case .tabs: id = tabSelection == "all" ? nil : tabSelection
         case .day, .fan, .dial: id = selectedRole ?? snapshot.roles.first?.id
         }
@@ -332,7 +299,14 @@ struct RoleRow: View {
             if isOpen { taskList.transition(.opacity) }
         }
         .contentShape(Rectangle())
-        .onTapGesture { onSelect() }
+        .background {
+            if expanded != nil {
+                Button(action: onSelect) { Rectangle().fill(.clear).contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Select \(role.name)")
+                    .accessibilityIdentifier("select-role-\(role.id)")
+            }
+        }
         .id("spread-role-\(role.id)")
         .onAppear { name = role.name }
         .onChange(of: role.name) { _, value in name = value }
@@ -357,7 +331,8 @@ struct RoleRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 if isOpen || editing {
                     // Renaming lives on the open card (and in Edit mode), so a tap on a compact card always opens it.
-                    TextField("Name", text: $name)
+                    TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"), axis: .vertical)
+                        .lineLimit(1...3)
                         .font(.system(.title3, weight: .semibold))
                         .focused($nameFocused)
                         .submitLabel(.done)
@@ -368,12 +343,13 @@ struct RoleRow: View {
                 } else {
                     Text(role.name)
                         .font(.system(.title3, weight: .semibold))
-                        .lineLimit(1)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("role-name-\(role.id)")
                 }
                 Text(summaryLine)
                     .font(.system(.footnote)).foregroundStyle(Spread.secondary)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -461,14 +437,16 @@ struct RoleRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("\(SpreadHours.text(placedHours)) placed · \(SpreadHours.text(left)) left")
                     .font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.ink).monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
                 DayMarks(snapshot: snapshot, role: role)
             }
             Spacer(minLength: 0)
-            artwork
+            if !typeSize.isAccessibilitySize { artwork
                 .background(
                     RadialGradient(colors: [tint.opacity(0.30), tint.opacity(0)], center: .center, startRadius: 2, endRadius: 80)
                         .allowsHitTesting(false)
                 )
+            }
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 8)
@@ -503,8 +481,9 @@ struct RoleRow: View {
     /// The tasks in a recessed list, so the open card reads as: identity, placement, work.
     private var taskList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(tasks) { task in
+            ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                 TaskRow(planner: planner, snapshot: snapshot, task: task, roleId: role.id, onOpen: { onOpenTask(role.id, task.id) })
+                    .modifier(SpreadEntrance(index: index))
             }
             AddTaskRow(placeholder: tasks.isEmpty ? "What matters most here?" : "Add a task") { text in
                 Task { await planner.send(["type": "addTask", "roleId": role.id, "text": text]) }
@@ -547,11 +526,14 @@ struct DayMarks: View {
                 let on = placed.contains(iso)
                 Text(PlannerOrder.dayMarks[index])
                     .font(.system(.caption, weight: on ? Font.Weight.semibold : Font.Weight.medium))
-                    .foregroundStyle(on ? Color(hex: role.color) : Spread.tertiary)
+                    .foregroundStyle(on ? Spread.ink : Spread.tertiary)
+                    .underline(on)
             }
         }
+        .frame(minHeight: 44)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken.isEmpty ? "Not placed on any day" : "\(role.name) on \(spoken.map { PlannerDates.label(PlannerDates.date($0), pattern: "EEEE") }.joined(separator: ", "))")
+        .contentShape(.accessibility, Rectangle())
     }
 }
 
@@ -575,7 +557,7 @@ struct PalettePanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Colour").font(.system(.subheadline, weight: .semibold))
-            HStack(spacing: 4) {
+            FlowRow(spacing: 4) {
                 ForEach(Self.colors, id: \.self) { color in
                     Button {
                         Task { await planner.send(["type": "setRoleColor", "roleId": role.id, "color": color]) }
@@ -665,6 +647,7 @@ struct TaskRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(task.text.isEmpty ? "Untitled task" : task.text)
             .accessibilityIdentifier("task-row-\(task.id)")
 
             if isToday && !task.done {
@@ -689,14 +672,23 @@ struct TaskRow: View {
 struct AddTaskRow: View {
     let placeholder: String
     let onAdd: (String) -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var text = ""
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+        if typeSize.isAccessibilitySize {
+            Text(placeholder)
+                .font(.system(.body)).foregroundStyle(Spread.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 56).padding(.top, 12)
+                .accessibilityHidden(true)
+        }
         HStack(spacing: 0) {
             Image(systemName: "plus").font(.system(.body, weight: .regular)).foregroundStyle(Spread.accent)
                 .frame(width: 56, height: 56)
                 .accessibilityHidden(true)
-            TextField(placeholder, text: $text)
+            TextField(placeholder, text: $text, prompt: typeSize.isAccessibilitySize ? nil : Spread.fieldPrompt(placeholder))
                 .font(.system(.body))
                 .submitLabel(.done)
                 .onSubmit { submit() }
@@ -714,6 +706,7 @@ struct AddTaskRow: View {
                 .accessibilityIdentifier("add-task-button")
                 .transition(.opacity)
             }
+        }
         }
         .padding(.leading, 12)
         .overlay(alignment: .top) { Rectangle().fill(Spread.line).frame(height: 0.5).padding(.leading, 56) }
@@ -744,7 +737,7 @@ struct StackLayout: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            ForEach(snapshot.roles) { role in
+            ForEach(Array(snapshot.roles.enumerated()), id: \.element.id) { index, role in
                 let isFocused = focusedId == role.id
                 RoleRow(
                     planner: planner, snapshot: snapshot, role: role, editing: editing,
@@ -754,9 +747,25 @@ struct StackLayout: View {
                 )
                 .spreadCard(edge: Color(hex: role.color), active: isFocused)
                 .zIndex(isFocused ? 1 : 0)
+                .modifier(SpreadEntrance(index: index))
             }
         }
         .animation(reduceMotion ? nil : SpreadMotion.curve, value: focusedId)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Responsibilities in Stack view")
+        .accessibilityValue(snapshot.roles.first(where: { $0.id == focusedId })?.name ?? "")
+        .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { value in
+            guard abs(value.translation.width) > abs(value.translation.height) * 1.5,
+                  abs(value.translation.width) >= 64,
+                  let index = snapshot.roles.firstIndex(where: { $0.id == focusedId }) else { return }
+            let next = min(max(0, index + (value.translation.width < 0 ? 1 : -1)), snapshot.roles.count - 1)
+            select(snapshot.roles[next].id)
+        })
+        .accessibilityAdjustableAction { direction in
+            guard let index = snapshot.roles.firstIndex(where: { $0.id == focusedId }) else { return }
+            let next = min(max(0, index + (direction == .increment ? 1 : -1)), snapshot.roles.count - 1)
+            select(snapshot.roles[next].id)
+        }
         .accessibilityIdentifier("stack-cards")
     }
 

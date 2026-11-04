@@ -31,7 +31,7 @@ if (!Number.isFinite(min) || files.length === 0) {
   console.error(`run-tests: no test files given (got ${files.length}). Refusing to report success.`);
   process.exit(2);
 }
-const run = spawnSync(process.execPath, [...nodeArgs, "--test", ...files], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+const run = spawnSync(process.execPath, [...nodeArgs, "--test", "--test-reporter=tap", ...files], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 process.stdout.write(run.stdout);
 process.stderr.write(run.stderr);
 const count = (name) => Number((new RegExp(`^# ${name} (\\d+)`, "m").exec(run.stdout) ?? [])[1] ?? NaN);

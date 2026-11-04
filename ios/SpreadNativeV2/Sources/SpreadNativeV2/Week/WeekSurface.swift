@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import UIKit
 
 /// The Week body from `weekly-view.tsx`, top to bottom: the caption, the role bubble strip (remaining hours),
 /// Free time suggestions, the dashed To place tray, then seven solid day cards, Sunday first.
@@ -17,10 +18,9 @@ struct WeekSurface: View {
     let onSwipeWeek: (Int) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    /// Finger offset while a swipe is live. A `GestureState` returns to zero on end *and* on cancel, so an
-    /// interrupted swipe (a system drag lift, a scroll takeover) can never leave the week offset or dimmed.
-    @GestureState(resetTransaction: Transaction(animation: SpreadMotion.press)) private var swipeShift: CGFloat = 0
+    @Environment(\.dynamicTypeSize) private var typeSize
+    /// Horizontal feedback resets on end, cancellation and leaving the surface.
+    @State private var swipeShift: CGFloat = 0
     @State private var width: CGFloat = 0
 
     private var today: String { PlannerDates.localISO() }
@@ -36,11 +36,12 @@ struct WeekSurface: View {
             onOpenRole: onOpenRole
         )
         .id(iso)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("day-card-\(iso)")
     }
 
     private var dayColumns: [GridItem] {
-        sizeClass == .regular ? [GridItem(.flexible(), spacing: 12, alignment: .top), GridItem(.flexible(), alignment: .top)] : [GridItem(.flexible())]
+        Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: PlannerLayout.dayColumns(availableWidth: Double(width), accessibilityText: typeSize.isAccessibilitySize))
     }
     private var showsTray: Bool {
         snapshot.tasks.contains(where: { $0.allocationId == nil }) || snapshot.tasks.contains(where: { !$0.done })
@@ -70,7 +71,7 @@ struct WeekSurface: View {
                 }
                 // One eager column on iPhone (every day stays in the accessibility tree); two columns on iPad, where a
                 // single wide column of day cards would be mostly air.
-                if sizeClass == .regular {
+                if dayColumns.count == 2 {
                     LazyVGrid(columns: dayColumns, spacing: 12) {
                         ForEach(0..<7, id: \.self) { position in dayCard(position) }
                     }
@@ -88,10 +89,11 @@ struct WeekSurface: View {
                     .onAppear { width = proxy.size.width }
                     .onChange(of: proxy.size.width) { _, value in width = value }
             })
-            .simultaneousGesture(swipeGesture)
+            .background(WeekHorizontalSwipe(onShift: { swipeShift = $0 }, onMove: onSwipeWeek))
         }
         .id(snapshot.weekKey)
         .transition(weekTransition)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("week-surface")
     }
 
@@ -101,18 +103,6 @@ struct WeekSurface: View {
             insertion: .offset(x: CGFloat(direction) * 36).combined(with: .opacity),
             removal: .opacity
         )
-    }
-
-    private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 10)
-            .updating($swipeShift) { value, state, _ in
-                state = WeekSwipeRules.shift(start: value.startLocation, current: value.location)
-            }
-            .onEnded { value in
-                if let dir = WeekSwipeRules.direction(start: value.startLocation, end: value.location, width: width) {
-                    onSwipeWeek(dir)
-                }
-            }
     }
 
     // MARK: Role bubbles (`SpreadChip`, `SpreadBubbleStrip`)
@@ -194,6 +184,95 @@ struct WeekSurface: View {
     }
 }
 
+/// The vertical ScrollView owns vertical movement. A UIKit pan delegate can reject a vertical
+/// touch before recognizing it; checking the direction inside SwiftUI's onChanged is too late.
+/// Attach only to the enclosing scroll view, and accept touches inside the day/tray region only.
+private struct WeekHorizontalSwipe: UIViewRepresentable {
+    let onShift: (CGFloat) -> Void
+    let onMove: (Int) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onShift: onShift, onMove: onMove) }
+    func makeUIView(context: Context) -> AnchorView {
+        let view = AnchorView()
+        view.isUserInteractionEnabled = false
+        view.moved = { [weak coordinator = context.coordinator] view in coordinator?.attach(to: view) }
+        return view
+    }
+    func updateUIView(_ view: AnchorView, context: Context) {
+        context.coordinator.onShift = onShift
+        context.coordinator.onMove = onMove
+        context.coordinator.attach(to: view)
+    }
+    static func dismantleUIView(_ view: AnchorView, coordinator: Coordinator) { coordinator.detach() }
+
+    final class AnchorView: UIView {
+        var moved: ((UIView) -> Void)?
+        override func didMoveToWindow() { super.didMoveToWindow(); moved?(self) }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onShift: (CGFloat) -> Void
+        var onMove: (Int) -> Void
+        private weak var anchor: UIView?
+        private weak var scroller: UIScrollView?
+        private var start = CGPoint.zero
+        private lazy var pan = UIPanGestureRecognizer(target: self, action: #selector(changed(_:)))
+
+        init(onShift: @escaping (CGFloat) -> Void, onMove: @escaping (Int) -> Void) {
+            self.onShift = onShift
+            self.onMove = onMove
+        }
+        func attach(to view: UIView) {
+            anchor = view
+            guard view.window != nil else { detach(); return }
+            var ancestor = view.superview
+            while let current = ancestor, !(current is UIScrollView) { ancestor = current.superview }
+            guard let scroll = ancestor as? UIScrollView, scroll !== scroller else { return }
+            detach()
+            anchor = view
+            scroller = scroll
+            pan.delegate = self
+            pan.maximumNumberOfTouches = 1
+            pan.cancelsTouchesInView = false
+            scroll.addGestureRecognizer(pan)
+        }
+        func detach() {
+            scroller?.removeGestureRecognizer(pan)
+            scroller = nil
+        }
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let anchor, anchor.bounds.contains(touch.location(in: anchor)) else { return false }
+            start = touch.location(in: anchor)
+            return true
+        }
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let anchor else { return false }
+            let velocity = pan.velocity(in: scroller)
+            return abs(velocity.x) > abs(velocity.y) * WeekSwipeRules.dominance
+                && start.x >= WeekSwipeRules.edgeGuard
+                && start.x <= anchor.bounds.width - WeekSwipeRules.edgeGuard
+        }
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            other === scroller?.panGestureRecognizer
+        }
+        @objc private func changed(_ gesture: UIPanGestureRecognizer) {
+            let translation = gesture.translation(in: scroller)
+            let end = CGPoint(x: start.x + translation.x, y: start.y + translation.y)
+            switch gesture.state {
+            case .began, .changed:
+                onShift(WeekSwipeRules.shift(start: start, current: end))
+            case .ended:
+                let direction = WeekSwipeRules.direction(start: start, end: end, width: anchor?.bounds.width ?? 0)
+                withAnimation(SpreadMotion.press) { onShift(0) }
+                if let direction { onMove(direction) }
+            case .cancelled, .failed:
+                withAnimation(SpreadMotion.press) { onShift(0) }
+            default: break
+            }
+        }
+    }
+}
+
 /// One solid day card (`DayCard`): label, date, Today, the allocation rows, and an Add button for the selected role.
 struct DayCard: View {
     @ObservedObject var planner: LivePlanner
@@ -227,13 +306,11 @@ struct DayCard: View {
                     .font(.system(.caption)).foregroundStyle(Spread.secondary).monospacedDigit()
             }
             .padding(.horizontal, 4)
+            .frame(minHeight: allocations.isEmpty && selectedRole == nil ? 28 : 0)
+            .accessibilityElement(children: .combine)
+            .accessibilityValue(allocations.isEmpty ? "Nothing planned" : "")
 
-            if allocations.isEmpty {
-                // Visually empty day: the label is still announced, and the card stays a calm, solid surface.
-                Color.clear.frame(width: 1, height: 1)
-                    .accessibilityLabel("No responsibilities scheduled for \(label).")
-            }
-
+            if !allocations.isEmpty {
             VStack(spacing: 8) {
                 ForEach(allocations) { allocation in
                     AllocationRow(planner: planner, snapshot: snapshot, allocation: allocation, dayLabel: label, onOpenTask: onOpenTask)
@@ -241,6 +318,7 @@ struct DayCard: View {
                 }
             }
 
+            }
             if let selectedRole, let name = selectedName {
                 Button {
                     Task { await planner.placeHours(roleId: selectedRole, day: day, hours: 1) }
@@ -259,7 +337,7 @@ struct DayCard: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, allocations.isEmpty && selectedRole == nil ? 10 : 12)
+        .padding(.vertical, allocations.isEmpty && selectedRole == nil ? 8 : 12)
         .spreadCard(edge: isToday ? Spread.accent : nil, active: isToday)
         .overlay(
             RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
@@ -303,6 +381,8 @@ struct AllocationRow: View {
 
     @State private var showTasks = false
     @State private var leaving = false
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var role: Responsibility? { snapshot.roles.first { $0.id == allocation.roleId } }
     private var tasks: [PlannerTask] { snapshot.tasks.filter { $0.allocationId == allocation.id } }
@@ -310,6 +390,9 @@ struct AllocationRow: View {
     var body: some View {
         if let role {
             VStack(spacing: 0) {
+                if typeSize.isAccessibilitySize {
+                    Text(role.name).font(.headline).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                }
                 HStack(spacing: 4) {
                     // Drag handle: the role dot. Long press starts a native drag; the Move control is the alternative.
                     RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 30)
@@ -319,7 +402,9 @@ struct AllocationRow: View {
                         .accessibilityLabel("Move \(role.name)")
                         .accessibilityIdentifier("allocation-\(allocation.id)")
 
-                    if tasks.isEmpty {
+                    if typeSize.isAccessibilitySize && tasks.isEmpty {
+                        Spacer(minLength: 0)
+                    } else if tasks.isEmpty {
                         Text(role.name).font(.system(.subheadline, weight: .medium)).lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
@@ -352,7 +437,7 @@ struct AllocationRow: View {
                     Button {
                         leaving = true
                         Task {
-                            try? await Task.sleep(nanoseconds: 340_000_000)
+                            if !reduceMotion { try? await Task.sleep(nanoseconds: 340_000_000) }
                             await planner.send(["type": "removeAllocation", "allocationId": allocation.id])
                             leaving = false
                         }
@@ -379,8 +464,8 @@ struct AllocationRow: View {
             .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.inset))
             .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).strokeBorder(Color(hex: role.color).opacity(0.28), lineWidth: 1))
             .opacity(leaving ? 0 : 1)
-            .offset(y: leaving ? -22 : 0)
-            .animation(SpreadMotion.ascend, value: leaving)
+            .offset(y: leaving && !reduceMotion ? -22 : 0)
+            .animation(reduceMotion ? nil : SpreadMotion.ascend, value: leaving)
             .dropDestination(for: SpreadDragPayload.self) { items, _ in
                 guard let item = items.first else { return false }
                 Task {

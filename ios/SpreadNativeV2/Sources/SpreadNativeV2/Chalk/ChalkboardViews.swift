@@ -38,7 +38,7 @@ struct ChalkIllustration: View {
     }
 }
 
-/// One moving cutout from `doodle-motion.ts`: its art, box and pivot (percent of the art), the kind of motion,
+/// One moving cutout from `doodle-motion.ts`: its art, box and pivot (percent of the cutout), the kind of motion,
 /// amplitude, period and delay in seconds. Values are transcribed from the Studio motion specification.
 struct ChalkMotionLayer: Identifiable {
     enum Kind { case sway, flutter, beat, bob, drift, spin, rock, grow, nudge }
@@ -138,19 +138,27 @@ struct ChalkMotionArt: View {
     var size: CGFloat = 96
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var began = Date()
 
     static let aspect: CGFloat = 273.0 / 393.0
 
     var body: some View {
         let height = size * Self.aspect
-        ZStack {
-            ChalkIllustration(category: category, maxWidth: size, maxHeight: height)
-            ForEach(ChalkMotionTable.layers(for: category)) { layer in
-                MotionCutout(layer: layer, width: size, height: height, animated: !reduceMotion)
+        let animated = !reduceMotion && scenePhase == .active
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !animated)) { timeline in
+            let elapsed = animated ? timeline.date.timeIntervalSince(began) : 0
+            ZStack {
+                ChalkIllustration(category: category, maxWidth: size, maxHeight: height)
+                ForEach(ChalkMotionTable.layers(for: category)) { layer in
+                    MotionCutout(layer: layer, width: size, height: height, elapsed: elapsed, animated: animated)
+                }
+                if animated { ChalkEffects(category: category, elapsed: elapsed) }
             }
+            .frame(width: size, height: height)
         }
-        .frame(width: size, height: height)
         .accessibilityHidden(true)
+        .allowsHitTesting(false)
     }
 }
 
@@ -158,40 +166,39 @@ private struct MotionCutout: View {
     let layer: ChalkMotionLayer
     let width: CGFloat
     let height: CGFloat
+    let elapsed: Double
     let animated: Bool
 
     var body: some View {
-        if animated {
-            TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
-                cutout(phase: timeline.date.timeIntervalSinceReferenceDate)
-            }
-        } else {
-            cutout(phase: 0)
-        }
-    }
-
-    /// The box is a percent rectangle inside the landscape art; the pivot is a percent point inside that box.
-    private func cutout(phase: Double) -> some View {
-        let t = (phase + layer.delay) / layer.dur
-        let wave = sin(t * 2 * .pi)
+        let phase = ChalkTiming.phase(elapsed, duration: layer.dur, delay: layer.delay)
+        let alternate = ChalkTiming.ease(ChalkTiming.phase(elapsed, duration: layer.dur, delay: layer.delay, alternate: true))
         let frame = CGRect(x: layer.box.x / 100 * width, y: layer.box.y / 100 * height,
                            width: layer.box.w / 100 * width, height: layer.box.h / 100 * height)
-        let pivot = UnitPoint(x: (layer.origin.x - layer.box.x) / max(layer.box.w, 0.001),
-                              y: (layer.origin.y - layer.box.y) / max(layer.box.h, 0.001))
-        var angle = 0.0, scale = 1.0, dx = 0.0, dy = 0.0
-        switch layer.kind {
-        case .sway, .flutter, .rock: angle = wave * layer.amp
-        case .spin: angle = (phase.truncatingRemainder(dividingBy: layer.dur) / layer.dur) * layer.amp
-        case .beat: scale = 1 + wave * layer.amp
-        case .bob: dy = wave * layer.amp * height / 100
-        case .drift: dx = wave * layer.amp * width / 100
-        case .grow: scale = 1 + (wave + 1) / 2 * layer.amp
-        case .nudge: dx = wave * layer.amp * width / 100
+        // doodles.tsx uses transformOrigin directly on the cutout image: these percentages are local
+        // to its box, not positions in the full illustration (the old conversion orbited distant pivots).
+        let pivot = UnitPoint(x: layer.origin.x / 100, y: layer.origin.y / 100)
+        var angle = 0.0, sx = 1.0, sy = 1.0, dx = 0.0, dy = 0.0
+        if animated {
+            switch layer.kind {
+            case .sway, .rock: angle = layer.amp * (2 * alternate - 1)
+            case .flutter: angle = ChalkTiming.sample(phase, [(0, 0), (0.3, layer.amp), (0.6, -0.6 * layer.amp), (1, 0)])
+            case .spin: angle = phase * 360
+            case .beat:
+                sx = ChalkTiming.sample(phase, [(0, 1), (0.12, 1 + layer.amp), (0.22, 1 + layer.amp * 0.5), (0.32, 1), (1, 1)], out: true)
+                sy = sx
+            case .bob: dy = alternate * layer.amp * Double(frame.height) / 100
+            case .drift: dx = (alternate - 0.5) * layer.amp * Double(frame.width) / 100
+            case .grow: sy = 1 - layer.amp + alternate * layer.amp
+            case .nudge:
+                let push = ChalkTiming.sample(phase, [(0, 0), (0.5, 1), (1, 0)])
+                dx = push * layer.amp * Double(frame.width) / 100
+                dy = -push * layer.amp * Double(frame.height) / 100
+            }
         }
         return ChalkImageFrame(resource: layer.src)
             .frame(width: frame.width, height: frame.height)
             .rotationEffect(.degrees(angle), anchor: pivot)
-            .scaleEffect(scale, anchor: pivot)
+            .scaleEffect(x: sx, y: sy, anchor: pivot)
             .offset(x: dx, y: dy)
             .position(x: frame.midX, y: frame.midY)
     }
