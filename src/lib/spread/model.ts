@@ -19,13 +19,18 @@ export type Hat = {
   color: string;
   category?: SpreadCategory;
 };
+/** A task removed from the active plan but recoverable for 30 days. */
+export type DeletedTask = { id: string; hatId: string; weekKey: string; task: Task; deletedAt: number };
 export type Box = { hatId: string; hours: number; tasks: Task[] };
 export type Allocation = { id: string; hatId: string; day: string; hours: number; order: number };
-export type WeekData = { boxes: Box[]; allocations: Allocation[] };
+/** dayTaskOrder affects only Week presentation, never the responsibility's canonical task order. */
+export type WeekData = { boxes: Box[]; allocations: Allocation[]; dayTaskOrder?: Record<string, string[]> };
 export type SpreadData = {
   hats: Hat[];
   weeks: Record<string, WeekData>;
   currentWeek: string;
+  /** Optional for backward compatibility with older backups, snapshots and synced profiles. */
+  deletedTasks?: DeletedTask[];
 };
 export type License = { ok: true; plan: "demo" | "personal" };
 
@@ -174,6 +179,7 @@ export function cloneWeek(week: WeekData): WeekData {
   });
   return {
     allocations,
+    // Fresh copies contain new task IDs and deliberately do not inherit old day display order.
     boxes: week.boxes.map((box) => ({
       hatId: box.hatId,
       hours: box.hours,
@@ -265,11 +271,23 @@ export function normalizeData(raw: unknown): SpreadData {
       weeks[key] = {
         boxes: week.boxes.filter(isBox).map((box) => restoreBank(normalizeBox(box), allocations, hats)),
         allocations,
+        ...(week.dayTaskOrder && typeof week.dayTaskOrder === "object"
+          ? { dayTaskOrder: normalizeDayTaskOrder(week.dayTaskOrder) } : {}),
       };
     }
   }
   const currentWeek = typeof value.currentWeek === "string" ? value.currentWeek : weekKey();
-  return ensureWeek({ hats, weeks: repairDuplicateIds(weeks), currentWeek });
+  const result = ensureWeek({ hats, weeks: repairDuplicateIds(weeks), currentWeek });
+  const deletedTasks = Array.isArray(value.deletedTasks)
+    ? value.deletedTasks.filter(isDeletedTask).map((entry) => ({
+        id: entry.id,
+        hatId: entry.hatId,
+        weekKey: entry.weekKey,
+        deletedAt: entry.deletedAt,
+        task: normalizeTask(entry.task),
+      }))
+    : undefined;
+  return deletedTasks === undefined ? result : { ...result, deletedTasks };
 }
 
 /**
@@ -364,6 +382,24 @@ function restoreBank(box: Box, allocations: { hatId: string; hours: number }[], 
     return { ...box, hours: hat.defaultHours };
   }
   return box;
+}
+
+function normalizeDayTaskOrder(value: Record<string, unknown>): Record<string, string[]> {
+  const order: Record<string, string[]> = {};
+  for (const [key, ids] of Object.entries(value)) {
+    if (key.length > 140 || !Array.isArray(ids)) continue;
+    order[key] = [...new Set(ids.filter((id): id is string => typeof id === "string" && id.length <= 200))].slice(0, 10000);
+  }
+  return order;
+}
+
+function isDeletedTask(value: unknown): value is DeletedTask {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<DeletedTask>;
+  return typeof item.id === "string" && typeof item.hatId === "string"
+    && typeof item.weekKey === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(item.weekKey)
+    && typeof item.deletedAt === "number" && Number.isFinite(item.deletedAt)
+    && isTask(item.task);
 }
 
 function isTask(value: unknown): value is Task {
