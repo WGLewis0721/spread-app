@@ -262,3 +262,34 @@ workflows:
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
+
+  spread-store-status:
+    name: Spread - App Store status (read only)
+    max_build_duration: 10
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      vars:
+        APP_STORE_APPLE_ID: "6821191009"
+      xcode: 27.1
+    scripts:
+      - name: Read current Apple versions and uploaded builds
+        script: |
+          set -eu
+          mkdir -p artifacts/store-status
+          app-store-connect apps app-store-versions --platform IOS --json "$APP_STORE_APPLE_ID" > artifacts/store-status/versions.json
+          app-store-connect apps builds --json "$APP_STORE_APPLE_ID" > artifacts/store-status/builds.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for name in ("versions", "builds"):
+              data = json.loads(Path(f"artifacts/store-status/{name}.json").read_text())
+              rows = data if isinstance(data, list) else data.get("data", [data])
+              allowed = ("versionString", "appStoreState", "appVersionState", "version", "processingState", "expired", "uploadedDate", "platform")
+              summary = [{"id": row.get("id"), **{key: value for key, value in row.get("attributes", row).items() if key in allowed}} for row in rows]
+              Path(f"artifacts/store-status/{name}-summary.json").write_text(json.dumps(summary, indent=2))
+              print(name, json.dumps(summary))
+          PY
+    artifacts:
+      - artifacts/store-status/*-summary.json
