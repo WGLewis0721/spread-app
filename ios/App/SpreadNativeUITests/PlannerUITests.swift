@@ -119,8 +119,13 @@ class NativeUITestCase: XCTestCase {
     }
     func typeInto(_ id: String, _ text: String, file: StaticString = #filePath, line: UInt = #line) {
         let field = el(id)
+        // Rich-content table cells can be below the keyboard and absent from
+        // the initial accessibility snapshot until the outer sheet scrolls.
+        // Scroll the real sheet to expose the field before asserting existence.
+        if !field.waitForExistence(timeout: 3) { scrollIntoView(field) }
         XCTAssertTrue(field.waitForExistence(timeout: 30), "Missing field \(id)", file: file, line: line)
         scrollIntoView(field)
+        XCTAssertTrue(field.isHittable, "Field is obscured: \(id)", file: file, line: line)
         field.tap()
         field.typeText(text)
     }
