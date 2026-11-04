@@ -384,10 +384,14 @@ final class JourneyUITests: NativeUITestCase {
         tapID("task-move-" + id)
         let days = waitElements(prefix: "eligible-day-", minimum: 2)
         XCTAssertEqual(days.count, 2, "Only this responsibility’s allocated days are eligible")
-        tapID("eligible-day-" + monday)
+        // MoveToSheet identifies each choice by allocation ID, not calendar day.
+        // Use the allocations captured in F02, ordered Monday then Wednesday.
+        XCTAssertEqual(Dataset.allocationIds.count, 2, "F02 must persist both eligible allocations")
+        tapID("eligible-day-" + String(Dataset.allocationIds[0].dropFirst("allocation-".count)))
         showTasks(on: monday)
         XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
-        tapID("task-move-" + id); tapID("eligible-day-" + wednesday)
+        tapID("task-move-" + id)
+        tapID("eligible-day-" + String(Dataset.allocationIds[1].dropFirst("allocation-".count)))
         showTasks(on: wednesday)
         XCTAssertTrue(el("day-card-" + wednesday).descendants(matching: .any).matching(identifier: "task-row-" + id).firstMatch.exists)
         tapID("undo-last-change"); showTasks(on: monday)
