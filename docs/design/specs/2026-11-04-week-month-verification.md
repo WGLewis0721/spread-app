@@ -72,7 +72,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 32 | Add on a day without hours: save, then offer hours | Implemented | UI test written |
 | 33 | Selection scrolls to row without reordering | Implemented | Code only |
 | 34 | A task is on at most one day | Implemented (model invariant) | Existing tests |
-| 35 | Whole day complete: brief check and one haptic | **Partial:** check shown; the haptic is per task, not per day. A second haptic would break "one light haptic on completing a task", so the owner should decide | |
+| 35 | Whole day complete: brief check and one haptic | Implemented in #139, per owner choice: the completion that finishes the day plays one success haptic **instead of** the task haptic (still one per tap); brief check and VoiceOver announcement | Code only |
 | 36 | Crown date returns to Today, with haptic | Implemented | Code only |
 | 37 | Delete goes to Recently Deleted | Implemented | Bridge test |
 | 38 | Expires after 30 days | Implemented | Unit test |
@@ -90,7 +90,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 50 | Expanded sidebar overlays; selection collapses it | Implemented | UI test written |
 | 51 | Day change slides by direction | **Partial:** animated, not directional | |
 | 52 | Completion never reduces hours | Implemented | Bridge test |
-| 53 | Overview morphs into Month | **Partial:** animated swap, not a shared-geometry morph | |
+| 53 | Overview morphs into Month | Implemented in #139: each strip day shares geometry with its Month cell; no movement under Reduce Motion; Classic unchanged | Code only |
 | 54 | Month replaces schedule, keeps rail and Crown | Implemented | UI test written |
 | 55 | Month dots | Implemented | Existing month-marks test |
 | 56 | Crown and swipe navigate months | Implemented | UI test written |
@@ -100,7 +100,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 60 | Toggle in the overview header | Implemented | UI test written |
 | 61 | Closing Month restores the prior day | Implemented | UI test written |
 
-**Summary:** 56 implemented and 5 partial (#20, #29, #35, #51, #53). Verified so far: store and bridge behavior only. Native build, UI journeys, screenshots, VoiceOver, Dynamic Type, rotation, Duo poses and light/dark are all still owed.
+**Summary:** 58 implemented and 3 partial (#20, #29, #51). The owner deferred those three to a follow-up on Nov 4. Verified so far: store and bridge behavior only. Native build, UI journeys, screenshots, VoiceOver, Dynamic Type, rotation, Duo poses and light/dark are all still owed.
 
 ## Not touched (rules card boundaries)
 

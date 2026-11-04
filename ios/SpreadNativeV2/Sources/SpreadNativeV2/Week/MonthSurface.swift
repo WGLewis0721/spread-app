@@ -15,6 +15,8 @@ struct MonthSurface: View {
     var onLongPressAdd: ((String) -> Void)? = nil
     var onSwipeMonth: ((Int) -> Void)? = nil
     var mondayFirst: Bool = false
+    /// Opt-in Week only: shared with the seven-day strip so the open week morphs into its Month row.
+    var morphNamespace: Namespace.ID? = nil
 
     /// Dots for every day of the month, from the planner (any week). Until they arrive, or if they cannot, the open
     /// week's own dots are drawn so the grid is never empty.
@@ -171,6 +173,7 @@ struct MonthSurface: View {
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.spreadPress)
+        .modifier(CalendarMorph(id: "calendar-day-\(cell.iso)", namespace: morphNamespace))
         .modifier(MonthDayAddGesture(iso: cell.iso, onAdd: onLongPressAdd,
                                      onPressed: { longPressed = ($0, Date()) }))
         .accessibilityLabel("\(isToday ? "Today, " : "")\(inOpenWeek ? "Open week, " : "")\(label). \(count == 0 ? "No responsibilities scheduled." : "\(count) \(count == 1 ? "responsibility" : "responsibilities") scheduled.")")
@@ -195,6 +198,20 @@ private struct MonthDayAddGesture: ViewModifier {
                     onAdd(iso)
                 })
                 .accessibilityAction(named: "Add task to this day") { onAdd(iso) }
+        } else {
+            content
+        }
+    }
+}
+
+/// Applies the Week strip / Month grid shared-geometry id only when a namespace is given (never in Classic).
+private struct CalendarMorph: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.matchedGeometryEffect(id: id, in: namespace)
         } else {
             content
         }

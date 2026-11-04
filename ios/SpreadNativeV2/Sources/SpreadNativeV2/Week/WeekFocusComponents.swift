@@ -21,8 +21,7 @@ struct FocusedTaskRow: View {
     var body: some View {
         HStack(spacing: 4) {
             Button {
-                Task { await planner.send(["type": "toggleTask", "roleId": roleId,
-                                           "taskId": task.id], completionHaptic: !task.done) }
+                Task { await toggle() }
             } label: {
                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
                     .font(.system(.title3))
@@ -67,8 +66,7 @@ struct FocusedTaskRow: View {
         } isTargeted: { _ in }
         .confirmationDialog(task.text, isPresented: $showActions, titleVisibility: .visible) {
             Button(task.done ? "Mark incomplete" : "Complete") {
-                Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": task.id],
-                                          completionHaptic: !task.done) }
+                Task { await toggle() }
             }
             if !task.done {
                 Button("Reschedule") { showMove = true }
@@ -84,6 +82,23 @@ struct FocusedTaskRow: View {
             Text("Deleted tasks stay recoverable for 30 days in Settings.")
         }
         .sheet(isPresented: $showMove) { MoveToSheet(planner: planner, taskId: task.id) }
+    }
+
+    /// True when completing this task leaves no open task scheduled on this day, in any responsibility.
+    private var completesDay: Bool {
+        guard !task.done else { return false }
+        let ids = Set(snapshot.allocations.filter { $0.day == day && $0.hours > 0 }.map(\.id))
+        let dayTasks = snapshot.tasks.filter { ids.contains($0.allocationId ?? "") }
+        return dayTasks.contains { $0.id == task.id } && dayTasks.allSatisfy { $0.done || $0.id == task.id }
+    }
+
+    /// Decision 35 within the rules card's single haptic: the task that finishes the whole day plays one
+    /// success haptic instead of the usual light one. Every other completion keeps the light haptic.
+    private func toggle() async {
+        let finishesDay = completesDay
+        let ok = await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": task.id],
+                                    completionHaptic: !task.done && !finishesDay)
+        if ok && finishesDay { SpreadHaptics.success() }
     }
 }
 

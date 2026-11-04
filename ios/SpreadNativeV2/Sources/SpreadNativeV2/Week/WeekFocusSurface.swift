@@ -23,7 +23,10 @@ struct WeekFocusSurface: View {
     @State private var monthQuickAddDay: MonthAddDate?
     @State private var sidebarExpanded = false
     @State private var sidebarHidden = false
+    @State private var showDayDone = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 53: each strip day and its Month cell share an id, so opening Month morphs the week into the grid.
+    @Namespace private var calendarMorph
     private struct MonthAddDate: Identifiable {
         let iso: String
         var id: String { iso }
@@ -46,6 +49,14 @@ struct WeekFocusSurface: View {
         snapshot.unplacedTasks.filter { $0.roleId == activeRole }
     }
     private var dayHours: Double { todaysAllocations.reduce(0) { $0 + $1.hours } }
+    /// Every task scheduled on the selected day is done (and there is at least one).
+    private var dayComplete: Bool {
+        let ids = Set(todaysAllocations.map(\.id))
+        let tasks = snapshot.tasks.filter { ids.contains($0.allocationId ?? "") }
+        return !tasks.isEmpty && tasks.allSatisfy(\.done)
+    }
+    /// Changes only when the same day becomes complete, not when moving to an already complete day.
+    private var dayCompletion: String { "\(day)|\(dayComplete)" }
     private func rolesOn(_ iso: String) -> [Responsibility] {
         var roles = snapshot.roles.filter { role in
             snapshot.allocations.contains { $0.day == iso && $0.roleId == role.id && $0.hours > 0 }
@@ -113,7 +124,7 @@ struct WeekFocusSurface: View {
                                          onSwipeMonth: { delta in
                                             monthAnchor = PlannerDates.calendar.date(byAdding: .month, value: delta, to: monthAnchor) ?? monthAnchor
                                             SpreadHaptics.selection()
-                                         }, mondayFirst: true)
+                                         }, mondayFirst: true, morphNamespace: calendarMorph)
                         } else {
                             dailyDetails
                                 .simultaneousGesture(
@@ -174,6 +185,30 @@ struct WeekFocusSurface: View {
             selectedDay = newWeek // Monday, by owner decision
         }
         .onChange(of: expandedByDate) { _, _ in rememberExpansions() }
+        .onChange(of: dayCompletion) { old, new in
+            // Decision 35: a brief check when the open day becomes complete. The haptic is played by the
+            // completing row (one per tap); this view only draws.
+            guard new == day + "|true", old == day + "|false" else { return }
+            withAnimation(reduceMotion ? nil : SpreadMotion.curve) { showDayDone = true }
+            AccessibilityNotification.Announcement("Day complete").post()
+            Task {
+                try? await Task.sleep(nanoseconds: 1_400_000_000)
+                withAnimation(reduceMotion ? nil : SpreadMotion.curve) { showDayDone = false }
+            }
+        }
+        .overlay {
+            if showDayDone {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 64, weight: .semibold))
+                    .foregroundStyle(Spread.accent)
+                    .padding(24)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+                    .allowsHitTesting(false)
+                    .accessibilityLabel("Day complete")
+                    .accessibilityIdentifier("focus-day-complete")
+            }
+        }
         .onChange(of: selectedDay) { _, newDay in
             if let newDay { UserDefaults.standard.set(newDay, forKey: dayKey) }
         }
@@ -255,6 +290,7 @@ struct WeekFocusSurface: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d"))
                         .accessibilityAddTraits(active ? .isSelected : [])
+                        .matchedGeometryEffect(id: "calendar-day-\(iso)", in: calendarMorph)
                         .accessibilityIdentifier("focus-day-\(iso)")
                         .dropDestination(for: SpreadDragPayload.self) { items, _ in
                             guard let item = items.first, item.kind == .task else { return false }
