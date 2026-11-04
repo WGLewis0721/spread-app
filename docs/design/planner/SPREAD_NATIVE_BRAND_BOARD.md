@@ -1,0 +1,88 @@
+# Spread — Native iOS Brand Board (owner-approved 2026-11-03)
+
+> Part of the [Spread design brain](../README.md). Governs **native SwiftUI presentation** on PR #119; does not replace the React planner tokens or the public landing brand.
+>
+> Summary: Owner-approved premium dark, luminous blue iPhone identity, metallic horizontal Crown, consistent Chalkboard illustrated cards, measured visual vocabulary, exact screen contracts and verification. Preserves Responsibilities → Hours → Week → Tasks, all five modes, existing data, accessibility and navigation. Scoped exception to the legacy React planner's quieter visual rules.
+
+## 1. Reference authority and interpretation
+
+1. **Owner's desired-state images (November 3 conversation):** five dark premium iPhone renderings (Spread, Week, Month, Task, Move to) plus the consistent visual-language storyboard. These define the *approved target appearance*, not a proven installed build, pixel-exact specification, or permission to create new functionality.
+2. **Owner's actual older app screenshots:** light Spread/Fan/Week/Month/More/New Spread and their navigation/affordances define working product structure and behavior. Correct visible defects (clipped dates, colliding arrow controls and floating dock) rather than reproducing them.
+3. **Code provenance:** pre-migration `main` at `35b66522f30836d1eb74ca9758c6d3f24c0de2e3`; Studio layouts/artwork at `5d2100548ce3a296134caaea497da5b9e9781ce5`; current native PR #119; the authoritative TypeScript planner store.
+4. [Planner design system](SPREAD_DESIGN_SYSTEM.md), [Apple principles](../platforms/APPLE_DESIGN_PRINCIPLES.md), [original icon catalog](../brand/ICON_HANDOFF.md), [UX laws](../FOUNDATIONAL_UX_PRINCIPLES.md), [Apple HIG](https://developer.apple.com/design/human-interface-guidelines/). Their nonvisual safety/behavior rules still apply.
+5. **External references are techniques only:** habit-app layered cards, compact calendar layouts, Uiverse tactile components, fffuel lighting/SVG effects, AppShot information hierarchy, Iconbuddy symbol consistency, WebGradients restraint, Velvetyne expressive type research. Do not import a new navigation system, icon library, or UI framework.
+
+**Important evidence limit:** the user shared target images in the chat; the original image binaries are not checked into the repository. This document and [the vector specimen](SPREAD_NATIVE_VISUAL_SPECIMEN.svg) are portable guidance, not substitutes for those screenshots or proof that conceptual screens already work. Ask the implementing agent to view the owner's images from the chat; if unavailable, explicitly mark reference comparison unverified. Never call aspirational renders "production screenshots."
+
+## 2. Identity to preserve
+
+- Folded-card blue app icon with **Spread** in system sans, stable across every screen; no invented serif rebrand.
+- Machined **horizontal metallic Crown** with fine ribs, recessed dark center, month/week label and date, left/right controls, precise detents and accessible alternative controls.
+- All **11 original Chalkboard drawings** and real category glyphs in soft luminous color tiles; initials are not replacements. Art must not crowd task text. The native Dial is retained.
+- Responsibility colors as persisted data, hour banks, allocation controls, task previews, rich Notes/Outline/Table/Photo, local-first profiles, export and protected recovery.
+- Five presentation modes: **Stack** (vertically compressed/expanded cards), **Fan** (angled overlapping cards around a focal one), **Dial** (preserve working behavior), **Tabs** and **Day**. Distinct geometry and motion.
+- Familiar **Spread/Week** relationship and Month *inside Week*. No generic Home dashboard, permanent five-button nav, or invented analytics destination just because one concept board illustrates one.
+
+## 3. Native color, type, depth, shape
+
+The following hex and geometry values are **initial calibration targets**, inferred from owner design direction. They are not claims of exact source-image pixel measurements. Centralize them in native semantic tokens and adjust only with measured screenshot/contrast evidence. **Do not rewrite `src/styles.css` or `docs/design/tokens.json` as part of the native paint pass.**
+
+| Semantic role | Candidate value | Behavior |
+| --- | --- | --- |
+| Night canvas | `#060B18` | Calm nearly black/navy app ground, not neon cobalt |
+| Elevated content | `#101C32` | Quiet card/day/task surfaces |
+| Inset/recess | `#0A1427` | Crown center, task rows, recessed controls |
+| Ink | `#F7FAFF` | Main text, high readability |
+| Secondary ink | `#B0BCD1` | Dates, supporting labels |
+| Action blue | `#0A84FF` | Current selection, Today, main actions |
+| Hairline | white 10–16% alpha | Subtle separation instead of chunky outlines |
+| Role color | existing per-role data; typically Work `#34C759`, Home `#FF9500`, Health `#0A84FF` | Luminous role accents only; never infer roles from a hardcoded color |
+
+**Four layers:** calm dark canvas → solid readable content surface → *bounded* role-colored edge light → functional chrome (Crown, dock, actionable buttons). The dramatic blue background **outside the phone** in the renderings is marketing scenery, not an in-app animated wallpaper. Avoid wall-to-wall glassmorphism or glow around every control.
+
+**Suggested optical targets, subject to real comparison:** card border <=1.5 pt; glow blur radius ~8–16 pt with ~12–25% role-color opacity; the active card is brighter, nonfocused cards quieter. No constant glow animation or low-contrast glowing text. Use system materials sparingly for *interactive chrome*; content remains legible and material-light.
+
+**Crown:** high-precision ridged metal/highlight gradient, physical recess and end caps, no moiré. It must never collide with the date string or arrow hit regions. Finger-drag and keyboard/VoiceOver control must act on the same week state.
+
+**Typography:** SF system family, Dynamic Type supported. Initial unscaled hierarchy: page headline ~28–32pt, section ~19–22pt, responsibility ~20–24pt, body ~15–17pt, secondary ~12–14pt. Preserve readability; no dramatic serif title or experimental font on functional screens.
+
+**Geometry:** safe-area aware 16–20pt page insets, 12–20pt section rhythm, 14–18pt card padding, approx. 20–28pt card corners, 44pt minimum real hit targets. These are adaptive targets not fixed pixels. Keep titles, illustrations, hours and task previews from colliding on 390pt iPhones and large text.
+
+**Appearance:** premium dark is the primary target. Light/system mode remains supported and uses **the same layout and UI identity**, with accessible cream/off-white canvas, dark ink, softer role edges. No forced-dark scheme. Respect Reduce Motion, Reduce Transparency and Increase Contrast.
+
+## 4. Screen contracts: target vs forbidden drift
+
+| Screen | Keep/implement in genuine SwiftUI | Avoid |
+| --- | --- | --- |
+| Global shell | Compact blue icon + sans Spread; actionable Crown; one clear Spread/Week switch; minimal dock | Giant decorative title, redundant navigation, multiple “main” buttons |
+| Spread | True computed hour summary and proportional role bar; dense illustrated role cards with category tile, role hours, task preview, quick inline actions, Add a spread | Generic “Responsibilities” splash, letter tiles, empty oversized cards |
+| Stack/Fan/Dial/Tabs/Day | Five truly different views; first-touch responsive; visible selection; preserve Dial | List renamed five times, choppy first swipe, hidden task entry |
+| Hours | Clear hour budget, allocation controls and current hours without confusing duplication | New source of truth, changes that silently overallocate |
+| Week | Compact role/hour chips; grouped dashed “To place” tray; solid distinct days; inline task operations; “Free time” suggestions distinct | Same glowing rectangle for tray/day/suggestion; hiding essential placement |
+| Month | Sunday-first grid, real role dots per date, current and selected day, concise role totals; drill into day/week | Invented data or detached calendar flow |
+| Task | Native sheet with role/title/hours/date, completion, subtasks and Notes/Outline/Table/Photo, Save/Cancel | Thin generic form, discarded rich content, glow behind editor text |
+| Move to | Native eligible-day sheet, unscheduled option, role-hour rules, cancel and Undo | Unrestricted arbitrary drops or silent refusal |
+| New Spread / More / Settings | Original category choices with glyph + Chalkboard relationship; real profiles/appearance/export/backup/recovery, native hierarchy | Dead buttons, giant plain tiles, extra account sign-up |
+| Empty/progress/iPad | Illustrated empties; only existing verified insights; adaptive wider layouts | Unapproved analytics product or filler tab |
+
+A mockup's presence does not authorize a new feature. Any conceptual Activity/Progress/Home destination absent in existing product stays a future proposal pending owner approval.
+
+## 5. Motion and interaction principles
+
+**Stack** is a vertical physical stack with pressed elevation and focused expansion. **Fan** rotates/translates side cards around a dominant front card. **Dial** keeps its working geometry. Single gesture authority prevents duplicate commits, gesture reversal jumps and touch-readiness glitches. The first valid swipe responds immediately—no shadow/image loading gate.
+
+Crown uses deterministic detents with tactile feedback, visible state, and non-gesture equivalents. Week↔Month changes preserve date context. Spring motion is purposeful and short; reduced motion removes decorative movement. No ornamental motion that compromises frame rate or task availability.
+
+Navigation and controls never shift by arbitrary 4–5pt changes when switching destinations. External UI references inform **navigation discipline**, not new sidebar/tab/FAB clutter. Frequent actions should generally finish within three taps while safe/undoable.
+
+## 6. Acceptance and release gates
+
+Before changing visuals capture installed PR #119 surfaces, then compare the same fixtures afterward on native **390/820/1024pt**, light/dark, empty/dense, long names, Dynamic Type, Reduce Motion and Increase Contrast. Inspect screens: Crown, Spread (five modes), Hours, Week/Month, Task, Move, New Spread, More. Produce actual screenshots/video and mark device-only tests unverified until measured.
+
+Measure: no clipped header/text, overlap or obscured tap target; controls >=44pt; text 4.5:1 normal / 3:1 large/icons; distinct selected/focus states beyond color; role hour/task data correct; real first-swipe and drag alternatives; existing Crown 100 turns + 30 reversals and Stack/Fan 100 each when harness available; no data loss or secondary writes. Run actual TypeScript, Swift package, iOS build, UI and persistence tests. A compile pass is not a UI sign-off; render concepts cannot substitute for simulator captures.
+
+### Explicit owner-approved native design exception
+
+On PR #119 **only the new SwiftUI presentation** may use these navy/blue luminous materials, role-edge glows and brushed metallic controls. This narrowly supersedes the old “no new colors or decoration / quiet palette only” React planner visual rules *for native SwiftUI styling*. All original data, planner semantics, privacy, golden versions, web React styles, landing branding, cloud/schema/backup boundaries, and production release gates remain unchanged.
+
+Do **not** merge, deploy, distribute another TestFlight build, or submit for App Store review without a separate explicit release authorization. Keep PR #119 draft, preserve rollback, and report real tests and before/after screenshot evidence. **Reproduce Spread's personality; never replace the product.**
