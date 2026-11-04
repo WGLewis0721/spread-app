@@ -144,12 +144,33 @@ class NativeUITestCase: XCTestCase {
         }, "The Week surface did not open")
     }
     func goSpread() { tapID("native-spread") }
+    /// Stack is the only responsibility layout. The removed five-mode picker is not a fallback.
     func chooseMode(_ mode: String) {
-        tapID("open-more")
-        let choice = tapID("more-layout-" + mode.lowercased())
-        XCTAssertTrue(choice.isSelected, "The requested layout preference was not selected")
-        tapID("close-more")
-        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        XCTAssertEqual(mode, "Stack", "Only the Wallet-style Stack is available")
+        goSpread()
+        XCTAssertTrue(el("stack-cards").waitForExistence(timeout: 20), "Wallet Stack did not open")
+    }
+
+    /// A responsibility may be offscreen in the lazy Wallet stack. Find its labeled expand control.
+    func openWalletCard(_ name: String) {
+        goSpread()
+        func control() -> XCUIElement {
+            app.buttons.matching(NSPredicate(format: "label == %@", "Expand " + name + " and show tasks")).firstMatch
+        }
+        for _ in 0..<20 {
+            if control().exists && control().isHittable { break }
+            scrollPage(up: true)
+        }
+        if !control().exists || !control().isHittable {
+            for _ in 0..<20 {
+                if control().exists && control().isHittable { break }
+                scrollPage(up: false)
+            }
+        }
+        let closed = control()
+        if closed.exists && closed.isHittable { closed.tap() }
+        let opened = app.buttons["Collapse " + name].firstMatch
+        XCTAssertTrue(opened.waitForExistence(timeout: 20), "Card " + name + " did not expand")
     }
     /// Reveals a tab in the horizontally scrolling row (offscreen tabs are not reachable until scrolled).
     func revealTab(_ name: String) {
@@ -174,9 +195,7 @@ class NativeUITestCase: XCTestCase {
     }
     func selectRole(_ name: String) {
         closeNativeSheets()
-        goSpread(); chooseMode("Tabs")
-        revealTab(name)
-        tapButton(name)
+        openWalletCard(name)
         XCTAssertTrue(eventually { self.el("manage-selected").label == "Manage \(name)" }, "Responsibility \(name) did not become the selection")
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
@@ -400,14 +419,15 @@ final class JourneyUITests: NativeUITestCase {
         XCTAssertTrue(eventually { self.crownValue == initial })
     }
 
-    func testF07_LayoutsKeepSelectionAndData() throws {
+    func testF07_WalletStackRetainsSelectionAndTasks() throws {
         try requireDataset(); launch(); selectRole(Dataset.role)
-        for mode in ["Fan", "Dial", "Tabs", "Day", "Stack"] {
-            chooseMode(mode)
-            if mode == "Tabs" { tapButton(Dataset.role) }
-            XCTAssertEqual(selectedRoleLabel, "Manage " + Dataset.role)
-            capture("F07-" + mode.lowercased())
-        }
+        XCTAssertTrue(el("stack-cards").exists)
+        XCTAssertTrue(el("role-block-" + Dataset.role).exists == false || el("stack-cards").exists)
+        XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
+        tapID("open-more")
+        XCTAssertFalse(el("view-mode-button").exists, "The removed multi-layout picker must not return")
+        closeNativeSheets()
+        capture("F07-wallet-stack")
     }
 
     func testF08_Month() throws {
@@ -461,8 +481,9 @@ final class JourneyUITests: NativeUITestCase {
         let originalId = original.identifier
         let other = "Isolation " + Dataset.tag
         typeInto("new-profile-field", other); tapID("create-profile")
-        closeNativeSheets(); goSpread(); chooseMode("Tabs")
-        XCTAssertFalse(app.buttons[Dataset.role].exists, "The new profile contains another profile’s responsibility")
+        closeNativeSheets(); goSpread()
+        XCTAssertFalse(elements(prefix: "select-role-").contains(where: { $0.label == Dataset.role }),
+                       "The new profile contains another profile’s responsibility")
         tapID("open-more"); tapID("manage-profiles"); tapID(originalId)
         closeNativeSheets(); selectRole(Dataset.role)
         XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
