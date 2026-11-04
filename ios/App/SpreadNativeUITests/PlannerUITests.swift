@@ -1401,3 +1401,166 @@ final class DuoUITests: NativeUITestCase {
         }
     }
 }
+
+// MARK: - Week/Month redesign (opt-in preview, owner decisions 1-61)
+
+/// Actual-app journeys for the redesigned Week/Month. Each test turns the preview on through its launch
+/// argument (Classic stays the default) and checks behavior through accessibility state, not pixels.
+final class WeekMonthUITests: NativeUITestCase {
+    private let preview = ["-native.weekMonth.previewEnabled", "YES"]
+
+    private func openFocusedWeek() {
+        tapID("native-week")
+        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20), "The focused Week did not open")
+        if el("month").exists { tapID("focus-week-month-toggle") }
+        XCTAssertEqual(waitElements(prefix: "focus-day-", minimum: 7).count, 7)
+    }
+    private func dayIDs() -> [String] { waitElements(prefix: "focus-day-", minimum: 7).map(\.identifier) }
+    private func roleIDs() -> [String] {
+        waitElements(prefix: "focus-role-").map(\.identifier)
+            .filter { !$0.hasPrefix("focus-role-toggle-") }
+            .map { String($0.dropFirst("focus-role-".count)) }
+    }
+    private func todayISO() -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: Date())
+    }
+    private func taskRow(_ title: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'focus-task-' AND label == %@", title)).firstMatch
+    }
+
+    /// Decisions 25, 54 and 90-91: tap a day, Month round trip keeps it, a strip swipe changes week and opens Monday.
+    func testDaySelectionSurvivesMonthAndStripSwipeOpensMonday() {
+        launch(preview); openFocusedWeek()
+        let days = dayIDs()
+        let thursday = days[3]
+        tapID(thursday)
+        XCTAssertTrue(eventually(5) { self.el(thursday).isSelected }, "Tapping a day did not select it")
+        tapID("focus-week-month-toggle")
+        XCTAssertTrue(el("month").waitForExistence(timeout: 10), "Month did not open")
+        capture("wm-month-from-thursday")
+        tapID("focus-week-month-toggle")
+        XCTAssertTrue(eventually(10) { self.el(thursday).exists && self.el(thursday).isSelected },
+                      "Closing Month without choosing a date must restore the previous day")
+        el(thursday).swipeLeft()
+        XCTAssertTrue(eventually(15) { self.dayIDs().first != days.first }, "Swiping the seven-day strip did not change week")
+        let next = dayIDs()
+        XCTAssertTrue(eventually(5) { self.el(next[0]).isSelected }, "Changing weeks must open Monday")
+        capture("wm-next-week-opens-monday")
+        el(next[0]).swipeRight()
+        XCTAssertTrue(eventually(15) { self.dayIDs().first == days.first }, "Swiping back did not return to the first week")
+    }
+
+    /// Decision 91: the selected responsibility is shared by Spread, Week and Month.
+    func testSelectedResponsibilityIsSharedAcrossSpreadWeekAndMonth() {
+        launch(preview); openFocusedWeek()
+        let roles = roleIDs()
+        guard roles.count >= 2 else { return XCTFail("The default planner should have at least two responsibilities") }
+        let pick = "focus-role-" + roles[1]
+        tapID(pick)
+        XCTAssertTrue(eventually(5) { self.el(pick).isSelected }, "Selecting a responsibility in Week did not take")
+        tapID("focus-week-month-toggle")
+        XCTAssertTrue(el("month").waitForExistence(timeout: 10))
+        XCTAssertTrue(el(pick).isSelected, "Month lost the selected responsibility")
+        goSpread()
+        XCTAssertTrue(eventually(10) { self.el(pick).exists && self.el(pick).isSelected },
+                      "Spread's sidebar does not show the same selected responsibility")
+        capture("wm-spread-shares-selection")
+        tapID("native-week")
+        XCTAssertTrue(eventually(10) { self.el(pick).exists && self.el(pick).isSelected },
+                      "Returning to Week lost the selected responsibility")
+    }
+
+    /// Decisions 18, 24 and 50: compact rail; expanded rail overlays without squeezing or shifting; hide and restore.
+    func testExpandedSidebarOverlaysScheduleAndHiddenSidebarRestores() {
+        launch(preview); openFocusedWeek()
+        let role = roleIDs()[0]
+        let card = el("focus-role-toggle-" + role)
+        XCTAssertTrue(card.waitForExistence(timeout: 20), "The selected responsibility's schedule row is missing")
+        let before = card.frame
+        tapID("sidebar-expand-collapse")
+        XCTAssertTrue(eventually(5) { self.el("sidebar-expand-collapse").label == "Condense sidebar" },
+                      "The sidebar did not expand")
+        capture("wm-sidebar-expanded-overlay")
+        let during = el("focus-role-toggle-" + role).frame
+        XCTAssertEqual(during.width, before.width, accuracy: 1, "Expanding the sidebar squeezed the schedule")
+        XCTAssertEqual(during.minX, before.minX, accuracy: 1, "Expanding the sidebar shifted the schedule")
+        tapID("focus-role-" + role)
+        XCTAssertTrue(eventually(5) { self.el("sidebar-expand-collapse").label == "Expand sidebar" },
+                      "Choosing a responsibility must collapse the expanded sidebar")
+        tapID("focus-show-sidebar")
+        XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists }, "Hide did not hide the sidebar")
+        capture("wm-sidebar-hidden")
+        tapID("focus-show-sidebar")
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5), "The hidden sidebar did not come back")
+    }
+
+    /// Task lifecycle through the store: Quick Add, complete (folded section), relaunch, uncomplete, delete,
+    /// Recently Deleted restore to To Place, relaunch again. Each step must survive a cold start.
+    func testQuickAddCompleteDeleteRestoreSurvivesRelaunch() {
+        launch(preview); openFocusedWeek()
+        let role = roleIDs()[0]
+        let title = "WM \(Int(Date().timeIntervalSince1970) % 1_000_000)"
+        tapID("focus-quick-add-" + role)
+        typeInto("focus-quick-add-field", title)
+        tapButton("Save")
+        let offer = app.buttons["Add 30 minutes to this day"]
+        if offer.waitForExistence(timeout: 5) { offer.tap() }
+        XCTAssertTrue(taskRow(title).waitForExistence(timeout: 20), "Quick Add did not place the task on the day")
+        let taskId = String(taskRow(title).identifier.dropFirst("focus-task-".count))
+        capture("wm-quick-added")
+
+        tapButton("Complete " + title)
+        XCTAssertTrue(el("focus-completed-toggle-" + role).waitForExistence(timeout: 10),
+                      "A completed task must fold under the completed section")
+        relaunch(); openFocusedWeek()
+        tapID("focus-completed-toggle-" + role)
+        XCTAssertTrue(app.buttons["Mark " + title + " incomplete"].waitForExistence(timeout: 20),
+                      "Completion did not survive relaunch")
+        tapButton("Mark " + title + " incomplete")
+        XCTAssertTrue(app.buttons["Complete " + title].waitForExistence(timeout: 10))
+
+        scrollIntoView(taskRow(title)); taskRow(title).tap()
+        tapButton("Delete")
+        XCTAssertTrue(eventually(10) { !self.taskRow(title).exists }, "Delete did not remove the task from the day")
+        relaunch()
+        goSpread(); tapID("open-more"); tapID("more-recently-deleted")
+        XCTAssertTrue(el("deleted-item-" + taskId).waitForExistence(timeout: 20),
+                      "The deleted task is not in Recently Deleted after relaunch")
+        capture("wm-recently-deleted")
+        tapID("deleted-restore-" + taskId)
+        XCTAssertTrue(eventually(10) { !self.el("deleted-item-" + taskId).exists }, "Restore did not take the task out")
+        closeNativeSheets()
+
+        relaunch(); openFocusedWeek()
+        tapID("focus-to-place")
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", title))
+                        .firstMatch.waitForExistence(timeout: 20),
+                      "The restored task is not in its responsibility's To Place after relaunch")
+        capture("wm-restored-to-place")
+    }
+
+    /// Decisions 54-56: long press a Month date to add without leaving Month; Month swipe changes month.
+    func testMonthLongPressAddsWithoutLeavingMonthAndSwipeChangesMonth() {
+        launch(preview); openFocusedWeek()
+        tapID("focus-week-month-toggle")
+        XCTAssertTrue(el("month").waitForExistence(timeout: 10))
+        let cell = el("month-day-" + todayISO())
+        XCTAssertTrue(cell.waitForExistence(timeout: 10), "Today is missing from Month")
+        cell.press(forDuration: 0.9)
+        XCTAssertTrue(el("month-quick-add-title").waitForExistence(timeout: 10), "Long press did not open Quick Add")
+        typeInto("month-quick-add-title", "Month add \(Int(Date().timeIntervalSince1970) % 100_000)")
+        tapID("month-quick-add-save")
+        XCTAssertTrue(eventually(10) { !self.el("month-quick-add-title").exists }, "Quick Add did not save and close")
+        XCTAssertTrue(el("month").exists, "Quick Add must not leave Month")
+        XCTAssertFalse(el("focus-day-" + todayISO()).exists, "The long press release also drilled into Week")
+        capture("wm-month-after-quick-add")
+        let firstBefore = elements(prefix: "month-day-").first?.identifier
+        el("month").swipeLeft()
+        XCTAssertTrue(eventually(10) { self.elements(prefix: "month-day-").first?.identifier != firstBefore },
+                      "Swiping Month did not change the month")
+    }
+}

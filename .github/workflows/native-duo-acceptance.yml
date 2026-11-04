@@ -44,6 +44,8 @@ jobs:
             -only-testing:SpreadNativeUITests/DuoUITests \
             -only-testing:SpreadNativeUITests/PlannerUITests/testWalletCardsExpandIndependentlyAndEdit \
             -only-testing:SpreadNativeUITests/PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally \
+            -only-testing:SpreadNativeUITests/WeekMonthUITests/testExpandedSidebarOverlaysScheduleAndHiddenSidebarRestores \
+            -only-testing:SpreadNativeUITests/WeekMonthUITests/testDaySelectionSurvivesMonthAndStripSwipeOpensMonday \
             -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Verify actual live system appearance with OS readback
         run: |

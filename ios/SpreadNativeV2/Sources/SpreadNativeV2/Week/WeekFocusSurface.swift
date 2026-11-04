@@ -88,9 +88,15 @@ struct WeekFocusSurface: View {
                 .padding(.top, 4)
                 .padding(.bottom, 6)
             HStack(alignment: .top, spacing: 8) {
-                if !sidebarHidden && !sidebarExpanded {
+                if !sidebarHidden {
+                    // Keep the compact rail's slot while the expanded rail overlays the schedule, so the
+                    // schedule is neither squeezed nor shifted (owner decision 50). Hidden from VoiceOver
+                    // and hit testing while the overlay is up, so each control exists once.
                     responsibilityRail
                         .frame(width: 56)
+                        .opacity(sidebarExpanded ? 0 : 1)
+                        .allowsHitTesting(!sidebarExpanded)
+                        .accessibilityHidden(sidebarExpanded)
                         .zIndex(2)
                 }
                 ScrollViewReader { proxy in
@@ -178,7 +184,7 @@ struct WeekFocusSurface: View {
                     if sidebarHidden { sidebarExpanded = false }
                     SpreadHaptics.selection()
                 } label: {
-                    Image(systemName: sidebarHidden ? "sidebar.left" : "sidebar.left")
+                    Image(systemName: sidebarHidden ? "sidebar.squares.left" : "sidebar.left")
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel(sidebarHidden ? "Show responsibilities" : "Hide responsibilities")

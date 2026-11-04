@@ -43,7 +43,14 @@ jobs:
           - name: reduce-motion
             width: 390
             reduce_motion: "1"
-            tests: "PlannerUITests/testReduceMotionKeepsFunction"
+            tests: "PlannerUITests/testReduceMotionKeepsFunction PlannerUITests/testFocusedWeekRetainsSidebarAndMorphsCalendar WeekMonthUITests/testDaySelectionSurvivesMonthAndStripSwipeOpensMonday"
+          # Week/Month redesign (#136): its own UI tests never ran in CI before this group.
+          - name: week-month
+            width: 390
+            tests: "WeekMonthUITests PlannerUITests/testCalendarDesignPreviewCanReturnToClassic PlannerUITests/testFocusedWeekRetainsSidebarAndMorphsCalendar PlannerUITests/testRecentlyDeletedIsReachableInNativeSettings"
+          - name: week-month-ipad
+            width: 820
+            tests: "WeekMonthUITests PlannerUITests/testFocusedWeekRetainsSidebarAndMorphsCalendar"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
