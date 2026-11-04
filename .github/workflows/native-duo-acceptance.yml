@@ -52,6 +52,13 @@ jobs:
       - name: Export actual Duo captures and diagnostics
         if: always()
         run: |
+          mkdir -p artifacts
+          # Debug-only trace of the Week swipe recognizer (attach, touch, begin, end). Empty means the swipe never
+          # reached a recognizer, which is itself the finding.
+          xcrun simctl spawn "$NATIVE_UDID" log show --last 3h --style compact \
+            --predicate 'subsystem == "com.graymatter.spread" AND category == "week-swipe"' \
+            > artifacts/week-swipe.log 2>&1 || true
+          wc -l artifacts/week-swipe.log || true
           if [ -d artifacts/Duo.xcresult ]; then
             xcrun xcresulttool export attachments --path artifacts/Duo.xcresult --output-path artifacts/screenshots
           fi
