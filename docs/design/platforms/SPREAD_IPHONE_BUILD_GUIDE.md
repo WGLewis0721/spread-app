@@ -38,7 +38,7 @@ Spread is a Capacitor app: the planner runs in one WKWebView and `ios/App/CapApp
 
 ### Repo rules that always hold [Repo]
 
-- No new colors, fonts, or decorative styles. Use existing tokens in `src/styles.css`.
+- React planner: no new colors/fonts/decorative styles outside approved flags; use existing CSS tokens. **SwiftUI PR #119 native presentation exception (2026-11-03):** follow [SPREAD_NATIVE_BRAND_BOARD.md](../planner/SPREAD_NATIVE_BRAND_BOARD.md) for deep navy, role-edge light and metal Crown while preserving behavior and accessibility.
 - Do not touch: `src/lib/spread/` cloud, sync, backup, merge, restore, pins, consent, safety, rollback, native-mirror, schema files; `ios/App/App/Cloud/**`; `ios/App/SpreadCloudCore/**`; `server/`; the landing page (`UnlockScreen`, `landing-*.tsx`, the "Landing page only" block of `styles.css`); any `golden/*` branch.
 - All task changes go through `store.ts` actions and `commit`. No second store.
 - Cloud behavior stays flagged off. Never show iCloud success without a native acknowledgment.
