@@ -197,10 +197,28 @@ class NativeUITestCase: XCTestCase {
     func selectRole(_ name: String) {
         closeNativeSheets()
         openWalletCard(name)
-        XCTAssertTrue(eventually { self.el("manage-selected").label == "Manage \(name)" }, "Responsibility \(name) did not become the selection")
+        XCTAssertTrue(eventually { (self.el("stack-cards").value as? String) == name },
+                      "Responsibility \(name) did not become the selection")
+    }
+
+    /// The selected responsibility opens its existing editor by a left
+    /// edit-swipe, not a redundant bottom Manage button.
+    func manageSelectedRole() throws {
+        goSpread()
+        let name = try XCTUnwrap(el("stack-cards").value as? String)
+        let button = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == name })
+        let id = String(button.identifier.dropFirst("select-role-".count))
+        let card = el("role-block-" + id)
+        scrollIntoView(card)
+        if !el("dock-done").exists { tapID("edit-spreads") }
+        card.swipeLeft()
+        let manage = el("manage-role-" + id)
+        XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
+        XCTAssertTrue(manage.isHittable)
+        manage.tap()
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
-    var selectedRoleLabel: String { el("manage-selected").label }
+    var selectedRoleLabel: String { (el("stack-cards").value as? String) ?? "" }
 
     // MARK: dates (the planner keeps date-only UTC weeks that start on Monday)
 
@@ -335,12 +353,12 @@ final class JourneyUITests: NativeUITestCase {
         typeInto("role-name-field", Dataset.role)
         capture("F01-new-spread"); tapID("save-spreads")
         selectRole(Dataset.role)
-        XCTAssertEqual(selectedRoleLabel, "Manage " + Dataset.role)
+        XCTAssertEqual(selectedRoleLabel, Dataset.role)
         capture("F01-created")
     }
 
     func testF02_BudgetAndDays() throws {
-        try requireDataset(); launch(); selectRole(Dataset.role); tapID("manage-selected")
+        try requireDataset(); launch(); selectRole(Dataset.role); try manageSelectedRole()
         XCTAssertTrue(el("bank-remaining").waitForExistence(timeout: 15))
         XCTAssertEqual(el("bank-remaining").label, "2h left in this week’s bank")
         tapButton("Increase \(Dataset.role) hours by half an hour")
@@ -516,7 +534,7 @@ final class JourneyUITests: NativeUITestCase {
         tapID("week-month-toggle"); try audit("journey-month")
     }
     func testF11_AuditSheets() throws {
-        try requireDataset(); launch(); selectRole(Dataset.role); tapID("manage-selected")
+        try requireDataset(); launch(); selectRole(Dataset.role); try manageSelectedRole()
         try auditScrolled("role-sheet"); closeNativeSheets(); openTask(Dataset.taskA)
         try auditScrolled("task-sheet"); closeNativeSheets(); tapID("open-more")
         try auditScrolled("more-sheet"); tapID("manage-profiles"); try auditScrolled("profiles-sheet")
@@ -861,7 +879,7 @@ final class PlannerUITests: NativeUITestCase {
         tapID("edit-spreads")
         assertTargets("wallet-edit")
         tapID("dock-done")
-        tapID("manage-selected"); assertTargets("role-editor"); tapButton("Done")
+        try manageSelectedRole(); assertTargets("role-editor"); tapButton("Done")
         goWeek(); el("week-month-toggle").tap(); assertTargets("month")
     }
 
@@ -913,7 +931,7 @@ final class PlannerUITests: NativeUITestCase {
         try audit("long-names-week")
         selectRole(role)
         chooseMode("Stack")
-        XCTAssertEqual(selectedRoleLabel, "Manage \(role)")
+        XCTAssertEqual(selectedRoleLabel, role)
         try audit("long-names-wallet")
         capture("long-names-spread")
     }
@@ -1075,7 +1093,7 @@ final class SpreadFlowUITests: NativeUITestCase {
         capture("flow1-before-relaunch")
         relaunch()
         selectRole(name)
-        XCTAssertEqual(selectedRoleLabel, "Manage " + name)
+        XCTAssertEqual(selectedRoleLabel, name)
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch.waitForExistence(timeout: 20), "The task did not survive a relaunch")
         XCTAssertTrue(app.buttons["Mark not done: \(task)"].firstMatch.exists, "The completed state did not survive a relaunch")
     }
