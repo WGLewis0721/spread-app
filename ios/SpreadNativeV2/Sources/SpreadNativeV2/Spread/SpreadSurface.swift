@@ -346,7 +346,14 @@ struct RoleRow: View {
             if isOpen { taskList.transition(.opacity) }
         }
         .contentShape(Rectangle())
-        .onTapGesture { onSelect() }
+        .background {
+            if expanded != nil {
+                Button(action: onSelect) { Rectangle().fill(.clear).contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Select \(role.name)")
+                    .accessibilityIdentifier("select-role-\(role.id)")
+            }
+        }
         .id("spread-role-\(role.id)")
         .onAppear { name = role.name }
         .onChange(of: role.name) { _, value in name = value }
@@ -371,7 +378,8 @@ struct RoleRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 if isOpen || editing {
                     // Renaming lives on the open card (and in Edit mode), so a tap on a compact card always opens it.
-                    TextField("Name", text: $name)
+                    TextField("Name", text: $name, axis: .vertical)
+                        .lineLimit(1...3)
                         .font(.system(.title3, weight: .semibold))
                         .focused($nameFocused)
                         .submitLabel(.done)
@@ -387,7 +395,8 @@ struct RoleRow: View {
                 }
                 Text(summaryLine)
                     .font(.system(.footnote)).foregroundStyle(Spread.secondary)
-                    .lineLimit(1)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -475,14 +484,16 @@ struct RoleRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("\(SpreadHours.text(placedHours)) placed · \(SpreadHours.text(left)) left")
                     .font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.ink).monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
                 DayMarks(snapshot: snapshot, role: role)
             }
             Spacer(minLength: 0)
-            artwork
+            if !typeSize.isAccessibilitySize { artwork
                 .background(
                     RadialGradient(colors: [tint.opacity(0.30), tint.opacity(0)], center: .center, startRadius: 2, endRadius: 80)
                         .allowsHitTesting(false)
                 )
+            }
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 8)

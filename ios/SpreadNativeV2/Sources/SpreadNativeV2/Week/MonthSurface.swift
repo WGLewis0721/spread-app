@@ -101,8 +101,9 @@ struct MonthSurface: View {
                 Text("\(cell.day)")
                     .font(.system(.subheadline, weight: .semibold))
                     .monospacedDigit()
+                    .lineLimit(1).minimumScaleFactor(0.6)
                     .foregroundStyle(isToday ? Spread.onAccent : (cell.inMonth ? Spread.ink : Spread.tertiary))
-                    .frame(width: 28, height: 28)
+                    .frame(minWidth: 28, minHeight: 28)
                     .background(isToday ? Spread.accent : Color.clear, in: Circle())
                 HStack(spacing: 3) {
                     ForEach(Array(dots.colors.enumerated()), id: \.offset) { _, color in
@@ -110,10 +111,14 @@ struct MonthSurface: View {
                     }
                 }
                 .frame(height: 6)
-                Text(extra > 0 ? "+\(extra)" : " ")
-                    .font(.system(.caption2, weight: .medium))
-                    .foregroundStyle(Spread.secondary)
-                    .frame(height: 12)
+                if extra > 0 {
+                    Text("+\(extra)")
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(Spread.secondary)
+                        .frame(minHeight: 12)
+                } else {
+                    Color.clear.frame(height: 12).accessibilityHidden(true)
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 56)
             .padding(.vertical, 4)
@@ -123,7 +128,6 @@ struct MonthSurface: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(inOpenWeek ? Spread.accent.opacity(0.75) : Spread.line, lineWidth: inOpenWeek ? 1.5 : 0.5)
             )
-            .opacity(cell.inMonth ? 1 : 0.55)
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.spreadPress)

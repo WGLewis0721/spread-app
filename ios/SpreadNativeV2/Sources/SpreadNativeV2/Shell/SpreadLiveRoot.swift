@@ -30,6 +30,7 @@ public struct SpreadLiveRoot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     public init(planner: LivePlanner, recovery: @escaping () -> Void) {
         self.planner = planner
@@ -283,8 +284,9 @@ public struct SpreadLiveRoot: View {
                         Text(active)
                             .font(.system(.caption))
                             .foregroundStyle(Spread.secondary)
-                            .lineLimit(1)
-                            .frame(maxWidth: 110, alignment: .leading)
+                            .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                            .frame(maxWidth: 160, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("active-profile-name")
                     }
                 }
@@ -300,7 +302,8 @@ public struct SpreadLiveRoot: View {
     /// The Spread/Week switch: a recessed trough with one lit segment. Month is a mode inside Week, so there are
     /// two segments only, and both always show their label (an icon alone is not a destination).
     private var destinationRail: some View {
-        HStack(spacing: 2) {
+        let arrangement = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 2)) : AnyLayout(HStackLayout(spacing: 2))
+        return arrangement {
             ForEach(SpreadDestination.allCases) { item in
                 let selected = destination == item
                 Button {
@@ -330,7 +333,7 @@ public struct SpreadLiveRoot: View {
         .padding(3)
         .background(Capsule().fill(Spread.inset))
         .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 0.5))
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: false)
     }
 
     // MARK: Notices
