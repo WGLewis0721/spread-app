@@ -23,7 +23,8 @@ struct WeekCrownView: View {
     @GestureState private var gestureActive = false
     @State private var hintVisible = !UserDefaults.standard.bool(forKey: SpreadViewMemory.crownUsedKey)
 
-    private let height: CGFloat = 61.6   // 3.85rem
+    /// 3.85rem, growing with Dynamic Type so the recessed readout never clips its text.
+    @ScaledMetric(relativeTo: .callout) private var height: CGFloat = 62
     private let radius: CGFloat = 18.4   // 1.15rem
     private let knurlPeriod: CGFloat = 16
 
@@ -31,7 +32,7 @@ struct WeekCrownView: View {
         VStack(spacing: 8) {
             wheel
             if hintVisible {
-                Text("Swipe, scroll, or use arrow keys to change weeks.")
+                Text("Drag the Crown to change weeks.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.secondary)
                     .accessibilityAddTraits(.updatesFrequently)
@@ -147,8 +148,11 @@ struct WeekCrownView: View {
         .padding(.horizontal, 11)
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 60)
-        .background(Spread.canvas.opacity(0.78), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        // The recess fills the space between the end caps and leaves the ribbed shoulders visible, as in the specimen.
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Spread.crownRecess))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Spread.crownRecessStroke, lineWidth: 1))
+        .padding(.horizontal, 50)
+        .padding(.vertical, 7)
         .allowsHitTesting(onDetail != nil)
         .accessibilityHidden(true)
     }
@@ -165,6 +169,12 @@ struct WeekCrownView: View {
                             : [.clear, .white.opacity(0.38), .black.opacity(0.38)],
                         startPoint: leading ? .leading : .trailing, endPoint: leading ? .trailing : .leading))
                     .frame(width: 11.5)
+                    .allowsHitTesting(false)
+                // The chevron sits on the ribbed shoulder, inside the 44 pt target and clear of the recess and the date.
+                Image(systemName: leading ? "chevron.left" : "chevron.right")
+                    .font(.system(.subheadline, weight: .bold))
+                    .foregroundStyle(Color(hex6: 0x0E1A2E).opacity(0.82))
+                    .frame(width: 44)
                     .allowsHitTesting(false)
             }
             .frame(width: 44, height: height)

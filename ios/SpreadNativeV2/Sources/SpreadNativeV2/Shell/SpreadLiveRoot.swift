@@ -20,7 +20,6 @@ public struct SpreadLiveRoot: View {
     @State private var focusDay: String?
     @State private var sheet: LiveSheet?
     @State private var editing = false
-    @State private var brandFolded = false
     @State private var gearTurn = false
     @State private var dismissedNotice: String?
     @State private var loadedProfile: String?
@@ -63,7 +62,6 @@ public struct SpreadLiveRoot: View {
         layers
             .task { await planner.refresh() }
             .task(id: planner.undoId) { await expireUndo() }
-            .task { await foldBrandAfterFirstLook() }
             .onChange(of: scenePhase) { _, phase in refreshWhenActive(phase) }
             .onChange(of: planner.state?.envelope.profileId) { _, profile in openProfile(profile) }
             .onChange(of: destination) { _, _ in persistView() }
@@ -81,7 +79,6 @@ public struct SpreadLiveRoot: View {
             .sensoryFeedback(.selection, trigger: weekTick)
             .onKeyPress(.leftArrow) { keyWeek(-1) }
             .onKeyPress(.rightArrow) { keyWeek(1) }
-            .simultaneousGesture(TapGesture().onEnded { foldBrand() })
     }
 
     private var errorShown: Binding<Bool> {
@@ -103,12 +100,6 @@ public struct SpreadLiveRoot: View {
         guard planner.undoId != nil else { return }
         try? await Task.sleep(nanoseconds: UInt64(SpreadUndo.seconds * 1_000_000_000))
         if !Task.isCancelled { planner.undoId = nil }
-    }
-
-    /// The brand folds to its mark after a short look, as the web planner did (3.5 s or first touch).
-    private func foldBrandAfterFirstLook() async {
-        try? await Task.sleep(nanoseconds: 3_500_000_000)
-        foldBrand()
     }
 
     private func refreshWhenActive(_ phase: ScenePhase) {
@@ -218,6 +209,8 @@ public struct SpreadLiveRoot: View {
 
     // MARK: Header
 
+    /// Compact and stable: the brand and the one Spread/Week switch share a row, the metal Crown sits below, and
+    /// nothing in here changes size after launch. When large text no longer fits one row, the switch drops below.
     private func header(_ snapshot: PlannerSnapshot, isMonth: Bool) -> some View {
         let isCurrent = snapshot.weekKey == PlannerDates.currentWeekKey()
         let now = Date()
@@ -235,55 +228,60 @@ public struct SpreadLiveRoot: View {
         let move: (Int) -> Void = { delta in
             if isMonth { changeMonth(delta) } else { goWeek(delta) }
         }
-        return VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                brandButton
-                Spacer(minLength: 8)
-                if planner.profiles.count > 1, let active = activeProfileName {
-                    Button { sheet = .more } label: {
-                        Text(active).font(.system(.subheadline)).lineLimit(1)
-                            .padding(.horizontal, 12).frame(maxWidth: 200, minHeight: 44)
-                            .background(Spread.fill, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(active), profiles")
-                    .accessibilityIdentifier("active-profile-name")
+        return VStack(spacing: 10) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    brandButton
+                    Spacer(minLength: 8)
+                    destinationRail
+                }
+                VStack(spacing: 8) {
+                    HStack { brandButton; Spacer(minLength: 0) }
+                    destinationRail
                 }
             }
             WeekCrownView(title: title, detail: detail, onDetail: detailAction, onMove: move)
-            destinationRail
         }
         .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
-        .background(reduceTransparency ? Spread.canvas : Spread.canvas.opacity(0.92))
+        .padding(.top, 6)
+        .padding(.bottom, 6)
+        .background(reduceTransparency ? Spread.canvas : Spread.canvas.opacity(0.94))
     }
 
     private var activeProfileName: String? {
         planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId })?.name
     }
 
-    /// The brand row. The word folds into the mark after its first look; the mark stays and returns home.
+    /// The brand: the folded-card blue icon and "Spread" in the system face. With more than one profile the open
+    /// profile's name sits under it, and the whole block returns home. It is the same on every screen.
     private var brandButton: some View {
         Button { goHome() } label: {
             HStack(spacing: 10) {
-                SpreadBrandMark(size: 34)
-                if !brandFolded {
+                SpreadBrandMark(size: 36)
+                VStack(alignment: .leading, spacing: 0) {
                     Text("Spread")
-                        .font(.system(.subheadline, weight: .semibold))
-                        .tracking(-0.45)
-                        .transition(.opacity.combined(with: .move(edge: .leading)))
+                        .font(.system(.headline, weight: .semibold))
+                        .foregroundStyle(Spread.ink)
+                    if planner.profiles.count > 1, let active = activeProfileName {
+                        Text(active)
+                            .font(.system(.caption))
+                            .foregroundStyle(Spread.secondary)
+                            .lineLimit(1)
+                            .frame(maxWidth: 110, alignment: .leading)
+                            .accessibilityIdentifier("active-profile-name")
+                    }
                 }
             }
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.spreadPress)
-        .accessibilityLabel("Spread, home")
+        .accessibilityLabel(planner.profiles.count > 1 ? "Spread, home. Profile \(activeProfileName ?? "")" : "Spread, home")
         .accessibilityIdentifier("brand-home")
     }
 
-    /// The Spread/Week destination rail. Month is a mode inside Week, so this rail has two segments only.
+    /// The Spread/Week switch: a recessed trough with one lit segment. Month is a mode inside Week, so there are
+    /// two segments only, and both always show their label (an icon alone is not a destination).
     private var destinationRail: some View {
         HStack(spacing: 2) {
             ForEach(SpreadDestination.allCases) { item in
@@ -295,18 +293,15 @@ public struct SpreadLiveRoot: View {
                     withAnimation(reduceMotion ? nil : SpreadMotion.curve) { destination = item }
                 } label: {
                     HStack(spacing: 6) {
-                        SpreadIcon(name: item.iconName, size: 22)
-                            .foregroundStyle(selected ? Spread.accent : Spread.secondary)
-                        if !brandFolded {
-                            Text(item.label)
-                                .font(.system(.subheadline, weight: .medium))
-                                .foregroundStyle(selected ? Spread.ink : Spread.secondary)
-                        }
+                        SpreadIcon(name: item.iconName, size: 20)
+                        Text(item.label).font(.system(.subheadline, weight: .semibold))
                     }
-                    .padding(.horizontal, 16)
+                    .foregroundStyle(selected ? Spread.onAccent : Spread.secondary)
+                    .padding(.horizontal, 14)
                     .frame(minHeight: 44)
-                    .background(selected ? Spread.segment : Color.clear, in: Capsule())
-                    .shadow(color: selected ? Spread.shadow.opacity(0.6) : .clear, radius: 2, y: 1)
+                    .background {
+                        if selected { Capsule().fill(Spread.accentGradient) }
+                    }
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.spreadPress)
@@ -315,9 +310,10 @@ public struct SpreadLiveRoot: View {
                 .accessibilityIdentifier(item == .week ? "native-week" : "native-spread")
             }
         }
-        .padding(4)
-        .background(Spread.fill, in: Capsule())
-        .frame(maxWidth: .infinity)
+        .padding(3)
+        .background(Capsule().fill(Spread.inset))
+        .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 0.5))
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     // MARK: Notices
@@ -361,6 +357,8 @@ public struct SpreadLiveRoot: View {
 
     // MARK: Dock
 
+    /// The floating chrome: one capsule holding Done / Edit, the Week-Month morph and Settings. It never carries a
+    /// second copy of a command that is already on screen, and Done is the only lit control in it.
     private var dock: some View {
         VStack(spacing: 8) {
             if let undo = planner.undoId {
@@ -368,13 +366,8 @@ public struct SpreadLiveRoot: View {
             }
             HStack(spacing: 0) {
                 if destination == .week && !monthPlane && selectedRole != nil {
-                    Button { selectedRole = nil } label: {
-                        Text("Done").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.onAccent)
-                            .padding(.horizontal, 20).frame(minHeight: 44)
-                            .background(Spread.accent, in: Capsule())
-                    }
-                    .buttonStyle(.spreadPress)
-                    .padding(.trailing, 4)
+                    doneButton { selectedRole = nil }
+                        .padding(.trailing, 4)
                     dockDivider
                 }
                 if destination == .week {
@@ -391,12 +384,7 @@ public struct SpreadLiveRoot: View {
                 }
                 if destination == .spread {
                     if editing {
-                        Button { editing = false } label: {
-                            Text("Done").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.onAccent)
-                                .padding(.horizontal, 20).frame(minHeight: 44)
-                                .background(Spread.accent, in: Capsule())
-                        }
-                        .buttonStyle(.spreadPress)
+                        doneButton { editing = false }
                     } else {
                         Button { editing = true } label: {
                             HStack(spacing: 6) {
@@ -430,11 +418,22 @@ public struct SpreadLiveRoot: View {
                     Capsule().fill(Spread.glass)
                 }
             }
-            .overlay(Capsule().stroke(Spread.glassStroke, lineWidth: reduceTransparency ? 1 : 0.5))
-            .shadow(color: Spread.shadow, radius: 12, y: 6)
+            .overlay(Capsule().strokeBorder(Spread.glassStroke, lineWidth: reduceTransparency ? 1 : 0.5))
+            .shadow(color: Spread.shadow, radius: 14, y: 6)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
+    }
+
+    /// The one lit control in the dock.
+    private func doneButton(_ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text("Done").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.onAccent)
+                .padding(.horizontal, 20).frame(minHeight: 44)
+                .background(Capsule().fill(Spread.accentGradient))
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityIdentifier("dock-done")
     }
 
     private var dockDivider: some View {
@@ -444,12 +443,15 @@ public struct SpreadLiveRoot: View {
     /// Quiet Undo: one line, the last change, dismissed after six seconds.
     private func undoNotice(_ editId: String) -> some View {
         Button { Task { await planner.send(["type": "undo", "editId": editId]) } } label: {
-            Text("Undo last change")
-                .font(.system(.subheadline, weight: .semibold))
-                .foregroundStyle(Spread.accent)
-                .padding(.horizontal, 18).frame(minHeight: 44)
-                .background(Spread.elevated, in: Capsule())
-                .shadow(color: Spread.shadow, radius: 8, y: 3)
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.uturn.backward").font(.system(.footnote, weight: .bold))
+                Text("Undo last change").font(.system(.subheadline, weight: .semibold))
+            }
+            .foregroundStyle(Spread.accent)
+            .padding(.horizontal, 18).frame(minHeight: 44)
+            .background(Capsule().fill(Spread.elevated))
+            .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 0.5))
+            .shadow(color: Spread.shadow, radius: 10, y: 4)
         }
         .buttonStyle(.spreadPress)
         .accessibilityIdentifier("undo-last-change")
@@ -531,11 +533,6 @@ public struct SpreadLiveRoot: View {
             gearTurn = false
         }
         sheet = .more
-    }
-
-    private func foldBrand() {
-        guard !brandFolded else { return }
-        withAnimation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.78)) { brandFolded = true }
     }
 
     // MARK: Sheets

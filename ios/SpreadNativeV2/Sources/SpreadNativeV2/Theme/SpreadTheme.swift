@@ -2,66 +2,91 @@
 import SwiftUI
 import UIKit
 
-/// Semantic tokens transcribed from the pre-migration `src/styles.css` `:root` light and dark
-/// blocks (commit 35b6652). Every token is system-aware: light and dark follow the device appearance
-/// through `UIColor(dynamicProvider:)`. Nothing here forces a scheme. Role colours are data and come
-/// from `Responsibility.color`, never from this file.
+/// Spread's native design tokens (docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md, section 3).
+///
+/// Premium dark is the primary identity: a calm navy canvas, quiet navy content surfaces, a recessed inset, one
+/// functional blue for selection and action, and role colour (always data, from `Responsibility.color`) as bounded
+/// edge light on cards. Light mode keeps the same layout and identity on a cream canvas with dark navy ink. Every
+/// token follows the device appearance through `UIColor(dynamicProvider:)`; nothing here forces a scheme.
+///
+/// Scope: the owner-approved native design exception. These values do not touch `src/styles.css` or the React app.
 public enum Spread {
     // MARK: Surfaces and ink
 
-    public static let canvas = dynamic(light: 0xF2F2F7, dark: 0x000000)
-    public static let elevated = dynamic(light: 0xFFFFFF, dark: 0x1C1C1E)
-    public static let ink = dynamic(light: 0x1D1D1F, dark: 0xF5F5F7)
+    /// Calm, nearly black navy ground (dark) / cream (light).
+    public static let canvas = dynamic(light: 0xF4F1EA, dark: 0x060B18)
+    /// Solid readable content surface.
+    public static let elevated = dynamic(light: 0xFFFFFF, dark: 0x101C32)
+    /// Recess: the Crown's centre, task rows, the rail's trough.
+    public static let inset = dynamic(light: 0xEBE7DD, dark: 0x0A1427)
+    public static let ink = dynamic(light: 0x0E1A2E, dark: 0xF7FAFF)
     // Increase Contrast ("stronger separators and ink", docs/design/packs/apple-native-feel.md) swaps in the
     // ink value for secondary text and a stronger alpha for tertiary text and separators. No new hues.
     public static let secondary = adaptive(
-        light: (110, 110, 115, 1), dark: (235, 235, 245, 0.60),
-        highLight: (29, 29, 31, 0.86), highDark: (245, 245, 247, 0.88))
+        light: (74, 86, 112, 1), dark: (176, 188, 209, 1),
+        highLight: (14, 26, 46, 0.92), highDark: (247, 250, 255, 0.92))
     public static let tertiary = adaptive(
-        light: (142, 142, 147, 1), dark: (235, 235, 245, 0.38),
-        highLight: (110, 110, 115, 1), highDark: (235, 235, 245, 0.72))
+        light: (95, 107, 133, 1), dark: (176, 188, 209, 0.66),
+        highLight: (74, 86, 112, 1), highDark: (176, 188, 209, 0.92))
+    /// Hairline separation instead of chunky outlines (white 10-16% on dark).
     public static let line = adaptive(
-        light: (60, 60, 67, 0.14), dark: (84, 84, 88, 0.65),
-        highLight: (60, 60, 67, 0.46), highDark: (235, 235, 245, 0.55))
-    public static let fill = dynamic(lightRGBA: (120, 120, 128, 0.16), dark: 0x2C2C2E)
-    public static let segment = dynamic(light: 0xFFFFFF, dark: 0x3A3A3C)
+        light: (14, 26, 46, 0.12), dark: (255, 255, 255, 0.12),
+        highLight: (14, 26, 46, 0.46), highDark: (255, 255, 255, 0.46))
+    /// The trough behind a segmented control and quiet chips.
+    public static let fill = adaptive(light: (14, 26, 46, 0.07), dark: (255, 255, 255, 0.07))
+    public static let segment = Spread.accent
 
     // MARK: Accent and state
 
-    public static let accent = dynamic(light: 0x007AFF, dark: 0x0A84FF)
+    /// Action blue: current selection, Today, the main actions.
+    public static let accent = dynamic(light: 0x0860C8, dark: 0x0A84FF)
     public static let onAccent = Color.white
-    public static let danger = dynamic(light: 0xFF3B30, dark: 0xFF453A)
+    public static let danger = dynamic(light: 0xC8281E, dark: 0xFF453A)
     public static let onDanger = Color.white
     public static let caution = dynamic(light: 0x9A3412, dark: 0xFF9F0A)
-    public static let scrim = dynamic(lightRGBA: (0, 0, 0, 0.32), darkRGBA: (0, 0, 0, 0.50))
+    public static let scrim = dynamic(lightRGBA: (0, 0, 0, 0.32), darkRGBA: (0, 0, 0, 0.55))
+    /// The lit blue of a selected segment or primary button (specimen `blueBtn`, #2F95FF to #0559C7).
+    public static let accentGradient = LinearGradient(
+        colors: [Color(hex6: 0x2F95FF), Color(hex6: 0x0559C7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+
+    // MARK: Card surface (specimen `navyCard`)
+
+    private static let cardTop = dynamic(light: 0xFFFFFF, dark: 0x152845)
+    private static let cardMid = dynamic(light: 0xFFFFFF, dark: 0x0C172A)
+    private static let cardBottom = dynamic(light: 0xFAF8F2, dark: 0x0A1223)
+    /// Quiet gradient body of a content card: lit from the top-left, settling into the canvas.
+    public static let cardFill = LinearGradient(
+        stops: [.init(color: cardTop, location: 0), .init(color: cardMid, location: 0.55), .init(color: cardBottom, location: 1)],
+        startPoint: .topLeading, endPoint: .bottomTrailing)
 
     // MARK: Glass (floating dock, tab rail)
 
-    public static let glass = dynamic(lightRGBA: (255, 255, 255, 0.78), darkRGBA: (44, 44, 46, 0.82))
+    public static let glass = dynamic(lightRGBA: (255, 255, 255, 0.80), darkRGBA: (16, 28, 50, 0.80))
     public static let glassStroke = adaptive(
-        light: (0, 0, 0, 0.08), dark: (255, 255, 255, 0.12),
-        highLight: (0, 0, 0, 0.38), highDark: (255, 255, 255, 0.50))
-    public static let glassLine = dynamic(lightRGBA: (255, 255, 255, 0.90), darkRGBA: (255, 255, 255, 0.16))
-    public static let shadow = dynamic(lightRGBA: (0, 0, 0, 0.10), darkRGBA: (0, 0, 0, 0.45))
+        light: (14, 26, 46, 0.10), dark: (255, 255, 255, 0.14),
+        highLight: (14, 26, 46, 0.46), highDark: (255, 255, 255, 0.50))
+    public static let glassLine = adaptive(light: (14, 26, 46, 0.12), dark: (255, 255, 255, 0.14))
+    public static let shadow = dynamic(lightRGBA: (14, 26, 46, 0.12), darkRGBA: (0, 0, 0, 0.50))
 
-    // MARK: Crown metal (styles.css `.crown-wheel`, light and dark gradients)
+    // MARK: Crown metal (specimen `metal`: cool steel, bright top edge, recessed centre)
 
-    public static let crownLight: [Color] = [
-        Color(hex6: 0xFFFFFF), Color(hex6: 0xF2F2F4), Color(hex6: 0xC8C8CD), Color(hex6: 0x9A9AA0),
-        Color(hex6: 0x6D6D72), Color(hex6: 0xB9B9BE), Color(hex6: 0xF7F7F8),
+    private static let steel: [Color] = [
+        Color(hex6: 0xF3F5FF), Color(hex6: 0xC9D1E2), Color(hex6: 0x606F8B), Color(hex6: 0xDDE2ED),
+        Color(hex6: 0x44516C), Color(hex6: 0xECEFF4), Color(hex6: 0x8190AC),
     ]
-    public static let crownDark: [Color] = [
-        Color(hex6: 0xF5F5F7), Color(hex6: 0xAEAEB2), Color(hex6: 0x636366), Color(hex6: 0x3A3A3C),
-        Color(hex6: 0x1C1C1E), Color(hex6: 0x48484A), Color(hex6: 0xD1D1D6),
-    ]
-    public static let toothDarkLight = Color(hex6: 0x6E6E73), toothMidLight = Color(hex6: 0xD2D2D7)
-    public static let toothLightLight = Color.white, toothGapLight = Color(hex6: 0xAEAEB2)
-    public static let toothDarkDark = Color(hex6: 0x111113), toothMidDark = Color(hex6: 0x8E8E93)
-    public static let toothLightDark = Color(hex6: 0xF5F5F7), toothGapDark = Color(hex6: 0x1C1C1E)
+    public static let crownLight: [Color] = steel
+    public static let crownDark: [Color] = steel
+    /// The recessed centre that holds the week readout.
+    public static let crownRecess = dynamic(light: 0xEEF1F7, dark: 0x081223)
+    public static let crownRecessStroke = adaptive(light: (14, 26, 46, 0.30), dark: (213, 220, 232, 0.55))
+    public static let toothDarkLight = Color(hex6: 0x44516C), toothMidLight = Color(hex6: 0xC7CFDF)
+    public static let toothLightLight = Color.white, toothGapLight = Color(hex6: 0x8190AC)
+    public static let toothDarkDark = Color(hex6: 0x111827), toothMidDark = Color(hex6: 0x8190AC)
+    public static let toothLightDark = Color(hex6: 0xFAFDFF), toothGapDark = Color(hex6: 0x1B2438)
 
     // MARK: Shape language (styles.css @theme and tailwind classes in the planner)
 
-    public static let radiusCard: CGFloat = 22      // rounded-3xl surfaces (22 pt in the CSS token)
+    public static let radiusCard: CGFloat = 24      // card corners: 20-28 pt per the brand board
     public static let radiusRow: CGFloat = 16      // rounded-2xl rows
     public static let radiusSheet: CGFloat = 28    // --radius-sheet
     public static let radiusControl: CGFloat = 14  // --radius-control
@@ -226,5 +251,68 @@ struct SpreadPressStyle: ButtonStyle {
 
 extension ButtonStyle where Self == SpreadPressStyle {
     static var spreadPress: SpreadPressStyle { SpreadPressStyle() }
+}
+
+// MARK: - Shared surfaces
+
+/// A solid content card with an optional, *bounded* role-colour edge (brand board, "four layers": canvas, solid
+/// content surface, bounded role edge light, functional chrome). The edge is a hairline, never thicker than 1.5 pt;
+/// `active` makes it brighter and adds a soft glow, and every other card stays quiet. Nothing here animates by itself.
+struct SpreadCardStyle: ViewModifier {
+    var edge: Color?
+    var active: Bool
+    var radius: CGFloat
+
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    private var edgeColor: Color {
+        guard let edge else { return Spread.line }
+        let strength: Double = active ? 0.95 : (scheme == .dark ? 0.52 : 0.60)
+        return edge.opacity(contrast == .increased ? 1 : strength)
+    }
+    private var edgeWidth: CGFloat { edge == nil ? 0.5 : (active ? 1.5 : 1) }
+    private var glowColor: Color {
+        guard let edge else { return Spread.shadow }
+        let strength: Double = scheme == .dark ? (active ? 0.30 : 0.10) : (active ? 0.18 : 0.06)
+        return edge.opacity(strength)
+    }
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        return content
+            .background(shape.fill(Spread.cardFill))
+            .overlay(shape.strokeBorder(edgeColor, lineWidth: edgeWidth))
+            .shadow(color: glowColor, radius: active ? 14 : 8, y: edge == nil ? 4 : 2)
+    }
+}
+
+extension View {
+    /// The shared Spread card: quiet navy surface (cream/white in light), hairline, optional role edge light.
+    func spreadCard(edge: Color? = nil, active: Bool = false, radius: CGFloat = Spread.radiusCard) -> some View {
+        modifier(SpreadCardStyle(edge: edge, active: active, radius: radius))
+    }
+
+    /// A small capsule control: a recessed trough when idle, the lit action blue when selected.
+    func spreadChip(selected: Bool) -> some View {
+        modifier(SpreadChipStyle(selected: selected))
+    }
+}
+
+struct SpreadChipStyle: ViewModifier {
+    let selected: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+            .background {
+                if selected {
+                    Capsule().fill(Spread.accentGradient)
+                } else {
+                    Capsule().fill(Spread.inset)
+                }
+            }
+            .overlay(Capsule().strokeBorder(selected ? Color.clear : Spread.line, lineWidth: 0.5))
+    }
 }
 #endif
