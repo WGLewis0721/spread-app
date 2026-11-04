@@ -866,3 +866,85 @@ final class PlannerUITests: NativeUITestCase {
         }
     }
 }
+
+// MARK: - Visual tour (screenshot evidence for design changes)
+
+/// Real simulator screenshots of every main surface, in dark and light, for before/after comparison. It only
+/// records: each step is best effort, so a surface that cannot be reached is noted in an attachment instead of
+/// hiding the screens after it. Run on its own with `-only-testing:SpreadNativeUITests/VisualTourUITests`.
+final class VisualTourUITests: NativeUITestCase {
+    func testTourDark() throws { try tour("dark", arguments: ["-AppleInterfaceStyle", "Dark"]) }
+    func testTourLight() throws { try tour("light", arguments: ["-AppleInterfaceStyle", "Light"]) }
+    func testTourDarkLargeText() throws {
+        try tour("dark-large-text", arguments: ["-AppleInterfaceStyle", "Dark", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"], short: true)
+    }
+
+    private var notes: [String] = []
+    private func note(_ text: String) { notes.append(text) }
+
+    /// Taps `id` if it appears within `timeout`; records a note otherwise.
+    @discardableResult private func tryTap(_ id: String, timeout: TimeInterval = 6) -> Bool {
+        let element = el(id)
+        guard element.waitForExistence(timeout: timeout) else { note("missing: \(id)"); return false }
+        scrollIntoView(element)
+        element.tap()
+        return true
+    }
+
+    private func settle(_ seconds: TimeInterval = 0.8) { RunLoop.current.run(until: Date().addingTimeInterval(seconds)) }
+
+    private func tour(_ style: String, arguments: [String], short: Bool = false) throws {
+        notes = []
+        launch(arguments)
+        settle(1.5)
+        capture("tour-\(style)-01-spread-stack")
+
+        if !short {
+            // Give the open card real content so the evidence shows tasks, not an empty list.
+            let field = el("new-task-field")
+            if field.waitForExistence(timeout: 6) {
+                scrollIntoView(field); field.tap(); field.typeText("Plan the week\n")
+                settle(0.8)
+                field.tap(); field.typeText("Review the budget\n")
+                settle(1.0)
+                capture("tour-\(style)-02-stack-with-tasks")
+            } else { note("missing: new-task-field") }
+
+            // Open a different card: the Stack opens one at a time.
+            let blocks = elements(prefix: "role-block-")
+            if blocks.count > 1, blocks[1].isHittable { blocks[1].tap(); settle(1.0); capture("tour-\(style)-03-stack-second-card") }
+        }
+
+        goSpread()
+        for mode in ["Fan", "Dial", "Tabs", "Day"] {
+            if tryTap("view-mode-button") && tryTap("layout-" + mode.lowercased()) { settle(1.0); capture("tour-\(style)-04-\(mode.lowercased())") }
+        }
+        if tryTap("view-mode-button"), tryTap("layout-stack") { settle(0.6) }
+
+        goWeek(); settle(1.0)
+        capture("tour-\(style)-05-week")
+        if !short {
+            app.swipeUp(); settle(0.6); capture("tour-\(style)-06-week-scrolled"); app.swipeDown()
+            if tryTap("week-month-toggle") { settle(1.0); capture("tour-\(style)-07-month"); tryTap("week-month-toggle") }
+        }
+
+        if tryTap("open-more") { settle(1.0); capture("tour-\(style)-08-more"); dismissSheet() }
+        goSpread(); settle(0.5)
+        if !short {
+            if let row = elements(prefix: "task-row-").first, row.exists {
+                scrollIntoView(row); row.tap(); settle(1.2); capture("tour-\(style)-09-task-sheet"); dismissSheet()
+            } else { note("missing: a task row") }
+            if tryTap("new-spread") { settle(1.0); capture("tour-\(style)-10-new-spread"); dismissSheet() }
+        }
+        if !notes.isEmpty { attach(notes.joined(separator: "\n"), "tour-\(style)-notes") }
+    }
+
+    /// Closes the open sheet through its own Done/Cancel control, falling back to a downward swipe.
+    private func dismissSheet() {
+        for label in ["Done", "Cancel", "Close"] {
+            let button = app.buttons[label].firstMatch
+            if button.exists && button.isHittable { button.tap(); settle(0.6); return }
+        }
+        app.swipeDown(velocity: .fast); settle(0.6)
+    }
+}

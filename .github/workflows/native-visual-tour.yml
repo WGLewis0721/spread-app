@@ -1,0 +1,55 @@
+name: Native visual tour
+# Real simulator screenshots of every main surface in dark and light (and large text), for before/after design
+# evidence. It builds a simulator app only (never a distributable, never signed, never uploaded). Artifacts are the
+# exported attachments from the XCUITest result bundle.
+on:
+  # Runs from the PR's own copy of this file (a dispatch-only workflow must already be on the default branch).
+  pull_request:
+    paths:
+      - ".github/workflows/native-visual-tour.yml"
+      - "ios/SpreadNativeV2/**"
+      - "ios/App/SpreadNativeUITests/**"
+      - "scripts/native-simulator.mjs"
+  workflow_dispatch:
+concurrency:
+  group: native-visual-tour-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  tour:
+    name: tour (${{ matrix.width }} pt)
+    runs-on: macos-15
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        width: [390, 820]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Create actual compatible simulator
+        run: node scripts/native-simulator.mjs ${{ matrix.width }}
+      - name: Run the visual tour
+        run: |
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 900 \
+            -only-testing:SpreadNativeUITests/VisualTourUITests \
+            -resultBundlePath artifacts/tour-${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Export screenshots
+        if: always()
+        run: |
+          if [ -d artifacts/tour-${{ matrix.width }}.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/tour-${{ matrix.width }}.xcresult --output-path artifacts/screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-tour-${{ matrix.width }}
+          path: artifacts
