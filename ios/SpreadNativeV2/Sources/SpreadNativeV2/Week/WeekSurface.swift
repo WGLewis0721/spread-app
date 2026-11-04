@@ -165,7 +165,7 @@ struct WeekSurface: View {
                                 Circle().fill(Color(hex: role?.color ?? "#8E8E93")).frame(width: 8, height: 8)
                                 Text(role?.name ?? "").foregroundStyle(Spread.ink)
                                 Text(String(item.dayLabel.prefix(3)))
-                                Text("\(SpreadHours.text(item.hours))h").opacity(0.7).monospacedDigit()
+                                Text("\(SpreadHours.text(item.hours))h").foregroundStyle(Spread.ink).monospacedDigit()
                             }
                             .font(.system(.subheadline, weight: .semibold))
                             .foregroundStyle(Spread.accent)
@@ -409,7 +409,8 @@ struct AllocationRow: View {
                     if typeSize.isAccessibilitySize && tasks.isEmpty {
                         Spacer(minLength: 0)
                     } else if tasks.isEmpty {
-                        Text(role.name).font(.system(.subheadline, weight: .medium)).lineLimit(1)
+                        Text(role.name).font(.system(.subheadline, weight: .medium))
+                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         Button { showTasks.toggle() } label: {
