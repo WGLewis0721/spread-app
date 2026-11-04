@@ -78,6 +78,7 @@ const action = z.discriminatedUnion("type", [
     type: z.literal("monthMarks"),
     year: z.number().int().min(1970).max(2200),
     month: z.number().int().min(0).max(11),
+    selectedRoleId: id.optional(),
   }),
   z.strictObject({ type: z.literal("rollover"), force: z.boolean() }),
   z.strictObject({
@@ -207,7 +208,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
     // Exports are reads: they are not replay-protected and never change planner state.
     if (command.action.type === "exportWeek") return exportWeek(command, command.action.format, fail);
     if (command.action.type === "monthMarks")
-      return monthMarks(command, command.action.year, command.action.month, fail);
+      return monthMarks(command, command.action.year, command.action.month, command.action.selectedRoleId, fail);
     // Volatile, read-only result sets: never cache task text in replay receipts.
     if (["readDeletedTasks", "readOverdueTasks", "previewBulkOverdue"].includes(command.action.type))
       return run(command, fail);
@@ -274,13 +275,14 @@ export function createNativeV2Dispatcher(sessionId: string) {
     command: NativeRequest,
     year: number,
     month: number,
+    selectedRoleId: string | undefined,
     fail: (error: string) => NativeReply,
   ): NativeReply {
     const state = useSpread.getState();
     if (!state.ready || !state.activeId) return fail("not-ready");
     if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
     const marks: Record<string, { colors: string[]; extra: number }> = {};
-    for (const cell of monthGrid(year, month)) marks[cell.date] = dayMarks(state.data, cell.date);
+    for (const cell of monthGrid(year, month)) marks[cell.date] = dayMarks(state.data, cell.date, selectedRoleId);
     return { requestId: command.requestId, ok: true, state: read(), monthMarks: marks };
   }
   function run(command: NativeRequest, fail: (error: string) => NativeReply): NativeReply {
