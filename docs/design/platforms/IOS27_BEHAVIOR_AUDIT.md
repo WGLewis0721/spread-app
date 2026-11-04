@@ -50,11 +50,19 @@
 
 **Files changed in this pass:** `SpreadLiveRoot.swift` (responsive Spread), `SpreadSurface.swift` (dense bar and large type), `ChalkboardViews.swift` (pause invisible animation), `PlannerUITests.swift` (full scene width/44pt), `NativeContractsTests.swift` (ten-role touch target width). These are source facts, not visual PASS claims.
 
+### Edit affordance and compact top navigation (November 4)
+
+**Observed iPhone recording and later owner decision:** inserting Delete into the responsibility header shifts icon/name/hours. The replacement is **Edit mode plus directional swipe**: swipe the rigid card left to reveal Manage on its right, or right to reveal Delete on its left. Remove the obsolete bottom Manage card. Only haptic discrete interactions, never the pulse animation. Keep a visible edit glow, confirmation for destructive actions, and native accessibility alternatives. After opening, header labels fold into icons after 2.5 seconds; the Crown stays fixed.
+
+**Design fundamentals:** Fitts (>=44pt reachable targets), Gestalt continuity (position-stable cards), progressive disclosure (Edit-only delete), system feedback (real confirmation), reduced motion (no forced movement), Jakob (recognizable icon controls with VoiceOver labels). Maintain the original source-of-truth store.
+
+**Evidence gates:** New XCUITests compare card width and icon/hour/chevron horizontal coordinates before and during Edit, verify the Manage/Delete controls are revealed only after their directional swipes and remain tappable, and ensure labels disappear while navigation still works after the timed fold. Real 390pt iPhone, large Dynamic Type, iPad, Duo and light/dark simulator evidence is required before a visual PASS.
+
 ### More sheet — single-screen usability (owner recording, Nov 4)
 
 **Observed defect:** The native More sheet was a tall five-section List. Even on a standard iPhone, Share and Backup/Restore were below the first viewport and required scrolling.
 
-**Current treatment (PR pending):** Open More at the large detent as a compact dashboard. Keep **all existing actions** immediately visible at ordinary text sizes on 390pt iPhone: New Spread, Review tasks, Rollover; System/Light/Dark appearance; current profile + Manage; PDF/print, Word, Text exports; Backup and restore. Use three equal-width action tiles per row, quiet semantic navy/cream surfaces and 44pt+ touch regions. The selected profile is a summary, not a repeated list of noninteractive profiles. Do **not** hide the three sharing formats in another menu. Keep a scroll fallback for very small/resized windows and accessibility Dynamic Type rather than clipping controls.
+**Current treatment (PR #131):** Open More at the large detent as a compact dashboard. Keep **all existing actions** immediately visible at ordinary text sizes on 390pt iPhone: New Spread, Review tasks, Rollover; System/Light/Dark appearance; current profile + Manage; PDF/print, Word, Text exports; Backup and restore. Use three equal-width action tiles per row, quiet semantic navy/cream surfaces and 44pt+ touch regions. The selected profile is a summary, not a repeated list of noninteractive profiles. Do **not** hide the three sharing formats in another menu. Keep a scroll fallback for very small/resized windows and accessibility Dynamic Type rather than clipping controls.
 
 **Acceptance:** The new More-overview native UI test must pass on a 390pt iPhone *without a swipe*; check light/dark, larger type, iPad and Duo for readable labels, all real actions and no unintended planner writes. New Spread, Review, Profiles, export and Recovery still open the original destinations. This source change is **not a simulator PASS** until XCTest runs and the More screenshot has been reviewed.
 

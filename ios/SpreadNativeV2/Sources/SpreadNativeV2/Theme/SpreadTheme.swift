@@ -212,6 +212,35 @@ public enum SpreadUndo {
 
 /// One light haptic when a task is completed, after the store has acknowledged the change. iPhone only.
 public enum SpreadHaptics {
+    /// Discrete feedback, never tied to repeating glow frames or drag updates.
+    /// An iPhone home-screen style touch cue on edit, swipe reveal and commit.
+    @MainActor public static func editMode(entering: Bool) {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        UIImpactFeedbackGenerator(style: entering ? .rigid : .soft)
+            .impactOccurred(intensity: entering ? 0.85 : 0.55)
+    }
+
+    @MainActor public static func selection() {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    @MainActor public static func revealed(destructive: Bool) {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        UIImpactFeedbackGenerator(style: destructive ? .medium : .light)
+            .impactOccurred(intensity: destructive ? 0.9 : 0.65)
+    }
+
+    @MainActor public static func destructivePrompt() {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+    }
+
+    @MainActor public static func success() {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
     @MainActor public static func completed() {
         guard UIDevice.current.userInterfaceIdiom == .phone else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
