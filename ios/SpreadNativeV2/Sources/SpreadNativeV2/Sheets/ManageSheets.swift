@@ -583,20 +583,7 @@ struct MoreSheet: View {
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                sectionLabel("Appearance")
-                                Button {
-                                    showCalendarPicker = true
-                                } label: {
-                                    Label(weekFocusEnabled ? "New calendar" : "Classic calendar", systemImage: "calendar")
-                                        .font(.system(.caption, weight: .semibold))
-                                        .foregroundStyle(Spread.accent)
-                                        .frame(minHeight: 44)
-                                }
-                                .buttonStyle(.spreadPress)
-                                .accessibilityLabel("Calendar design")
-                                .accessibilityIdentifier("calendar-design-picker")
-                            }
+                            sectionLabel("Appearance")
                             HStack(spacing: 6) {
                                 ForEach(SpreadAppearance.allCases) { item in
                                     Button { appearance = item } label: {
@@ -610,6 +597,16 @@ struct MoreSheet: View {
                                     .accessibilityAddTraits(appearance == item ? .isSelected : [])
                                     .accessibilityIdentifier("appearance-" + item.rawValue)
                                 }
+                                Button { showCalendarPicker = true } label: {
+                                    Image(systemName: "calendar")
+                                        .font(.system(.body, weight: .semibold))
+                                        .foregroundStyle(Spread.accent)
+                                        .frame(width: 44, height: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.spreadPress)
+                                .accessibilityLabel(weekFocusEnabled ? "Calendar design: New preview" : "Calendar design: Classic")
+                                .accessibilityIdentifier("calendar-design-picker")
                             }
                             .padding(6)
                             .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
