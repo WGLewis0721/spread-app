@@ -27,7 +27,7 @@ jobs:
         include:
           - name: reported-fixes
             width: 390
-            tests: "PlannerUITests/testWalletCardsExpandIndependentlyAndEdit PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally"
+            tests: "PlannerUITests/testWalletCardsExpandIndependentlyAndEdit PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally PlannerUITests/testWalletFloatingDeletePreservesCardGeometry PlannerUITests/testHeaderLabelsFoldIntoIconsAndNavigationRemainsUsable"
           - name: journey
             width: 390
             tests: "JourneyUITests"
