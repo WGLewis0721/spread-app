@@ -376,7 +376,8 @@ struct TabsLayout: View {
             .overlay(Capsule().strokeBorder(Spread.line, lineWidth: selected ? 0 : 0.5))
         }
         .buttonStyle(.spreadPress)
-        .scaleEffect(selected && !reduceMotion ? 1.0 : 0.97)
+        // The chosen tab lifts a little and settles with a spring; no tab is ever drawn below its 44 pt target.
+        .scaleEffect(selected && !reduceMotion ? 1.04 : 1.0)
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.62), value: selected)
         .id("tab-\(id)")
         .accessibilityAddTraits(selected ? .isSelected : [])
