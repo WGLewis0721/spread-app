@@ -1,5 +1,8 @@
 # Claude — Fix Spread's UI in PR #119
 
+> **Updated owner decision (2026-11-04):** The original instructions below describe the superseded five-layout plan. The current native responsibility view is **only a Wallet-style animated Stack**; see [the native brand board amendment](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and [draft PR #127](https://github.com/WGLewis0721/spread-app/pull/127). Do **not** restore Fan, Dial, Tabs or Day selectors or disable animations. Closed cards overlap; each opens independently and grows with its tasks. Edit or long-press opens rename, icon/color and confirmed quick-delete controls with role-colored pulsing. Protect Week, Month, the Crown, headless store and release gates.
+
+
 > **Status, 2026-11-04: PR #119 is merged to `main` (`c66116c`).** Continue from [CLAUDE_NATIVE_UI_REMAINING_HANDOFF.md](CLAUDE_NATIVE_UI_REMAINING_HANDOFF.md) and [SPREAD_NATIVE_UI_REMAINING_SPEC.md](SPREAD_NATIVE_UI_REMAINING_SPEC.md). Work on a new branch, not on `claude/spread-swiftui-parity-87llx2`, and open a draft PR to `main`. The text below is the original brief and is kept for the design intent.
 
 **Your job:** Fix the existing SwiftUI app, **not build another app**. Stay on `claude/spread-swiftui-parity-87llx2` and [PR #119](https://github.com/WGLewis0721/spread-app/pull/119).
