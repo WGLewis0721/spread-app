@@ -119,8 +119,8 @@ struct FanLayout: View {
             RoleBadge(category: row.role.category == "custom" ? nil : row.role.category, color: row.role.color, size: 44)
                 .offset(x: 16 + (cardWidth - 76) * min(1, max(0, e)), y: 14)
             if front {
-                // The front card carries its Chalkboard art and the Studio motion layers. Only the card in front
-                // animates, so the work stays off the screen and off Reduce Motion users' screens.
+                // The front card carries its continuously moving Chalkboard art and Studio motion layers.
+                // The renderer pauses offscreen and respects the system Reduce Motion preference.
                 ChalkMotionArt(category: row.role.category, size: 150)
                     .offset(x: cardWidth - 160, y: 10)
                     .allowsHitTesting(false)
