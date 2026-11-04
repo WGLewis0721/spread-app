@@ -80,6 +80,14 @@ export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.sprea
     const bytes = await size(file);
     return { ok: r.ok && bytes >= MIN_SCREENSHOT_BYTES, detail: r.ok ? `${bytes} bytes (${method})` : errorText(r), file: name };
   };
+  // Month is recognised by either of two independent signals: its day cells in the accessibility tree, or the
+  // Week/Month toggle reading value "Month" (it reads "Week" on the Week plane).
+  const onMonth = async (treeText) => {
+    if (MONTH_TREE.test(treeText)) return { ok: true, detail: 'Month day cells in tree' };
+    const attrs = await ad(['get', 'attrs', 'id="week-month-toggle"'], { timeoutMs: 60000 });
+    if (attrs.ok && /"value"\s*:\s*"Month"/.test(attrs.stdout)) return { ok: true, detail: 'toggle value reads Month' };
+    return { ok: false, detail: 'neither Month day cells nor a Month toggle value were found' };
+  };
   const press = async (selector) => ad(['click', selector], { timeoutMs: 60000 });
   const visible = async (selector, timeoutMs = 60000) => ad(['wait', selector, String(timeoutMs)], { timeoutMs: timeoutMs + 30000 });
 
@@ -148,15 +156,18 @@ export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.sprea
       await press('id="native-week"');
       await sleep(1000);
       const week = await snap(`${tag}-week`);
+      const crown = await ad(['is', 'visible', 'id="week-crown"'], { timeoutMs: 60000 });
+      const weekSeen = crown.ok || WEEK_TREE.test(week.text);
       const weekShot = await shot(`duo-${tag}-week.png`);
-      record(pose, orientation, 'week', WEEK_TREE.test(week.text) && weekShot.ok ? 'PASS' : 'FAIL',
-        `${WEEK_TREE.test(week.text) ? 'Crown in tree' : 'week-crown absent from accessibility tree'}; screenshot ${weekShot.detail}`, [week.file, weekShot.file]);
+      record(pose, orientation, 'week', weekSeen && weekShot.ok ? 'PASS' : 'FAIL',
+        `${weekSeen ? 'Crown visible' : 'week-crown neither visible nor in the accessibility tree'}; screenshot ${weekShot.detail}`, [week.file, weekShot.file]);
       await press('id="week-month-toggle"');
       await sleep(1000);
       const month = await snap(`${tag}-month`);
+      const monthSeen = await onMonth(month.text);
       const monthShot = await shot(`duo-${tag}-month.png`);
-      record(pose, orientation, 'month', MONTH_TREE.test(month.text) && monthShot.ok ? 'PASS' : 'FAIL',
-        `${MONTH_TREE.test(month.text) ? 'Month day cells in tree' : 'no Month day cell in accessibility tree'}; screenshot ${monthShot.detail}`, [month.file, monthShot.file]);
+      record(pose, orientation, 'month', monthSeen.ok && monthShot.ok ? 'PASS' : 'FAIL',
+        `${monthSeen.detail}; screenshot ${monthShot.detail}`, [month.file, monthShot.file]);
       await press('id="week-month-toggle"');
       await sleep(600);
     }
@@ -203,8 +214,9 @@ export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.sprea
     const f = await ad(['fold', pose], { json: true, timeoutMs: 180000 });
     await sleep(1500);
     const t = await snap(`continuity-month-${pose}`);
-    record(pose, '-', 'continuity-month-kept', f.ok ? (MONTH_TREE.test(t.text) ? 'PASS' : 'FAIL') : 'BLOCKED',
-      f.ok ? (MONTH_TREE.test(t.text) ? 'still on Month after the fold' : 'left Month during the fold') : errorText(f), [t.file]);
+    const stillMonth = f.ok ? await onMonth(t.text) : { ok: false };
+    record(pose, '-', 'continuity-month-kept', f.ok ? (stillMonth.ok ? 'PASS' : 'FAIL') : 'BLOCKED',
+      f.ok ? (stillMonth.ok ? 'still on Month after the fold' : 'left Month during the fold') : errorText(f), [t.file]);
   }
   // Exploratory (not gating): a timed hinge sweep must leave the app responsive.
   const sweep = JSON.stringify([{ atMs: 0, angle: 180 }, { atMs: 1500, angle: 100 }, { atMs: 3000, angle: 0 }, { atMs: 4500, angle: 180 }]);

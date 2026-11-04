@@ -40,9 +40,11 @@ function fakeDevice(options = {}) {
       case 'snapshot': {
         const text = state.screen === 'wallet'
           ? [state.expanded ? 'Collapse Work' : 'Expand Work and show tasks', state.draft].join(' ')
-          : state.month ? 'month-day-2026-11-04' : 'week-crown';
+          : options.treeHidesIdentifiers ? 'unlabelled content' : state.month ? 'month-day-2026-11-04' : 'week-crown';
         return ok({ nodes: [{ label: text }] });
       }
+      case 'is': return options.crownHidden ? { code: 1, stdout: '', stderr: 'not visible' } : { code: 0, stdout: '', stderr: '' };
+      case 'get': return ok({ attrs: { id: 'week-month-toggle', label: state.month ? 'Week' : 'Month', value: state.month && !options.toggleStuckOnWeek ? 'Month' : 'Week' } });
       case 'screenshot': await writeFile(first, Buffer.alloc(4096, 1)); return { code: 0, stdout: '', stderr: '' };
       default: return { code: 0, stdout: '', stderr: '' };
     }
@@ -136,4 +138,23 @@ test('the pose matrix marks advisory checks and escapes table separators', () =>
   assert.match(markdown, /hinge-sweep-responsive \(advisory\)/);
   assert.match(markdown, /a \\\| b/);
   assert.ok(DRAFT.length > 0);
+});
+
+test('Week and Month are recognised from the Crown selector and the toggle value even when the tree omits identifiers', async () => {
+  const result = await run({ treeHidesIdentifiers: true });
+  assert.equal(result.ok, true, JSON.stringify(result.cells.filter((c) => c.status !== 'PASS')));
+  assert.match(cell(result, 'open', 'portrait', 'month').detail, /toggle value reads Month/);
+});
+
+test('Month fails when neither the day cells nor the toggle value show it', async () => {
+  const result = await run({ treeHidesIdentifiers: true, toggleStuckOnWeek: true });
+  assert.equal(cell(result, 'open', 'portrait', 'month').status, 'FAIL');
+  assert.equal(cell(result, 'open', 'portrait', 'week').status, 'PASS');
+  assert.equal(result.ok, false);
+});
+
+test('Week fails when the Crown is neither visible nor in the tree', async () => {
+  const result = await run({ treeHidesIdentifiers: true, crownHidden: true });
+  assert.equal(cell(result, 'closed', 'landscape-left', 'week').status, 'FAIL');
+  assert.equal(result.ok, false);
 });
