@@ -193,14 +193,13 @@ struct SpreadSurface: View {
     }
 
     /// The responsibility the modes other than Stack are showing: the Fan's and Dial's selection (first by default),
-    /// the open Tabs tab, the Day panel's role. The Stack opens its own card and has its menu.
+    /// the open Tabs tab, and Day's role (the first by default, like the others). The Stack opens its own card and has its menu.
     private var managedRole: Responsibility? {
         let id: String?
         switch layout {
         case .stack: id = nil
         case .tabs: id = tabSelection == "all" ? nil : tabSelection
-        case .day: id = selectedRole
-        case .fan, .dial: id = selectedRole ?? snapshot.roles.first?.id
+        case .day, .fan, .dial: id = selectedRole ?? snapshot.roles.first?.id
         }
         return snapshot.roles.first { $0.id == id }
     }

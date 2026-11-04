@@ -413,6 +413,7 @@ struct DayLayout: View {
         let starts = blocks.reduce(into: [0.0]) { $0.append(($0.last ?? 0) + $1.hours) }
         let today = PlannerDates.localISO()
         let label = PlannerDates.label(PlannerDates.date(selectedDay), pattern: "EEEE")
+        let chosenRole = selectedRole ?? rows.first?.id
 
         VStack(alignment: .leading, spacing: 16) {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
@@ -489,14 +490,14 @@ struct DayLayout: View {
                                         RoundedRectangle(cornerRadius: 22, style: .continuous)
                                             .fill(LinearGradient(colors: [tint.opacity(0.42), tint.opacity(0.06)], startPoint: .leading, endPoint: .trailing))
                                         RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                            .strokeBorder(tint.opacity(selectedRole == block.roleId ? 0.95 : 0.5), lineWidth: selectedRole == block.roleId ? 1.5 : 1)
+                                            .strokeBorder(tint.opacity(chosenRole == block.roleId ? 0.95 : 0.5), lineWidth: chosenRole == block.roleId ? 1.5 : 1)
                                     }
                                 }
                                 .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                             }
                             .buttonStyle(.spreadPress)
                             .accessibilityLabel("\(role?.name ?? ""), \(SpreadHours.spoken(block.hours))")
-                            .accessibilityAddTraits(selectedRole == block.roleId ? .isSelected : [])
+                            .accessibilityAddTraits(chosenRole == block.roleId ? .isSelected : [])
                         }
                         .transition(.opacity.combined(with: .offset(y: reduceMotion ? 0 : 14)))
                     }
@@ -511,7 +512,8 @@ struct DayLayout: View {
                 }
             }
 
-            if let role = rows.first(where: { $0.id == selectedRole })?.role {
+            // Like Fan, Dial and Tabs, Day always has a responsibility selected (the first by default).
+            if let role = (rows.first(where: { $0.id == selectedRole }) ?? rows.first)?.role {
                 RoleRow(planner: planner, snapshot: snapshot, role: role, editing: false, focused: true, onOpenTask: onOpenTask, onOpenRole: { _ in })
                     .spreadCard(edge: Color(hex: role.color), active: true)
             }
