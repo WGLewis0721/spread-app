@@ -51,6 +51,8 @@ struct TaskSheet: View {
     @State private var saveTask: Task<Void, Never>?
     @State private var photoPick: PhotosPickerItem?
     @State private var confirmDelete = false
+    /// Which rich-content field has the keyboard. Only set when the user adds a line, row or column.
+    @FocusState private var focusedField: String?
 
     private var task: PlannerTask? { planner.snapshot?.tasks.first { $0.id == taskId } }
     private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) } }
@@ -100,7 +102,10 @@ struct TaskSheet: View {
                     }
                     .scrollDismissesKeyboard(.interactively)
                     .onAppear { title = task.text }
-                    .onChange(of: task.text) { _, value in if title != value { title = value } }
+                    // Adopt a changed stored title only while the field still shows the previous stored one. If the user
+                    // has typed since (for example after a submit), the acknowledgement of an earlier edit must not
+                    // overwrite those characters.
+                    .onChange(of: task.text) { old, new in if title == old { title = new } }
                 } else {
                     ContentUnavailableView("This task is no longer in the plan.", systemImage: "checkmark.circle")
                 }
@@ -227,6 +232,12 @@ struct TaskSheet: View {
         Task { await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) }
     }
 
+    /// Moves the keyboard to a field the user just added, so they can keep typing. The field exists only once this
+    /// update has rendered, so focus it on the next turn of the main run loop. SwiftUI scrolls a focused field into view.
+    private func focusNewField(_ id: String) {
+        DispatchQueue.main.async { focusedField = id }
+    }
+
     private func update(_ block: NativeContentBlock) {
         guard let index = content.blocks.firstIndex(where: { $0.id == block.id }) else { return }
         content.blocks[index] = block
@@ -340,6 +351,7 @@ struct TaskSheet: View {
                     .font(.system(.body))
                     .lineLimit(1...3)
                     .frame(minHeight: 44)
+                    .focused($focusedField, equals: "outline-\(block.id)-\(index)")
                     .accessibilityIdentifier("content-outline-\(index)")
                     Button {
                         guard var copy = content.blocks.first(where: { $0.id == block.id }),
@@ -363,6 +375,7 @@ struct TaskSheet: View {
                 guard var copy = content.blocks.first(where: { $0.id == block.id }) else { return }
                 copy.items = (copy.items ?? []) + [NativeOutlineItem(id: UUID().uuidString, text: "", level: 0)]
                 update(copy)
+                focusNewField("outline-\(block.id)-\(max(0, (copy.items?.count ?? 1) - 1))")
             } label: { Text("Add line").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget() }
         }
     }
@@ -392,6 +405,7 @@ struct TaskSheet: View {
                             .lineLimit(1...3)
                             .frame(width: 140)
                             .frame(minHeight: 44)
+                            .focused($focusedField, equals: "cell-\(block.id)-\(row)-\(column)")
                             .accessibilityLabel("Row \(row + 1), column \(column + 1)")
                             .accessibilityIdentifier("content-cell-\(row)-\(column)")
                         }
@@ -403,11 +417,14 @@ struct TaskSheet: View {
                         let latest = copy.cells ?? [["", ""], ["", ""]]
                         copy.cells = latest + [Array(repeating: "", count: latest.first?.count ?? 2)]
                         update(copy)
+                        focusNewField("cell-\(block.id)-\(latest.count)-0")
                     } label: { Text("Add row").font(.system(.subheadline, weight: .semibold)).tapTarget() }
                     Button {
                         guard var copy = content.blocks.first(where: { $0.id == block.id }) else { return }
-                        copy.cells = (copy.cells ?? [["", ""], ["", ""]]).map { $0 + [""] }
+                        let latest = copy.cells ?? [["", ""], ["", ""]]
+                        copy.cells = latest.map { $0 + [""] }
                         update(copy)
+                        focusNewField("cell-\(block.id)-0-\(latest.first?.count ?? 2)")
                     } label: { Text("Add column").font(.system(.subheadline, weight: .semibold)).tapTarget() }
                 }
             }

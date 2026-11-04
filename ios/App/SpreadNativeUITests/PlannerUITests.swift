@@ -1374,6 +1374,29 @@ final class DuoUITests: NativeUITestCase {
         XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The edited title did not survive a relaunch")
     }
 
+    /// "Add line" and "Add row" hand the keyboard to the field they create, so typing continues without another tap.
+    func testAddingOutlineLineAndTableRowFocusesTheNewField() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        addAndOpenTask("Focus " + stamp)
+        tapID("format-outline")
+        typeInto("content-outline-0", "First")
+        tapButton("Add line")
+        XCTAssertTrue(el("content-outline-1").waitForExistence(timeout: 20), "Add line did not create a second outline line")
+        app.typeText("Second") // no tap: this lands only if the new line has the keyboard
+        XCTAssertTrue(eventually { self.fieldText("content-outline-1") == "Second" }, "The new outline line did not receive the keyboard focus")
+        XCTAssertEqual(fieldText("content-outline-0"), "First", "Typing after Add line altered the first line")
+        tapID("add-block"); tapID("format-table")
+        typeInto("content-cell-0-0", "A")
+        tapButton("Add row")
+        XCTAssertTrue(el("content-cell-2-0").waitForExistence(timeout: 20), "Add row did not create a third row")
+        app.typeText("B")
+        XCTAssertTrue(eventually { self.fieldText("content-cell-2-0") == "B" }, "The new table row did not receive the keyboard focus")
+        XCTAssertEqual(fieldText("content-cell-0-0"), "A", "Typing after Add row altered the first cell")
+        capture("task-add-line-and-row-focus")
+        tapID("task-sheet-done")
+    }
+
     /// Create, then delete, a task from its sheet, and confirm it stays deleted after a relaunch.
     func testTaskCanBeDeletedFromItsSheet() throws {
         launch()

@@ -1019,7 +1019,7 @@ struct StackLayout: View {
                 }
             }
         }
-        .frame(height: 80, alignment: .center)
+        .frame(minHeight: 80, alignment: .center)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 4)
     }
@@ -1038,7 +1038,10 @@ struct StackLayout: View {
                 Text(title).font(.system(.caption2, weight: .semibold))
             }
             .foregroundStyle(destructive ? Spread.onDanger : Spread.onAccent)
-            .frame(width: 72, height: 64)
+            // Minimums, not fixed sizes: at default text size the content is smaller, so the 72 x 64 button is
+            // unchanged; at accessibility sizes it grows instead of clipping "Manage" or "Delete".
+            .padding(.horizontal, 6)
+            .frame(minWidth: 72, minHeight: 64)
             .background(
                 RoundedRectangle(cornerRadius: 15, style: .continuous)
                     .fill(destructive ? Spread.danger : Spread.accent)

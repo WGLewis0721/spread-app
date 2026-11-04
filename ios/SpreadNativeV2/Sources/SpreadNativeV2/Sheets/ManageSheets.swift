@@ -555,6 +555,12 @@ struct MoreSheet: View {
         .accessibilityIdentifier(id)
     }
 
+    /// The Appearance choices share one row, identical to the previous HStack. At accessibility text sizes a third of
+    /// the width cannot hold "System" on one line (the labels are single-line), so the row stacks instead of truncating.
+    private var appearanceLayout: AnyLayout {
+        typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 6)) : AnyLayout(HStackLayout(spacing: 6))
+    }
+
     var body: some View {
         SpreadSheetStack {
             GeometryReader { geometry in
@@ -584,7 +590,7 @@ struct MoreSheet: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Appearance")
-                            HStack(spacing: 6) {
+                            appearanceLayout {
                                 ForEach(SpreadAppearance.allCases) { item in
                                     Button { appearance = item } label: {
                                         Text(item.title)
