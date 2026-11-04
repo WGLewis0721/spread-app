@@ -1,5 +1,5 @@
 name: Native acceptance journeys
-# F1-F10 on one real dataset, 100 rapid Stack and Fan gestures, the 100-drag Crown run, and the
+# F1-F10 on one real dataset, 100 Wallet expand/collapse gestures, the 100-drag Crown run, and the
 # Dynamic Type / long-name / 44 pt checks. Each group runs on its own fresh simulator so a failure
 # in one cannot hide evidence from another. Results are the real xcresult and exported screenshots.
 on:
@@ -27,13 +27,13 @@ jobs:
         include:
           - name: reported-fixes
             width: 390
-            tests: "PlannerUITests/testDialArcSelectionAndPreferencePersistence PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally"
+            tests: "PlannerUITests/testWalletCardsExpandIndependentlyAndEdit PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally"
           - name: journey
             width: 390
             tests: "JourneyUITests"
           - name: gestures
             width: 390
-            tests: "PlannerUITests/testStackHundredRapidSwipesKeepSelection PlannerUITests/testFanHundredRapidSwipesKeepSelection PlannerUITests/testSelectedRoleFallsBackAfterDeletion PlannerUITests/testFanKeepsLargeContentInsideItsFrame"
+            tests: "PlannerUITests/testWalletHundredExpandCollapseCycles PlannerUITests/testWalletLongPressEnablesEditing PlannerUITests/testWalletQuickDeleteRequiresConfirmationAndFallsBack PlannerUITests/testWalletCardGrowsWithTasksAndKeepsRowsReachable"
           - name: crown
             width: 390
             tests: "PlannerUITests/testCrownHundredDragsWithThirtyReversals"
