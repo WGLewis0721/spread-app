@@ -1,15 +1,13 @@
 #if os(iOS)
 import SwiftUI
 
-/// The Spread surface (`Summary` and `RoleBlock` in spread-app.tsx) with the owner-approved layout choice
-/// (Stack, Fan, Dial, Tabs, Day). The summary is the same in every layout: total hours, a responsibility-coloured
-/// hour bar that jumps to a role, done counts, Rollover and Review open tasks. Changing the layout is a
-/// per-device display choice; it never writes planner data.
+/// Responsibilities are presented as one full-width Wallet-style Stack.
+/// The planner store remains the only data writer; editing and expansion are UI state.
 struct SpreadSurface: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
     @Binding var layout: SpreadLayout
-    let editing: Bool
+    @Binding var editing: Bool
     @Binding var selectedRole: String?
     let onOpenRole: (String) -> Void
     let onOpenTask: (String, String) -> Void
@@ -141,22 +139,13 @@ struct SpreadSurface: View {
         .spreadCard()
     }
 
-    // MARK: Layout bodies
+    // MARK: The single responsibility presentation
 
-    @ViewBuilder private var layoutBody: some View {
-        let rows = snapshot.roles.map { LayoutRow(role: $0, hours: $0.hours) }
-        switch layout {
-        case .stack:
-            StackLayout(planner: planner, snapshot: snapshot, selectedRole: $selectedRole, editing: editing, onOpenTask: onOpenTask, onOpenRole: onOpenRole)
-        case .fan:
-            FanLayout(planner: planner, rows: rows, selectedId: selectedRole ?? rows.first?.role.id ?? "", onSelect: { selectedRole = $0 }, onOpenTask: onOpenTask, snapshot: snapshot)
-        case .dial:
-            DialLayout(planner: planner, rows: rows, selectedId: selectedRole ?? rows.first?.role.id ?? "", onSelect: { selectedRole = $0 }, onOpenRole: onOpenRole, snapshot: snapshot)
-        case .tabs:
-            TabsLayout(planner: planner, rows: rows, tab: $tabSelection, snapshot: snapshot, onOpenTask: onOpenTask, onSelect: { selectedRole = $0 })
-        case .day:
-            DayLayout(planner: planner, rows: rows, snapshot: snapshot, selectedDay: $daySelection, selectedRole: $selectedRole, onOpenTask: onOpenTask)
-        }
+    private var layoutBody: some View {
+        StackLayout(
+            planner: planner, snapshot: snapshot, selectedRole: $selectedRole,
+            editing: $editing, onOpenTask: onOpenTask, onOpenRole: onOpenRole
+        )
     }
 
     /// The responsibility the modes other than Stack are showing: the Fan's and Dial's selection (first by default),
