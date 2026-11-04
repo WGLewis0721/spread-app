@@ -253,7 +253,7 @@ export function ensureWeek(data: SpreadData): SpreadData {
   return {
     ...data,
     currentWeek: key,
-    weeks: { ...data.weeks, [key]: { boxes, allocations: existing.allocations ?? [] } },
+    weeks: { ...data.weeks, [key]: { ...existing, boxes, allocations: existing.allocations ?? [] } },
   };
 }
 
