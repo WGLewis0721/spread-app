@@ -1,5 +1,7 @@
 # Week/Month complete experience — component specification
 
+> Part of the [Spread design brain](../README.md). See [spec index](README.md).
+
 > **Owner-authorized build scope:** All 61 decisions in [owner ledger](2026-11-04-week-month-owner-decisions.md). This file is the component-level source of truth for the new opt-in SwiftUI interface. Based on the **actual review ZIP** (Spread_Week_Month_Review.zip, Nov 4) and the [native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md). New work must preserve Classic as the fallback.
 
 | Field | Value |

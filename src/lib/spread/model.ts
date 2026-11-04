@@ -253,7 +253,9 @@ export function ensureWeek(data: SpreadData): SpreadData {
   return {
     ...data,
     currentWeek: key,
-    weeks: { ...data.weeks, [key]: { boxes, allocations: existing.allocations ?? [] } },
+    // Keep every other week field (dayTaskOrder): rebuilding only boxes and allocations
+    // silently dropped the person's Week day order on every load and sync.
+    weeks: { ...data.weeks, [key]: { ...existing, boxes, allocations: existing.allocations ?? [] } },
   };
 }
 
