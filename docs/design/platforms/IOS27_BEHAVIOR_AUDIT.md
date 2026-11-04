@@ -26,6 +26,30 @@
 
 **Evidence categories:** Source-inspected means only code appears present, **not** that the behavior passed a simulator. Current PR #127 automated Xcode/Duo and screenshots are required before marking any visual row PASS. Sources in this document are technical guidance, not pixel-diff proof.
 
+## Applied audit against the seven design fundamentals
+
+*Source-inspected on native PR #127; automated/device status is reported separately.*
+
+| Fundamental | Finding | Implemented or required |
+| --- | --- | --- |
+| **Unity** | Existing Spread mark, metallic Crown, role colors and Chalkboard art are intact; historical documentation still conflicted. | One Wallet Stack; current board, map and agent rules synchronized. Keep system glass **only** on the dock. |
+| **Balance** | Spread cards were artificially limited to a 720pt column on iPad and wider Duo scenes. | **Fixed:** Spread cards use all scene width while Week retains its readable 1120pt timeline cap. |
+| **Hierarchy** | Card titles could collide with +/- controls; collapsed tasks require an obvious entry. | **Fixed in PR:** hours editor is on its own row, each card has a permanent 44pt expand chevron, actual tasks determine expanded height. |
+| **Contrast** | Role edges are attractive but cannot substitute for legible status or active-state words. | Semantic ink and labels remain; contrast and Increase Contrast XCUITest are **not yet passing** on this tip. |
+| **Emphasis** | Multiple equal-glow surfaces would weaken the next action; editing needs an unmistakable cue. | Edit-only color pulse and leading delete; no new FAB/sidebars; reduce motion cancels decorative pulse. |
+| **Scale** | Dense hour strips could shrink touch targets below 44pt. Wallet overlap could obscure large text. | **Fixed:** horizontally scrollable bar reserves 44pt per segment; XXL accessibility text disables closed-card overlap; scene-size test covers 390/820/1024. |
+| **Repetition** | Sheets and day cards must use consistent affordances and recoverable planner actions. | Native sheets, task rows, role colors and Undo remain unchanged; regression and persistence acceptance **pending**. |
+
+### iOS 27 platform compatibility findings
+
+- **Scene lifecycle:** `ios/App/App/Info.plist` has `UIApplicationSceneManifest` and `SceneDelegate` creates a `UIWindow(windowScene:)`. **Source pass**; Xcode 27 launch still needs verification.
+- **Resizable UI:** `SpreadLiveRoot` uses container width rather than `UIScreen.main` or device-orientation branching. Removed 720pt Spread cap and added viewport tests. **Code applied, device validation pending**.
+- **System materials:** the existing `glassEffect(.regular, in: Capsule())` is a SwiftUI system control material and benefits from iOS 27 rendering changes automatically; the task and Wallet content stay opaque. Reduce Transparency uses solid elevated color. Do **not** build an unnecessary custom liquid-glass shader.
+- **Illustration performance:** Chalkboard animations pause when their views disappear, the scene is inactive or Reduce Motion is on. They remain animated for visible users. Frame timing and battery checks need hardware.
+- **New iOS 27-only APIs:** don't introduce `swipeActionsContainer`, 27 toolbar placements, or new document storage merely for novelty. The current build uses Xcode 26-compatible SwiftUI. Test iOS 27 behavior with **Xcode 27, resizable scene/simulator and physical-device review** before claiming native iOS 27 compliance. No underlying planner migration is authorized.
+
+**Files changed in this pass:** `SpreadLiveRoot.swift` (responsive Spread), `SpreadSurface.swift` (dense bar and large type), `ChalkboardViews.swift` (pause invisible animation), `PlannerUITests.swift` (full scene width/44pt), `NativeContractsTests.swift` (ten-role touch target width). These are source facts, not visual PASS claims.
+
 ## Engineering checklist
 
 1. Resolve doc contradictions: map current owner choice to the native board; mark older five-mode specs **historical**. Sync the single [rules card](../RULES_CARD.md) to agent files, then run `npm run docs:check`.
