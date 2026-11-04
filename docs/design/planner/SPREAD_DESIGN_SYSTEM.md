@@ -89,7 +89,7 @@ Applies to the **React planner** and the invariant native planner behavior. Land
 - [21st.dev calendar components](https://21st.dev) — implementation patterns and state variants, not runtime dependencies; individual licensing must be reviewed before copying code.
 - [Pinterest weekly planner search](https://www.pinterest.com/search/pins/?q=minimal%20weekly%20planner%20app%20ui) — spacing inspiration only, not licensed product assets.
 
-**Reference lock:** Keep the crown, Spread/Week/Month semantics, responsibility colors, hour bank, round surfaces, and the quiet palette. Reject unrelated navigation, invented brand colors, extra icon libraries, and decorative animation.
+**Reference lock:** Keep Crown, Spread/Week/Month semantics, responsibility colors, hour bank and the established product structure. The React planner retains its quiet palette; the [native brand board](SPREAD_NATIVE_BRAND_BOARD.md) authorizes *bounded* navy/blue luminous SwiftUI paint on PR #119 only. Reject unrelated navigation, arbitrary identity replacements, extra icon libraries and decoration that compromises work.
 
 ### Verification gates
 
