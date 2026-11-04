@@ -257,7 +257,8 @@ struct WeekFocusSurface: View {
         let allocations = todaysAllocations.filter { $0.roleId == role.id }
         let allocatedIds = Set(allocations.map(\.id))
         let tasks = snapshot.tasks.filter { $0.roleId == role.id && $0.allocationId.map { allocatedIds.contains($0) } == true }
-        let open = expandedByDate[day]?.contains(role.id) ?? role.id == activeRole
+        // `??` binds tighter than `==`: without the parentheses this read `(Bool? ?? String) == String?` and did not compile.
+        let open = expandedByDate[day]?.contains(role.id) ?? (role.id == activeRole)
         let hours = allocations.reduce(0) { $0 + $1.hours }
         return VStack(spacing: 0) {
             Button {
