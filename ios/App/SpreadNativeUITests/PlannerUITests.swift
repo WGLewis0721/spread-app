@@ -917,9 +917,9 @@ final class VisualTourUITests: NativeUITestCase {
 
         goSpread()
         for mode in ["Fan", "Dial", "Tabs", "Day"] {
-            if tryTap("view-mode-button") && tryTap("layout-" + mode.lowercased()) { settle(1.0); capture("tour-\(style)-04-\(mode.lowercased())") }
+            if tryTap("layout-" + mode.lowercased()) { settle(1.0); capture("tour-\(style)-04-\(mode.lowercased())") }
         }
-        if tryTap("view-mode-button"), tryTap("layout-stack") { settle(0.6) }
+        if tryTap("layout-stack") { settle(0.6) }
 
         goWeek(); settle(1.0)
         capture("tour-\(style)-05-week")

@@ -137,7 +137,6 @@ struct SpreadSurface: View {
             ScrollView(.horizontal) { layoutRail }
                 .scrollIndicators(.hidden)
         }
-        .accessibilityIdentifier("view-mode-button")
     }
 
     private var layoutRail: some View {
@@ -167,6 +166,11 @@ struct SpreadSurface: View {
         .padding(4)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Spread.inset))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
+        // A real container element: the five mode buttons stay individually reachable inside it, and the group
+        // itself has the stable identifier the UI tests and VoiceOver landmarks use.
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Spread view")
+        .accessibilityIdentifier("view-mode-button")
     }
 
     // MARK: Layout bodies
