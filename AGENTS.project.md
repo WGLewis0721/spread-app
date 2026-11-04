@@ -13,11 +13,11 @@ These apply to any agent or tool working in this repository, alongside `AGENTS.m
 **Start here:** `docs/design/README.md` (router). Plans and specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens as data: `docs/design/tokens.json`. Read the task pack the router names, then only the section it points to.
 
 **Look**
-- In unflagged **React**, no new colors/fonts/decorative paint: use existing CSS tokens. **SwiftUI PR #119 native paint** follows the owner-approved `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` (deep navy, bounded role glow, metallic Crown) without changing React or landing.
+- In unflagged **React**, use existing CSS tokens. **SwiftUI PR #127** follows `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` for navy, restrained glow, Chalkboard art and the metal Crown; React/landing keep their own rules.
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week keeps three kinds of thing: solid day cards, a dashed To place tray, tinted Free time chips.
-- Keep Crown, Spread/Week/Month semantics, hour bank, original artwork and five modes. The quiet default palette applies to React; native board governs SwiftUI appearance only.
+- Keep Crown, Spread/Week/Month, hour bank and original artwork. **Native Spread has ONE Wallet-style animated Stack**: full-width, overlapping closed cards, independent expansion, chevron, tasks, Edit/long-press, colour/icon/name edits and confirmed delete. Five-mode directions are historical for native only.
 - The landing page is separate (`docs/design/landing/DESIGN.md`): one focal object per section, both modes.
 
 **Behavior**
