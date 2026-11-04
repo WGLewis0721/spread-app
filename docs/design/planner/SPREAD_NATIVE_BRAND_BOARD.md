@@ -7,6 +7,12 @@
 >
 > Summary: Owner-approved premium dark, luminous blue iPhone identity, metallic horizontal Crown, consistent Chalkboard illustrated cards, measured visual vocabulary, exact screen contracts and verification. Preserves Responsibilities → Hours → Week → Tasks, the **sole Wallet-style responsibility Stack**, existing data, accessibility and navigation. Scoped exception to the legacy React planner's quieter visual rules.
 
+### November 4 interaction refinement: edge delete and timed header
+
+- **Edit mode:** The red minus must appear as a floating tab emerging from the *left edge of the Wallet card border*, not inside the card's title HStack. Its accessible 44pt hit box stays on-screen in the existing 16pt margin. Showing and hiding Delete must **not change card width, x-position, icon/name/hour/chevron positions, or text wrapping**. Confirmation and local-first removal are unchanged; Reduce Motion uses an instant transition.
+- **Top navigation:** On first display of the loaded planner, show the folded-card Spread mark with its wordmark plus Spread/Week icons and labels for about **2.5 seconds**. Then the three text labels slide **left into their associated icons**, scale/fade away, and leave the icons as fully operational >=44pt controls with permanent accessibility labels. The metallic Crown and current week stay visible. The animation runs once per app opening, not on every tab switch. Keep labels visible at accessibility Dynamic Type sizes; Reduce Motion removes the sliding animation.
+- **Verification:** Compare screenshots and XCUITest geometry before/after Edit. Confirm the header's compact state, icon tap actions, accessible descriptions, and no unintended Crown movement or planner writes.
+
 ## 1. Reference authority and interpretation
 
 1. **Owner's desired-state images (November 3 conversation):** five dark premium iPhone renderings (Spread, Week, Month, Task, Move to) plus the consistent visual-language storyboard. These define the *approved target appearance*, not a proven installed build, pixel-exact specification, or permission to create new functionality.
