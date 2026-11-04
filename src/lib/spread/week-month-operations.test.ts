@@ -122,3 +122,17 @@ test("duplicate bulk picks never move the same task twice", () => {
   const targets = move.data.weeks["2026-11-02"].boxes[0].tasks.filter((task) => task.id === "old-h");
   assert.equal(targets.length, 1);
 });
+
+
+test("same-week overdue rescheduling changes only allocation, not Spread task order", () => {
+  const original = fixture();
+  const key = original.currentWeek;
+  original.weeks[key].allocations.push({ id: "early", hatId: "home", day: "2026-11-03", hours: 1, order: 1 });
+  original.weeks[key].boxes[0].tasks.splice(1, 0,
+    { id: "early-task", text: "Call home", done: false, allocationId: "early" });
+  const beforeOrder = original.weeks[key].boxes[0].tasks.map((task) => task.id);
+  const result = bulkRescheduleOverdue(original, ["early-task"], "2026-11-05", isoToday);
+  assert.equal(result.moved, 1);
+  assert.deepEqual(result.data.weeks[key].boxes[0].tasks.map((task) => task.id), beforeOrder);
+  assert.equal(result.data.weeks[key].boxes[0].tasks[1].allocationId, "a");
+});
