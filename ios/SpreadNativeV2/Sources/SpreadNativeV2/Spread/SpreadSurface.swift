@@ -58,16 +58,40 @@ struct SpreadSurface: View {
         let spreadWord = spreads == 1 ? "spread" : "spreads"
         let spoken = SpreadHours.spoken(totalHours) + " across \(spreads) \(spreadWord)" + (taskCount > 0 ? ", \(doneCount) of \(taskCount) tasks done" : "")
         return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text(SpreadHours.text(totalHours)).font(.system(.title, weight: .bold)).monospacedDigit()
-                    Text("h").font(.system(.headline, weight: .semibold)).foregroundStyle(Spread.secondary)
+            // iOS 27 resizable scenes: let content choose a compact two-line
+            // heading when space or Dynamic Type makes the one-line form clip.
+            // Never shrink the hours or overlap the completed-task count.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(SpreadHours.text(totalHours)).font(.system(.title, weight: .bold)).monospacedDigit()
+                        Text("h").font(.system(.headline, weight: .semibold)).foregroundStyle(Spread.secondary)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    Text("across \(spreads) \(spreadWord)")
+                        .font(.system(.subheadline)).foregroundStyle(Spread.secondary)
+                        .fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: 8)
+                    if taskCount > 0 {
+                        Text("\(doneCount) of \(taskCount) done")
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(Spread.secondary).monospacedDigit()
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
                 }
-                Text("across \(spreads) \(spreadWord)").font(.system(.subheadline)).foregroundStyle(Spread.secondary)
-                Spacer(minLength: 8)
-                if taskCount > 0 {
-                    Text("\(doneCount) of \(taskCount) done")
-                        .font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.secondary).monospacedDigit()
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(SpreadHours.text(totalHours)).font(.system(.title, weight: .bold)).monospacedDigit()
+                        Text("h").font(.system(.headline, weight: .semibold)).foregroundStyle(Spread.secondary)
+                        Text("across \(spreads) \(spreadWord)")
+                            .font(.system(.subheadline)).foregroundStyle(Spread.secondary)
+                            .padding(.leading, 6)
+                    }
+                    if taskCount > 0 {
+                        Text("\(doneCount) of \(taskCount) done")
+                            .font(.system(.subheadline, weight: .medium))
+                            .foregroundStyle(Spread.secondary).monospacedDigit()
+                    }
                 }
             }
             .accessibilityElement(children: .ignore)
