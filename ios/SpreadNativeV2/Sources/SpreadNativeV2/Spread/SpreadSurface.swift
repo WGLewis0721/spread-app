@@ -309,7 +309,16 @@ struct RoleRow: View {
 
         .id("spread-role-\(role.id)")
         .onAppear { name = role.name }
-        .onChange(of: role.name) { _, value in name = value }
+        .onChange(of: role.name) { _, value in
+            name = value
+            SpreadHaptics.selection()
+        }
+        .onChange(of: role.color) { _, _ in SpreadHaptics.selection() }
+        .onChange(of: role.category) { _, _ in SpreadHaptics.selection() }
+        .onChange(of: role.hours) { _, _ in SpreadHaptics.selection() }
+        .onChange(of: tasks.count) { _, _ in SpreadHaptics.selection() }
+        .onChange(of: palette) { _, _ in SpreadHaptics.selection() }
+        .onChange(of: adjusting) { _, _ in SpreadHaptics.selection() }
         .onChange(of: editing) { _, active in
             if !active {
                 commitName()
@@ -844,7 +853,7 @@ struct StackLayout: View {
         .accessibilityAction(named: Text("Delete \(role.name)")) {
             if !editing { editing = true }
             pendingDeleteId = role.id
-            SpreadHaptics.warning()
+            SpreadHaptics.destructivePrompt()
         }
     }
 
@@ -885,14 +894,14 @@ struct StackLayout: View {
     private func actionTray(for role: Responsibility) -> some View {
         HStack {
             if visibleSide(for: role.id) == .delete {
-                swipeAction("Delete", symbol: "trash.fill", id: "remove-role-\(role.id)", destructive: true) {
+                swipeAction("Delete", symbol: "trash.fill", id: "remove-role-\(role.id)", roleName: role.name, destructive: true) {
                     pendingDeleteId = role.id
-                    SpreadHaptics.warning()
+                    SpreadHaptics.destructivePrompt()
                 }
             }
             Spacer(minLength: 0)
             if visibleSide(for: role.id) == .manage {
-                swipeAction("Manage", symbol: "slider.horizontal.3", id: "manage-role-\(role.id)", destructive: false) {
+                swipeAction("Manage", symbol: "slider.horizontal.3", id: "manage-role-\(role.id)", roleName: role.name, destructive: false) {
                     closeReveal()
                     SpreadHaptics.selection()
                     onOpenRole(role.id)
@@ -908,6 +917,7 @@ struct StackLayout: View {
         _ title: String,
         symbol: String,
         id: String,
+        roleName: String,
         destructive: Bool,
         action: @escaping () -> Void
     ) -> some View {
@@ -925,7 +935,7 @@ struct StackLayout: View {
             .contentShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title + " \(snapshot.roles.first(where: { $0.id == revealedRoleId })?.name ?? "responsibility")")
+        .accessibilityLabel(title + " " + roleName)
         .accessibilityIdentifier(id)
     }
 
@@ -964,7 +974,7 @@ struct StackLayout: View {
                 let moved = start + x
                 let side: WalletReveal = moved > 48 ? .delete : (moved < -48 ? .manage : .none)
                 if side != revealedSide || (side != .none && revealedRoleId != id) {
-                    SpreadHaptics.selection()
+                    SpreadHaptics.revealed(destructive: side == .delete)
                 }
                 withAnimation(swipeAnimation) {
                     revealedRoleId = side == .none ? nil : id
@@ -1003,16 +1013,29 @@ private struct RoleEditGlow: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .shadow(color: enabled ? color.opacity(bright && !reduceMotion ? 0.40 : 0.16) : .clear,
-                    radius: enabled ? (bright && !reduceMotion ? 19 : 7) : 0)
+            .overlay {
+                if enabled {
+                    // Breathe along the card's actual edge without changing
+                    // its size or shifting a single glyph. Static when Reduce
+                    // Motion is enabled; no jitter or constant vibration.
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(color.opacity(bright && !reduceMotion ? 0.72 : 0.20),
+                                      lineWidth: bright && !reduceMotion ? 2 : 1)
+                        .blur(radius: bright && !reduceMotion ? 2.5 : 0.5)
+                        .allowsHitTesting(false)
+                }
+            }
+            .shadow(color: enabled ? color.opacity(bright && !reduceMotion ? 0.44 : 0.16) : .clear,
+                    radius: enabled ? (bright && !reduceMotion ? 20 : 7) : 0)
             .onAppear { animate() }
             .onChange(of: enabled) { _, _ in animate() }
+            .onChange(of: reduceMotion) { _, _ in animate() }
     }
 
     private func animate() {
         bright = false
         guard enabled && !reduceMotion else { return }
-        withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+        withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true)) {
             bright = true
         }
     }
