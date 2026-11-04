@@ -388,9 +388,10 @@ struct ProfilesSheet: View {
                             .accessibilityLabel("Open \(profile.name)")
                             .accessibilityAddTraits(active ? .isSelected : [])
                             .accessibilityIdentifier("profile-\(profile.id)")
-                            TextField("Name", text: Binding(get: { names[profile.id] ?? profile.name }, set: { names[profile.id] = $0 }), prompt: Spread.fieldPrompt("Name"))
+                            TextField("Name", text: Binding(get: { names[profile.id] ?? profile.name }, set: { names[profile.id] = $0 }), prompt: Spread.fieldPrompt("Name"), axis: .vertical)
                                 .font(.system(.body))
                                 .padding(.vertical, 10)
+                                .lineLimit(1...3)
                                 .frame(minHeight: 44)
                                 .submitLabel(.done)
                                 .onSubmit { rename(profile) }
@@ -409,14 +410,19 @@ struct ProfilesSheet: View {
                 }
                     .listRowBackground(Spread.elevated)
                 Section {
-                    TextField("New profile name", text: $newName, prompt: Spread.fieldPrompt("New profile name"))
+                    TextField("New profile name", text: $newName, prompt: Spread.fieldPrompt("New profile name"), axis: .vertical)
                         .submitLabel(.done)
                         .onSubmit { create() }
                         .font(.system(.body))
                         .padding(.vertical, 10)
+                        .lineLimit(1...3)
                         .frame(minHeight: 44)
                         .accessibilityIdentifier("new-profile-field")
-                    Button("Create profile") { create() }
+                    Button { create() } label: {
+                        Text("Create profile").lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }
                         .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty || planner.profiles.count >= Self.limit)
                         .accessibilityIdentifier("create-profile")
                 } header: {
@@ -498,14 +504,14 @@ struct MoreSheet: View {
                 Section("Spreads") {
                     Button { newSpread = true } label: { Label("New Spread", systemImage: "plus").frame(minHeight: 44, alignment: .leading) }
                         .accessibilityIdentifier("more-new-spread")
-                    Button { openTasks = true } label: { Label("Review open tasks", systemImage: "tray").fixedSize(horizontal: false, vertical: true).frame(minHeight: 44, alignment: .leading) }
+                    Button { openTasks = true } label: { Label("Review open tasks", systemImage: "tray").lineLimit(3).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading) }
                     Button {
                         Task {
                             if await planner.send(["type": "rollover", "force": false]), planner.rolloverOutcome == "confirm" {
                                 confirmRollover = true
                             }
                         }
-                    } label: { Label("Rollover to next week", systemImage: "arrow.right.square").fixedSize(horizontal: false, vertical: true).frame(minHeight: 44, alignment: .leading) }
+                    } label: { Label("Rollover to next week", systemImage: "arrow.right.square").lineLimit(3).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading) }
                     .accessibilityIdentifier("more-rollover")
                 }
                     .listRowBackground(Spread.elevated)
