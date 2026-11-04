@@ -29,6 +29,8 @@ class NativeUITestCase: XCTestCase {
     func relaunch() { launch(app.launchArguments) }
 
     func capture(_ name: String) {
+        // SwiftUI transitions can still be rendering after XCTest reports the process idle.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
@@ -56,11 +58,17 @@ class NativeUITestCase: XCTestCase {
         }
         return condition()
     }
-    /// Scrolls up through a list or sheet until the element can be hit. Never swipes down, which
-    /// would dismiss a sheet that is already at its top.
+    /// Search the active list in both directions: iOS can restore its offset when a sheet reopens.
+    /// Use the list's own scrolling area so a downward search does not start on the sheet chrome.
     func scrollIntoView(_ element: XCUIElement, maxSwipes: Int = 8) {
+        let list = app.collectionViews.firstMatch
+        let scroller = list.exists ? list : app
         var swipes = 0
-        while (!element.exists || !element.isHittable) && swipes < maxSwipes { app.swipeUp(); swipes += 1 }
+        while (!element.exists || !element.isHittable) && swipes < maxSwipes { scroller.swipeUp(); swipes += 1 }
+        if list.exists {
+            swipes = 0
+            while (!element.exists || !element.isHittable) && swipes < maxSwipes { list.swipeDown(); swipes += 1 }
+        }
     }
     @discardableResult func tapID(_ id: String, timeout: TimeInterval = 30, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
         let element = el(id)
@@ -101,9 +109,11 @@ class NativeUITestCase: XCTestCase {
         let button = el("layout-" + mode.lowercased())
         if !button.isHittable {
             let rail = el("view-mode-button")
+            scrollIntoView(rail)
             for _ in 0..<5 where !button.isHittable { mode == "Stack" ? rail.swipeRight() : rail.swipeLeft() }
         }
         tapID("layout-" + mode.lowercased())
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
     }
     /// Reveals a tab in the horizontally scrolling row (offscreen tabs are not reachable until scrolled).
     func revealTab(_ name: String) {
@@ -166,9 +176,11 @@ class NativeUITestCase: XCTestCase {
         continueAfterFailure = true
         defer { continueAfterFailure = previous }
         var found: [String] = []
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
         try app.performAccessibilityAudit(for: types) { issue in
             let element = issue.element
             found.append("[\(screen)] \(issue.compactDescription): \(issue.detailedDescription) | element id=\(element?.identifier ?? "?") label=\(element?.label ?? "?") frame=\(String(describing: element?.frame))")
+            print(found.last!)
             return false
         }
         if !found.isEmpty { attach(found.joined(separator: "\n"), "audit-issues-" + screen) }
@@ -183,7 +195,7 @@ class NativeUITestCase: XCTestCase {
 
     /// Every visible button must offer at least 44 x 44 points (system bars and keyboards excluded).
     func assertTargets(_ screen: String, file: StaticString = #filePath, line: UInt = #line) {
-        let system = Set(app.navigationBars.descendants(matching: .button).allElementsBoundByIndex.map { $0.label })
+        let system = Set(app.navigationBars.descendants(matching: .button).allElementsBoundByIndex.map { $0.label }).union(["Sheet Grabber"])
         var offenders: [String] = []
         for button in app.buttons.allElementsBoundByIndex where button.exists && button.isHittable {
             if system.contains(button.label) { continue }
@@ -659,18 +671,20 @@ final class PlannerUITests: NativeUITestCase {
         let tag = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(4))
         let profile = "Family and household projects for \(tag)"
         let role = "Quarterly planning and stakeholder updates \(tag)"
-        let original = el("active-profile-name").label
+        tapID("open-more"); tapID("manage-profiles")
+        let originalId = try XCTUnwrap(elements(prefix: "profile-").first { $0.isSelected }).identifier
+        closeNativeSheets()
         defer {
             // Leave the roster as found so later tests use the original profile.
             if app.state != .notRunning {
                 launch()
                 tapID("open-more"); tapID("manage-profiles")
-                elements(prefix: "profile-").first { $0.label.hasPrefix(original) }?.tap()
+                tapID(originalId)
             }
         }
         tapID("open-more"); tapID("manage-profiles")
         typeInto("new-profile-field", profile); tapButton("Create profile")
-        XCTAssertTrue(eventually { self.el("active-profile-name").label == profile }, "Long profile name was not kept whole: \(el("active-profile-name").label)")
+        XCTAssertTrue(eventually { self.el("brand-home").label.hasSuffix("Profile " + profile) }, "Long profile name was not kept in the accessible header")
         tapID("open-more"); tapID("more-new-spread")
         typeInto("role-name-field", role); tapID("save-spreads")
         capture("long-names-week")
@@ -732,6 +746,7 @@ final class VisualTourUITests: NativeUITestCase {
     private func tour(_ style: String, arguments: [String], short: Bool = false) throws {
         notes = []
         launch(arguments)
+        closeNativeSheets(); goSpread(); chooseMode("Stack")
         settle(1.5)
         let expectedAppearance = style.hasPrefix("dark") ? "dark" : "light"
         XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(";" + expectedAppearance) == true }, "The requested appearance did not render")
@@ -741,9 +756,9 @@ final class VisualTourUITests: NativeUITestCase {
             // Give the open card real content so the evidence shows tasks, not an empty list.
             let field = el("new-task-field")
             if field.waitForExistence(timeout: 6) {
-                scrollIntoView(field); field.tap(); field.typeText("Plan the week\n")
+                typeInto("new-task-field", "Plan the week\n")
                 settle(0.8)
-                field.tap(); field.typeText("Review the budget\n")
+                typeInto("new-task-field", "Review the budget\n")
                 settle(1.0)
                 capture("tour-\(style)-02-stack-with-tasks")
             } else { note("missing: new-task-field") }
@@ -927,12 +942,13 @@ final class DuoUITests: NativeUITestCase {
         }
     }
 
-    func testResizablePlannerInBothAppearancesAndOrientations() throws {
-        defer { XCUIDevice.shared.orientation = .portrait; XCUIDevice.shared.appearance = .light }
+    /// Actual hinge and rotation changes run in native-duo-poses.yml. XCTest's orientation setter
+    /// does not prove that a multi-panel simulator rotated, so this test makes no pose claim.
+    func testPlannerModesInBothAppearances() throws {
+        defer { XCUIDevice.shared.appearance = .light }
         for dark in [false, true] {
             XCUIDevice.shared.appearance = dark ? .dark : .light
-            for (name, orientation) in [("portrait", UIDeviceOrientation.portrait), ("landscape", .landscapeLeft)] {
-                XCUIDevice.shared.orientation = orientation
+            let name = "default-pose"
                 launch(["-spread.native.appearance", dark ? "dark" : "light"])
                 XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(dark ? ";dark" : ";light") == true })
                 goSpread()
@@ -949,7 +965,6 @@ final class DuoUITests: NativeUITestCase {
                 XCTAssertTrue(el("month").exists)
                 tapID("open-more"); capture("duo-\(dark ? "dark" : "light")-\(name)-more")
                 closeNativeSheets()
-            }
         }
     }
 }

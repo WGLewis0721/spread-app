@@ -501,20 +501,20 @@ struct MoreSheet: View {
                 }
                     .listRowBackground(Spread.elevated)
                 Section("Spread view") {
-                    ForEach(SpreadLayout.allCases) { item in
-                        Button { layout = item } label: {
-                            HStack {
-                                Text(item.title)
-                                Spacer()
-                                if layout == item { Image(systemName: "checkmark").foregroundStyle(Spread.accent) }
+                    FlowRow(spacing: 6) {
+                        ForEach(SpreadLayout.allCases) { item in
+                            Button { layout = item } label: {
+                                Text(item.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                                    .padding(.horizontal, 14).frame(minWidth: 44, minHeight: 44)
+                                    .spreadChip(selected: layout == item)
                             }
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
+                            .buttonStyle(.spreadPress)
+                            .accessibilityAddTraits(layout == item ? .isSelected : [])
+                            .accessibilityIdentifier("more-layout-\(item.rawValue)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(layout == item ? .isSelected : [])
-                        .accessibilityIdentifier("more-layout-\(item.rawValue)")
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Spread view")
                 }
                     .listRowBackground(Spread.elevated)
                 Section("Appearance") {

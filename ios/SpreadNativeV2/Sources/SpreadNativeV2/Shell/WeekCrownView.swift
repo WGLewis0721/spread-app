@@ -36,6 +36,9 @@ struct WeekCrownView: View {
                 Text("Drag the Crown to change weeks.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
                     .accessibilityAddTraits(.updatesFrequently)
             }
         }
@@ -90,7 +93,7 @@ struct WeekCrownView: View {
                 cap(label: "Next week", direction: 1, leading: false)
             }
         }
-        .frame(height: height)
+        .frame(minHeight: height)
         .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .gesture(dragGesture)
         .onChange(of: gestureActive) { _, active in
@@ -155,6 +158,7 @@ struct WeekCrownView: View {
                 Text(detail).font(.system(.caption, weight: .medium))
                     .foregroundStyle(onDetail == nil ? Spread.secondary : Spread.accent)
                     .multilineTextAlignment(.center)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 44)

@@ -220,7 +220,7 @@ workflows:
           python3 scripts/app-store-preflight.py
           npm run ios:sync
           python3 scripts/app-store-preflight.py --bundle dist-ios
-      - name: Real Duo simulator - modes, appearance and rotation
+      - name: Real Duo simulator - modes and rendered appearance
         script: |
           set -eu
           mkdir -p artifacts

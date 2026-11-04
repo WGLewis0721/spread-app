@@ -44,3 +44,15 @@ Candidate run `6aeaa7bfa87b4d255fde5ec8` passed its checks/bundle step, then was
 No accent picker, Stack auto-turn, custom sheet stack, cloud surface or native backup rewrite was added.
 The original engine remains the only writer; protected recovery and all golden branches are unchanged.
 Physical haptics, fold/occlusion poses, exact-reference spring/FX calibration and comparison to the owner's original binary remain explicit gates.
+
+## Capture integrity follow-up
+
+The first Duo test run passed its assertions, but its exported files labeled portrait and landscape had the same 1398×2034 dimensions and its dark-labeled captures remained light. Those files do not verify rotation, dark mode, or fold poses. New tests assert the actual rendered appearance. Automated captures and audits also wait for SwiftUI transitions to settle.
+
+The extended 820pt audit produced 289 reports: 168 contrast reports, 105 Dynamic Type reports on blank calendar placeholders, 14 on day abbreviations, and 2 on the fixed-size Dial number. The focused follow-up removes blank text placeholders, keeps adjacent-month dates at readable contrast, and uses scalable type for the Dial and day labels. Remaining contrast reports require a settled capture and re-audit; they are not waived.
+
+Candidate `94e7e9b`: native compile, CI and 28 portable contracts passed. The 390pt dark and dark-large-text tours passed rendered-appearance assertions. The real Duo mode/appearance test passed; its separate preference round-trip failed finding Light after reopening More, so Codemagic run `6aeaa952a87b4d255fde5f29` stopped at the test gate with no signed IPA/upload. The follow-up compacts More choices and searches restored list offsets in both directions.
+
+Largest-text captures showed the Crown date/hint and destination rail exceeding available space. The follow-up permits Crown readout growth, wraps its hint, stacks the destination choices at accessibility sizes, and separates the Dial role label at those sizes. Card selection uses a full-card background button instead of inheriting a gesture onto static day marks. System sheet grabbers are excluded from the custom-button target check, alongside system navigation bars.
+
+PR #123 verifies the actual simulator hinge and orientation using pinned, provenance-checked CI tooling, with state readback and unmodified screenshots. A passed XCUIDevice orientation assignment is not rotation evidence.

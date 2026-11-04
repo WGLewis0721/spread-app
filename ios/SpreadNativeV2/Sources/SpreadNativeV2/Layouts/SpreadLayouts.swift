@@ -175,6 +175,7 @@ struct DialLayout: View {
     let snapshot: PlannerSnapshot
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var roles: [Responsibility] { rows.map(\.role) }
     private var arcs: [DialArc] { DialGeometry.arcs(for: roles) }
@@ -224,6 +225,11 @@ struct DialLayout: View {
                 .accessibilityIdentifier("dial")
             }
             .frame(height: 300)
+            if typeSize.isAccessibilitySize {
+                Text(selected?.role.name ?? "")
+                    .font(.headline).multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -267,11 +273,14 @@ struct DialLayout: View {
         let glow = Color(hex: selected?.role.color ?? "#8E8E93")
         return VStack(spacing: 2) {
             Text("\(SpreadHours.text(selected?.hours ?? 0))h")
-                .font(.system(size: 44, weight: .heavy)).monospacedDigit().tracking(-1.2)
+                .font(.system(typeSize.isAccessibilitySize ? .title3 : .largeTitle, weight: .heavy)).monospacedDigit().tracking(-1.2)
+                .lineLimit(1).minimumScaleFactor(0.65)
                 .contentTransition(.numericText())
                 .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.42), value: selected?.hours)
-            Text(selected?.role.name ?? "")
-                .font(.system(.body, weight: .bold)).lineLimit(1)
+            if !typeSize.isAccessibilitySize {
+                Text(selected?.role.name ?? "")
+                    .font(.system(.body, weight: .bold)).lineLimit(1)
+            }
             Text("of \(SpreadHours.text(total))h")
                 .font(.system(.footnote, weight: .semibold)).foregroundStyle(.white.opacity(0.78))
         }
@@ -429,7 +438,8 @@ struct DayLayout: View {
                     Button { if day != selectedDay { withAnimation(reduceMotion ? nil : SpreadMotion.curve) { selectedDay = day } } } label: {
                         VStack(spacing: 2) {
                             Text(String(PlannerDates.label(PlannerDates.date(day), pattern: "EEE").prefix(3)))
-                                .font(.system(.caption2, weight: .semibold))
+                                .font(.system(.footnote, weight: .semibold))
+                                .lineLimit(1).minimumScaleFactor(0.5)
                             Text(PlannerDates.label(PlannerDates.date(day), pattern: "d"))
                                 .font(.system(.body, weight: .heavy)).monospacedDigit()
                         }
