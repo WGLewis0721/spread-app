@@ -303,7 +303,6 @@ struct RoleRow: View {
     @State private var palette = false
     @State private var adjusting = false
     @State private var tasksOpen = true
-    @State private var confirmDelete = false
     @FocusState private var nameFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -351,14 +350,6 @@ struct RoleRow: View {
                 adjusting = false
             }
         }
-        .confirmationDialog("Remove \(role.name) and its tasks?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete responsibility", role: .destructive) {
-                Task { _ = await planner.send(["type": "removeRole", "roleId": role.id]) }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This removes the responsibility and its planned work. You cannot undo this from the card.")
-        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("role-block-\(role.id)")
     }
@@ -367,20 +358,9 @@ struct RoleRow: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 7) {
-            if editing {
-                Button { confirmDelete = true } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.system(.title2, weight: .semibold))
-                        .foregroundStyle(Spread.danger)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Delete \(role.name)")
-                .accessibilityIdentifier("remove-role-\(role.id)")
-                .transition(.move(edge: .leading).combined(with: .opacity))
-            }
-
+            // The destructive control belongs *outside* the rounded Wallet
+            // border. Never insert it into this row: doing so reallocates the
+            // icon, name, hour count and chevron every time editing starts.
             Button {
                 if editing {
                     withAnimation(SpreadMotion.cascade) { palette.toggle() }
@@ -792,6 +772,7 @@ struct StackLayout: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var expandedIds: Set<String> = []
+    @State private var pendingDeleteId: String?
 
     private var focusedId: String { selectedRole ?? snapshot.roles.first?.id ?? "" }
 
@@ -832,6 +813,30 @@ struct StackLayout: View {
                 .modifier(RoleEditGlow(color: Color(hex: role.color), enabled: editing))
                 .shadow(color: Color(hex: role.color).opacity(open ? 0.18 : 0.09),
                         radius: open ? 16 : 8, y: 4)
+                // Floating tab is drawn AFTER the card clipping/border: it
+                // protrudes into the existing 16pt page gutter without
+                // changing the card frame or any text wrapping.
+                .overlay(alignment: .leading) {
+                    if editing {
+                        Button { pendingDeleteId = role.id } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.system(size: 30, weight: .semibold))
+                                .foregroundStyle(Spread.danger)
+                                .shadow(color: Spread.shadow, radius: 5, y: 2)
+                                .offset(x: -7)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        // The 44pt touch box remains entirely on-screen;
+                        // only the red glyph hangs past the card border.
+                        .offset(x: -16)
+                        .transition(.offset(x: -24).combined(with: .opacity))
+                        .accessibilityLabel("Delete \(role.name)")
+                        .accessibilityHint("Requires confirmation before removing the responsibility and tasks")
+                        .accessibilityIdentifier("remove-role-\(role.id)")
+                    }
+                }
                 // Wallet overlap is decorative; never let a following card
                 // cover large accessibility-sized names, hours or the chevron.
                 .padding(.bottom, open || editing || typeSize.isAccessibilitySize ? 12 : -36)
@@ -849,6 +854,23 @@ struct StackLayout: View {
         .padding(.bottom, 36)
         .animation(reduceMotion ? nil : SpreadMotion.curve, value: expandedIds)
         .animation(reduceMotion ? nil : SpreadMotion.curve, value: editing)
+        .confirmationDialog(
+            "Remove \(snapshot.roles.first(where: { $0.id == pendingDeleteId })?.name ?? "this responsibility") and its tasks?",
+            isPresented: Binding(
+                get: { pendingDeleteId != nil },
+                set: { if !$0 { pendingDeleteId = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete responsibility", role: .destructive) {
+                guard let id = pendingDeleteId else { return }
+                pendingDeleteId = nil
+                Task { _ = await planner.send(["type": "removeRole", "roleId": id]) }
+            }
+            Button("Cancel", role: .cancel) { pendingDeleteId = nil }
+        } message: {
+            Text("This removes the responsibility and its planned work. You cannot undo this from the card.")
+        }
         .onChange(of: snapshot.roles.map(\.id)) { _, ids in
             expandedIds.formIntersection(Set(ids))
             if let selectedRole, !ids.contains(selectedRole) { self.selectedRole = ids.first }
