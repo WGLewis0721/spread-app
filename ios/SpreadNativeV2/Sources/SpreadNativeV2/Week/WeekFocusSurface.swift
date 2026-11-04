@@ -67,7 +67,7 @@ struct WeekFocusSurface: View {
     }
     private func isComplete(roleId: String, on date: String) -> Bool {
         let ids = Set(snapshot.allocations.filter { $0.day == date && $0.roleId == roleId }.map(\.id))
-        let tasks = snapshot.tasks.filter { $0.roleId == roleId && $0.allocationId.map { ids.contains($0) } == true }
+        let tasks = snapshot.tasks.filter { $0.roleId == roleId && ids.contains($0.allocationId ?? "") }
         return !tasks.isEmpty && tasks.allSatisfy(\.done)
     }
     private func rememberExpansions() {

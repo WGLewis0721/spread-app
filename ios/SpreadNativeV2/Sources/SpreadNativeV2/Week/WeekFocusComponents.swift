@@ -193,7 +193,7 @@ struct FocusedRoleCard: View {
     }
     private var tasks: [PlannerTask] {
         let ids = Set(allocations.map(\.id))
-        let filtered = snapshot.tasks.filter { $0.roleId == role.id && $0.allocationId.map { ids.contains($0) } == true }
+        let filtered = snapshot.tasks.filter { $0.roleId == role.id && ids.contains($0.allocationId ?? "") }
         let order = snapshot.dayTaskOrder?[day + "|" + role.id] ?? []
         let index = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
         return filtered.sorted {
