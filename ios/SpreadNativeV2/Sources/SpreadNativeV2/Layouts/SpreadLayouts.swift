@@ -309,6 +309,7 @@ struct TabsLayout: View {
     @Binding var tab: String
     let snapshot: PlannerSnapshot
     let onOpenTask: (String, String) -> Void
+    let onSelect: (String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var lastIndex = 0
@@ -373,6 +374,9 @@ struct TabsLayout: View {
         let tint: Color? = color.map { Color(hex: $0) }
         return Button {
             withAnimation(reduceMotion ? nil : SpreadMotion.curve) { tab = id }
+            // A second tap on an already-selected tab must still sync the role shared
+            // with Stack, Fan and Dial; onChange(of: tab) alone misses that case.
+            if id != "all" { onSelect(id) }
         } label: {
             HStack(spacing: 8) {
                 if let color { RoleBadge(category: category == "custom" ? nil : category, color: color, size: 26) }
