@@ -729,6 +729,19 @@ struct AddTaskRow: View {
 /// The Stack: the responsibilities as a vertical stack of illustrated cards. One card is open at a time (its
 /// placement, tasks and add-a-task line); the others stay compact, so every responsibility is visible at once and
 /// the open one has room. Choosing a card opens it with the shared curve; its role-colour edge is the brightest.
+/// Edit-only swipe directions. A leftward card slide reveals Manage at the
+/// trailing edge; a rightward slide reveals Delete at the leading edge.
+private enum WalletReveal: Equatable {
+    case none, manage, delete
+    var xOffset: CGFloat {
+        switch self {
+        case .none: return 0
+        case .manage: return -80
+        case .delete: return 80
+        }
+    }
+}
+
 struct StackLayout: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
@@ -741,87 +754,34 @@ struct StackLayout: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var expandedIds: Set<String> = []
     @State private var pendingDeleteId: String?
+    @State private var revealedRoleId: String?
+    @State private var revealedSide: WalletReveal = .none
+    @State private var draggedRoleId: String?
+    @State private var dragOffset: CGFloat = 0
 
     private var focusedId: String { selectedRole ?? snapshot.roles.first?.id ?? "" }
+    private var swipeAnimation: Animation? { reduceMotion ? nil : .interactiveSpring(response: 0.33, dampingFraction: 0.86) }
 
     var body: some View {
-        // A single column, full-bleed inside the planner's normal safe-area margins.
-        // Closed cards overlap like Apple Wallet; opening one releases it into its
-        // natural, task-driven height without hiding any row under the next card.
         LazyVStack(spacing: 0) {
             ForEach(Array(snapshot.roles.enumerated()), id: \.element.id) { index, role in
-                let open = expandedIds.contains(role.id)
-                RoleRow(
-                    planner: planner, snapshot: snapshot, role: role, editing: editing,
-                    focused: open, expanded: open,
-                    onSelect: { toggle(role.id) },
-                    onOpenTask: onOpenTask, onOpenRole: onOpenRole
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background {
-                    let tint = Color(hex: role.color)
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Spread.cardFill)
-                        .overlay(alignment: .top) {
-                            // Tinted upper edge and soft colour wash echo the Wallet stack
-                            // without hiding the readable solid background.
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .fill(LinearGradient(
-                                    colors: [tint.opacity(0.48), tint.opacity(0.16), .clear],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing
-                                ))
-                        }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(Color(hex: role.color).opacity(open || editing ? 0.85 : 0.48),
-                                      lineWidth: editing ? 1.5 : 1)
-                }
-                .modifier(RoleEditGlow(color: Color(hex: role.color), enabled: editing))
-                .shadow(color: Color(hex: role.color).opacity(open ? 0.18 : 0.09),
-                        radius: open ? 16 : 8, y: 4)
-                // Floating tab is drawn AFTER the card clipping/border: it
-                // protrudes into the existing 16pt page gutter without
-                // changing the card frame or any text wrapping.
-                .overlay(alignment: .leading) {
-                    if editing {
-                        Button { pendingDeleteId = role.id } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.system(size: 30, weight: .semibold))
-                                .foregroundStyle(Spread.danger)
-                                .shadow(color: Spread.shadow, radius: 5, y: 2)
-                                .offset(x: -7)
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        // The 44pt touch box remains entirely on-screen;
-                        // only the red glyph hangs past the card border.
-                        .offset(x: -16)
-                        .transition(.offset(x: -24).combined(with: .opacity))
-                        .accessibilityLabel("Delete \(role.name)")
-                        .accessibilityHint("Requires confirmation before removing the responsibility and tasks")
-                        .accessibilityIdentifier("remove-role-\(role.id)")
-                    }
-                }
-                // Wallet overlap is decorative; never let a following card
-                // cover large accessibility-sized names, hours or the chevron.
-                .padding(.bottom, open || editing || typeSize.isAccessibilitySize ? 12 : -36)
-                // Lower cards sit in front of the card above, like Wallet passes.
-                .zIndex(Double(index))
-                // The long press and the bottom dock's Edit button enter the same
-                // global editing state. Normal taps, text entry and scrolling remain.
-                .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
-                    withAnimation(reduceMotion ? nil : SpreadMotion.curve) { editing = true }
-                })
-                .accessibilityAction(named: Text("Edit \(role.name)")) { editing = true }
-                .modifier(SpreadEntrance(index: index))
+                walletCard(role, index: index)
+                    .padding(.bottom, expandedIds.contains(role.id) || editing || typeSize.isAccessibilitySize ? 12 : -36)
+                    .zIndex(Double(index))
+                    .modifier(SpreadEntrance(index: index))
             }
         }
         .padding(.bottom, 36)
         .animation(reduceMotion ? nil : SpreadMotion.curve, value: expandedIds)
         .animation(reduceMotion ? nil : SpreadMotion.curve, value: editing)
+        .onChange(of: editing) { _, active in
+            if !active { closeReveal() }
+        }
+        .onChange(of: snapshot.roles.map(\.id)) { _, ids in
+            expandedIds.formIntersection(Set(ids))
+            if let selectedRole, !ids.contains(selectedRole) { self.selectedRole = ids.first }
+            if let revealedRoleId, !ids.contains(revealedRoleId) { closeReveal() }
+        }
         .confirmationDialog(
             "Remove \(snapshot.roles.first(where: { $0.id == pendingDeleteId })?.name ?? "this responsibility") and its tasks?",
             isPresented: Binding(
@@ -833,20 +793,193 @@ struct StackLayout: View {
             Button("Delete responsibility", role: .destructive) {
                 guard let id = pendingDeleteId else { return }
                 pendingDeleteId = nil
-                Task { _ = await planner.send(["type": "removeRole", "roleId": id]) }
+                closeReveal()
+                Task {
+                    if await planner.send(["type": "removeRole", "roleId": id]) {
+                        SpreadHaptics.success()
+                    }
+                }
             }
-            Button("Cancel", role: .cancel) { pendingDeleteId = nil }
+            Button("Cancel", role: .cancel) {
+                pendingDeleteId = nil
+                SpreadHaptics.selection()
+            }
         } message: {
             Text("This removes the responsibility and its planned work. You cannot undo this from the card.")
-        }
-        .onChange(of: snapshot.roles.map(\.id)) { _, ids in
-            expandedIds.formIntersection(Set(ids))
-            if let selectedRole, !ids.contains(selectedRole) { self.selectedRole = ids.first }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Responsibilities in Stack view")
         .accessibilityValue(snapshot.roles.first(where: { $0.id == focusedId })?.name ?? "")
         .accessibilityIdentifier("stack-cards")
+    }
+
+    @ViewBuilder
+    private func walletCard(_ role: Responsibility, index: Int) -> some View {
+        let open = expandedIds.contains(role.id)
+        ZStack(alignment: .topLeading) {
+            if editing {
+                actionTray(for: role)
+            }
+            cardContents(role, open: open)
+                // Render-only offset: never resize the card, its text HStack,
+                // or its artwork. The underlying action is revealed in place.
+                .offset(x: cardOffset(for: role.id))
+                .animation(swipeAnimation, value: revealedRoleId)
+                .animation(swipeAnimation, value: revealedSide)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .simultaneousGesture(swipeGesture(for: role.id))
+        .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
+            guard !editing else { return }
+            withAnimation(reduceMotion ? nil : SpreadMotion.curve) { editing = true }
+        })
+        // Custom accessibility actions give VoiceOver/keyboard users a way to
+        // reach swipe-only actions, without another permanent button row.
+        .accessibilityAction(named: Text("Manage \(role.name)")) {
+            guard editing else { editing = true; return }
+            closeReveal()
+            SpreadHaptics.selection()
+            onOpenRole(role.id)
+        }
+        .accessibilityAction(named: Text("Delete \(role.name)")) {
+            if !editing { editing = true }
+            pendingDeleteId = role.id
+            SpreadHaptics.warning()
+        }
+    }
+
+    private func cardContents(_ role: Responsibility, open: Bool) -> some View {
+        RoleRow(
+            planner: planner, snapshot: snapshot, role: role, editing: editing,
+            focused: open, expanded: open,
+            onSelect: { toggle(role.id) },
+            onOpenTask: onOpenTask, onOpenRole: onOpenRole
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            let tint = Color(hex: role.color)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Spread.cardFill)
+                .overlay(alignment: .top) {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(LinearGradient(
+                            colors: [tint.opacity(0.48), tint.opacity(0.16), .clear],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ))
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color(hex: role.color).opacity(open || editing ? 0.85 : 0.48),
+                              lineWidth: editing ? 1.5 : 1)
+                .allowsHitTesting(false)
+        }
+        .modifier(RoleEditGlow(color: Color(hex: role.color), enabled: editing))
+        .shadow(color: Color(hex: role.color).opacity(open ? 0.18 : 0.09),
+                radius: open ? 16 : 8, y: 4)
+        .accessibilityAction(named: Text("Edit \(role.name)")) { editing = true }
+    }
+
+    @ViewBuilder
+    private func actionTray(for role: Responsibility) -> some View {
+        HStack {
+            if visibleSide(for: role.id) == .delete {
+                swipeAction("Delete", symbol: "trash.fill", id: "remove-role-\(role.id)", destructive: true) {
+                    pendingDeleteId = role.id
+                    SpreadHaptics.warning()
+                }
+            }
+            Spacer(minLength: 0)
+            if visibleSide(for: role.id) == .manage {
+                swipeAction("Manage", symbol: "slider.horizontal.3", id: "manage-role-\(role.id)", destructive: false) {
+                    closeReveal()
+                    SpreadHaptics.selection()
+                    onOpenRole(role.id)
+                }
+            }
+        }
+        .frame(height: 80, alignment: .center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 4)
+    }
+
+    private func swipeAction(
+        _ title: String,
+        symbol: String,
+        id: String,
+        destructive: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: symbol).font(.system(.title3, weight: .semibold))
+                Text(title).font(.system(.caption2, weight: .semibold))
+            }
+            .foregroundStyle(destructive ? Spread.onDanger : Spread.onAccent)
+            .frame(width: 72, height: 64)
+            .background(
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(destructive ? Spread.danger : Spread.accent)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title + " \(snapshot.roles.first(where: { $0.id == revealedRoleId })?.name ?? "responsibility")")
+        .accessibilityIdentifier(id)
+    }
+
+    private func visibleSide(for id: String) -> WalletReveal {
+        if draggedRoleId == id && abs(dragOffset) > 20 {
+            return dragOffset < 0 ? .manage : .delete
+        }
+        return revealedRoleId == id ? revealedSide : .none
+    }
+
+    private func cardOffset(for id: String) -> CGFloat {
+        if draggedRoleId == id { return dragOffset }
+        return revealedRoleId == id ? revealedSide.xOffset : 0
+    }
+
+    private func swipeGesture(for id: String) -> some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onChanged { value in
+                guard editing else { return }
+                let x = value.translation.width
+                let y = value.translation.height
+                // Vertical scrolling continues uninterrupted. Only an
+                // intentional horizontal gesture moves a Wallet card.
+                guard abs(x) > 22, abs(x) > abs(y) * 1.5 else { return }
+                let start = revealedRoleId == id ? revealedSide.xOffset : 0
+                draggedRoleId = id
+                dragOffset = min(88, max(-88, start + x))
+            }
+            .onEnded { value in
+                guard editing else { return }
+                defer { draggedRoleId = nil; dragOffset = 0 }
+                let x = value.translation.width
+                let y = value.translation.height
+                guard abs(x) >= 55, abs(x) > abs(y) * 1.5 else { return }
+                let start = revealedRoleId == id ? revealedSide.xOffset : 0
+                let moved = start + x
+                let side: WalletReveal = moved > 48 ? .delete : (moved < -48 ? .manage : .none)
+                if side != revealedSide || (side != .none && revealedRoleId != id) {
+                    SpreadHaptics.selection()
+                }
+                withAnimation(swipeAnimation) {
+                    revealedRoleId = side == .none ? nil : id
+                    revealedSide = side
+                }
+            }
+    }
+
+    private func closeReveal() {
+        withAnimation(swipeAnimation) {
+            revealedRoleId = nil
+            revealedSide = .none
+            draggedRoleId = nil
+            dragOffset = 0
+        }
     }
 
     private func toggle(_ id: String) {
@@ -855,6 +988,7 @@ struct StackLayout: View {
             else { expandedIds.insert(id) }
             selectedRole = id
         }
+        SpreadHaptics.selection()
     }
 }
 
