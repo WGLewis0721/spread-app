@@ -603,7 +603,8 @@ final class PlannerUITests: NativeUITestCase {
         let origin = app.coordinate(withNormalizedOffset: .zero)
         let from = origin.withOffset(CGVector(dx: viewport.frame.maxX - app.frame.minX - 65, dy: visible.midY - app.frame.minY))
         from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: -120, dy: 0)))
-        XCTAssertTrue(eventually { crown.label != initialWeek }, "A horizontal Week swipe no longer changes weeks")
+        XCTAssertTrue(eventually { crown.label != initialWeek },
+                      "A horizontal Week swipe no longer changes weeks; inspect the swipe anchor bounds and scroll recognizer")
         capture("fixed-week-after-horizontal-swipe")
     }
 
