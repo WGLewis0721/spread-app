@@ -92,7 +92,7 @@ struct NewSpreadSheet: View {
             HStack {
                 Text("Hours each week").font(Spread.callout).foregroundStyle(Spread.secondary)
                 Spacer()
-                HourStepper(value: draft.hours, label: "Hours for spread \(index + 1)") { hours in
+                HourStepper(value: draft.hours, label: "Hours for spread \(index + 1)", step: 0.5) { hours in
                     drafts[index].hours = hours
                 }
             }
@@ -169,7 +169,7 @@ struct RoleSheet: View {
                         HStack {
                             Text("Hours each week")
                             Spacer()
-                            HourStepper(value: role.hours, label: "\(role.name) hours") { hours in
+                            HourStepper(value: role.hours, label: "\(role.name) hours", step: 0.5) { hours in
                                 Task { await planner.send(["type": "setHours", "roleId": role.id, "hours": hours]) }
                             }
                         }
@@ -214,7 +214,7 @@ struct RoleSheet: View {
                         HStack {
                             Text("Hours")
                             Spacer()
-                            HourStepper(value: placeHours, label: "Hours to place") { placeHours = $0 }
+                            HourStepper(value: placeHours, label: "Hours to place", step: 0.5) { placeHours = $0 }
                         }
                         Button("Place \(SpreadHours.text(placeHours))h") {
                             Task { await planner.send(["type": "allocate", "roleId": role.id, "day": placeDay, "hours": placeHours]) }

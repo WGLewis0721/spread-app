@@ -350,7 +350,10 @@ struct RoleRow: View {
 
             hoursControl
 
-            if expanded == true {
+            if adjusting {
+                // While the hours are being adjusted the stepper needs the row; the menu and chevron wait.
+                EmptyView()
+            } else if expanded == true {
                 // The open card's quick actions, in one place instead of three more buttons on a 390 pt row.
                 Menu {
                     Button { onOpenRole(role.id) } label: { Label("Details and hours", systemImage: "slider.horizontal.3") }
@@ -391,7 +394,7 @@ struct RoleRow: View {
     @ViewBuilder private var hoursControl: some View {
         if adjusting {
             HStack(spacing: 0) {
-                HourStepper(value: role.hours, label: "\(role.name) hours") { hours in
+                HourStepper(value: role.hours, label: "\(role.name) hours", step: 0.5) { hours in
                     Task { await planner.send(["type": "setHours", "roleId": role.id, "hours": hours]) }
                 }
                 Button { adjusting = false } label: {

@@ -396,28 +396,31 @@ struct AllocationRow: View {
     }
 }
 
-/// `DayHours`: a minus button, the hours, and a plus button. Half-hour steps are not used here (the day step is one hour).
+/// `DayHours`: a minus button, the hours, and a plus button. A day's allocation steps by one hour, as the original
+/// planner did; a responsibility's weekly hours step by half an hour (`step: 0.5`), which the store's half-hour
+/// rule has always allowed and the earlier native editor offered.
 struct HourStepper: View {
     let value: Double
     let label: String
+    var step: Double = 1
     let onChange: (Double) -> Void
 
     var body: some View {
         HStack(spacing: 0) {
-            Button { onChange(SpreadHours.clamp(value - 1)) } label: {
+            Button { onChange(SpreadHours.clamp(value - step)) } label: {
                 Image(systemName: "minus").font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Decrease \(label)")
+            .accessibilityLabel("Decrease \(label)\(step < 1 ? " by half an hour" : "")")
             Text("\(SpreadHours.text(value))h")
                 .font(.system(.subheadline, weight: .semibold)).monospacedDigit()
                 .frame(minWidth: 32)
                 .accessibilityLabel("\(label), \(SpreadHours.spoken(value))")
-            Button { onChange(SpreadHours.clamp(value + 1)) } label: {
+            Button { onChange(SpreadHours.clamp(value + step)) } label: {
                 Image(systemName: "plus").font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Increase \(label)")
+            .accessibilityLabel("Increase \(label)\(step < 1 ? " by half an hour" : "")")
         }
     }
 }
