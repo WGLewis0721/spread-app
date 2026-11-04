@@ -154,6 +154,7 @@ class NativeUITestCase: XCTestCase {
     /// A responsibility may be offscreen in the lazy Wallet stack. Find its labeled expand control.
     func openWalletCard(_ name: String) {
         goSpread()
+        if app.buttons["Collapse " + name].firstMatch.exists { return }
         func control() -> XCUIElement {
             app.buttons.matching(NSPredicate(format: "label == %@", "Expand " + name + " and show tasks")).firstMatch
         }
@@ -422,7 +423,6 @@ final class JourneyUITests: NativeUITestCase {
     func testF07_WalletStackRetainsSelectionAndTasks() throws {
         try requireDataset(); launch(); selectRole(Dataset.role)
         XCTAssertTrue(el("stack-cards").exists)
-        XCTAssertTrue(el("role-block-" + Dataset.role).exists == false || el("stack-cards").exists)
         XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
         tapID("open-more")
         XCTAssertFalse(el("view-mode-button").exists, "The removed multi-layout picker must not return")
@@ -741,7 +741,12 @@ final class PlannerUITests: NativeUITestCase {
         goWeek()
         capture("viewport-\(width)-week")
         goSpread()
-        for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] { chooseMode(mode); capture("viewport-\(width)-" + mode.lowercased()) }
+        chooseMode("Stack")
+        capture("viewport-\(width)-wallet-closed")
+        if let card = waitElements(prefix: "expand-role-").first {
+            tapID(card.identifier)
+            capture("viewport-\(width)-wallet-expanded")
+        }
         goWeek(); el("week-month-toggle").tap()
         XCTAssertTrue(eventually { (self.el("week-month-toggle").value as? String) == "Month" })
         capture("viewport-\(width)-month")
@@ -758,7 +763,12 @@ final class PlannerUITests: NativeUITestCase {
         let tag = "\(width)\(label)"
         try auditScrolled("\(tag)-week", types: types)
         goSpread()
-        for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] { chooseMode(mode); try auditScrolled("\(tag)-\(mode.lowercased())", types: types) }
+        chooseMode("Stack")
+        try auditScrolled("\(tag)-wallet-closed", types: types)
+        if let card = waitElements(prefix: "expand-role-").first {
+            tapID(card.identifier)
+            try auditScrolled("\(tag)-wallet-expanded", types: types)
+        }
         goWeek(); el("week-month-toggle").tap()
         try audit("\(tag)-month", types: types)
     }
@@ -769,7 +779,15 @@ final class PlannerUITests: NativeUITestCase {
     func testTargets44Everywhere() throws {
         goWeek(); assertTargets("week")
         goSpread()
-        for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] { chooseMode(mode); assertTargets(mode.lowercased()) }
+        chooseMode("Stack")
+        assertTargets("wallet-closed")
+        if let card = waitElements(prefix: "expand-role-").first {
+            tapID(card.identifier)
+            assertTargets("wallet-expanded")
+        }
+        tapID("edit-spreads")
+        assertTargets("wallet-edit")
+        tapID("dock-done")
         tapID("manage-selected"); assertTargets("role-editor"); tapButton("Done")
         goWeek(); el("week-month-toggle").tap(); assertTargets("month")
     }
@@ -781,7 +799,14 @@ final class PlannerUITests: NativeUITestCase {
         capture("dynamic-type-xxxl-week")
         try auditScrolled("xxxl-week")
         goSpread()
-        for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] { chooseMode(mode); capture("dynamic-type-xxxl-\(mode.lowercased())"); try auditScrolled("xxxl-\(mode.lowercased())") }
+        chooseMode("Stack")
+        capture("dynamic-type-xxxl-wallet-closed")
+        try auditScrolled("xxxl-wallet-closed")
+        if let card = waitElements(prefix: "expand-role-").first {
+            tapID(card.identifier)
+            capture("dynamic-type-xxxl-wallet-expanded")
+            try auditScrolled("xxxl-wallet-expanded")
+        }
         goWeek(); el("week-month-toggle").tap(); capture("dynamic-type-xxxl-month"); try audit("xxxl-month")
         // The title and profile name are never truncated: everything is inside the screen.
         let title = app.staticTexts["Spread"].firstMatch
@@ -814,7 +839,9 @@ final class PlannerUITests: NativeUITestCase {
         capture("long-names-week")
         try audit("long-names-week")
         selectRole(role)
-        for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] { chooseMode(mode); XCTAssertEqual(selectedRoleLabel, "Manage \(role)"); try audit("long-names-\(mode.lowercased())") }
+        chooseMode("Stack")
+        XCTAssertEqual(selectedRoleLabel, "Manage \(role)")
+        try audit("long-names-wallet")
         capture("long-names-spread")
     }
 
@@ -829,7 +856,7 @@ final class PlannerUITests: NativeUITestCase {
             capture("orientation-\(name)-week", wholeScreen: true)
             attach(app.debugDescription, "orientation-hierarchy-" + name)
             try audit("orientation-\(name)-week")
-            goSpread(); chooseMode("Fan"); capture("orientation-\(name)-fan", wholeScreen: true)
+            goSpread(); chooseMode("Stack"); capture("orientation-\(name)-wallet", wholeScreen: true)
             goWeek()
         }
     }
@@ -880,7 +907,8 @@ final class VisualTourUITests: NativeUITestCase {
         capture("tour-\(style)-01-spread-stack")
 
         if !short {
-            // Give the open card real content so the evidence shows tasks, not an empty list.
+            // Open the first Wallet card before adding tasks; closed cards stay compact.
+            if let first = waitElements(prefix: "expand-role-").first { tapID(first.identifier) }
             let field = el("new-task-field")
             if field.waitForExistence(timeout: 6) {
                 typeInto("new-task-field", "Plan the week\n")
@@ -890,16 +918,23 @@ final class VisualTourUITests: NativeUITestCase {
                 capture("tour-\(style)-02-stack-with-tasks")
             } else { note("missing: new-task-field") }
 
-            // Open a different card: the Stack opens one at a time.
-            let blocks = elements(prefix: "role-block-")
-            if blocks.count > 1, blocks[1].isHittable { blocks[1].tap(); settle(1.0); capture("tour-\(style)-03-stack-second-card") }
+            // Open a second card; both must stay open and retain their task lists.
+            let chevrons = elements(prefix: "expand-role-")
+            if chevrons.count > 1 {
+                tapID(chevrons[1].identifier)
+                settle(1.0)
+                capture("tour-\(style)-03-wallet-two-expanded")
+            }
         }
 
         goSpread()
-        for mode in ["Fan", "Dial", "Tabs", "Day"] {
-            chooseMode(mode); settle(1.0); capture("tour-\(style)-04-\(mode.lowercased())")
+        if !short {
+            tapID("edit-spreads")
+            settle(0.8)
+            capture("tour-\(style)-04-wallet-edit-mode")
+            tapID("dock-done")
         }
-        chooseMode("Stack"); settle(0.6)
+        settle(0.6)
 
         goWeek(); settle(1.0)
         capture("tour-\(style)-05-week")
@@ -1022,7 +1057,9 @@ final class SpreadFlowUITests: NativeUITestCase {
     func testFlow5_MoveToSheetPlacesATask() throws {
         let tag = uniqueTag(); let task = "Move " + tag
         launch(); tapID("brand-home"); chooseMode("Stack")
-        // The first card is open by default: give its responsibility a task.
+        // Explicitly open the first card. No collapsed card edits data accidentally.
+        let first = try XCTUnwrap(waitElements(prefix: "expand-role-").first)
+        tapID(first.identifier)
         typeInto("new-task-field", task + "\n")
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch.waitForExistence(timeout: 20))
         goWeek(); ensureThisWeek()
@@ -1075,7 +1112,7 @@ final class DuoUITests: NativeUITestCase {
 
     /// Actual hinge and rotation changes run in native-duo-poses.yml. XCTest's orientation setter
     /// does not prove that a multi-panel simulator rotated, so this test makes no pose claim.
-    func testPlannerModesInBothAppearances() throws {
+    func testWalletStackInBothAppearances() throws {
         for dark in [false, true] {
             let name = "default-pose"
                 launch(["-spread.native.appearance", dark ? "dark" : "light"])
@@ -1085,11 +1122,17 @@ final class DuoUITests: NativeUITestCase {
                 XCTAssertGreaterThan(bounds.width, 0)
                 XCTAssertGreaterThan(bounds.height, 0)
                 XCTAssertLessThanOrEqual(el("week-crown").frame.height, 120, "The standard-size Crown expanded into the planner's scroll region")
-                for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] {
-                    chooseMode(mode)
-                    capture("duo-\(dark ? "dark" : "light")-\(name)-\(mode.lowercased())")
-                    assertTargets("duo-" + name + "-" + mode)
-                }
+                chooseMode("Stack")
+                capture("duo-\(dark ? "dark" : "light")-\(name)-wallet-closed")
+                assertTargets("duo-" + name + "-wallet-closed")
+                let cards = waitElements(prefix: "expand-role-", minimum: 2)
+                tapID(cards[0].identifier)
+                tapID(cards[1].identifier)
+                capture("duo-\(dark ? "dark" : "light")-\(name)-wallet-expanded")
+                assertTargets("duo-" + name + "-wallet-expanded")
+                tapID("edit-spreads")
+                capture("duo-\(dark ? "dark" : "light")-\(name)-wallet-edit")
+                tapID("dock-done")
                 goWeek(); capture("duo-\(dark ? "dark" : "light")-\(name)-week")
                 tapID("week-month-toggle"); capture("duo-\(dark ? "dark" : "light")-\(name)-month")
                 XCTAssertTrue(el("month").exists)
