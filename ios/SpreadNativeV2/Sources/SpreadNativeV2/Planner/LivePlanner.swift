@@ -11,6 +11,34 @@ struct LiveState: Decodable {
     let revision: Int
     let envelope: NativeV2Envelope
 }
+struct NativeTaskStub: Decodable {
+    let id: String
+    let text: String
+    let done: Bool
+}
+struct NativeDeletedTask: Decodable, Identifiable {
+    let id: String
+    let hatId: String
+    let weekKey: String
+    let deletedAt: Double
+    let task: NativeTaskStub
+}
+struct NativeOverdueTask: Decodable, Identifiable {
+    let weekKey: String
+    let hatId: String
+    let day: String
+    let task: NativeTaskStub
+    var id: String { task.id }
+}
+struct NativeBulkPreview: Decodable, Identifiable {
+    let taskId: String
+    let weekKey: String
+    let hatId: String
+    let targetAllocationId: String?
+    let error: String?
+    var id: String { taskId }
+    var eligible: Bool { targetAllocationId != nil && error == nil }
+}
 struct LiveReply: Decodable {
     let ok: Bool
     let taskDetail: NativeTaskDetail?
@@ -24,6 +52,10 @@ struct LiveReply: Decodable {
     let rollover: String?
     let exported: NativeExport?
     let monthMarks: [String: NativeDayMark]?
+    let deletedTasks: [NativeDeletedTask]?
+    let overdueTasks: [NativeOverdueTask]?
+    let bulkPreview: [NativeBulkPreview]?
+    let bulkMoved: Int?
 }
 
 /// Read-only observable projection; all mutations are awaited intents to the React store.
@@ -131,6 +163,34 @@ struct LiveReply: Decodable {
               let reply = try? JSONDecoder().decode(LiveReply.self, from: Data(text.utf8)),
               reply.requestId == requestId, reply.ok else { return nil }
         return reply.monthMarks
+    }
+
+    /// Read-only request with the same identity/revision guards as other planner reads.
+    /// It never changes the user's open week, data, profile, or local storage.
+    private func readWeekFeature(_ action: [String: Any]) async -> LiveReply? {
+        guard let current = state else { return nil }
+        let requestId = UUID().uuidString
+        let request: [String: Any] = ["protocolVersion": 1, "sessionId": current.sessionId,
+            "requestId": requestId, "expectedProfileId": current.envelope.profileId,
+            "expectedWeek": current.envelope.snapshot.weekKey, "expectedRevision": current.revision,
+            "action": action]
+        guard let bytes = try? JSONSerialization.data(withJSONObject: request),
+              let json = String(data: bytes, encoding: .utf8),
+              let text = try? await exchange(json),
+              let reply = try? JSONDecoder().decode(LiveReply.self, from: Data(text.utf8)),
+              reply.requestId == requestId, reply.ok,
+              state?.envelope.profileId == current.envelope.profileId else { return nil }
+        return reply
+    }
+    func recentlyDeletedTasks() async -> [NativeDeletedTask]? {
+        await readWeekFeature(["type": "readDeletedTasks"])?.deletedTasks
+    }
+    func allOverdueTasks(today: String) async -> [NativeOverdueTask]? {
+        await readWeekFeature(["type": "readOverdueTasks", "today": today])?.overdueTasks
+    }
+    func previewOverdueMove(taskIds: [String], targetDay: String, today: String) async -> [NativeBulkPreview]? {
+        await readWeekFeature(["type": "previewBulkOverdue", "taskIds": taskIds,
+                               "targetDay": targetDay, "today": today])?.bulkPreview
     }
 
     /// Adds hours for a responsibility to a day, and says why when it cannot. The store quietly does nothing when a
