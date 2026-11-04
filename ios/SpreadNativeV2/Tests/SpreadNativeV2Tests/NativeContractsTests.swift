@@ -211,6 +211,20 @@ extension NativeContractsTests {
         XCTAssertGreaterThan(widths[0], widths[2])
     }
 
+    func testDenseWalletHourStripReservesScrollableFortyFourPointTargets() throws {
+        // On a narrow iPhone the visible hour strip is ~326pt wide. The SwiftUI
+        // summary now allocates a scrollable content width instead of forcing ten
+        // buttons into 32pt regions. This is the content sizing contract.
+        let hours = Array(repeating: 2.0, count: 10)
+        let visible = 326.0
+        let contentWidth = max(visible, Double(hours.count) * 44 + Double(hours.count - 1) * 4)
+        let widths = HourStrip.widths(hours: hours, available: contentWidth, spacing: 4, minimum: 44)
+        XCTAssertEqual(contentWidth, 476, accuracy: 0.001)
+        XCTAssertEqual(widths.count, 10)
+        XCTAssertTrue(widths.allSatisfy { $0 >= 44 - 0.001 })
+        XCTAssertEqual(widths.reduce(0, +) + Double(hours.count - 1) * 4, contentWidth, accuracy: 0.001)
+    }
+
     func testHourStripFallsBackToEqualWidthsWhenNoSplitCanReachTheMinimum() throws {
         let widths = HourStrip.widths(hours: Array(repeating: 2, count: 10), available: 358, spacing: 4, minimum: 44)
         XCTAssertEqual(widths.count, 10)
