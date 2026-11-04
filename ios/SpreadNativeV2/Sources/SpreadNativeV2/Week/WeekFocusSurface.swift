@@ -78,7 +78,7 @@ struct WeekFocusSurface: View {
                 .padding(.top, 4)
                 .padding(.bottom, 6)
             HStack(alignment: .top, spacing: 8) {
-                if !sidebarHidden {
+                if !sidebarHidden && !sidebarExpanded {
                     responsibilityRail
                         .frame(width: 56)
                         .zIndex(2)
@@ -163,16 +163,16 @@ struct WeekFocusSurface: View {
     private var overview: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                if sidebarHidden {
-                    Button {
-                        sidebarHidden = false
-                        SpreadHaptics.selection()
-                    } label: {
-                        Image(systemName: "sidebar.left").frame(width: 44, height: 44)
-                    }
-                    .accessibilityLabel("Show responsibilities")
-                    .accessibilityIdentifier("focus-show-sidebar")
+                Button {
+                    sidebarHidden.toggle()
+                    if sidebarHidden { sidebarExpanded = false }
+                    SpreadHaptics.selection()
+                } label: {
+                    Image(systemName: sidebarHidden ? "sidebar.left" : "sidebar.left")
+                        .frame(width: 44, height: 44)
                 }
+                .accessibilityLabel(sidebarHidden ? "Show responsibilities" : "Hide responsibilities")
+                .accessibilityIdentifier("focus-show-sidebar")
                 Text(monthPlane ? PlannerDates.label(monthAnchor, pattern: "MMMM yyyy") : "This week")
                     .font(.system(.headline, weight: .semibold))
                 Spacer()
@@ -264,59 +264,22 @@ struct WeekFocusSurface: View {
     }
 
     private var responsibilityRail: some View {
-        VStack(spacing: 6) {
-            ScrollView {
-                VStack(spacing: 6) {
-                    ForEach(snapshot.roles) { role in
-                        Button {
-                            selectedRole = role.id
-                            expandedByDate[day, default: []].insert(role.id)
-                            if sidebarExpanded { sidebarExpanded = false }
-                            SpreadHaptics.selection()
-                        } label: {
-                            VStack(spacing: 3) {
-                                ZStack {
-                                    Circle().stroke(Color(hex: role.color).opacity(0.20), lineWidth: 2)
-                                    Circle()
-                                        .trim(from: 0, to: progress(for: role))
-                                        .stroke(Color(hex: role.color), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                                        .rotationEffect(.degrees(-90))
-                                    RoleBadge(category: role.category == "custom" ? nil : role.category,
-                                              color: role.color, size: 24)
-                                }
-                                .frame(width: 42, height: 42)
-                                if sidebarExpanded {
-                                    Text(role.name).font(.system(.caption2, weight: .medium))
-                                        .lineLimit(2).multilineTextAlignment(.center)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, minHeight: sidebarExpanded ? 65 : 50)
-                            .background(role.id == activeRole ? Color(hex: role.color).opacity(0.15) : Color.clear,
-                                        in: RoundedRectangle(cornerRadius: 12))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(role.name)
-                        .accessibilityAddTraits(role.id == activeRole ? .isSelected : [])
-                        .accessibilityIdentifier("focus-role-\(role.id)")
-                    }
+        ResponsibilitySidebar(
+            snapshot: snapshot,
+            selectedRole: $selectedRole,
+            expanded: sidebarExpanded,
+            onAdd: onNewRole,
+            onToggle: {
+                withAnimation(reduceMotion ? nil : SpreadMotion.curve) {
+                    sidebarExpanded.toggle()
+                }
+            },
+            onSelected: { _ in
+                if sidebarExpanded {
+                    withAnimation(reduceMotion ? nil : SpreadMotion.curve) { sidebarExpanded = false }
                 }
             }
-            Button(action: onNewRole) {
-                Image(systemName: "plus").frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.spreadPress)
-            .accessibilityLabel("Add responsibility")
-            Button {
-                withAnimation(reduceMotion ? nil : SpreadMotion.curve) { sidebarExpanded.toggle() }
-            } label: {
-                Image(systemName: sidebarExpanded ? "chevron.left.2" : "chevron.right.2")
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.spreadPress)
-            .accessibilityLabel(sidebarExpanded ? "Condense responsibilities" : "Expand responsibilities")
-        }
-        .padding(4)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 18))
+        )
     }
 
     private var dailyDetails: some View {
