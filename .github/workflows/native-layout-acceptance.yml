@@ -11,7 +11,8 @@ permissions:
   contents: read
 concurrency:
   group: native-layout-${{ github.ref }}
-  cancel-in-progress: true
+  # Retain long simulator evidence; the newest revision queues behind the current acceptance run.
+  cancel-in-progress: false
 jobs:
   viewport:
     runs-on: macos-15

@@ -573,7 +573,8 @@ struct DayMarks: View {
                 let on = placed.contains(iso)
                 Text(PlannerOrder.dayMarks[index])
                     .font(.system(.caption, weight: on ? Font.Weight.semibold : Font.Weight.medium))
-                    .foregroundStyle(on ? Color(hex: role.color) : Spread.tertiary)
+                    .foregroundStyle(on ? Spread.ink : Spread.tertiary)
+                    .underline(on)
             }
         }
         .frame(minHeight: 44)

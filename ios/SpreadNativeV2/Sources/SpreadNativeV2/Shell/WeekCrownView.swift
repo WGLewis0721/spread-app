@@ -98,7 +98,9 @@ struct WeekCrownView: View {
         // ideal height, including larger readout text, instead of splitting the screen with the list.
         .fixedSize(horizontal: false, vertical: true)
         .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-        .gesture(dragGesture)
+        // A drag across the readout must cancel its "Back to this week" button. Otherwise a
+        // sequence away from today can reset to today while the same finger is changing weeks.
+        .highPriorityGesture(dragGesture)
         .onChange(of: gestureActive) { _, active in
             guard !active else { return }
             travel.release()
@@ -199,7 +201,7 @@ struct WeekCrownView: View {
 
     /// Finger tracking. A 64 point crossing commits one week; the ridges keep moving with the finger.
     private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
+        DragGesture(minimumDistance: 8)
             .updating($gestureActive) { _, state, _ in state = true }
             .onChanged { value in
                 live = true

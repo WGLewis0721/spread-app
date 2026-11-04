@@ -86,6 +86,37 @@ workflows:
         submit_to_testflight: false
         submit_to_app_store: false
 
+  spread-store-status:
+    name: Spread - App Store status (read only)
+    max_build_duration: 10
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      vars:
+        APP_STORE_APPLE_ID: "6821191009"
+      xcode: 27.1
+    scripts:
+      - name: Read current Apple versions and uploaded builds
+        script: |
+          set -eu
+          mkdir -p artifacts/store-status
+          app-store-connect apps app-store-versions --platform IOS --json "$APP_STORE_APPLE_ID" > artifacts/store-status/versions.json
+          app-store-connect apps builds --json "$APP_STORE_APPLE_ID" > artifacts/store-status/builds.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for name in ("versions", "builds"):
+              data = json.loads(Path(f"artifacts/store-status/{name}.json").read_text())
+              rows = data if isinstance(data, list) else data.get("data", [data])
+              allowed = ("versionString", "appStoreState", "appVersionState", "version", "processingState", "expired", "uploadedDate", "platform")
+              summary = [{"id": row.get("id"), **{key: value for key, value in row.get("attributes", row).items() if key in allowed}} for row in rows]
+              Path(f"artifacts/store-status/{name}-summary.json").write_text(json.dumps(summary, indent=2))
+              print(name, json.dumps(summary))
+          PY
+    artifacts:
+      - artifacts/store-status/*-summary.json
+
   spread-pr119-internal-testflight:
     name: Spread PR #119 - manually approved INTERNAL TestFlight candidate
     # No automatic triggers. Isolated from the existing main-only App Store release workflow.
@@ -230,8 +261,13 @@ workflows:
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
             -only-testing:SpreadNativeUITests/DuoUITests \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testCrownHundredDragsWithThirtyReversals \
+            -only-testing:SpreadNativeUITests/SpreadFlowUITests/testFlow3_CrownCapsRoundTripAndToday \
             -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
           xcrun xcresulttool export attachments --path artifacts/Duo.xcresult --output-path artifacts/duo-screenshots
+          DUO_TOOLS="$(mktemp -d /tmp/spread-duo-tools.XXXXXX)"
+          npm install --prefix "$DUO_TOOLS" --ignore-scripts --no-save --no-audit --no-fund agent-device@0.21.36
+          bash scripts/native-system-appearance.sh "$DUO_TOOLS/node_modules/.bin/agent-device" "$NATIVE_UDID"
       - name: Select unused Apple build number and signing
         script: |
           set -eu

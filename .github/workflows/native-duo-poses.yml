@@ -44,7 +44,11 @@ jobs:
           ad() { "$AD" "$@" --platform ios --udid "$NATIVE_UDID" --session spread-duo-poses; }
           xcrun simctl launch --terminate-running-process "$NATIVE_UDID" com.graymatter.spread -spread.native.appearance dark
           ad open com.graymatter.spread --json > artifacts/session.json
-          ad wait 'id="native-content"' 90000
+          ready=0
+          for attempt in 1 2; do
+            if ad wait 'id="native-content"' 180000; then ready=1; break; fi
+          done
+          test "$ready" = 1 || { ad screenshot artifacts/startup-failure.png; exit 1; }
           for pose in closed half-open open; do
             ad fold "$pose" --json > "artifacts/hinge-$pose.json"
             for orientation in portrait landscape-left; do

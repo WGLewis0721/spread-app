@@ -933,8 +933,7 @@ final class SpreadFlowUITests: NativeUITestCase {
 /// Runs only on the real Duo destination selected by the candidate workflow. Window geometry and the
 /// real system appearance drive layout; no fixed screen mock or device-name branch enters the app.
 final class DuoUITests: NativeUITestCase {
-    func testAppearanceChoiceAndSystemChanges() throws {
-        defer { XCUIDevice.shared.appearance = .light }
+    func testAppearancePreferenceRoundTrip() throws {
         launch()
         for style in ["dark", "light", "system"] {
             tapID("open-more")
@@ -945,19 +944,18 @@ final class DuoUITests: NativeUITestCase {
                 XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(";" + style) == true }, "Appearance choice did not reach the planner")
             }
         }
-        for dark in [true, false] {
-            XCUIDevice.shared.appearance = dark ? .dark : .light
-            XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(dark ? ";dark" : ";light") == true }, "System appearance change did not reach the planner (device: \(XCUIDevice.shared.appearance), rendered: \(self.el("native-content").value ?? "missing"))")
-            capture("duo-system-" + (dark ? "dark" : "light"))
-        }
+        relaunch()
+        tapID("open-more")
+        XCTAssertTrue(eventually { self.el("appearance-system").isSelected }, "System preference did not survive a relaunch")
+        closeNativeSheets()
+        // Live System changes are asserted by native-system-appearance.sh using simctl readback and
+        // the actual rendered root. XCUIDevice's reported setting alone does not prove an OS change.
     }
 
     /// Actual hinge and rotation changes run in native-duo-poses.yml. XCTest's orientation setter
     /// does not prove that a multi-panel simulator rotated, so this test makes no pose claim.
     func testPlannerModesInBothAppearances() throws {
-        defer { XCUIDevice.shared.appearance = .light }
         for dark in [false, true] {
-            XCUIDevice.shared.appearance = dark ? .dark : .light
             let name = "default-pose"
                 launch(["-spread.native.appearance", dark ? "dark" : "light"])
                 XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(dark ? ";dark" : ";light") == true })

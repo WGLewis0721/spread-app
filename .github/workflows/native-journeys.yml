@@ -15,7 +15,8 @@ permissions:
   contents: read
 concurrency:
   group: native-journeys-${{ github.ref }}
-  cancel-in-progress: true
+  # Retain long simulator evidence; the newest revision queues behind the current acceptance run.
+  cancel-in-progress: false
 jobs:
   group:
     runs-on: macos-15

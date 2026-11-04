@@ -41,6 +41,10 @@ jobs:
             -test-timeouts-enabled YES -maximum-test-execution-time-allowance 1200 \
             -only-testing:SpreadNativeUITests/DuoUITests \
             -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Verify actual live system appearance with OS readback
+        run: |
+          npm install --prefix "$RUNNER_TEMP/spread-duo-tools" --ignore-scripts --no-save --no-audit --no-fund agent-device@0.21.36
+          bash scripts/native-system-appearance.sh "$RUNNER_TEMP/spread-duo-tools/node_modules/.bin/agent-device" "$NATIVE_UDID"
       - name: Export actual Duo captures and diagnostics
         if: always()
         run: |
