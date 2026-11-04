@@ -398,7 +398,7 @@ struct RoleRow: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(.body, weight: .semibold)).foregroundStyle(Spread.secondary)
-                        .frame(width: 36, height: 44)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("More for \(role.name)")
@@ -408,7 +408,7 @@ struct RoleRow: View {
                     Image(systemName: "chevron.right")
                         .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.secondary)
                         .rotationEffect(.degrees(isOpen ? 90 : 0))
-                        .frame(width: 32, height: 44)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.spreadPress)
