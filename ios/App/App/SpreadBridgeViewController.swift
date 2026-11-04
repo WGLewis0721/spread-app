@@ -146,7 +146,8 @@ final class SpreadContainerViewController: UIViewController {
     }
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        // The same calm canvas as the SwiftUI root and the launch screen, so launch never flashes gray.
+        view.backgroundColor = Spread.canvasUIColor
         addChild(engine)
         engine.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(engine.view)

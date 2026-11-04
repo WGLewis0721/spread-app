@@ -17,6 +17,10 @@ public enum Spread {
     public static let canvas = dynamic(light: 0xF4F1EA, dark: 0x060B18)
     /// Solid readable content surface.
     public static let elevated = dynamic(light: 0xFFFFFF, dark: 0x101C32)
+    /// The canvas as a UIKit colour (dynamic), for the UIKit container behind the SwiftUI root and launch continuity.
+    public static let canvasUIColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark ? UIColor(hex6: 0x060B18) : UIColor(hex6: 0xF4F1EA)
+    }
     /// Recess: the Crown's centre, task rows, the rail's trough.
     public static let inset = dynamic(light: 0xEBE7DD, dark: 0x0A1427)
     public static let ink = dynamic(light: 0x0E1A2E, dark: 0xF7FAFF)
