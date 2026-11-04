@@ -298,3 +298,72 @@ workflows:
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
+
+  spread-ipad-capture-verification:
+    name: Spread - iPad full-screen capture verification
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      vars:
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 27.1
+    scripts:
+      - name: Confirm unchanged candidate app sources
+        script: |
+          set -eu
+          mkdir -p artifacts
+          for path in ios/SpreadNativeV2 ios/App/App ios/App/App.xcodeproj; do
+            test "$(git rev-parse HEAD:$path)" = "$(git rev-parse 317b195353353cbcb5954a08786717807091600b:$path)"
+            git rev-parse "HEAD:$path" >> artifacts/app-source-identity.txt
+          done
+      - name: Bundle the same local-first planner
+        script: |
+          set -eu
+          npm ci
+          npm run ios:sync
+      - name: Prepare full-screen rotation evidence
+        script: |
+          set -eu
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("ios/App/SpreadNativeUITests/PlannerUITests.swift")
+          source = path.read_text()
+          assert source.count("app.screenshot()") == 2
+          source = source.replace("app.screenshot()", "XCUIScreen.main.screenshot()")
+          old = 'try startAtWidth(width)\n        capture("viewport-'
+          assert source.count(old) == 1
+          source = source.replace(old, 'try startAtWidth(width)\n        goSpread(); goWeek()\n        capture("viewport-')
+          old = 'defer { XCUIDevice.shared.orientation = .portrait }\n        for (name, orientation)'
+          assert source.count(old) == 1
+          source = source.replace(old, 'defer { XCUIDevice.shared.orientation = .portrait }\n        goSpread(); goWeek()\n        for (name, orientation)')
+          old = 'XCUIDevice.shared.orientation = orientation\n            XCTAssertTrue'
+          assert source.count(old) == 1
+          new = 'XCUIDevice.shared.orientation = orientation\n            XCTAssertTrue(eventually { orientation.isLandscape ? self.app.frame.width > self.app.frame.height : self.app.frame.height > self.app.frame.width }, "Window did not adopt the requested orientation")\n            attach(app.debugDescription, "orientation-hierarchy-" + name)\n            XCTAssertTrue'
+          source = source.replace(old, new)
+          path.write_text(source)
+          PY
+          git diff -- ios/App/SpreadNativeUITests/PlannerUITests.swift > artifacts/verification-harness.diff
+      - name: Boot the actual 1024pt iPad
+        script: |
+          node scripts/native-simulator.mjs 1024
+      - name: Capture all modes, actual rotation and dark iPad
+        script: |
+          set -eu
+          result=0
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testLayout1024 \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testIPadOrientations \
+            -only-testing:SpreadNativeUITests/VisualTourUITests/testTourDark \
+            -only-testing:SpreadNativeUITests/VisualTourUITests/testTourDarkLargeText \
+            -resultBundlePath artifacts/IPad.xcresult CODE_SIGNING_ALLOWED=NO || result=$?
+          if [ -d artifacts/IPad.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/IPad.xcresult --output-path artifacts/screenshots
+          fi
+          exit "$result"
+    artifacts:
+      - artifacts/screenshots/**
+      - artifacts/verification-harness.diff
+      - artifacts/app-source-identity.txt
