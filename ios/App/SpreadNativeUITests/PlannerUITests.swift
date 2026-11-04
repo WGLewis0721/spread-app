@@ -549,40 +549,53 @@ final class PlannerUITests: NativeUITestCase {
         launch()
     }
 
-    /// Editing must not steal horizontal space from a responsibility card:
-    /// the red delete tab hangs across its left border instead of entering
-    /// the header HStack and shifting the name, icon or hour count.
-    func testWalletFloatingDeletePreservesCardGeometry() throws {
+    /// Edit changes no Wallet text geometry. Swipe left to expose Manage;
+    /// swipe right for Delete. The rigid card moves, never reflows.
+    func testWalletSwipeActionsPreserveCardGeometry() throws {
         goSpread()
         let badge = try XCTUnwrap(waitElements(prefix: "role-colour-").first)
-        let roleId = String(badge.identifier.dropFirst("role-colour-".count))
-        let card = el("role-block-" + roleId)
-        let hour = el("hours-stepper-" + roleId)
-        let chevron = el("expand-role-" + roleId)
+        let id = String(badge.identifier.dropFirst("role-colour-".count))
+        let card = el("role-block-" + id)
+        let hour = el("hours-stepper-" + id)
+        let chevron = el("expand-role-" + id)
         scrollIntoView(card)
-        let beforeCard = card.frame
-        let beforeBadge = badge.frame
-        let beforeHours = hour.frame
-        let beforeChevron = chevron.frame
+        let cardWidth = card.frame.width
+        let badgeRel = badge.frame.minX - card.frame.minX
+        let hourRel = hour.frame.minX - card.frame.minX
+        let chevronRel = chevron.frame.minX - card.frame.minX
 
         tapID("edit-spreads")
-        let delete = el("remove-role-" + roleId)
-        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Floating delete did not appear")
-        XCTAssertTrue(delete.isHittable, "Floating delete is clipped or covered")
-        XCTAssertGreaterThanOrEqual(delete.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(delete.frame.height, 44)
-        XCTAssertGreaterThanOrEqual(delete.frame.minX, app.frame.minX - 1, "Delete touch target is offscreen")
-        XCTAssertLessThan(delete.frame.midX, card.frame.minX + 16,
-                          "Delete button is in the card's text layout instead of protruding past the left border")
+        XCTAssertFalse(el("remove-role-" + id).exists, "Delete should appear only after a right swipe")
+        XCTAssertFalse(el("manage-role-" + id).exists, "Manage should appear only after a left swipe")
+        XCTAssertEqual(card.frame.width, cardWidth, accuracy: 1)
+        XCTAssertEqual(badge.frame.minX - card.frame.minX, badgeRel, accuracy: 1)
+        XCTAssertEqual(hour.frame.minX - card.frame.minX, hourRel, accuracy: 1)
 
-        XCTAssertEqual(card.frame.width, beforeCard.width, accuracy: 1)
-        XCTAssertEqual(card.frame.minX, beforeCard.minX, accuracy: 1)
-        XCTAssertEqual(badge.frame.minX, beforeBadge.minX, accuracy: 1, "Role icon moved on Edit")
-        XCTAssertEqual(hour.frame.minX, beforeHours.minX, accuracy: 1, "Hour count moved on Edit")
-        XCTAssertEqual(chevron.frame.minX, beforeChevron.minX, accuracy: 1, "Expand chevron moved on Edit")
-        capture("wallet-floating-delete-no-reflow")
+        card.swipeLeft()
+        let manage = el("manage-role-" + id)
+        XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
+        XCTAssertTrue(manage.isHittable)
+        XCTAssertFalse(el("remove-role-" + id).exists)
+        XCTAssertEqual(card.frame.width, cardWidth, accuracy: 1)
+        XCTAssertEqual(badge.frame.minX - card.frame.minX, badgeRel, accuracy: 1)
+        XCTAssertEqual(hour.frame.minX - card.frame.minX, hourRel, accuracy: 1)
+        XCTAssertEqual(chevron.frame.minX - card.frame.minX, chevronRel, accuracy: 1)
+
+        // Move through center to the other action. An extra swipe is safe
+        // when a gesture stops at the neutral detent.
+        card.swipeRight()
+        if !el("remove-role-" + id).exists { card.swipeRight() }
+        let delete = el("remove-role-" + id)
+        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Right swipe did not reveal Delete")
+        XCTAssertTrue(delete.isHittable)
+        XCTAssertFalse(manage.exists)
+        XCTAssertEqual(card.frame.width, cardWidth, accuracy: 1)
+        XCTAssertEqual(badge.frame.minX - card.frame.minX, badgeRel, accuracy: 1)
+        XCTAssertEqual(hour.frame.minX - card.frame.minX, hourRel, accuracy: 1)
+        capture("wallet-manage-delete-swipe-no-reflow")
         tapID("dock-done")
-        XCTAssertFalse(delete.exists, "Delete tab remains visible after Done")
+        XCTAssertFalse(delete.exists, "Actions remain after leaving edit mode")
+        XCTAssertFalse(el("manage-selected").exists, "The obsolete bottom Manage box must not return")
     }
 
     /// After a brief introduction, visible labels fold left toward the icons.
