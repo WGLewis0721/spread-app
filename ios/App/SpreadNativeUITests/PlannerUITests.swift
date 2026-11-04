@@ -555,17 +555,27 @@ final class PlannerUITests: NativeUITestCase {
 
     func testWeekScrollsVerticallyAndStillSwipesHorizontally() throws {
         goWeek()
+        // Show the placement controls, as in an actual planning session. An empty Week can fit
+        // entirely on a Duo, and scrolling cannot move content that is shorter than its viewport.
+        let chip = try XCTUnwrap(waitElements(prefix: "role-chip-").first)
+        if !chip.isSelected { chip.tap() }
+        XCTAssertTrue(eventually { self.elements(prefix: "add-to-").count == 7 }, "The selected responsibility must offer placement on all seven days")
         let crown = el("week-crown")
         let initialWeek = crown.label
         let cards = elements(prefix: "day-card-")
         let first = try XCTUnwrap(cards.first)
+        let viewport = try XCTUnwrap(app.scrollViews.allElementsBoundByIndex.max { $0.frame.height < $1.frame.height })
+        let overflow = max(0, (cards.map { $0.frame.maxY }.max() ?? 0) + 16 - viewport.frame.maxY)
         let initialY = first.frame.minY
         scrollPage(up: true)
-        XCTAssertTrue(eventually { first.frame.minY < initialY - 60 }, "An upward drag over Week did not scroll its day cards")
+        if overflow > 5 {
+            XCTAssertTrue(eventually { first.frame.minY < initialY - min(60, overflow * 0.75) }, "An upward drag over Week did not scroll its day cards")
+        } else {
+            XCTAssertTrue(cards.allSatisfy { viewport.frame.contains($0.frame) }, "Every day must be visible when the Week fits")
+        }
         XCTAssertEqual(crown.label, initialWeek, "Vertical scrolling must not change the week")
         capture("fixed-week-after-vertical-scroll")
-        let viewport = try XCTUnwrap(app.scrollViews.allElementsBoundByIndex.max { $0.frame.height < $1.frame.height })
-        let visibleCard = try XCTUnwrap(cards.first { $0.frame.intersection(viewport.frame).height > 60 })
+        let visibleCard = try XCTUnwrap(cards.first { $0.frame.intersection(viewport.frame).height > 30 })
         let visible = visibleCard.frame.intersection(viewport.frame)
         let origin = app.coordinate(withNormalizedOffset: .zero)
         let from = origin.withOffset(CGVector(dx: viewport.frame.maxX - app.frame.minX - 65, dy: visible.midY - app.frame.minY))
