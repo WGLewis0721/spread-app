@@ -742,9 +742,20 @@ final class PlannerUITests: NativeUITestCase {
         capture("viewport-\(width)-week")
         goSpread()
         chooseMode("Stack")
+        // Apple iOS 27 resizable-scene contract: cards follow the actual scene
+        // width, not the old 720pt iPad column. The visible chevron remains a
+        // real 44pt target even as the scene narrows or text size increases.
+        let responsibility = try XCTUnwrap(waitElements(prefix: "role-block-").first)
+        scrollIntoView(responsibility)
+        XCTAssertGreaterThanOrEqual(responsibility.frame.width, CGFloat(width - 48),
+                                     "Wallet card stayed in a narrow column instead of filling the scene")
+        XCTAssertGreaterThanOrEqual(responsibility.frame.minX, app.frame.minX)
+        XCTAssertLessThanOrEqual(responsibility.frame.maxX, app.frame.maxX + 1)
         capture("viewport-\(width)-wallet-closed")
-        if let card = waitElements(prefix: "expand-role-").first {
-            tapID(card.identifier)
+        if let expand = waitElements(prefix: "expand-role-").first {
+            XCTAssertGreaterThanOrEqual(expand.frame.width, 44, "Wallet chevron hit area is too narrow")
+            XCTAssertGreaterThanOrEqual(expand.frame.height, 44, "Wallet chevron hit area is too short")
+            tapID(expand.identifier)
             capture("viewport-\(width)-wallet-expanded")
         }
         goWeek(); el("week-month-toggle").tap()
