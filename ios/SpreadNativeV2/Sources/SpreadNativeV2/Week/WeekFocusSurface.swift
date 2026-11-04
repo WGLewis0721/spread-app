@@ -82,9 +82,7 @@ struct WeekFocusSurface: View {
             }
         }
         .onChange(of: snapshot.weekKey) { _, newWeek in
-            if PlannerDates.weekKey(for: PlannerDates.date(day)) != newWeek {
-                selectedDay = newWeek // Monday, by owner decision
-            }
+            selectedDay = newWeek // Monday, by owner decision
         }
         .accessibilityIdentifier("week-focus-surface")
     }
