@@ -1,5 +1,7 @@
 # Claude — Fix Spread's UI in PR #119
 
+> **Status, 2026-11-04: PR #119 is merged to `main` (`c66116c`).** Continue from [CLAUDE_NATIVE_UI_REMAINING_HANDOFF.md](CLAUDE_NATIVE_UI_REMAINING_HANDOFF.md) and [SPREAD_NATIVE_UI_REMAINING_SPEC.md](SPREAD_NATIVE_UI_REMAINING_SPEC.md). Work on a new branch, not on `claude/spread-swiftui-parity-87llx2`, and open a draft PR to `main`. The text below is the original brief and is kept for the design intent.
+
 **Your job:** Fix the existing SwiftUI app, **not build another app**. Stay on `claude/spread-swiftui-parity-87llx2` and [PR #119](https://github.com/WGLewis0721/spread-app/pull/119).
 
 ## Where we are vs. where we want to be
