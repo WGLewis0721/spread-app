@@ -96,6 +96,8 @@ type Store = {
   removeHat: (hatId: string) => void;
   addHat: (name: string, hours: number, options?: { category?: SpreadCategory }) => void;
   addTask: (hatId: string, text: string) => void;
+  /** One atomic plan mutation; the viewed week stays unchanged even for a date in another month. */
+  addTaskToDay: (hatId: string, day: string, text: string) => boolean;
   toggleTask: (hatId: string, taskId: string) => void;
   /** Recoverable deletion, across profiles/weeks, including full task content. */
   deleteTask: (hatId: string, taskId: string) => void;
@@ -657,6 +659,25 @@ export const useSpread = create<Store>((set, get) => ({
       tasks: [...box.tasks, { id: uid(), text: trimmed, done: false }],
     }));
     commit(set, next);
+  },
+  addTaskToDay: (hatId, day, text) => {
+    const trimmed = text.trim();
+    if (!trimmed || !get().data.hats.some((role) => role.id === hatId)) return false;
+    const target = weekKey(new Date(day + "T12:00:00"));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(new Date(day + "T12:00:00").getTime()))
+      return false;
+    const data = get().data;
+    const seeded = ensureWeek({ ...data, currentWeek: target });
+    const week = seeded.weeks[target];
+    const allocation = week.allocations.find((item) =>
+      item.hatId === hatId && item.day === day && item.hours > 0);
+    const boxes = week.boxes.map((box) => box.hatId === hatId
+      ? { ...box, tasks: [...box.tasks, { id: uid(), text: trimmed, done: false,
+          ...(allocation ? { allocationId: allocation.id } : {}) }] }
+      : box);
+    commit(set, { ...seeded, currentWeek: data.currentWeek,
+      weeks: { ...seeded.weeks, [target]: { ...week, boxes } } });
+    return true;
   },
   toggleTask: (hatId, taskId) => {
     const next = mapBox(get().data, hatId, (box) => ({
