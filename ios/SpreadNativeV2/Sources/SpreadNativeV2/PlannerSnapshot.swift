@@ -143,6 +143,11 @@ public enum ChalkArtwork {
         categories.contains(raw) ? raw : "custom"
     }
 
+    /// Categories that have an original category glyph (`category-glyph-*`). "custom" uses the list mark.
+    static let categoryGlyphNames: Set<String> = [
+        "work", "school", "home", "health", "family", "fitness", "business", "project", "church", "personal"
+    ]
+
     /// Resource URL is resolved from this package, not the host app or a network URL.
     public static func resourceURL(for categoryName: String) -> URL? {
         Bundle.module.url(forResource: category(for: categoryName),
@@ -172,4 +177,19 @@ public enum SpreadV2Fixture {
             PlannerTask(id: "t-4", roleId: "health", text: "Walk after work", done: true, allocationId: "a-health")
         ]
     )
+}
+
+/// Role dots for one calendar day, as the original Month view drew them: up to three responsibility colours and
+/// a count of any further ones. It is a read-only answer from the planner; it is never written back.
+public struct NativeDayMark: Codable, Equatable, Sendable {
+    public let colors: [String]
+    public let extra: Int
+
+    public init(colors: [String], extra: Int) {
+        self.colors = colors
+        self.extra = extra
+    }
+
+    /// How many responsibilities are on the day (the dots shown plus the ones folded into "+N").
+    public var count: Int { colors.count + extra }
 }

@@ -84,3 +84,97 @@ workflows:
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
+
+  spread-pr119-internal-testflight:
+    name: Spread PR #119 - manually approved INTERNAL TestFlight candidate
+    # No automatic triggers. Isolated from the existing main-only App Store release workflow.
+    # Launch manually on Codemagic, selecting branch claude/spread-swiftui-parity-87llx2.
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.graymatter.spread
+      vars:
+        APP_STORE_APPLE_ID: "6821191009"
+        VITE_SPREAD_OPEN_ACCESS: "1"
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 26.5
+    scripts:
+      - name: Guard approved native candidate branch and local-only flags
+        script: |
+          set -eu
+          test "$CM_BRANCH" = "claude/spread-swiftui-parity-87llx2" || { echo "Internal candidate branch only" >&2; exit 1; }
+          test "${CM_PULL_REQUEST:-false}" = false || { echo "No PR event can publish" >&2; exit 1; }
+          test "$(printf "%s" "${CM_REPO_SLUG:-}" | tr "[:upper:]" "[:lower:]")" = "wglewis0721/spread-app" || { echo "Unexpected repository" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || { echo "Checked-out SHA mismatch" >&2; exit 1; }
+          CURRENT="$(git ls-remote https://github.com/WGLewis0721/spread-app.git refs/heads/claude/spread-swiftui-parity-87llx2 | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate branch changed during build; refuse upload" >&2; exit 1; }
+          test "$VITE_SPREAD_OPEN_ACCESS" = 1 || exit 1
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
+          test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
+      - name: Verify current candidate
+        script: |
+          set -eu
+          python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v
+          python3 scripts/app-store-preflight.py
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:spread
+          swift test --package-path ios/SpreadNativeV2
+          swift test --package-path ios/App/SpreadCloudCore
+      - name: Bundle and synchronize local-first Spread
+        script: |
+          set -eu
+          npm run ios:sync
+          python3 scripts/app-store-preflight.py --bundle dist-ios
+      - name: Reserve unused Apple build number
+        script: |
+          set -eu
+          LATEST_APPLE_BUILD="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+          python3 scripts/ios_build_number.py set \
+            --latest-apple "$LATEST_APPLE_BUILD" \
+            --codemagic-build "$BUILD_NUMBER" \
+            --project ios/App/App.xcodeproj/project.pbxproj \
+            --record /tmp/spread-ios-build-version.json
+          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
+      - name: Sign INTERNAL TestFlight only
+        script: |
+          xcode-project use-profiles \
+            --custom-export-options='{"testFlightInternalTestingOnly": true}'
+      - name: Build and validate signed internal IPA
+        script: |
+          set -eu
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
+            --scheme App
+          for ipa in build/ios/ipa/*.ipa; do
+            test -f "$ipa" || { echo "No signed IPA produced" >&2; exit 1; }
+            python3 scripts/app-store-preflight.py --ipa "$ipa"
+            LATEST_BEFORE_UPLOAD="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+            python3 scripts/ios_build_number.py verify \
+              --ipa "$ipa" \
+              --record /tmp/spread-ios-build-version.json \
+              --latest-apple "$LATEST_BEFORE_UPLOAD"
+          done
+      - name: Recheck exact source before internal TestFlight upload
+        script: |
+          set -eu
+          CURRENT="$(git ls-remote https://github.com/WGLewis0721/spread-app.git refs/heads/claude/spread-swiftui-parity-87llx2 | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Branch moved; refusing to publish stale candidate" >&2; exit 1; }
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload to App Store Connect / TestFlight only; no external beta review or App Store review.
+        # Internal tester assignment still requires verification in App Store Connect.
+        submit_to_testflight: false
+        submit_to_app_store: false

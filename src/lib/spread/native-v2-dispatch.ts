@@ -3,6 +3,9 @@ import { isSpreadCategory, shiftWeek, type SpreadData, type TaskContent } from "
 import { getSaveFacts } from "./local-status.ts";
 import { projectNativeV2, type NativeV2Envelope } from "./native-v2-projection.ts";
 import { flushSpread, retrySpreadSave, useSpread } from "./store.ts";
+import { buildWeekDocument, weekDocumentText } from "./week-document.ts";
+import { weekDocumentHTML } from "./native-v2-export.ts";
+import { dayMarks, monthGrid } from "./month.ts";
 
 const id = z.string().trim().min(1).max(200);
 const text = z.string().trim().min(1).max(10000);
@@ -59,6 +62,33 @@ const action = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("removeRole"), roleId: id }),
   z.strictObject({ type: z.literal("switchProfile"), profileId: id }),
   z.strictObject({ type: z.literal("addProfile"), name: text }),
+  z.strictObject({ type: z.literal("removeProfile"), profileId: id }),
+  z.strictObject({ type: z.literal("renameProfile"), profileId: id, name: text }),
+  z.strictObject({ type: z.literal("exportWeek"), format: z.enum(["text", "html", "docx"]) }),
+  // Read-only: the role dots for every day of one calendar month (any week), as the original Month view drew them.
+  z.strictObject({
+    type: z.literal("monthMarks"),
+    year: z.number().int().min(1970).max(2200),
+    month: z.number().int().min(0).max(11),
+  }),
+  z.strictObject({ type: z.literal("rollover"), force: z.boolean() }),
+  z.strictObject({
+    type: z.literal("moveSpreadToDay"),
+    roleId: id,
+    day,
+    hours: hours.refine((n) => n > 0),
+  }),
+  z.strictObject({ type: z.literal("moveAllocation"), allocationId: id, day }),
+  z.strictObject({
+    type: z.literal("setRoleColor"),
+    roleId: id,
+    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  }),
+  z.strictObject({
+    type: z.literal("setRoleCategory"),
+    roleId: id,
+    category: z.string().refine(isSpreadCategory),
+  }),
   z.strictObject({
     type: z.literal("changeWeek"),
     direction: z.union([z.literal(-1), z.literal(1), z.literal("today")]),
@@ -114,6 +144,11 @@ export type NativeReply = {
   ok: boolean;
   error?: string;
   undoId?: string | null;
+  rollover?: "done" | "confirm" | "empty";
+  /** Read-only export of the open week; never persisted and never part of planner state. */
+  exported?: { format: "text" | "html" | "docx"; content: string };
+  /** Read-only role dots per ISO date for one month; never persisted and never part of planner state. */
+  monthMarks?: Record<string, { colors: string[]; extra: number }>;
   state: NativeRead | null;
 };
 
@@ -157,6 +192,10 @@ export function createNativeV2Dispatcher(sessionId: string) {
       byte.toString(16).padStart(2, "0"),
     ).join("");
     if (disposed) return fail("closed-session");
+    // Exports are reads: they are not replay-protected and never change planner state.
+    if (command.action.type === "exportWeek") return exportWeek(command, command.action.format, fail);
+    if (command.action.type === "monthMarks")
+      return monthMarks(command, command.action.year, command.action.month, fail);
     const prior = requests.get(command.requestId);
     if (prior) {
       if (prior.fingerprint !== fingerprint) return fail("request-id-reused");
@@ -188,6 +227,47 @@ export function createNativeV2Dispatcher(sessionId: string) {
     });
     return result;
   }
+  async function exportWeek(
+    command: NativeRequest,
+    format: "text" | "html" | "docx",
+    fail: (error: string) => NativeReply,
+  ): Promise<NativeReply> {
+    const state = useSpread.getState();
+    if (!state.ready || !state.activeId) return fail("not-ready");
+    if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
+    if (command.expectedWeek !== state.data.currentWeek) return fail("stale-week");
+    const doc = buildWeekDocument(state.data);
+    let content: string;
+    if (format === "text") content = weekDocumentText(doc);
+    else if (format === "html") content = weekDocumentHTML(doc);
+    else {
+      // Loaded on demand: the Word writer is large and most sessions never export.
+      const { weekDocxBlob } = await import("./week-docx.ts");
+      const bytes = new Uint8Array(await (await weekDocxBlob(doc)).arrayBuffer());
+      let binary = "";
+      for (let index = 0; index < bytes.length; index += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+      }
+      content = btoa(binary);
+    }
+    return { requestId: command.requestId, ok: true, state: read(), exported: { format, content } };
+  }
+  /** Role dots for a month's grid, from the same helpers the original Month view used. A read: it is not
+   * replay-protected, ignores the open week and revision (the person may browse any month), and refuses
+   * when the profile has changed so one profile's plan can never be drawn into another's. */
+  function monthMarks(
+    command: NativeRequest,
+    year: number,
+    month: number,
+    fail: (error: string) => NativeReply,
+  ): NativeReply {
+    const state = useSpread.getState();
+    if (!state.ready || !state.activeId) return fail("not-ready");
+    if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
+    const marks: Record<string, { colors: string[]; extra: number }> = {};
+    for (const cell of monthGrid(year, month)) marks[cell.date] = dayMarks(state.data, cell.date);
+    return { requestId: command.requestId, ok: true, state: read(), monthMarks: marks };
+  }
   function run(command: NativeRequest, fail: (error: string) => NativeReply): NativeReply {
     const state = useSpread.getState();
     if (!state.ready || !state.activeId) return fail("not-ready");
@@ -197,6 +277,8 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (getSaveFacts().failed && !["retrySave", "readTaskContent"].includes(command.action.type))
       return fail("save-unavailable");
     const a = command.action;
+    if (a.type === "exportWeek") return fail("export-not-here");
+    if (a.type === "monthMarks") return fail("read-not-here");
     const invalid =
       a.type === "switchProfile" && !state.profiles.some((p) => p.id === a.profileId)
         ? "no-profile"
@@ -214,6 +296,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
       };
     }
     let undoId: string | null = null;
+    let rolloverOutcome: "done" | "confirm" | "empty" | undefined;
     try {
       const mutate = () => {
         switch (a.type) {
@@ -244,6 +327,28 @@ export function createNativeV2Dispatcher(sessionId: string) {
             break;
           case "addProfile":
             if (!state.addProfile(a.name)) throw new Error("profile-limit");
+            break;
+          case "removeProfile":
+            if (!state.removeProfile(a.profileId)) throw new Error("profile-refused");
+            break;
+          case "renameProfile":
+            if (!state.renameProfile(a.profileId, a.name)) throw new Error("profile-refused");
+            break;
+          case "rollover":
+            rolloverOutcome = state.rollover(a.force);
+            break;
+          case "moveSpreadToDay":
+            state.moveSpreadToDay(a.roleId, a.day, a.hours);
+            break;
+          case "moveAllocation":
+            state.moveAllocation(a.allocationId, a.day);
+            break;
+          case "setRoleColor":
+            state.setHatColor(a.roleId, a.color);
+            break;
+          case "setRoleCategory":
+            if (!isSpreadCategory(a.category)) throw new Error("invalid-category");
+            state.setHatCategory(a.roleId, a.category);
             break;
           case "addRole":
             state.addHat(a.name, a.hours, a.category === "custom" ? undefined : { category: a.category });
@@ -292,13 +397,22 @@ export function createNativeV2Dispatcher(sessionId: string) {
           "addRole",
           "switchProfile",
           "addProfile",
+          "renameProfile",
+          "removeProfile",
           "removeRole",
+          "rollover",
         ].includes(a.type)
       )
         mutate();
       else undoId = state.undoable(mutate);
       if (getSaveFacts().failed) return fail("save-failed");
-      return { requestId: command.requestId, ok: true, undoId, state: read() };
+      return {
+        requestId: command.requestId,
+        ok: true,
+        undoId,
+        ...(rolloverOutcome ? { rollover: rolloverOutcome } : {}),
+        state: read(),
+      };
     } catch {
       return fail("action-refused");
     }
@@ -331,11 +445,11 @@ export function createNativeV2Dispatcher(sessionId: string) {
 function validateTarget(a: NativeRequest["action"], data: SpreadData): string | null {
   const week = data.weeks[data.currentWeek];
   if (
-    (a.type === "allocationHours" || a.type === "removeAllocation") &&
+    (a.type === "allocationHours" || a.type === "removeAllocation" || a.type === "moveAllocation") &&
     !week?.allocations.some((p) => p.id === a.allocationId)
   )
     return "no-allocation";
-  if (a.type === "allocate") {
+  if (a.type === "allocate" || a.type === "moveSpreadToDay" || a.type === "moveAllocation") {
     const date = new Date(`${a.day}T12:00:00Z`);
     if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== a.day)
       return "invalid-day";
@@ -347,7 +461,7 @@ function validateTarget(a: NativeRequest["action"], data: SpreadData): string | 
   )
     return "no-task";
   if (
-    a.type === "allocate" &&
+    (a.type === "allocate" || a.type === "moveSpreadToDay" || a.type === "moveAllocation") &&
     (a.day < data.currentWeek || a.day >= shiftWeek(data.currentWeek, 1))
   )
     return "invalid-day";

@@ -5,6 +5,7 @@ These apply to any agent or tool working in this repository, alongside `AGENTS.m
 ## Before you change anything
 
 - Read `README.md` for how the planner works and where it deploys.
+- **Native SwiftUI PR #119:** read `CLAUDE_NATIVE_UI_HANDOFF.md` and `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` first. Their owner-approved visual direction and real UI verification supersede the older code-only handoff and the quiet React paint rule *for native SwiftUI visuals only*. Then read the parity spec/instructions and P1–P13 ledger; preserve behaviors, original art, existing planner store and all release gates. No merge, deployment or new TestFlight upload is authorized by design approval.
 - Read `APP_STORE_RELEASE_PLAN.md` before any iOS packaging, TestFlight, App Store, native storage/share, pricing, or CloudKit work. It fixes the 1.0 direction as Capacitor + the existing React app, local-first, no account required, paid-app commerce. For iCloud backup/sync, migrations, attachments, iPad and the related release gates read `docs/ICLOUD_PLAN.md` too, and never ship a cloud feature outside its `cloud.*` flag until its gate has passed.
 - **Design work:** the block below is generated from `docs/design/RULES_CARD.md`. Do not edit it here; run `npm run docs:sync`. Landing page rules, planner rules and device notes are in the packs the router names.
 
@@ -12,11 +13,11 @@ These apply to any agent or tool working in this repository, alongside `AGENTS.m
 **Start here:** `docs/design/README.md` (router). Plans and specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens as data: `docs/design/tokens.json`. Read the task pack the router names, then only the section it points to.
 
 **Look**
-- No new colors, fonts or decorative styles in the unflagged planner. Use a token (`--canvas`, `--elevated`, `--ink`, `--secondary`, `--tertiary`, `--line`, `--fill`, `--accent`, `--on-accent`, `--danger`, `--caution`, `--scrim`, `--shadow`, `--glass*`) or reuse a pattern.
+- In unflagged **React**, no new colors/fonts/decorative paint: use existing CSS tokens. **SwiftUI PR #119 native paint** follows the owner-approved `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` (deep navy, bounded role glow, metallic Crown) without changing React or landing.
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week keeps three kinds of thing: solid day cards, a dashed To place tray, tinted Free time chips.
-- Keep the Crown, Spread/Week/Month semantics, the hour bank and the quiet palette.
+- Keep Crown, Spread/Week/Month semantics, hour bank, original artwork and five modes. The quiet default palette applies to React; native board governs SwiftUI appearance only.
 - The landing page is separate (`docs/design/landing/DESIGN.md`): one focal object per section, both modes.
 
 **Behavior**

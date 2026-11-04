@@ -1,0 +1,73 @@
+name: Native visual tour
+# Real simulator screenshots of every main surface in dark and light (and large text), for before/after design
+# evidence. It builds a simulator app only (never a distributable, never signed, never uploaded). Artifacts are the
+# exported attachments from the XCUITest result bundle.
+on:
+  # Runs from the PR's own copy of this file (a dispatch-only workflow must already be on the default branch).
+  pull_request:
+    paths:
+      - ".github/workflows/native-visual-tour.yml"
+      - "ios/SpreadNativeV2/**"
+      - "ios/App/SpreadNativeUITests/**"
+      - "scripts/native-simulator.mjs"
+  workflow_dispatch:
+concurrency:
+  group: native-visual-tour-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  tour:
+    name: tour (${{ matrix.variant }}, ${{ matrix.width }} pt)
+    runs-on: macos-15
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { variant: after, width: 390, before_ref: "" }
+          - { variant: before, width: 390, before_ref: "b1ae53ad8820de01fb57a891c86c7bd26335f6b8" }
+          - { variant: after, width: 820, before_ref: "" }
+          - { variant: flows, width: 390, before_ref: "", tests: "SpreadFlowUITests" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "BEFORE variant, native sources as they were before the visual redesign"
+        if: ${{ matrix.before_ref != '' }}
+        run: |
+          # Only the SwiftUI sources are rewound. The tour test, the project and the workflow stay as they are, so
+          # the BEFORE and AFTER screenshots come from the same steps on the same simulator.
+          git checkout ${{ matrix.before_ref }} -- ios/SpreadNativeV2/Sources
+          git status --short | head -5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Create actual compatible simulator (retried; a loaded runner can time out simctl)
+        run: |
+          for attempt in 1 2 3; do
+            if node scripts/native-simulator.mjs ${{ matrix.width }}; then exit 0; fi
+            echo "simulator creation attempt $attempt failed; retrying"; sleep 20
+          done
+          exit 1
+      - name: Run the visual tour
+        run: |
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 900 \
+            -only-testing:SpreadNativeUITests/${{ matrix.tests || 'VisualTourUITests' }} \
+            -resultBundlePath artifacts/tour-${{ matrix.variant }}-${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Export screenshots
+        if: always()
+        run: |
+          if [ -d artifacts/tour-${{ matrix.variant }}-${{ matrix.width }}.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/tour-${{ matrix.variant }}-${{ matrix.width }}.xcresult --output-path artifacts/screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-tour-${{ matrix.variant }}-${{ matrix.width }}
+          path: artifacts

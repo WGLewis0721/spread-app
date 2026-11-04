@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="820" viewBox="0 0 1440 820" role="img" aria-label="Spread SwiftUI native brand specimen: navy canvas, metallic crown, functional blue accent, Chalkboard illustration placeholders and bounded role color cards">
+<defs>
+<linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071020"/><stop offset="1" stop-color="#030814"/></linearGradient>
+<linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F3F5FF"/><stop offset=".20" stop-color="#606F8B"/><stop offset=".38" stop-color="#DDE2ED"/><stop offset=".6" stop-color="#44516C"/><stop offset=".8" stop-color="#ECEFF4"/><stop offset="1" stop-color="#8190AC"/></linearGradient>
+<pattern id="ribs" width="22" height="110" patternUnits="userSpaceOnUse"><rect width="22" height="110" fill="url(#metal)"/><rect width="5" height="110" x="6" fill="#FAFDFF" opacity=".5"/><rect width="5" height="110" x="13" fill="#111827" opacity=".5"/></pattern>
+<linearGradient id="navyCard" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#152845"/><stop offset=".55" stop-color="#0C172A"/><stop offset="1" stop-color="#0A1223"/></linearGradient>
+<linearGradient id="blueBtn" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2F95FF"/><stop offset="1" stop-color="#0559C7"/></linearGradient>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10"/></filter>
+<style>text{font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#F7FAFF} .dim{fill:#B0BCD1} .label{font-size:18px;font-weight:600;letter-spacing:2px} .small{font-size:17px}.body{font-size:24px}.header{font-size:46px;font-weight:750}.role{font-size:27px;font-weight:680}</style>
+</defs>
+<rect width="1440" height="820" fill="url(#background)"/>
+<text class="label" x="70" y="80">SPREAD / NATIVE iOS</text><text class="header" x="70" y="146">Depth with discipline.</text>
+<text class="small dim" x="72" y="189">Owner-approved 2026-11-03 • Visual specimen, not an app screenshot</text>
+<line x1="70" y1="217" x2="1370" y2="217" stroke="#A3AEC7" opacity=".25"/>
+<g transform="translate(70,255)">
+ <rect width="795" height="122" rx="55" fill="#B7C5E2" opacity=".22" filter="url(#glow)"/>
+ <rect x="4" y="10" width="785" height="103" rx="40" fill="url(#ribs)" stroke="#D3DCEB" stroke-width="2"/>
+ <rect x="195" y="19" width="402" height="86" rx="34" fill="#081223" stroke="#D5DCE8" stroke-opacity=".9" stroke-width="2"/>
+ <text x="245" y="72" font-size="27" font-weight="650">‹</text><text x="397" y="63" text-anchor="middle" font-size="25" font-weight="650">This week</text><text x="397" y="86" text-anchor="middle" font-size="16" class="dim">Oct 5 – Oct 11</text><text x="552" y="72" font-size="27">›</text>
+</g>
+<text class="label" x="70" y="432">CATEGORY IDENTITY</text>
+<g transform="translate(70,455)">
+ <rect width="795" height="97" rx="27" fill="#34C759" opacity=".22" filter="url(#glow)"/>
+ <rect width="795" height="97" rx="27" fill="url(#navyCard)" stroke="#34C759" stroke-width="1.5"/>
+ <rect x="18" y="19" width="58" height="58" rx="17" fill="#34C759"/><path d="M37 34h20v7h7v21H30V41h7z" fill="#fff"/><path d="M40 32h14v7H40z" fill="none" stroke="#fff" stroke-width="3"/>
+ <text x="98" y="52" class="role">Work</text><text x="98" y="76" font-size="18" class="dim">2 tasks • 8h planned</text>
+ <text x="580" y="60" font-size="32" font-weight="700">8h</text><text x="720" y="61" class="body">•••</text>
+</g>
+<g transform="translate(70,563)">
+ <rect width="795" height="97" rx="27" fill="#FF9500" opacity=".17" filter="url(#glow)"/>
+ <rect width="795" height="97" rx="27" fill="url(#navyCard)" stroke="#FF9500" stroke-width="1.5"/>
+ <rect x="18" y="19" width="58" height="58" rx="17" fill="#FF9500"/><path d="M30 49l17-15 17 15v16H52V54H43v11H30z" fill="#fff"/>
+ <text x="98" y="52" class="role">Home</text><text x="98" y="76" font-size="18" class="dim">2 tasks • 4h planned</text>
+ <text x="580" y="60" font-size="32" font-weight="700">4h</text><text x="720" y="61" class="body">•••</text>
+</g>
+<g transform="translate(70,671)">
+ <rect width="795" height="97" rx="27" fill="#0A84FF" opacity=".18" filter="url(#glow)"/>
+ <rect width="795" height="97" rx="27" fill="url(#navyCard)" stroke="#0A84FF" stroke-width="1.5"/>
+ <rect x="18" y="19" width="58" height="58" rx="17" fill="#0A84FF"/><path d="M47 66l-17-17c-10-14 8-25 17-11 9-14 27-3 17 11z" fill="#fff"/>
+ <text x="98" y="52" class="role">Health</text><text x="98" y="76" font-size="18" class="dim">1 task • 3h planned</text>
+ <text x="580" y="60" font-size="32" font-weight="700">3h</text><text x="720" y="61" class="body">•••</text>
+</g>
+<g transform="translate(930,260)">
+ <text class="label" x="0" y="0">CALIBRATION PALETTE</text>
+ <rect y="33" width="88" height="88" rx="22" fill="#060B18" stroke="#FFF" stroke-opacity=".25"/>
+ <rect x="112" y="33" width="88" height="88" rx="22" fill="#101C32" stroke="#FFF" stroke-opacity=".25"/>
+ <rect x="224" y="33" width="88" height="88" rx="22" fill="#0A84FF"/>
+ <rect x="336" y="33" width="88" height="88" rx="22" fill="#F7FAFF"/>
+ <text class="small" x="0" y="150">Canvas</text><text class="small" x="112" y="150">Surface</text><text class="small" x="224" y="150">Action</text><text class="small" x="336" y="150">Ink</text>
+ <text class="small dim" x="0" y="175">#060B18</text><text class="small dim" x="112" y="175">#101C32</text><text class="small dim" x="224" y="175">#0A84FF</text><text class="small dim" x="336" y="175">#F7FAFF</text>
+ <text class="label" x="0" y="234">FUNCTIONAL CHROME</text>
+ <rect x="0" y="256" width="344" height="78" rx="38" fill="#101C32" stroke="#DDE6F4" stroke-opacity=".3"/>
+ <rect x="168" y="261" width="171" height="68" rx="32" fill="url(#blueBtn)"/>
+ <text x="77" y="304" text-anchor="middle" class="body">Spread</text><text x="256" y="304" text-anchor="middle" class="body">Week</text>
+ <text class="label" x="0" y="402">RULE OF RESTRAINT</text>
+ <text class="small dim" x="0" y="440">Only focused items glow strongly.</text>
+ <text class="small dim" x="0" y="473">Illustrations: use original Chalkboard assets.</text>
+ <text class="small dim" x="0" y="506">Do not infer features from concept screens.</text>
+</g>
+</svg>

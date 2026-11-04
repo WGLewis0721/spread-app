@@ -6,7 +6,7 @@
 
 ## Facts to work from
 
-**Principles.** The job is scanning days, tasks and hours calmly. Personalization is a tint and a backdrop, never a layout. Hierarchy comes from size, weight and spacing, not borders and fills. One accent, system type, hairlines, generous space. Role colors are data. `[Repo][Apple]`
+**Principles.** The job is scanning days, tasks and hours calmly. Hierarchy comes from size, weight and spacing. One functional accent, system type and legibility first. Role colors are data. **Owner-approved PR #119 native exception:** [native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md) permits deep navy, restrained metal Crown and bounded role-colored edge light in visible SwiftUI only. React/Studio/landing keep existing constraints. `[Repo][Apple]`
 
 **Two layers.** Controls and navigation float above content. Glass belongs to the controls layer only; the content layer (cards, task rows) uses standard materials or plain surfaces. Use glass sparingly on custom controls. `[Apple]`
 

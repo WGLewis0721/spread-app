@@ -68,3 +68,20 @@ enum PlannerDates {
         return "\(label(monday, pattern: "MMM d")) – \(label(sunday, pattern: "MMM d"))"
     }
 }
+
+extension PlannerDates {
+    /// Today on the device's own calendar, as `YYYY-MM-DD`. The store keys days by the local date.
+    static func localISO(_ date: Date = Date()) -> String {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
+    }
+
+    /// The Monday that starts the device's current week.
+    static func currentWeekKey() -> String {
+        weekKey(for: date(localISO()))
+    }
+}

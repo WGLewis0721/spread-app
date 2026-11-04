@@ -1,0 +1,3 @@
+# SwiftPM build products (local `swift build` / `swift test`); never commit
+.build/
+.swiftpm/

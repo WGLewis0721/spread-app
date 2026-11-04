@@ -2,7 +2,7 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md). Tier 2 pack: a digest, not the source. The rules card and [../tokens.json](../tokens.json) apply on top.
 
-**Use when:** you change Week, Spread, Month, a sheet, a toast, a task row, the Crown, or anything the planner shows. For the landing page use [landing-change.md](landing-change.md).
+**Use when:** you change Week, Spread, Month, a sheet, a toast, a task row, the Crown, or anything the planner shows. For native SwiftUI visuals follow [the approved brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md); behavior rules here still apply. For landing use [landing-change.md](landing-change.md).
 
 ## Facts to work from
 
@@ -37,7 +37,7 @@
 4. Convenience state uses a key that does not start with `spread.`.
 5. Select plain values from the store, never objects built in a selector (it re-renders forever).
 
-**Reference lock (2026-10-08):** keep the Crown, Spread/Week/Month semantics, responsibility colors, hour bank and quiet palette. Reject unrelated navigation, extra icon libraries and decorative animation.
+**Reference lock:** keep Crown, Spread/Week/Month semantics, role colors and hour bank. The quiet palette applies to React; owner-approved native SwiftUI paint uses [SPREAD_NATIVE_BRAND_BOARD.md](../planner/SPREAD_NATIVE_BRAND_BOARD.md) instead. Reject unrelated navigation/icon libraries and nonfunctional decoration.
 
 ## Checklist
 - [ ] Only tokens and patterns above; no new color, font or decorative style (else list an exception).

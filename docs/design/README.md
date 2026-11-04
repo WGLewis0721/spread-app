@@ -20,8 +20,6 @@ Stop at the first sufficient tier.
 | 3 | Long reference docs, read only the relevant sections | n/a | Only when the pack says the detail matters |
 | Data | [tokens.json](tokens.json): every planner token for light and dark, generated from `src/styles.css` | 4 KB | Instead of reading CSS or prose for token values |
 
-Rarely needed: [DECISIONS.md](DECISIONS.md) and historical Unified UX.
-
 ---
 
 ## 2. Task router
@@ -30,6 +28,7 @@ Rarely needed: [DECISIONS.md](DECISIONS.md) and historical Unified UX.
 | --- | --- | --- |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
+| Native SwiftUI UI/UX, PR #119 | [owner brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md) + [Claude handoff](../../CLAUDE_NATIVE_UI_HANDOFF.md) | [parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md); actual screenshots |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
 | Layout for iPhone, iPad or iPhone Duo; safe areas; dark palette; App Store screenshots | [packs/device-layout.md](packs/device-layout.md) | The device guide sections named in the pack |
@@ -58,8 +57,10 @@ All paths are under `docs/design/`.
 | specs/ (README.md is the index) | One spec per request | Plans, not approval |
 | packs/ | One digest per kind of task | Derived. The long documents win if they differ |
 | tokens.json | Planner tokens, light and dark | Generated from `src/styles.css` |
-| planner/SPREAD_DESIGN_SYSTEM.md | Planner visuals and patterns | Highest for planner UI. Includes the 2026-10-08 HIG polish and the reference lock |
-| planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | The Unified UX pass and its result matrix | Historical record, not a design authority. Its Duo section is superseded by the Duo guide |
+| [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Owner direction |
+| planner/SPREAD_DESIGN_SYSTEM.md | React planner visuals, native behavior invariants | Governs legacy UI and behavior |
+| planner/SPREAD_NATIVE_BRAND_BOARD.md | Owner-approved SwiftUI visual paint/geometry; [SVG specimen](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Native-only on PR #119 |
+| planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | Unified UX history | Historical only |
 | landing/DESIGN.md | Landing page | Highest for the landing page only, never for planner decisions. Frozen as `golden/2026-09-28-full-landing-modes` |
 | platforms/APPLE_DESIGN_PRINCIPLES.md | Native feel: materials, color, sheets | New 2026-10-28. Advisory, below the planner design system |
 | platforms/SPREAD_IPHONE_BUILD_GUIDE.md | iPhone plus the shared baseline (toolchain, Capacitor, repo rules, dark palette, tests) | Research notes from 2026-10-21 with evidence tags. The dark palette in section 6a is a recommendation, not adopted |
@@ -67,13 +68,13 @@ All paths are under `docs/design/`.
 | platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md | iPhone Duo | Same as above |
 | brand/ICON_HANDOFF.md | Icon files and placement (SVGs stay in `public/icons/`) | Highest for icon files |
 
-**When documents disagree, higher wins and the lower one is fixed in the same change:** (1) what ships: `src/styles.css`, `ROLE_COLORS` and hat colors in `src/lib/spread/model.ts`, the running app; (2) the governing document for the surface; (3) `[Repo]` rules in the device guides; (4) `[Apple]` facts; (5) `[3P]` and `[Rec]` leads; (6) historical records.
+**Authority:** Verified planner behavior/data wins. The [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) governs SwiftUI *visual treatment only*. React retains its CSS/tokens and planner system; landing its own board. Resolve document conflicts explicitly.
 
 ---
 
 ## 4. Where the design truth lives in code
 
-- Tokens and planner styles: `src/styles.css` (`:root`, `[data-theme="dark"]`, the `glass` utility, the "Landing page only" block). Read them as data in [tokens.json](tokens.json).
+- React planner tokens/styles: `src/styles.css`, generated [tokens.json](tokens.json). Native visual tokens: [brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md); implement centrally in SwiftUI.
 - Role colors: `ROLE_COLORS` and hat `color` in `src/lib/spread/model.ts`.
 - Theme: `applyTheme` in `src/lib/spread/store.ts` and the pre-paint script in `src/routes/__root.tsx` are the only writers of `data-theme`. Do not reuse it for a custom look.
 - Landing: `src/spread/screens/spread-app.tsx` (`UnlockScreen`) and `src/spread/components/landing-*.tsx`.
@@ -91,10 +92,10 @@ Only with the flag on may validated per-profile appearance override scoped color
 
 ## 6. Design-adjacent material that stays where it is
 
-- `user-testing/` (read by `scripts/e2e/coverage.mjs`) and `tools/launch-video/` (its own workspace).
+- `user-testing/` and `tools/launch-video/` (separate workspace).
 - Process, not design: `APP_STORE_RELEASE_PLAN.md`, `ROADMAP.md`, `docs/IOS_*.md`, `docs/APP_*.md`, `docs/ICLOUD_PLAN.md`, `docs/BETA_ACCESS.md`, `docs/WAITLIST_API.md`, `docs/audits/`.
 - Agent instruction files (`AGENTS.project.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`) carry the generated card and point here. Keep them thin.
-- Promo status, storyboard, production plan, end-state spec and Studio review live in the Claude Project "Spread-app-design", not in git.
+- Owner's native concept images are in the Nov 3 chat, not git; do not call them installed-build evidence.
 
 ---
 

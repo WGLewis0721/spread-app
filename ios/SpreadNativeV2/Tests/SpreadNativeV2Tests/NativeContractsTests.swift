@@ -174,3 +174,64 @@ extension NativeContractsTests {
         XCTAssertEqual(PlannerDates.monthCells(weekKey: "2028-02-07").compactMap(\.day).count, 29)
     }
 }
+
+extension NativeContractsTests {
+    // MARK: Hour strip (Spread summary)
+
+    func testHourStripIsProportionalWhenEverySegmentIsWideEnough() throws {
+        let widths = HourStrip.widths(hours: [10, 20, 10], available: 358, spacing: 4, minimum: 44)
+        XCTAssertEqual(widths.reduce(0, +), 350, accuracy: 0.001)
+        XCTAssertEqual(widths[1], widths[0] * 2, accuracy: 0.001)
+        XCTAssertEqual(widths[0], widths[2], accuracy: 0.001)
+    }
+
+    func testHourStripKeepsEverySegmentAtTheTouchMinimumAndFillsTheRow() throws {
+        let widths = HourStrip.widths(hours: [30, 0.5, 1, 0.5], available: 358, spacing: 4, minimum: 44)
+        XCTAssertEqual(widths.count, 4)
+        XCTAssertEqual(widths.reduce(0, +), 358 - 12, accuracy: 0.001)
+        for width in widths { XCTAssertGreaterThanOrEqual(width, 44 - 0.001) }
+        XCTAssertGreaterThan(widths[0], widths[2])
+    }
+
+    func testHourStripFallsBackToEqualWidthsWhenNoSplitCanReachTheMinimum() throws {
+        let widths = HourStrip.widths(hours: Array(repeating: 2, count: 10), available: 358, spacing: 4, minimum: 44)
+        XCTAssertEqual(widths.count, 10)
+        XCTAssertEqual(widths.reduce(0, +), 358 - 36, accuracy: 0.001)
+        XCTAssertEqual(Set(widths.map { ($0 * 1000).rounded() }).count, 1)
+    }
+
+    func testHourStripHandlesEmptyZeroAndBrokenInput() throws {
+        XCTAssertEqual(HourStrip.widths(hours: [], available: 300, spacing: 4, minimum: 44), [])
+        let zeros = HourStrip.widths(hours: [0, 0, 0], available: 300, spacing: 0, minimum: 44)
+        XCTAssertEqual(zeros.reduce(0, +), 300, accuracy: 0.001)
+        let bad = HourStrip.widths(hours: [.nan, 4, .infinity], available: 300, spacing: 0, minimum: 44)
+        XCTAssertEqual(bad.reduce(0, +), 300, accuracy: 0.001)
+        XCTAssertTrue(bad.allSatisfy { $0.isFinite && $0 >= 0 })
+        XCTAssertEqual(HourStrip.widths(hours: [3], available: 0, spacing: 0, minimum: 44), [0])
+    }
+
+    // MARK: Crown lifecycle
+
+    /// Why the on-screen Crown must call `release()` when a drag is cancelled, not only when it ends: a reducer
+    /// that still holds detents answers the next drag's first update (translation 0) with the opposite week.
+    func testCrownThatIsNotReleasedAfterACancelEmitsAPhantomOppositeWeek() throws {
+        var crown = CrownTravel()
+        XCTAssertEqual(crown.update(translation: 130), 2)
+        XCTAssertEqual(crown.update(translation: 0), -2, "an unreleased reducer undoes weeks on the next drag")
+        var released = CrownTravel()
+        XCTAssertEqual(released.update(translation: 130), 2)
+        released.release()
+        XCTAssertEqual(released.update(translation: 0), 0, "after release the next drag starts clean")
+    }
+}
+
+extension NativeContractsTests {
+    func testNativeDayMarkDecodesThePlannersMonthAnswerAndCountsFoldedRoles() throws {
+        let json = ##"{"2026-11-02":{"colors":["#FF9500","#007AFF","#34C759"],"extra":2},"2026-11-03":{"colors":[],"extra":0}}"##
+        let marks = try JSONDecoder().decode([String: NativeDayMark].self, from: Data(json.utf8))
+        XCTAssertEqual(marks["2026-11-02"]?.colors.count, 3)
+        XCTAssertEqual(marks["2026-11-02"]?.count, 5, "three dots plus two folded into +2")
+        XCTAssertEqual(marks["2026-11-03"]?.count, 0)
+        XCTAssertEqual(marks["2026-11-02"], NativeDayMark(colors: ["#FF9500", "#007AFF", "#34C759"], extra: 2))
+    }
+}
