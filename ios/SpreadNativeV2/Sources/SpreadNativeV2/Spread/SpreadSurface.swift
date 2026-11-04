@@ -272,6 +272,7 @@ struct RoleRow: View {
     @State private var adjusting = false
     @State private var tasksOpen = true
     @FocusState private var nameFocused: Bool
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var tasks: [PlannerTask] { snapshot.tasks(for: role.id) }
     private var isOpen: Bool { expanded ?? tasksOpen }
@@ -329,7 +330,8 @@ struct RoleRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !isOpen {
+            // At accessibility text sizes the name needs the room, so the small drawing steps aside.
+            if !isOpen && !typeSize.isAccessibilitySize {
                 ChalkIllustration(category: role.category, maxWidth: 68, maxHeight: 48)
                     .frame(width: 68, height: 48)
             }
@@ -493,6 +495,11 @@ struct PalettePanel: View {
 
     static let colors: [String] = ["#34C759", "#FF9500", "#007AFF", "#FF2D55", "#AF52DE", "#64D2FF", "#5856D6",
                                    "#30B0C7", "#FFCC00", "#FF9F0A", "#BF5AF2"]
+    /// Each category's preset colour (`SPREAD_CATEGORIES` in model.ts): choosing a symbol also takes this colour.
+    static let categoryColors: [String: String] = [
+        "work": "#34C759", "school": "#007AFF", "home": "#FF9500", "health": "#30B0C7", "family": "#AF52DE",
+        "fitness": "#FFCC00", "business": "#5856D6", "project": "#FF9F0A", "church": "#BF5AF2", "personal": "#FF2D55",
+    ]
     static let categories: [(id: String, label: String)] = [
         ("work", "Work"), ("school", "School"), ("home", "Home"), ("health", "Health"), ("family", "Family"),
         ("fitness", "Fitness"), ("business", "Business"), ("project", "Project"), ("church", "Church"), ("personal", "Personal"),

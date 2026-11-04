@@ -33,15 +33,22 @@ struct NewSpreadSheet: View {
                         drafts.append(Draft(id: nextId))
                         nextId += 1
                     } label: {
-                        Text("Add another spread").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus").font(.system(.subheadline, weight: .bold))
+                            Text("Add another spread").font(.system(.subheadline, weight: .semibold))
+                        }
+                        .foregroundStyle(Spread.accent)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .spreadChip(selected: false)
                     }
+                    .buttonStyle(.spreadPress)
                     .accessibilityIdentifier("add-another-spread")
                     Button { save() } label: {
                         Text("Save spreads").font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
                             .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Spread.accent, in: Capsule())
+                            .background(Capsule().fill(Spread.accentGradient))
                     }
+                    .buttonStyle(.spreadPress)
                     .disabled(!ready || saving)
                     .opacity(ready ? 1 : 0.4)
                     .accessibilityIdentifier("save-spreads")
@@ -60,16 +67,28 @@ struct NewSpreadSheet: View {
         .presentationDragIndicator(.visible)
     }
 
+    /// One spread being created, previewed as it will look: its tile and Chalkboard drawing take the chosen category's
+    /// colour as soon as it is picked.
     private func draftCard(_ index: Int) -> some View {
         let draft = drafts[index]
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Spread \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
-            TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }))
-                .font(.system(.body))
-                .padding(.horizontal, 14).frame(minHeight: 48)
-                .background(Spread.fill, in: RoundedRectangle(cornerRadius: 14))
-                .accessibilityLabel("Spread \(index + 1) name")
-                .accessibilityIdentifier("role-name-field")
+        let colorHex: String = draft.category.flatMap { PalettePanel.categoryColors[$0] } ?? "#8E8E93"
+        let tint = Color(hex: colorHex)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                RoleBadge(category: draft.category, color: colorHex, size: 48)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Spread \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
+                    TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }))
+                        .font(.system(.body))
+                        .padding(.horizontal, 12).frame(minHeight: 44)
+                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Spread.inset))
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
+                        .accessibilityLabel("Spread \(index + 1) name")
+                        .accessibilityIdentifier("role-name-field")
+                }
+                ChalkIllustration(category: draft.category ?? "custom", maxWidth: 72, maxHeight: 50)
+                    .frame(width: 72, height: 50)
+            }
             HStack {
                 Text("Hours each week").font(Spread.callout).foregroundStyle(Spread.secondary)
                 Spacer()
@@ -83,19 +102,20 @@ struct NewSpreadSheet: View {
                 ForEach(PalettePanel.categories, id: \.id) { item in
                     let selected = draft.category == item.id
                     Button { drafts[index].category = item.id } label: {
-                        RoleBadge(category: item.id, color: "#8E8E93", size: 32)
+                        RoleBadge(category: item.id, color: PalettePanel.categoryColors[item.id] ?? "#8E8E93", size: 36)
                             .frame(width: 44, height: 44)
-                            .overlay(Circle().stroke(Spread.ink, lineWidth: selected ? 2 : 0).frame(width: 40, height: 40))
+                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Spread.ink, lineWidth: selected ? 2 : 0).frame(width: 44, height: 44))
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.spreadPress)
                     .accessibilityLabel(item.label)
                     .accessibilityAddTraits(selected ? .isSelected : [])
                 }
             }
         }
         .padding(14)
-        .background(Spread.canvas, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .spreadCard(edge: draft.category == nil ? nil : tint, active: draft.category != nil)
     }
 
     private func save() {
