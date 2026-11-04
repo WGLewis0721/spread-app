@@ -27,6 +27,22 @@ jobs:
         run: |
           node scripts/native-simulator.mjs duo
           mkdir -p artifacts
+      - name: Probe the real SDK for hinge and reserved-region APIs (diagnostic, never gating)
+        run: |
+          # Native code does not yet use reserved regions. Record what the installed iOS 27.1 SDK really
+          # declares, so any hinge-aware layout is written against the actual signatures, not a guess.
+          mkdir -p artifacts
+          SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          {
+            echo "== xcodebuild -version"; xcodebuild -version
+            echo "== SDK path: $SDK"
+            echo "== simulator device types matching Duo"; xcrun simctl list devicetypes | grep -i -E "duo|fold" || echo "none"
+            echo "== runtimes"; xcrun simctl list runtimes
+            echo "== SwiftUI / UIKit declarations mentioning reserved regions, hinge or fold"
+            grep -rIn -E "reservedRegion|ReservedRegion|hingeAngle|HingeAngle|[Ff]oldable|[Ff]oldPose|devicePosture|DevicePosture" \
+              "$SDK/System/Library/Frameworks/SwiftUI.framework" "$SDK/System/Library/Frameworks/UIKit.framework" 2>/dev/null | head -300 || true
+          } > artifacts/sdk-reserved-regions-probe.txt 2>&1 || true
+          wc -l artifacts/sdk-reserved-regions-probe.txt
       - name: Build and install Spread
         run: |
           xcodebuild build -project ios/App/App.xcodeproj -scheme App \
