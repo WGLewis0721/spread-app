@@ -28,6 +28,7 @@ jobs:
           - { variant: after, width: 390, before_ref: "" }
           - { variant: before, width: 390, before_ref: "b1ae53ad8820de01fb57a891c86c7bd26335f6b8" }
           - { variant: after, width: 820, before_ref: "" }
+          - { variant: flows, width: 390, before_ref: "", tests: "SpreadFlowUITests" }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,7 +58,7 @@ jobs:
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
             -test-timeouts-enabled YES -maximum-test-execution-time-allowance 900 \
-            -only-testing:SpreadNativeUITests/VisualTourUITests \
+            -only-testing:SpreadNativeUITests/${{ matrix.tests || 'VisualTourUITests' }} \
             -resultBundlePath artifacts/tour-${{ matrix.variant }}-${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Export screenshots
         if: always()

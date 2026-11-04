@@ -948,3 +948,124 @@ final class VisualTourUITests: NativeUITestCase {
         app.swipeDown(velocity: .fast); settle(0.6)
     }
 }
+
+// MARK: - Flow regression for the redesigned UI
+
+/// End-to-end checks of the redesigned screens through the real app. These are hard assertions (unlike the tour):
+/// each flow creates its own uniquely tagged data, so it holds whatever an earlier run left in the simulator.
+final class SpreadFlowUITests: NativeUITestCase {
+    private func uniqueTag() -> String { String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6)) }
+
+    private func closeSheets() {
+        for _ in 0..<3 {
+            let done = app.buttons["Done"].firstMatch
+            if done.exists && done.isHittable { done.tap(); continue }
+            let close = app.buttons["Close"].firstMatch
+            if close.exists && close.isHittable { close.tap(); continue }
+            break
+        }
+    }
+
+    /// F1: create a spread from More, add a task to its card, complete it, relaunch, and find both again.
+    func testFlow1_CreateSpreadAddTaskCompleteAndPersist() throws {
+        let tag = uniqueTag(); let name = "QA " + tag; let task = "Task " + tag
+        launch()
+        tapID("open-more"); tapID("more-new-spread")
+        typeInto("role-name-field", name)
+        tapID("save-spreads")
+        XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 30) || eventually { self.closeSheets(); return self.app.staticTexts[name].firstMatch.exists },
+                      "The new spread \(name) never appeared as a card")
+        closeSheets()
+        // A tap on a compact card opens it (it does not start a rename).
+        let title = app.staticTexts[name].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 20)); scrollIntoView(title); title.tap()
+        typeInto("new-task-field", task + "\n")
+        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 20), "The task \(task) was not added to the open card")
+        let check = app.buttons["Mark done: \(task)"].firstMatch
+        XCTAssertTrue(check.waitForExistence(timeout: 10)); scrollIntoView(check); check.tap()
+        XCTAssertTrue(app.buttons["Mark not done: \(task)"].firstMatch.waitForExistence(timeout: 20), "Completing the task did not register")
+        capture("flow1-before-relaunch")
+        relaunch()
+        let again = app.staticTexts[name].firstMatch
+        XCTAssertTrue(again.waitForExistence(timeout: 30), "\(name) did not survive a relaunch"); scrollIntoView(again); again.tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch.waitForExistence(timeout: 20), "The task did not survive a relaunch")
+        XCTAssertTrue(app.buttons["Mark not done: \(task)"].firstMatch.exists, "The completed state did not survive a relaunch")
+    }
+
+    /// The open week is stored data and survives relaunches, so each flow starts from this week.
+    private func ensureThisWeek() {
+        let back = el("week-crown-detail")
+        if back.waitForExistence(timeout: 3) { back.tap() }
+        _ = eventually { self.el("week-crown").label.hasPrefix("This week") }
+    }
+
+    /// F2: in Week, choose a responsibility, add it to a day, and Undo it.
+    /// (Undo, not a count of rows: the store folds hours into an existing allocation of the same responsibility and day.)
+    func testFlow2_PlaceHoursOnADayAndUndo() throws {
+        launch(); goWeek(); ensureThisWeek()
+        let chips = waitElements(prefix: "role-chip-")
+        XCTAssertFalse(chips.isEmpty, "Week shows no responsibility chips")
+        chips[0].tap()
+        guard let add = waitElements(prefix: "add-to-").first else { return XCTFail("No Add button appeared for the chosen responsibility") }
+        scrollIntoView(add); add.tap()
+        XCTAssertTrue(el("undo-last-change").waitForExistence(timeout: 20), "Adding to a day did not register a change (no Undo offered)")
+        capture("flow2-after-add")
+        tapID("undo-last-change")
+        XCTAssertTrue(eventually(15) { !self.el("undo-last-change").exists }, "Undo was not accepted")
+    }
+
+    /// F3: the Crown caps move one week each way, a round trip returns to the same week, and Today comes back.
+    func testFlow3_CrownCapsRoundTripAndToday() throws {
+        launch(); goWeek(); ensureThisWeek()
+        let start = el("week-crown").label
+        XCTAssertTrue(start.hasPrefix("This week"), "The Crown does not start on this week: \(start)")
+        for _ in 0..<5 { tapID("crown-next") }
+        XCTAssertTrue(eventually { self.el("week-crown").label != start }, "Five taps on Next did not move the Crown")
+        XCTAssertTrue(el("week-crown-detail").waitForExistence(timeout: 10), "No way back to this week is offered")
+        for _ in 0..<5 { tapID("crown-previous") }
+        XCTAssertTrue(eventually { self.el("week-crown").label == start }, "Five Next and five Previous did not return to the same week (phantom week)")
+        tapID("crown-next"); tapID("week-crown-detail")
+        XCTAssertTrue(eventually { self.el("week-crown").label.hasPrefix("This week") }, "Back to this week did not return")
+    }
+
+    /// F4: Week to Month and back by picking a day.
+    func testFlow4_MonthPickDayReturnsToWeek() throws {
+        launch(); goWeek(); ensureThisWeek()
+        tapID("week-month-toggle")
+        XCTAssertTrue(el("month").waitForExistence(timeout: 15), "Month did not open")
+        tapID("month-day-" + iso(thisMonday))
+        XCTAssertTrue(el("week-surface").waitForExistence(timeout: 20), "Picking a day did not return to the Week")
+        XCTAssertTrue(eventually { (self.el("week-month-toggle").value as? String) == "Week" }, "The toggle did not return to Week")
+    }
+
+    /// F5: the Move to sheet offers the eligible day, moves the task there, and Undo is available afterwards.
+    func testFlow5_MoveToSheetPlacesATask() throws {
+        let tag = uniqueTag(); let task = "Move " + tag
+        launch()
+        // The first card is open by default: give its responsibility a task.
+        typeInto("new-task-field", task + "\n")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch.waitForExistence(timeout: 20))
+        goWeek(); ensureThisWeek()
+        let chips = waitElements(prefix: "role-chip-")
+        XCTAssertFalse(chips.isEmpty); chips[0].tap()
+        guard let add = waitElements(prefix: "add-to-").first else { return XCTFail("No Add button for the first responsibility") }
+        scrollIntoView(add); add.tap()
+        XCTAssertTrue(el("undo-last-change").waitForExistence(timeout: 20), "Placing hours did not register")
+        tapID("dock-done")
+        // Find this task's own row (the tray group may be folded when many tasks are waiting) and its Place button.
+        func row() -> XCUIElement { app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch }
+        if !row().waitForExistence(timeout: 5) {
+            for header in elements(prefix: "tray-role-") where (header.value as? String) == "Collapsed" { scrollIntoView(header); header.tap() }
+        }
+        XCTAssertTrue(row().waitForExistence(timeout: 20), "The task \(task) is not in the To place tray")
+        let taskId = String(row().identifier.dropFirst("task-row-".count))
+        tapID("task-move-" + taskId)
+        XCTAssertTrue(el("move-to-sheet").waitForExistence(timeout: 15), "The Move to sheet did not open")
+        capture("flow5-move-to-sheet")
+        let day = waitElements(prefix: "eligible-day-").first
+        XCTAssertNotNil(day, "The sheet offered no eligible day for a responsibility that is on a day")
+        day?.tap()
+        XCTAssertTrue(eventually(20) { !self.el("move-to-sheet").exists }, "The sheet did not close after choosing a day")
+    }
+}

@@ -155,7 +155,9 @@ struct WeekCrownView: View {
         .padding(.horizontal, 50)
         .padding(.vertical, 7)
         .allowsHitTesting(onDetail != nil)
-        .accessibilityHidden(true)
+        // The Crown's own label already says the week; hide the readout only while it is purely a label. When it offers
+        // "Back to this week", that button must stay reachable by VoiceOver, Switch Control and UI tests.
+        .accessibilityHidden(onDetail == nil)
     }
 
     /// Metal caps: a narrow shaded edge drawn over a 44 pt hit region that moves one week.
