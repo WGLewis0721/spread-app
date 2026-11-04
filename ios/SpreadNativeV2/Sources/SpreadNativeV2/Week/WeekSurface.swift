@@ -17,12 +17,31 @@ struct WeekSurface: View {
     let onSwipeWeek: (Int) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var sizeClass
     /// Finger offset while a swipe is live. A `GestureState` returns to zero on end *and* on cancel, so an
     /// interrupted swipe (a system drag lift, a scroll takeover) can never leave the week offset or dimmed.
     @GestureState(resetTransaction: Transaction(animation: SpreadMotion.press)) private var swipeShift: CGFloat = 0
     @State private var width: CGFloat = 0
 
     private var today: String { PlannerDates.localISO() }
+    private func dayCard(_ position: Int) -> some View {
+        let iso = PlannerOrder.day(weekKey: snapshot.weekKey, displayPosition: position)
+        return DayCard(
+            planner: planner,
+            snapshot: snapshot,
+            day: iso,
+            selectedRole: selectedRole,
+            isToday: iso == today,
+            onOpenTask: onOpenTask,
+            onOpenRole: onOpenRole
+        )
+        .id(iso)
+        .accessibilityIdentifier("day-card-\(iso)")
+    }
+
+    private var dayColumns: [GridItem] {
+        sizeClass == .regular ? [GridItem(.flexible(), spacing: 12, alignment: .top), GridItem(.flexible(), alignment: .top)] : [GridItem(.flexible())]
+    }
     private var showsTray: Bool {
         snapshot.tasks.contains(where: { $0.allocationId == nil }) || snapshot.tasks.contains(where: { !$0.done })
     }
@@ -49,20 +68,15 @@ struct WeekSurface: View {
                 if showsTray {
                     ToPlaceTray(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask)
                 }
-                VStack(spacing: 12) {
-                    ForEach(0..<7, id: \.self) { position in
-                        let iso = PlannerOrder.day(weekKey: snapshot.weekKey, displayPosition: position)
-                        DayCard(
-                            planner: planner,
-                            snapshot: snapshot,
-                            day: iso,
-                            selectedRole: selectedRole,
-                            isToday: iso == today,
-                            onOpenTask: onOpenTask,
-                            onOpenRole: onOpenRole
-                        )
-                        .id(iso)
-                        .accessibilityIdentifier("day-card-\(iso)")
+                // One eager column on iPhone (every day stays in the accessibility tree); two columns on iPad, where a
+                // single wide column of day cards would be mostly air.
+                if sizeClass == .regular {
+                    LazyVGrid(columns: dayColumns, spacing: 12) {
+                        ForEach(0..<7, id: \.self) { position in dayCard(position) }
+                    }
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(0..<7, id: \.self) { position in dayCard(position) }
                     }
                 }
             }

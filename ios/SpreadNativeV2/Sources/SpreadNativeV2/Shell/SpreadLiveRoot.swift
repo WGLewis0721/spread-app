@@ -30,6 +30,7 @@ public struct SpreadLiveRoot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     public init(planner: LivePlanner, recovery: @escaping () -> Void) {
         self.planner = planner
@@ -182,7 +183,8 @@ public struct SpreadLiveRoot: View {
                 }
                 Color.clear.frame(height: 120) // room for the floating dock
             }
-            .frame(maxWidth: 640)
+            // iPhone keeps a 640 pt reading column; iPad (regular width) opens up so it is not a narrow strip.
+            .frame(maxWidth: sizeClass == .regular ? 880 : 640)
             .frame(maxWidth: .infinity)
             // Without this the week's slide transition never plays: a changed week would just swap in place.
             .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: snapshot.weekKey)
