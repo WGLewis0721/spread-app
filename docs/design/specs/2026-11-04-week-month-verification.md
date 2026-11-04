@@ -1,12 +1,13 @@
 # Week/Month redesign: 61-decision verification status
 
-> Part of the [Spread design brain](../README.md). See [spec index](README.md), the [owner decisions](2026-11-04-week-month-owner-decisions.md) and the [component specification](2026-11-04-week-month-components-implementation.md). This is a status record for PR #139, not a release approval.
+> Part of the [Spread design brain](../README.md). See [spec index](README.md), the [owner decisions](2026-11-04-week-month-owner-decisions.md) and the [component specification](2026-11-04-week-month-components-implementation.md). This is a status record for PR #139 (merged) and its follow-up PR, not a release approval.
 
 | Field | Value |
 | --- | --- |
 | Base | `main` 51f9a7c (#136 and #140), plus #138's compile fix |
-| Branch | `fix/redesign-finish-verify` (PR #139, draft) |
-| Release status | **NO-GO.** No macOS build or simulator run has passed on this branch yet |
+| Merged | PR #139 as 74356d5 on Nov 4, at the owner's request, **before** the macOS build and simulator runs finished |
+| Follow-up | `fix/redesign-verify-followup` |
+| Release status | **NO-GO.** No macOS build or simulator run had passed when #139 merged |
 
 ## Where evidence comes from
 
@@ -105,3 +106,16 @@ Code being present does not count as passing. Every row below still owes simulat
 ## Not touched (rules card boundaries)
 
 Cloud, sync, backup, restore and schema files were not edited. The sync roundtrip was fixed in `model.ts` and verified by the existing sync-model test. iCloud compatibility of the new fields is covered only by that test, not by a device sync.
+
+## Remaining work (follow-up PR)
+
+Each item closes only with evidence attached to the follow-up PR: an xcresult, screenshots, or a test name.
+
+1. **Native build:** `iOS shell` xcodebuild green on main after #139. Fix any Swift compile errors first; #139's Swift was not compiled before merge.
+2. **Week/Month journeys:** `native-journeys` groups `week-month` (390 pt), `week-month-ipad` (820 pt) and `reduce-motion`, plus the two journeys in `native-duo-acceptance`. Fix real failures; never skip a test.
+3. **Regression suites still green:** Classic Week, Wallet Stack, Crown, layout acceptance (390, 820, 1024, 1366), visual tour, Duo hinge and rotation.
+4. **Manual or simulator checks:** VoiceOver order and actions (Move up/down, Add task to this day, Day complete), the largest Dynamic Type size, light and dark, rotation and resizing, and Duo open and closed.
+5. **Data:** profile separation, backup and restore, and iCloud sync of `deletedTasks` and `dayTaskOrder` between two devices. Only the store-level sync test covers these today.
+6. **Deferred partial decisions:** #20 and #29 (an Adjust hours action that names the shortage) and #51 (directional day slide).
+7. **Screenshots** compared with the approved review images, with differences recorded here.
+
