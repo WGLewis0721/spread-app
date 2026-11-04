@@ -231,11 +231,14 @@ workflows:
       - name: Guard exact candidate and local-first configuration
         script: |
           set -eu
-          test "$CM_BRANCH" = "fix/swiftui-finish" || { echo "Wrong candidate branch" >&2; exit 1; }
+          case "$CM_BRANCH" in
+            main|fix/swiftui-finish) ;;
+            *) echo "Build must use main or the release candidate branch" >&2; exit 1 ;;
+          esac
           test "${CM_PULL_REQUEST:-false}" = false || { echo "Manual runs only" >&2; exit 1; }
           test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
           test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
-          CURRENT="$(git ls-remote origin refs/heads/fix/swiftui-finish | cut -f1)"
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
           test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate moved" >&2; exit 1; }
       - name: Verify and bundle the candidate
         script: |
@@ -262,6 +265,8 @@ workflows:
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
             -only-testing:SpreadNativeUITests/DuoUITests \
             -only-testing:SpreadNativeUITests/PlannerUITests/testCrownHundredDragsWithThirtyReversals \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testDialArcSelectionAndPreferencePersistence \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally \
             -only-testing:SpreadNativeUITests/SpreadFlowUITests \
             -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
           xcrun xcresulttool export attachments --path artifacts/Duo.xcresult --output-path artifacts/duo-screenshots
@@ -287,7 +292,7 @@ workflows:
             LATEST_APPLE="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
             python3 scripts/ios_build_number.py verify --ipa "$ipa" --record artifacts/build-version.json --latest-apple "$LATEST_APPLE"
           done
-          CURRENT="$(git ls-remote origin refs/heads/fix/swiftui-finish | cut -f1)"
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
           test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate moved; refusing upload" >&2; exit 1; }
     artifacts:
       - build/ios/ipa/*.ipa

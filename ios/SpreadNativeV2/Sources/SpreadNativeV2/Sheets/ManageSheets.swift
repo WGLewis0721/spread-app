@@ -500,7 +500,7 @@ struct MoreSheet: View {
                     .accessibilityIdentifier("more-rollover")
                 }
                     .listRowBackground(Spread.elevated)
-                Section("Spread view") {
+                Section("Spread layout") {
                     FlowRow(spacing: 6) {
                         ForEach(SpreadLayout.allCases) { item in
                             Button { layout = item } label: {
@@ -514,7 +514,8 @@ struct MoreSheet: View {
                         }
                     }
                     .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Spread view")
+                    .accessibilityLabel("Spread layout")
+                    .accessibilityIdentifier("view-mode-button")
                 }
                     .listRowBackground(Spread.elevated)
                 Section("Appearance") {
@@ -568,6 +569,7 @@ struct MoreSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Done").tapTarget() }
+                        .accessibilityIdentifier("close-more")
                 }
             }
             .sheet(isPresented: $newSpread) { NewSpreadSheet(planner: planner) }

@@ -145,13 +145,10 @@ class NativeUITestCase: XCTestCase {
     }
     func goSpread() { tapID("native-spread") }
     func chooseMode(_ mode: String) {
-        let button = el("layout-" + mode.lowercased())
-        if !button.isHittable {
-            let rail = el("view-mode-button")
-            scrollIntoView(rail)
-            for _ in 0..<5 where !button.isHittable { mode == "Stack" ? rail.swipeRight() : rail.swipeLeft() }
-        }
-        tapID("layout-" + mode.lowercased())
+        tapID("open-more")
+        let choice = tapID("more-layout-" + mode.lowercased())
+        XCTAssertTrue(choice.isSelected, "The requested layout preference was not selected")
+        tapID("close-more")
         RunLoop.current.run(until: Date().addingTimeInterval(0.6))
     }
     /// Reveals a tab in the horizontally scrolling row (offscreen tabs are not reachable until scrolled).
@@ -513,6 +510,70 @@ final class PlannerUITests: NativeUITestCase {
         launch()
     }
 
+    // MARK: Owner-reported radial layout, preference location and Week scroll regressions
+
+    func testDialArcSelectionAndPreferencePersistence() throws {
+        goSpread()
+        XCTAssertFalse(el("view-mode-button").exists, "Layout preferences must live in More")
+        let segments = elements(prefix: "hour-segment-")
+        let entries = try segments.map { segment -> (name: String, hours: Double) in
+            let pieces = segment.label.components(separatedBy: ", ")
+            let hours = try XCTUnwrap(Double(pieces.last?.components(separatedBy: " ").first ?? ""))
+            return (pieces.dropLast().joined(separator: ", "), max(0.5, hours))
+        }
+        XCTAssertGreaterThanOrEqual(entries.count, 2)
+        chooseMode("Dial")
+        let dial = el("dial")
+        scrollIntoView(dial)
+        XCTAssertTrue(dial.isHittable)
+        XCTAssertEqual(dial.frame.width, dial.frame.height, accuracy: 2, "The radial stage must be square")
+        let total = entries.reduce(0.0) { $0 + $1.hours }
+        let available = 360 - Double(entries.count) * 3
+        var cursor = 1.5
+        for entry in entries {
+            let span = entry.hours / total * available
+            let angle = (cursor + span / 2 - 90) * Double.pi / 180
+            // Tap the center of the visible arc in the dial's own square. Displaced ring geometry
+            // selects the wrong responsibility here even when the pure arc math is correct.
+            let radius = dial.frame.width / 2 - 22
+            dial.coordinate(withNormalizedOffset: CGVector(
+                dx: 0.5 + CGFloat(cos(angle)) * radius / dial.frame.width,
+                dy: 0.5 + CGFloat(sin(angle)) * radius / dial.frame.height
+            )).tap()
+            XCTAssertTrue(eventually { self.selectedRoleLabel == "Manage " + entry.name }, "The visible arc did not select " + entry.name)
+            cursor += span + 3
+        }
+        capture("fixed-dial-concentric")
+        relaunch()
+        XCTAssertTrue(el("dial").waitForExistence(timeout: 20), "The layout preference did not survive relaunch")
+        tapID("open-more")
+        scrollIntoView(el("more-layout-dial"))
+        XCTAssertTrue(el("more-layout-dial").isSelected)
+        capture("layout-preference-in-more")
+        tapID("close-more")
+    }
+
+    func testWeekScrollsVerticallyAndStillSwipesHorizontally() throws {
+        goWeek()
+        let crown = el("week-crown")
+        let initialWeek = crown.label
+        let cards = elements(prefix: "day-card-")
+        let first = try XCTUnwrap(cards.first)
+        let initialY = first.frame.minY
+        scrollPage(up: true)
+        XCTAssertTrue(eventually { first.frame.minY < initialY - 60 }, "An upward drag over Week did not scroll its day cards")
+        XCTAssertEqual(crown.label, initialWeek, "Vertical scrolling must not change the week")
+        capture("fixed-week-after-vertical-scroll")
+        let viewport = try XCTUnwrap(app.scrollViews.allElementsBoundByIndex.max { $0.frame.height < $1.frame.height })
+        let visibleCard = try XCTUnwrap(cards.first { $0.frame.intersection(viewport.frame).height > 60 })
+        let visible = visibleCard.frame.intersection(viewport.frame)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let from = origin.withOffset(CGVector(dx: viewport.frame.maxX - app.frame.minX - 65, dy: visible.midY - app.frame.minY))
+        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: -120, dy: 0)))
+        XCTAssertTrue(eventually { crown.label != initialWeek }, "A horizontal Week swipe no longer changes weeks")
+        capture("fixed-week-after-horizontal-swipe")
+    }
+
     // MARK: Crown (unchanged semantics: 100 real drags including 30 reversals)
 
     func testCrownHundredDragsWithThirtyReversals() {
@@ -823,9 +884,9 @@ final class VisualTourUITests: NativeUITestCase {
 
         goSpread()
         for mode in ["Fan", "Dial", "Tabs", "Day"] {
-            if tryTap("layout-" + mode.lowercased()) { settle(1.0); capture("tour-\(style)-04-\(mode.lowercased())") }
+            chooseMode(mode); settle(1.0); capture("tour-\(style)-04-\(mode.lowercased())")
         }
-        if tryTap("layout-stack") { settle(0.6) }
+        chooseMode("Stack"); settle(0.6)
 
         goWeek(); settle(1.0)
         capture("tour-\(style)-05-week")

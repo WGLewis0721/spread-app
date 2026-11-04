@@ -1,13 +1,21 @@
 # Native release candidate
 
 Branch: `fix/swiftui-finish`. Authoritative main: `3852a9f` (PRs #119 and #120).
-Implementation and release evidence are tracked in PR #121. Main, the web deployment and golden branches are unchanged.
+Implementation and release evidence are tracked in PR #121. The owner explicitly authorized merging the completed fixes into main on November 4. Golden branches remain protected. Main and the web deployment have not changed yet.
 
 ## Scope
 
 The candidate preserves the local-first planner and its serialized writer. It finishes the native Week, Month and five Spread layouts, Crown navigation, task/role/profile editing, rich-content save, appearance, measured dock layout and adaptive type. It adds no accounts, schema migration, cloud surface, accent picker or native backup rewrite.
 
 The latest fixes give Stack one accessibility identity, keep large-text headers scrollable, allow Crown and responsibility text to wrap, improve field prompt contrast and label Month weekday headings. Test navigation explicitly opens Week, searches restored list offsets and scrolls above the keyboard. iPad rotation requires matching window axes and captures the whole display. Duo automation queries the simulator guest panel table through an explicit device-set path because headless CoreDevice did not report displays.
+
+## Owner-reported corrections (November 4)
+
+The supplied iPhone screenshot showed the Dial ring and knob offset from the center disc: the arc used the page center inside a smaller square. All radial parts now use the square's center, and the square is centered once in the page. Layout controls move from the planner canvas to More → Spread layout, next to Appearance, using the existing saved device preference.
+
+Week's generic SwiftUI pan was replaced by a horizontal-only UIKit recognizer attached to the enclosing scroll view. It rejects vertical movement before recognition, keeps the role-bubble strip outside its region, and retains the existing week swipe threshold and cancellation reset. The enclosing vertical scroll view retains its own recognizer.
+
+New actual-app regression tests tap each visible dial arc, verify layout persistence through relaunch, require vertical Week movement without changing weeks, and require horizontal Week navigation. Both 390pt and actual Duo workflows include these tests. Visual tours and hinge automation use the relocated More controls. These corrections require fresh native compilation, interaction results and screenshots before merge.
 
 ## Verified baseline: `317b195`
 
@@ -22,9 +30,9 @@ Local follow-up: script suite 214 pass / 4 existing skips; TypeScript typecheck 
 
 ## Release gates
 
-`spread-release-candidate` uses Xcode 27.1, requires the exact branch tip and cloud flags off, runs portable/source/bundle checks, actual Duo appearance checks, Crown stress and all five core flows, then verifies live System appearance through OS readback and the rendered accessibility root. Only passing gates permit build-number allocation, App Store signing, IPA validation and upload. Keep the branch fixed while a candidate is running.
+`spread-release-candidate` uses Xcode 27.1, accepts only main or the release branch, and requires the exact selected branch tip and cloud flags off, runs portable/source/bundle checks, actual Duo appearance checks, Crown stress and all five core flows, then verifies live System appearance through OS readback and the rendered accessibility root. Only passing gates permit build-number allocation, App Store signing, IPA validation and upload. Keep the branch fixed while a candidate is running.
 
-Codemagic candidate #5 (`6aeabc3ba87b4d255fde62fd`, source `317b195`) failed before signing: the Crown flow inherited Month mode from a prior test. No replacement candidate has been signed or uploaded. Candidate #6 (`6aeb01b9d6634fc362f177fa`, source `5320b87`) also stopped before signing/upload on that UI-test compile error. Earlier candidate runs stopped at UI gates. Existing main build 16 is not this candidate.
+Codemagic candidate #5 (`6aeabc3ba87b4d255fde62fd`, source `317b195`) failed before signing: the Crown flow inherited Month mode from a prior test. No replacement candidate has been signed or uploaded. Candidate #6 (`6aeb01b9d6634fc362f177fa`, source `5320b87`) also stopped before signing/upload on that UI-test compile error. Candidate #7 (`6aeb03add6634fc362f178b4`, source `e18be6b`) was stopped before signing/upload when the owner supplied the radial/scroll/switcher corrections; its partial results do not accept the new code. Earlier candidate runs stopped at UI gates. Existing main build 16 is not this candidate.
 
 The actual Duo pose workflow built and installed the app, but fold state failed because the simulator display table was unavailable through CoreDevice. The explicit guest query fix requires a fresh run. Physical haptics, occlusion poses, exact-reference animation calibration and comparison with the owner's reference binary remain unverified.
 

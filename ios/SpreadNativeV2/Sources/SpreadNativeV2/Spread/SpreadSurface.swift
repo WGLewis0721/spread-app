@@ -29,7 +29,6 @@ struct SpreadSurface: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             summary
-            layoutPicker
             layoutBody
             manageRow
             newSpread
@@ -140,52 +139,6 @@ struct SpreadSurface: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .spreadCard()
-    }
-
-    // MARK: Layout picker
-
-    /// The five presentation modes as one recessed rail with a lit selection. It fits 390 pt without scrolling and
-    /// scrolls only when large text needs the room.
-    private var layoutPicker: some View {
-        ScrollView(.horizontal) { layoutRail }
-            .scrollIndicators(.hidden)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Spread view")
-            .accessibilityIdentifier("view-mode-button")
-    }
-
-    private var layoutRail: some View {
-        HStack(spacing: 4) {
-            ForEach(SpreadLayout.allCases) { item in
-                let selected = layout == item
-                Button { withAnimation(reduceMotion ? nil : SpreadMotion.curve) { layout = item } } label: {
-                    VStack(spacing: 4) {
-                        LayoutGlyph(layout: item, tint: selected ? Spread.onAccent : Spread.secondary)
-                            .frame(width: 26, height: 26)
-                        Text(item.title).font(.system(.caption, weight: .semibold))
-                            .lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                    }
-                    .foregroundStyle(selected ? Spread.onAccent : Spread.secondary)
-                    .padding(.horizontal, 6)
-                    .frame(minWidth: 54, minHeight: 56)
-                    .background {
-                        if selected { RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Spread.accentGradient) }
-                    }
-                    .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.spreadPress)
-                .accessibilityLabel(item.title)
-                .accessibilityAddTraits(selected ? .isSelected : [])
-                .accessibilityIdentifier("layout-\(item.rawValue)")
-            }
-        }
-        .padding(4)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Spread.inset))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
-        // A real container element: the five mode buttons stay individually reachable inside it, and the group
-        // itself has the stable identifier the UI tests and VoiceOver landmarks use.
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Spread view")
     }
 
     // MARK: Layout bodies

@@ -186,7 +186,9 @@ struct DialLayout: View {
         VStack(spacing: 12) {
             GeometryReader { proxy in
                 let side = min(280, proxy.size.width * 0.8)
-                let center = CGPoint(x: proxy.size.width / 2, y: side / 2)
+                // Every part is drawn in the dial's square, then the whole square is centered in
+                // the page. Mixing the page width into this point displaced the ring and knob.
+                let center = CGPoint(x: side / 2, y: side / 2)
                 ZStack {
                     tickRing(center: center, side: side)
                     ForEach(arcs, id: \.id) { arc in

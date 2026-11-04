@@ -58,7 +58,9 @@ jobs:
               ad is visible 'id="native-content"'
               ad find id native-spread click
               for mode in stack fan dial tabs day; do
-                ad find id "layout-$mode" click
+                ad find id open-more click
+                ad find id "more-layout-$mode" click
+                ad find id close-more click
                 ad snapshot -i --json > "artifacts/tree-$tag-$mode.json"
                 ad screenshot "artifacts/duo-$tag-$mode.png"
               done

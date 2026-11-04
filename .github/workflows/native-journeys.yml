@@ -25,6 +25,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: reported-fixes
+            width: 390
+            tests: "PlannerUITests/testDialArcSelectionAndPreferencePersistence PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally"
           - name: journey
             width: 390
             tests: "JourneyUITests"
