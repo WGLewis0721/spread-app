@@ -7,7 +7,7 @@
 
 **Verification status of sections 1 to 6: UNVERIFIED** (they describe code written and read). See section 7 for what has since been compiled and run.
 
-**Release verdict: NO-GO.** Not release-ready; no merge, deployment, TestFlight upload or App Store submission has been made.
+**Release verdict of the original code-only record: NO-GO** (nothing had been built or run). The owner authorised a merge and deploy on 2026-11-04; what that does and does not prove is in **section 7**. No App Store submission has been made.
 
 ## Status key
 
@@ -193,3 +193,87 @@ Files are relative to `ios/SpreadNativeV2/Sources/SpreadNativeV2/` unless a path
 - Implementation: code written for A01–F11 with the gaps and blockers listed above.
 - Verification: none performed, by instruction. Every item is unverified.
 - Release: not authorised. No merge, deployment, Codemagic/TestFlight upload, or App Store submission was made.
+
+## 7. Native visual correction pass (PR #119, 2026-11-04)
+
+**Scope.** Fix the existing SwiftUI app so it matches the owner-approved native direction
+([brand board](../../design/planner/SPREAD_NATIVE_BRAND_BOARD.md), [specimen](../../design/planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg)),
+keeping every feature and the headless planner engine. Native SwiftUI only: no React, schema, cloud, backup or server file changed.
+
+**Reference limit (read first).** The owner's TestFlight screenshots, old light-mode screenshots and approved dark designs
+live in a chat and are not in the repository. They could not be viewed in this session, so no claim here is a comparison against
+them. The captures below are real simulator screenshots of this repository (after = this branch), compared with the SVG specimen and the written brand board only.
+
+### What changed (visible)
+
+| Area | Before | After |
+| --- | --- | --- |
+| Palette | system grays, forced to look like iOS defaults | calm navy canvas, quiet navy surfaces, recessed inset, near-white ink, one action blue; cream/white light mode on the same layout |
+| Header | three stacked rows, brand folded away after 3.5 s | brand + Spread/Week switch on one row, metal Crown below; nothing resizes after launch |
+| Crown | flat grays, arrows unmarked | cool-steel ribs, recessed centre, chevrons inside the recess in 94 pt buttons |
+| Spread | plain list in one card | summary card with an hour-proportional bar; illustrated role cards (lit category tile, Chalkboard art, bounded role-colour edge), one open at a time |
+| Fan / Tabs / Day | solid slabs, white-on-ink selection | same card language; lit-blue selection |
+| Week / Month | flat cards | day cards with Today edge, tiles on allocations, open week marked in Month, two-column days on iPad |
+| Sheets | stock grouped forms | one container (navy canvas and bar), Task header with role and Mark done, Move to as a real sheet, New Spread previews its card |
+| Launch | gray flash | navy / cream launch colours |
+
+### Evidence (what was actually run and seen)
+
+Head `16382e5`. Screenshots: [`screenshots/2026-11-04/`](screenshots/2026-11-04/README.md).
+
+| Check | Result | Notes |
+| --- | --- | --- |
+| Planner: `npm run test:spread` | **432 pass** | +10 dispatcher tests for the new intents; `--min` raised |
+| TypeScript typecheck, lint, `test:scripts`, docs check | **pass** | lint 0 errors, 7 warnings; 4 existing skips in scripts |
+| Swift package tests (Linux, portable layer) | **24 pass** | +6 (hour strip, Crown phantom-release invariant, month marks) |
+| macOS: SwiftUI compiled for iOS simulator (`native-ios-compile`) | **pass** | plus portable-contracts, swift-core, CloudKit typecheck, bridge-sims, App Store source checks |
+| Full app built and launched in the iOS Simulator | **pass** | iPhone (393 pt) and iPad Air (820 pt): the tour ran to the end on both |
+| Real screenshots, **light** appearance | **seen** | Spread (Stack, Fan, Dial, Tabs, Day), Week, Month, More, Task sheet, large text, iPad |
+| Real screenshots, **dark** appearance | **NOT captured** | the tour's dark flag is ignored on this iOS; every "dark" capture is light (measured). Dark is verified by token contrast arithmetic only. |
+| BEFORE screenshots | **NOT captured** | the BEFORE job did not compile (workflow swaps old sources but kept a new host file); no old-vs-new pair exists |
+| Owner reference images | **UNVERIFIED** | in the owner's chat, not in the repository; never viewed |
+| Flow tests (create spread, add/complete task, place hours + Undo, Crown caps, Month to Week, Move to) | **result not recorded here** | job still running when this was written; see the run |
+| Layout acceptance (390 / 820 / 1024) | **result not recorded here** | job still running when this was written |
+| Inherited UI tests and journeys (`PlannerUITests`, `JourneyUITests`: Crown 100 drags, Stack/Fan 100 swipes, accessibility audits) | **NOT run on this UI** | cancelled by the author to free runners, and they target the previous UI's labels and identifiers (More, New responsibility, Save hours, `card-more-tasks`, `selected-day-`); they need adapting before they mean anything |
+| Device (physical iPhone) | **NOT run** | haptics, Crown feel, motion, thermal |
+
+### What the real captures show, and what they expose
+
+Seen working (light): brand plus Spread/Week switch on one row; metal Crown with chevrons inside the recess; hour summary
+with a proportional bar; illustrated role cards (lit category tile, Chalkboard art, role-colour edge, hours, tasks, menu);
+five distinct modes with the Dial intact; Week with Free time chips, a dashed To place tray and solid day cards with a Today
+edge; Sunday-first Month; Move-to and Task sheets in the same container; iPad two-column days.
+
+Open defects seen in them (details in the screenshots README): layout switcher wraps mid-word at accessibility text size;
+empty day cards keep a tall blank area; Week and Day list days newest first (parity with the original unverified); Crown ribs
+read as hard stripes; floating dock covers the last rows until scrolled; the tour never reached the New Spread sheet.
+
+### P1 to P13 (partial-task list), reconciled
+| P | Item | Status after this pass | Evidence / what is still open |
+| --- | --- | --- | --- |
+| P1 | More: theme, accent, iCloud | **Partly done.** System / Light / Dark is a device-local choice in More (UserDefaults, no planner write). Accent picker **not built**: the brand board fixes one action blue. iCloud/sync not surfaced (cloud flags, no claim). | Owner decision: accent picker, iCloud surface. |
+| P2 | Typography, spacing, glass | **Done in code.** Navy/cream tokens, text styles, shared card and chip surfaces. Dock uses a system material plus the token; the CSS `blur(28px) saturate(1.7)` is not reproduced. | Compare against the owner's dark designs (not viewable here). |
+| P3 | Stack auto-turn | **Not built (owner decision E-5).** The Stack is now a vertical card stack that opens one card at a time; Studio's self-turning cards are not implemented. | Owner decision. |
+| P4 | Sheet presentation | **Done.** One sheet container (canvas, bar, tint, drag indicator); More and Profiles open at medium; errors stay alerts (save problems offer Retry/Backup, refusals only OK). | Inline-vs-alert per error is a style call. |
+| P5 | Cascade / week-seq motion | **Partly done.** Week slide now plays (it never did); cards open with the shared curve. Profile-switch stagger not built. | Interruption behaviour needs a device. |
+| P6 | Sheet stack, press feedback | **Press feedback done** (scale 0.95 / opacity 0.72, scale dropped under Reduce Motion). System sheets kept (owner decision on the staggered stack). | Owner decision. |
+| P7 | Week to Month morph | **Not done.** Week and Month still cross-fade; Month marks the open week. | Needs matched geometry design. |
+| P8 | Fan, Dial, Tabs, Day physics | **Restyled, physics unchanged.** Tabs pop, Day fill animation and Dial count-up not built. | Calibration needs the reference recording. |
+| P9 | Chalkboard motion | **Geometry fixed** (cutouts were laid out on a square instead of the 393x273 art). Curves remain sinusoidal; FX overlays not ported. | Keyframes live on the spread-studio branch. |
+| P10 | Dynamic Type, contrast, transparency | **Done in code:** 100 fixed sizes became text styles, Increase Contrast and Reduce Transparency handled. Accessibility-size layout verified only where the large-text tour ran. | See evidence. |
+| P11 | Bank refusal copy | **Partly done:** refusals have specific text for ineligible days; zero-bank / over-cap use the store's generic refusal. | Needs a store-side reason code (a TypeScript change). |
+| P12 | Export and backup/restore | **Export done** (print/PDF, Word, text). Native `.spread` backup/restore **blocked (E-1)**; the recovery surface stays. | Owner decision. |
+| P13 | Privacy manifest | **Verified by reading:** UserDefaults (CA92.1) and file timestamps are declared. App Store metadata is owner-authored. | Owner supplies metadata. |
+
+
+### Owner decisions still open
+
+Accent picker (the brand board fixes one blue); Stack auto-turn (E-5); staggered sheet stack; `.spread` backup/restore (E-1);
+iCloud surface (cloud flags stay off, no claim); the G0 reference binary and the owner's chat images.
+
+### Release state of this section
+
+Merge and TestFlight were authorised by the owner on 2026-11-04 ("merge and deploy what you have done so far"). That is
+permission, not verification: dark appearance, BEFORE comparison, the inherited UI tests and a physical device are all
+unverified. The Codemagic workflow `spread-pr119-internal-testflight` builds only the branch
+`claude/spread-swiftui-parity-87llx2` at its exact tip and is launched by hand in the owner's Codemagic account.
