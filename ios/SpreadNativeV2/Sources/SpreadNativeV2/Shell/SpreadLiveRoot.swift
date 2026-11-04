@@ -434,15 +434,27 @@ public struct SpreadLiveRoot: View {
             }
             .padding(6)
             .background {
-                // Reduce Transparency means opaque surfaces: the dock drops its material for the plain elevated surface.
+                // iOS 27 refresh: the floating *control* dock may use system
+                // Liquid Glass; responsibility cards and task content never do.
+                // The accessibility fallback is fully opaque and high-contrast.
                 if reduceTransparency {
                     Capsule().fill(Spread.elevated)
+                } else if #available(iOS 26.0, *) {
+                    Capsule().fill(Color.clear)
+                        .glassEffect(.regular, in: Capsule())
                 } else {
-                    Capsule().fill(.ultraThinMaterial)
-                    Capsule().fill(Spread.glass)
+                    Capsule().fill(.regularMaterial)
                 }
             }
-            .overlay(Capsule().strokeBorder(Spread.glassStroke, lineWidth: reduceTransparency ? 1 : 0.5))
+            .overlay {
+                // System glass draws its own edge. Adding a second border makes
+                // the dock look cheap and lowers contrast over busy cards.
+                if reduceTransparency {
+                    Capsule().strokeBorder(Spread.line, lineWidth: 1)
+                } else if #unavailable(iOS 26.0) {
+                    Capsule().strokeBorder(Spread.glassStroke, lineWidth: 0.5)
+                }
+            }
             .shadow(color: Spread.shadow, radius: 14, y: 6)
         }
         .padding(.horizontal, 16)
