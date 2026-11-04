@@ -316,14 +316,22 @@ struct RoleRow: View {
             .accessibilityIdentifier("role-colour-\(role.id)")
 
             VStack(alignment: .leading, spacing: 2) {
-                TextField("Name", text: $name)
-                    .font(.system(.title3, weight: .semibold))
-                    .focused($nameFocused)
-                    .submitLabel(.done)
-                    .onSubmit { commitName() }
-                    .onChange(of: nameFocused) { _, focused in if !focused { commitName() } }
-                    .accessibilityLabel("\(role.name) name")
-                    .accessibilityIdentifier("role-name-\(role.id)")
+                if isOpen || editing {
+                    // Renaming lives on the open card (and in Edit mode), so a tap on a compact card always opens it.
+                    TextField("Name", text: $name)
+                        .font(.system(.title3, weight: .semibold))
+                        .focused($nameFocused)
+                        .submitLabel(.done)
+                        .onSubmit { commitName() }
+                        .onChange(of: nameFocused) { _, focused in if !focused { commitName() } }
+                        .accessibilityLabel("\(role.name) name")
+                        .accessibilityIdentifier("role-name-\(role.id)")
+                } else {
+                    Text(role.name)
+                        .font(.system(.title3, weight: .semibold))
+                        .lineLimit(1)
+                        .accessibilityIdentifier("role-name-\(role.id)")
+                }
                 Text(summaryLine)
                     .font(.system(.footnote)).foregroundStyle(Spread.secondary)
                     .lineLimit(1)
@@ -338,15 +346,31 @@ struct RoleRow: View {
 
             hoursControl
 
-            Button { toggleOpen() } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.secondary)
-                    .rotationEffect(.degrees(isOpen ? 90 : 0))
-                    .frame(width: 32, height: 44)
-                    .contentShape(Rectangle())
+            if expanded == true {
+                // The open card's quick actions, in one place instead of three more buttons on a 390 pt row.
+                Menu {
+                    Button { onOpenRole(role.id) } label: { Label("Details and hours", systemImage: "slider.horizontal.3") }
+                    Button { withAnimation(SpreadMotion.cascade) { palette.toggle() } } label: { Label("Colour and symbol", systemImage: "paintpalette") }
+                    Button { adjusting = true } label: { Label("Adjust weekly hours", systemImage: "clock") }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(.body, weight: .semibold)).foregroundStyle(Spread.secondary)
+                        .frame(width: 36, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("More for \(role.name)")
+                .accessibilityIdentifier("role-menu-\(role.id)")
+            } else {
+                Button { toggleOpen() } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.secondary)
+                        .rotationEffect(.degrees(isOpen ? 90 : 0))
+                        .frame(width: 32, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityLabel(isOpen ? "Hide tasks for \(role.name)" : "Show tasks for \(role.name)")
             }
-            .buttonStyle(.spreadPress)
-            .accessibilityLabel(isOpen ? "Hide tasks for \(role.name)" : "Show tasks for \(role.name)")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
