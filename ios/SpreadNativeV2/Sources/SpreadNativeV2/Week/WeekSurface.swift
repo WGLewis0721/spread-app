@@ -168,7 +168,7 @@ struct WeekSurface: View {
                     ForEach(items) { item in
                         let role = snapshot.roles.first { $0.id == item.roleId }
                         Button {
-                            Task { await planner.send(["type": "moveSpreadToDay", "roleId": item.roleId, "day": item.day, "hours": item.hours]) }
+                            Task { await planner.placeHours(roleId: item.roleId, day: item.day, hours: item.hours) }
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "plus").font(.system(.footnote, weight: .bold))
@@ -243,7 +243,7 @@ struct DayCard: View {
 
             if let selectedRole, let name = selectedName {
                 Button {
-                    Task { await planner.send(["type": "moveSpreadToDay", "roleId": selectedRole, "day": day, "hours": 1]) }
+                    Task { await planner.placeHours(roleId: selectedRole, day: day, hours: 1) }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "plus").font(.system(.subheadline, weight: .bold))
@@ -277,7 +277,7 @@ struct DayCard: View {
     private func drop(_ item: SpreadDragPayload) async {
         switch item.kind {
         case .spread:
-            await planner.send(["type": "moveSpreadToDay", "roleId": item.roleId, "day": day, "hours": 1])
+            await planner.placeHours(roleId: item.roleId, day: day, hours: 1)
         case .allocation:
             await planner.send(["type": "moveAllocation", "allocationId": item.itemId, "day": day])
         case .task:
@@ -345,7 +345,7 @@ struct AllocationRow: View {
                         value: allocation.hours,
                         label: "\(role.name) on \(dayLabel)",
                         onChange: { hours in
-                            Task { await planner.send(["type": "allocationHours", "allocationId": allocation.id, "hours": hours]) }
+                            Task { await planner.setAllocationHours(allocation, to: hours) }
                         }
                     )
 

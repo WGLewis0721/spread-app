@@ -131,6 +131,35 @@ struct LiveReply: Decodable {
         return reply.monthMarks
     }
 
+    /// Adds hours for a responsibility to a day, and says why when it cannot. The store quietly does nothing when a
+    /// responsibility's weekly hours are all placed, so a tap would otherwise look broken: this explains it first.
+    @discardableResult func placeHours(roleId: String, day: String, hours: Double) async -> Bool {
+        if let snapshot, snapshot.remainingHours(for: roleId) <= 0 {
+            let name = snapshot.roles.first { $0.id == roleId }?.name ?? "This responsibility"
+            refuse("\(name) has no hours left this week. Raise its weekly hours, or take an hour off another day first.")
+            return false
+        }
+        return await send(["type": "moveSpreadToDay", "roleId": roleId, "day": day, "hours": hours])
+    }
+
+    /// Changes a day's hours, refusing with a reason (instead of silently clamping) when raising them would pass the
+    /// responsibility's weekly hours.
+    @discardableResult func setAllocationHours(_ allocation: DayAllocation, to hours: Double) async -> Bool {
+        if hours > allocation.hours, let snapshot, snapshot.remainingHours(for: allocation.roleId) <= 0 {
+            let name = snapshot.roles.first { $0.id == allocation.roleId }?.name ?? "This responsibility"
+            refuse("\(name) has no hours left this week. Take an hour off another day, or raise its weekly hours.")
+            return false
+        }
+        return await send(["type": "allocationHours", "allocationId": allocation.id, "hours": hours])
+    }
+
+    /// A refusal the person should read: plain OK, never Retry saving or Backup.
+    private func refuse(_ message: String) {
+        error = message
+        errorOffersRetry = false
+        errorOffersBackup = false
+    }
+
     @discardableResult func send(_ action: [String: Any], completionHaptic: Bool = false) async -> Bool {
         let previous = tail
         let originProfile = state?.envelope.profileId
