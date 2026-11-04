@@ -266,6 +266,7 @@ struct RoleRow: View {
     @State private var palette = false
     @State private var adjusting = false
     @State private var tasksOpen = true
+    @State private var confirmDelete = false
     @FocusState private var nameFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -279,26 +280,47 @@ struct RoleRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
+            if adjusting { hoursEditor.transition(.opacity) }
+            if !isOpen && !typeSize.isAccessibilitySize {
+                // The cutouts move on closed Wallet cards too. The next card
+                // overlaps part of this decorative band, not the title or tasks.
+                HStack {
+                    Spacer(minLength: 0)
+                    ChalkMotionArt(category: role.category, size: 120)
+                }
+                .padding(.trailing, 16)
+                .frame(height: 74, alignment: .top)
+                .clipped()
+                .accessibilityHidden(true)
+            }
             if isOpen { placementBand.transition(.opacity) }
             if palette {
                 PalettePanel(planner: planner, role: role)
                     .transition(.opacity.combined(with: .offset(y: 14)))
             }
-            if editing { removeRow }
             if isOpen { taskList.transition(.opacity) }
         }
         .contentShape(Rectangle())
-        .background {
-            if expanded != nil {
-                Button(action: onSelect) { Rectangle().fill(.clear).contentShape(Rectangle()) }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Select \(role.name)")
-                    .accessibilityIdentifier("select-role-\(role.id)")
-            }
-        }
+
         .id("spread-role-\(role.id)")
         .onAppear { name = role.name }
         .onChange(of: role.name) { _, value in name = value }
+        .onChange(of: editing) { _, active in
+            if !active {
+                commitName()
+                nameFocused = false
+                palette = false
+                adjusting = false
+            }
+        }
+        .confirmationDialog("Remove \(role.name) and its tasks?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete responsibility", role: .destructive) {
+                Task { _ = await planner.send(["type": "removeRole", "roleId": role.id]) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the responsibility and its planned work. You cannot undo this from the card.")
+        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("role-block-\(role.id)")
     }
@@ -306,82 +328,102 @@ struct RoleRow: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Button { withAnimation(SpreadMotion.cascade) { palette.toggle() } } label: {
-                RoleBadge(category: categoryKey, color: role.color, size: 48)
-                    .frame(width: 48, height: 48)
+        HStack(alignment: .center, spacing: 7) {
+            if editing {
+                Button { confirmDelete = true } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(.title2, weight: .semibold))
+                        .foregroundStyle(Spread.danger)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Delete \(role.name)")
+                .accessibilityIdentifier("remove-role-\(role.id)")
+                .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+
+            Button {
+                if editing {
+                    withAnimation(SpreadMotion.cascade) { palette.toggle() }
+                } else {
+                    toggleOpen()
+                }
+            } label: {
+                RoleBadge(category: categoryKey, color: role.color, size: 42)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.spreadPress)
-            .accessibilityLabel("Colour and symbol for \(role.name)")
-            .accessibilityValue(palette ? "Expanded" : "Collapsed")
+            .accessibilityLabel(editing ? "Change colour and icon for \(role.name)" : "Open \(role.name)")
+            .accessibilityValue(editing && palette ? "Palette open" : "")
             .accessibilityIdentifier("role-colour-\(role.id)")
 
-            VStack(alignment: .leading, spacing: 2) {
-                if isOpen || editing {
-                    // Renaming lives on the open card (and in Edit mode), so a tap on a compact card always opens it.
+            VStack(alignment: .leading, spacing: 3) {
+                if editing {
                     TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"), axis: .vertical)
+                        .font(.system(.headline, weight: .semibold))
                         .lineLimit(1...3)
-                        .font(.system(.title3, weight: .semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: 44)
                         .focused($nameFocused)
                         .submitLabel(.done)
                         .onSubmit { commitName() }
                         .onChange(of: nameFocused) { _, focused in if !focused { commitName() } }
-                        .accessibilityLabel("\(role.name) name")
                         .accessibilityIdentifier("role-name-\(role.id)")
                 } else {
-                    Text(role.name)
-                        .font(.system(.title3, weight: .semibold))
-                        .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("role-name-\(role.id)")
+                    Button(action: toggleOpen) {
+                        Text(role.name)
+                            .font(.system(.headline, weight: .semibold))
+                            .foregroundStyle(Spread.ink)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("select-role-\(role.id)")
                 }
                 Text(summaryLine)
-                    .font(.system(.footnote)).foregroundStyle(Spread.secondary)
+                    .font(.system(.footnote))
+                    .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // At accessibility text sizes the name needs the room, so the small drawing steps aside.
-            if !isOpen && !typeSize.isAccessibilitySize {
-                ChalkIllustration(category: role.category, maxWidth: 68, maxHeight: 48)
-                    .frame(width: 68, height: 48)
+            // The number never shares a row with plus/minus controls; the hour
+            // editor opens *below* the title. No more mangled names on small phones.
+            Button {
+                withAnimation(SpreadMotion.press) { adjusting.toggle() }
+            } label: {
+                Text("\(SpreadHours.text(role.hours))h")
+                    .font(.system(.subheadline, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Spread.ink)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(minHeight: 44)
             }
+            .buttonStyle(.spreadPress)
+            .accessibilityLabel("\(role.name), \(SpreadHours.spoken(role.hours)). Adjust hours")
+            .accessibilityIdentifier("hours-stepper-\(role.id)")
 
-            hoursControl
-
-            if adjusting {
-                // While the hours are being adjusted the stepper needs the row; the menu and chevron wait.
-                EmptyView()
-            } else if expanded != nil {
-                // Every Stack card carries the same quick actions, in one place instead of more buttons on a 390 pt row.
-                Menu {
-                    Button { onOpenRole(role.id) } label: { Label("Details and hours", systemImage: "slider.horizontal.3") }
-                    Button { withAnimation(SpreadMotion.cascade) { palette.toggle() } } label: { Label("Colour and symbol", systemImage: "paintpalette") }
-                    Button { adjusting = true } label: { Label("Adjust weekly hours", systemImage: "clock") }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(.body, weight: .semibold)).foregroundStyle(Spread.secondary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityLabel("More for \(role.name)")
-                .accessibilityIdentifier("role-menu-\(role.id)")
-            } else {
-                Button { toggleOpen() } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.secondary)
-                        .rotationEffect(.degrees(isOpen ? 90 : 0))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.spreadPress)
-                .accessibilityLabel(isOpen ? "Hide tasks for \(role.name)" : "Show tasks for \(role.name)")
+            // Never replace the chevron with an ellipsis or hour stepper.
+            Button(action: toggleOpen) {
+                Image(systemName: "chevron.down")
+                    .font(.system(.subheadline, weight: .bold))
+                    .foregroundStyle(Spread.ink)
+                    .rotationEffect(.degrees(isOpen ? 180 : 0))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.spreadPress)
+            .accessibilityLabel(isOpen ? "Collapse \(role.name)" : "Expand \(role.name) and show tasks")
+            .accessibilityIdentifier("expand-role-\(role.id)")
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(minHeight: 68)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 72)
     }
 
     /// "2 tasks • 3h placed" (the specimen's line), or the invitation to add the first task.
@@ -392,29 +434,27 @@ struct RoleRow: View {
         return "\(tasks.count) \(noun) • \(placed)"
     }
 
-    @ViewBuilder private var hoursControl: some View {
-        if adjusting {
-            HStack(spacing: 0) {
-                HourStepper(value: role.hours, label: "\(role.name) hours", step: 0.5) { hours in
-                    Task { await planner.send(["type": "setHours", "roleId": role.id, "hours": hours]) }
-                }
-                Button { adjusting = false } label: {
-                    Text("Done").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent).frame(minWidth: 44, minHeight: 44)
-                }
-                .buttonStyle(.plain)
+    private var hoursEditor: some View {
+        HStack(spacing: 12) {
+            Text("Hours each week")
+                .font(Spread.footnote)
+                .foregroundStyle(Spread.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            HourStepper(value: role.hours, label: "\(role.name) hours", step: 0.5) { hours in
+                Task { _ = await planner.send(["type": "setHours", "roleId": role.id, "hours": hours]) }
             }
-            .transition(.opacity)
-        } else {
-            Button { adjusting = true } label: {
-                Text("\(SpreadHours.text(role.hours))h")
-                    .font(.system(.title2, weight: .bold)).foregroundStyle(Spread.ink).monospacedDigit()
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+            Button("Done") {
+                withAnimation(SpreadMotion.press) { adjusting = false }
             }
-            .buttonStyle(.spreadPress)
-            .accessibilityLabel("\(role.name), \(SpreadHours.spoken(role.hours)). Adjust")
-            .accessibilityIdentifier("hours-stepper-\(role.id)")
+            .font(.system(.subheadline, weight: .semibold))
+            .buttonStyle(.plain)
+            .foregroundStyle(Spread.accent)
+            .frame(minWidth: 44, minHeight: 44)
         }
+        .padding(.horizontal, 14)
+        .padding(.bottom, 10)
+        .accessibilityIdentifier("role-hour-editor-\(role.id)")
     }
 
     // MARK: Open card
@@ -450,21 +490,6 @@ struct RoleRow: View {
             ChalkIllustration(category: role.category, maxWidth: 132, maxHeight: 92)
                 .frame(width: 132, height: 92)
         }
-    }
-
-    private var removeRow: some View {
-        Button {
-            onOpenRole(role.id)
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "minus.circle.fill").foregroundStyle(Spread.danger)
-                Text("Remove \(role.name)").font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.danger)
-            }
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .padding(.horizontal, 16)
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("remove-role-\(role.id)")
     }
 
     /// The tasks in a recessed list, so the open card reads as: identity, placement, work.
