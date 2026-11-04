@@ -11,6 +11,8 @@ public struct SpreadLiveRoot: View {
     @ObservedObject var planner: LivePlanner
     let recovery: () -> Void
 
+    @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false
+    @State private var focusSelectedDay: String?
     @State private var destination: SpreadDestination = .spread
     @State private var monthPlane = false
     @State private var monthAnchor = PlannerDates.date(PlannerDates.currentWeekKey())
@@ -139,6 +141,7 @@ public struct SpreadLiveRoot: View {
         monthPlane = remembered.monthPlane
         selectedRole = nil
         focusDay = nil
+        focusSelectedDay = nil
         editing = false
         sheet = nil
         loadedProfile = profile
@@ -163,6 +166,20 @@ public struct SpreadLiveRoot: View {
         return VStack(spacing: 0) {
             // The header is sticky, as the web header was: it stays put while the surface scrolls under it.
             if !typeSize.isAccessibilitySize { header(snapshot, isMonth: isMonth) }
+            if weekFocusEnabled && destination == .week {
+                WeekFocusSurface(
+                    planner: planner,
+                    snapshot: snapshot,
+                    selectedRole: $selectedRole,
+                    selectedDay: $focusSelectedDay,
+                    monthPlane: $monthPlane,
+                    monthAnchor: $monthAnchor,
+                    onWeekChange: { goWeek($0) },
+                    onPickDay: { pickDay($0) },
+                    onOpenTask: { sheet = .task($0, $1) },
+                    onNewRole: { sheet = .newRole }
+                )
+            } else {
             ScrollViewReader { proxy in
             ScrollView {
             VStack(spacing: 0) {
@@ -224,6 +241,7 @@ public struct SpreadLiveRoot: View {
                 guard let day else { return }
                 withAnimation(reduceMotion ? nil : SpreadMotion.curve) { proxy.scrollTo(day, anchor: .top) }
                 focusDay = nil
+            }
             }
             }
         }
@@ -438,7 +456,7 @@ public struct SpreadLiveRoot: View {
                         .padding(.trailing, 4)
                     dockDivider
                 }
-                if destination == .week {
+                if destination == .week && !weekFocusEnabled {
                     Button {
                         if monthPlane { closeMonth() } else { openMonth() }
                     } label: {
@@ -595,6 +613,7 @@ public struct SpreadLiveRoot: View {
             let monday = PlannerDates.weekKey(for: PlannerDates.date(iso))
             if await planner.send(["type": "openWeek", "weekKey": monday]) {
                 focusDay = iso
+                focusSelectedDay = iso
                 withAnimation(reduceMotion ? nil : SpreadMotion.morph) { monthPlane = false }
             }
         }
@@ -628,7 +647,7 @@ public struct SpreadLiveRoot: View {
         case .review:
             CarryOverSheet(planner: planner)
         case .more:
-            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, appearance: $appearance)
+            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, appearance: $appearance, weekFocusEnabled: $weekFocusEnabled)
         case .profiles:
             ProfilesSheet(planner: planner)
         case .confirmRollover:
