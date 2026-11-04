@@ -31,8 +31,9 @@ These are real iOS Simulator screenshots of the SwiftUI app built from head `163
 
 - At the accessibility text size the layout switcher wraps mid-word ("Stac|k", "Tab|s").
 - Empty day cards in Week keep a tall blank area under the day name (the owner's earlier complaint about empty space).
-- Week and Day list days newest to oldest (Sunday at the top, Monday last). Whether that matches the original app is not
-  verified, because the original screenshots could not be viewed.
+- Week and Day list days Sunday first, Monday last. This is deliberate parity, not a bug: `weekDays()` in
+  `src/lib/spread/model.ts` (pre-migration `35b6652`) lists Sunday to Monday and the original planner showed that order.
+  Whether the owner still wants it is a decision, not a defect.
 - The Crown's ribs read as hard barcode stripes at 3x; the brand board asks for no moire.
 - The floating dock covers the last rows of a long list until you scroll.
 - The tour could not reach the New Spread sheet (note `missing: new-spread`), so that sheet has no capture.

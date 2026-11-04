@@ -232,8 +232,8 @@ Head `16382e5`. Screenshots: [`screenshots/2026-11-04/`](screenshots/2026-11-04/
 | Real screenshots, **dark** appearance | **NOT captured** | the tour's dark flag is ignored on this iOS; every "dark" capture is light (measured). Dark is verified by token contrast arithmetic only. |
 | BEFORE screenshots | **NOT captured** | the BEFORE job did not compile (workflow swaps old sources but kept a new host file); no old-vs-new pair exists |
 | Owner reference images | **UNVERIFIED** | in the owner's chat, not in the repository; never viewed |
-| Flow tests (create spread, add/complete task, place hours + Undo, Crown caps, Month to Week, Move to) | **result not recorded here** | job still running when this was written; see the run |
-| Layout acceptance (390 / 820 / 1024) | **result not recorded here** | job still running when this was written |
+| Flow tests (create spread, add/complete task, place hours + Undo, Crown caps, Month to Week, Move to) | **NO RESULT** | the job was cancelled by a later push (twice; the second time by the commit that added this section), so none of the five flows has a pass or a fail |
+| Layout acceptance, legacy audits (390 / 820 / 1024) | **ran and FAILED, not yet triaged** | 390 pt: every test stops at its first line, which asserts a 390 pt screen, and the iPhone 15 simulator is 393 pt, so the audits never ran. 1024 pt: `view-mode-button` is missing on iPad, and the hit-region audit reports an element under 44 pt (Week top, and iPad orientations); the element is in attachment `audit-issues-1024-week-top` of that run. 820 pt was still running. |
 | Inherited UI tests and journeys (`PlannerUITests`, `JourneyUITests`: Crown 100 drags, Stack/Fan 100 swipes, accessibility audits) | **NOT run on this UI** | cancelled by the author to free runners, and they target the previous UI's labels and identifiers (More, New responsibility, Save hours, `card-more-tasks`, `selected-day-`); they need adapting before they mean anything |
 | Device (physical iPhone) | **NOT run** | haptics, Crown feel, motion, thermal |
 
@@ -245,7 +245,7 @@ five distinct modes with the Dial intact; Week with Free time chips, a dashed To
 edge; Sunday-first Month; Move-to and Task sheets in the same container; iPad two-column days.
 
 Open defects seen in them (details in the screenshots README): layout switcher wraps mid-word at accessibility text size;
-empty day cards keep a tall blank area; Week and Day list days newest first (parity with the original unverified); Crown ribs
+empty day cards keep a tall blank area; Week and Day list days Sunday first and Monday last (this is deliberate parity: `weekDays()` in `src/lib/spread/model.ts` at `35b6652` lists Sunday to Monday, so it is a decision for the owner, not a bug); Crown ribs
 read as hard stripes; floating dock covers the last rows until scrolled; the tour never reached the New Spread sheet.
 
 ### P1 to P13 (partial-task list), reconciled
