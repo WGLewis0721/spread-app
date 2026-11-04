@@ -477,12 +477,14 @@ struct MoreSheet: View {
     let recovery: () -> Void
     let showProfiles: () -> Void
     @Binding var appearance: SpreadAppearance
+    @Binding var weekFocusEnabled: Bool
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var newSpread = false
     @State private var openTasks = false
     @State private var confirmRollover = false
+    @State private var showCalendarPicker = false
 
     private var activeProfileName: String {
         planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId })?.name ?? "Current profile"
@@ -581,7 +583,20 @@ struct MoreSheet: View {
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
-                            sectionLabel("Appearance")
+                            HStack {
+                                sectionLabel("Appearance")
+                                Button {
+                                    showCalendarPicker = true
+                                } label: {
+                                    Label(weekFocusEnabled ? "New calendar" : "Classic calendar", systemImage: "calendar")
+                                        .font(.system(.caption, weight: .semibold))
+                                        .foregroundStyle(Spread.accent)
+                                        .frame(minHeight: 44)
+                                }
+                                .buttonStyle(.spreadPress)
+                                .accessibilityLabel("Calendar design")
+                                .accessibilityIdentifier("calendar-design-picker")
+                            }
                             HStack(spacing: 6) {
                                 ForEach(SpreadAppearance.allCases) { item in
                                     Button { appearance = item } label: {
@@ -677,6 +692,13 @@ struct MoreSheet: View {
             }
             .sheet(isPresented: $newSpread) { NewSpreadSheet(planner: planner) }
             .sheet(isPresented: $openTasks) { CarryOverSheet(planner: planner) }
+            .confirmationDialog("Calendar design", isPresented: $showCalendarPicker, titleVisibility: .visible) {
+                Button("Classic (current)") { weekFocusEnabled = false }
+                Button("Week + Month (preview)") { weekFocusEnabled = true }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("The new calendar is an opt-in preview. Existing tasks, hours and planning data are unchanged. Choose Classic anytime to return.")
+            }
             .confirmationDialog("Replace next week?", isPresented: $confirmRollover, titleVisibility: .visible) {
                 Button("Replace", role: .destructive) { Task { await planner.send(["type": "rollover", "force": true]) } }
                 Button("Cancel", role: .cancel) {}
