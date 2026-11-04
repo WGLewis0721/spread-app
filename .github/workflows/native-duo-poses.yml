@@ -40,47 +40,13 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/spread-duo-tools" --ignore-scripts --no-save agent-device@0.21.36
       - name: Verify real hinge poses, rotations and surfaces
         run: |
-          set -eu
-          AD="$RUNNER_TEMP/spread-duo-tools/node_modules/.bin/agent-device"
-          ad() { "$AD" "$@" --platform ios --udid "$NATIVE_UDID" --ios-simulator-device-set "$HOME/Library/Developer/CoreSimulator/Devices" --session spread-duo-poses; }
+          mkdir -p artifacts
           xcrun simctl launch --terminate-running-process "$NATIVE_UDID" com.graymatter.spread -spread.native.appearance dark
-          ad open com.graymatter.spread --json > artifacts/session.json
-          # A SwiftUI container may be omitted from agent-device snapshots even
-          # when its real, interactive child is present. Wait for the actual
-          # Spread navigation button that the native XCTest suite also requires.
-          # Never treat a timeout as a pass: save a diagnostic tree/screenshot.
-          ready=0
-          for attempt in 1 2; do
-            if ad wait 'id="native-spread"' 180000; then ready=1; break; fi
-            echo "Spread button did not appear on attempt $attempt" >&2
-          done
-          if [ "$ready" != 1 ]; then
-            ad snapshot -i --json > artifacts/startup-failure-tree.json || true
-            ad screenshot artifacts/startup-failure.png || xcrun simctl io "$NATIVE_UDID" screenshot artifacts/startup-failure.png
-            exit 1
-          fi
-          for pose in closed half-open open; do
-            ad fold "$pose" --json > "artifacts/hinge-$pose.json"
-            for orientation in portrait landscape-left; do
-              tag="$pose-$orientation"
-              ad orientation "$orientation" --json > "artifacts/orientation-$tag.json"
-              ad snapshot -i --json > "artifacts/tree-$tag.json"
-              ad is visible 'id="native-spread"'
-              ad find id native-spread click
-              # There is one responsibility view. Capture the actual closed
-              # Wallet cards, then its visible Edit mode on each pose.
-              ad snapshot -i --json > "artifacts/tree-$tag-wallet.json"
-              ad screenshot "artifacts/duo-$tag-wallet.png"
-              ad find id edit-spreads click
-              ad screenshot "artifacts/duo-$tag-wallet-edit.png"
-              ad find id dock-done click
-              ad find id native-week click
-              ad screenshot "artifacts/duo-$tag-week.png"
-              ad find id week-month-toggle click
-              ad screenshot "artifacts/duo-$tag-month.png"
-              ad find id week-month-toggle click
-            done
-          done
+          # scripts/native-duo-poses.mjs attempts every pose and rotation, saves a screenshot, accessibility
+          # tree and hinge readback for each, writes artifacts/pose-matrix.{json,md}, and exits non-zero unless
+          # every gating cell passed. BLOCKED and FAIL are never a pass. It must NOT pass
+          # a scoped simulator set: agent-device then refuses every rotation of a foldable simulator.
+          node scripts/native-duo-poses.mjs --ad "$RUNNER_TEMP/spread-duo-tools/node_modules/.bin/agent-device" --udid "$NATIVE_UDID" --out artifacts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
