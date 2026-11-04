@@ -531,6 +531,29 @@ final class PlannerUITests: NativeUITestCase {
         launch()
     }
 
+    // A regular 390pt iPhone must show every More action immediately, including
+    // exports and recovery. No scrolling, hidden overflow menus or small tap areas.
+    func testMoreOverviewShowsEveryOptionWithoutScrolling() {
+        goSpread()
+        tapID("open-more")
+        XCTAssertTrue(el("more-overview").waitForExistence(timeout: 10))
+        let visibleActions = [
+            "more-new-spread", "more-review-tasks", "more-rollover",
+            "appearance-system", "appearance-light", "appearance-dark",
+            "manage-profiles", "export-print", "export-word", "export-text",
+            "backup-and-restore"
+        ]
+        for id in visibleActions {
+            let control = el(id)
+            XCTAssertTrue(control.exists, "More is missing the action: \(id)")
+            XCTAssertTrue(control.isHittable, "More requires scrolling to reach \(id)")
+            XCTAssertGreaterThanOrEqual(control.frame.height, 44, "More has an undersized action: \(id)")
+            XCTAssertLessThanOrEqual(control.frame.maxY, app.frame.maxY,
+                                     "More places \(id) below the visible screen")
+        }
+        capture("more-all-options-visible-390")
+    }
+
     // MARK: Owner-reported radial layout, preference location and Week scroll regressions
 
     /// Wallet cards must open independently and expose the same edit mode from the dock
