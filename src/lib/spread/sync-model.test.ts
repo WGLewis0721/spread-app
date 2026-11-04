@@ -83,3 +83,17 @@ test("recoverable tasks and independent day order survive sync item roundtrip", 
   assert.equal(back.data.weeks[key].boxes[0].tasks[0].id, "t1",
     "canonical Spread task sequence remains independent of day order");
 });
+
+test("normalizing a week preserves daily task order while restoring missing responsibilities", () => {
+  const data = sample();
+  const key = data.currentWeek;
+  const orderKey = key + "|" + data.hats[0].id;
+  const taskOrder = { [orderKey]: ["t2", "t1"] };
+  data.weeks[key].dayTaskOrder = taskOrder;
+  const missingRole = data.hats.at(-1)!.id;
+  data.weeks[key].boxes = data.weeks[key].boxes.filter((box) => box.hatId !== missingRole);
+
+  const normalized = normalizeData(data);
+  assert.deepEqual(normalized.weeks[key].dayTaskOrder, taskOrder);
+  assert.ok(normalized.weeks[key].boxes.some((box) => box.hatId === missingRole));
+});
