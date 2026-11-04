@@ -30,6 +30,7 @@ struct SpreadSurface: View {
             summary
             layoutPicker
             layoutBody
+            manageRow
             newSpread
         }
         .padding(.horizontal, 16)
@@ -188,6 +189,41 @@ struct SpreadSurface: View {
             TabsLayout(planner: planner, rows: rows, tab: $tabSelection, snapshot: snapshot, onOpenTask: onOpenTask)
         case .day:
             DayLayout(planner: planner, rows: rows, snapshot: snapshot, selectedDay: $daySelection, selectedRole: $selectedRole, onOpenTask: onOpenTask)
+        }
+    }
+
+    /// The responsibility the modes other than Stack are showing: the Fan's and Dial's selection (first by default),
+    /// the open Tabs tab, the Day panel's role. The Stack opens its own card and has its menu.
+    private var managedRole: Responsibility? {
+        let id: String?
+        switch layout {
+        case .stack: id = nil
+        case .tabs: id = tabSelection == "all" ? nil : tabSelection
+        case .day: id = selectedRole
+        case .fan, .dial: id = selectedRole ?? snapshot.roles.first?.id
+        }
+        return snapshot.roles.first { $0.id == id }
+    }
+
+    /// One way to open the full responsibility editor from every mode, named for what it opens.
+    @ViewBuilder private var manageRow: some View {
+        if let role = managedRole {
+            Button { onOpenRole(role.id) } label: {
+                HStack(spacing: 12) {
+                    RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 32)
+                    Text("Manage \(role.name)").font(.system(.subheadline, weight: .semibold)).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                }
+                .padding(.horizontal, 14)
+                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+                .spreadCard(edge: Color(hex: role.color))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.spreadPress)
+            .accessibilityLabel("Manage \(role.name)")
+            .accessibilityHint("Opens hours, colour, symbol, placed days and tasks")
+            .accessibilityIdentifier("manage-selected")
         }
     }
 
@@ -663,18 +699,31 @@ struct AddTaskRow: View {
             TextField(placeholder, text: $text)
                 .font(.system(.body))
                 .submitLabel(.done)
-                .onSubmit {
-                    let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !value.isEmpty else { return }
-                    onAdd(value)
-                    text = ""
-                }
+                .onSubmit { submit() }
                 .frame(minHeight: 56)
                 .accessibilityLabel(placeholder)
                 .accessibilityIdentifier("new-task-field")
+            // Return adds the task, and so does this: an explicit control for anyone who does not reach for Return.
+            if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button { submit() } label: {
+                    Text("Add task").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
+                        .padding(.horizontal, 14).frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityIdentifier("add-task-button")
+                .transition(.opacity)
+            }
         }
         .padding(.leading, 12)
         .overlay(alignment: .top) { Rectangle().fill(Spread.line).frame(height: 0.5).padding(.leading, 56) }
+    }
+
+    private func submit() {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        onAdd(value)
+        text = ""
     }
 }
 

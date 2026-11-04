@@ -308,6 +308,7 @@ struct CarryOverSheet: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(chosen.contains(where: { $0.id == task.id }) ? .isSelected : [])
+                        .accessibilityIdentifier("carry-\(task.id)")
                     }
                 } header: {
                     Text("Pick what moves to next week. The rest stays here. Next week’s own tasks and days are not touched.")

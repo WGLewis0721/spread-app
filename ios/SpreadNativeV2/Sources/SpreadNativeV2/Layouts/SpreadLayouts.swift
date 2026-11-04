@@ -224,13 +224,6 @@ struct DialLayout: View {
                 .accessibilityIdentifier("dial")
             }
             .frame(height: 300)
-            if let selected {
-                Button { onOpenRole(selected.id) } label: {
-                    Text("Edit \(selected.role.name)").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 
