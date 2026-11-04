@@ -395,7 +395,7 @@ struct RoleRow: View {
                 DayMarks(snapshot: snapshot, role: role)
             }
             Spacer(minLength: 0)
-            ChalkMotionArt(category: role.category, size: 132)
+            artwork
                 .background(
                     RadialGradient(colors: [tint.opacity(0.30), tint.opacity(0)], center: .center, startRadius: 2, endRadius: 80)
                         .allowsHitTesting(false)
@@ -403,6 +403,17 @@ struct RoleRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 8)
+    }
+
+    /// The role's Chalkboard drawing. Only the focused card animates it; where several cards are open at once
+    /// (Tabs "All") the drawings stay still, so no more than one set of cutouts is ever running.
+    @ViewBuilder private var artwork: some View {
+        if focused {
+            ChalkMotionArt(category: role.category, size: 132)
+        } else {
+            ChalkIllustration(category: role.category, maxWidth: 132, maxHeight: 92)
+                .frame(width: 132, height: 92)
+        }
     }
 
     private var removeRow: some View {

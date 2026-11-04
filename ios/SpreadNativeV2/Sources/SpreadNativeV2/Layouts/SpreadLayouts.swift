@@ -312,9 +312,9 @@ struct TabsLayout: View {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
-                        tabButton(id: "all", title: "All", color: nil)
+                        tabButton(id: "all", title: "All", color: nil, category: nil)
                         ForEach(rows) { row in
-                            tabButton(id: row.id, title: row.role.name, color: row.role.color)
+                            tabButton(id: row.id, title: row.role.name, color: row.role.color, category: row.role.category)
                         }
                     }
                     .padding(.vertical, 2)
@@ -333,12 +333,12 @@ struct TabsLayout: View {
                     VStack(spacing: 10) {
                         ForEach(rows) { row in
                             RoleRow(planner: planner, snapshot: snapshot, role: row.role, editing: false, onOpenTask: onOpenTask, onOpenRole: { _ in })
-                                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+                                .spreadCard(edge: Color(hex: row.role.color))
                         }
                     }
                 } else if let row = rows.first(where: { $0.id == tab }) {
                     RoleRow(planner: planner, snapshot: snapshot, role: row.role, editing: false, focused: true, onOpenTask: onOpenTask, onOpenRole: { _ in })
-                        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+                        .spreadCard(edge: Color(hex: row.role.color), active: true)
                 }
             }
             .id(tab)
@@ -358,25 +358,29 @@ struct TabsLayout: View {
         )
     }
 
-    private func tabButton(id: String, title: String, color: String?) -> some View {
+    private func tabButton(id: String, title: String, color: String?, category: String?) -> some View {
         let selected = tab == id
+        let tint: Color? = color.map { Color(hex: $0) }
         return Button {
             tab = id
         } label: {
             HStack(spacing: 8) {
-                if let color { Circle().fill(Color(hex: color)).frame(width: 10, height: 10) }
+                if let color { RoleBadge(category: category == "custom" ? nil : category, color: color, size: 26) }
                 Text(title).font(.system(.subheadline, weight: .semibold)).lineLimit(1)
             }
-            .foregroundStyle(selected ? Color.white : Spread.ink)
-            .padding(.horizontal, 16)
+            .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+            .padding(.leading, color == nil ? 16 : 9).padding(.trailing, 16)
             .frame(minHeight: 44)
-            .background(
-                selected ? (color.map { Color(hex: $0) } ?? Spread.ink) : Spread.elevated,
-                in: Capsule()
-            )
-            .overlay(Capsule().stroke(Spread.line, lineWidth: selected ? 0 : 0.5))
+            .background {
+                if selected {
+                    Capsule().fill(tint.map { AnyShapeStyle($0) } ?? AnyShapeStyle(Spread.accentGradient))
+                } else {
+                    Capsule().fill(Spread.inset)
+                }
+            }
+            .overlay(Capsule().strokeBorder(Spread.line, lineWidth: selected ? 0 : 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.spreadPress)
         .id("tab-\(id)")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier("role-tab-\(id)")
@@ -424,17 +428,25 @@ struct DayLayout: View {
                             Text(PlannerDates.label(PlannerDates.date(day), pattern: "d"))
                                 .font(.system(.body, weight: .heavy)).monospacedDigit()
                         }
-                        .foregroundStyle(isSelected ? Spread.canvas : Spread.ink)
+                        .foregroundStyle(isSelected ? Spread.onAccent : Spread.ink)
                         .frame(maxWidth: .infinity, minHeight: 60)
                         .background(alignment: .bottom) {
-                            Rectangle().fill(isSelected ? Spread.ink : Spread.ink.opacity(0.12))
+                            // How busy the day is, against the busiest day: a quiet fill rising from the bottom.
+                            Rectangle().fill(isSelected ? Color.white.opacity(0.24) : Spread.accent.opacity(0.22))
                                 .frame(height: 60 * filled)
                         }
-                        .background(isSelected ? Spread.ink : Spread.elevated, in: RoundedRectangle(cornerRadius: 20))
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Spread.ink, lineWidth: day == today ? 1.5 : 0))
+                        .background {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Spread.accentGradient)
+                            } else {
+                                RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Spread.elevated)
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(day == today ? Spread.accent : Spread.line, lineWidth: day == today ? 1.5 : 0.5))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.spreadPress)
                     .accessibilityLabel("\(PlannerDates.label(PlannerDates.date(day), pattern: "EEEE"))\(day == today ? ", today" : "")\(load(day) > 0 ? ", \(SpreadHours.spoken(load(day))) planned" : ", nothing planned")")
                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                     .accessibilityIdentifier("day-chip-\(day)")
@@ -468,13 +480,22 @@ struct DayLayout: View {
                                     Spacer(minLength: 4)
                                     Text("\(SpreadHours.text(block.hours))h").font(.system(.subheadline, weight: .semibold)).monospacedDigit()
                                 }
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Spread.ink)
                                 .padding(.horizontal, 14)
                                 .frame(maxWidth: .infinity, minHeight: max(56, 40 + min(block.hours, 6) * 14), alignment: .leading)
-                                .background(Color(hex: role?.color ?? "#8E8E93"), in: RoundedRectangle(cornerRadius: 22))
-                                .contentShape(RoundedRectangle(cornerRadius: 22))
+                                .background {
+                                    let tint = Color(hex: role?.color ?? "#8E8E93")
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Spread.cardFill)
+                                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                            .fill(LinearGradient(colors: [tint.opacity(0.42), tint.opacity(0.06)], startPoint: .leading, endPoint: .trailing))
+                                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                            .strokeBorder(tint.opacity(selectedRole == block.roleId ? 0.95 : 0.5), lineWidth: selectedRole == block.roleId ? 1.5 : 1)
+                                    }
+                                }
+                                .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.spreadPress)
                             .accessibilityLabel("\(role?.name ?? ""), \(SpreadHours.spoken(block.hours))")
                             .accessibilityAddTraits(selectedRole == block.roleId ? .isSelected : [])
                         }
@@ -493,7 +514,7 @@ struct DayLayout: View {
 
             if let role = rows.first(where: { $0.id == selectedRole })?.role {
                 RoleRow(planner: planner, snapshot: snapshot, role: role, editing: false, focused: true, onOpenTask: onOpenTask, onOpenRole: { _ in })
-                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+                    .spreadCard(edge: Color(hex: role.color), active: true)
             }
         }
         .accessibilityIdentifier("day-layout")
