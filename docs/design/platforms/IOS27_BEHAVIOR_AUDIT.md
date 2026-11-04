@@ -50,6 +50,14 @@
 
 **Files changed in this pass:** `SpreadLiveRoot.swift` (responsive Spread), `SpreadSurface.swift` (dense bar and large type), `ChalkboardViews.swift` (pause invisible animation), `PlannerUITests.swift` (full scene width/44pt), `NativeContractsTests.swift` (ten-role touch target width). These are source facts, not visual PASS claims.
 
+### More sheet — single-screen usability (owner recording, Nov 4)
+
+**Observed defect:** The native More sheet was a tall five-section List. Even on a standard iPhone, Share and Backup/Restore were below the first viewport and required scrolling.
+
+**Current treatment (PR pending):** Open More at the large detent as a compact dashboard. Keep **all existing actions** immediately visible at ordinary text sizes on 390pt iPhone: New Spread, Review tasks, Rollover; System/Light/Dark appearance; current profile + Manage; PDF/print, Word, Text exports; Backup and restore. Use three equal-width action tiles per row, quiet semantic navy/cream surfaces and 44pt+ touch regions. The selected profile is a summary, not a repeated list of noninteractive profiles. Do **not** hide the three sharing formats in another menu. Keep a scroll fallback for very small/resized windows and accessibility Dynamic Type rather than clipping controls.
+
+**Acceptance:** The new More-overview native UI test must pass on a 390pt iPhone *without a swipe*; check light/dark, larger type, iPad and Duo for readable labels, all real actions and no unintended planner writes. New Spread, Review, Profiles, export and Recovery still open the original destinations. This source change is **not a simulator PASS** until XCTest runs and the More screenshot has been reviewed.
+
 ## Engineering checklist
 
 1. Resolve doc contradictions: map current owner choice to the native board; mark older five-mode specs **historical**. Sync the single [rules card](../RULES_CARD.md) to agent files, then run `npm run docs:check`.
