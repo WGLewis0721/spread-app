@@ -724,6 +724,39 @@ final class PlannerUITests: NativeUITestCase {
         XCTAssertTrue(el("week-crown").exists, "Classic view lost the Week Crown")
     }
 
+    /// Preview-specific acceptance: Classic uses a separate view and is never the target of these assertions.
+    func testFocusedWeekRetainsSidebarAndMorphsCalendar() {
+        launch(["-native.weekMonth.previewEnabled", "YES"])
+        tapID("native-week")
+        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20))
+        XCTAssertTrue(el("responsibility-sidebar").exists,
+                      "The focused Week must retain the responsibility rail")
+        XCTAssertTrue(el("focus-week-overview").exists,
+                      "The seven-day navigation must remain pinned above the schedule")
+        XCTAssertEqual(waitElements(prefix: "focus-day-", minimum: 7).count, 7)
+        tapID("focus-week-month-toggle")
+        XCTAssertTrue(el("month").waitForExistence(timeout: 10),
+                      "The calendar button must open Month without leaving Week")
+        capture("focused-month")
+        tapID("focus-week-month-toggle")
+        XCTAssertTrue(el("focus-week-overview").exists)
+        XCTAssertEqual(waitElements(prefix: "focus-day-", minimum: 7).count, 7)
+        capture("focused-week")
+    }
+
+    func testRecentlyDeletedIsReachableInNativeSettings() {
+        launch()
+        goSpread()
+        tapID("open-more")
+        XCTAssertTrue(el("more-recently-deleted").waitForExistence(timeout: 10))
+        tapID("more-recently-deleted")
+        XCTAssertTrue(el("recently-deleted-sheet").waitForExistence(timeout: 10))
+        XCTAssertTrue(el("deleted-empty-all").exists ||
+                      app.staticTexts["Nothing recently deleted"].exists,
+                      "Recently Deleted must show a recovery list or useful empty state")
+        capture("recently-deleted-empty-or-recoverable")
+    }
+
     // MARK: Owner-reported radial layout, preference location and Week scroll regressions
 
     /// Wallet cards must open independently and expose the same edit mode from the dock
