@@ -341,14 +341,16 @@ struct TaskSheet: View {
                     Button {
                         guard var copy = content.blocks.first(where: { $0.id == block.id }),
                               copy.items?.indices.contains(index) == true else { return }
-                        copy.items?[index].level = max(0, (copy.items?[index].level ?? 0) - 1)
+                        let level = copy.items?[index].level ?? 0
+                        copy.items?[index].level = max(0, level - 1)
                         update(copy)
                     } label: { Image(systemName: "decrease.indent").tapTarget() }
                     .accessibilityLabel("Outdent")
                     Button {
                         guard var copy = content.blocks.first(where: { $0.id == block.id }),
                               copy.items?.indices.contains(index) == true else { return }
-                        copy.items?[index].level = min(4, (copy.items?[index].level ?? 0) + 1)
+                        let level = copy.items?[index].level ?? 0
+                        copy.items?[index].level = min(4, level + 1)
                         update(copy)
                     } label: { Image(systemName: "increase.indent").tapTarget() }
                     .accessibilityLabel("Indent")
