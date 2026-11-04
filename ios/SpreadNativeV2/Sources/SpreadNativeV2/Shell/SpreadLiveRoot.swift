@@ -15,7 +15,7 @@ public struct SpreadLiveRoot: View {
     @State private var monthPlane = false
     @State private var monthAnchor = PlannerDates.date(PlannerDates.currentWeekKey())
     @State private var weekDirection = 0
-    @State private var layout: SpreadLayout = SpreadLayoutPreference.read()
+    @State private var layout: SpreadLayout = .stack
     @State private var appearance: SpreadAppearance = SpreadAppearancePreference.read()
     @State private var selectedRole: String?
     @State private var focusDay: String?
@@ -175,7 +175,7 @@ public struct SpreadLiveRoot: View {
                         planner: planner,
                         snapshot: snapshot,
                         layout: $layout,
-                        editing: editing,
+                        editing: $editing,
                         selectedRole: $selectedRole,
                         onOpenRole: { sheet = .role($0) },
                         onOpenTask: { sheet = .task($0, $1) },
