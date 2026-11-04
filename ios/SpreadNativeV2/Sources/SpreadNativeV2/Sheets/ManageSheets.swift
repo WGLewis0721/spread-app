@@ -470,7 +470,6 @@ struct MoreSheet: View {
     @ObservedObject var planner: LivePlanner
     let recovery: () -> Void
     let showProfiles: () -> Void
-    @Binding var layout: SpreadLayout
     @Binding var appearance: SpreadAppearance
 
     @Environment(\.dismiss) private var dismiss
