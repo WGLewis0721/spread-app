@@ -416,7 +416,8 @@ struct RoleRow: View {
                             .multilineTextAlignment(.leading)
                             .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                             .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("select-role-\(role.id)")
@@ -439,7 +440,8 @@ struct RoleRow: View {
                     .foregroundStyle(Spread.ink)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-                    .frame(minHeight: 44)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.spreadPress)
             .accessibilityLabel("\(role.name), \(SpreadHours.spoken(role.hours)). Adjust hours")
