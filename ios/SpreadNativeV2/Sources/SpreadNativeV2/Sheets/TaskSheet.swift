@@ -62,10 +62,11 @@ struct TaskSheet: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             taskHeader(task)
-                            TextField("Task title", text: $title, prompt: Spread.fieldPrompt("Task title"))
+                            TextField("Task title", text: $title, prompt: Spread.fieldPrompt("Task title"), axis: .vertical)
                                 .font(.system(.title2, weight: .bold))
                                 .padding(.vertical, 10)
                                 .frame(minHeight: 52)
+                                .lineLimit(1...4)
                                 .submitLabel(.done)
                                 .onSubmit { commitTitle() }
                                 .accessibilityLabel("Task title")
@@ -332,8 +333,9 @@ struct TaskSheet: View {
                               copy.items?.indices.contains(index) == true else { return }
                         copy.items?[index].text = value
                         update(copy)
-                    }), prompt: Spread.fieldPrompt(item.level == 0 ? "Point" : "Detail"))
+                    }), prompt: Spread.fieldPrompt(item.level == 0 ? "Point" : "Detail"), axis: .vertical)
                     .font(.system(.body))
+                    .lineLimit(1...3)
                     .frame(minHeight: 44)
                     .accessibilityIdentifier("content-outline-\(index)")
                     Button {
@@ -379,9 +381,12 @@ struct TaskSheet: View {
                                       rows[row].indices.contains(column) else { return }
                                 current.cells?[row][column] = text
                                 update(current)
-                            }), prompt: Spread.fieldPrompt("Row \(row + 1), column \(column + 1)"))
+                            }), prompt: Spread.fieldPrompt("Row \(row + 1), column \(column + 1)"), axis: .vertical)
                             .textFieldStyle(.roundedBorder)
-                            .frame(width: 140, height: 44)
+                            .font(.system(.body))
+                            .lineLimit(1...3)
+                            .frame(width: 140)
+                            .frame(minHeight: 44)
                             .accessibilityLabel("Row \(row + 1), column \(column + 1)")
                             .accessibilityIdentifier("content-cell-\(row)-\(column)")
                         }
