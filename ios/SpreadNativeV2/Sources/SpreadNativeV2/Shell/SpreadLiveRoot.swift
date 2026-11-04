@@ -78,9 +78,19 @@ public struct SpreadLiveRoot: View {
             }
             .task(id: planner.undoId) { await expireUndo() }
             .onChange(of: scenePhase) { _, phase in refreshWhenActive(phase) }
+            // Entering Edit gets a distinct Home-screen-like impact; leaving
+            // Edit gives a softer acknowledgement. Long press uses this same
+            // binding, so there is exactly one impact per transition.
+            .onChange(of: editing) { _, active in SpreadHaptics.editMode(entering: active) }
             .onChange(of: planner.state?.envelope.profileId) { _, profile in openProfile(profile) }
-            .onChange(of: destination) { _, _ in persistView() }
-            .onChange(of: monthPlane) { _, _ in persistView() }
+            .onChange(of: destination) { _, _ in
+                persistView()
+                SpreadHaptics.selection()
+            }
+            .onChange(of: monthPlane) { _, _ in
+                persistView()
+                SpreadHaptics.selection()
+            }
             .onChange(of: layout) { _, value in SpreadLayoutPreference.write(value) }
             .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
             .onChange(of: planner.snapshot?.weekKey) { _, _ in weekChanged() }
