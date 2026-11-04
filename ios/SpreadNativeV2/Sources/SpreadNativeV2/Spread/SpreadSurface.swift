@@ -847,6 +847,7 @@ struct StackLayout: View {
         .accessibilityAction(named: Text("Manage \(role.name)")) {
             guard editing else { editing = true; return }
             closeReveal()
+            editing = false
             SpreadHaptics.selection()
             onOpenRole(role.id)
         }
@@ -903,6 +904,7 @@ struct StackLayout: View {
             if visibleSide(for: role.id) == .manage {
                 swipeAction("Manage", symbol: "slider.horizontal.3", id: "manage-role-\(role.id)", roleName: role.name, destructive: false) {
                     closeReveal()
+                    editing = false
                     SpreadHaptics.selection()
                     onOpenRole(role.id)
                 }
