@@ -86,7 +86,7 @@ struct NewSpreadSheet: View {
                         .accessibilityLabel("Spread \(index + 1) name")
                         .accessibilityIdentifier("role-name-field")
                 }
-                ChalkIllustration(category: draft.category ?? "custom", maxWidth: 72, maxHeight: 50)
+                ChalkMotionArt(category: draft.category ?? "custom", size: 72)
                     .frame(width: 72, height: 50)
             }
             HStack {
@@ -158,7 +158,7 @@ struct RoleSheet: View {
             if let snapshot = planner.snapshot, let role {
                 Form {
                     Section {
-                        ChalkIllustration(category: role.category, maxWidth: 160, maxHeight: 110)
+                        ChalkMotionArt(category: role.category, size: 160)
                             .frame(maxWidth: .infinity)
                     }
                         .listRowBackground(Spread.elevated)
@@ -469,21 +469,26 @@ struct ProfilesSheet: View {
     }
 }
 
-/// More (`MoreSheet`): the profile list, the Spread layout choice, the Week and Open tasks actions, and Backup
-/// and restore. Backup and restore open the protected planner recovery surface (see the ledger exception).
+/// More: a one-glance control panel, not a long Settings list. On a normal iPhone
+/// the existing actions fit without scrolling; small windows and accessibility text
+/// keep a scroll fallback instead of clipping or shrinking hit targets.
 struct MoreSheet: View {
     @ObservedObject var planner: LivePlanner
     let recovery: () -> Void
     let showProfiles: () -> Void
-    @Binding var layout: SpreadLayout
     @Binding var appearance: SpreadAppearance
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var newSpread = false
     @State private var openTasks = false
     @State private var confirmRollover = false
 
-    /// Exports run on the store, then hand the result to the system: print/PDF, the share sheet, or text.
+    private var activeProfileName: String {
+        planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId })?.name ?? "Current profile"
+    }
+
+    /// The existing store exports and system presentation paths stay untouched.
     private func exportWeek(_ format: String) {
         Task {
             guard let exported = await planner.exportWeek(format) else { return }
@@ -498,69 +503,170 @@ struct MoreSheet: View {
         }
     }
 
+    private func rollover() {
+        Task {
+            if await planner.send(["type": "rollover", "force": false]),
+               planner.rolloverOutcome == "confirm" {
+                confirmRollover = true
+            }
+        }
+    }
+
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(.footnote, weight: .semibold))
+            .foregroundStyle(Spread.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// Compact, uniform tiles. The icon is accent-colored; actual text stays
+    /// high-contrast on a solid surface in both dark and light appearance.
+    private func tile(
+        _ title: String,
+        symbol: String,
+        id: String,
+        accessibilityLabel: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: symbol)
+                    .font(.system(.title3, weight: .medium))
+                    .foregroundStyle(Spread.accent)
+                    .frame(height: 26)
+                Text(title)
+                    .font(.system(.caption, weight: .semibold))
+                    .foregroundStyle(Spread.ink)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity, minHeight: 78)
+            .padding(.horizontal, 5)
+            .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
+            .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous))
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityLabel(accessibilityLabel ?? title)
+        .accessibilityIdentifier(id)
+    }
+
     var body: some View {
         SpreadSheetStack {
-            List {
-                Section("Spreads") {
-                    Button { newSpread = true } label: { Label("New Spread", systemImage: "plus").frame(minHeight: 44, alignment: .leading) }
-                        .accessibilityIdentifier("more-new-spread")
-                    Button { openTasks = true } label: { Label("Review open tasks", systemImage: "tray").lineLimit(3).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading) }
-                    Button {
-                        Task {
-                            if await planner.send(["type": "rollover", "force": false]), planner.rolloverOutcome == "confirm" {
-                                confirmRollover = true
+            GeometryReader { geometry in
+                // Three columns on regular phones. Two columns only when a scene
+                // really narrows or Dynamic Type needs more space.
+                let count = typeSize.isAccessibilitySize || geometry.size.width < 330 ? 2 : 3
+                let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: count)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Spreads")
+                            LazyVGrid(columns: columns, spacing: 8) {
+                                tile("New Spread", symbol: "plus", id: "more-new-spread") {
+                                    newSpread = true
+                                }
+                                tile("Review tasks", symbol: "tray", id: "more-review-tasks",
+                                     accessibilityLabel: "Review open tasks") {
+                                    openTasks = true
+                                }
+                                tile("Rollover", symbol: "arrow.right.square", id: "more-rollover",
+                                     accessibilityLabel: "Rollover to next week") {
+                                    rollover()
+                                }
                             }
                         }
-                    } label: { Label("Rollover to next week", systemImage: "arrow.right.square").lineLimit(3).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading) }
-                    .accessibilityIdentifier("more-rollover")
-                }
-                    .listRowBackground(Spread.elevated)
-                Section("Appearance") {
-                    FlowRow(spacing: 6) {
-                        ForEach(SpreadAppearance.allCases) { item in
-                            Button { appearance = item } label: {
-                                Text(item.title).font(.subheadline.weight(.semibold)).lineLimit(1)
-                                    .padding(.horizontal, 16).frame(minWidth: 44, minHeight: 44)
-                                    .spreadChip(selected: appearance == item)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Appearance")
+                            HStack(spacing: 6) {
+                                ForEach(SpreadAppearance.allCases) { item in
+                                    Button { appearance = item } label: {
+                                        Text(item.title)
+                                            .font(.system(.subheadline, weight: .semibold))
+                                            .lineLimit(1)
+                                            .frame(maxWidth: .infinity, minHeight: 44)
+                                            .spreadChip(selected: appearance == item)
+                                    }
+                                    .buttonStyle(.spreadPress)
+                                    .accessibilityAddTraits(appearance == item ? .isSelected : [])
+                                    .accessibilityIdentifier("appearance-" + item.rawValue)
+                                }
+                            }
+                            .padding(6)
+                            .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                            .accessibilityElement(children: .contain)
+                            .accessibilityIdentifier("appearance-picker")
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Profiles")
+                            HStack(spacing: 10) {
+                                Image(systemName: "person.crop.circle")
+                                    .foregroundStyle(Spread.secondary)
+                                    .accessibilityHidden(true)
+                                Text(activeProfileName)
+                                    .font(.system(.subheadline, weight: .semibold))
+                                    .foregroundStyle(Spread.ink)
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Button("Manage") { showProfiles() }
+                                    .font(.system(.subheadline, weight: .semibold))
+                                    .frame(minWidth: 64, minHeight: 44)
+                                    .accessibilityLabel("Manage profiles")
+                                    .accessibilityIdentifier("manage-profiles")
+                            }
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: 48)
+                            .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Share this week")
+                            LazyVGrid(columns: columns, spacing: 8) {
+                                tile("PDF / print", symbol: "printer", id: "export-print",
+                                     accessibilityLabel: "Print or save as PDF") {
+                                    exportWeek("html")
+                                }
+                                tile("Word", symbol: "doc.richtext", id: "export-word",
+                                     accessibilityLabel: "Word document") {
+                                    exportWeek("docx")
+                                }
+                                tile("Plain text", symbol: "text.alignleft", id: "export-text") {
+                                    exportWeek("text")
+                                }
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Data")
+                            Button {
+                                dismiss()
+                                recovery()
+                            } label: {
+                                Label("Backup and restore", systemImage: "externaldrive")
+                                    .font(.system(.subheadline, weight: .semibold))
+                                    .foregroundStyle(Spread.ink)
+                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                    .padding(.horizontal, 14)
+                                    .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
                             }
                             .buttonStyle(.spreadPress)
-                            .accessibilityAddTraits(appearance == item ? .isSelected : [])
-                            .accessibilityIdentifier("appearance-" + item.rawValue)
+                            .accessibilityIdentifier("backup-and-restore")
                         }
                     }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("appearance-picker")
+                    .frame(maxWidth: 620)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
+                    .frame(maxWidth: .infinity, alignment: .top)
                 }
-                    .listRowBackground(Spread.elevated)
-                Section("Profiles") {
-                    ForEach(planner.profiles) { profile in
-                        HStack {
-                            Text(profile.name)
-                            Spacer()
-                            if profile.id == planner.state?.envelope.profileId { Image(systemName: "checkmark").foregroundStyle(Spread.accent) }
-                        }
-                        .frame(minHeight: 44)
-                    }
-                    Button("Manage profiles") { showProfiles() }
-                        .accessibilityIdentifier("manage-profiles")
-                }
-                    .listRowBackground(Spread.elevated)
-                Section("Share this week") {
-                    Button { exportWeek("html") } label: { Label("Print or save as PDF", systemImage: "printer").frame(minHeight: 44, alignment: .leading) }
-                        .accessibilityIdentifier("export-print")
-                    Button { exportWeek("docx") } label: { Label("Word document", systemImage: "doc.richtext").frame(minHeight: 44, alignment: .leading) }
-                        .accessibilityIdentifier("export-word")
-                    Button { exportWeek("text") } label: { Label("Plain text", systemImage: "text.alignleft").frame(minHeight: 44, alignment: .leading) }
-                        .accessibilityIdentifier("export-text")
-                }
-                    .listRowBackground(Spread.elevated)
-                Section("Data") {
-                    Button { dismiss(); recovery() } label: { Label("Backup and restore", systemImage: "externaldrive").frame(minHeight: 44, alignment: .leading) }
-                        .accessibilityIdentifier("backup-and-restore")
-                }
-                    .listRowBackground(Spread.elevated)
+                .scrollBounceBehavior(.basedOnSize)
+                .accessibilityIdentifier("more-overview")
             }
-                .spreadListSurface()
             .navigationTitle("More")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -578,7 +684,9 @@ struct MoreSheet: View {
                 Text("Next week already has tasks or days. This week stays as it is.")
             }
         }
-        .presentationDetents([.medium, .large])
+        // Start fully presented so the entire compact menu is visible immediately.
+        // Scrolling is still possible on smaller iPhones, keyboard and large text.
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
 }

@@ -22,6 +22,8 @@ public struct SpreadLiveRoot: View {
     @State private var sheet: LiveSheet?
     @State private var editing = false
     @State private var gearTurn = false
+    // Labels fold into their icons once after the planner first appears.
+    @State private var headerLabelsCollapsed = false
     @State private var dismissedNotice: String?
     @State private var loadedProfile: String?
     /// Counts week moves the store has acknowledged. The selection haptic listens to it, so it never fires at launch.
@@ -65,11 +67,30 @@ public struct SpreadLiveRoot: View {
     private var observed: some View {
         layers
             .task { await planner.refresh() }
+            .task(id: planner.snapshot != nil) {
+                // Don't start the 2.5s introduction until the planner appears.
+                guard planner.snapshot != nil, !headerLabelsCollapsed else { return }
+                do { try await Task.sleep(nanoseconds: 2_500_000_000) }
+                catch { return }
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.38)) {
+                    headerLabelsCollapsed = true
+                }
+            }
             .task(id: planner.undoId) { await expireUndo() }
             .onChange(of: scenePhase) { _, phase in refreshWhenActive(phase) }
+            // Entering Edit gets a distinct Home-screen-like impact; leaving
+            // Edit gives a softer acknowledgement. Long press uses this same
+            // binding, so there is exactly one impact per transition.
+            .onChange(of: editing) { _, active in SpreadHaptics.editMode(entering: active) }
             .onChange(of: planner.state?.envelope.profileId) { _, profile in openProfile(profile) }
-            .onChange(of: destination) { _, _ in persistView() }
-            .onChange(of: monthPlane) { _, _ in persistView() }
+            .onChange(of: destination) { _, _ in
+                persistView()
+                SpreadHaptics.selection()
+            }
+            .onChange(of: monthPlane) { _, _ in
+                persistView()
+                SpreadHaptics.selection()
+            }
             .onChange(of: layout) { _, value in SpreadLayoutPreference.write(value) }
             .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
             .onChange(of: planner.snapshot?.weekKey) { _, _ in weekChanged() }
@@ -211,7 +232,7 @@ public struct SpreadLiveRoot: View {
     /// An illustrated empty state: the notebook drawing, one sentence, one lit action.
     private var emptyPlan: some View {
         VStack(spacing: 14) {
-            ChalkIllustration(category: "custom", maxWidth: 230, maxHeight: 160)
+            ChalkMotionArt(category: "custom", size: 230)
             Text("Make room for what matters")
                 .font(.system(.title2, weight: .bold)).multilineTextAlignment(.center)
             Text("Name a responsibility, give it hours, then place those hours in your week.")
@@ -232,6 +253,14 @@ public struct SpreadLiveRoot: View {
     }
 
     // MARK: Header
+
+    /// Labels fold left into their associated icon while the icon remains
+    /// tappable. Crown, dates, and sheet controls do not participate.
+    private var headerTextExit: AnyTransition {
+        .offset(x: -20)
+            .combined(with: .scale(scale: 0.45, anchor: .leading))
+            .combined(with: .opacity)
+    }
 
     /// Compact and stable: the brand and the one Spread/Week switch share a row, the metal Crown sits below, and
     /// nothing in here changes size after launch. When large text no longer fits one row, the switch drops below.
@@ -270,6 +299,9 @@ public struct SpreadLiveRoot: View {
         .padding(.top, 6)
         .padding(.bottom, 6)
         .background(reduceTransparency ? Spread.canvas : Spread.canvas.opacity(0.94))
+        .accessibilityElement(children: .contain)
+        .accessibilityValue(headerLabelsCollapsed ? "Compact navigation" : "Labeled navigation")
+        .accessibilityIdentifier("top-header")
     }
 
     private var activeProfileName: String? {
@@ -282,22 +314,26 @@ public struct SpreadLiveRoot: View {
         Button { goHome() } label: {
             HStack(spacing: 10) {
                 SpreadBrandMark(size: 36)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Spread")
-                        .font(.system(.headline, weight: .semibold))
-                        .foregroundStyle(Spread.ink)
-                    if planner.profiles.count > 1, let active = activeProfileName {
-                        Text(active)
-                            .font(.system(.caption))
-                            .foregroundStyle(Spread.secondary)
-                            .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-                            .frame(maxWidth: 160, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("active-profile-name")
+                if !headerLabelsCollapsed || typeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Spread")
+                            .font(.system(.headline, weight: .semibold))
+                            .foregroundStyle(Spread.ink)
+                            .accessibilityIdentifier("header-brand-title")
+                        if planner.profiles.count > 1, let active = activeProfileName {
+                            Text(active)
+                                .font(.system(.caption))
+                                .foregroundStyle(Spread.secondary)
+                                .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                                .frame(maxWidth: 160, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("active-profile-name")
+                        }
                     }
+                    .transition(headerTextExit)
                 }
             }
-            .frame(minHeight: 44)
+            .frame(minWidth: 44, minHeight: 44, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.spreadPress)
@@ -306,7 +342,8 @@ public struct SpreadLiveRoot: View {
     }
 
     /// The Spread/Week switch: a recessed trough with one lit segment. Month is a mode inside Week, so there are
-    /// two segments only, and both always show their label (an icon alone is not a destination).
+    /// two segments only. After the intro, their text folds into the icons.
+    /// The actual buttons keep their VoiceOver labels and 44pt targets.
     private var destinationRail: some View {
         let arrangement = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 2)) : AnyLayout(HStackLayout(spacing: 2))
         return arrangement {
@@ -320,7 +357,12 @@ public struct SpreadLiveRoot: View {
                 } label: {
                     HStack(spacing: 6) {
                         SpreadIcon(name: item.iconName, size: 20)
-                        Text(item.label).font(.system(.subheadline, weight: .semibold))
+                        if !headerLabelsCollapsed || typeSize.isAccessibilitySize {
+                            Text(item.label)
+                                .font(.system(.subheadline, weight: .semibold))
+                                .accessibilityIdentifier(item == .week ? "header-label-week" : "header-label-spread")
+                                .transition(headerTextExit)
+                        }
                     }
                     .foregroundStyle(selected ? Spread.onAccent : Spread.secondary)
                     .padding(.horizontal, 14)
@@ -586,7 +628,7 @@ public struct SpreadLiveRoot: View {
         case .review:
             CarryOverSheet(planner: planner)
         case .more:
-            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, layout: $layout, appearance: $appearance)
+            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, appearance: $appearance)
         case .profiles:
             ProfilesSheet(planner: planner)
         case .confirmRollover:

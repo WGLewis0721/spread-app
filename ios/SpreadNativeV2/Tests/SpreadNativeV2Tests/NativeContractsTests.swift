@@ -93,6 +93,24 @@ final class NativeContractsTests: XCTestCase {
         }
     }
 
+    #if os(iOS)
+    func testAllElevenChalkIllustrationsHaveDecodableAnimationResources() {
+        let categories = ChalkArtwork.categories
+        let layers = categories.flatMap { ChalkMotionTable.layers(for: $0) }
+        XCTAssertEqual(categories.count, 11)
+        XCTAssertEqual(layers.count, 40, "Keep all 40 original Studio motion cutouts")
+        XCTAssertEqual(Set(layers.map(\.src)).count, 40)
+        for category in categories {
+            let motions = ChalkMotionTable.layers(for: category)
+            XCTAssertFalse(motions.isEmpty, "\(category) must never fall back to a static drawing")
+            for layer in motions {
+                XCTAssertGreaterThan(layer.dur, 0)
+                XCTAssertNotNil(ChalkMotionImage.load(layer.src), "Missing or undecodable \(layer.src).webp")
+            }
+        }
+    }
+    #endif
+
     func testTaskCanOnlyTargetItsOwnResponsibilityAllocation() {
         let source = SpreadV2Fixture.week
         let task = source.tasks.first(where: { $0.id == "t-2" })!
@@ -122,6 +140,51 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertEqual(envelope.snapshot.remainingHours(for: "work"), 5)
         XCTAssertEqual(try JSONDecoder().decode(NativeV2Envelope.self,
                     from: JSONEncoder().encode(envelope)), envelope)
+    }
+
+    func testCompactWeeklySummaryStartsWithEightHoursToPlan() {
+        let roles = [
+            Responsibility(id: "a", name: "Home", category: "home", color: "#FF9500", hours: 2),
+            Responsibility(id: "b", name: "Work", category: "work", color: "#FF9500", hours: 2),
+            Responsibility(id: "c", name: "Health", category: "health", color: "#BB50D8", hours: 2),
+            Responsibility(id: "d", name: "Family", category: "family", color: "#34C759", hours: 2)
+        ]
+        let snapshot = PlannerSnapshot(weekKey: "2026-11-09", roles: roles, allocations: [], tasks: [])
+        let status = WeeklyHourStatus(snapshot: snapshot)
+        XCTAssertEqual(status.spreadCount, 4)
+        XCTAssertEqual(status.total, 8)
+        XCTAssertEqual(status.scheduled, 0)
+        XCTAssertEqual(status.remaining, 8)
+        XCTAssertEqual(status.overbooked, 0)
+        XCTAssertEqual(status.headlineHours, 8)
+        XCTAssertEqual(status.headlineLabel, "to plan")
+    }
+
+    func testCompactSummaryUsesTheLivePlacedHoursAndAllScheduledState() {
+        let role = Responsibility(id: "home", name: "Home", category: "home", color: "#FF9500", hours: 8)
+        let snapshot = PlannerSnapshot(weekKey: "2026-11-09", roles: [role],
+            allocations: [DayAllocation(id: "day", roleId: "home", day: "2026-11-09", hours: 8)], tasks: [])
+        let status = WeeklyHourStatus(snapshot: snapshot)
+        XCTAssertEqual(status.scheduled, 8)
+        XCTAssertEqual(status.remaining, 0)
+        XCTAssertEqual(status.overbooked, 0)
+        XCTAssertEqual(status.headlineHours, 8)
+        XCTAssertEqual(status.headlineLabel, "planned")
+    }
+
+    func testCompactSummaryReportsOverbookingWithoutHidingUnplacedHours() {
+        let roles = [
+            Responsibility(id: "a", name: "Overbooked", category: "work", color: "#FF9500", hours: 2),
+            Responsibility(id: "b", name: "Still to plan", category: "home", color: "#34C759", hours: 3)
+        ]
+        let snapshot = PlannerSnapshot(weekKey: "2026-11-09", roles: roles,
+            allocations: [DayAllocation(id: "over", roleId: "a", day: "2026-11-09", hours: 4)], tasks: [])
+        let status = WeeklyHourStatus(snapshot: snapshot)
+        XCTAssertEqual(status.total, 5)
+        XCTAssertEqual(status.scheduled, 4)
+        XCTAssertEqual(status.remaining, 3)
+        XCTAssertEqual(status.overbooked, 2)
+        XCTAssertEqual(status.headlineHours, 3)
     }
 
     func testLegacyOverbookedWeekMatchesJavaScriptHourArithmetic() {
