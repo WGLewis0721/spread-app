@@ -62,3 +62,24 @@ test("assembling from nothing gives an empty but valid planner", () => {
   assert.ok(Array.isArray(back.data.hats));
   assert.equal(back.name, null);
 });
+
+
+test("recoverable tasks and independent day order survive sync item roundtrip", () => {
+  const data = sample();
+  const key = data.currentWeek;
+  data.deletedTasks = [{
+    id: "deleted-example", weekKey: key, hatId: data.hats[0].id,
+    deletedAt: Date.parse("2026-11-04T10:00:00Z"),
+    task: { id: "deleted-example", text: "Find receipts", done: false,
+      content: { blocks: [{ id: "note", type: "notes", text: "Receipts by drawer" }] } },
+  }];
+  data.weeks[key].dayTaskOrder = { [key + "|" + data.hats[0].id]: ["t2", "t1"] };
+  const out = flatten(data, "Me");
+  assert.ok(out.some((row) => row.id === "deleted-task:deleted-example"));
+  assert.ok(out.some((row) => row.id.startsWith("day-order:")));
+  const back = assemble(out, key);
+  assert.deepEqual(back.data.deletedTasks, data.deletedTasks);
+  assert.deepEqual(back.data.weeks[key].dayTaskOrder, data.weeks[key].dayTaskOrder);
+  assert.equal(back.data.weeks[key].boxes[0].tasks[0].id, "t1",
+    "canonical Spread task sequence remains independent of day order");
+});
