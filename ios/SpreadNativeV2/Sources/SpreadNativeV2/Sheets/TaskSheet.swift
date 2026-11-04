@@ -347,11 +347,17 @@ struct TaskSheet: View {
                     let values = cells[row]
                     HStack(spacing: 6) {
                         ForEach(values.indices, id: \.self) { column in
-                            let value = values[column]
-                            TextField("Row \(row + 1), column \(column + 1)", text: Binding(get: { value }, set: { text in
-                                var copy = block
-                                copy.cells?[row][column] = text
-                                update(copy)
+                            TextField("Row \(row + 1), column \(column + 1)", text: Binding(get: {
+                                guard let current = content.blocks.first(where: { $0.id == block.id }),
+                                      let rows = current.cells, rows.indices.contains(row),
+                                      rows[row].indices.contains(column) else { return "" }
+                                return rows[row][column]
+                            }, set: { text in
+                                guard var current = content.blocks.first(where: { $0.id == block.id }),
+                                      let rows = current.cells, rows.indices.contains(row),
+                                      rows[row].indices.contains(column) else { return }
+                                current.cells?[row][column] = text
+                                update(current)
                             }), prompt: Spread.fieldPrompt("Row \(row + 1), column \(column + 1)"))
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 140, height: 44)
