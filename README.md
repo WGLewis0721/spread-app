@@ -2,7 +2,7 @@
 
 # Spread
 
-**Current native design direction:** [Working-build → SwiftUI parity spec](SPREAD_SWIFTUI_PARITY_SPEC.md) · [Outside-in migration instructions](SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) · [Claude implementation-only handoff](CLAUDE_SWIFTUI_HANDOFF.md). The previously working installed app, once pinned to its exact build, is the UI/UX reference. This is a native reimplementation, **not a rollback or a new design**; no release is authorized by these docs.
+**Current design entrypoint:** [central UI/UX map](docs/design/README.md). **Native SwiftUI:** [owner-approved Wallet-style Stack brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and [iOS 27 behavior audit](docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md), implemented in draft [PR #127](https://github.com/WGLewis0721/spread-app/pull/127) stacked on Duo fixes in [PR #126](https://github.com/WGLewis0721/spread-app/pull/126). Older five-mode migration specifications are historical. No release is authorized by these docs.
 
 The weekly role spread. Roles first. Hours second. Tasks last.
 

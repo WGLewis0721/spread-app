@@ -4,7 +4,7 @@ Start here for Spread's design rules and task-specific references.
 
 **Audience:** developers and coding agents. Keep design guidance in this folder.
 
-**Product model:** Responsibilities, then Hours, then Week, then Tasks. Spread is a local-first weekly planner (Capacitor around a React app). The planner and the public landing page have separate design rules.
+**Product model:** Responsibilities → Hours → Week → Tasks, local-first. **Native owner decision (Nov 4): only an animated full-width Wallet Stack on Spread**, with Week/Month and all planner actions preserved. React and landing retain separate rules.
 
 ---
 
@@ -28,11 +28,11 @@ Stop at the first sufficient tier.
 | --- | --- | --- |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
-| Native SwiftUI UI/UX, PR #119 | [owner brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md) + [Claude handoff](../../CLAUDE_NATIVE_UI_HANDOFF.md) | [parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md); actual screenshots |
+| Native SwiftUI / Wallet Stack (PR #127) | [current native brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [iOS 27 behavior audit](platforms/IOS27_BEHAVIOR_AUDIT.md); owner's screenshots; historical [handoff](../../CLAUDE_NATIVE_UI_HANDOFF.md) |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
-| Layout for iPhone, iPad or iPhone Duo; safe areas; dark palette; App Store screenshots | [packs/device-layout.md](packs/device-layout.md) | The device guide sections named in the pack |
-| Making the UI feel native: materials, color, sheets, motion | [packs/apple-native-feel.md](packs/apple-native-feel.md) | [platforms/APPLE_DESIGN_PRINCIPLES.md](platforms/APPLE_DESIGN_PRINCIPLES.md) |
+| iPhone, iPad, Duo and resize / hinge support | [packs/device-layout.md](packs/device-layout.md) | [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) and device guides |
+| Native controls, material, motion and accessibility | [packs/apple-native-feel.md](packs/apple-native-feel.md) | [Apple principles](platforms/APPLE_DESIGN_PRINCIPLES.md), [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) |
 | App icon, UI action icons, category badges | [brand/ICON_HANDOFF.md](brand/ICON_HANDOFF.md) | Files in `public/icons/` |
 | Why a planner behavior exists, or what was verified and deferred | [planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md](planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md) (historical record) | `ROADMAP.md` |
 | Wallpaper-driven personalization (Studio) | Section 5 below: it lives on a branch | |
@@ -57,18 +57,19 @@ All paths are under `docs/design/`.
 | specs/ (README.md is the index) | One spec per request | Plans, not approval |
 | packs/ | One digest per kind of task | Derived. The long documents win if they differ |
 | tokens.json | Planner tokens, light and dark | Generated from `src/styles.css` |
-| [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Owner direction |
+| [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Historical; five-mode direction superseded by Nov 4 owner choice |
 | planner/SPREAD_DESIGN_SYSTEM.md | React planner visuals, native behavior invariants | Governs legacy UI and behavior |
-| planner/SPREAD_NATIVE_BRAND_BOARD.md | Owner-approved SwiftUI visual paint/geometry; [SVG specimen](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Native-only on PR #119 |
+| planner/SPREAD_NATIVE_BRAND_BOARD.md | Current SwiftUI: **single animated Wallet Stack**; [SVG](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Native-only PR #127; supersedes five-mode language |
 | planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | Unified UX history | Historical only |
 | landing/DESIGN.md | Landing page | Highest for the landing page only, never for planner decisions. Frozen as `golden/2026-09-28-full-landing-modes` |
-| platforms/APPLE_DESIGN_PRINCIPLES.md | Native feel: materials, color, sheets | New 2026-10-28. Advisory, below the planner design system |
-| platforms/SPREAD_IPHONE_BUILD_GUIDE.md | iPhone plus the shared baseline (toolchain, Capacitor, repo rules, dark palette, tests) | Research notes from 2026-10-21 with evidence tags. The dark palette in section 6a is a recommendation, not adopted |
+| platforms/APPLE_DESIGN_PRINCIPLES.md | Native controls, sheets and contrast | Platform principles; native board preserves identity |
+| platforms/IOS27_BEHAVIOR_AUDIT.md | **iOS 27 adaptive layout, glass controls, UX audit and release gates** | Current 2026-11-04 checklist for native PR #127 |
+| platforms/SPREAD_IPHONE_BUILD_GUIDE.md | iPhone baseline | October research; native owner board overrides older paint |
 | platforms/SPREAD_IPAD_BUILD_GUIDE.md | iPad | Same as above |
 | platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md | iPhone Duo | Same as above |
 | brand/ICON_HANDOFF.md | Icon files and placement (SVGs stay in `public/icons/`) | Highest for icon files |
 
-**Authority:** Verified planner behavior/data wins. The [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) governs SwiftUI *visual treatment only*. React retains its CSS/tokens and planner system; landing its own board. Resolve document conflicts explicitly.
+**Authority:** Verified planner behavior/data wins. Owner's Nov 4 single-Stack decision on the [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) controls SwiftUI presentation; [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) controls platform acceptance. Five-mode references are history. React and landing retain their rules.
 
 ---
 
@@ -84,18 +85,15 @@ All paths are under `docs/design/`.
 
 ## 5. Studio (wallpaper-driven personalization)
 
-Studio is on branch `spread-studio`, gated by `VITE_SPREAD_STUDIO` (off by default); its docs are in `docs/spread-studio/` there. See [the rebuild spec](specs/2026-10-28-studio-rebuild.md). If merged, move its docs to `docs/design/studio/` and update this map.
-
-Only with the flag on may validated per-profile appearance override scoped colors, fonts, material and geometry in `[data-studio-appearance]`. Flag-off matches golden; this is not release approval. Per [Apple principles](platforms/APPLE_DESIGN_PRINCIPLES.md), wallpaper changes tint, dim, material and mode, never layout.
+Studio lives on the `spread-studio` branch and is off by default. [Historical rebuild spec](specs/2026-10-28-studio-rebuild.md). Do not import Studio's appearance changes into current SwiftUI.
 
 ---
 
 ## 6. Design-adjacent material that stays where it is
 
-- `user-testing/` and `tools/launch-video/` (separate workspace).
-- Process, not design: `APP_STORE_RELEASE_PLAN.md`, `ROADMAP.md`, `docs/IOS_*.md`, `docs/APP_*.md`, `docs/ICLOUD_PLAN.md`, `docs/BETA_ACCESS.md`, `docs/WAITLIST_API.md`, `docs/audits/`.
-- Agent instruction files (`AGENTS.project.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`) carry the generated card and point here. Keep them thin.
-- Owner's native concept images are in the Nov 3 chat, not git; do not call them installed-build evidence.
+- Historical root handoffs: `SPREAD_NATIVE_UI_REMAINING_SPEC.md`, `CLAUDE_NATIVE_UI_HANDOFF.md`, `SPREAD_SWIFTUI_PARITY_SPEC.md`; defer to current native board.
+- `user-testing/`, `tools/launch-video/`, release/roadmap/audit docs are separate. Agent instruction files mirror [RULES_CARD.md](RULES_CARD.md).
+- Owner's concept images are in chat, not git; do not call them installed-build evidence.
 
 ---
 

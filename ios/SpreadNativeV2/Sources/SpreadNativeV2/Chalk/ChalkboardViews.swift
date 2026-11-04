@@ -139,13 +139,17 @@ struct ChalkMotionArt: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
+    // LazyVStack may retain previously scrolled cards. The illustration remains
+    // in the hierarchy, but its display-link should not keep rendering at 30 fps
+    // when its card disappears from the viewport.
+    @State private var isVisible = false
     @State private var began = Date()
 
     static let aspect: CGFloat = 273.0 / 393.0
 
     var body: some View {
         let height = size * Self.aspect
-        let animated = !reduceMotion && scenePhase == .active
+        let animated = isVisible && !reduceMotion && scenePhase == .active
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !animated)) { timeline in
             let elapsed = animated ? timeline.date.timeIntervalSince(began) : 0
             ZStack {
@@ -159,6 +163,8 @@ struct ChalkMotionArt: View {
         }
         .accessibilityHidden(true)
         .allowsHitTesting(false)
+        .onAppear { isVisible = true }
+        .onDisappear { isVisible = false }
     }
 }
 

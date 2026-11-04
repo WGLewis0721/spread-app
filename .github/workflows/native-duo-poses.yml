@@ -2,6 +2,7 @@ name: Duo hinge and rotation acceptance
 on:
   pull_request:
     paths:
+      - "ios/**"
       - ".github/workflows/native-duo-poses.yml"
   workflow_dispatch:
 permissions:
@@ -66,13 +67,13 @@ jobs:
               ad snapshot -i --json > "artifacts/tree-$tag.json"
               ad is visible 'id="native-spread"'
               ad find id native-spread click
-              for mode in stack fan dial tabs day; do
-                ad find id open-more click
-                ad find id "more-layout-$mode" click
-                ad find id close-more click
-                ad snapshot -i --json > "artifacts/tree-$tag-$mode.json"
-                ad screenshot "artifacts/duo-$tag-$mode.png"
-              done
+              # There is one responsibility view. Capture the actual closed
+              # Wallet cards, then its visible Edit mode on each pose.
+              ad snapshot -i --json > "artifacts/tree-$tag-wallet.json"
+              ad screenshot "artifacts/duo-$tag-wallet.png"
+              ad find id edit-spreads click
+              ad screenshot "artifacts/duo-$tag-wallet-edit.png"
+              ad find id dock-done click
               ad find id native-week click
               ad screenshot "artifacts/duo-$tag-week.png"
               ad find id week-month-toggle click

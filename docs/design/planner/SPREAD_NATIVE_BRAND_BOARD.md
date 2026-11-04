@@ -1,8 +1,11 @@
 # Spread — Native iOS Brand Board (owner-approved 2026-11-03)
 
-> Part of the [Spread design brain](../README.md). Governs **native SwiftUI presentation** on PR #119; does not replace the React planner tokens or the public landing brand.
+> **November 4 owner amendment — current authority for Spread responsibilities:** Show **only one Wallet-style Stack**, not five layout choices. All responsibility cards fill the available width, overlap when closed and expand independently to fit their full task lists. The expand chevron is always visible. The original Chalkboard illustrations animate on closed and expanded cards, except when Reduce Motion is active. Press and hold or tap the dock Edit button to rename, change symbols/role colours and reveal a leading quick-delete control with confirmation. Use a soft breathing glow in each role colour as the edit cue. Hour controls must not collide with titles. Keep Week, Month, Tasks, the metal Crown, local-first store, and all other core functionality. **This explicitly supersedes every five-mode requirement elsewhere in this historical brand board and older parity/handoff documents.** Other modes may remain dormant in source for rollback but cannot be selected in the shipped SwiftUI app. Implementation: [draft PR #127](https://github.com/WGLewis0721/spread-app/pull/127), based on the Duo-fix branch #126. Native test evidence remains required before release.
+
+
+> Part of the [Spread design brain](../README.md). Governs **native SwiftUI presentation** on draft PR #127; does not replace the React planner tokens or the public landing brand.
 >
-> Summary: Owner-approved premium dark, luminous blue iPhone identity, metallic horizontal Crown, consistent Chalkboard illustrated cards, measured visual vocabulary, exact screen contracts and verification. Preserves Responsibilities → Hours → Week → Tasks, all five modes, existing data, accessibility and navigation. Scoped exception to the legacy React planner's quieter visual rules.
+> Summary: Owner-approved premium dark, luminous blue iPhone identity, metallic horizontal Crown, consistent Chalkboard illustrated cards, measured visual vocabulary, exact screen contracts and verification. Preserves Responsibilities → Hours → Week → Tasks, the **sole Wallet-style responsibility Stack**, existing data, accessibility and navigation. Scoped exception to the legacy React planner's quieter visual rules.
 
 ## 1. Reference authority and interpretation
 
@@ -18,9 +21,9 @@
 
 - Folded-card blue app icon with **Spread** in system sans, stable across every screen; no invented serif rebrand.
 - Machined **horizontal metallic Crown** with fine ribs, recessed dark center, month/week label and date, left/right controls, precise detents and accessible alternative controls.
-- All **11 original Chalkboard drawings** and real category glyphs in soft luminous color tiles; initials are not replacements. Art must not crowd task text. The native Dial is retained.
+- All **11 original Chalkboard drawings** and real category glyphs in soft luminous color tiles; initials are not replacements. Art must not crowd task text. The previous Dial code is retained only as dormant rollback code, not an available responsibility view.
 - Responsibility colors as persisted data, hour banks, allocation controls, task previews, rich Notes/Outline/Table/Photo, local-first profiles, export and protected recovery.
-- Five presentation modes: **Stack** (vertically compressed/expanded cards), **Fan** (angled overlapping cards around a focal one), **Dial** (preserve working behavior), **Tabs** and **Day**. Distinct geometry and motion.
+- One native responsibility presentation: **Wallet Stack** with full-width overlapping closed cards, independently expanded natural-height task lists, always-visible chevrons and animated Chalkboard art. No selectable Fan, Dial, Tabs or Day.
 - Familiar **Spread/Week** relationship and Month *inside Week*. No generic Home dashboard, permanent five-button nav, or invented analytics destination just because one concept board illustrates one.
 
 ## 3. Native color, type, depth, shape
@@ -56,7 +59,7 @@ The following hex and geometry values are **initial calibration targets**, infer
 | --- | --- | --- |
 | Global shell | Compact blue icon + sans Spread; actionable Crown; one clear Spread/Week switch; minimal dock | Giant decorative title, redundant navigation, multiple “main” buttons |
 | Spread | True computed hour summary and proportional role bar; dense illustrated role cards with category tile, role hours, task preview, quick inline actions, Add a spread | Generic “Responsibilities” splash, letter tiles, empty oversized cards |
-| Stack/Fan/Dial/Tabs/Day | Five truly different views; first-touch responsive; visible selection; preserve Dial | List renamed five times, choppy first swipe, hidden task entry |
+| Wallet Stack | Single full-width responsive view; independent card expansion, growing tasks, animated art, Edit/long-press parity, quick delete confirmation | Replacing cards with plain rows; hidden chevron or task entry; multi-mode switcher |
 | Hours | Clear hour budget, allocation controls and current hours without confusing duplication | New source of truth, changes that silently overallocate |
 | Week | Compact role/hour chips; grouped dashed “To place” tray; solid distinct days; inline task operations; “Free time” suggestions distinct | Same glowing rectangle for tray/day/suggestion; hiding essential placement |
 | Month | Sunday-first grid, real role dots per date, current and selected day, concise role totals; drill into day/week | Invented data or detached calendar flow |
@@ -69,7 +72,7 @@ A mockup's presence does not authorize a new feature. Any conceptual Activity/Pr
 
 ## 5. Motion and interaction principles
 
-**Stack** is a vertical physical stack with pressed elevation and focused expansion. **Fan** rotates/translates side cards around a dominant front card. **Dial** keeps its working geometry. Single gesture authority prevents duplicate commits, gesture reversal jumps and touch-readiness glitches. The first valid swipe responds immediately—no shadow/image loading gate.
+**Wallet Stack** is a single vertical physical stack. Closed cards overlap with title, hours and visible chevron. Any card can expand, remaining cards slide down to reveal all tasks. Original Chalkboard motion is active on visible cards except Reduce Motion. A long press and the dock Edit button enter the same mode (name, colour, icon and leading delete control). Single gesture authority prevents duplicate commits and touches blocked by decorative layers.
 
 Crown uses deterministic detents with tactile feedback, visible state, and non-gesture equivalents. Week↔Month changes preserve date context. Spring motion is purposeful and short; reduced motion removes decorative movement. No ornamental motion that compromises frame rate or task availability.
 
@@ -77,12 +80,12 @@ Navigation and controls never shift by arbitrary 4–5pt changes when switching 
 
 ## 6. Acceptance and release gates
 
-Before changing visuals capture installed PR #119 surfaces, then compare the same fixtures afterward on native **390/820/1024pt**, light/dark, empty/dense, long names, Dynamic Type, Reduce Motion and Increase Contrast. Inspect screens: Crown, Spread (five modes), Hours, Week/Month, Task, Move, New Spread, More. Produce actual screenshots/video and mark device-only tests unverified until measured.
+Before changing visuals capture installed PR #119 surfaces, then compare the same fixtures afterward on native **390/820/1024pt**, light/dark, empty/dense, long names, Dynamic Type, Reduce Motion and Increase Contrast. Inspect screens: Crown, Spread (closed/expanded/edit Wallet cards), Hours, Week/Month, Task, Move, New Spread, More. Produce actual screenshots/video and mark device-only tests unverified until measured.
 
-Measure: no clipped header/text, overlap or obscured tap target; controls >=44pt; text 4.5:1 normal / 3:1 large/icons; distinct selected/focus states beyond color; role hour/task data correct; real first-swipe and drag alternatives; existing Crown 100 turns + 30 reversals and Stack/Fan 100 each when harness available; no data loss or secondary writes. Run actual TypeScript, Swift package, iOS build, UI and persistence tests. A compile pass is not a UI sign-off; render concepts cannot substitute for simulator captures.
+Measure: no clipped header/text, overlap or obscured tap target; controls >=44pt; text 4.5:1 normal / 3:1 large/icons; distinct selected/focus states beyond color; role hour/task data correct; real first-swipe and drag alternatives; existing Crown 100 turns + 30 reversals and Wallet 100 expand/collapse actions when harness available; no data loss or secondary writes. Run actual TypeScript, Swift package, iOS build, UI and persistence tests. A compile pass is not a UI sign-off; render concepts cannot substitute for simulator captures.
 
 ### Explicit owner-approved native design exception
 
-On PR #119 **only the new SwiftUI presentation** may use these navy/blue luminous materials, role-edge glows and brushed metallic controls. This narrowly supersedes the old “no new colors or decoration / quiet palette only” React planner visual rules *for native SwiftUI styling*. All original data, planner semantics, privacy, golden versions, web React styles, landing branding, cloud/schema/backup boundaries, and production release gates remain unchanged.
+On draft PR #127 **only native SwiftUI presentation** may use these navy/blue luminous materials, role-edge glows and brushed metallic controls. This narrowly supersedes the old “no new colors or decoration / quiet palette only” React planner visual rules *for native SwiftUI styling*. All original data, planner semantics, privacy, golden versions, web React styles, landing branding, cloud/schema/backup boundaries, and production release gates remain unchanged.
 
-Do **not** merge, deploy, distribute another TestFlight build, or submit for App Store review without a separate explicit release authorization. Keep PR #119 draft, preserve rollback, and report real tests and before/after screenshot evidence. **Reproduce Spread's personality; never replace the product.**
+Do **not** merge, deploy, distribute another TestFlight build, or submit for App Store review without a separate explicit release authorization. Keep PR #127 draft, preserve rollback, and report real tests and before/after screenshot evidence. **Reproduce Spread's personality; never replace the product.**

@@ -15,7 +15,7 @@ public struct SpreadLiveRoot: View {
     @State private var monthPlane = false
     @State private var monthAnchor = PlannerDates.date(PlannerDates.currentWeekKey())
     @State private var weekDirection = 0
-    @State private var layout: SpreadLayout = SpreadLayoutPreference.read()
+    @State private var layout: SpreadLayout = .stack
     @State private var appearance: SpreadAppearance = SpreadAppearancePreference.read()
     @State private var selectedRole: String?
     @State private var focusDay: String?
@@ -175,7 +175,7 @@ public struct SpreadLiveRoot: View {
                         planner: planner,
                         snapshot: snapshot,
                         layout: $layout,
-                        editing: editing,
+                        editing: $editing,
                         selectedRole: $selectedRole,
                         onOpenRole: { sheet = .role($0) },
                         onOpenTask: { sheet = .task($0, $1) },
@@ -188,8 +188,10 @@ public struct SpreadLiveRoot: View {
                 }
                 Color.clear.frame(height: 16)
             }
-            // iPhone keeps a 640 pt reading column; iPad (regular width) opens up so it is not a narrow strip.
-            .frame(maxWidth: destination == .spread ? 720 : 1120)
+            // iOS 27 resizable scenes: Wallet responsibility cards use the *available*
+            // window width, including iPad and Duo. Only the more text-dense Week
+            // timeline keeps a readable column cap. Never size from UIScreen.main.
+            .frame(maxWidth: destination == .spread ? .infinity : 1120)
             .frame(maxWidth: .infinity)
             // Without this the week's slide transition never plays: a changed week would just swap in place.
             .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: snapshot.weekKey)
@@ -434,15 +436,27 @@ public struct SpreadLiveRoot: View {
             }
             .padding(6)
             .background {
-                // Reduce Transparency means opaque surfaces: the dock drops its material for the plain elevated surface.
+                // iOS 27 refresh: the floating *control* dock may use system
+                // Liquid Glass; responsibility cards and task content never do.
+                // The accessibility fallback is fully opaque and high-contrast.
                 if reduceTransparency {
                     Capsule().fill(Spread.elevated)
+                } else if #available(iOS 26.0, *) {
+                    Capsule().fill(Color.clear)
+                        .glassEffect(.regular, in: Capsule())
                 } else {
-                    Capsule().fill(.ultraThinMaterial)
-                    Capsule().fill(Spread.glass)
+                    Capsule().fill(.regularMaterial)
                 }
             }
-            .overlay(Capsule().strokeBorder(Spread.glassStroke, lineWidth: reduceTransparency ? 1 : 0.5))
+            .overlay {
+                // System glass draws its own edge. Adding a second border makes
+                // the dock look cheap and lowers contrast over busy cards.
+                if reduceTransparency {
+                    Capsule().strokeBorder(Spread.line, lineWidth: 1)
+                } else if #unavailable(iOS 26.0) {
+                    Capsule().strokeBorder(Spread.glassStroke, lineWidth: 0.5)
+                }
+            }
             .shadow(color: Spread.shadow, radius: 14, y: 6)
         }
         .padding(.horizontal, 16)

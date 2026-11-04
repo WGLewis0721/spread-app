@@ -1,5 +1,8 @@
 # Spread native UI: what is done, what is left, and how to finish it
 
+> **Owner update (2026-11-04):** The five-mode responsibility view described in this historical completion ledger has been superseded. See [the current native brand board amendment](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and [draft PR #127](https://github.com/WGLewis0721/spread-app/pull/127). The target is a single Wallet-style animated Stack with independent expansion, native task growth, persistent chevron and a common Edit/long-press mode. Legacy mode-specific test cases must be replaced with strict Stack tests, not silently skipped. All underlying planner and release constraints still apply.
+
+
 **Written:** 2026-11-04, after PR #119 was merged to `main` as `c66116c` (branch tip `57acfbc`, identical tree).
 **For:** the next engineer or Claude session. Pair it with [CLAUDE_NATIVE_UI_REMAINING_HANDOFF.md](CLAUDE_NATIVE_UI_REMAINING_HANDOFF.md).
 **Status of the app:** the redesigned SwiftUI app builds, launches and renders on iPhone and iPad simulators **in light appearance**. Dark appearance, the old-vs-new comparison, the owner's reference images, most functional flows and every physical-device check are **unproven**. Merge was authorised by the owner; that is permission, not verification.

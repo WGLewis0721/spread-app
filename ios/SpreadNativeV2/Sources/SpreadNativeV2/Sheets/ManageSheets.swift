@@ -509,24 +509,6 @@ struct MoreSheet: View {
                     .accessibilityIdentifier("more-rollover")
                 }
                     .listRowBackground(Spread.elevated)
-                Section("Spread layout") {
-                    FlowRow(spacing: 6) {
-                        ForEach(SpreadLayout.allCases) { item in
-                            Button { layout = item } label: {
-                                Text(item.title).font(.subheadline.weight(.semibold)).lineLimit(1)
-                                    .padding(.horizontal, 14).frame(minWidth: 44, minHeight: 44)
-                                    .spreadChip(selected: layout == item)
-                            }
-                            .buttonStyle(.spreadPress)
-                            .accessibilityAddTraits(layout == item ? .isSelected : [])
-                            .accessibilityIdentifier("more-layout-\(item.rawValue)")
-                        }
-                    }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Spread layout")
-                    .accessibilityIdentifier("view-mode-button")
-                }
-                    .listRowBackground(Spread.elevated)
                 Section("Appearance") {
                     FlowRow(spacing: 6) {
                         ForEach(SpreadAppearance.allCases) { item in

@@ -25,6 +25,7 @@ Resolve an open decision here and in its source document together, then move the
 
 | Date | Decision | Where |
 | --- | --- | --- |
+| 2026-11-04 | Owner replaces the former five-mode SwiftUI responsibility presentation with a **single full-width animated Wallet-style Stack**. Independent task-height expansion, permanent chevron, shared Edit/long-press state, inline names, role colour/icon palette, confirmed quick delete, and edit-only breathing glow. This explicitly supersedes the 2026-11-03 five-mode requirement **for native SwiftUI only**; React, Week/Month, planner store, privacy and release gates remain unchanged. | [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md), [PR #127](https://github.com/WGLewis0721/spread-app/pull/127) |
 | 2026-09-28 | Landing direction frozen as `golden/2026-09-28-full-landing-modes` | landing/DESIGN.md |
 | 2026-10-08 | HIG polish for the planner: Crown, capacity bar, edit mode, Week empty days, Month Today marker, global arrows | planner/SPREAD_DESIGN_SYSTEM.md |
 | 2026-10-21 | Device build guides researched (iPhone, iPad, Duo) | platforms/ |
