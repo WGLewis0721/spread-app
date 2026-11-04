@@ -197,10 +197,29 @@ class NativeUITestCase: XCTestCase {
     func selectRole(_ name: String) {
         closeNativeSheets()
         openWalletCard(name)
-        XCTAssertTrue(eventually { self.el("manage-selected").label == "Manage \(name)" }, "Responsibility \(name) did not become the selection")
+        XCTAssertTrue(eventually { (self.el("stack-cards").value as? String) == name },
+                      "Responsibility \(name) did not become the selection")
+    }
+
+    /// The selected responsibility opens its existing editor by a left
+    /// edit-swipe, not a redundant bottom Manage button.
+    func manageSelectedRole() throws {
+        goSpread()
+        let name = try XCTUnwrap(el("stack-cards").value as? String)
+        let button = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == name })
+        let id = String(button.identifier.dropFirst("select-role-".count))
+        let card = el("role-block-" + id)
+        scrollIntoView(card)
+        if !el("dock-done").exists { tapID("edit-spreads") }
+        card.swipeLeft()
+        let manage = el("manage-role-" + id)
+        XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
+        XCTAssertTrue(manage.isHittable)
+        manage.tap()
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
-    var selectedRoleLabel: String { el("manage-selected").label }
+    // The old bottom Manage card is gone; selection lives on the Stack itself.
+    var selectedRoleLabel: String { "Manage " + ((el("stack-cards").value as? String) ?? "") }
 
     // MARK: dates (the planner keeps date-only UTC weeks that start on Monday)
 
@@ -335,12 +354,12 @@ final class JourneyUITests: NativeUITestCase {
         typeInto("role-name-field", Dataset.role)
         capture("F01-new-spread"); tapID("save-spreads")
         selectRole(Dataset.role)
-        XCTAssertEqual(selectedRoleLabel, "Manage " + Dataset.role)
+        XCTAssertEqual(selectedRoleLabel, Dataset.role)
         capture("F01-created")
     }
 
     func testF02_BudgetAndDays() throws {
-        try requireDataset(); launch(); selectRole(Dataset.role); tapID("manage-selected")
+        try requireDataset(); launch(); selectRole(Dataset.role); try manageSelectedRole()
         XCTAssertTrue(el("bank-remaining").waitForExistence(timeout: 15))
         XCTAssertEqual(el("bank-remaining").label, "2h left in this week’s bank")
         tapButton("Increase \(Dataset.role) hours by half an hour")
@@ -516,7 +535,7 @@ final class JourneyUITests: NativeUITestCase {
         tapID("week-month-toggle"); try audit("journey-month")
     }
     func testF11_AuditSheets() throws {
-        try requireDataset(); launch(); selectRole(Dataset.role); tapID("manage-selected")
+        try requireDataset(); launch(); selectRole(Dataset.role); try manageSelectedRole()
         try auditScrolled("role-sheet"); closeNativeSheets(); openTask(Dataset.taskA)
         try auditScrolled("task-sheet"); closeNativeSheets(); tapID("open-more")
         try auditScrolled("more-sheet"); tapID("manage-profiles"); try auditScrolled("profiles-sheet")
@@ -529,6 +548,81 @@ final class PlannerUITests: NativeUITestCase {
     override func setUpWithError() throws {
         try super.setUpWithError()
         launch()
+    }
+
+    /// Edit changes no Wallet text geometry. Swipe left to expose Manage;
+    /// swipe right for Delete. The rigid card moves, never reflows.
+    func testWalletSwipeActionsPreserveCardGeometry() throws {
+        goSpread()
+        let badge = try XCTUnwrap(waitElements(prefix: "role-colour-").first)
+        let id = String(badge.identifier.dropFirst("role-colour-".count))
+        let card = el("role-block-" + id)
+        let hour = el("hours-stepper-" + id)
+        let chevron = el("expand-role-" + id)
+        scrollIntoView(card)
+        let cardWidth = card.frame.width
+        let badgeRel = badge.frame.minX - card.frame.minX
+        let hourRel = hour.frame.minX - card.frame.minX
+        let chevronRel = chevron.frame.minX - card.frame.minX
+
+        tapID("edit-spreads")
+        XCTAssertFalse(el("remove-role-" + id).exists, "Delete should appear only after a right swipe")
+        XCTAssertFalse(el("manage-role-" + id).exists, "Manage should appear only after a left swipe")
+        XCTAssertEqual(card.frame.width, cardWidth, accuracy: 1)
+        XCTAssertEqual(badge.frame.minX - card.frame.minX, badgeRel, accuracy: 1)
+        XCTAssertEqual(hour.frame.minX - card.frame.minX, hourRel, accuracy: 1)
+
+        card.swipeLeft()
+        let manage = el("manage-role-" + id)
+        XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
+        XCTAssertTrue(manage.isHittable)
+        XCTAssertFalse(el("remove-role-" + id).exists)
+        XCTAssertEqual(card.frame.width, cardWidth, accuracy: 1)
+        XCTAssertEqual(badge.frame.minX - card.frame.minX, badgeRel, accuracy: 1)
+        XCTAssertEqual(hour.frame.minX - card.frame.minX, hourRel, accuracy: 1)
+        XCTAssertEqual(chevron.frame.minX - card.frame.minX, chevronRel, accuracy: 1)
+
+        // Move through center to the other action. An extra swipe is safe
+        // when a gesture stops at the neutral detent.
+        card.swipeRight()
+        if !el("remove-role-" + id).exists { card.swipeRight() }
+        let delete = el("remove-role-" + id)
+        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Right swipe did not reveal Delete")
+        XCTAssertTrue(delete.isHittable)
+        XCTAssertFalse(manage.exists)
+        XCTAssertEqual(card.frame.width, cardWidth, accuracy: 1)
+        XCTAssertEqual(badge.frame.minX - card.frame.minX, badgeRel, accuracy: 1)
+        XCTAssertEqual(hour.frame.minX - card.frame.minX, hourRel, accuracy: 1)
+        capture("wallet-manage-delete-swipe-no-reflow")
+        tapID("dock-done")
+        XCTAssertFalse(delete.exists, "Actions remain after leaving edit mode")
+        XCTAssertFalse(el("manage-selected").exists, "The obsolete bottom Manage box must not return")
+    }
+
+    /// After a brief introduction, visible labels fold left toward the icons.
+    /// The icon buttons and metallic Week Crown must remain usable.
+    func testHeaderLabelsFoldIntoIconsAndNavigationRemainsUsable() {
+        goSpread()
+        let header = el("top-header")
+        XCTAssertTrue(header.waitForExistence(timeout: 15), "Top header not present")
+        XCTAssertTrue(eventually(8) { (header.value as? String) == "Compact navigation" },
+                      "The introduction did not fold after 2.5 seconds")
+        XCTAssertFalse(el("header-brand-title").exists)
+        XCTAssertFalse(el("header-label-spread").exists)
+        XCTAssertFalse(el("header-label-week").exists)
+        for id in ["brand-home", "native-spread", "native-week"] {
+            let control = el(id)
+            XCTAssertTrue(control.isHittable, "Compact navigation lost \(id)")
+            XCTAssertGreaterThanOrEqual(control.frame.width, 44, "Compact icon has a small hit target: \(id)")
+            XCTAssertGreaterThanOrEqual(control.frame.height, 44)
+        }
+        capture("header-after-auto-fold")
+        tapID("native-week")
+        XCTAssertTrue(el("week-month-toggle").waitForExistence(timeout: 20),
+                      "Week does not open from the compact icon")
+        tapID("brand-home")
+        XCTAssertTrue(el("stack-cards").waitForExistence(timeout: 20),
+                      "Spread logo no longer returns to the responsibility stack")
     }
 
     // MARK: Owner-reported radial layout, preference location and Week scroll regressions
@@ -550,8 +644,10 @@ final class PlannerUITests: NativeUITestCase {
                       "Expanding the second responsibility collapsed the first")
         capture("wallet-two-open-cards")
         tapID("edit-spreads")
-        XCTAssertTrue(el("remove-role-" + firstId).waitForExistence(timeout: 10),
-                      "Delete control did not slide into the card")
+        XCTAssertFalse(el("remove-role-" + firstId).exists,
+                       "Delete must remain hidden until a right swipe")
+        XCTAssertFalse(el("manage-role-" + firstId).exists,
+                       "Manage must remain hidden until a left swipe")
         XCTAssertTrue(el("role-name-" + firstId).exists, "Card title is not editable")
         tapID("role-colour-" + firstId)
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use #'")).firstMatch.waitForExistence(timeout: 10),
@@ -571,7 +667,11 @@ final class PlannerUITests: NativeUITestCase {
         first.press(forDuration: 0.65)
         XCTAssertTrue(el("dock-done").waitForExistence(timeout: 10),
                       "Long press did not enter the same Edit mode as the dock")
-        XCTAssertFalse(elements(prefix: "remove-role-").isEmpty)
+        XCTAssertTrue(elements(prefix: "remove-role-").isEmpty,
+                      "Long press should enter Edit without revealing Delete")
+        let id = first.identifier.replacingOccurrences(of: "role-block-", with: "")
+        first.swipeRight()
+        XCTAssertTrue(el("remove-role-" + id).waitForExistence(timeout: 10))
         capture("wallet-long-press-edit")
         tapID("dock-done")
     }
@@ -663,7 +763,11 @@ final class PlannerUITests: NativeUITestCase {
                           "Wallet card stopped responding with Reduce Motion")
         }
         tapID("edit-spreads")
-        XCTAssertFalse(elements(prefix: "remove-role-").isEmpty)
+        XCTAssertTrue(elements(prefix: "remove-role-").isEmpty)
+        let firstCard = try XCTUnwrap(waitElements(prefix: "role-block-").first)
+        let firstId = String(firstCard.identifier.dropFirst("role-block-".count))
+        firstCard.swipeRight()
+        XCTAssertTrue(el("remove-role-" + firstId).waitForExistence(timeout: 10))
         tapID("dock-done")
         goWeek()
         let before = crownValue
@@ -681,6 +785,7 @@ final class PlannerUITests: NativeUITestCase {
         let role = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == doomed })
         let roleId = String(role.identifier.dropFirst("select-role-".count))
         tapID("edit-spreads")
+        el("role-block-" + roleId).swipeRight()
         tapID("remove-role-" + roleId)
         XCTAssertTrue(app.buttons["Delete responsibility"].waitForExistence(timeout: 10),
                       "Quick delete bypassed confirmation")
@@ -799,7 +904,7 @@ final class PlannerUITests: NativeUITestCase {
         tapID("edit-spreads")
         assertTargets("wallet-edit")
         tapID("dock-done")
-        tapID("manage-selected"); assertTargets("role-editor"); tapButton("Done")
+        try manageSelectedRole(); assertTargets("role-editor"); tapButton("Done")
         goWeek(); el("week-month-toggle").tap(); assertTargets("month")
     }
 
@@ -851,7 +956,7 @@ final class PlannerUITests: NativeUITestCase {
         try audit("long-names-week")
         selectRole(role)
         chooseMode("Stack")
-        XCTAssertEqual(selectedRoleLabel, "Manage \(role)")
+        XCTAssertEqual(selectedRoleLabel, role)
         try audit("long-names-wallet")
         capture("long-names-spread")
     }
@@ -1013,7 +1118,7 @@ final class SpreadFlowUITests: NativeUITestCase {
         capture("flow1-before-relaunch")
         relaunch()
         selectRole(name)
-        XCTAssertEqual(selectedRoleLabel, "Manage " + name)
+        XCTAssertEqual(selectedRoleLabel, name)
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch.waitForExistence(timeout: 20), "The task did not survive a relaunch")
         XCTAssertTrue(app.buttons["Mark not done: \(task)"].firstMatch.exists, "The completed state did not survive a relaunch")
     }
