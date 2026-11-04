@@ -5,7 +5,7 @@ Owner objective (November 3, America/Chicago): a paid-app candidate tonight, wit
 
 ## Implementation
 
-- Reserve the dock through a real safe-area inset; no hardcoded bottom spacer.
+- Reserve the dock in the vertical layout using its measured content height; no hardcoded bottom spacer.
 - Keep whole layout names in a scrolling control, and its accessibility container in every size.
 - Compact empty days; choose one or two day columns from available space, with one column at accessibility text sizes.
 - Allow phone landscape; use the iOS 27.1 SDK in the shipping and new manual candidate workflows.
@@ -56,3 +56,5 @@ Candidate `94e7e9b`: native compile, CI and 28 portable contracts passed. The 39
 Largest-text captures showed the Crown date/hint and destination rail exceeding available space. The follow-up permits Crown readout growth, wraps its hint, stacks the destination choices at accessibility sizes, and separates the Dial role label at those sizes. Card selection uses a full-card background button instead of inheriting a gesture onto static day marks. System sheet grabbers are excluded from the custom-button target check, alongside system navigation bars.
 
 PR #123 verifies the actual simulator hinge and orientation using pinned, provenance-checked CI tooling, with state readback and unmodified screenshots. A passed XCUIDevice orientation assignment is not rotation evidence.
+
+The rendered dark capture from `94e7e9b` confirmed that a safe-area inset still lets scroll content draw beneath the floating dock. The follow-up puts content and dock in separate vertical layout regions, sized from their actual contents, so visible task fields and card controls stay above the dock.

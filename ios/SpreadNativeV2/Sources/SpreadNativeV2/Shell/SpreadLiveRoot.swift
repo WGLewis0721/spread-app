@@ -43,15 +43,17 @@ public struct SpreadLiveRoot: View {
 
     /// The planner layers and the standing accessibility identity.
     private var layers: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Spread.canvas.ignoresSafeArea()
-            if let snapshot = planner.snapshot {
-                content(snapshot)
-            } else {
-                opening
+            VStack(spacing: 0) {
+                if let snapshot = planner.snapshot {
+                    content(snapshot)
+                } else {
+                    opening
+                }
+                dock
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { dock }
         .foregroundStyle(Spread.ink)
         .tint(Spread.accent)
         .accessibilityElement(children: .contain)
