@@ -203,7 +203,9 @@ struct DialLayout: View {
                     sphere(side: side)
                 }
                 .frame(width: side, height: side)
-                .position(x: proxy.size.width / 2, y: side / 2)
+                // .position expands the enclosing layout's coordinate space on some devices.
+                // Keep the hit-tested Dial a true square and shift that square into the center:
+                // drag locations then match the same center used to draw every arc and the knob.
                 .contentShape(Circle())
                 .gesture(
                     DragGesture(minimumDistance: 0)
@@ -225,6 +227,7 @@ struct DialLayout: View {
                     onSelect(rows[(next + rows.count) % rows.count].id)
                 }
                 .accessibilityIdentifier("dial")
+                .offset(x: max(0, (proxy.size.width - side) / 2))
             }
             .frame(height: 300)
             if typeSize.isAccessibilitySize {
@@ -306,6 +309,7 @@ struct TabsLayout: View {
     @Binding var tab: String
     let snapshot: PlannerSnapshot
     let onOpenTask: (String, String) -> Void
+    let onSelect: (String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var lastIndex = 0
@@ -370,6 +374,9 @@ struct TabsLayout: View {
         let tint: Color? = color.map { Color(hex: $0) }
         return Button {
             withAnimation(reduceMotion ? nil : SpreadMotion.curve) { tab = id }
+            // A second tap on an already-selected tab must still sync the role shared
+            // with Stack, Fan and Dial; onChange(of: tab) alone misses that case.
+            if id != "all" { onSelect(id) }
         } label: {
             HStack(spacing: 8) {
                 if let color { RoleBadge(category: category == "custom" ? nil : category, color: color, size: 26) }

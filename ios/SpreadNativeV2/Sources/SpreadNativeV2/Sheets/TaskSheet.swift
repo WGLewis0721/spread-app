@@ -64,6 +64,8 @@ struct TaskSheet: View {
                             taskHeader(task)
                             TextField("Task title", text: $title, prompt: Spread.fieldPrompt("Task title"))
                                 .font(.system(.title2, weight: .bold))
+                                .padding(.vertical, 10)
+                                .frame(minHeight: 52)
                                 .submitLabel(.done)
                                 .onSubmit { commitTitle() }
                                 .accessibilityLabel("Task title")

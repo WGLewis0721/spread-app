@@ -153,7 +153,7 @@ struct SpreadSurface: View {
         case .dial:
             DialLayout(planner: planner, rows: rows, selectedId: selectedRole ?? rows.first?.role.id ?? "", onSelect: { selectedRole = $0 }, onOpenRole: onOpenRole, snapshot: snapshot)
         case .tabs:
-            TabsLayout(planner: planner, rows: rows, tab: $tabSelection, snapshot: snapshot, onOpenTask: onOpenTask)
+            TabsLayout(planner: planner, rows: rows, tab: $tabSelection, snapshot: snapshot, onOpenTask: onOpenTask, onSelect: { selectedRole = $0 })
         case .day:
             DayLayout(planner: planner, rows: rows, snapshot: snapshot, selectedDay: $daySelection, selectedRole: $selectedRole, onOpenTask: onOpenTask)
         }

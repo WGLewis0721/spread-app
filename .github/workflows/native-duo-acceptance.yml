@@ -2,6 +2,8 @@ name: iPhone Duo native acceptance
 on:
   pull_request:
     paths:
+      - "ios/**"
+      - "scripts/native-simulator*"
       - ".github/workflows/native-duo-acceptance.yml"
   workflow_dispatch:
 permissions:

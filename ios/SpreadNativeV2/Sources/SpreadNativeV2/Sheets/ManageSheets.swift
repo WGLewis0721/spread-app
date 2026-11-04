@@ -389,6 +389,9 @@ struct ProfilesSheet: View {
                             .accessibilityAddTraits(active ? .isSelected : [])
                             .accessibilityIdentifier("profile-\(profile.id)")
                             TextField("Name", text: Binding(get: { names[profile.id] ?? profile.name }, set: { names[profile.id] = $0 }), prompt: Spread.fieldPrompt("Name"))
+                                .font(.system(.body))
+                                .padding(.vertical, 10)
+                                .frame(minHeight: 44)
                                 .submitLabel(.done)
                                 .onSubmit { rename(profile) }
                                 .accessibilityLabel("Name for \(profile.name)")
@@ -402,16 +405,22 @@ struct ProfilesSheet: View {
                     }
                 } footer: {
                     Text("Each profile keeps its own spreads and weeks.")
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                     .listRowBackground(Spread.elevated)
-                Section("New profile") {
+                Section {
                     TextField("New profile name", text: $newName, prompt: Spread.fieldPrompt("New profile name"))
                         .submitLabel(.done)
                         .onSubmit { create() }
+                        .font(.system(.body))
+                        .padding(.vertical, 10)
+                        .frame(minHeight: 44)
                         .accessibilityIdentifier("new-profile-field")
                     Button("Create profile") { create() }
                         .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty || planner.profiles.count >= Self.limit)
                         .accessibilityIdentifier("create-profile")
+                } header: {
+                    Text("New profile").fixedSize(horizontal: false, vertical: true)
                 }
                     .listRowBackground(Spread.elevated)
             }
@@ -489,14 +498,14 @@ struct MoreSheet: View {
                 Section("Spreads") {
                     Button { newSpread = true } label: { Label("New Spread", systemImage: "plus").frame(minHeight: 44, alignment: .leading) }
                         .accessibilityIdentifier("more-new-spread")
-                    Button { openTasks = true } label: { Label("Review open tasks", systemImage: "tray").frame(minHeight: 44, alignment: .leading) }
+                    Button { openTasks = true } label: { Label("Review open tasks", systemImage: "tray").fixedSize(horizontal: false, vertical: true).frame(minHeight: 44, alignment: .leading) }
                     Button {
                         Task {
                             if await planner.send(["type": "rollover", "force": false]), planner.rolloverOutcome == "confirm" {
                                 confirmRollover = true
                             }
                         }
-                    } label: { Label("Rollover to next week", systemImage: "arrow.right.square").frame(minHeight: 44, alignment: .leading) }
+                    } label: { Label("Rollover to next week", systemImage: "arrow.right.square").fixedSize(horizontal: false, vertical: true).frame(minHeight: 44, alignment: .leading) }
                     .accessibilityIdentifier("more-rollover")
                 }
                     .listRowBackground(Spread.elevated)
