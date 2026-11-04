@@ -6,7 +6,7 @@ All design guidance lives in one place: **[docs/design/README.md](docs/design/RE
 **Start here:** `docs/design/README.md` (router). Plans and specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens as data: `docs/design/tokens.json`. Read the task pack the router names, then only the section it points to.
 
 **Look**
-- In unflagged **React**, no new colors/fonts/decorative paint: use existing CSS tokens. **SwiftUI PR #119 native paint** follows the [owner-approved visual board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) (deep navy, bounded role glow, metallic Crown) without changing React or landing.
+- In unflagged **React**, no new colors/fonts/decorative paint: use existing CSS tokens. **SwiftUI PR #119 native paint** follows the owner-approved `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` (deep navy, bounded role glow, metallic Crown) without changing React or landing.
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week keeps three kinds of thing: solid day cards, a dashed To place tray, tinted Free time chips.
