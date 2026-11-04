@@ -248,24 +248,27 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             scroller = nil
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            // SwiftUI may host a background representable with a stale or zero-sized
-            // UIKit bounds during its first layout pass. Compare the touch in the
-            // scroll view's coordinates against the anchor's converted frame instead.
-            // This still excludes the independently horizontally scrolling role strip.
+            // The Week column is capped at 1120pt, but on an unfolded/rotated
+            // Duo the parent scroll view can be wider. Use the anchor's vertical
+            // range to exclude the independently scrolling role strip and sticky
+            // Crown; use the full visible viewport horizontally, including its
+            // gutters, so swipes don't silently die outside the column.
             guard let anchor, let scroller else { return false }
             let region = anchor.convert(anchor.bounds, to: scroller)
-            guard region.width > 0, region.height > 0 else { return false }
+            let viewport = scroller.bounds
+            guard region.height > 0, viewport.width > 0 else { return false }
             let point = touch.location(in: scroller)
-            guard region.contains(point) else { return false }
-            start = CGPoint(x: point.x - region.minX, y: point.y - region.minY)
+            guard point.y >= region.minY, point.y <= region.maxY,
+                  point.x >= viewport.minX, point.x <= viewport.maxX else { return false }
+            start = CGPoint(x: point.x - viewport.minX, y: point.y - region.minY)
             return true
         }
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            guard let anchor, anchor.bounds.width > 0 else { return false }
+            guard let scroller, scroller.bounds.width > 0 else { return false }
             let velocity = pan.velocity(in: scroller)
             return abs(velocity.x) > abs(velocity.y) * WeekSwipeRules.dominance
                 && start.x >= WeekSwipeRules.edgeGuard
-                && start.x <= anchor.bounds.width - WeekSwipeRules.edgeGuard
+                && start.x <= scroller.bounds.width - WeekSwipeRules.edgeGuard
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             // Day cards use SwiftUI drag and tap recognizers. If one of those wins
@@ -281,7 +284,7 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             case .began, .changed:
                 onShift(WeekSwipeRules.shift(start: start, current: end))
             case .ended:
-                let direction = WeekSwipeRules.direction(start: start, end: end, width: anchor?.bounds.width ?? 0)
+                let direction = WeekSwipeRules.direction(start: start, end: end, width: scroller?.bounds.width ?? 0)
                 withAnimation(SpreadMotion.press) { onShift(0) }
                 if let direction { onMove(direction) }
             case .cancelled, .failed:
