@@ -253,7 +253,11 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
                 && start.x <= anchor.bounds.width - WeekSwipeRules.edgeGuard
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-            other === scroller?.panGestureRecognizer
+            // Day cards use SwiftUI drag and tap recognizers. If one of those wins
+            // exclusivity, the outer swipe can never reach .ended on iPhone Duo.
+            // A horizontal swipe has already passed the direction gate above;
+            // the vertical ScrollView pan must keep running for normal scrolling.
+            return other === scroller?.panGestureRecognizer || other is UIPanGestureRecognizer
         }
         @objc private func changed(_ gesture: UIPanGestureRecognizer) {
             let translation = gesture.translation(in: scroller)
