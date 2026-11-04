@@ -195,7 +195,8 @@ struct FocusedRoleCard: View {
         let ids = Set(allocations.map(\.id))
         let filtered = snapshot.tasks.filter { $0.roleId == role.id && ids.contains($0.allocationId ?? "") }
         let order = snapshot.dayTaskOrder?[day + "|" + role.id] ?? []
-        let index = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
+        // uniquingKeysWith: a repeated id in saved order must never trap the app.
+        let index = Dictionary(order.enumerated().map { ($0.element, $0.offset) }, uniquingKeysWith: { first, _ in first })
         return filtered.sorted {
             (index[$0.id] ?? Int.max) < (index[$1.id] ?? Int.max)
         }

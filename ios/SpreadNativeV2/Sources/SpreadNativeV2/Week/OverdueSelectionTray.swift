@@ -174,9 +174,12 @@ struct OverdueSelectionTray: View {
     }
 
     private func commitPreview() async {
-        guard !preparing, preview.contains(where: \.eligible) else { return }
+        // Move exactly what the person reviewed and confirmed: the eligible rows of this preview.
+        // Sending the whole selection would let a planner change made after the preview move more.
+        let reviewed = preview.filter(\.eligible).map(\.taskId)
+        guard !preparing, !reviewed.isEmpty else { return }
         preparing = true
-        let ok = await planner.send(["type": "bulkMoveOverdue", "taskIds": selectedIDs,
+        let ok = await planner.send(["type": "bulkMoveOverdue", "taskIds": reviewed,
                                      "targetDay": targetDay, "today": PlannerDates.localISO()])
         preparing = false
         if ok {

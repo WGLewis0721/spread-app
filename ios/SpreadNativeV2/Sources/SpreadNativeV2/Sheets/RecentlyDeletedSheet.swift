@@ -12,6 +12,7 @@ struct RecentlyDeletedSheet: View {
     @State private var busy = false
     @State private var confirmingDelete = false
     @State private var loaded = false
+    @State private var loadFailed = false
 
     var body: some View {
         SpreadSheetStack {
@@ -22,6 +23,16 @@ struct RecentlyDeletedSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                     if !loaded {
                         ProgressView().frame(maxWidth: .infinity, minHeight: 100)
+                    } else if loadFailed {
+                        VStack(spacing: 10) {
+                            Text("Recently Deleted could not be read. Nothing was removed.")
+                                .font(Spread.callout).foregroundStyle(Spread.secondary)
+                                .multilineTextAlignment(.center)
+                            Button("Try again") { Task { await reload() } }
+                                .frame(minHeight: 44)
+                                .accessibilityIdentifier("deleted-retry")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 160)
                     } else if rows.isEmpty {
                         ContentUnavailableView("Nothing recently deleted", systemImage: "trash",
                                                description: Text("Tasks you delete will appear here for 30 days."))
@@ -141,8 +152,10 @@ struct RecentlyDeletedSheet: View {
     }
 
     private func reload() async {
-        if let fetched = await planner.recentlyDeletedTasks() { rows = fetched; loaded = true }
-        else { rows = []; loaded = true }
+        // A failed read is not an empty list: saying "Nothing recently deleted" would look like loss.
+        if let fetched = await planner.recentlyDeletedTasks() { rows = fetched; loadFailed = false }
+        else { loadFailed = true }
+        loaded = true
     }
 
     private func restore(_ ids: [String]) async {
