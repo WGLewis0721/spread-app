@@ -92,6 +92,7 @@ struct MonthSurface: View {
     private func dayCell(_ cell: Cell, isToday: Bool) -> some View {
         let dots: NativeDayMark = mark(for: cell.iso)
         let label = PlannerDates.label(cell.date, pattern: "EEEE MMMM d")
+        let inOpenWeek = PlannerDates.weekKey(for: cell.date) == snapshot.weekKey
         let count = dots.count
         let extra = dots.extra
         return Button { onPick(cell.iso) } label: {
@@ -115,12 +116,17 @@ struct MonthSurface: View {
             }
             .frame(maxWidth: .infinity, minHeight: 56)
             .padding(.vertical, 4)
-            .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 16))
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Spread.elevated))
+            // The open week's seven days carry a blue hairline, so the way Week sits inside Month stays visible.
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(inOpenWeek ? Spread.accent.opacity(0.75) : Spread.line, lineWidth: inOpenWeek ? 1.5 : 0.5)
+            )
             .opacity(cell.inMonth ? 1 : 0.55)
-            .contentShape(RoundedRectangle(cornerRadius: 16))
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(isToday ? "Today, " : "")\(label). \(count == 0 ? "No responsibilities scheduled." : "\(count) \(count == 1 ? "responsibility" : "responsibilities") scheduled.")")
+        .buttonStyle(.spreadPress)
+        .accessibilityLabel("\(isToday ? "Today, " : "")\(inOpenWeek ? "Open week, " : "")\(label). \(count == 0 ? "No responsibilities scheduled." : "\(count) \(count == 1 ? "responsibility" : "responsibilities") scheduled.")")
         .accessibilityAddTraits(isToday ? .isSelected : [])
         .accessibilityIdentifier("month-day-\(cell.iso)")
     }

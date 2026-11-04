@@ -122,6 +122,7 @@ public struct SpreadLiveRoot: View {
 
     private var opening: some View {
         VStack(spacing: 16) {
+            SpreadBrandMark(size: 56)
             ProgressView("Opening your plan…")
             Button { Task { await planner.refresh() } } label: { Text("Try again").tapTarget() }
             Button { recovery() } label: { Text("Open existing planner").tapTarget() }
@@ -195,16 +196,27 @@ public struct SpreadLiveRoot: View {
         }
     }
 
+    /// An illustrated empty state: the notebook drawing, one sentence, one lit action.
     private var emptyPlan: some View {
-        ContentUnavailableView {
-            Label("Make room for what matters", systemImage: "square.stack")
-        } description: {
+        VStack(spacing: 14) {
+            ChalkIllustration(category: "custom", maxWidth: 230, maxHeight: 160)
+            Text("Make room for what matters")
+                .font(.system(.title2, weight: .bold)).multilineTextAlignment(.center)
             Text("Name a responsibility, give it hours, then place those hours in your week.")
-        } actions: {
-            Button { sheet = .newRole } label: { Text("Create responsibility").tapTarget() }
-                .buttonStyle(.borderedProminent)
+                .font(.system(.subheadline)).foregroundStyle(Spread.secondary).multilineTextAlignment(.center)
+            Button { sheet = .newRole } label: {
+                Text("Create responsibility")
+                    .font(.system(.headline, weight: .semibold)).foregroundStyle(Spread.onAccent)
+                    .padding(.horizontal, 28).frame(minHeight: 50)
+                    .background(Capsule().fill(Spread.accentGradient))
+            }
+            .buttonStyle(.spreadPress)
+            .padding(.top, 6)
+            .accessibilityIdentifier("create-first-spread")
         }
-        .padding(.top, 32)
+        .padding(.horizontal, 32)
+        .padding(.top, 28)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Header
