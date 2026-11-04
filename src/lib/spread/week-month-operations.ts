@@ -49,6 +49,18 @@ export function moveTaskToRecentlyDeleted(
  * Restoring never schedules a task. It returns to the *original week* and original role's
  * To Place, preserving content and completion state without changing the viewed week.
  */
+/**
+ * After an Undo brings a deleted task back into the plan, its Recently Deleted entry is stale: it can never be
+ * restored (that would duplicate the task) and would only mislead. Drop entries whose task is in the plan again.
+ */
+export function dropRevivedDeletedTasks(data: SpreadData): SpreadData {
+  if (!data.deletedTasks?.length) return data;
+  const live = new Set(Object.values(data.weeks).flatMap((week) =>
+    week.boxes.flatMap((box) => box.tasks.map((task) => task.id))));
+  const kept = data.deletedTasks.filter((item) => !live.has(item.task.id));
+  return kept.length === data.deletedTasks.length ? data : { ...data, deletedTasks: kept };
+}
+
 export function restoreRecentlyDeletedTask(
   data: SpreadData, taskId: string, now = Date.now(),
 ): { data: SpreadData; changed: boolean; reason?: string } {

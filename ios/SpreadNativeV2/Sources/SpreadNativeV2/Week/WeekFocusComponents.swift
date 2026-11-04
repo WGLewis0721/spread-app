@@ -10,6 +10,9 @@ struct FocusedTaskRow: View {
     let day: String
     let roleId: String
     let onOpenEditor: (String, String) -> Void
+    /// Non-drag paths for reordering within the day (tap menu, VoiceOver, keyboard). Nil at the ends.
+    var onMoveUp: (() -> Void)? = nil
+    var onMoveDown: (() -> Void)? = nil
 
     @State private var showActions = false
     @State private var showMove = false
@@ -39,6 +42,10 @@ struct FocusedTaskRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Complete, Reschedule, Edit, or Delete")
+            .accessibilityActions {
+                if let onMoveUp { Button("Move up", action: onMoveUp) }
+                if let onMoveDown { Button("Move down", action: onMoveDown) }
+            }
             .accessibilityIdentifier("focus-task-\(task.id)")
             Image(systemName: "line.3.horizontal")
                 .foregroundStyle(Spread.tertiary)
@@ -66,6 +73,8 @@ struct FocusedTaskRow: View {
             if !task.done {
                 Button("Reschedule") { showMove = true }
             }
+            if let onMoveUp { Button("Move up", action: onMoveUp) }
+            if let onMoveDown { Button("Move down", action: onMoveDown) }
             Button("Edit") { onOpenEditor(roleId, task.id) }
             Button("Delete", role: .destructive) {
                 Task { await planner.send(["type": "deleteTask", "roleId": roleId, "taskId": task.id]) }
@@ -205,6 +214,29 @@ struct FocusedRoleCard: View {
     private var doneTasks: [PlannerTask] { tasks.filter { $0.done } }
     private var hours: Double { allocations.reduce(0) { $0 + $1.hours } }
 
+    private func moveUpAction(_ open: [PlannerTask], _ index: Int) -> (() -> Void)? {
+        guard index > 0, index < open.count else { return nil }
+        let taskId = open[index].id
+        let beforeId = open[index - 1].id
+        return { reorder(taskId, before: beforeId) }
+    }
+    private func moveDownAction(_ open: [PlannerTask], _ index: Int) -> (() -> Void)? {
+        guard index >= 0, index + 1 < open.count else { return nil }
+        let taskId = open[index].id
+        let beforeId: String? = index + 2 < open.count ? open[index + 2].id : nil
+        return { reorder(taskId, before: beforeId) }
+    }
+
+    /// Same store intent as a drag drop, so the tap/VoiceOver path and the drag path cannot disagree. Undoable.
+    private func reorder(_ taskId: String, before beforeId: String?) {
+        let target: Any = beforeId.map { $0 as Any } ?? NSNull()
+        Task {
+            _ = await planner.send(["type": "reorderDayTask", "roleId": role.id, "day": day,
+                                    "taskId": taskId, "beforeId": target])
+        }
+        SpreadHaptics.selection()
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
@@ -255,9 +287,12 @@ struct FocusedRoleCard: View {
             }
             if expanded {
                 VStack(alignment: .leading, spacing: 6) {
-                    ForEach(openTasks) { task in
+                    let open = openTasks
+                    ForEach(Array(open.enumerated()), id: \.element.id) { index, task in
                         FocusedTaskRow(planner: planner, snapshot: snapshot, task: task,
-                                       day: day, roleId: role.id, onOpenEditor: onOpenTask)
+                                       day: day, roleId: role.id, onOpenEditor: onOpenTask,
+                                       onMoveUp: moveUpAction(open, index),
+                                       onMoveDown: moveDownAction(open, index))
                     }
                     if !doneTasks.isEmpty {
                         Button {

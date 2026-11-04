@@ -184,3 +184,52 @@ function addDays(iso: string, n: number) {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
+
+test("Undo of a delete takes the task back out of Recently Deleted, so a later restore cannot duplicate it", async () => {
+  const { router, request, roleId, saved, week } = setup();
+  try {
+    const deleted = await router.dispatch(request({ type: "deleteTask", roleId, taskId: "a" }));
+    assert.ok(deleted.undoId, "delete offers Undo");
+    assert.equal((await router.dispatch(request({ type: "undo", editId: deleted.undoId }))).ok, true);
+    const all = () => Object.values(saved().weeks).flatMap((w) => w.boxes.flatMap((b) => b.tasks.map((t) => t.id)));
+    assert.equal(all().filter((id) => id === "a").length, 1, "undo brought the task back");
+    const listed = await router.dispatch(request({ type: "readDeletedTasks" }));
+    assert.deepEqual(listed.deletedTasks?.map((d) => d.id) ?? [], [], "the undone delete is no longer listed");
+    await router.dispatch(request({ type: "restoreDeletedTask", taskId: "a" }));
+    assert.equal(all().filter((id) => id === "a").length, 1, "never two copies of one task");
+    void week;
+  } finally {
+    router.dispose();
+  }
+});
+
+test("a drag reorder within a day offers Undo, and Undo puts the previous day order back", async () => {
+  const { router, request, roleId, saved, week } = setup();
+  try {
+    const key = week + "|" + roleId;
+    const first = await router.dispatch(request({ type: "reorderDayTask", roleId, day: week, taskId: "c", beforeId: "a" }));
+    assert.ok(first.undoId, "reorder offers Undo");
+    const reordered = saved().weeks[week].dayTaskOrder?.[key];
+    assert.equal((await router.dispatch(request({ type: "undo", editId: first.undoId }))).ok, true);
+    assert.notDeepEqual(saved().weeks[week].dayTaskOrder?.[key], reordered);
+    assert.deepEqual(saved().weeks[week].boxes[0].tasks.map((t) => t.id), ["a", "b", "c"]);
+  } finally {
+    router.dispose();
+  }
+});
+
+test("completing and uncompleting a task never changes planned hours or the task's day (decision 52)", async () => {
+  const { router, request, roleId, saved, week } = setup();
+  try {
+    const before = JSON.stringify(saved().weeks[week].allocations);
+    const hours = saved().weeks[week].boxes[0].hours;
+    assert.equal((await router.dispatch(request({ type: "toggleTask", roleId, taskId: "a" }))).ok, true);
+    assert.equal(JSON.stringify(saved().weeks[week].allocations), before);
+    assert.equal(saved().weeks[week].boxes[0].hours, hours);
+    assert.equal(saved().weeks[week].boxes[0].tasks.find((t) => t.id === "a")?.allocationId, "alloc");
+    assert.equal((await router.dispatch(request({ type: "toggleTask", roleId, taskId: "a" }))).ok, true);
+    assert.equal(JSON.stringify(saved().weeks[week].allocations), before);
+  } finally {
+    router.dispose();
+  }
+});
