@@ -293,6 +293,14 @@ public struct SpreadLiveRoot: View {
         let detailAction: (() -> Void)?
         if isMonth {
             detailAction = onThisMonth ? nil : { jumpMonth(to: now) }
+        } else if weekFocusEnabled {
+            // In the opt-in Week, tapping the Crown's date returns to Today.
+            // A successful week jump already emits its own haptic through weekTick.
+            detailAction = {
+                if isCurrent { SpreadHaptics.selection() }
+                focusSelectedDay = PlannerDates.localISO()
+                Task { await moveToToday() }
+            }
         } else {
             detailAction = isCurrent ? nil : { Task { await moveToToday() } }
         }
