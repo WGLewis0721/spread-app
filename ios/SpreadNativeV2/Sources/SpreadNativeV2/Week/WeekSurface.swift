@@ -89,7 +89,14 @@ struct WeekSurface: View {
                     .onAppear { width = proxy.size.width }
                     .onChange(of: proxy.size.width) { _, value in width = value }
             })
-            .background(WeekHorizontalSwipe(onShift: { swipeShift = $0 }, onMove: onSwipeWeek))
+            .background {
+                // Give the UIKit recognizer anchor real layout bounds. A zero-size
+                // UIViewRepresentable background rejects every touch in shouldReceive.
+                GeometryReader { geometry in
+                    WeekHorizontalSwipe(onShift: { swipeShift = $0 }, onMove: onSwipeWeek)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                }
+            }
         }
         .id(snapshot.weekKey)
         .transition(weekTransition)
@@ -241,16 +248,27 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             scroller = nil
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            guard let anchor, anchor.bounds.contains(touch.location(in: anchor)) else { return false }
-            start = touch.location(in: anchor)
+            // The Week column is capped at 1120pt, but on an unfolded/rotated
+            // Duo the parent scroll view can be wider. Use the anchor's vertical
+            // range to exclude the independently scrolling role strip and sticky
+            // Crown; use the full visible viewport horizontally, including its
+            // gutters, so swipes don't silently die outside the column.
+            guard let anchor, let scroller else { return false }
+            let region = anchor.convert(anchor.bounds, to: scroller)
+            let viewport = scroller.bounds
+            guard region.height > 0, viewport.width > 0 else { return false }
+            let point = touch.location(in: scroller)
+            guard point.y >= region.minY, point.y <= region.maxY,
+                  point.x >= viewport.minX, point.x <= viewport.maxX else { return false }
+            start = CGPoint(x: point.x - viewport.minX, y: point.y - region.minY)
             return true
         }
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            guard let anchor else { return false }
+            guard let scroller, scroller.bounds.width > 0 else { return false }
             let velocity = pan.velocity(in: scroller)
             return abs(velocity.x) > abs(velocity.y) * WeekSwipeRules.dominance
                 && start.x >= WeekSwipeRules.edgeGuard
-                && start.x <= anchor.bounds.width - WeekSwipeRules.edgeGuard
+                && start.x <= scroller.bounds.width - WeekSwipeRules.edgeGuard
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             // Day cards use SwiftUI drag and tap recognizers. If one of those wins
@@ -266,7 +284,7 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             case .began, .changed:
                 onShift(WeekSwipeRules.shift(start: start, current: end))
             case .ended:
-                let direction = WeekSwipeRules.direction(start: start, end: end, width: anchor?.bounds.width ?? 0)
+                let direction = WeekSwipeRules.direction(start: start, end: end, width: scroller?.bounds.width ?? 0)
                 withAnimation(SpreadMotion.press) { onShift(0) }
                 if let direction { onMove(direction) }
             case .cancelled, .failed:
@@ -415,7 +433,8 @@ struct AllocationRow: View {
                     } else {
                         Button { showTasks.toggle() } label: {
                             VStack(alignment: .leading, spacing: 0) {
-                                Text(role.name).font(.system(.subheadline, weight: .medium)).lineLimit(1)
+                                Text(role.name).font(.system(.subheadline, weight: .medium))
+                                    .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                                 HStack(spacing: 2) {
                                     Text("\(tasks.count) \(tasks.count == 1 ? "task" : "tasks")")
                                     Image(systemName: "chevron.down").font(.system(.caption2, weight: .bold))

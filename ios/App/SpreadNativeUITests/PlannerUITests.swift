@@ -119,8 +119,13 @@ class NativeUITestCase: XCTestCase {
     }
     func typeInto(_ id: String, _ text: String, file: StaticString = #filePath, line: UInt = #line) {
         let field = el(id)
+        // Rich-content table cells can be below the keyboard and absent from
+        // the initial accessibility snapshot until the outer sheet scrolls.
+        // Scroll the real sheet to expose the field before asserting existence.
+        if !field.waitForExistence(timeout: 3) { scrollIntoView(field) }
         XCTAssertTrue(field.waitForExistence(timeout: 30), "Missing field \(id)", file: file, line: line)
         scrollIntoView(field)
+        XCTAssertTrue(field.isHittable, "Field is obscured: \(id)", file: file, line: line)
         field.tap()
         field.typeText(text)
     }
@@ -403,15 +408,36 @@ final class JourneyUITests: NativeUITestCase {
         tapID("task-move-" + id)
         let days = waitElements(prefix: "eligible-day-", minimum: 2)
         XCTAssertEqual(days.count, 2, "Only this responsibility’s allocated days are eligible")
-        tapID("eligible-day-" + monday)
+        // Choices use allocation IDs, not ISO day strings. Resolve each by its
+        // accessible weekday label, so reversed allocation order cannot silently
+        // schedule on the wrong day while still satisfying a two-choice count.
+        let mondayChoice = try XCTUnwrap(days.first { $0.label.hasPrefix("Monday,") },
+                                          "The Monday allocation is missing from eligible choices")
+        let wednesdayChoice = try XCTUnwrap(days.first { $0.label.hasPrefix("Wednesday,") },
+                                             "The Wednesday allocation is missing from eligible choices")
+        tapID(mondayChoice.identifier)
         showTasks(on: monday)
         XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
-        tapID("task-move-" + id); tapID("eligible-day-" + wednesday)
+        tapID("task-move-" + id)
+        tapID(wednesdayChoice.identifier)
         showTasks(on: wednesday)
         XCTAssertTrue(el("day-card-" + wednesday).descendants(matching: .any).matching(identifier: "task-row-" + id).firstMatch.exists)
         tapID("undo-last-change"); showTasks(on: monday)
         XCTAssertTrue(el("day-card-" + monday).descendants(matching: .any).matching(identifier: "task-row-" + id).firstMatch.exists)
-        capture("F04-move-and-undo")
+        // Confirm the accessible Take off action and Undo round-trip, not merely
+        // two assigned days. It must return the task to its original allocation.
+        tapID("task-move-" + id)
+        tapID("task-unplace")
+        revealTray()
+        XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20), "Unplaced task is absent from the tray")
+        XCTAssertFalse(el("day-card-" + monday).descendants(matching: .any)
+                           .matching(identifier: "task-row-" + id).firstMatch.exists,
+                       "An unplaced task remains on Monday")
+        tapID("undo-last-change"); showTasks(on: monday)
+        XCTAssertTrue(el("day-card-" + monday).descendants(matching: .any)
+                          .matching(identifier: "task-row-" + id).firstMatch.exists,
+                      "Undo did not return the task to Monday")
+        capture("F04-move-unplace-and-undo")
     }
 
     func testF05_CompleteAndUndo() throws {
@@ -744,11 +770,23 @@ final class PlannerUITests: NativeUITestCase {
         capture("fixed-week-after-vertical-scroll")
         let visibleCard = try XCTUnwrap(cards.first { $0.frame.intersection(viewport.frame).height > 30 })
         let visible = visibleCard.frame.intersection(viewport.frame)
+        // The Week content is capped at 1120 pt in wide/rotated windows, but its
+        // enclosing ScrollView extends to the scene edges. Swipe INSIDE a visible
+        // card, not 65 pt from the scroll viewport's right edge (which can lie
+        // outside Week and correctly be rejected by the region-gated recognizer).
         let origin = app.coordinate(withNormalizedOffset: .zero)
-        let from = origin.withOffset(CGVector(dx: viewport.frame.maxX - app.frame.minX - 65, dy: visible.midY - app.frame.minY))
+        let from = origin.withOffset(CGVector(dx: visible.minX + visible.width * 0.72 - app.frame.minX,
+                                              dy: visible.midY - app.frame.minY))
         from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: -120, dy: 0)))
-        XCTAssertTrue(eventually { crown.label != initialWeek }, "A horizontal Week swipe no longer changes weeks")
+        XCTAssertTrue(eventually { crown.label != initialWeek },
+                      "A horizontal swipe inside a visible Week card did not advance the Crown; card=\(visible), viewport=\(viewport.frame)")
         capture("fixed-week-after-horizontal-swipe")
+        let currentWeek = crown.label
+        let reverse = origin.withOffset(CGVector(dx: visible.minX + visible.width * 0.32 - app.frame.minX,
+                                                 dy: visible.midY - app.frame.minY))
+        reverse.press(forDuration: 0.05, thenDragTo: reverse.withOffset(CGVector(dx: 120, dy: 0)))
+        XCTAssertTrue(eventually { crown.label == initialWeek },
+                      "A reverse swipe inside Week did not return from \(currentWeek) to \(initialWeek)")
     }
 
     // MARK: Crown (unchanged semantics: 100 real drags including 30 reversals)

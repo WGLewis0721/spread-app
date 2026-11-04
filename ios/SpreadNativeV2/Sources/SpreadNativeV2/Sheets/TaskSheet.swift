@@ -62,10 +62,11 @@ struct TaskSheet: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             taskHeader(task)
-                            TextField("Task title", text: $title, prompt: Spread.fieldPrompt("Task title"))
+                            TextField("Task title", text: $title, prompt: Spread.fieldPrompt("Task title"), axis: .vertical)
                                 .font(.system(.title2, weight: .bold))
                                 .padding(.vertical, 10)
                                 .frame(minHeight: 52)
+                                .lineLimit(1...4)
                                 .submitLabel(.done)
                                 .onSubmit { commitTitle() }
                                 .accessibilityLabel("Task title")
@@ -278,7 +279,13 @@ struct TaskSheet: View {
     }
 
     private func notesEditor(_ block: NativeContentBlock) -> some View {
-        TextEditor(text: Binding(get: { block.text ?? "" }, set: { var copy = block; copy.text = $0; update(copy) }))
+        TextEditor(text: Binding(get: {
+            content.blocks.first(where: { $0.id == block.id })?.text ?? ""
+        }, set: { value in
+            guard var current = content.blocks.first(where: { $0.id == block.id }) else { return }
+            current.text = value
+            update(current)
+        }))
             .frame(minHeight: 120)
             .scrollContentBackground(.hidden)
             .padding(8)
@@ -295,7 +302,13 @@ struct TaskSheet: View {
                 Spacer()
                 Button { expandedNote = nil } label: { Text("Done").font(.system(.subheadline, weight: .semibold)).tapTarget() }
             }
-            TextEditor(text: Binding(get: { block.text ?? "" }, set: { var copy = block; copy.text = $0; update(copy) }))
+            TextEditor(text: Binding(get: {
+            content.blocks.first(where: { $0.id == block.id })?.text ?? ""
+        }, set: { value in
+            guard var current = content.blocks.first(where: { $0.id == block.id }) else { return }
+            current.text = value
+            update(current)
+        }))
                 .frame(minHeight: 360)
                 .scrollContentBackground(.hidden)
                 .accessibilityLabel("Notes, expanded")
@@ -311,28 +324,40 @@ struct TaskSheet: View {
                     Text(outlineMarker(index: index, level: Int(item.level)))
                         .font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.secondary)
                         .frame(width: 34 + CGFloat(item.level) * 16, alignment: .trailing)
-                    TextField(item.level == 0 ? "Point" : "Detail", text: Binding(get: { item.text }, set: { value in
-                        var copy = block
+                    TextField(item.level == 0 ? "Point" : "Detail", text: Binding(get: {
+                        guard let items = content.blocks.first(where: { $0.id == block.id })?.items,
+                              items.indices.contains(index) else { return "" }
+                        return items[index].text
+                    }, set: { value in
+                        guard var copy = content.blocks.first(where: { $0.id == block.id }),
+                              copy.items?.indices.contains(index) == true else { return }
                         copy.items?[index].text = value
                         update(copy)
-                    }), prompt: Spread.fieldPrompt(item.level == 0 ? "Point" : "Detail"))
+                    }), prompt: Spread.fieldPrompt(item.level == 0 ? "Point" : "Detail"), axis: .vertical)
+                    .font(.system(.body))
+                    .lineLimit(1...3)
+                    .frame(minHeight: 44)
                     .accessibilityIdentifier("content-outline-\(index)")
                     Button {
-                        var copy = block
-                        copy.items?[index].level = max(0, item.level - 1)
+                        guard var copy = content.blocks.first(where: { $0.id == block.id }),
+                              copy.items?.indices.contains(index) == true else { return }
+                        let level = copy.items?[index].level ?? 0
+                        copy.items?[index].level = max(0, level - 1)
                         update(copy)
                     } label: { Image(systemName: "decrease.indent").tapTarget() }
                     .accessibilityLabel("Outdent")
                     Button {
-                        var copy = block
-                        copy.items?[index].level = min(4, item.level + 1)
+                        guard var copy = content.blocks.first(where: { $0.id == block.id }),
+                              copy.items?.indices.contains(index) == true else { return }
+                        let level = copy.items?[index].level ?? 0
+                        copy.items?[index].level = min(4, level + 1)
                         update(copy)
                     } label: { Image(systemName: "increase.indent").tapTarget() }
                     .accessibilityLabel("Indent")
                 }
             }
             Button {
-                var copy = block
+                guard var copy = content.blocks.first(where: { $0.id == block.id }) else { return }
                 copy.items = (copy.items ?? []) + [NativeOutlineItem(id: UUID().uuidString, text: "", level: 0)]
                 update(copy)
             } label: { Text("Add line").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget() }
@@ -347,14 +372,23 @@ struct TaskSheet: View {
                     let values = cells[row]
                     HStack(spacing: 6) {
                         ForEach(values.indices, id: \.self) { column in
-                            let value = values[column]
-                            TextField("Row \(row + 1), column \(column + 1)", text: Binding(get: { value }, set: { text in
-                                var copy = block
-                                copy.cells?[row][column] = text
-                                update(copy)
-                            }), prompt: Spread.fieldPrompt("Row \(row + 1), column \(column + 1)"))
+                            TextField("Row \(row + 1), column \(column + 1)", text: Binding(get: {
+                                guard let current = content.blocks.first(where: { $0.id == block.id }),
+                                      let rows = current.cells, rows.indices.contains(row),
+                                      rows[row].indices.contains(column) else { return "" }
+                                return rows[row][column]
+                            }, set: { text in
+                                guard var current = content.blocks.first(where: { $0.id == block.id }),
+                                      let rows = current.cells, rows.indices.contains(row),
+                                      rows[row].indices.contains(column) else { return }
+                                current.cells?[row][column] = text
+                                update(current)
+                            }), prompt: Spread.fieldPrompt("Row \(row + 1), column \(column + 1)"), axis: .vertical)
                             .textFieldStyle(.roundedBorder)
-                            .frame(width: 140, height: 44)
+                            .font(.system(.body))
+                            .lineLimit(1...3)
+                            .frame(width: 140)
+                            .frame(minHeight: 44)
                             .accessibilityLabel("Row \(row + 1), column \(column + 1)")
                             .accessibilityIdentifier("content-cell-\(row)-\(column)")
                         }
@@ -362,13 +396,14 @@ struct TaskSheet: View {
                 }
                 HStack {
                     Button {
-                        var copy = block
-                        copy.cells = cells + [Array(repeating: "", count: cells.first?.count ?? 2)]
+                        guard var copy = content.blocks.first(where: { $0.id == block.id }) else { return }
+                        let latest = copy.cells ?? [["", ""], ["", ""]]
+                        copy.cells = latest + [Array(repeating: "", count: latest.first?.count ?? 2)]
                         update(copy)
                     } label: { Text("Add row").font(.system(.subheadline, weight: .semibold)).tapTarget() }
                     Button {
-                        var copy = block
-                        copy.cells = cells.map { $0 + [""] }
+                        guard var copy = content.blocks.first(where: { $0.id == block.id }) else { return }
+                        copy.cells = (copy.cells ?? [["", ""], ["", ""]]).map { $0 + [""] }
                         update(copy)
                     } label: { Text("Add column").font(.system(.subheadline, weight: .semibold)).tapTarget() }
                 }
