@@ -86,7 +86,7 @@ struct NewSpreadSheet: View {
                         .accessibilityLabel("Spread \(index + 1) name")
                         .accessibilityIdentifier("role-name-field")
                 }
-                ChalkIllustration(category: draft.category ?? "custom", maxWidth: 72, maxHeight: 50)
+                ChalkMotionArt(category: draft.category ?? "custom", size: 72)
                     .frame(width: 72, height: 50)
             }
             HStack {
@@ -158,7 +158,7 @@ struct RoleSheet: View {
             if let snapshot = planner.snapshot, let role {
                 Form {
                     Section {
-                        ChalkIllustration(category: role.category, maxWidth: 160, maxHeight: 110)
+                        ChalkMotionArt(category: role.category, size: 160)
                             .frame(maxWidth: .infinity)
                     }
                         .listRowBackground(Spread.elevated)
