@@ -459,7 +459,6 @@ export function createNativeV2Dispatcher(sessionId: string) {
           "restoreDeletedTask",
           "permanentlyDeleteTasks",
           "bulkMoveOverdue",
-          "reorderDayTask",
           "addTaskForDay",
         ].includes(a.type)
       )

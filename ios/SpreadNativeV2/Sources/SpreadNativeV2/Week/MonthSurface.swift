@@ -15,10 +15,15 @@ struct MonthSurface: View {
     var onLongPressAdd: ((String) -> Void)? = nil
     var onSwipeMonth: ((Int) -> Void)? = nil
     var mondayFirst: Bool = false
+    /// Opt-in Week only: shared with the seven-day strip so the open week morphs into its Month row.
+    var morphNamespace: Namespace.ID? = nil
 
     /// Dots for every day of the month, from the planner (any week). Until they arrive, or if they cannot, the open
     /// week's own dots are drawn so the grid is never empty.
     @State private var marks: [String: NativeDayMark] = [:]
+    /// The date (and when) a long press just opened Quick Add: that same touch's release must not also drill into
+    /// Week. Time-bounded, because presenting the sheet usually cancels the touch and no release ever arrives.
+    @State private var longPressed: (iso: String, at: Date)?
 
     private static let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     private static let weekdayNames = ["Sun": "Sunday", "Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday", "Thu": "Thursday", "Fri": "Friday", "Sat": "Saturday"]
@@ -124,7 +129,14 @@ struct MonthSurface: View {
         let inOpenWeek = PlannerDates.weekKey(for: cell.date) == snapshot.weekKey
         let count = dots.count
         let extra = dots.extra
-        return Button { onPick(cell.iso) } label: {
+        return Button {
+            if let pressed = longPressed, pressed.iso == cell.iso, Date().timeIntervalSince(pressed.at) < 1.5 {
+                longPressed = nil
+                return
+            }
+            longPressed = nil
+            onPick(cell.iso)
+        } label: {
             VStack(spacing: 4) {
                 Text("\(cell.day)")
                     .font(.system(.subheadline, weight: .semibold))
@@ -161,11 +173,48 @@ struct MonthSurface: View {
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.spreadPress)
-        .onLongPressGesture(minimumDuration: 0.45) { onLongPressAdd?(cell.iso) }
-        .accessibilityAction(named: "Add task to this day") { onLongPressAdd?(cell.iso) }
+        .modifier(CalendarMorph(id: "calendar-day-\(cell.iso)", namespace: morphNamespace))
+        .modifier(MonthDayAddGesture(iso: cell.iso, onAdd: onLongPressAdd,
+                                     onPressed: { longPressed = ($0, Date()) }))
         .accessibilityLabel("\(isToday ? "Today, " : "")\(inOpenWeek ? "Open week, " : "")\(label). \(count == 0 ? "No responsibilities scheduled." : "\(count) \(count == 1 ? "responsibility" : "responsibilities") scheduled.")")
         .accessibilityAddTraits(isToday ? .isSelected : [])
         .accessibilityIdentifier("month-day-\(cell.iso)")
+    }
+}
+
+/// Long press (and a VoiceOver action) to add a task on a Month date, only where the opt-in Week offers it.
+/// Classic Month gets no gesture at all. A simultaneous gesture keeps the date tap and the scroll view working.
+private struct MonthDayAddGesture: ViewModifier {
+    let iso: String
+    let onAdd: ((String) -> Void)?
+    /// Called only for a touch long press, so the button can ignore that touch's release.
+    let onPressed: (String) -> Void
+
+    func body(content: Content) -> some View {
+        if let onAdd {
+            content
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                    onPressed(iso)
+                    onAdd(iso)
+                })
+                .accessibilityAction(named: "Add task to this day") { onAdd(iso) }
+        } else {
+            content
+        }
+    }
+}
+
+/// Applies the Week strip / Month grid shared-geometry id only when a namespace is given (never in Classic).
+private struct CalendarMorph: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.matchedGeometryEffect(id: id, in: namespace)
+        } else {
+            content
+        }
     }
 }
 #endif

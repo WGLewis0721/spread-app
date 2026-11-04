@@ -23,7 +23,10 @@ struct WeekFocusSurface: View {
     @State private var monthQuickAddDay: MonthAddDate?
     @State private var sidebarExpanded = false
     @State private var sidebarHidden = false
+    @State private var showDayDone = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 53: each strip day and its Month cell share an id, so opening Month morphs the week into the grid.
+    @Namespace private var calendarMorph
     private struct MonthAddDate: Identifiable {
         let iso: String
         var id: String { iso }
@@ -46,6 +49,14 @@ struct WeekFocusSurface: View {
         snapshot.unplacedTasks.filter { $0.roleId == activeRole }
     }
     private var dayHours: Double { todaysAllocations.reduce(0) { $0 + $1.hours } }
+    /// Every task scheduled on the selected day is done (and there is at least one).
+    private var dayComplete: Bool {
+        let ids = Set(todaysAllocations.map(\.id))
+        let tasks = snapshot.tasks.filter { ids.contains($0.allocationId ?? "") }
+        return !tasks.isEmpty && tasks.allSatisfy(\.done)
+    }
+    /// Changes only when the same day becomes complete, not when moving to an already complete day.
+    private var dayCompletion: String { "\(day)|\(dayComplete)" }
     private func rolesOn(_ iso: String) -> [Responsibility] {
         var roles = snapshot.roles.filter { role in
             snapshot.allocations.contains { $0.day == iso && $0.roleId == role.id && $0.hours > 0 }
@@ -57,6 +68,8 @@ struct WeekFocusSurface: View {
         return roles
     }
     private var storeKey: String { "native.weekFocus.expanded." + (planner.state?.envelope.profileId ?? "none") }
+    /// Decision 10: Week returns to the last selected day (per profile); the first visit opens Today.
+    private var dayKey: String { "native.weekFocus.day." + (planner.state?.envelope.profileId ?? "none") }
     private var refreshKey: String {
         "\(planner.state?.envelope.profileId ?? "")-\(planner.state?.revision ?? 0)-\(PlannerDates.localISO())"
     }
@@ -67,7 +80,7 @@ struct WeekFocusSurface: View {
     }
     private func isComplete(roleId: String, on date: String) -> Bool {
         let ids = Set(snapshot.allocations.filter { $0.day == date && $0.roleId == roleId }.map(\.id))
-        let tasks = snapshot.tasks.filter { $0.roleId == roleId && $0.allocationId.map { ids.contains($0) } == true }
+        let tasks = snapshot.tasks.filter { $0.roleId == roleId && ids.contains($0.allocationId ?? "") }
         return !tasks.isEmpty && tasks.allSatisfy(\.done)
     }
     private func rememberExpansions() {
@@ -88,9 +101,15 @@ struct WeekFocusSurface: View {
                 .padding(.top, 4)
                 .padding(.bottom, 6)
             HStack(alignment: .top, spacing: 8) {
-                if !sidebarHidden && !sidebarExpanded {
+                if !sidebarHidden {
+                    // Keep the compact rail's slot while the expanded rail overlays the schedule, so the
+                    // schedule is neither squeezed nor shifted (owner decision 50). Hidden from VoiceOver
+                    // and hit testing while the overlay is up, so each control exists once.
                     responsibilityRail
                         .frame(width: 56)
+                        .opacity(sidebarExpanded ? 0 : 1)
+                        .allowsHitTesting(!sidebarExpanded)
+                        .accessibilityHidden(sidebarExpanded)
                         .zIndex(2)
                 }
                 ScrollViewReader { proxy in
@@ -105,7 +124,7 @@ struct WeekFocusSurface: View {
                                          onSwipeMonth: { delta in
                                             monthAnchor = PlannerDates.calendar.date(byAdding: .month, value: delta, to: monthAnchor) ?? monthAnchor
                                             SpreadHaptics.selection()
-                                         }, mondayFirst: true)
+                                         }, mondayFirst: true, morphNamespace: calendarMorph)
                         } else {
                             dailyDetails
                                 .simultaneousGesture(
@@ -152,15 +171,47 @@ struct WeekFocusSurface: View {
             restoreExpansions()
             if selectedRole == nil { selectedRole = snapshot.roles.first?.id }
             if selectedDay == nil {
+                let remembered = UserDefaults.standard.string(forKey: dayKey)
                 let now = PlannerDates.localISO()
-                selectedDay = PlannerDates.weekKey(for: PlannerDates.date(now)) == snapshot.weekKey
-                    ? now : snapshot.weekKey
+                if let remembered, PlannerDates.weekKey(for: PlannerDates.date(remembered)) == snapshot.weekKey {
+                    selectedDay = remembered
+                } else {
+                    selectedDay = PlannerDates.weekKey(for: PlannerDates.date(now)) == snapshot.weekKey
+                        ? now : snapshot.weekKey
+                }
             }
         }
         .onChange(of: snapshot.weekKey) { _, newWeek in
             selectedDay = newWeek // Monday, by owner decision
         }
         .onChange(of: expandedByDate) { _, _ in rememberExpansions() }
+        .onChange(of: dayCompletion) { old, new in
+            // Decision 35: a brief check when the open day becomes complete. The haptic is played by the
+            // completing row (one per tap); this view only draws.
+            guard new == day + "|true", old == day + "|false" else { return }
+            withAnimation(reduceMotion ? nil : SpreadMotion.curve) { showDayDone = true }
+            AccessibilityNotification.Announcement("Day complete").post()
+            Task {
+                try? await Task.sleep(nanoseconds: 1_400_000_000)
+                withAnimation(reduceMotion ? nil : SpreadMotion.curve) { showDayDone = false }
+            }
+        }
+        .overlay {
+            if showDayDone {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 64, weight: .semibold))
+                    .foregroundStyle(Spread.accent)
+                    .padding(24)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+                    .allowsHitTesting(false)
+                    .accessibilityLabel("Day complete")
+                    .accessibilityIdentifier("focus-day-complete")
+            }
+        }
+        .onChange(of: selectedDay) { _, newDay in
+            if let newDay { UserDefaults.standard.set(newDay, forKey: dayKey) }
+        }
         .sheet(item: $monthQuickAddDay) { target in
             MonthQuickAddSheet(planner: planner, roleId: activeRole ?? "", day: target.iso)
         }
@@ -178,7 +229,7 @@ struct WeekFocusSurface: View {
                     if sidebarHidden { sidebarExpanded = false }
                     SpreadHaptics.selection()
                 } label: {
-                    Image(systemName: sidebarHidden ? "sidebar.left" : "sidebar.left")
+                    Image(systemName: sidebarHidden ? "sidebar.squares.left" : "sidebar.left")
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel(sidebarHidden ? "Show responsibilities" : "Hide responsibilities")
@@ -239,6 +290,7 @@ struct WeekFocusSurface: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d"))
                         .accessibilityAddTraits(active ? .isSelected : [])
+                        .matchedGeometryEffect(id: "calendar-day-\(iso)", in: calendarMorph)
                         .accessibilityIdentifier("focus-day-\(iso)")
                         .dropDestination(for: SpreadDragPayload.self) { items, _ in
                             guard let item = items.first, item.kind == .task else { return false }
@@ -375,14 +427,16 @@ struct WeekFocusSurface: View {
             let rolesToday = snapshot.roles.filter { role in
                 todaysAllocations.contains(where: { $0.roleId == role.id }) || role.id == activeRole
             }
-            if rolesToday.isEmpty {
+            // Decision 13: a day with no hours says so. The selected responsibility's own card (below) keeps
+            // its compact Add row (decision 16), so Add appears here only when there is no card to hold it.
+            if todaysAllocations.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(.title2))
                         .foregroundStyle(Spread.secondary)
                     Text("Nothing planned")
                         .font(.system(.headline, weight: .semibold))
-                    if let activeRole {
+                    if rolesToday.isEmpty, let activeRole {
                         FocusedQuickAdd(planner: planner, roleId: activeRole, day: day,
                                         onOpenEditor: onOpenTask)
                     }
@@ -390,6 +444,8 @@ struct WeekFocusSurface: View {
                 .frame(maxWidth: .infinity)
                 .padding(16)
                 .spreadCard()
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("focus-nothing-planned")
             }
             ForEach(rolesToday) { role in
                 FocusedRoleCard(

@@ -10,6 +10,9 @@ struct FocusedTaskRow: View {
     let day: String
     let roleId: String
     let onOpenEditor: (String, String) -> Void
+    /// Non-drag paths for reordering within the day (tap menu, VoiceOver, keyboard). Nil at the ends.
+    var onMoveUp: (() -> Void)? = nil
+    var onMoveDown: (() -> Void)? = nil
 
     @State private var showActions = false
     @State private var showMove = false
@@ -18,8 +21,7 @@ struct FocusedTaskRow: View {
     var body: some View {
         HStack(spacing: 4) {
             Button {
-                Task { await planner.send(["type": "toggleTask", "roleId": roleId,
-                                           "taskId": task.id], completionHaptic: !task.done) }
+                Task { await toggle() }
             } label: {
                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
                     .font(.system(.title3))
@@ -39,6 +41,10 @@ struct FocusedTaskRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Complete, Reschedule, Edit, or Delete")
+            .accessibilityActions {
+                if let onMoveUp { Button("Move up", action: onMoveUp) }
+                if let onMoveDown { Button("Move down", action: onMoveDown) }
+            }
             .accessibilityIdentifier("focus-task-\(task.id)")
             Image(systemName: "line.3.horizontal")
                 .foregroundStyle(Spread.tertiary)
@@ -60,12 +66,13 @@ struct FocusedTaskRow: View {
         } isTargeted: { _ in }
         .confirmationDialog(task.text, isPresented: $showActions, titleVisibility: .visible) {
             Button(task.done ? "Mark incomplete" : "Complete") {
-                Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": task.id],
-                                          completionHaptic: !task.done) }
+                Task { await toggle() }
             }
             if !task.done {
                 Button("Reschedule") { showMove = true }
             }
+            if let onMoveUp { Button("Move up", action: onMoveUp) }
+            if let onMoveDown { Button("Move down", action: onMoveDown) }
             Button("Edit") { onOpenEditor(roleId, task.id) }
             Button("Delete", role: .destructive) {
                 Task { await planner.send(["type": "deleteTask", "roleId": roleId, "taskId": task.id]) }
@@ -75,6 +82,23 @@ struct FocusedTaskRow: View {
             Text("Deleted tasks stay recoverable for 30 days in Settings.")
         }
         .sheet(isPresented: $showMove) { MoveToSheet(planner: planner, taskId: task.id) }
+    }
+
+    /// True when completing this task leaves no open task scheduled on this day, in any responsibility.
+    private var completesDay: Bool {
+        guard !task.done else { return false }
+        let ids = Set(snapshot.allocations.filter { $0.day == day && $0.hours > 0 }.map(\.id))
+        let dayTasks = snapshot.tasks.filter { ids.contains($0.allocationId ?? "") }
+        return dayTasks.contains { $0.id == task.id } && dayTasks.allSatisfy { $0.done || $0.id == task.id }
+    }
+
+    /// Decision 35 within the rules card's single haptic: the task that finishes the whole day plays one
+    /// success haptic instead of the usual light one. Every other completion keeps the light haptic.
+    private func toggle() async {
+        let finishesDay = completesDay
+        let ok = await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": task.id],
+                                    completionHaptic: !task.done && !finishesDay)
+        if ok && finishesDay { SpreadHaptics.success() }
     }
 }
 
@@ -193,9 +217,10 @@ struct FocusedRoleCard: View {
     }
     private var tasks: [PlannerTask] {
         let ids = Set(allocations.map(\.id))
-        let filtered = snapshot.tasks.filter { $0.roleId == role.id && $0.allocationId.map { ids.contains($0) } == true }
+        let filtered = snapshot.tasks.filter { $0.roleId == role.id && ids.contains($0.allocationId ?? "") }
         let order = snapshot.dayTaskOrder?[day + "|" + role.id] ?? []
-        let index = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
+        // uniquingKeysWith: a repeated id in saved order must never trap the app.
+        let index = Dictionary(order.enumerated().map { ($0.element, $0.offset) }, uniquingKeysWith: { first, _ in first })
         return filtered.sorted {
             (index[$0.id] ?? Int.max) < (index[$1.id] ?? Int.max)
         }
@@ -203,6 +228,29 @@ struct FocusedRoleCard: View {
     private var openTasks: [PlannerTask] { tasks.filter { !$0.done } }
     private var doneTasks: [PlannerTask] { tasks.filter { $0.done } }
     private var hours: Double { allocations.reduce(0) { $0 + $1.hours } }
+
+    private func moveUpAction(_ open: [PlannerTask], _ index: Int) -> (() -> Void)? {
+        guard index > 0, index < open.count else { return nil }
+        let taskId = open[index].id
+        let beforeId = open[index - 1].id
+        return { reorder(taskId, before: beforeId) }
+    }
+    private func moveDownAction(_ open: [PlannerTask], _ index: Int) -> (() -> Void)? {
+        guard index >= 0, index + 1 < open.count else { return nil }
+        let taskId = open[index].id
+        let beforeId: String? = index + 2 < open.count ? open[index + 2].id : nil
+        return { reorder(taskId, before: beforeId) }
+    }
+
+    /// Same store intent as a drag drop, so the tap/VoiceOver path and the drag path cannot disagree. Undoable.
+    private func reorder(_ taskId: String, before beforeId: String?) {
+        let target: Any = beforeId.map { $0 as Any } ?? NSNull()
+        Task {
+            _ = await planner.send(["type": "reorderDayTask", "roleId": role.id, "day": day,
+                                    "taskId": taskId, "beforeId": target])
+        }
+        SpreadHaptics.selection()
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -254,9 +302,12 @@ struct FocusedRoleCard: View {
             }
             if expanded {
                 VStack(alignment: .leading, spacing: 6) {
-                    ForEach(openTasks) { task in
+                    let open = openTasks
+                    ForEach(Array(open.enumerated()), id: \.element.id) { index, task in
                         FocusedTaskRow(planner: planner, snapshot: snapshot, task: task,
-                                       day: day, roleId: role.id, onOpenEditor: onOpenTask)
+                                       day: day, roleId: role.id, onOpenEditor: onOpenTask,
+                                       onMoveUp: moveUpAction(open, index),
+                                       onMoveDown: moveDownAction(open, index))
                     }
                     if !doneTasks.isEmpty {
                         Button {

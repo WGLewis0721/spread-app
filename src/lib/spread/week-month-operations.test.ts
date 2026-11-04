@@ -136,3 +136,16 @@ test("same-week overdue rescheduling changes only allocation, not Spread task or
   assert.deepEqual(result.data.weeks[key].boxes[0].tasks.map((task) => task.id), beforeOrder);
   assert.equal(result.data.weeks[key].boxes[0].tasks[1].allocationId, "a");
 });
+
+test("loading a planner keeps the current week's independent day order", () => {
+  const raw = {
+    hats: [{ id: "work", name: "Work", defaultHours: 4, color: "#000" }, { id: "home", name: "Home", defaultHours: 2, color: "#111" }],
+    currentWeek: "2026-11-02",
+    // The current week lacks a box for "home", so ensureWeek has to rebuild it.
+    weeks: { "2026-11-02": { boxes: [{ hatId: "work", hours: 4, tasks: [{ id: "a", text: "A", done: false }, { id: "b", text: "B", done: false }] }],
+      allocations: [], dayTaskOrder: { "2026-11-02|work": ["b", "a"] } } },
+  };
+  const data = normalizeData(raw);
+  assert.deepEqual(data.weeks["2026-11-02"].dayTaskOrder, { "2026-11-02|work": ["b", "a"] });
+  assert.equal(data.weeks["2026-11-02"].boxes.length, 2);
+});

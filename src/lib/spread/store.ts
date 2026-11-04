@@ -20,7 +20,7 @@ import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
 import {
-  activeDeletedTasks, bulkRescheduleOverdue, moveTaskToRecentlyDeleted, overdueTasks,
+  activeDeletedTasks, bulkRescheduleOverdue, dropRevivedDeletedTasks, moveTaskToRecentlyDeleted, overdueTasks,
   permanentlyDeleteRecentlyDeleted, previewBulkOverdue, purgeExpiredDeletedTasks,
   reorderDayTask, restoreRecentlyDeletedTask, type BulkOverdueOutcome, type OverdueTask,
 } from "@/lib/spread/week-month-operations";
@@ -856,7 +856,7 @@ export const useSpread = create<Store>((set, get) => ({
     const state = get();
     if (!canUndo(edit, state.activeId ?? "", state.data)) return false;
     editStack = editStack.filter((item) => item.id !== editId);
-    commit(set, applyUndo(edit, state.data));
+    commit(set, dropRevivedDeletedTasks(applyUndo(edit, state.data)));
     return true;
   },
   assignTask: (hatId, taskId, allocationId) => {
