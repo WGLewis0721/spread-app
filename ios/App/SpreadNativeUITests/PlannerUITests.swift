@@ -531,6 +531,68 @@ final class PlannerUITests: NativeUITestCase {
         launch()
     }
 
+    /// Editing must not steal horizontal space from a responsibility card:
+    /// the red delete tab hangs across its left border instead of entering
+    /// the header HStack and shifting the name, icon or hour count.
+    func testWalletFloatingDeletePreservesCardGeometry() throws {
+        goSpread()
+        let badge = try XCTUnwrap(waitElements(prefix: "role-colour-").first)
+        let roleId = String(badge.identifier.dropFirst("role-colour-".count))
+        let card = el("role-block-" + roleId)
+        let hour = el("hours-stepper-" + roleId)
+        let chevron = el("expand-role-" + roleId)
+        scrollIntoView(card)
+        let beforeCard = card.frame
+        let beforeBadge = badge.frame
+        let beforeHours = hour.frame
+        let beforeChevron = chevron.frame
+
+        tapID("edit-spreads")
+        let delete = el("remove-role-" + roleId)
+        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Floating delete did not appear")
+        XCTAssertTrue(delete.isHittable, "Floating delete is clipped or covered")
+        XCTAssertGreaterThanOrEqual(delete.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(delete.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(delete.frame.minX, app.frame.minX - 1, "Delete touch target is offscreen")
+        XCTAssertLessThan(delete.frame.midX, card.frame.minX + 16,
+                          "Delete button is in the card's text layout instead of protruding past the left border")
+
+        XCTAssertEqual(card.frame.width, beforeCard.width, accuracy: 1)
+        XCTAssertEqual(card.frame.minX, beforeCard.minX, accuracy: 1)
+        XCTAssertEqual(badge.frame.minX, beforeBadge.minX, accuracy: 1, "Role icon moved on Edit")
+        XCTAssertEqual(hour.frame.minX, beforeHours.minX, accuracy: 1, "Hour count moved on Edit")
+        XCTAssertEqual(chevron.frame.minX, beforeChevron.minX, accuracy: 1, "Expand chevron moved on Edit")
+        capture("wallet-floating-delete-no-reflow")
+        tapID("dock-done")
+        XCTAssertFalse(delete.exists, "Delete tab remains visible after Done")
+    }
+
+    /// After a brief introduction, visible labels fold left toward the icons.
+    /// The icon buttons and metallic Week Crown must remain usable.
+    func testHeaderLabelsFoldIntoIconsAndNavigationRemainsUsable() {
+        goSpread()
+        let header = el("top-header")
+        XCTAssertTrue(header.waitForExistence(timeout: 15), "Top header not present")
+        XCTAssertTrue(eventually(8) { (header.value as? String) == "Compact navigation" },
+                      "The introduction did not fold after 2.5 seconds")
+        XCTAssertFalse(el("header-brand-title").exists)
+        XCTAssertFalse(el("header-label-spread").exists)
+        XCTAssertFalse(el("header-label-week").exists)
+        for id in ["brand-home", "native-spread", "native-week"] {
+            let control = el(id)
+            XCTAssertTrue(control.isHittable, "Compact navigation lost \(id)")
+            XCTAssertGreaterThanOrEqual(control.frame.width, 44, "Compact icon has a small hit target: \(id)")
+            XCTAssertGreaterThanOrEqual(control.frame.height, 44)
+        }
+        capture("header-after-auto-fold")
+        tapID("native-week")
+        XCTAssertTrue(el("week-month-toggle").waitForExistence(timeout: 20),
+                      "Week does not open from the compact icon")
+        tapID("brand-home")
+        XCTAssertTrue(el("stack-cards").waitForExistence(timeout: 20),
+                      "Spread logo no longer returns to the responsibility stack")
+    }
+
     // MARK: Owner-reported radial layout, preference location and Week scroll regressions
 
     /// Wallet cards must open independently and expose the same edit mode from the dock
