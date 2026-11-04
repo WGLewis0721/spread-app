@@ -261,3 +261,43 @@ Also run the standard commands and browser widths from `SPREAD_IPHONE_BUILD_GUID
 - https://pub.dev/documentation/iphone_duo_ui_pro/0.2.1/ (third party)
 - https://github.com/ionic-team/capacitor/pull/8597 (third party)
 - https://github.com/Cap-go/capacitor-native-navigation (third party)
+
+
+---
+
+## 14. November 4, 2026: Apple's App Resizability review and native Spread acceptance contract
+
+**Status: guidance reviewed; native App Resizability skill NOT executed; device-pose simulator verification NOT complete.** This section supersedes the older web-only implementation assumption in sections 3, 4.5 and 4.6 for the SwiftUI native planner. Preserve the owner-approved single animated Apple Wallet responsibility Stack, metal Crown, Chalkboard artwork, Week/Month, local-first store, accessibility, privacy and iOS 27 behavior. Never reintroduce the five-mode selector.
+
+**Primary Apple sources (reviewed November 4):**
+- https://developer.apple.com/iphone-duo/prepare/ (three-step checklist and App Resizability skill)
+- https://developer.apple.com/videos/play/tech-talks/111461/ (size classes, asymmetric safe areas, navigation, full-screen SDK)
+- https://developer.apple.com/videos/play/tech-talks/111463/ (hinge reserved regions, displacement, split/overlay arrangements)
+
+### Run Apple's actual audit on a macOS runner with Xcode 27.1
+
+1. Open the native Xcode project in Xcode 27.1 and ask the coding assistant **“get my app ready for iPhone Duo”**. For a different agent, export the skill using `xcrun agent skills export` and run the exported App Resizability instructions. Do not claim this step complete based on a text search alone.
+2. Audit **all** app SwiftUI/UIKit files, extensions and local native plugins for `UIScreen.main`, `UIScreen.main.bounds`, `userInterfaceIdiom`, `interfaceOrientation`, fixed width/height device assumptions, hard-coded notch/camera padding, one-time geometry caches and aspect-fill cropping. Classify each hit: layout bug, harmless usage (such as XCTest screenshots), or needs simulator evidence. Save exact file:line and remediation in the CI artifact.
+3. Replace layout assumptions with current view/window bounds, `GeometryReader`/`onGeometryChange`, size classes, per-edge safe-area insets, and where necessary `reservedRegions(kind:options:layoutDirectionBehavior:)` guarded for iOS 27.1. Do not use hinge angle as a substitute for layout regions.
+4. Verify real Duo poses using Device Hub: closed, fully open portrait/landscape, partially folded book/laptop/tent, both rotations, and inner-display Split View at either edge. Test resizable simulator and extreme iPhone Mirroring dimensions as supplementary checks, not substitutes.
+5. Save per-pose screenshots, accessibility tree, failing XCTest name, app and Xcode version, simulator model/runtime and exact commit SHA. Mark each check PASS/FAIL/BLOCKED. A startup failure is BLOCKED, not evidence of correct hinge behavior.
+
+### Native product behavior that must remain coherent through resizing
+
+| Surface | Required behavior | Regression evidence |
+| --- | --- | --- |
+| Wallet responsibilities | One full-available-width animated stack; cards grow naturally as tasks grow; no card content or expand/edit/delete action under fold/camera; stable selected card and scroll position across resize | Expand, add six multiline tasks, resize mid-session, inspect frame and content; 44×44 pt hit regions |
+| Metal Crown | Remains visible, reachable and responsive; drag/reversal state is not reset by fold or rotation; no control intersects active reserved division or occlusion | Drag and reverse before and after pose change; screenshot + value assertions |
+| Chalkboard illustrations | Animation remains active in normal motion mode across open/close/rotate; respects Reduce Motion preference; no frozen layer or jump when view geometry changes | Capture time-separated frames and check state/visibility; distinguish accessibility Reduce Motion |
+| Week and Month | Vertical Week scrolling and horizontal week navigation both work; Month remains readable; no accidental navigation on vertical drag; current week/date and local edits persist through resize | Swipe both axes, switch Week/Month, rotate/fold, assert displayed week and persisted data |
+| Navigation and sheets | Foreground respects asymmetric insets; system vertical bars and custom controls do not collide; sheets/menus/dialogs avoid fold and cameras; accessible VoiceOver order | Test both Split View edges, keyboard and popover positions; capture per-edge frames |
+| Data and accessibility | No loss or duplication of tasks, no forced cloud sync, no touch target below 44×44 pt, Dynamic Type/VoiceOver/contrast usable | Relaunch after pose changes; store snapshot parity and native accessibility audit |
+
+### Automation work required (not yet implemented by this documentation update)
+
+- Extend `.github/workflows/native-duo-acceptance.yml` and `native-duo-poses.yml` to attach a machine-readable pose matrix and actual screenshots, and fail on missing required evidence instead of silently passing.
+- Add XCTest coverage for stack growth/selection, Crown continuity, Week/Month persistence, asymmetric safe-area hit targets and reduced-motion artwork. Run on an actual iPhone Duo iOS 27.1 simulator.
+- For pose/hinge automation, only assert a pose was tested when Device Hub/simulator control demonstrably changed it; otherwise report BLOCKED. Do not replace native pose tests with Chromium viewport checks.
+- Track the earlier PR #127 Duo failures and PR #129 repairs separately; require green native acceptance before calling Duo-ready. No weakening or disabling existing tests.
+
+**Release gate:** No “optimized for iPhone Duo” claim or merge based solely on docs, compile success, App Store preflight or queued checks. The actual skill findings, simulator evidence and visual review must be recorded first.
