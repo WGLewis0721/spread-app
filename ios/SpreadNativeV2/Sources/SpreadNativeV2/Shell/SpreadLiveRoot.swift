@@ -188,8 +188,10 @@ public struct SpreadLiveRoot: View {
                 }
                 Color.clear.frame(height: 16)
             }
-            // iPhone keeps a 640 pt reading column; iPad (regular width) opens up so it is not a narrow strip.
-            .frame(maxWidth: destination == .spread ? 720 : 1120)
+            // iOS 27 resizable scenes: Wallet responsibility cards use the *available*
+            // window width, including iPad and Duo. Only the more text-dense Week
+            // timeline keeps a readable column cap. Never size from UIScreen.main.
+            .frame(maxWidth: destination == .spread ? .infinity : 1120)
             .frame(maxWidth: .infinity)
             // Without this the week's slide transition never plays: a changed week would just swap in place.
             .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: snapshot.weekKey)
