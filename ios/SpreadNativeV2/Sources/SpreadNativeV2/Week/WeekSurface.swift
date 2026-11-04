@@ -430,7 +430,8 @@ struct AllocationRow: View {
                     } else {
                         Button { showTasks.toggle() } label: {
                             VStack(alignment: .leading, spacing: 0) {
-                                Text(role.name).font(.system(.subheadline, weight: .medium)).lineLimit(1)
+                                Text(role.name).font(.system(.subheadline, weight: .medium))
+                                    .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                                 HStack(spacing: 2) {
                                     Text("\(tasks.count) \(tasks.count == 1 ? "task" : "tasks")")
                                     Image(systemName: "chevron.down").font(.system(.caption2, weight: .bold))
