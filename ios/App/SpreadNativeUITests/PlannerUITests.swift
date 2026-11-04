@@ -695,6 +695,35 @@ final class PlannerUITests: NativeUITestCase {
         capture("more-all-options-visible-390")
     }
 
+    /// The opt-in preview must not silently replace Classic or mutate the planner.
+    /// Restore Classic before returning so other native journeys keep their baseline.
+    func testCalendarDesignPreviewCanReturnToClassic() {
+        launch(); goSpread()
+        tapID("open-more")
+        let picker = el("calendar-design-picker")
+        XCTAssertTrue(picker.waitForExistence(timeout: 10), "Calendar design must be available in Settings")
+        XCTAssertTrue(picker.isHittable, "Calendar design must be visible without scrolling")
+        XCTAssertGreaterThanOrEqual(picker.frame.height, 44, "Calendar design has a small hit target")
+        picker.tap()
+        let preview = app.buttons["Week + Month (preview)"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 10), "New calendar preference was not offered")
+        preview.tap()
+        closeNativeSheets()
+        tapID("native-week")
+        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20),
+                      "Opt-in preview did not open the focused Week view")
+        capture("focus-week-preview-opted-in")
+        tapID("open-more")
+        tapID("calendar-design-picker")
+        let classic = app.buttons["Classic (current)"]
+        XCTAssertTrue(classic.waitForExistence(timeout: 10), "Classic rollback option is missing")
+        classic.tap()
+        closeNativeSheets()
+        XCTAssertTrue(eventually(15) { !self.el("week-focus-surface").exists },
+                      "Choosing Classic did not restore the existing Week view")
+        XCTAssertTrue(el("week-crown").exists, "Classic view lost the Week Crown")
+    }
+
     // MARK: Owner-reported radial layout, preference location and Week scroll regressions
 
     /// Wallet cards must open independently and expose the same edit mode from the dock
