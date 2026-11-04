@@ -1,63 +1,51 @@
-# Claude: Fix Spread's UI in PR #119
+# Claude — Fix Spread's UI in PR #119
 
-**Your job:** Make the existing Spread app look and feel like the owner's approved design. **This is not a new app.**
+**Your job:** Fix the existing SwiftUI app, **not build another app**. Stay on `claude/spread-swiftui-parity-87llx2` and [PR #119](https://github.com/WGLewis0721/spread-app/pull/119).
 
-**Repository:** `WGLewis0721/spread-app`  
-**Branch:** `claude/spread-swiftui-parity-87llx2`  
-**PR:** [#119](https://github.com/WGLewis0721/spread-app/pull/119) (stay on this branch).
+## Where we are vs. where we want to be
 
-## 1. What we have today
+**NOW:** The TestFlight app has a giant serif title, generic “Responsibilities” heading, letter badges, too much empty space and basic cards. It lost Spread's identity. The owner likes the Chalkboard images and Dial.
 
-The owner installed the current native SwiftUI TestFlight build. It works far enough to open and show responsibilities, but its UI is wrong: a giant serif “Spread” title, generic “Responsibilities” section, letter icons (W/H/T), oversized blank spacing and ordinary stacked panels. It looks like a different planner. **The Chalkboard illustrations and Dial are the parts the owner likes.** Keep the working code, but do not use this UI as your design target.
+**GOAL:** The **same working Spread planner**, presented like the approved premium iPhone designs: dark navy, restrained luminous blue, role-colored cards, polished metal Crown, original illustrations, clear tasks and smooth touch. Light mode must also work.
 
-## 2. What we want
+## References — what each one is FOR
 
-**The real Spread app, in premium native SwiftUI:** deep navy/dark surfaces, luminous blue selected controls, restrained role-color edge lighting, an actual ridged metallic Crown, original colorful Chalkboard art, compact cards with real tasks, and smooth physical interactions. Clear and useful first; beautiful second. Light mode must still work with the same layout.
+| Reference | Why it exists / how to use it |
+| --- | --- |
+| **Current TestFlight screenshot** (owner's Nov 3 chat) | **Before:** find the bad layout and generic visuals to remove. |
+| **Old light Spread screenshots** (same chat, historical repo) | **Product blueprint:** what screens, controls and workflows already exist. Fix the visible clipping bugs. |
+| **Approved dark Spread designs** (same chat) | **Visual target:** colors, Crown, card depth, typography, visual hierarchy and task sheets. They are *concept images*, not extra features to invent. |
+| **Stacked-card/calendar/menu examples** (same chat) | **Interaction inspiration:** physical Stack/Fan, readable dates, simple menus. Do not copy those apps. |
+| [**Native brand board**](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and [**SVG specimen**](docs/design/planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | **Exact guidance:** native styling rules, target geometry, screen requirements and checks. SVG is a specimen, not an installed screenshot. |
+| [**Design map**](docs/design/README.md), `SWIFTUI_PARTIAL_TASKS.md`, actual SwiftUI/React planner code | **Rules and facts:** existing features, data flow, original artwork and unfinished P1–P13 tasks. Read before editing. |
 
-## 3. References: what they are and how to use them
+The owner's image files are in the conversation, **not Git**. Say when you cannot view them; never fake a comparison.
 
-| Reference | Where | What to use it for |
-| --- | --- | --- |
-| **Current TestFlight screenshot** | Owner's Nov 3 chat | **Before picture:** find what looks wrong. Don't copy it. |
-| **Old working app screenshots** (light Spread, Fan, Week, Month, More, New Spread) | Owner's Nov 3 chat; historical code | **Behavior/map:** where controls go, what users can do, and how screens connect. Fix the old clipping/overlap bugs, don't reproduce them. |
-| **Approved dark Spread concept images** (Spread, Week, Month, Task, Move To) | Owner's Nov 3 chat | **After picture:** target colors, card hierarchy, Crown, spacing and visual personality. They are concept art, not proof that extra features exist. |
-| **Card-stack, calendar and menu inspiration** | Owner's chat | **Interaction ideas only:** how Stack/Fan feel, calendars stay readable, and menus stay simple. Never copy an entire app's navigation. |
-| **Native brand board** | [`docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md`](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) | **Official visual rules:** colors, spacing, glow limits, per-screen targets and test criteria. The [SVG specimen](docs/design/planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) shows the materials but does **not** replace the owner's screenshots. |
-| **Existing code + design docs** | [`docs/design/README.md`](docs/design/README.md), `SWIFTUI_PARTIAL_TASKS.md`, parity spec, planner store/tests | **How it really works:** use existing functions, assets, behavior rules and P1–P13 tasks. Don't invent new data or features. |
+## What Spread SHOULD look like and DO
 
-**The user's reference photos are in the conversation, not checked into Git.** Open them if accessible; otherwise say visual comparison is limited. Don't fake a pixel-perfect match.
+- **Header:** small blue Spread icon, system-font name, metallic horizontal Crown, correct dates/arrows, simple navigation.
+- **Spread:** actual hour summary; compact role-color cards with original category icons and Chalkboard drawings; hours, tasks and fast add/edit controls.
+- **Modes:** Stack layers vertically; Fan angles cards around a focused card; preserve Dial; Tabs and Day remain distinct. All respond on first touch.
+- **Week/Month:** real task placement, To place tray, Free time chips, easy-to-read days/month, move/Undo and accurate hour limits.
+- **Sheets:** complete task details (Notes, Outline, Table, Photo), Move To, New Spread, More, Profiles, export and recovery.
+- **Everywhere:** consistent dark/light appearance, readable content, stable layout, purposeful motion and accessible 44pt+ controls.
 
-## 4. How it SHOULD look and work
+## What Spread SHOULD NOT look like or become
 
-- **Top:** small folded-card app icon + **Spread** in system font; real horizontal metallic Crown with usable arrows and dates; no clipping.
-- **Spread:** accurate hours summary and colored hour bar; illustrated responsibility cards with real category symbols, hours, task counts, task previews, quick task entry and hour controls. No letter avatars.
-- **Five views:** **Stack** = vertical overlapping cards; **Fan** = angled cards with one focused card; **Dial** = preserve the working Dial; **Tabs/Day** = their own useful layouts. Gestures work on the first touch.
-- **Week/Month:** responsibility-hour chips, **To place** tasks, clearly separate day cards, Free time suggestions, usable month grid, easy task moving and Undo.
-- **Task sheets:** real details, complete/edit/move, Notes/Outline/Table/Photo; original New Spread, More, Profiles, appearance, exports and recovery remain accessible.
-- **Every screen:** consistent navy/light appearance, readable text, clear tap targets, restrained glow, meaningful springs and no shifting or overlapping controls.
+A generic to-do app, plain letter-icon list, oversized empty dashboard, copy of another calendar, or a mess of glowing gradients and floating buttons. Never sacrifice useful task information for decoration.
 
-## 5. What Spread SHOULD NOT be
+## What Claude MUST NOT do
 
-- Not a generic to-do list, habit tracker, calendar clone or dashboard.
-- Not a completely redesigned navigation structure or a new Home/Activity/Analytics product.
-- Not a sea of glows, glass, gradients, big decorative headings or empty space.
-- Not a flat list with category initials, missing Chalkboard art or fake controls.
-- Not visually impressive at the cost of task visibility, accessibility, battery or speed.
+Do not restart, replace the working planner engine, remove modes/features, invent Home/Activity tabs, change protected cloud/backup/schema files, add a second data store, or use fake buttons/screenshots. The premium style is approved for **native SwiftUI only**, not the React app or website. **No merge, deploy or TestFlight upload** without approval.
 
-## 6. What YOU should NOT do
+## Exact steps
 
-**Do not** restart the app, replace its planner engine, remove modes/features, create a second data store, change protected cloud/backup/schema code, invent new tabs, or build a separate demo. Do not confuse concept mockups with working features. Do not call a screen “done” because it compiled. Do not merge, deploy or send a new TestFlight build without owner approval.
-
-The native brand board is an **approved visual exception** to the old quiet React palette rule **for SwiftUI only**. Leave React, the website, data, and production alone.
-
-## 7. Work in this order
-
-1. **Look:** Inspect PR #119 and current screenshots; compare each existing screen with the old app (behavior) and new dark references (appearance). List specific mismatches.
-2. **Fix the shell:** App title/icon → Crown → Spread/Week navigation → dock → typography/colors/spacing. Use shared native components.
-3. **Fix the main screens:** Responsibility cards and all five modes → Week/Month → Task/Move To → New Spread/More/Settings. Keep the current working behavior.
-4. **Fix the motion:** First swipe works; no card jumps, double-actions, shifted headers, awkward animation or blocked taps.
-5. **Prove it:** Build and run real iOS UI tests; test data, gestures, light/dark, accessibility. Capture real before/after native screenshots on the same device sizes. Finish the actionable P1–P13 items and record blockers honestly.
-6. **Report:** What changed, what still fails, screenshots, test results and source SHA. Keep **PR #119 in draft** for owner review.
+1. **Compare** current TestFlight to the old working screens (behavior) and approved dark concepts (appearance). Identify specific differences.
+2. **Fix shared UI first:** icon/title, Crown, navigation, dock, colors, spacing and typography.
+3. **Finish screens:** role cards/five modes → Week/Month → tasks/sheets/settings. Preserve every working action.
+4. **Fix gestures:** first swipe, Stack/Fan physics, interruptions, shifting controls and blocked taps.
+5. **Test the real app:** native build, UI tests, planner regression, light/dark and accessibility. Capture real before/after screenshots. Finish P1–P13 or document exact blockers.
+6. **Report results** in PR #119 with screenshots, tests, changed files and remaining issues. Keep it draft.
 
 **Finish with:** `UI: PASS/PARTIAL/FAIL | FEATURES: PASS/PARTIAL/FAIL | TESTS: PASS/UNVERIFIED | RELEASE: NOT APPROVED`
 
