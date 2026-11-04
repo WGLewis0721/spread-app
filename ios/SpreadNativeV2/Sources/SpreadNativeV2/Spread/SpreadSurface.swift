@@ -456,6 +456,8 @@ struct RoleRow: View {
             }
             .buttonStyle(.spreadPress)
             .accessibilityLabel(isOpen ? "Collapse \(role.name)" : "Expand \(role.name) and show tasks")
+            .accessibilityValue(isOpen ? "Expanded" : "Collapsed")
+            .accessibilityHint("Reveals scheduled hours and the responsibility's tasks")
             .accessibilityIdentifier("expand-role-\(role.id)")
         }
         .padding(.horizontal, 12)
@@ -793,6 +795,7 @@ struct StackLayout: View {
     let onOpenRole: (String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var expandedIds: Set<String> = []
 
     private var focusedId: String { selectedRole ?? snapshot.roles.first?.id ?? "" }
@@ -834,7 +837,9 @@ struct StackLayout: View {
                 .modifier(RoleEditGlow(color: Color(hex: role.color), enabled: editing))
                 .shadow(color: Color(hex: role.color).opacity(open ? 0.18 : 0.09),
                         radius: open ? 16 : 8, y: 4)
-                .padding(.bottom, open || editing ? 12 : -36)
+                // Wallet overlap is decorative; never let a following card
+                // cover large accessibility-sized names, hours or the chevron.
+                .padding(.bottom, open || editing || typeSize.isAccessibilitySize ? 12 : -36)
                 // Lower cards sit in front of the card above, like Wallet passes.
                 .zIndex(Double(index))
                 // The long press and the bottom dock's Edit button enter the same
