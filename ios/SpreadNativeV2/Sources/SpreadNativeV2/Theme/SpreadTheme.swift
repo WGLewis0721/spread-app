@@ -45,9 +45,10 @@ public enum Spread {
     public static let onDanger = Color.white
     public static let caution = dynamic(light: 0x9A3412, dark: 0xFF9F0A)
     public static let scrim = dynamic(lightRGBA: (0, 0, 0, 0.32), darkRGBA: (0, 0, 0, 0.55))
-    /// The lit blue of a selected segment or primary button (specimen `blueBtn`, #2F95FF to #0559C7).
+    /// The lit blue of a selected segment or primary button. The specimen's `blueBtn` runs #2F95FF to #0559C7, but white
+    /// text on #2F95FF is only 3.06:1; the light end is #0A6FE8 so white text is at least 4.5:1 across the whole gradient.
     public static let accentGradient = LinearGradient(
-        colors: [Color(hex6: 0x2F95FF), Color(hex6: 0x0559C7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        colors: [Color(hex6: 0x0A6FE8), Color(hex6: 0x0559C7)], startPoint: .topLeading, endPoint: .bottomTrailing)
 
     // MARK: Card surface (specimen `navyCard`)
 
