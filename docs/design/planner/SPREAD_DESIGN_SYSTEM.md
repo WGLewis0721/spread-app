@@ -6,8 +6,7 @@
 
 
 This is the one place the planner's visual rules live. [`landing/DESIGN.md`](../landing/DESIGN.md) covers the landing page only.
-The planner has no brand board of its own: it uses the tokens in `src/styles.css` and the patterns below.
-**Do not add colors, fonts or decorative styles.** Use a token, or reuse a pattern.
+The **React planner** has no separate board: its styles use `src/styles.css` tokens and the patterns below. Do not add colors, fonts or decorative styles to that unflagged React UI. **Owner-approved native exception (2026-11-03):** [SPREAD_NATIVE_BRAND_BOARD.md](SPREAD_NATIVE_BRAND_BOARD.md) governs the *visible SwiftUI presentation* of PR #119, including deep navy surfaces, bounded role-colored glow and machined metal Crown. This exception **does not** authorize changing the React UI, landing site, role color data, data model, interaction semantics, or release gates. Its native visual decisions take precedence over the old quiet palette when implementing SwiftUI; all functional rules below still apply.
 
 ## Tokens
 
@@ -66,7 +65,7 @@ Every drag has a tap equivalent and a keyboard equivalent:
 
 ## Human Interface Guidelines polish — 2026-10-08
 
-Applies to the **planner** only. The landing page remains governed by [`landing/DESIGN.md`](../landing/DESIGN.md), and no new palette, typeface, component framework, or storage mechanism is introduced.
+Applies to the **React planner** and the invariant native planner behavior. Landing remains governed by [landing/DESIGN.md](../landing/DESIGN.md). The approved **SwiftUI-only** visual exception is documented in [the native brand board](SPREAD_NATIVE_BRAND_BOARD.md); no new font family, component framework or storage mechanism is authorized.
 
 | Surface | Refinement | Reason |
 | --- | --- | --- |
