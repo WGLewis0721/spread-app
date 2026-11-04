@@ -515,11 +515,18 @@ final class PlannerUITests: NativeUITestCase {
     func testDialArcSelectionAndPreferencePersistence() throws {
         goSpread()
         XCTAssertFalse(el("view-mode-button").exists, "Layout preferences must live in More")
+        // The summary bar omits zero-hour responsibilities, but the actual Dial
+        // keeps them visible at a minimum 0.5-hour weight. Include every real role
+        // in display order, or this test taps the wrong arc after the first zero.
+        let names = roleNames()
         let segments = elements(prefix: "hour-segment-")
-        let entries = try segments.map { segment -> (name: String, hours: Double) in
+        let hoursByName = try Dictionary(uniqueKeysWithValues: segments.map { segment -> (String, Double) in
             let pieces = segment.label.components(separatedBy: ", ")
             let hours = try XCTUnwrap(Double(pieces.last?.components(separatedBy: " ").first ?? ""))
-            return (pieces.dropLast().joined(separator: ", "), max(0.5, hours))
+            return (pieces.dropLast().joined(separator: ", "), hours)
+        })
+        let entries: [(name: String, hours: Double)] = names.map {
+            (name: $0, hours: max(0.5, hoursByName[$0] ?? 0))
         }
         XCTAssertGreaterThanOrEqual(entries.count, 2)
         chooseMode("Dial")
