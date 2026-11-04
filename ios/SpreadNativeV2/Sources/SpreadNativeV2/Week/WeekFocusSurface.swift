@@ -314,98 +314,119 @@ struct WeekFocusSurface: View {
                 Text(PlannerDates.label(PlannerDates.date(day), pattern: "EEEE, MMM d"))
                     .font(.system(.headline, weight: .semibold))
                 Spacer(minLength: 0)
-                Text("\(SpreadHours.text(dayHours))h")
-                    .font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.secondary)
+                Text("\(SpreadHours.text(dayHours))h planned")
+                    .font(.system(.subheadline, weight: .medium))
+                    .foregroundStyle(Spread.secondary)
+                    .monospacedDigit()
             }
             .padding(.vertical, 8)
-            if !unplaced.isEmpty {
-                Button { trayOpen.toggle() } label: {
-                    Label("To Place: \(unplaced.count)", systemImage: "tray")
-                        .font(.system(.subheadline, weight: .medium))
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(.spreadPress)
-                .accessibilityIdentifier("focus-to-place")
-                if trayOpen {
-                    VStack(spacing: 0) {
-                        ForEach(unplaced) { task in
-                            TaskLine(planner: planner, snapshot: snapshot, task: task,
-                                     currentAllocation: nil, onOpenTask: onOpenTask)
+
+            if dayHours > 0 {
+                HStack(spacing: 3) {
+                    ForEach(todaysAllocations) { allocation in
+                        if let role = snapshot.roles.first(where: { $0.id == allocation.roleId }) {
+                            Capsule()
+                                .fill(Color(hex: role.color))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 6)
+                                .accessibilityHidden(true)
                         }
                     }
-                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 14))
                 }
+                .frame(height: 6)
+                .accessibilityLabel("Daily allocation total \(SpreadHours.text(dayHours)) hours")
+            }
+
+            HStack(spacing: 8) {
+                if !unplaced.isEmpty {
+                    Button {
+                        trayOpen.toggle()
+                        if trayOpen { overdueOpen = false }
+                    } label: {
+                        Label("To Place \(unplaced.count)", systemImage: "tray")
+                            .font(.system(.caption, weight: .semibold))
+                            .frame(minHeight: 44)
+                            .padding(.horizontal, 8)
+                            .background(Spread.elevated, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("focus-to-place")
+                }
+                if !overdueRows.isEmpty {
+                    Button {
+                        overdueOpen.toggle()
+                        if overdueOpen { trayOpen = false }
+                    } label: {
+                        Label("Overdue \(overdueRows.count)", systemImage: "clock.arrow.circlepath")
+                            .font(.system(.caption, weight: .semibold))
+                            .frame(minHeight: 44)
+                            .padding(.horizontal, 8)
+                            .background(Spread.elevated, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("focus-overdue")
+                }
+                Spacer(minLength: 0)
+            }
+            if trayOpen {
+                VStack(spacing: 0) {
+                    ForEach(unplaced) { task in
+                        TaskLine(planner: planner, snapshot: snapshot, task: task,
+                                 currentAllocation: nil, onOpenTask: onOpenTask)
+                    }
+                }
+                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 14))
+                .dropDestination(for: SpreadDragPayload.self) { items, _ in
+                    guard let item = items.first, item.kind == .task else { return false }
+                    Task {
+                        _ = await planner.send(["type": "assignTask", "roleId": item.roleId,
+                                                "taskId": item.itemId, "allocationId": NSNull()])
+                    }
+                    return true
+                } isTargeted: { _ in }
+            }
+            if overdueOpen {
+                OverdueSelectionTray(planner: planner, snapshot: snapshot,
+                                     rows: overdueRows, currentDay: day, weekDays: weekDays)
             }
             let rolesToday = snapshot.roles.filter { role in
                 todaysAllocations.contains(where: { $0.roleId == role.id }) || role.id == activeRole
             }
             if rolesToday.isEmpty {
-                VStack(spacing: 10) {
-                    Text("Nothing planned").font(.system(.headline, weight: .semibold))
-                    Button(action: onNewRole) { Text("Add responsibility").tapTarget() }
+                VStack(spacing: 12) {
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(.title2))
+                        .foregroundStyle(Spread.secondary)
+                    Text("Nothing planned")
+                        .font(.system(.headline, weight: .semibold))
+                    if let activeRole {
+                        FocusedQuickAdd(planner: planner, roleId: activeRole, day: day,
+                                        onOpenEditor: onOpenTask)
+                    }
                 }
-                .frame(maxWidth: .infinity).padding(16).spreadCard()
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .spreadCard()
             }
             ForEach(rolesToday) { role in
-                roleCard(role).id(role.id)
+                FocusedRoleCard(
+                    planner: planner, snapshot: snapshot, role: role, day: day,
+                    selected: role.id == activeRole,
+                    expanded: expandedByDate[day]?.contains(role.id) ?? (role.id == activeRole),
+                    onToggle: {
+                        let expanded = expandedByDate[day]?.contains(role.id) ?? (role.id == activeRole)
+                        if expanded { expandedByDate[day, default: []].remove(role.id) }
+                        else { expandedByDate[day, default: []].insert(role.id) }
+                        SpreadHaptics.selection()
+                    }, onOpenTask: onOpenTask
+                )
+                .id(role.id)
             }
             Color.clear.frame(height: 12)
         }
         .padding(.vertical, 6)
+        .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: day)
     }
 
-    private func roleCard(_ role: Responsibility) -> some View {
-        let allocations = todaysAllocations.filter { $0.roleId == role.id }
-        let allocatedIds = Set(allocations.map(\.id))
-        let tasks = snapshot.tasks.filter { $0.roleId == role.id && $0.allocationId.map { allocatedIds.contains($0) } == true }
-        let open = expandedByDate[day]?.contains(role.id) ?? role.id == activeRole
-        let hours = allocations.reduce(0) { $0 + $1.hours }
-        return VStack(spacing: 0) {
-            Button {
-                if open { expandedByDate[day, default: []].remove(role.id) }
-                else { expandedByDate[day, default: []].insert(role.id) }
-            } label: {
-                HStack(spacing: 6) {
-                    RoleBadge(category: role.category == "custom" ? nil : role.category,
-                              color: role.color, size: 28)
-                    Text(role.name).font(.system(.subheadline, weight: .semibold))
-                        .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
-                    Text("\(tasks.count) tasks").font(Spread.caption).foregroundStyle(Spread.secondary)
-                    Text("\(SpreadHours.text(hours))h").font(Spread.caption)
-                        .foregroundStyle(Spread.secondary).padding(.leading, 3)
-                    Image(systemName: "chevron.down")
-                        .font(.system(.caption, weight: .semibold))
-                        .rotationEffect(.degrees(open ? 180 : 0))
-                        .foregroundStyle(Spread.secondary)
-                }
-                .frame(minHeight: 52)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("focus-role-toggle-\(role.id)")
-            if open {
-                VStack(spacing: 0) {
-                    ForEach(allocations) { allocation in
-                        AllocationRow(planner: planner, snapshot: snapshot, allocation: allocation,
-                                      dayLabel: PlannerDates.label(PlannerDates.date(day), pattern: "EEEE"),
-                                      onOpenTask: onOpenTask)
-                    }
-                    if allocations.isEmpty {
-                        Button {
-                            Task { await planner.placeHours(roleId: role.id, day: day, hours: 1) }
-                        } label: { Label("Add hours to \(role.name)", systemImage: "plus").tapTarget() }
-                        .buttonStyle(.spreadPress)
-                    }
-                }
-                .padding(.top, 4)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16)
-            .strokeBorder(Color(hex: role.color).opacity(role.id == activeRole ? 0.65 : 0.15),
-                          lineWidth: role.id == activeRole ? 1.5 : 0.5))
-    }
 }
 #endif
