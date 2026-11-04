@@ -1,16 +1,16 @@
 # Spread: instructions for Claude Code
 
-All design guidance lives in one place: **[docs/design/README.md](docs/design/README.md)**. The block below is generated from `docs/design/RULES_CARD.md` (`npm run docs:sync`); do not edit it here. Project rules: [AGENTS.project.md](AGENTS.project.md). Setup for each AI tool: [docs/design/AI_TOOL_SETUP.md](docs/design/AI_TOOL_SETUP.md).
+For PR #119's owner-approved native UI correction, **start at [CLAUDE_NATIVE_UI_HANDOFF.md](CLAUDE_NATIVE_UI_HANDOFF.md) and [the native brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md)**. Other design guidance lives in **[docs/design/README.md](docs/design/README.md)**. The block below is generated from `docs/design/RULES_CARD.md` (`npm run docs:sync`); do not edit it here. Project rules: [AGENTS.project.md](AGENTS.project.md). Setup for each AI tool: [docs/design/AI_TOOL_SETUP.md](docs/design/AI_TOOL_SETUP.md).
 
 <!-- design-rules-card:start -->
 **Start here:** `docs/design/README.md` (router). Plans and specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens as data: `docs/design/tokens.json`. Read the task pack the router names, then only the section it points to.
 
 **Look**
-- No new colors, fonts or decorative styles in the unflagged planner. Use a token (`--canvas`, `--elevated`, `--ink`, `--secondary`, `--tertiary`, `--line`, `--fill`, `--accent`, `--on-accent`, `--danger`, `--caution`, `--scrim`, `--shadow`, `--glass*`) or reuse a pattern.
+- In unflagged **React**, no new colors/fonts/decorative paint: use existing CSS tokens. **SwiftUI PR #119 native paint** follows the [owner-approved visual board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) (deep navy, bounded role glow, metallic Crown) without changing React or landing.
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week keeps three kinds of thing: solid day cards, a dashed To place tray, tinted Free time chips.
-- Keep the Crown, Spread/Week/Month semantics, the hour bank and the quiet palette.
+- Keep Crown, Spread/Week/Month semantics, hour bank, original artwork and five modes. The quiet default palette applies to React; native board governs SwiftUI appearance only.
 - The landing page is separate (`docs/design/landing/DESIGN.md`): one focal object per section, both modes.
 
 **Behavior**
