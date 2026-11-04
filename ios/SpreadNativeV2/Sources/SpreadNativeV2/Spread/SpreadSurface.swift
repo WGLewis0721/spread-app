@@ -28,7 +28,6 @@ struct SpreadSurface: View {
         VStack(alignment: .leading, spacing: 16) {
             summary
             layoutBody
-            manageRow
             newSpread
         }
         .padding(.horizontal, 16)
@@ -185,39 +184,8 @@ struct SpreadSurface: View {
         )
     }
 
-    /// The responsibility the modes other than Stack are showing: the Fan's and Dial's selection (first by default),
-    /// the open Tabs tab, and Day's role (the first by default, like the others). The Stack opens its own card and has its menu.
-    private var managedRole: Responsibility? {
-        let id: String?
-        switch layout {
-        case .stack: id = selectedRole ?? snapshot.roles.first?.id
-        case .tabs: id = tabSelection == "all" ? nil : tabSelection
-        case .day, .fan, .dial: id = selectedRole ?? snapshot.roles.first?.id
-        }
-        return snapshot.roles.first { $0.id == id }
-    }
-
-    /// One way to open the full responsibility editor from every mode, named for what it opens.
-    @ViewBuilder private var manageRow: some View {
-        if let role = managedRole {
-            Button { onOpenRole(role.id) } label: {
-                HStack(spacing: 12) {
-                    RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 32)
-                    Text("Manage \(role.name)").font(.system(.subheadline, weight: .semibold)).lineLimit(1)
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.right").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.tertiary)
-                }
-                .padding(.horizontal, 14)
-                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                .spreadCard(edge: Color(hex: role.color))
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.spreadPress)
-            .accessibilityLabel("Manage \(role.name)")
-            .accessibilityHint("Opens hours, colour, symbol, placed days and tasks")
-            .accessibilityIdentifier("manage-selected")
-        }
-    }
+    // Manage and Delete are revealed by an editing swipe on each Wallet card.
+    // The previous full-width Manage box is intentionally removed.
 
     private var newSpread: some View {
         Button(action: onNewRole) {
