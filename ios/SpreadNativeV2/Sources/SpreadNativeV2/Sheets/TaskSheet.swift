@@ -55,11 +55,12 @@ struct TaskSheet: View {
     private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) } }
 
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             Group {
                 if let task {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
+                            taskHeader(task)
                             TextField("Task title", text: $title)
                                 .font(.system(.title2, weight: .bold))
                                 .submitLabel(.done)
@@ -126,6 +127,49 @@ struct TaskSheet: View {
                 }
             }
         }
+    }
+
+    // MARK: Header
+
+    /// Whose task this is, where it sits this week, and a one-tap completion. The same store command as the
+    /// checkbox in the list, so the haptic is felt only after the store has acknowledged it.
+    @ViewBuilder private func taskHeader(_ task: PlannerTask) -> some View {
+        if let role = planner.snapshot?.roles.first(where: { $0.id == roleId }) {
+            HStack(spacing: 12) {
+                RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(role.name).font(.system(.headline, weight: .semibold)).lineLimit(1)
+                    Text(placementText(task)).font(.system(.footnote)).foregroundStyle(Spread.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Button {
+                    Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": taskId], completionHaptic: !task.done) }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
+                        Text(task.done ? "Done" : "Mark done")
+                    }
+                    .font(.system(.subheadline, weight: .semibold))
+                    .foregroundStyle(task.done ? Spread.onAccent : Spread.accent)
+                    .padding(.horizontal, 14).frame(minHeight: 44)
+                    .spreadChip(selected: task.done)
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityLabel(task.done ? "Mark not done" : "Mark done")
+                .accessibilityIdentifier("task-sheet-complete")
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .spreadCard(edge: Color(hex: role.color))
+        }
+    }
+
+    private func placementText(_ task: PlannerTask) -> String {
+        guard let allocationId = task.allocationId,
+              let day = planner.snapshot?.allocations.first(where: { $0.id == allocationId })?.day else {
+            return "Not placed on a day"
+        }
+        return "On " + PlannerDates.label(PlannerDates.date(day), pattern: "EEEE, MMM d")
     }
 
     // MARK: Loading and saving

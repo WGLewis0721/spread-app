@@ -21,7 +21,7 @@ struct NewSpreadSheet: View {
     private var ready: Bool { drafts.contains { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
 
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Name the spreads you actually live. Add as many as you need.")
@@ -133,13 +133,14 @@ struct RoleSheet: View {
     private var role: Responsibility? { planner.snapshot?.roles.first { $0.id == roleId } }
 
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             if let snapshot = planner.snapshot, let role {
                 Form {
                     Section {
                         ChalkIllustration(category: role.category, maxWidth: 160, maxHeight: 110)
                             .frame(maxWidth: .infinity)
                     }
+                        .listRowBackground(Spread.elevated)
                     Section("Responsibility") {
                         TextField("Name", text: $name)
                             .submitLabel(.done)
@@ -156,10 +157,12 @@ struct RoleSheet: View {
                             .font(Spread.footnote).foregroundStyle(Spread.secondary)
                             .accessibilityIdentifier("bank-remaining")
                     }
+                        .listRowBackground(Spread.elevated)
                     Section("Colour and symbol") {
                         PalettePanel(planner: planner, role: role)
                             .listRowInsets(EdgeInsets())
                     }
+                        .listRowBackground(Spread.elevated)
                     Section("Placed hours") {
                         let placed = snapshot.allocations.filter { $0.roleId == role.id }.sorted { $0.day < $1.day }
                         if placed.isEmpty {
@@ -179,6 +182,7 @@ struct RoleSheet: View {
                             }
                         }
                     }
+                        .listRowBackground(Spread.elevated)
                     Section("Place hours") {
                         Picker("Day", selection: $placeDay) {
                             ForEach(0..<7, id: \.self) { position in
@@ -198,6 +202,7 @@ struct RoleSheet: View {
                         .disabled(snapshot.remainingHours(for: role.id) < placeHours || placeDay.isEmpty)
                         .accessibilityIdentifier("place-hours-button")
                     }
+                        .listRowBackground(Spread.elevated)
                     Section("Tasks") {
                         ForEach(snapshot.tasks(for: role.id)) { task in
                             TaskRow(planner: planner, snapshot: snapshot, task: task, roleId: role.id, onOpen: { onOpenTask(task.id) })
@@ -206,6 +211,7 @@ struct RoleSheet: View {
                             Task { await planner.send(["type": "addTask", "roleId": role.id, "text": text]) }
                         }
                     }
+                        .listRowBackground(Spread.elevated)
                     Section {
                         Button("Remove responsibility", role: .destructive) {
                             Task {
@@ -216,7 +222,9 @@ struct RoleSheet: View {
                     } footer: {
                         Text("The hours and tasks for this spread leave every week.")
                     }
+                        .listRowBackground(Spread.elevated)
                 }
+                    .spreadListSurface()
                 .navigationTitle("Responsibility")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -256,7 +264,7 @@ struct CarryOverSheet: View {
     private var chosen: [PlannerTask] { items.filter { !unchecked.contains($0.id) } }
 
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             List {
                 Section {
                     if items.isEmpty {
@@ -285,10 +293,13 @@ struct CarryOverSheet: View {
                     Text("Pick what moves to next week. The rest stays here. Next week’s own tasks and days are not touched.")
                         .textCase(nil)
                 }
+                    .listRowBackground(Spread.elevated)
                 if let status {
                     Section { Text(status).foregroundStyle(Spread.secondary) }
+                        .listRowBackground(Spread.elevated)
                 }
             }
+                .spreadListSurface()
             .navigationTitle("Open tasks")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -327,7 +338,7 @@ struct ProfilesSheet: View {
     static let limit = 10
 
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             List {
                 Section {
                     ForEach(planner.profiles) { profile in
@@ -363,6 +374,7 @@ struct ProfilesSheet: View {
                 } footer: {
                     Text("Each profile keeps its own spreads and weeks.")
                 }
+                    .listRowBackground(Spread.elevated)
                 Section("New profile") {
                     TextField("New profile name", text: $newName)
                         .submitLabel(.done)
@@ -372,7 +384,9 @@ struct ProfilesSheet: View {
                         .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty || planner.profiles.count >= Self.limit)
                         .accessibilityIdentifier("create-profile")
                 }
+                    .listRowBackground(Spread.elevated)
             }
+                .spreadListSurface()
             .navigationTitle("Profiles")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -439,7 +453,7 @@ struct MoreSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             List {
                 Section("Spreads") {
                     Button { newSpread = true } label: { Label("New Spread", systemImage: "plus").frame(minHeight: 44, alignment: .leading) }
@@ -450,6 +464,7 @@ struct MoreSheet: View {
                     } label: { Label("Rollover to next week", systemImage: "arrow.right.square").frame(minHeight: 44, alignment: .leading) }
                     .accessibilityIdentifier("more-rollover")
                 }
+                    .listRowBackground(Spread.elevated)
                 Section("Spread view") {
                     ForEach(SpreadLayout.allCases) { item in
                         Button { layout = item } label: {
@@ -466,6 +481,7 @@ struct MoreSheet: View {
                         .accessibilityIdentifier("more-layout-\(item.rawValue)")
                     }
                 }
+                    .listRowBackground(Spread.elevated)
                 Section("Profiles") {
                     ForEach(planner.profiles) { profile in
                         HStack {
@@ -478,6 +494,7 @@ struct MoreSheet: View {
                     Button("Manage profiles") { dismiss(); showProfiles() }
                         .accessibilityIdentifier("manage-profiles")
                 }
+                    .listRowBackground(Spread.elevated)
                 Section("Share this week") {
                     Button { exportWeek("html") } label: { Label("Print or save as PDF", systemImage: "printer").frame(minHeight: 44, alignment: .leading) }
                         .accessibilityIdentifier("export-print")
@@ -486,11 +503,14 @@ struct MoreSheet: View {
                     Button { exportWeek("text") } label: { Label("Plain text", systemImage: "text.alignleft").frame(minHeight: 44, alignment: .leading) }
                         .accessibilityIdentifier("export-text")
                 }
+                    .listRowBackground(Spread.elevated)
                 Section("Data") {
                     Button { dismiss(); recovery() } label: { Label("Backup and restore", systemImage: "externaldrive").frame(minHeight: 44, alignment: .leading) }
                         .accessibilityIdentifier("backup-and-restore")
                 }
+                    .listRowBackground(Spread.elevated)
             }
+                .spreadListSurface()
             .navigationTitle("More")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

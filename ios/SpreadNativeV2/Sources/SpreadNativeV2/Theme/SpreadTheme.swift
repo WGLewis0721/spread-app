@@ -315,4 +315,32 @@ struct SpreadChipStyle: ViewModifier {
             .overlay(Capsule().strokeBorder(selected ? Color.clear : Spread.line, lineWidth: 0.5))
     }
 }
+
+// MARK: - Sheets
+
+/// Every sheet's container: a navigation stack on the navy canvas with a matching navigation bar, the action blue as
+/// its tint, and the drag indicator. Using one container keeps New Spread, the responsibility editor, Open tasks,
+/// Profiles, More and the Task sheet looking like one product.
+struct SpreadSheetStack<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        NavigationStack {
+            content()
+                .background(Spread.canvas.ignoresSafeArea())
+                .toolbarBackground(Spread.canvas, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+        }
+        .tint(Spread.accent)
+        .presentationBackground(Spread.canvas)
+        .presentationDragIndicator(.visible)
+    }
+}
+
+extension View {
+    /// A `List` or `Form` on the navy canvas instead of the system grouped gray.
+    func spreadListSurface() -> some View {
+        scrollContentBackground(.hidden).background(Spread.canvas)
+    }
+}
 #endif
