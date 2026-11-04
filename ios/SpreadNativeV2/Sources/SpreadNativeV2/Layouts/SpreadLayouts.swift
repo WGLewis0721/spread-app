@@ -268,6 +268,8 @@ struct DialLayout: View {
         return VStack(spacing: 2) {
             Text("\(SpreadHours.text(selected?.hours ?? 0))h")
                 .font(.system(size: 44, weight: .heavy)).monospacedDigit().tracking(-1.2)
+                .contentTransition(.numericText())
+                .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.42), value: selected?.hours)
             Text(selected?.role.name ?? "")
                 .font(.system(.body, weight: .bold)).lineLimit(1)
             Text("of \(SpreadHours.text(total))h")
@@ -374,6 +376,8 @@ struct TabsLayout: View {
             .overlay(Capsule().strokeBorder(Spread.line, lineWidth: selected ? 0 : 0.5))
         }
         .buttonStyle(.spreadPress)
+        .scaleEffect(selected && !reduceMotion ? 1.0 : 0.97)
+        .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.62), value: selected)
         .id("tab-\(id)")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier("role-tab-\(id)")
@@ -427,6 +431,7 @@ struct DayLayout: View {
                             // How busy the day is, against the busiest day: a quiet fill rising from the bottom.
                             Rectangle().fill(isSelected ? Color.white.opacity(0.24) : Spread.accent.opacity(0.22))
                                 .frame(height: 60 * filled)
+                                .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.64), value: filled)
                         }
                         .background {
                             if isSelected {
