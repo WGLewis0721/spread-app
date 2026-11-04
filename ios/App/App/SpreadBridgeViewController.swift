@@ -132,6 +132,14 @@ private final class PlannerReadyHandler: NSObject, WKScriptMessageHandler {
 
 /// Capacitor's root view is WKWebView. Native UI must be a sibling, never its descendant.
 final class SpreadContainerViewController: UIViewController {
+    @objc private func updateAppearance() {
+        let stored = UserDefaults.standard.string(forKey: Spread.appearancePreferenceKey)
+        let style: UIUserInterfaceStyle = stored == "dark" ? .dark : (stored == "light" ? .light : .unspecified)
+        guard overrideUserInterfaceStyle != style else { return }
+        overrideUserInterfaceStyle = style
+        setNeedsStatusBarAppearanceUpdate()
+    }
+
     private let engine = SpreadBridgeViewController()
     /// The native planner's status bar follows the device appearance, as the canvas does.
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -148,6 +156,8 @@ final class SpreadContainerViewController: UIViewController {
         super.viewDidLoad()
         // The same calm canvas as the SwiftUI root and the launch screen, so launch never flashes gray.
         view.backgroundColor = Spread.canvasUIColor
+        updateAppearance()
+        NotificationCenter.default.addObserver(self, selector: #selector(updateAppearance), name: UserDefaults.didChangeNotification, object: nil)
         addChild(engine)
         engine.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(engine.view)

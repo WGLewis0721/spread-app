@@ -1,5 +1,7 @@
 # SwiftUI parity: partially completed tasks
 
+> Historical inventory. PR #119/#120 are merged. Current continuation and verification: [release candidate](docs/evidence/swiftui-parity/release-candidate.md). The old no-test instruction below is superseded by the owner’s current release-build assignment.
+
 **Source:** [docs/evidence/swiftui-parity/implementation-ledger.md](docs/evidence/swiftui-parity/implementation-ledger.md) (rows marked `PARTIAL (UNVERIFIED)`, plus the related gap and blocker register).
 **Branch:** `claude/spread-swiftui-parity-87llx2` · **PR:** [#119](https://github.com/WGLewis0721/spread-app/pull/119) (draft).
 **Status of everything below: UNVERIFIED. Nothing was built, tested, or run on a device.**

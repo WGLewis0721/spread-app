@@ -20,6 +20,7 @@ struct SpreadSurface: View {
     @State private var tabSelection = "all"
     @State private var daySelection = PlannerDates.localISO()
     @State private var dropOpen = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var totalHours: Double { snapshot.roles.reduce(0) { $0 + $1.hours } }
     private var taskCount: Int { snapshot.tasks.count }
@@ -35,6 +36,18 @@ struct SpreadSurface: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
+        .onChange(of: tabSelection) { _, id in
+            if snapshot.roles.contains(where: { $0.id == id }) { selectedRole = id }
+        }
+        .onChange(of: snapshot.roles.map(\.id)) { _, ids in
+            if let selectedRole, !ids.contains(selectedRole) { self.selectedRole = ids.first }
+            if tabSelection != "all", !ids.contains(tabSelection) { tabSelection = "all" }
+        }
+        .onChange(of: snapshot.weekKey) { _, key in
+            if !PlannerOrder.displayOffsets.map({ PlannerDates.dayISO(weekKey: key, index: $0) }).contains(daySelection) {
+                daySelection = PlannerOrder.day(weekKey: key, displayPosition: 0)
+            }
+        }
         .accessibilityIdentifier("spread-surface")
     }
 
@@ -133,26 +146,27 @@ struct SpreadSurface: View {
     /// The five presentation modes as one recessed rail with a lit selection. It fits 390 pt without scrolling and
     /// scrolls only when large text needs the room.
     private var layoutPicker: some View {
-        ViewThatFits(in: .horizontal) {
-            layoutRail
-            ScrollView(.horizontal) { layoutRail }
-                .scrollIndicators(.hidden)
-        }
+        ScrollView(.horizontal) { layoutRail }
+            .scrollIndicators(.hidden)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Spread view")
+            .accessibilityIdentifier("view-mode-button")
     }
 
     private var layoutRail: some View {
         HStack(spacing: 4) {
             ForEach(SpreadLayout.allCases) { item in
                 let selected = layout == item
-                Button { withAnimation(SpreadMotion.curve) { layout = item } } label: {
+                Button { withAnimation(reduceMotion ? nil : SpreadMotion.curve) { layout = item } } label: {
                     VStack(spacing: 4) {
                         LayoutGlyph(layout: item, tint: selected ? Spread.onAccent : Spread.secondary)
                             .frame(width: 26, height: 26)
                         Text(item.title).font(.system(.caption, weight: .semibold))
+                            .lineLimit(1).fixedSize(horizontal: true, vertical: false)
                     }
                     .foregroundStyle(selected ? Spread.onAccent : Spread.secondary)
                     .padding(.horizontal, 6)
-                    .frame(minWidth: 62, maxWidth: .infinity, minHeight: 56)
+                    .frame(minWidth: 54, minHeight: 56)
                     .background {
                         if selected { RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Spread.accentGradient) }
                     }
@@ -171,7 +185,6 @@ struct SpreadSurface: View {
         // itself has the stable identifier the UI tests and VoiceOver landmarks use.
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Spread view")
-        .accessibilityIdentifier("view-mode-button")
     }
 
     // MARK: Layout bodies
@@ -197,7 +210,7 @@ struct SpreadSurface: View {
     private var managedRole: Responsibility? {
         let id: String?
         switch layout {
-        case .stack: id = nil
+        case .stack: id = selectedRole ?? snapshot.roles.first?.id
         case .tabs: id = tabSelection == "all" ? nil : tabSelection
         case .day, .fan, .dial: id = selectedRole ?? snapshot.roles.first?.id
         }
@@ -503,8 +516,9 @@ struct RoleRow: View {
     /// The tasks in a recessed list, so the open card reads as: identity, placement, work.
     private var taskList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(tasks) { task in
+            ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                 TaskRow(planner: planner, snapshot: snapshot, task: task, roleId: role.id, onOpen: { onOpenTask(role.id, task.id) })
+                    .modifier(SpreadEntrance(index: index))
             }
             AddTaskRow(placeholder: tasks.isEmpty ? "What matters most here?" : "Add a task") { text in
                 Task { await planner.send(["type": "addTask", "roleId": role.id, "text": text]) }
@@ -575,7 +589,7 @@ struct PalettePanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Colour").font(.system(.subheadline, weight: .semibold))
-            HStack(spacing: 4) {
+            FlowRow(spacing: 4) {
                 ForEach(Self.colors, id: \.self) { color in
                     Button {
                         Task { await planner.send(["type": "setRoleColor", "roleId": role.id, "color": color]) }
@@ -665,6 +679,7 @@ struct TaskRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(task.text.isEmpty ? "Untitled task" : task.text)
             .accessibilityIdentifier("task-row-\(task.id)")
 
             if isToday && !task.done {
@@ -744,7 +759,7 @@ struct StackLayout: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            ForEach(snapshot.roles) { role in
+            ForEach(Array(snapshot.roles.enumerated()), id: \.element.id) { index, role in
                 let isFocused = focusedId == role.id
                 RoleRow(
                     planner: planner, snapshot: snapshot, role: role, editing: editing,
@@ -754,9 +769,22 @@ struct StackLayout: View {
                 )
                 .spreadCard(edge: Color(hex: role.color), active: isFocused)
                 .zIndex(isFocused ? 1 : 0)
+                .modifier(SpreadEntrance(index: index))
             }
         }
         .animation(reduceMotion ? nil : SpreadMotion.curve, value: focusedId)
+        .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { value in
+            guard abs(value.translation.width) > abs(value.translation.height) * 1.5,
+                  abs(value.translation.width) >= 64,
+                  let index = snapshot.roles.firstIndex(where: { $0.id == focusedId }) else { return }
+            let next = min(max(0, index + (value.translation.width < 0 ? 1 : -1)), snapshot.roles.count - 1)
+            select(snapshot.roles[next].id)
+        })
+        .accessibilityAdjustableAction { direction in
+            guard let index = snapshot.roles.firstIndex(where: { $0.id == focusedId }) else { return }
+            let next = min(max(0, index + (direction == .increment ? 1 : -1)), snapshot.roles.count - 1)
+            select(snapshot.roles[next].id)
+        }
         .accessibilityIdentifier("stack-cards")
     }
 

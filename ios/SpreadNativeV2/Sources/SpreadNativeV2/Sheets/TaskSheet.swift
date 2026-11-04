@@ -105,7 +105,7 @@ struct TaskSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { commitTitle(); dismiss() } label: { Text("Done").tapTarget() }
+                    Button { finishEditing() } label: { Text("Done").tapTarget() }
                         .accessibilityIdentifier("task-sheet-done")
                 }
             }
@@ -139,7 +139,7 @@ struct TaskSheet: View {
                 RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(role.name).font(.system(.headline, weight: .semibold)).lineLimit(1)
-                    Text(placementText(task)).font(.system(.footnote)).foregroundStyle(Spread.secondary).lineLimit(1)
+                    Text(placementText(task)).font(.system(.footnote)).foregroundStyle(Spread.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
                 Button {
@@ -166,10 +166,10 @@ struct TaskSheet: View {
 
     private func placementText(_ task: PlannerTask) -> String {
         guard let allocationId = task.allocationId,
-              let day = planner.snapshot?.allocations.first(where: { $0.id == allocationId })?.day else {
+              let allocation = planner.snapshot?.allocations.first(where: { $0.id == allocationId }) else {
             return "Not placed on a day"
         }
-        return "On " + PlannerDates.label(PlannerDates.date(day), pattern: "EEEE, MMM d")
+        return PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE, MMM d") + " · " + SpreadHours.text(allocation.hours) + "h for this responsibility"
     }
 
     // MARK: Loading and saving
@@ -192,6 +192,25 @@ struct TaskSheet: View {
             let encoded = try? JSONEncoder().encode(snapshot)
             guard let encoded, let object = try? JSONSerialization.jsonObject(with: encoded) else { return }
             _ = await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+        }
+    }
+
+    /// Done flushes the pending debounced block edit before dismissal. A quick Done/relaunch cannot
+    /// drop the last keystroke, and failed saves keep the sheet open with its original draft.
+    private func finishEditing() {
+        saveTask?.cancel()
+        let draft = content
+        let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task {
+            if loaded && supported {
+                guard let bytes = try? JSONEncoder().encode(draft),
+                      let object = try? JSONSerialization.jsonObject(with: bytes),
+                      await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object]) else { return }
+            }
+            if !newTitle.isEmpty, newTitle != task?.text {
+                guard await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": newTitle]) else { return }
+            }
+            dismiss()
         }
     }
 

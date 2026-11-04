@@ -47,7 +47,7 @@ struct FanLayout: View {
                         let dx = value.translation.width
                         let steps = Int((-(dx + value.predictedEndTranslation.width - dx) / step).rounded())
                         drag = 0
-                        let clamped = max(-2, min(2, steps))
+                        let clamped = max(-1, min(1, steps))
                         if clamped != 0 { move(clamped) }
                     }
             )
@@ -134,11 +134,11 @@ struct FanLayout: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.role.name)
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.system(.title, weight: .bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text("\(SpreadHours.text(row.hours))h")
-                    .font(.system(size: 18, weight: .bold)).foregroundStyle(Spread.secondary).monospacedDigit()
+                    .font(.system(.headline, weight: .bold)).foregroundStyle(Spread.secondary).monospacedDigit()
             }
             .foregroundStyle(Spread.ink)
             .padding(.horizontal, 20)

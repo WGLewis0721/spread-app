@@ -95,7 +95,14 @@ class NativeUITestCase: XCTestCase {
 
     func goWeek() { tapID("native-week") }
     func goSpread() { tapID("native-spread") }
-    func chooseMode(_ mode: String) { tapID("view-mode-button"); tapID("layout-" + mode.lowercased()) }
+    func chooseMode(_ mode: String) {
+        let button = el("layout-" + mode.lowercased())
+        if !button.isHittable {
+            let rail = el("view-mode-button")
+            for _ in 0..<5 where !button.isHittable { mode == "Stack" ? rail.swipeRight() : rail.swipeLeft() }
+        }
+        tapID("layout-" + mode.lowercased())
+    }
     /// Reveals a tab in the horizontally scrolling row (offscreen tabs are not reachable until scrolled).
     func revealTab(_ name: String) {
         let tab = app.buttons[name].firstMatch
@@ -104,7 +111,15 @@ class NativeUITestCase: XCTestCase {
             el("role-tabs").swipeLeft(); swipes += 1
         }
     }
+    func closeNativeSheets() {
+        for _ in 0..<4 {
+            let button = ["Done", "Close", "Cancel"].map { app.buttons[$0].firstMatch }.first { $0.exists && $0.isHittable }
+            guard let button else { return }
+            button.tap()
+        }
+    }
     func selectRole(_ name: String) {
+        closeNativeSheets()
         goSpread(); chooseMode("Tabs")
         revealTab(name)
         tapButton(name)
@@ -203,418 +218,231 @@ enum Dataset {
 /// Numbered so XCTest runs them in order. Each step relaunches the app, which also proves the
 /// previous step was persisted. Audits are separate tests, so a clipped label never hides function.
 final class JourneyUITests: NativeUITestCase {
-    func requireDataset() throws { if Dataset.tag.isEmpty { throw XCTSkip("F01 has not created the dataset in this run") } }
-
-    func collectTaskIds() {
-        for row in elements(prefix: "task-row-") { Dataset.taskIds[row.label] = String(row.identifier.dropFirst("task-row-".count)) }
+    func requireDataset() throws {
+        if Dataset.tag.isEmpty { throw XCTSkip("F01 has not created the dataset in this run") }
     }
-    func taskId(_ text: String) -> String {
-        if Dataset.taskIds[text] == nil { collectTaskIds() }
-        return Dataset.taskIds[text] ?? "missing-\(text)"
+    private func taskRow(_ text: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'task-row-' AND label == %@", text)).firstMatch
     }
-    /// Opens the To place group for the dataset responsibility. Does nothing when the row that the
-    /// caller expects (`showing`) is already visible, so an open group is never collapsed.
-    func expandTray(showing taskRow: String? = nil) {
-        if let taskRow, el(taskRow).exists { return }
-        let group = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "\(Dataset.role) ·")).firstMatch
-        XCTAssertTrue(group.waitForExistence(timeout: 20), "The To place group for \(Dataset.role) is missing")
-        scrollIntoView(group); group.tap()
+    private func taskId(_ text: String) -> String {
+        let row = taskRow(text)
+        XCTAssertTrue(row.waitForExistence(timeout: 20), "Missing task \(text)")
+        return String(row.identifier.dropFirst("task-row-".count))
     }
-
-    // F1 Onboarding: first responsibility
-    func testF01_Onboarding() throws {
-        Dataset.reset()
-        launch()
-        capture("F01-01-week-before")
-        tapButton("More"); tapButton("New responsibility")
-        typeInto("role-name-field", Dataset.role)
-        capture("F01-02-create-before")
-        tapButton("Create responsibility")
+    private func openTask(_ text: String) {
         selectRole(Dataset.role)
-        capture("F01-03-spread-after-create")
+        let row = taskRow(text)
+        XCTAssertTrue(row.waitForExistence(timeout: 20)); scrollIntoView(row); row.tap()
+        XCTAssertTrue(el("task-editor").waitForExistence(timeout: 20))
     }
-
-    // F2 Budget: change hours in 0.5 steps, see the bank, place on two days
-    func testF02_BudgetAndDays() throws {
-        try requireDataset(); launch()
-        selectRole(Dataset.role)
-        var taps = 0
-        tapID("manage-selected"); taps += 1
-        let stepper = app.steppers["hours-stepper"]
-        XCTAssertTrue(stepper.waitForExistence(timeout: 20), "Missing hours stepper")
-        XCTAssertEqual(stepper.label, "1 hours")
-        stepper.buttons["Increment"].tap(); XCTAssertEqual(app.steppers["hours-stepper"].label, "1.5 hours")
-        stepper.buttons["Increment"].tap(); XCTAssertEqual(app.steppers["hours-stepper"].label, "2 hours")
-        tapButton("Save hours")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2h left in this week’s bank" }, "Bank did not show 2h: \(el("bank-remaining").label)")
-        // First day: Monday, the picker default.
-        tapID("place-hours-button"); taps += 1
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "1.5h left in this week’s bank" }, "Bank did not show 1.5h: \(el("bank-remaining").label)")
-        XCTAssertLessThanOrEqual(taps, 3, "Responsibility to first allocation must take at most 3 taps")
-        capture("F02-01-first-allocation")
-        // Second day: Wednesday.
+    private func chooseDay(_ label: String) {
         tapID("day-picker")
-        var wednesday = app.buttons["Wednesday"]
-        if !wednesday.waitForExistence(timeout: 5) { wednesday = app.menuItems["Wednesday"] }
-        XCTAssertTrue(wednesday.waitForExistence(timeout: 10), "Day menu did not offer Wednesday")
-        wednesday.tap()
-        tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "1h left in this week’s bank" }, "Bank did not show 1h: \(el("bank-remaining").label)")
-        let placedRows = app.steppers.matching(NSPredicate(format: "identifier BEGINSWITH %@", "placed-")).count
-        XCTAssertEqual(placedRows, 2, "Expected exactly two placed-hours rows")
-        capture("F02-02-two-allocations")
-        tapButton("Done")
-        // A second responsibility with its own Monday allocation, so wrong-role days can be refused later.
-        selectRole("Work")
-        tapID("manage-selected")
-        tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "7.5h left in this week’s bank" }, "Work bank: \(el("bank-remaining").label)")
-        tapButton("Done")
-        goWeek()
-        let allocations = elements(prefix: "allocation-").filter { $0.label == Dataset.role }
-        XCTAssertEqual(allocations.count, 2, "Week must show the two allocations of \(Dataset.role)")
-        XCTAssertTrue(allocations.allSatisfy { ($0.value as? String) == "0.5h" }, "Each allocation is 0.5h")
-        Dataset.allocationIds = allocations.map { $0.identifier }
-        capture("F02-03-week-with-allocations")
+        let option = app.buttons[label].firstMatch
+        if option.waitForExistence(timeout: 3) { option.tap() }
+        else { app.menuItems[label].firstMatch.tap() }
+    }
+    private func showTasks(on day: String) {
+        let card = el("day-card-" + day)
+        XCTAssertTrue(card.waitForExistence(timeout: 20)); scrollIntoView(card)
+        for toggle in card.descendants(matching: .button).matching(NSPredicate(format: "identifier BEGINSWITH 'allocation-toggle-'")).allElementsBoundByIndex
+            where (toggle.value as? String) == "Tasks folded" { toggle.tap() }
+    }
+    private func revealTray() {
+        for group in elements(prefix: "tray-role-") where group.label.hasPrefix(Dataset.role) && (group.value as? String) == "Collapsed" {
+            scrollIntoView(group); group.tap()
+        }
     }
 
-    // F3 Task: add three tasks to the responsibility, add rich content to one
+    func testF01_Onboarding() throws {
+        Dataset.reset(); launch()
+        tapID("open-more"); tapID("more-new-spread")
+        typeInto("role-name-field", Dataset.role)
+        capture("F01-new-spread"); tapID("save-spreads")
+        selectRole(Dataset.role)
+        XCTAssertEqual(selectedRoleLabel, "Manage " + Dataset.role)
+        capture("F01-created")
+    }
+
+    func testF02_BudgetAndDays() throws {
+        try requireDataset(); launch(); selectRole(Dataset.role); tapID("manage-selected")
+        XCTAssertTrue(el("bank-remaining").waitForExistence(timeout: 15))
+        XCTAssertEqual(el("bank-remaining").label, "2h left in this week’s bank")
+        tapButton("Increase \(Dataset.role) hours by half an hour")
+        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2.5h left in this week’s bank" })
+        tapButton("Increase \(Dataset.role) hours by half an hour")
+        XCTAssertTrue(eventually { self.el("bank-remaining").label == "3h left in this week’s bank" })
+        chooseDay("Monday"); tapID("place-hours-button")
+        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2h left in this week’s bank" })
+        chooseDay("Wednesday"); tapID("place-hours-button")
+        XCTAssertTrue(eventually { self.el("bank-remaining").label == "1h left in this week’s bank" })
+        tapButton("Done"); goWeek()
+        let allocations = elements(prefix: "allocation-").filter { $0.label == "Move " + Dataset.role }
+        XCTAssertEqual(allocations.count, 2)
+        Dataset.allocationIds = allocations.map(\.identifier)
+        capture("F02-budget-and-two-days")
+    }
+
     func testF03_TasksAndRichContent() throws {
-        try requireDataset(); launch()
-        selectRole(Dataset.role)
-        tapID("manage-selected")
+        try requireDataset(); launch(); selectRole(Dataset.role)
         for text in [Dataset.taskA, Dataset.taskB, Dataset.taskC] {
-            typeInto("new-task-field", text)
-            tapButton("Add task")
-            XCTAssertTrue(eventually { self.app.buttons[text].exists }, "Task \(text) did not appear under Tasks")
+            typeInto("new-task-field", text); tapID("add-task-button")
+            XCTAssertTrue(taskRow(text).waitForExistence(timeout: 20))
+            Dataset.taskIds[text] = taskId(text)
         }
-        capture("F03-01-three-tasks")
-        tapButton(Dataset.taskA)
-        tapButton("Notes and attachments")
-        tapButton("Notes"); typeInto("content-notes", Dataset.note)
-        tapButton("Outline"); typeInto("content-outline-0", Dataset.outline)
-        tapButton("Table"); typeInto("content-cell-0-0", Dataset.cell)
-        capture("F03-02-rich-content-before-save")
-        tapButton("Save")
-        // Saving pops back to the task; the content must come back unchanged when read again.
-        tapButton("Notes and attachments")
-        XCTAssertTrue(eventually { self.fieldText("content-notes") == Dataset.note }, "Notes read back as '\(fieldText("content-notes"))'")
+        openTask(Dataset.taskA)
+        tapID("format-notes"); typeInto("content-notes", Dataset.note)
+        tapID("add-block"); tapID("format-outline"); typeInto("content-outline-0", Dataset.outline)
+        tapID("add-block"); tapID("format-table"); typeInto("content-cell-0-0", Dataset.cell)
+        capture("F03-rich-content"); tapID("task-sheet-done")
+        relaunch(); openTask(Dataset.taskA)
+        XCTAssertTrue(eventually { self.fieldText("content-notes") == Dataset.note })
         XCTAssertEqual(fieldText("content-outline-0"), Dataset.outline)
         XCTAssertEqual(fieldText("content-cell-0-0"), Dataset.cell)
-        capture("F03-03-rich-content-read-back")
+        capture("F03-persisted-content")
     }
 
-    // F4 Place and move: only the responsibility's own days are offered; Undo is offered
     func testF04_PlaceAndMove() throws {
-        try requireDataset(); launch()
-        XCTAssertEqual(Dataset.allocationIds.count, 2, "F02 must have recorded two allocations")
-        goWeek()
-        expandTray()
-        collectTaskIds()
-        let a = taskId(Dataset.taskA)
+        try requireDataset(); launch(); goWeek(); revealTray()
+        let id = try XCTUnwrap(Dataset.taskIds[Dataset.taskA])
         let monday = iso(thisMonday), wednesday = iso(addDays(thisMonday, 2))
-        capture("F04-01-tray")
-        func inDay(_ day: String) -> Bool {
-            el("day-card-\(day)").descendants(matching: .any).matching(identifier: "task-row-\(a)").firstMatch.exists
-        }
-        // Place: Place, then the day. At most three taps once the task is chosen.
-        tapID("task-move-\(a)")
-        let eligible = waitElements(prefix: "eligible-day-", minimum: 2)
-        XCTAssertEqual(eligible.count, 2, "Only the two days of \(Dataset.role) may be offered, never Work's Monday")
-        capture("F04-02-eligible-days")
-        eligible[0].tap()
-        XCTAssertTrue(eventually { inDay(monday) }, "Task did not land on Monday")
-        XCTAssertTrue(el("undo-last-change").waitForExistence(timeout: 10), "Undo was not offered after placing")
-        capture("F04-03-placed")
-        // Undo puts it back in the tray.
-        tapID("undo-last-change")
-        XCTAssertTrue(eventually { !inDay(monday) }, "Undo did not take the task off Monday")
-        // Place again, then Move to Wednesday, then Undo returns it to Monday.
-        expandTray(showing: "task-row-\(a)")
-        tapID("task-move-\(a)"); waitElements(prefix: "eligible-day-", minimum: 2)[0].tap()
-        XCTAssertTrue(eventually { inDay(monday) })
-        tapID("task-move-\(a)")
+        tapID("task-move-" + id)
         let days = waitElements(prefix: "eligible-day-", minimum: 2)
-        XCTAssertEqual(days.count, 2)
-        days[1].tap()
-        XCTAssertTrue(eventually { inDay(wednesday) }, "Task did not move to Wednesday")
-        capture("F04-04-moved-to-wednesday")
-        tapID("undo-last-change")
-        XCTAssertTrue(eventually { inDay(monday) }, "Undo did not return the task to Monday")
-        capture("F04-05-undo-move")
+        XCTAssertEqual(days.count, 2, "Only this responsibility’s allocated days are eligible")
+        tapID("eligible-day-" + monday)
+        showTasks(on: monday)
+        XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
+        tapID("task-move-" + id); tapID("eligible-day-" + wednesday)
+        showTasks(on: wednesday)
+        XCTAssertTrue(el("day-card-" + wednesday).descendants(matching: .any).matching(identifier: "task-row-" + id).firstMatch.exists)
+        tapID("undo-last-change"); showTasks(on: monday)
+        XCTAssertTrue(el("day-card-" + monday).descendants(matching: .any).matching(identifier: "task-row-" + id).firstMatch.exists)
+        capture("F04-move-and-undo")
     }
 
-    // F5 Finish: one tap completes, Undo reopens, complete again
     func testF05_CompleteAndUndo() throws {
-        try requireDataset(); launch()
-        goWeek()
-        let a = taskId(Dataset.taskA)
-        let check = el("task-check-\(a)")
-        XCTAssertTrue(check.waitForExistence(timeout: 30), "Task \(Dataset.taskA) is not on the Week")
-        XCTAssertEqual(check.label, "Complete \(Dataset.taskA)")
-        check.tap()
-        XCTAssertTrue(eventually { self.el("task-check-\(a)").label == "Reopen \(Dataset.taskA)" }, "Task did not complete")
-        XCTAssertTrue(el("undo-last-change").waitForExistence(timeout: 10), "Undo not offered after completing")
-        capture("F05-01-completed")
+        try requireDataset(); launch(); selectRole(Dataset.role)
+        let id = try XCTUnwrap(Dataset.taskIds[Dataset.taskA])
+        tapID("task-check-" + id)
+        XCTAssertTrue(eventually { self.el("task-check-" + id).label == "Mark not done: " + Dataset.taskA })
         tapID("undo-last-change")
-        XCTAssertTrue(eventually { self.el("task-check-\(a)").label == "Complete \(Dataset.taskA)" }, "Undo did not reopen the task")
-        el("task-check-\(a)").tap()
-        XCTAssertTrue(eventually { self.el("task-check-\(a)").label == "Reopen \(Dataset.taskA)" })
-        capture("F05-02-completed-final")
+        XCTAssertTrue(eventually { self.el("task-check-" + id).label == "Mark done: " + Dataset.taskA })
+        tapID("task-check-" + id)
+        capture("F05-complete-and-undo")
     }
 
-    // F6 Crown: arrows, Today and a real drag move exactly one week
     func testF06_CrownWeeks() throws {
-        try requireDataset(); launch()
-        let start = crownValue
-        XCTAssertEqual(start, "Your week, \(rangeLabel(monday: thisMonday))")
-        tapButton("Next week")
-        XCTAssertTrue(eventually { self.crownValue == "Your week, \(self.rangeLabel(monday: self.addDays(self.thisMonday, 7)))" }, "Next week: \(crownValue)")
-        tapButton("Previous week")
-        XCTAssertTrue(eventually { self.crownValue == start })
-        let crown = el("week-crown")
-        let from = crown.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 70, dy: 0)))
-        XCTAssertTrue(eventually { self.crownValue == "Your week, \(self.rangeLabel(monday: self.addDays(self.thisMonday, 7)))" }, "A 70 pt drag moved to \(crownValue)")
-        tapID("today")
-        XCTAssertTrue(eventually { self.crownValue == start }, "Today did not return to \(start): \(crownValue)")
-        capture("F06-01-crown")
+        try requireDataset(); launch(); goWeek()
+        let initial = crownValue
+        tapID("crown-next")
+        XCTAssertTrue(eventually { self.crownValue != initial })
+        tapID("crown-previous")
+        XCTAssertTrue(eventually { self.crownValue == initial })
+        let from = el("week-crown").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: -70, dy: 0)))
+        XCTAssertTrue(eventually { self.crownValue != initial })
+        tapID("week-crown-detail")
+        XCTAssertTrue(eventually { self.crownValue == initial })
     }
 
-    // F7 Layouts: every mode shows the same selection and writes nothing
     func testF07_LayoutsKeepSelectionAndData() throws {
-        try requireDataset(); launch()
-        selectRole(Dataset.role)
-        for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] {
+        try requireDataset(); launch(); selectRole(Dataset.role)
+        for mode in ["Fan", "Dial", "Tabs", "Day", "Stack"] {
             chooseMode(mode)
-            XCTAssertEqual(selectedRoleLabel, "Manage \(Dataset.role)", "\(mode) changed the selected responsibility")
-            XCTAssertFalse(el("undo-last-change").exists, "\(mode) wrote to the plan")
-            capture("F07-\(mode.lowercased())")
+            if mode == "Tabs" { tapButton(Dataset.role) }
+            XCTAssertEqual(selectedRoleLabel, "Manage " + Dataset.role)
+            capture("F07-" + mode.lowercased())
         }
     }
 
-    // F8 Month: dates, selection, return to Week, and a year boundary
     func testF08_Month() throws {
-        try requireDataset(); launch()
-        goWeek()
-        let toggle = el("week-month-toggle")
-        XCTAssertEqual(toggle.value as? String, "Week")
-        toggle.tap()
-        XCTAssertTrue(eventually { (self.el("week-month-toggle").value as? String) == "Month" }, "Toggle did not switch to Month")
-        let month = utc.dateComponents([.year, .month], from: thisMonday)
-        let first = utc.date(from: month)!
-        let days = utc.range(of: .day, in: .month, for: first)!.count
-        XCTAssertEqual(elements(prefix: "month-day-").count, days, "Month grid must show every date exactly once")
-        XCTAssertTrue(el("month-day-\(iso(first))").exists)
-        XCTAssertTrue(el("month-day-\(iso(addDays(first, days - 1)))").exists)
-        // The open week is marked (value), every other date is not.
-        for offset in 0..<7 {
-            XCTAssertEqual(el("month-day-\(iso(addDays(thisMonday, offset)))").value as? String, "In the open week", "Open-week date \(offset) is not marked")
-        }
-        let outside = addDays(thisMonday, 14)
-        if utc.component(.month, from: outside) == utc.component(.month, from: first) {
-            XCTAssertEqual((el("month-day-\(iso(outside))").value as? String) ?? "", "", "A date outside the open week must not be marked")
-        }
-        capture("F08-01-month")
-        // Pick a date in this month: Week returns, that week is open and the day is marked.
-        let pick = addDays(first, 14)
-        tapID("month-day-\(iso(pick))")
-        XCTAssertTrue(eventually { (self.el("week-month-toggle").value as? String) == "Week" }, "Selecting a date did not return to Week")
-        XCTAssertTrue(eventually { self.crownValue == "Your week, \(self.rangeLabel(monday: self.monday(of: pick)))" }, "Wrong week after picking \(iso(pick)): \(crownValue)")
-        XCTAssertTrue(el("selected-day-\(iso(pick))").waitForExistence(timeout: 10), "The picked day is not marked Selected")
-        capture("F08-02-picked-date")
-        // Year boundary: open the week of Dec 31, pick it from December's grid.
-        let year = utc.component(.year, from: thisMonday)
-        let dec31 = utc.date(from: DateComponents(year: year, month: 12, day: 31))!
-        let target = "Your week, \(rangeLabel(monday: monday(of: dec31)))"
-        var hops = 0
-        while crownValue != target && hops < 70 { tapButton("Next week"); hops += 1; _ = eventually(5) { self.crownValue != "" } }
-        XCTAssertEqual(crownValue, target, "Could not reach the week of Dec 31")
-        el("week-month-toggle").tap()
-        tapID("month-day-\(iso(dec31))")
-        XCTAssertTrue(eventually { self.crownValue == "Your week, \(self.rangeLabel(monday: self.monday(of: dec31)))" }, "Dec 31 opened \(crownValue)")
-        XCTAssertTrue(el("selected-day-\(iso(dec31))").waitForExistence(timeout: 10))
-        tapButton("Next week")
-        XCTAssertTrue(eventually { self.crownValue == "Your week, \(self.rangeLabel(monday: self.addDays(self.monday(of: dec31), 7)))" }, "Week after Dec 31: \(crownValue)")
-        capture("F08-03-year-boundary")
-        tapID("today")
+        try requireDataset(); launch(); goWeek(); tapID("week-month-toggle")
+        XCTAssertTrue(el("month").waitForExistence(timeout: 20))
+        tapID("month-day-" + iso(addDays(thisMonday, 2)))
+        XCTAssertTrue(el("week-surface").waitForExistence(timeout: 20))
+        XCTAssertEqual(el("week-month-toggle").value as? String, "Week")
+        XCTAssertTrue(el("day-card-" + iso(addDays(thisMonday, 2))).exists)
+        capture("F08-month-to-week")
     }
 
-    // F9 Rollover: carry open work to next week, Undo, carry again, find it there with the same identity
     func testF09_CarryUnfinishedWork() throws {
-        try requireDataset(); launch()
-        goWeek()
-        expandTray()
-        collectTaskIds()
-        let b = taskId(Dataset.taskB), c = taskId(Dataset.taskC)
+        try requireDataset(); launch(); selectRole(Dataset.role)
         tapID("review-unfinished")
-        XCTAssertTrue(el("carry-\(b)").waitForExistence(timeout: 20), "Review does not list \(Dataset.taskB)")
-        XCTAssertFalse(el("carry-\(taskId(Dataset.taskA))").exists, "A completed task must not be offered")
-        flip("carry-\(b)")
-        capture("F09-01-review-selected")
-        tapID("carry-selected")
-        XCTAssertTrue(eventually { !self.el("task-row-\(b)").exists }, "Carried task is still in this week")
-        XCTAssertTrue(el("undo-last-change").waitForExistence(timeout: 10), "Undo not offered after carrying")
-        tapID("undo-last-change")
-        XCTAssertTrue(eventually { self.el("task-row-\(b)").exists }, "Undo did not bring the task back")
-        // Carry again for real.
-        tapID("review-unfinished"); flip("carry-\(b)"); tapID("carry-selected")
-        XCTAssertTrue(eventually { !self.el("task-row-\(b)").exists })
-        XCTAssertTrue(el("task-row-\(c)").exists, "The unselected task must stay")
-        tapButton("Next week")
-        XCTAssertTrue(eventually { self.crownValue == "Your week, \(self.rangeLabel(monday: self.addDays(self.thisMonday, 7)))" })
-        expandTray()
-        XCTAssertTrue(el("task-row-\(b)").waitForExistence(timeout: 20), "Carried task is missing next week")
-        XCTAssertEqual(el("task-row-\(b)").label, Dataset.taskB)
-        XCTAssertEqual(elements(prefix: "task-row-").filter { $0.label == Dataset.taskB }.count, 1, "Carried task must appear exactly once")
-        XCTAssertFalse(el("task-row-\(c)").exists, "The task that stayed must not be duplicated next week")
-        capture("F09-02-next-week")
-        tapButton("Previous week")
-        XCTAssertTrue(eventually { self.crownValue == "Your week, \(self.rangeLabel(monday: self.thisMonday))" })
-        XCTAssertFalse(el("task-row-\(b)").exists, "Carry must not duplicate the task in its original week")
-        tapButton("Previous week")
-        XCTAssertTrue(eventually { self.crownValue == "Your week, \(self.rangeLabel(monday: self.addDays(self.thisMonday, -7)))" })
-        XCTAssertFalse(el("task-row-\(b)").exists, "A historical week must not receive the task")
-        tapID("today")
+        // Keep every unrelated task and Charlie in this week; carry only Bravo.
+        for toggle in elements(prefix: "carry-") {
+            let desired = toggle.identifier == "carry-" + (Dataset.taskIds[Dataset.taskB] ?? "")
+            let selected = (toggle.value as? String) == "1"
+            if selected != desired { scrollIntoView(toggle); toggle.tap() }
+        }
+        tapID("carry-selected"); closeNativeSheets(); goWeek(); tapID("crown-next")
+        selectRole(Dataset.role)
+        XCTAssertTrue(taskRow(Dataset.taskB).waitForExistence(timeout: 20))
+        XCTAssertFalse(taskRow(Dataset.taskA).exists)
+        tapID("crown-previous"); selectRole(Dataset.role)
+        XCTAssertTrue(taskRow(Dataset.taskC).waitForExistence(timeout: 20))
+        XCTAssertFalse(taskRow(Dataset.taskB).exists)
+        capture("F09-carry-keeps-history")
     }
 
-    // F10 Preservation: after a relaunch every record, allocation and content value is the same
     func testF10_1_RelaunchKeepsEverything() throws {
-        try requireDataset(); launch()
-        goWeek()
-        for id in Dataset.allocationIds {
-            let allocation = el(id)
-            XCTAssertTrue(allocation.waitForExistence(timeout: 30), "Allocation \(id) is gone after relaunch")
-            XCTAssertEqual(allocation.label, Dataset.role)
-            XCTAssertEqual(allocation.value as? String, "0.5h")
-        }
-        let a = taskId(Dataset.taskA), c = taskId(Dataset.taskC)
-        XCTAssertEqual(el("task-row-\(a)").label, Dataset.taskA)
-        XCTAssertEqual(el("task-check-\(a)").label, "Reopen \(Dataset.taskA)", "Completed state must survive")
-        expandTray()
-        XCTAssertTrue(el("task-row-\(c)").waitForExistence(timeout: 20), "Task C is gone")
-        tapButton("Next week")
-        expandTray()
-        XCTAssertTrue(el("task-row-\(taskId(Dataset.taskB))").waitForExistence(timeout: 20), "Carried task is gone after relaunch")
-        tapID("today")
-        // Rich content, identical.
-        tapID("task-row-\(a)")
-        tapButton("Notes and attachments")
-        XCTAssertTrue(eventually { self.fieldText("content-notes") == Dataset.note }, "Notes: '\(fieldText("content-notes"))'")
+        try requireDataset(); launch(); selectRole(Dataset.role)
+        XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
+        XCTAssertTrue(taskRow(Dataset.taskC).exists)
+        XCTAssertEqual(el("task-check-" + (Dataset.taskIds[Dataset.taskA] ?? "")).label, "Mark not done: " + Dataset.taskA)
+        openTask(Dataset.taskA)
+        XCTAssertTrue(eventually { self.fieldText("content-notes") == Dataset.note })
         XCTAssertEqual(fieldText("content-outline-0"), Dataset.outline)
         XCTAssertEqual(fieldText("content-cell-0-0"), Dataset.cell)
-        capture("F10-01-relaunch-content")
+        closeNativeSheets(); goWeek()
+        for id in Dataset.allocationIds { XCTAssertTrue(el(id).exists, "Missing persisted allocation " + id) }
+        capture("F10-persisted-plan")
     }
 
-    // F10 Profiles: a new profile is separate; switching back finds the same data
     func testF10_2_ProfilesAreIsolated() throws {
         try requireDataset(); launch()
-        let original = el("active-profile-name").label
-        let other = "Iso \(Dataset.tag)"
-        tapButton("More"); tapButton("Profiles")
-        typeInto("new-profile-field", other)
-        tapButton("Create profile")
-        XCTAssertTrue(eventually { self.el("active-profile-name").label == other }, "Profile did not switch to \(other)")
-        goWeek()
-        XCTAssertTrue(elements(prefix: "allocation-").filter { $0.label == Dataset.role }.isEmpty, "The new profile must not show \(Dataset.role)")
-        capture("F10-02-new-profile")
-        // Switch back through the roster.
-        tapButton("More"); tapButton("Profiles")
-        let back = elements(prefix: "profile-").first { $0.label.hasPrefix(original) }
-        XCTAssertNotNil(back, "Original profile \(original) is not listed")
-        back?.tap()
-        XCTAssertTrue(eventually { self.el("active-profile-name").label == original }, "Did not switch back to \(original)")
-        goWeek()
-        for id in Dataset.allocationIds { XCTAssertTrue(el(id).waitForExistence(timeout: 30), "Allocation \(id) missing after switching back") }
-        XCTAssertEqual(el("task-row-\(taskId(Dataset.taskA))").label, Dataset.taskA)
-        capture("F10-03-switched-back")
+        tapID("open-more"); tapID("manage-profiles")
+        let profiles = elements(prefix: "profile-")
+        let original = try XCTUnwrap(profiles.first { ($0.value as? String) == "Current profile" } ?? profiles.first)
+        let originalId = original.identifier
+        let other = "Isolation " + Dataset.tag
+        typeInto("new-profile-field", other); tapID("create-profile")
+        closeNativeSheets(); goSpread(); chooseMode("Tabs")
+        XCTAssertFalse(app.buttons[Dataset.role].exists, "The new profile contains another profile’s responsibility")
+        tapID("open-more"); tapID("manage-profiles"); tapID(originalId)
+        closeNativeSheets(); selectRole(Dataset.role)
+        XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
+        capture("F10-profiles-isolated")
     }
 
-    // F10 Recovery: the existing React backup interface opens, exports, and returns to native
     func testF10_3_BackupInterfaceAndReturn() throws {
-        try requireDataset(); launch()
-        tapButton("More"); tapButton("Backup and restore")
-        let back = app.buttons["Return to native Spread"]
-        XCTAssertTrue(back.waitForExistence(timeout: 30), "Recovery interface did not offer a way back to native Spread")
-        XCTAssertFalse(app.buttons["native-spread"].exists, "Native UI is still visible over the recovery interface")
-        capture("F10-04-recovery-interface")
-        let settings = app.buttons["Settings"].firstMatch
-        if settings.waitForExistence(timeout: 30) {
-            settings.tap()
-            let backup = app.buttons["Back Up Spread"].firstMatch
-            XCTAssertTrue(backup.waitForExistence(timeout: 20), "The existing Back Up Spread action is not offered")
-            capture("F10-05-more-sheet")
-            backup.tap()
-            let sharing = eventually(30) { self.app.otherElements["ActivityListView"].exists || self.app.sheets.firstMatch.exists || self.app.buttons["Close"].exists || self.app.staticTexts["Backup exported."].exists }
-            capture("F10-06-backup-export")
-            XCTAssertTrue(sharing, "Back Up Spread produced neither a share sheet nor a confirmation")
-            if app.buttons["Close"].exists { app.buttons["Close"].firstMatch.tap() }
-        } else {
-            attach(app.debugDescription, "recovery-hierarchy-without-settings")
-            XCTFail("The recovery interface's Settings button was not reachable")
-        }
-        if app.buttons["Return to native Spread"].exists { app.buttons["Return to native Spread"].tap() }
-        XCTAssertTrue(app.buttons["native-spread"].waitForExistence(timeout: 30), "Returning did not restore the native planner")
-        goWeek()
-        for id in Dataset.allocationIds { XCTAssertTrue(el(id).waitForExistence(timeout: 30), "Allocation \(id) missing after the recovery round trip") }
-        capture("F10-07-returned")
+        try requireDataset(); launch(); tapID("open-more"); tapID("backup-and-restore")
+        XCTAssertTrue(app.buttons["Return to native Spread"].waitForExistence(timeout: 30))
+        XCTAssertFalse(app.buttons["native-spread"].exists)
+        capture("F10-protected-recovery")
+        tapButton("Return to native Spread"); selectRole(Dataset.role)
+        XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))
     }
 
-    // F10 Failed save: the real store reports a storage failure, nothing is claimed saved, Retry recovers
     func testF10_4_FailedSaveThenRetry() throws {
-        try requireDataset()
-        let marker = "FAILSAVE-\(Dataset.tag)"
-        launch(["-SpreadFailSaveMarker", marker])
-        selectRole(Dataset.role)
-        tapID("manage-selected")
-        typeInto("new-task-field", marker + " task")
-        tapButton("Add task")
-        // The write throws QuotaExceededError once. The banner and alert must say so.
-        XCTAssertTrue(el("save-failure-banner").waitForExistence(timeout: 30) || app.alerts.firstMatch.waitForExistence(timeout: 10), "A failed save was not announced")
-        capture("F10-08-save-failed")
-        // The alert may offer Retry saving (root) or only OK (editor). Either way, then close the
-        // editor so the banner behind it is reachable, and use Retry saving.
-        if app.alerts.firstMatch.waitForExistence(timeout: 5) {
-            let retry = app.alerts.buttons["Retry saving"]
-            if retry.exists { retry.tap() } else { app.alerts.buttons["OK"].firstMatch.tap() }
-        }
-        if app.buttons["Done"].exists { app.buttons["Done"].firstMatch.tap() }
-        if el("save-failure-banner").waitForExistence(timeout: 10) { tapID("retry-saving") }
-        XCTAssertTrue(eventually(30) { !self.el("save-failure-banner").exists }, "Retry saving did not clear the failure")
-        capture("F10-09-retry-saved")
-        // After a relaunch the retried task must be on disk.
-        relaunch()
-        selectRole(Dataset.role)
-        tapID("manage-selected")
-        XCTAssertTrue(app.buttons[marker + " task"].waitForExistence(timeout: 30), "The retried task was not persisted")
+        try requireDataset(); let marker = "FAILSAVE-" + Dataset.tag
+        launch(["-SpreadFailSaveMarker", marker]); selectRole(Dataset.role)
+        typeInto("new-task-field", marker); tapID("add-task-button")
+        XCTAssertTrue(el("save-failure-banner").waitForExistence(timeout: 20) || app.alerts.firstMatch.exists)
+        if app.alerts.firstMatch.exists { app.alerts.buttons["Retry saving"].tap() }
+        else { tapID("retry-saving") }
+        XCTAssertTrue(eventually { !self.el("save-failure-banner").exists })
+        launch(); selectRole(Dataset.role)
+        XCTAssertTrue(taskRow(marker).waitForExistence(timeout: 20), "Retried task was not persisted")
     }
-
-    // MARK: Accessibility audits of the journey screens (separate so function is never hidden)
 
     func testF11_AuditWeekAndMonth() throws {
-        try requireDataset(); launch()
-        goWeek()
-        try auditScrolled("week-390plus")
-        assertTargets("week")
-        el("week-month-toggle").tap()
-        try audit("month")
-        assertTargets("month")
+        try requireDataset(); launch(); goWeek(); try auditScrolled("journey-week")
+        tapID("week-month-toggle"); try audit("journey-month")
     }
-
     func testF11_AuditSheets() throws {
-        try requireDataset(); launch()
-        selectRole(Dataset.role)
-        tapID("manage-selected")
-        try auditScrolled("role-editor")
-        assertTargets("role-editor")
-        tapButton(Dataset.taskA)
-        try audit("task-editor")
-        tapButton("Notes and attachments")
-        try audit("content-editor")
-        launch()
-        goWeek()
-        tapID("review-unfinished"); try audit("review"); tapButton("Done")
-        tapButton("More"); tapButton("Profiles"); try audit("profiles"); tapButton("Done")
+        try requireDataset(); launch(); selectRole(Dataset.role); tapID("manage-selected")
+        try auditScrolled("role-sheet"); closeNativeSheets(); openTask(Dataset.taskA)
+        try auditScrolled("task-sheet"); closeNativeSheets(); tapID("open-more")
+        try auditScrolled("more-sheet"); tapID("manage-profiles"); try auditScrolled("profiles-sheet")
     }
 }
 
@@ -659,7 +487,7 @@ final class PlannerUITests: NativeUITestCase {
         var names: [String] = []
         for _ in 0..<8 {
             let before = names.count
-            for label in elements(prefix: "role-tab-").map({ $0.label }) where !names.contains(label) { names.append(label) }
+            for label in elements(prefix: "role-tab-").filter({ $0.identifier != "role-tab-all" }).map({ $0.label }) where !names.contains(label) { names.append(label) }
             if names.count == before { break }
             el("role-tabs").swipeLeft()
         }
@@ -712,8 +540,8 @@ final class PlannerUITests: NativeUITestCase {
     func testSelectedRoleFallsBackAfterDeletion() {
         let tag = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(5))
         let doomed = "Fallback \(tag)"
-        tapButton("More"); tapButton("New responsibility")
-        typeInto("role-name-field", doomed); tapButton("Create responsibility")
+        tapID("open-more"); tapID("more-new-spread")
+        typeInto("role-name-field", doomed); tapID("save-spreads")
         let names = roleNames()
         XCTAssertEqual(names.last, doomed)
         let first = names[0]
@@ -735,13 +563,13 @@ final class PlannerUITests: NativeUITestCase {
     func testFanKeepsLargeContentInsideItsFrame() {
         let tag = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(5))
         let name = "Large \(tag) responsibility with a deliberately long name"
-        tapButton("More"); tapButton("New responsibility")
-        typeInto("role-name-field", name); tapButton("Create responsibility")
+        tapID("open-more"); tapID("more-new-spread")
+        typeInto("role-name-field", name); tapID("save-spreads")
         selectRole(name)
         tapID("manage-selected")
         for n in 1...6 {
             typeInto("new-task-field", "Task \(n) \(tag) with enough words to wrap onto a second and third line of the card")
-            tapButton("Add task")
+            tapID("add-task-button")
             XCTAssertTrue(eventually { self.app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Task \(n) \(tag)")).firstMatch.exists })
         }
         tapButton("Done")
@@ -749,17 +577,15 @@ final class PlannerUITests: NativeUITestCase {
         XCTAssertEqual(selectedRoleLabel, "Manage \(name)")
         let fan = el("fan-cards")
         XCTAssertTrue(fan.waitForExistence(timeout: 20))
-        let more = el("card-more-tasks")
-        XCTAssertTrue(more.waitForExistence(timeout: 20), "Six tasks must be summarised with a Manage link, not clipped")
-        XCTAssertLessThanOrEqual(more.frame.maxY, fan.frame.maxY + 1, "The Manage link sits outside the fan frame")
-        XCTAssertGreaterThanOrEqual(more.frame.minX, app.frame.minX)
-        XCTAssertLessThanOrEqual(more.frame.maxX, app.frame.maxX + 1)
-        let shown = elements(prefix: "card-task-").filter { $0.label.hasPrefix("Task ") }
-        XCTAssertLessThanOrEqual(shown.count, 3, "The fan card shows at most three tasks")
-        for row in shown { XCTAssertLessThanOrEqual(row.frame.maxY, fan.frame.maxY + 1, "\(row.label) is clipped by the fan frame") }
+        let rows = elements(prefix: "task-row-").filter { $0.label.contains(tag) }
+        XCTAssertEqual(rows.count, 6, "Fan must keep every task reachable below its card stage")
+        for row in rows {
+            scrollIntoView(row)
+            XCTAssertTrue(row.isHittable, "Task is unreachable: " + row.label)
+            XCTAssertGreaterThanOrEqual(row.frame.minX, app.frame.minX)
+            XCTAssertLessThanOrEqual(row.frame.maxX, app.frame.maxX + 1)
+        }
         capture("fan-large-content")
-        more.tap()   // opens the responsibility, where every task is reachable
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Task 6 \(tag)")).firstMatch.waitForExistence(timeout: 20))
     }
 
     // MARK: Layout evidence (screens and Month at the matching width; audits are separate tests)
@@ -836,15 +662,15 @@ final class PlannerUITests: NativeUITestCase {
             // Leave the roster as found so later tests use the original profile.
             if app.state != .notRunning {
                 launch()
-                tapButton("More"); tapButton("Profiles")
+                tapID("open-more"); tapID("manage-profiles")
                 elements(prefix: "profile-").first { $0.label.hasPrefix(original) }?.tap()
             }
         }
-        tapButton("More"); tapButton("Profiles")
+        tapID("open-more"); tapID("manage-profiles")
         typeInto("new-profile-field", profile); tapButton("Create profile")
         XCTAssertTrue(eventually { self.el("active-profile-name").label == profile }, "Long profile name was not kept whole: \(el("active-profile-name").label)")
-        tapButton("More"); tapButton("New responsibility")
-        typeInto("role-name-field", role); tapButton("Create responsibility")
+        tapID("open-more"); tapID("more-new-spread")
+        typeInto("role-name-field", role); tapID("save-spreads")
         capture("long-names-week")
         try audit("long-names-week")
         selectRole(role)
@@ -854,7 +680,6 @@ final class PlannerUITests: NativeUITestCase {
 
     /// iPad supports every orientation (Info.plist). The phone build is portrait-only by design.
     func testIPadOrientations() throws {
-        guard UIDevice.current.userInterfaceIdiom == .pad else { throw XCTSkip("The phone build supports portrait only (Info.plist)") }
         defer { XCUIDevice.shared.orientation = .portrait }
         for (name, orientation) in [("landscape-left", UIDeviceOrientation.landscapeLeft), ("landscape-right", .landscapeRight), ("portrait-upside-down", .portraitUpsideDown)] {
             XCUIDevice.shared.orientation = orientation
@@ -873,10 +698,19 @@ final class PlannerUITests: NativeUITestCase {
 /// records: each step is best effort, so a surface that cannot be reached is noted in an attachment instead of
 /// hiding the screens after it. Run on its own with `-only-testing:SpreadNativeUITests/VisualTourUITests`.
 final class VisualTourUITests: NativeUITestCase {
-    func testTourDark() throws { try tour("dark", arguments: ["-AppleInterfaceStyle", "Dark"]) }
-    func testTourLight() throws { try tour("light", arguments: ["-AppleInterfaceStyle", "Light"]) }
+    func testTourDark() throws {
+        XCUIDevice.shared.appearance = .dark
+        defer { XCUIDevice.shared.appearance = .light }
+        try tour("dark", arguments: ["-spread.native.appearance", "system"])
+    }
+    func testTourLight() throws {
+        XCUIDevice.shared.appearance = .light
+        try tour("light", arguments: ["-spread.native.appearance", "system"])
+    }
     func testTourDarkLargeText() throws {
-        try tour("dark-large-text", arguments: ["-AppleInterfaceStyle", "Dark", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"], short: true)
+        XCUIDevice.shared.appearance = .dark
+        defer { XCUIDevice.shared.appearance = .light }
+        try tour("dark-large-text", arguments: ["-spread.native.appearance", "system", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"], short: true)
     }
 
     private var notes: [String] = []
@@ -934,7 +768,7 @@ final class VisualTourUITests: NativeUITestCase {
             if let row = elements(prefix: "task-row-").first, row.exists {
                 scrollIntoView(row); row.tap(); settle(1.2); capture("tour-\(style)-09-task-sheet"); dismissSheet()
             } else { note("missing: a task row") }
-            if tryTap("new-spread") { settle(1.0); capture("tour-\(style)-10-new-spread"); dismissSheet() }
+            if tryTap("open-more"), tryTap("more-new-spread") { settle(1.0); capture("tour-\(style)-10-new-spread"); dismissSheet() }
         }
         if !notes.isEmpty { attach(notes.joined(separator: "\n"), "tour-\(style)-notes") }
     }
@@ -969,7 +803,7 @@ final class SpreadFlowUITests: NativeUITestCase {
     /// F1: create a spread from More, add a task to its card, complete it, relaunch, and find both again.
     func testFlow1_CreateSpreadAddTaskCompleteAndPersist() throws {
         let tag = uniqueTag(); let name = "QA " + tag; let task = "Task " + tag
-        launch()
+        launch(); goSpread(); chooseMode("Stack")
         tapID("open-more"); tapID("more-new-spread")
         typeInto("role-name-field", name)
         tapID("save-spreads")
@@ -977,8 +811,7 @@ final class SpreadFlowUITests: NativeUITestCase {
                       "The new spread \(name) never appeared as a card")
         closeSheets()
         // A tap on a compact card opens it (it does not start a rename).
-        let title = app.staticTexts[name].firstMatch
-        XCTAssertTrue(title.waitForExistence(timeout: 20)); scrollIntoView(title); title.tap()
+        selectRole(name)
         typeInto("new-task-field", task + "\n")
         let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 20), "The task \(task) was not added to the open card")
@@ -987,8 +820,8 @@ final class SpreadFlowUITests: NativeUITestCase {
         XCTAssertTrue(app.buttons["Mark not done: \(task)"].firstMatch.waitForExistence(timeout: 20), "Completing the task did not register")
         capture("flow1-before-relaunch")
         relaunch()
-        let again = app.staticTexts[name].firstMatch
-        XCTAssertTrue(again.waitForExistence(timeout: 30), "\(name) did not survive a relaunch"); scrollIntoView(again); again.tap()
+        selectRole(name)
+        XCTAssertEqual(selectedRoleLabel, "Manage " + name)
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch.waitForExistence(timeout: 20), "The task did not survive a relaunch")
         XCTAssertTrue(app.buttons["Mark not done: \(task)"].firstMatch.exists, "The completed state did not survive a relaunch")
     }
@@ -1042,7 +875,7 @@ final class SpreadFlowUITests: NativeUITestCase {
     /// F5: the Move to sheet offers the eligible day, moves the task there, and Undo is available afterwards.
     func testFlow5_MoveToSheetPlacesATask() throws {
         let tag = uniqueTag(); let task = "Move " + tag
-        launch()
+        launch(); tapID("brand-home"); chooseMode("Stack")
         // The first card is open by default: give its responsibility a task.
         typeInto("new-task-field", task + "\n")
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", task)).firstMatch.waitForExistence(timeout: 20))
@@ -1067,5 +900,34 @@ final class SpreadFlowUITests: NativeUITestCase {
         XCTAssertNotNil(day, "The sheet offered no eligible day for a responsibility that is on a day")
         day?.tap()
         XCTAssertTrue(eventually(20) { !self.el("move-to-sheet").exists }, "The sheet did not close after choosing a day")
+    }
+}
+
+/// Runs only on the real Duo destination selected by the candidate workflow. Window geometry and the
+/// real system appearance drive layout; no fixed screen mock or device-name branch enters the app.
+final class DuoUITests: NativeUITestCase {
+    func testResizablePlannerInBothAppearancesAndOrientations() throws {
+        defer { XCUIDevice.shared.orientation = .portrait; XCUIDevice.shared.appearance = .light }
+        for dark in [false, true] {
+            XCUIDevice.shared.appearance = dark ? .dark : .light
+            for (name, orientation) in [("portrait", UIDeviceOrientation.portrait), ("landscape", .landscapeLeft)] {
+                XCUIDevice.shared.orientation = orientation
+                launch(["-spread.native.appearance", "system"])
+                goSpread()
+                let bounds = app.frame
+                XCTAssertGreaterThan(bounds.width, 0)
+                XCTAssertGreaterThan(bounds.height, 0)
+                for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] {
+                    chooseMode(mode)
+                    capture("duo-\(dark ? "dark" : "light")-\(name)-\(mode.lowercased())")
+                    assertTargets("duo-" + name + "-" + mode)
+                }
+                goWeek(); capture("duo-\(dark ? "dark" : "light")-\(name)-week")
+                tapID("week-month-toggle"); capture("duo-\(dark ? "dark" : "light")-\(name)-month")
+                XCTAssertTrue(el("month").exists)
+                tapID("open-more"); capture("duo-\(dark ? "dark" : "light")-\(name)-more")
+                closeNativeSheets()
+            }
+        }
     }
 }

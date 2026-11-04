@@ -81,6 +81,8 @@ struct LiveReply: Decodable {
             errorOffersRetry = false; errorOffersBackup = false
             switch reply.error {
             case "stale-profile", "stale-week", "stale-revision", "stale-session": error = "Your plan changed. Review the current plan and try again."
+            case "bank-empty": error = "All hours for this responsibility are placed. Raise its weekly hours, or take hours off another day first."
+            case "bank-exceeded": error = "There aren’t enough hours left in this responsibility’s bank. Choose fewer hours, or raise its weekly hours."
             case "ineligible-day": error = "Place hours for this responsibility on that day first."
             case "save-failed", "save-unavailable":
                 error = "Couldn’t save on this device. Retry saving or back up before closing Spread."
@@ -139,7 +141,8 @@ struct LiveReply: Decodable {
             refuse("\(name) has no hours left this week. Raise its weekly hours, or take an hour off another day first.")
             return false
         }
-        return await send(["type": "moveSpreadToDay", "roleId": roleId, "day": day, "hours": hours])
+        let amount = min(hours, snapshot?.remainingHours(for: roleId) ?? hours)
+        return await send(["type": "moveSpreadToDay", "roleId": roleId, "day": day, "hours": amount])
     }
 
     /// Changes a day's hours, refusing with a reason (instead of silently clamping) when raising them would pass the

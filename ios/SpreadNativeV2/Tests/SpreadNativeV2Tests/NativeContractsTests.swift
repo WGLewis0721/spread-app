@@ -235,3 +235,38 @@ extension NativeContractsTests {
         XCTAssertEqual(marks["2026-11-02"], NativeDayMark(colors: ["#FF9500", "#007AFF", "#34C759"], extra: 2))
     }
 }
+
+private struct FreeTimeVector: Decodable {
+    struct Expected: Decodable, Equatable {
+        let roleId: String
+        let day: String
+        let hours: Double
+    }
+    let snapshot: PlannerSnapshot
+    let today: String
+    let expected: [Expected]
+}
+
+extension NativeContractsTests {
+    func testFreeTimeMatchesSixtyTypeScriptVectors() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "free-time-v1", withExtension: "json", subdirectory: "Fixtures"))
+        let vectors = try JSONDecoder().decode([FreeTimeVector].self, from: Data(contentsOf: url))
+        XCTAssertEqual(vectors.count, 60)
+        for (index, vector) in vectors.enumerated() {
+            let actual = FreeTimeMirror.suggestions(for: vector.snapshot, today: vector.today)
+                .map { FreeTimeVector.Expected(roleId: $0.roleId, day: $0.day, hours: $0.hours) }
+            XCTAssertEqual(actual, vector.expected, "free-time vector \(index)")
+        }
+    }
+    func testDayColumnsFollowAvailableSpaceAtEverySizeAndAccessibilityText() {
+        for width in [320.0, 358, 640, 700, 743] {
+            XCTAssertEqual(PlannerLayout.dayColumns(availableWidth: width, accessibilityText: false), 1)
+        }
+        for width in [744.0, 788, 992, 1334] {
+            XCTAssertEqual(PlannerLayout.dayColumns(availableWidth: width, accessibilityText: false), 2)
+        }
+        for width in [358.0, 788, 992, 1334] {
+            XCTAssertEqual(PlannerLayout.dayColumns(availableWidth: width, accessibilityText: true), 1)
+        }
+    }
+}

@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 concurrency:
   group: native-visual-tour-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -28,6 +28,7 @@ jobs:
           - { variant: after, width: 390, before_ref: "" }
           - { variant: before, width: 390, before_ref: "b1ae53ad8820de01fb57a891c86c7bd26335f6b8" }
           - { variant: after, width: 820, before_ref: "" }
+          - { variant: after, width: 1024, before_ref: "" }
           - { variant: flows, width: 390, before_ref: "", tests: "SpreadFlowUITests" }
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +39,7 @@ jobs:
         run: |
           # Only the SwiftUI sources are rewound. The tour test, the project and the workflow stay as they are, so
           # the BEFORE and AFTER screenshots come from the same steps on the same simulator.
-          git checkout ${{ matrix.before_ref }} -- ios/SpreadNativeV2/Sources
+          git checkout ${{ matrix.before_ref }} -- ios/SpreadNativeV2/Sources ios/App/App/SpreadBridgeViewController.swift
           git status --short | head -5
       - uses: actions/setup-node@v4
         with:

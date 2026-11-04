@@ -11,6 +11,7 @@ import UIKit
 ///
 /// Scope: the owner-approved native design exception. These values do not touch `src/styles.css` or the React app.
 public enum Spread {
+    public static let appearancePreferenceKey = "spread.native.appearance"
     // MARK: Surfaces and ink
 
     /// Calm, nearly black navy ground (dark) / cream (light).
@@ -177,6 +178,27 @@ public enum SpreadMotion {
     /// Stagger for list items entering together (the planner's `cascade-item` delay, in seconds).
     public static func stagger(_ index: Int, step: Double = 0.045) -> Double {
         Double(max(0, index)) * step
+    }
+}
+
+/// Per-item presentation state, discarded on profile/role changes. Delays are bounded so a dense plan
+/// never leaves tasks waiting offscreen; controls retain hit testing while the short entrance runs.
+struct SpreadEntrance: ViewModifier {
+    let index: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var visible = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(visible || reduceMotion ? 1 : 0)
+            .offset(y: visible || reduceMotion ? 0 : 14)
+            .task {
+                await Task.yield()
+                guard !Task.isCancelled else { return }
+                withAnimation(reduceMotion ? nil : SpreadMotion.cascade.delay(min(0.315, SpreadMotion.stagger(index)))) {
+                    visible = true
+                }
+            }
     }
 }
 
@@ -374,7 +396,7 @@ enum SpreadAppearance: String, CaseIterable, Identifiable, Sendable {
 }
 
 enum SpreadAppearancePreference {
-    static let key = "spread.native.appearance"
+    static let key = Spread.appearancePreferenceKey
     static func read() -> SpreadAppearance { SpreadAppearance(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .system }
     static func write(_ value: SpreadAppearance) { UserDefaults.standard.set(value.rawValue, forKey: key) }
 }

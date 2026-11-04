@@ -21,3 +21,17 @@ test('rejects unknown widths and never selects an iOS 16 device to pass a gate',
   assert.throws(() => chooseSimulator([runtime], [modern], 100), /Unsupported/);
   assert.throws(() => chooseSimulator([{...runtime, version:'16.0'}], [modern], 1024), /compatible device/);
 });
+
+test('390 selects a real 390-point iPhone and rejects the 393-point iPhone 15', () => {
+  const phone = (name) => ({ name, identifier: name });
+  assert.equal(chooseSimulator([runtime], [phone('iPhone 15'), phone('iPhone 14')], 390).device.name, 'iPhone 14');
+  assert.throws(() => chooseSimulator([runtime], [phone('iPhone 15')], 390), /compatible device/);
+});
+
+test('Duo requires the actual Duo device and an iOS 27.1 runtime, never an iPad substitute', () => {
+  const duo = { name: 'iPhone Duo', identifier: 'duo' };
+  assert.throws(() => chooseSimulator([runtime], [duo], 'duo'), /compatible device/);
+  const supported = { ...runtime, identifier: 'iOS-27-1', version: '27.1', supportedDeviceTypes: [{ identifier: 'duo' }] };
+  assert.equal(chooseSimulator([supported], [modern, duo], 'duo').device.identifier, 'duo');
+  assert.throws(() => chooseSimulator([supported], [modern], 'duo'), /compatible device/);
+});

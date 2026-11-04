@@ -1,5 +1,7 @@
 # Handoff prompt: Spread SwiftUI working-build parity (historical continuation)
 
+> Current continuation is on `fix/swiftui-finish` from main `3852a9f`. See [release candidate evidence](docs/evidence/swiftui-parity/release-candidate.md). PR #119 is already merged; do not push its old build branch.
+
 > **Superseded for owner-approved PR #119 visual correction and QA (2026-11-03):** follow [CLAUDE_NATIVE_UI_HANDOFF.md](CLAUDE_NATIVE_UI_HANDOFF.md) and [native brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md). The older **code-only/no-test** rule below applied to a previous implementation session; it is **not** the current assignment. Preserve historical task and blocker details.
 
 Paste this file into a new session, or point the next agent at it. It is self-contained.

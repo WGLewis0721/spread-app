@@ -24,9 +24,10 @@ struct WeekCrownView: View {
     @State private var hintVisible = !UserDefaults.standard.bool(forKey: SpreadViewMemory.crownUsedKey)
 
     /// 3.85rem, growing with Dynamic Type so the recessed readout never clips its text.
-    @ScaledMetric(relativeTo: .callout) private var height: CGFloat = 62
+    @ScaledMetric(relativeTo: .callout) private var height: CGFloat = 88
     private let radius: CGFloat = 18.4   // 1.15rem
-    private let knurlPeriod: CGFloat = 16
+    private let knurlPeriod: CGFloat = 22
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         VStack(spacing: 8) {
@@ -52,11 +53,12 @@ struct WeekCrownView: View {
                 let light = colorScheme == .dark ? Spread.toothLightDark : Spread.toothLightLight
                 var x = -knurlPeriod + shift
                 while x < size.width + knurlPeriod {
-                    let rect = CGRect(x: x + 1.25, y: 0, width: 12.5, height: size.height)
+                    let alignedX = ((x + 1) * displayScale).rounded() / displayScale
+                    let rect = CGRect(x: alignedX, y: 0, width: 20, height: size.height)
                     let gradient = Gradient(stops: [
-                        .init(color: dark, location: 0), .init(color: mid, location: 0.38),
-                        .init(color: light, location: 0.5), .init(color: mid, location: 0.64),
-                        .init(color: dark, location: 1),
+                        .init(color: dark.opacity(0.25), location: 0), .init(color: mid.opacity(0.35), location: 0.38),
+                        .init(color: light.opacity(0.38), location: 0.5), .init(color: mid.opacity(0.35), location: 0.64),
+                        .init(color: dark.opacity(0.25), location: 1),
                     ])
                     context.fill(
                         Path(roundedRect: rect, cornerRadius: 2.2),
@@ -109,6 +111,7 @@ struct WeekCrownView: View {
             @unknown default: break
             }
         }
+        .accessibilityValue(title + (detail.map { ", " + $0 } ?? ""))
         .accessibilityIdentifier("week-crown")
     }
 
@@ -126,14 +129,14 @@ struct WeekCrownView: View {
             Text(title)
                 .font(.system(.callout, weight: .semibold))
                 .foregroundStyle(Spread.ink)
-                .lineLimit(1)
+                .lineLimit(2)
                 .minimumScaleFactor(0.8)
                 .truncationMode(.tail)
             if let detail {
                 if let onDetail {
                     Button(action: onDetail) {
                         Text(detail).font(.system(.caption, weight: .medium)).foregroundStyle(Spread.accent)
-                            .tapTarget(minWidth: 44, minHeight: 28)
+                            .tapTarget(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("week-crown-detail")

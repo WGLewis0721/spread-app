@@ -458,6 +458,7 @@ struct MoreSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var newSpread = false
     @State private var openTasks = false
+    @State private var confirmRollover = false
 
     /// Exports run on the store, then hand the result to the system: print/PDF, the share sheet, or text.
     private func exportWeek(_ format: String) {
@@ -482,7 +483,11 @@ struct MoreSheet: View {
                         .accessibilityIdentifier("more-new-spread")
                     Button { openTasks = true } label: { Label("Review open tasks", systemImage: "tray").frame(minHeight: 44, alignment: .leading) }
                     Button {
-                        Task { _ = await planner.send(["type": "rollover", "force": false]) }
+                        Task {
+                            if await planner.send(["type": "rollover", "force": false]), planner.rolloverOutcome == "confirm" {
+                                confirmRollover = true
+                            }
+                        }
                     } label: { Label("Rollover to next week", systemImage: "arrow.right.square").frame(minHeight: 44, alignment: .leading) }
                     .accessibilityIdentifier("more-rollover")
                 }
@@ -522,7 +527,7 @@ struct MoreSheet: View {
                         }
                         .frame(minHeight: 44)
                     }
-                    Button("Manage profiles") { dismiss(); showProfiles() }
+                    Button("Manage profiles") { showProfiles() }
                         .accessibilityIdentifier("manage-profiles")
                 }
                     .listRowBackground(Spread.elevated)
@@ -551,6 +556,12 @@ struct MoreSheet: View {
             }
             .sheet(isPresented: $newSpread) { NewSpreadSheet(planner: planner) }
             .sheet(isPresented: $openTasks) { CarryOverSheet(planner: planner) }
+            .confirmationDialog("Replace next week?", isPresented: $confirmRollover, titleVisibility: .visible) {
+                Button("Replace", role: .destructive) { Task { await planner.send(["type": "rollover", "force": true]) } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Next week already has tasks or days. This week stays as it is.")
+            }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)

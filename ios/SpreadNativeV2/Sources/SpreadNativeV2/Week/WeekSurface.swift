@@ -17,7 +17,7 @@ struct WeekSurface: View {
     let onSwipeWeek: (Int) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var typeSize
     /// Finger offset while a swipe is live. A `GestureState` returns to zero on end *and* on cancel, so an
     /// interrupted swipe (a system drag lift, a scroll takeover) can never leave the week offset or dimmed.
     @GestureState(resetTransaction: Transaction(animation: SpreadMotion.press)) private var swipeShift: CGFloat = 0
@@ -40,7 +40,7 @@ struct WeekSurface: View {
     }
 
     private var dayColumns: [GridItem] {
-        sizeClass == .regular ? [GridItem(.flexible(), spacing: 12, alignment: .top), GridItem(.flexible(), alignment: .top)] : [GridItem(.flexible())]
+        Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: PlannerLayout.dayColumns(availableWidth: Double(width), accessibilityText: typeSize.isAccessibilitySize))
     }
     private var showsTray: Bool {
         snapshot.tasks.contains(where: { $0.allocationId == nil }) || snapshot.tasks.contains(where: { !$0.done })
@@ -70,7 +70,7 @@ struct WeekSurface: View {
                 }
                 // One eager column on iPhone (every day stays in the accessibility tree); two columns on iPad, where a
                 // single wide column of day cards would be mostly air.
-                if sizeClass == .regular {
+                if dayColumns.count == 2 {
                     LazyVGrid(columns: dayColumns, spacing: 12) {
                         ForEach(0..<7, id: \.self) { position in dayCard(position) }
                     }
@@ -227,13 +227,11 @@ struct DayCard: View {
                     .font(.system(.caption)).foregroundStyle(Spread.secondary).monospacedDigit()
             }
             .padding(.horizontal, 4)
+            .frame(minHeight: allocations.isEmpty && selectedRole == nil ? 28 : 0)
+            .accessibilityElement(children: .combine)
+            .accessibilityValue(allocations.isEmpty ? "Nothing planned" : "")
 
-            if allocations.isEmpty {
-                // Visually empty day: the label is still announced, and the card stays a calm, solid surface.
-                Color.clear.frame(width: 1, height: 1)
-                    .accessibilityLabel("No responsibilities scheduled for \(label).")
-            }
-
+            if !allocations.isEmpty {
             VStack(spacing: 8) {
                 ForEach(allocations) { allocation in
                     AllocationRow(planner: planner, snapshot: snapshot, allocation: allocation, dayLabel: label, onOpenTask: onOpenTask)
@@ -241,6 +239,7 @@ struct DayCard: View {
                 }
             }
 
+            }
             if let selectedRole, let name = selectedName {
                 Button {
                     Task { await planner.placeHours(roleId: selectedRole, day: day, hours: 1) }
@@ -259,7 +258,7 @@ struct DayCard: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, allocations.isEmpty && selectedRole == nil ? 10 : 12)
+        .padding(.vertical, allocations.isEmpty && selectedRole == nil ? 8 : 12)
         .spreadCard(edge: isToday ? Spread.accent : nil, active: isToday)
         .overlay(
             RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
@@ -303,6 +302,8 @@ struct AllocationRow: View {
 
     @State private var showTasks = false
     @State private var leaving = false
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var role: Responsibility? { snapshot.roles.first { $0.id == allocation.roleId } }
     private var tasks: [PlannerTask] { snapshot.tasks.filter { $0.allocationId == allocation.id } }
@@ -310,6 +311,9 @@ struct AllocationRow: View {
     var body: some View {
         if let role {
             VStack(spacing: 0) {
+                if typeSize.isAccessibilitySize {
+                    Text(role.name).font(.headline).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                }
                 HStack(spacing: 4) {
                     // Drag handle: the role dot. Long press starts a native drag; the Move control is the alternative.
                     RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 30)
@@ -319,7 +323,9 @@ struct AllocationRow: View {
                         .accessibilityLabel("Move \(role.name)")
                         .accessibilityIdentifier("allocation-\(allocation.id)")
 
-                    if tasks.isEmpty {
+                    if typeSize.isAccessibilitySize && tasks.isEmpty {
+                        Spacer(minLength: 0)
+                    } else if tasks.isEmpty {
                         Text(role.name).font(.system(.subheadline, weight: .medium)).lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
@@ -352,7 +358,7 @@ struct AllocationRow: View {
                     Button {
                         leaving = true
                         Task {
-                            try? await Task.sleep(nanoseconds: 340_000_000)
+                            if !reduceMotion { try? await Task.sleep(nanoseconds: 340_000_000) }
                             await planner.send(["type": "removeAllocation", "allocationId": allocation.id])
                             leaving = false
                         }
@@ -379,8 +385,8 @@ struct AllocationRow: View {
             .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.inset))
             .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).strokeBorder(Color(hex: role.color).opacity(0.28), lineWidth: 1))
             .opacity(leaving ? 0 : 1)
-            .offset(y: leaving ? -22 : 0)
-            .animation(SpreadMotion.ascend, value: leaving)
+            .offset(y: leaving && !reduceMotion ? -22 : 0)
+            .animation(reduceMotion ? nil : SpreadMotion.ascend, value: leaving)
             .dropDestination(for: SpreadDragPayload.self) { items, _ in
                 guard let item = items.first else { return false }
                 Task {
