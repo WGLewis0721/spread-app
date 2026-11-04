@@ -1,0 +1,54 @@
+name: iPhone Duo native acceptance
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/native-duo-acceptance.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-duo-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  duo:
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select the released Duo SDK
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.1.app
+          xcodebuild -version
+          xcrun swift --version
+          xcodebuild -showsdks
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Create an actual iPhone Duo simulator
+        run: |
+          for attempt in 1 2 3; do
+            if node scripts/native-simulator.mjs duo; then exit 0; fi
+            echo "Simulator service not ready; attempt $attempt"
+          done
+          exit 1
+      - name: Test the real Duo app
+        run: |
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 1200 \
+            -only-testing:SpreadNativeUITests/DuoUITests \
+            -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Export actual Duo captures and diagnostics
+        if: always()
+        run: |
+          if [ -d artifacts/Duo.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/Duo.xcresult --output-path artifacts/screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iphone-duo-native-evidence
+          path: artifacts
