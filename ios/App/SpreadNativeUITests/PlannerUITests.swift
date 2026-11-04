@@ -643,8 +643,10 @@ final class PlannerUITests: NativeUITestCase {
                       "Expanding the second responsibility collapsed the first")
         capture("wallet-two-open-cards")
         tapID("edit-spreads")
-        XCTAssertTrue(el("remove-role-" + firstId).waitForExistence(timeout: 10),
-                      "Delete control did not slide into the card")
+        XCTAssertFalse(el("remove-role-" + firstId).exists,
+                       "Delete must remain hidden until a right swipe")
+        XCTAssertFalse(el("manage-role-" + firstId).exists,
+                       "Manage must remain hidden until a left swipe")
         XCTAssertTrue(el("role-name-" + firstId).exists, "Card title is not editable")
         tapID("role-colour-" + firstId)
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use #'")).firstMatch.waitForExistence(timeout: 10),
@@ -664,7 +666,11 @@ final class PlannerUITests: NativeUITestCase {
         first.press(forDuration: 0.65)
         XCTAssertTrue(el("dock-done").waitForExistence(timeout: 10),
                       "Long press did not enter the same Edit mode as the dock")
-        XCTAssertFalse(elements(prefix: "remove-role-").isEmpty)
+        XCTAssertTrue(elements(prefix: "remove-role-").isEmpty,
+                      "Long press should enter Edit without revealing Delete")
+        let id = first.identifier.replacingOccurrences(of: "role-block-", with: "")
+        first.swipeRight()
+        XCTAssertTrue(el("remove-role-" + id).waitForExistence(timeout: 10))
         capture("wallet-long-press-edit")
         tapID("dock-done")
     }
@@ -756,7 +762,11 @@ final class PlannerUITests: NativeUITestCase {
                           "Wallet card stopped responding with Reduce Motion")
         }
         tapID("edit-spreads")
-        XCTAssertFalse(elements(prefix: "remove-role-").isEmpty)
+        XCTAssertTrue(elements(prefix: "remove-role-").isEmpty)
+        let firstCard = try XCTUnwrap(waitElements(prefix: "role-block-").first)
+        let firstId = String(firstCard.identifier.dropFirst("role-block-".count))
+        firstCard.swipeRight()
+        XCTAssertTrue(el("remove-role-" + firstId).waitForExistence(timeout: 10))
         tapID("dock-done")
         goWeek()
         let before = crownValue
@@ -774,6 +784,7 @@ final class PlannerUITests: NativeUITestCase {
         let role = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == doomed })
         let roleId = String(role.identifier.dropFirst("select-role-".count))
         tapID("edit-spreads")
+        el("role-block-" + roleId).swipeRight()
         tapID("remove-role-" + roleId)
         XCTAssertTrue(app.buttons["Delete responsibility"].waitForExistence(timeout: 10),
                       "Quick delete bypassed confirmation")
