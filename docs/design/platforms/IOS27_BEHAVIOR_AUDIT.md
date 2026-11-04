@@ -50,6 +50,14 @@
 
 **Files changed in this pass:** `SpreadLiveRoot.swift` (responsive Spread), `SpreadSurface.swift` (dense bar and large type), `ChalkboardViews.swift` (pause invisible animation), `PlannerUITests.swift` (full scene width/44pt), `NativeContractsTests.swift` (ten-role touch target width). These are source facts, not visual PASS claims.
 
+### Edit affordance and compact top navigation (November 4)
+
+**Observed iPhone recording:** inserting a Delete button into the responsibility header shifts the category badge, name and hours. Use a floating destructive tab drawn outside the clipped card border, without changing the Wallet card's layout or tappable chevron. After the planner opens, the Spread wordmark and Spread/Week navigation labels should fold into their icons after 2.5 seconds; the Crown remains fixed.
+
+**Design fundamentals:** Fitts (>=44pt reachable targets), Gestalt continuity (position-stable cards), progressive disclosure (Edit-only delete), system feedback (real confirmation), reduced motion (no forced movement), Jakob (recognizable icon controls with VoiceOver labels). Maintain the original source-of-truth store.
+
+**Evidence gates:** New XCUITests compare card width and icon/hour/chevron horizontal coordinates before and during Edit, verify the Delete tab is outside the border and visible within the screen, and ensure labels disappear while navigation still works after the timed fold. Real 390pt iPhone, large Dynamic Type, iPad, Duo and light/dark simulator evidence is required before a visual PASS.
+
 ## Engineering checklist
 
 1. Resolve doc contradictions: map current owner choice to the native board; mark older five-mode specs **historical**. Sync the single [rules card](../RULES_CARD.md) to agent files, then run `npm run docs:check`.
