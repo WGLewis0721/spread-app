@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: BEFORE variant: native sources as they were before the visual redesign
+      - name: "BEFORE variant, native sources as they were before the visual redesign"
         if: ${{ matrix.before_ref != '' }}
         run: |
           # Only the SwiftUI sources are rewound. The tour test, the project and the workflow stay as they are, so
