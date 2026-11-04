@@ -1,0 +1,72 @@
+name: Duo hinge and rotation acceptance
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/native-duo-poses.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-duo-poses-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  poses:
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo xcode-select -s /Applications/Xcode_27.1.app
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Boot actual Duo and compile the actual app
+        run: |
+          node scripts/native-simulator.mjs duo
+          mkdir -p artifacts
+      - name: Build and install Spread
+        run: |
+          xcodebuild build -project ios/App/App.xcodeproj -scheme App \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/spread-duo-derived" CODE_SIGNING_ALLOWED=NO
+          xcrun simctl install "$NATIVE_UDID" "$RUNNER_TEMP/spread-duo-derived/Build/Products/Debug-iphonesimulator/App.app"
+      - name: Install pinned simulator test tooling
+        run: |
+          # CI tooling only. npm provenance resolves to Callstack commit ebbaff9a6be75babdb4adcb9074d7522a2773330.
+          # No install hooks or application dependency changes.
+          npm install --prefix "$RUNNER_TEMP/spread-duo-tools" --ignore-scripts --no-save agent-device@0.21.36
+      - name: Verify real hinge poses, rotations and surfaces
+        run: |
+          set -eu
+          AD="$RUNNER_TEMP/spread-duo-tools/node_modules/.bin/agent-device"
+          ad() { "$AD" "$@" --platform ios --udid "$NATIVE_UDID" --session spread-duo-poses; }
+          xcrun simctl launch --terminate-running-process "$NATIVE_UDID" com.graymatter.spread -spread.native.appearance dark
+          ad open com.graymatter.spread --json > artifacts/session.json
+          ad wait 'id="native-content"' 90000
+          for pose in closed half-open open; do
+            ad fold "$pose" --json > "artifacts/hinge-$pose.json"
+            for orientation in portrait landscape-left; do
+              tag="$pose-$orientation"
+              ad orientation "$orientation" --json > "artifacts/orientation-$tag.json"
+              ad snapshot -i --json > "artifacts/tree-$tag.json"
+              ad is visible 'id="native-content"'
+              ad find id native-spread click
+              for mode in stack fan dial tabs day; do
+                ad find id "layout-$mode" click
+                ad snapshot -i --json > "artifacts/tree-$tag-$mode.json"
+                ad screenshot "artifacts/duo-$tag-$mode.png"
+              done
+              ad find id native-week click
+              ad screenshot "artifacts/duo-$tag-week.png"
+              ad find id week-month-toggle click
+              ad screenshot "artifacts/duo-$tag-month.png"
+              ad find id week-month-toggle click
+            done
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: duo-real-hinge-and-rotation
+          path: artifacts
