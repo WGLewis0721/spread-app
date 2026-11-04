@@ -167,7 +167,9 @@ class NativeUITestCase: XCTestCase {
         // Done exists, otherwise the next tap can land on a still-present sheet behind that chrome.
         RunLoop.current.run(until: Date().addingTimeInterval(0.7))
         for _ in 0..<4 {
-            let button = ["Done", "Close", "Cancel"].flatMap { app.navigationBars.buttons[$0].allElementsBoundByIndex }.first { $0.exists && $0.isHittable }
+            let button = ["Done", "Close", "Cancel"].flatMap { label in
+                app.navigationBars.buttons.matching(NSPredicate(format: "label == %@", label)).allElementsBoundByIndex
+            }.first { $0.exists && $0.isHittable }
             guard let button else { return }
             button.tap()
             RunLoop.current.run(until: Date().addingTimeInterval(0.6))

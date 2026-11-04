@@ -18,13 +18,13 @@ The latest fixes give Stack one accessibility identity, keep large-text headers 
 - Create-flow checks failed with Save covered by the keyboard. Placement/Undo, Crown caps/Today, Month/day selection and Move to passed in the 390pt flow run. This revision corrects scrolling and includes all five core flows in the Codemagic signing gate.
 - Largest-text and extended accessibility checks remain unresolved. Fresh audits must validate the wrapping, scroll layout, prompt and weekday fixes. No contrast reports are waived.
 
-Local follow-up: script suite 214 pass / 4 existing skips; TypeScript typecheck and docs check passed; lint has no errors and 7 existing warnings. Changed SwiftUI and XCTest code still needs fresh native compilation and UI results.
+Local follow-up: script suite 214 pass / 4 existing skips; TypeScript typecheck and docs check passed; lint has no errors and 7 existing warnings. Revision `5320b87` passed native SwiftUI compilation, 28 portable Swift tests, CI checks and App Store preflight. Its UI-test build failed because the sheet-close helper used a query-only API on a single element; the focused follow-up uses a label-matching query. Fresh UI results remain required.
 
 ## Release gates
 
 `spread-release-candidate` uses Xcode 27.1, requires the exact branch tip and cloud flags off, runs portable/source/bundle checks, actual Duo appearance checks, Crown stress and all five core flows, then verifies live System appearance through OS readback and the rendered accessibility root. Only passing gates permit build-number allocation, App Store signing, IPA validation and upload. Keep the branch fixed while a candidate is running.
 
-Codemagic candidate #5 (`6aeabc3ba87b4d255fde62fd`, source `317b195`) failed before signing: the Crown flow inherited Month mode from a prior test. No replacement candidate has been signed or uploaded. Earlier candidate runs also stopped at UI gates. Existing main build 16 is not this candidate.
+Codemagic candidate #5 (`6aeabc3ba87b4d255fde62fd`, source `317b195`) failed before signing: the Crown flow inherited Month mode from a prior test. No replacement candidate has been signed or uploaded. Candidate #6 (`6aeb01b9d6634fc362f177fa`, source `5320b87`) also stopped before signing/upload on that UI-test compile error. Earlier candidate runs stopped at UI gates. Existing main build 16 is not this candidate.
 
 The actual Duo pose workflow built and installed the app, but fold state failed because the simulator display table was unavailable through CoreDevice. The explicit guest query fix requires a fresh run. Physical haptics, occlusion poses, exact-reference animation calibration and comparison with the owner's reference binary remain unverified.
 
