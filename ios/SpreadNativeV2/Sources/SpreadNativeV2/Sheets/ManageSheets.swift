@@ -477,12 +477,14 @@ struct MoreSheet: View {
     let recovery: () -> Void
     let showProfiles: () -> Void
     @Binding var appearance: SpreadAppearance
+    @Binding var weekFocusEnabled: Bool
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var newSpread = false
     @State private var openTasks = false
     @State private var confirmRollover = false
+    @State private var showCalendarPicker = false
 
     private var activeProfileName: String {
         planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId })?.name ?? "Current profile"
@@ -594,6 +596,23 @@ struct MoreSheet: View {
                                     .buttonStyle(.spreadPress)
                                     .accessibilityAddTraits(appearance == item ? .isSelected : [])
                                     .accessibilityIdentifier("appearance-" + item.rawValue)
+                                }
+                                Button { showCalendarPicker = true } label: {
+                                    Image(systemName: "calendar")
+                                        .font(.system(.body, weight: .semibold))
+                                        .foregroundStyle(Spread.accent)
+                                        .frame(width: 44, height: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.spreadPress)
+                                .accessibilityLabel(weekFocusEnabled ? "Calendar design: New preview" : "Calendar design: Classic")
+                                .accessibilityIdentifier("calendar-design-picker")
+                                .confirmationDialog("Calendar design", isPresented: $showCalendarPicker, titleVisibility: .visible) {
+                                    Button("Classic (current)") { weekFocusEnabled = false }
+                                    Button("Week + Month (preview)") { weekFocusEnabled = true }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("The new calendar is an opt-in preview. Existing tasks, hours and planning data are unchanged. Choose Classic anytime to return.")
                                 }
                             }
                             .padding(6)
