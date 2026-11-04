@@ -269,6 +269,7 @@ struct RoleRow: View {
     @State private var confirmDelete = false
     @FocusState private var nameFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var tasks: [PlannerTask] { snapshot.tasks(for: role.id) }
     private var isOpen: Bool { expanded ?? tasksOpen }
@@ -369,7 +370,6 @@ struct RoleRow: View {
                         .focused($nameFocused)
                         .submitLabel(.done)
                         .onSubmit { commitName() }
-                        .onChange(of: nameFocused) { _, focused in if !focused { commitName() } }
                         .accessibilityIdentifier("role-name-\(role.id)")
                 } else {
                     Button(action: toggleOpen) {
@@ -435,22 +435,32 @@ struct RoleRow: View {
     }
 
     private var hoursEditor: some View {
-        HStack(spacing: 12) {
-            Text("Hours each week")
-                .font(Spread.footnote)
-                .foregroundStyle(Spread.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 4)
-            HourStepper(value: role.hours, label: "\(role.name) hours", step: 0.5) { hours in
-                Task { _ = await planner.send(["type": "setHours", "roleId": role.id, "hours": hours]) }
+        let narrow = typeSize.isAccessibilitySize
+        return VStack(alignment: .leading, spacing: narrow ? 4 : 0) {
+            if narrow {
+                Text("Hours each week")
+                    .font(Spread.footnote)
+                    .foregroundStyle(Spread.secondary)
             }
-            Button("Done") {
-                withAnimation(SpreadMotion.press) { adjusting = false }
+            HStack(spacing: 8) {
+                if !narrow {
+                    Text("Hours each week")
+                        .font(Spread.footnote)
+                        .foregroundStyle(Spread.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                HourStepper(value: role.hours, label: "\(role.name) hours", step: 0.5) { hours in
+                    Task { _ = await planner.send(["type": "setHours", "roleId": role.id, "hours": hours]) }
+                }
+                Button("Done") {
+                    withAnimation(reduceMotion ? nil : SpreadMotion.press) { adjusting = false }
+                }
+                .font(.system(.subheadline, weight: .semibold))
+                .buttonStyle(.plain)
+                .foregroundStyle(Spread.accent)
+                .frame(minWidth: 44, minHeight: 44)
             }
-            .font(.system(.subheadline, weight: .semibold))
-            .buttonStyle(.plain)
-            .foregroundStyle(Spread.accent)
-            .frame(minWidth: 44, minHeight: 44)
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 10)
@@ -773,7 +783,7 @@ struct StackLayout: View {
                             // without hiding the readable solid background.
                             RoundedRectangle(cornerRadius: 24, style: .continuous)
                                 .fill(LinearGradient(
-                                    colors: [tint.opacity(0.19), tint.opacity(0.055), .clear],
+                                    colors: [tint.opacity(0.48), tint.opacity(0.16), .clear],
                                     startPoint: .topLeading, endPoint: .bottomTrailing
                                 ))
                         }
@@ -788,7 +798,8 @@ struct StackLayout: View {
                 .shadow(color: Color(hex: role.color).opacity(open ? 0.18 : 0.09),
                         radius: open ? 16 : 8, y: 4)
                 .padding(.bottom, open || editing ? 12 : -36)
-                .zIndex(Double(snapshot.roles.count - index))
+                // Lower cards sit in front of the card above, like Wallet passes.
+                .zIndex(Double(index))
                 // The long press and the bottom dock's Edit button enter the same
                 // global editing state. Normal taps, text entry and scrolling remain.
                 .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
