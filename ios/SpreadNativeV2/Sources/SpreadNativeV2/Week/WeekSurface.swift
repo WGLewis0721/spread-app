@@ -89,7 +89,14 @@ struct WeekSurface: View {
                     .onAppear { width = proxy.size.width }
                     .onChange(of: proxy.size.width) { _, value in width = value }
             })
-            .background(WeekHorizontalSwipe(onShift: { swipeShift = $0 }, onMove: onSwipeWeek))
+            .background {
+                // Give the UIKit recognizer anchor real layout bounds. A zero-size
+                // UIViewRepresentable background rejects every touch in shouldReceive.
+                GeometryReader { geometry in
+                    WeekHorizontalSwipe(onShift: { swipeShift = $0 }, onMove: onSwipeWeek)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                }
+            }
         }
         .id(snapshot.weekKey)
         .transition(weekTransition)
@@ -246,7 +253,7 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             return true
         }
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            guard let anchor else { return false }
+            guard let anchor, anchor.bounds.width > 0 else { return false }
             let velocity = pan.velocity(in: scroller)
             return abs(velocity.x) > abs(velocity.y) * WeekSwipeRules.dominance
                 && start.x >= WeekSwipeRules.edgeGuard
