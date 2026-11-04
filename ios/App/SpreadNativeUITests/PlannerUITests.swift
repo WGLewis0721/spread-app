@@ -1337,6 +1337,61 @@ final class DuoUITests: NativeUITestCase {
         // the actual rendered root. XCUIDevice's reported setting alone does not prove an OS change.
     }
 
+    // MARK: Task editing that must never lose what the user typed
+
+    private func taskRow(containing text: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'task-row-' AND label CONTAINS %@", text)).firstMatch
+    }
+
+    /// Adds a uniquely named task to the Work card and opens its sheet.
+    private func addAndOpenTask(_ title: String) {
+        selectRole("Work")
+        typeInto("new-task-field", title); tapID("add-task-button")
+        let row = taskRow(containing: title)
+        XCTAssertTrue(row.waitForExistence(timeout: 20), "The new task never appeared")
+        scrollIntoView(row); row.tap()
+        XCTAssertTrue(el("task-editor").waitForExistence(timeout: 20), "The Task sheet did not open")
+    }
+
+    /// A title typed into the Task sheet is saved even when the sheet is closed with the system swipe-down
+    /// gesture instead of Done. Before this repair the typed title was silently discarded.
+    func testTaskTitleEditSurvivesSwipeDismissAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let marker = "Kept" + stamp
+        addAndOpenTask("Dismiss " + stamp)
+        typeInto("task-editor", marker)
+        XCTAssertTrue(eventually { self.fieldText("task-editor").contains(marker) }, "The title field did not take the typed text")
+        // Drag the sheet down from its navigation bar. This is never the Done button.
+        let bar = app.navigationBars.firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "The Task sheet has no navigation bar to drag")
+        let from = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: app.frame.height * 0.6)))
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "Dragging the sheet down did not dismiss it")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The title typed before the swipe-dismiss was lost")
+        capture("task-title-kept-after-swipe-dismiss")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The edited title did not survive a relaunch")
+    }
+
+    /// Create, then delete, a task from its sheet, and confirm it stays deleted after a relaunch.
+    func testTaskCanBeDeletedFromItsSheet() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let title = "Remove " + stamp
+        addAndOpenTask(title)
+        tapID("delete-task")
+        // The confirmation is a dialog: an action sheet on a phone, a popover in a wide window.
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Delete task'")).allElementsBoundByIndex.last { $0.exists && $0.isHittable }
+        if confirm == nil { attach(app.debugDescription, "hierarchy-without-delete-confirmation") }
+        try XCTUnwrap(confirm, "The delete confirmation did not offer a Delete task button").tap()
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "The sheet stayed open after deleting the task")
+        XCTAssertTrue(eventually { !self.taskRow(containing: title).exists }, "The deleted task is still listed")
+        capture("task-deleted")
+        relaunch(); selectRole("Work")
+        XCTAssertFalse(taskRow(containing: title).waitForExistence(timeout: 5), "The deleted task came back after a relaunch")
+    }
+
     /// Actual hinge and rotation changes run in native-duo-poses.yml. XCTest's orientation setter
     /// does not prove that a multi-panel simulator rotated, so this test makes no pose claim.
     func testWalletStackInBothAppearances() throws {

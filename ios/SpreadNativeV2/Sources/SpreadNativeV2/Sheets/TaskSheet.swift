@@ -117,6 +117,7 @@ struct TaskSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .task { await load() }
+        .onDisappear { commitTitle() }
         .onChange(of: planner.details[taskId]) { _, value in
             if let value, !loaded { content = value; loaded = true }
         }
@@ -218,9 +219,11 @@ struct TaskSheet: View {
         }
     }
 
+    /// Saves a changed title. Also runs when the sheet disappears, so swiping the sheet down never discards a title
+    /// that was typed but not yet submitted. A deleted task (`task == nil`), an unchanged title and an empty one are no-ops.
     private func commitTitle() {
         let value = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty, value != task?.text else { return }
+        guard task != nil, !value.isEmpty, value != task?.text else { return }
         Task { await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) }
     }
 
