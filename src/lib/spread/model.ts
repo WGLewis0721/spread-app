@@ -338,7 +338,7 @@ export function repairDuplicateIds(weeks: Record<string, WeekData>): Record<stri
         return { ...t, id: fresh(t.id, key), allocationId };
       }),
     }));
-    out[key] = { allocations, boxes };
+    out[key] = { ...week, allocations, boxes };
   }
   return changed ? out : weeks;
 }
@@ -397,7 +397,7 @@ function isDeletedTask(value: unknown): value is DeletedTask {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<DeletedTask>;
   return typeof item.id === "string" && typeof item.hatId === "string"
-    && typeof item.weekKey === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(item.weekKey)
+    && typeof item.weekKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item.weekKey)
     && typeof item.deletedAt === "number" && Number.isFinite(item.deletedAt)
     && isTask(item.task);
 }
