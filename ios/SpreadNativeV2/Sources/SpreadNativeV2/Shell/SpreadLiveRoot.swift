@@ -16,6 +16,7 @@ public struct SpreadLiveRoot: View {
     @State private var monthAnchor = PlannerDates.date(PlannerDates.currentWeekKey())
     @State private var weekDirection = 0
     @State private var layout: SpreadLayout = SpreadLayoutPreference.read()
+    @State private var appearance: SpreadAppearance = SpreadAppearancePreference.read()
     @State private var selectedRole: String?
     @State private var focusDay: String?
     @State private var sheet: LiveSheet?
@@ -67,12 +68,14 @@ public struct SpreadLiveRoot: View {
             .onChange(of: destination) { _, _ in persistView() }
             .onChange(of: monthPlane) { _, _ in persistView() }
             .onChange(of: layout) { _, value in SpreadLayoutPreference.write(value) }
+            .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
             .onChange(of: planner.snapshot?.weekKey) { _, _ in weekChanged() }
     }
 
     /// Sheets, the error alert, the week tick and the keyboard/first-touch hooks.
     private var presented: some View {
         observed
+            .preferredColorScheme(appearance.scheme)
             .sheet(item: $sheet) { current in sheetContent(current) }
             .alert("Spread", isPresented: errorShown) { errorActions } message: { Text(planner.error ?? "") }
             // A light tick for an accepted week change only: not at launch, and not when a profile opens on its own week.
@@ -560,7 +563,7 @@ public struct SpreadLiveRoot: View {
         case .review:
             CarryOverSheet(planner: planner)
         case .more:
-            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, layout: $layout)
+            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, layout: $layout, appearance: $appearance)
         case .profiles:
             ProfilesSheet(planner: planner)
         case .confirmRollover:

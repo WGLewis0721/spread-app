@@ -343,4 +343,34 @@ extension View {
         scrollContentBackground(.hidden).background(Spread.canvas)
     }
 }
+
+// MARK: - Appearance
+
+/// This device's own light/dark choice for Spread. "System" follows iOS and is the default; the other two override it
+/// for Spread only. It is a presentation preference kept in UserDefaults, like the layout choice: never planner data,
+/// never backed up or synced, and it writes nothing to the store.
+enum SpreadAppearance: String, CaseIterable, Identifiable, Sendable {
+    case system, light, dark
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+    var scheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
+enum SpreadAppearancePreference {
+    static let key = "spread.native.appearance"
+    static func read() -> SpreadAppearance { SpreadAppearance(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .system }
+    static func write(_ value: SpreadAppearance) { UserDefaults.standard.set(value.rawValue, forKey: key) }
+}
 #endif

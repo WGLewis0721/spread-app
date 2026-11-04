@@ -452,6 +452,7 @@ struct MoreSheet: View {
     let recovery: () -> Void
     let showProfiles: () -> Void
     @Binding var layout: SpreadLayout
+    @Binding var appearance: SpreadAppearance
 
     @Environment(\.dismiss) private var dismiss
     @State private var newSpread = false
@@ -500,6 +501,15 @@ struct MoreSheet: View {
                         .accessibilityAddTraits(layout == item ? .isSelected : [])
                         .accessibilityIdentifier("more-layout-\(item.rawValue)")
                     }
+                }
+                    .listRowBackground(Spread.elevated)
+                Section("Appearance") {
+                    Picker("Appearance", selection: $appearance) {
+                        ForEach(SpreadAppearance.allCases) { item in Text(item.title).tag(item) }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("appearance-picker")
                 }
                     .listRowBackground(Spread.elevated)
                 Section("Profiles") {
