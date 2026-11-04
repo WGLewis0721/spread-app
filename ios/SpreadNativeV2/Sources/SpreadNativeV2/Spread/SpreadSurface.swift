@@ -389,8 +389,8 @@ struct RoleRow: View {
             if adjusting {
                 // While the hours are being adjusted the stepper needs the row; the menu and chevron wait.
                 EmptyView()
-            } else if expanded == true {
-                // The open card's quick actions, in one place instead of three more buttons on a 390 pt row.
+            } else if expanded != nil {
+                // Every Stack card carries the same quick actions, in one place instead of more buttons on a 390 pt row.
                 Menu {
                     Button { onOpenRole(role.id) } label: { Label("Details and hours", systemImage: "slider.horizontal.3") }
                     Button { withAnimation(SpreadMotion.cascade) { palette.toggle() } } label: { Label("Colour and symbol", systemImage: "paintpalette") }
@@ -420,11 +420,12 @@ struct RoleRow: View {
         .frame(minHeight: 68)
     }
 
-    /// "3 tasks · 1 done", or the invitation to add the first one.
+    /// "2 tasks • 3h placed" (the specimen's line), or the invitation to add the first task.
     private var summaryLine: String {
-        if tasks.isEmpty { return "No tasks yet" }
+        let placed = "\(SpreadHours.text(placedHours))h placed"
+        if tasks.isEmpty { return "No tasks yet • \(placed)" }
         let noun = tasks.count == 1 ? "task" : "tasks"
-        return doneCount == 0 ? "\(tasks.count) \(noun)" : "\(tasks.count) \(noun) · \(doneCount) done"
+        return "\(tasks.count) \(noun) • \(placed)"
     }
 
     @ViewBuilder private var hoursControl: some View {
@@ -442,7 +443,7 @@ struct RoleRow: View {
         } else {
             Button { adjusting = true } label: {
                 Text("\(SpreadHours.text(role.hours))h")
-                    .font(.system(.title3, weight: .bold)).foregroundStyle(Spread.ink).monospacedDigit()
+                    .font(.system(.title2, weight: .bold)).foregroundStyle(Spread.ink).monospacedDigit()
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }

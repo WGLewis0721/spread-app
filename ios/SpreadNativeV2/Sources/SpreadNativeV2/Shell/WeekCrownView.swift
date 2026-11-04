@@ -127,6 +127,7 @@ struct WeekCrownView: View {
                 .font(.system(.callout, weight: .semibold))
                 .foregroundStyle(Spread.ink)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .truncationMode(.tail)
             if let detail {
                 if let onDetail {
@@ -145,7 +146,7 @@ struct WeekCrownView: View {
                 }
             }
         }
-        .padding(.horizontal, 11)
+        .padding(.horizontal, 44)
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity)
         // The recess fills the space between the end caps and leaves the ribbed shoulders visible, as in the specimen.
@@ -170,14 +171,16 @@ struct WeekCrownView: View {
                         startPoint: leading ? .leading : .trailing, endPoint: leading ? .trailing : .leading))
                     .frame(width: 11.5)
                     .allowsHitTesting(false)
-                // The chevron sits on the ribbed shoulder, inside the 44 pt target and clear of the recess and the date.
+                // The chevron sits inside the recess, at its end, as in the specimen (it never touches the date). The
+                // whole 94 pt zone (ribbed shoulder plus the chevron) is one 44 pt-tall button, so what you see is what you hit.
                 Image(systemName: leading ? "chevron.left" : "chevron.right")
-                    .font(.system(.subheadline, weight: .bold))
-                    .foregroundStyle(Color(hex6: 0x0E1A2E).opacity(0.82))
+                    .font(.system(.body, weight: .bold))
+                    .foregroundStyle(Spread.ink.opacity(0.92))
                     .frame(width: 44)
+                    .padding(leading ? .leading : .trailing, 50)
                     .allowsHitTesting(false)
             }
-            .frame(width: 44, height: height)
+            .frame(width: 94, height: height)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
