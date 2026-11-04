@@ -46,6 +46,16 @@ struct WeekFocusSurface: View {
         snapshot.unplacedTasks.filter { $0.roleId == activeRole }
     }
     private var dayHours: Double { todaysAllocations.reduce(0) { $0 + $1.hours } }
+    private func rolesOn(_ iso: String) -> [Responsibility] {
+        var roles = snapshot.roles.filter { role in
+            snapshot.allocations.contains { $0.day == iso && $0.roleId == role.id && $0.hours > 0 }
+        }
+        if let activeRole, let index = roles.firstIndex(where: { $0.id == activeRole }) {
+            let highlighted = roles.remove(at: index)
+            roles.insert(highlighted, at: 0)
+        }
+        return roles
+    }
     private var storeKey: String { "native.weekFocus.expanded." + (planner.state?.envelope.profileId ?? "none") }
     private var refreshKey: String {
         "\(planner.state?.envelope.profileId ?? "")-\(planner.state?.revision ?? 0)-\(PlannerDates.localISO())"
@@ -206,24 +216,20 @@ struct WeekFocusSurface: View {
                                     .font(.system(.caption2))
                                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "d"))
                                     .font(.system(.subheadline, weight: active ? .bold : .medium))
-                                if let activeRole, isComplete(roleId: activeRole, on: iso) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(.caption2))
-                                        .foregroundStyle(Spread.accent)
-                                        .frame(height: 8)
-                                } else {
-                                    HStack(spacing: 2) {
-                                        ForEach(snapshot.roles.filter { role in
-                                            snapshot.allocations.contains { $0.day == iso && $0.roleId == role.id && $0.hours > 0 }
-                                        }.prefix(3)) { role in
-                                            Circle()
-                                                .fill(Color(hex: role.color))
-                                                .frame(width: role.id == activeRole ? 6 : 4,
-                                                       height: role.id == activeRole ? 6 : 4)
-                                        }
+                                HStack(spacing: 2) {
+                                    ForEach(rolesOn(iso).prefix(3)) { role in
+                                        Circle()
+                                            .fill(Color(hex: role.color))
+                                            .frame(width: role.id == activeRole ? 6 : 4,
+                                                   height: role.id == activeRole ? 6 : 4)
                                     }
-                                    .frame(height: 8)
+                                    if let activeRole, isComplete(roleId: activeRole, on: iso) {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 7, weight: .bold))
+                                            .foregroundStyle(Spread.accent)
+                                    }
                                 }
+                                .frame(height: 8)
                             }
                             .frame(maxWidth: .infinity, minHeight: 60)
                             .background(active ? Spread.accent.opacity(0.12) : Color.clear,
@@ -296,14 +302,17 @@ struct WeekFocusSurface: View {
             .padding(.vertical, 8)
 
             if dayHours > 0 {
-                HStack(spacing: 3) {
-                    ForEach(todaysAllocations) { allocation in
-                        if let role = snapshot.roles.first(where: { $0.id == allocation.roleId }) {
-                            Capsule()
-                                .fill(Color(hex: role.color))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 6)
-                                .accessibilityHidden(true)
+                GeometryReader { geometry in
+                    let gap: CGFloat = 3
+                    let usable = max(0, geometry.size.width - CGFloat(max(0, todaysAllocations.count - 1)) * gap)
+                    HStack(spacing: gap) {
+                        ForEach(todaysAllocations) { allocation in
+                            if let role = snapshot.roles.first(where: { $0.id == allocation.roleId }) {
+                                Capsule()
+                                    .fill(Color(hex: role.color))
+                                    .frame(width: usable * CGFloat(allocation.hours / dayHours), height: 6)
+                                    .accessibilityHidden(true)
+                            }
                         }
                     }
                 }
