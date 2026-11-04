@@ -19,6 +19,11 @@ import { carryOpenTasks, type CarryPick } from "@/lib/spread/task-rollover";
 import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
+import {
+  activeDeletedTasks, bulkRescheduleOverdue, moveTaskToRecentlyDeleted, overdueTasks,
+  permanentlyDeleteRecentlyDeleted, previewBulkOverdue, purgeExpiredDeletedTasks,
+  reorderDayTask, restoreRecentlyDeletedTask, type BulkOverdueOutcome, type OverdueTask,
+} from "@/lib/spread/week-month-operations";
 import { create } from "zustand";
 import {
   cloneWeek,
@@ -38,6 +43,7 @@ import {
   weekIsPopulated,
   weekKey,
   type Allocation,
+  type DeletedTask,
   type License,
   type SpreadCategory,
   type SpreadData,
@@ -91,7 +97,15 @@ type Store = {
   addHat: (name: string, hours: number, options?: { category?: SpreadCategory }) => void;
   addTask: (hatId: string, text: string) => void;
   toggleTask: (hatId: string, taskId: string) => void;
+  /** Recoverable deletion, across profiles/weeks, including full task content. */
   deleteTask: (hatId: string, taskId: string) => void;
+  recentlyDeleted: () => DeletedTask[];
+  restoreDeletedTask: (taskId: string) => { ok: boolean; reason?: string };
+  permanentlyDeleteTasks: (taskIds: string[]) => void;
+  overdueTasks: (today: string) => OverdueTask[];
+  previewOverdueMove: (taskIds: string[], targetDay: string, today: string) => BulkOverdueOutcome[];
+  bulkMoveOverdue: (taskIds: string[], targetDay: string, today: string) => { moved: number; outcomes: BulkOverdueOutcome[] };
+  reorderDayTask: (hatId: string, day: string, taskId: string, beforeId: string | null) => boolean;
   setTaskText: (hatId: string, taskId: string, text: string) => void;
   setTaskContent: (hatId: string, taskId: string, content: TaskContent) => void;
   setHatColor: (hatId: string, color: string) => void;
@@ -652,11 +666,36 @@ export const useSpread = create<Store>((set, get) => ({
     commit(set, next);
   },
   deleteTask: (hatId, taskId) => {
-    const next = mapBox(get().data, hatId, (box) => ({
-      ...box,
-      tasks: box.tasks.filter((task) => task.id !== taskId),
-    }));
-    commit(set, next);
+    const result = moveTaskToRecentlyDeleted(get().data, hatId, taskId);
+    if (result.changed) commit(set, result.data);
+  },
+  recentlyDeleted: () => {
+    const current = get().data;
+    const cleaned = purgeExpiredDeletedTasks(current);
+    if (cleaned !== current) commit(set, cleaned);
+    return activeDeletedTasks(cleaned);
+  },
+  restoreDeletedTask: (taskId) => {
+    const result = restoreRecentlyDeletedTask(get().data, taskId);
+    if (result.changed) commit(set, result.data);
+    return { ok: result.changed, reason: result.reason };
+  },
+  permanentlyDeleteTasks: (taskIds) => {
+    const next = permanentlyDeleteRecentlyDeleted(get().data, taskIds);
+    if (JSON.stringify(next.deletedTasks) !== JSON.stringify(get().data.deletedTasks))
+      commit(set, next);
+  },
+  overdueTasks: (today) => overdueTasks(get().data, today),
+  previewOverdueMove: (ids, targetDay, today) => previewBulkOverdue(get().data, ids, targetDay, today),
+  bulkMoveOverdue: (ids, targetDay, today) => {
+    const result = bulkRescheduleOverdue(get().data, ids, targetDay, today);
+    if (result.moved > 0) commit(set, result.data);
+    return { moved: result.moved, outcomes: result.outcomes };
+  },
+  reorderDayTask: (hatId, day, taskId, beforeId) => {
+    const result = reorderDayTask(get().data, hatId, day, taskId, beforeId);
+    if (result.changed) commit(set, result.data);
+    return result.changed;
   },
   setTaskText: (hatId, taskId, text) => {
     const next = mapBox(get().data, hatId, (box) => ({
