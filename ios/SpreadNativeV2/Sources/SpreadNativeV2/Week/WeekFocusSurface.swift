@@ -57,6 +57,8 @@ struct WeekFocusSurface: View {
         return roles
     }
     private var storeKey: String { "native.weekFocus.expanded." + (planner.state?.envelope.profileId ?? "none") }
+    /// Decision 10: Week returns to the last selected day (per profile); the first visit opens Today.
+    private var dayKey: String { "native.weekFocus.day." + (planner.state?.envelope.profileId ?? "none") }
     private var refreshKey: String {
         "\(planner.state?.envelope.profileId ?? "")-\(planner.state?.revision ?? 0)-\(PlannerDates.localISO())"
     }
@@ -158,15 +160,23 @@ struct WeekFocusSurface: View {
             restoreExpansions()
             if selectedRole == nil { selectedRole = snapshot.roles.first?.id }
             if selectedDay == nil {
+                let remembered = UserDefaults.standard.string(forKey: dayKey)
                 let now = PlannerDates.localISO()
-                selectedDay = PlannerDates.weekKey(for: PlannerDates.date(now)) == snapshot.weekKey
-                    ? now : snapshot.weekKey
+                if let remembered, PlannerDates.weekKey(for: PlannerDates.date(remembered)) == snapshot.weekKey {
+                    selectedDay = remembered
+                } else {
+                    selectedDay = PlannerDates.weekKey(for: PlannerDates.date(now)) == snapshot.weekKey
+                        ? now : snapshot.weekKey
+                }
             }
         }
         .onChange(of: snapshot.weekKey) { _, newWeek in
             selectedDay = newWeek // Monday, by owner decision
         }
         .onChange(of: expandedByDate) { _, _ in rememberExpansions() }
+        .onChange(of: selectedDay) { _, newDay in
+            if let newDay { UserDefaults.standard.set(newDay, forKey: dayKey) }
+        }
         .sheet(item: $monthQuickAddDay) { target in
             MonthQuickAddSheet(planner: planner, roleId: activeRole ?? "", day: target.iso)
         }
@@ -381,14 +391,16 @@ struct WeekFocusSurface: View {
             let rolesToday = snapshot.roles.filter { role in
                 todaysAllocations.contains(where: { $0.roleId == role.id }) || role.id == activeRole
             }
-            if rolesToday.isEmpty {
+            // Decision 13: a day with no hours says so. The selected responsibility's own card (below) keeps
+            // its compact Add row (decision 16), so Add appears here only when there is no card to hold it.
+            if todaysAllocations.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(.title2))
                         .foregroundStyle(Spread.secondary)
                     Text("Nothing planned")
                         .font(.system(.headline, weight: .semibold))
-                    if let activeRole {
+                    if rolesToday.isEmpty, let activeRole {
                         FocusedQuickAdd(planner: planner, roleId: activeRole, day: day,
                                         onOpenEditor: onOpenTask)
                     }
@@ -396,6 +408,8 @@ struct WeekFocusSurface: View {
                 .frame(maxWidth: .infinity)
                 .padding(16)
                 .spreadCard()
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("focus-nothing-planned")
             }
             ForEach(rolesToday) { role in
                 FocusedRoleCard(
