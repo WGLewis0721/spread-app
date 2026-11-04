@@ -533,52 +533,47 @@ final class PlannerUITests: NativeUITestCase {
 
     // MARK: Owner-reported radial layout, preference location and Week scroll regressions
 
-    func testDialArcSelectionAndPreferencePersistence() throws {
+    /// Wallet cards must open independently and expose the same edit mode from the dock
+    /// or a long press; the deleted five-layout picker must never appear.
+    func testWalletCardsExpandIndependentlyAndEdit() throws {
         goSpread()
-        XCTAssertFalse(el("view-mode-button").exists, "Layout preferences must live in More")
-        // The summary bar omits zero-hour responsibilities, but the actual Dial
-        // keeps them visible at a minimum 0.5-hour weight. Include every real role
-        // in display order, or this test taps the wrong arc after the first zero.
-        let names = roleNames()
-        let segments = elements(prefix: "hour-segment-")
-        let hoursByName = try Dictionary(uniqueKeysWithValues: segments.map { segment -> (String, Double) in
-            let pieces = segment.label.components(separatedBy: ", ")
-            let hours = try XCTUnwrap(Double(pieces.last?.components(separatedBy: " ").first ?? ""))
-            return (pieces.dropLast().joined(separator: ", "), hours)
-        })
-        let entries: [(name: String, hours: Double)] = names.map {
-            (name: $0, hours: max(0.5, hoursByName[$0] ?? 0))
-        }
-        XCTAssertGreaterThanOrEqual(entries.count, 2)
-        chooseMode("Dial")
-        let dial = el("dial")
-        scrollIntoView(dial)
-        XCTAssertTrue(dial.isHittable)
-        XCTAssertEqual(dial.frame.width, dial.frame.height, accuracy: 2, "The radial stage must be square")
-        let total = entries.reduce(0.0) { $0 + $1.hours }
-        let available = 360 - Double(entries.count) * 3
-        var cursor = 1.5
-        for entry in entries {
-            let span = entry.hours / total * available
-            let angle = (cursor + span / 2 - 90) * Double.pi / 180
-            // Tap the center of the visible arc in the dial's own square. Displaced ring geometry
-            // selects the wrong responsibility here even when the pure arc math is correct.
-            let radius = dial.frame.width / 2 - 22
-            dial.coordinate(withNormalizedOffset: CGVector(
-                dx: 0.5 + CGFloat(cos(angle)) * radius / dial.frame.width,
-                dy: 0.5 + CGFloat(sin(angle)) * radius / dial.frame.height
-            )).tap()
-            XCTAssertTrue(eventually { self.selectedRoleLabel == "Manage " + entry.name }, "The visible arc did not select " + entry.name)
-            cursor += span + 3
-        }
-        capture("fixed-dial-concentric")
-        relaunch()
-        XCTAssertTrue(el("dial").waitForExistence(timeout: 20), "The layout preference did not survive relaunch")
+        let chevrons = waitElements(prefix: "expand-role-", minimum: 2)
+        let first = chevrons[0].identifier
+        let second = chevrons[1].identifier
+        let firstId = String(first.dropFirst("expand-role-".count))
+        XCTAssertTrue(el(first).label.hasPrefix("Expand"))
+        tapID(first)
+        XCTAssertTrue(eventually { self.el(first).label.hasPrefix("Collapse") },
+                      "First responsibility does not expand")
+        tapID(second)
+        XCTAssertTrue(eventually { self.el(second).label.hasPrefix("Collapse") && self.el(first).label.hasPrefix("Collapse") },
+                      "Expanding the second responsibility collapsed the first")
+        capture("wallet-two-open-cards")
+        tapID("edit-spreads")
+        XCTAssertTrue(el("remove-role-" + firstId).waitForExistence(timeout: 10),
+                      "Delete control did not slide into the card")
+        XCTAssertTrue(el("role-name-" + firstId).exists, "Card title is not editable")
+        tapID("role-colour-" + firstId)
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use #'")).firstMatch.waitForExistence(timeout: 10),
+                      "Colour palette did not open inside Edit mode")
+        capture("wallet-edit-palette")
+        tapID("dock-done")
+        XCTAssertFalse(el("remove-role-" + firstId).exists, "Delete controls remain after Done")
         tapID("open-more")
-        scrollIntoView(el("more-layout-dial"))
-        XCTAssertTrue(el("more-layout-dial").isSelected)
-        capture("layout-preference-in-more")
-        tapID("close-more")
+        XCTAssertFalse(el("view-mode-button").exists, "The removed layout switcher remains visible")
+        closeNativeSheets()
+    }
+
+    func testWalletLongPressEnablesEditing() throws {
+        goSpread()
+        let first = try XCTUnwrap(waitElements(prefix: "role-block-").first)
+        scrollIntoView(first)
+        first.press(forDuration: 0.65)
+        XCTAssertTrue(el("dock-done").waitForExistence(timeout: 10),
+                      "Long press did not enter the same Edit mode as the dock")
+        XCTAssertFalse(elements(prefix: "remove-role-").isEmpty)
+        capture("wallet-long-press-edit")
+        tapID("dock-done")
     }
 
     func testWeekScrollsVerticallyAndStillSwipesHorizontally() throws {
@@ -638,113 +633,93 @@ final class PlannerUITests: NativeUITestCase {
         capture("crown-after-100-drags-30-reversals")
     }
 
-    // MARK: Stack and Fan: 100 rapid swipes each, correct selection after every one
+    // MARK: Wallet expansion stress, Reduce Motion, deletion and natural height
 
-    /// Responsibility names in display order, read from the Tabs row.
-    func roleNames() -> [String] {
-        goSpread(); chooseMode("Tabs")
-        var names: [String] = []
-        for _ in 0..<8 {
-            let before = names.count
-            for label in elements(prefix: "role-tab-").filter({ $0.identifier != "role-tab-all" }).map({ $0.label }) where !names.contains(label) { names.append(label) }
-            if names.count == before { break }
-            el("role-tabs").swipeLeft()
+    func testWalletHundredExpandCollapseCycles() {
+        goSpread()
+        let id = waitElements(prefix: "expand-role-").first!.identifier
+        let numberOfRoles = elements(prefix: "role-block-").count
+        for index in 0..<100 {
+            tapID(id)
+            let expected = index.isMultiple(of: 2) ? "Collapse" : "Expand"
+            XCTAssertTrue(eventually(6) { self.el(id).label.hasPrefix(expected) },
+                          "Wallet toggle \(index + 1) did not settle")
         }
-        for _ in 0..<8 { el("role-tabs").swipeRight() }
-        return names
+        XCTAssertEqual(elements(prefix: "role-block-").count, numberOfRoles)
+        capture("wallet-after-100-expand-collapse")
     }
 
-    private func rapidSwipes(mode: String, container: String, steps: Int = 100) {
-        let names = roleNames()
-        XCTAssertGreaterThanOrEqual(names.count, 2, "Need two responsibilities to swipe between")
-        tapButton(names[0])
-        chooseMode(mode)
-        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: container).count, 1, "The swipe surface must have one accessibility identity")
-        XCTAssertEqual(selectedRoleLabel, "Manage \(names[0])")
-        var index = 0
-        for step in 0..<steps {
-            // Walk both ways so reversals and both ends are exercised.
-            let forward = index == 0 ? true : (index == names.count - 1 ? false : step % 3 != 2)
-            let area = el(container)
-            XCTAssertTrue(area.waitForExistence(timeout: 20), "\(mode) cards are missing at swipe \(step)")
-            let from = area.coordinate(withNormalizedOffset: CGVector(dx: forward ? 0.75 : 0.25, dy: 0.12))
-            from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: forward ? -160 : 160, dy: 0)))
-            index = min(max(0, index + (forward ? 1 : -1)), names.count - 1)
-            let expected = "Manage \(names[index])"
-            XCTAssertTrue(eventually(6) { self.selectedRoleLabel == expected }, "\(mode) swipe \(step + 1): expected \(expected), found \(self.selectedRoleLabel)")
-        }
-        capture("\(steps)-rapid-swipes-\(mode.lowercased())")
-    }
-
-    func testStackHundredRapidSwipesKeepSelection() { rapidSwipes(mode: "Stack", container: "stack-cards") }
-    func testFanHundredRapidSwipesKeepSelection() { rapidSwipes(mode: "Fan", container: "fan-cards") }
-
-    /// Reduce Motion: every gesture still works without animation. The Debug build reports what the
-    /// system setting did to the app; if it is not in effect the test is skipped, never passed.
     func testReduceMotionKeepsFunction() throws {
         let state = (app.otherElements["native-content"].firstMatch.value as? String) ?? ""
-        guard state.hasPrefix("reduce-motion;") else { throw XCTSkip("Reduce Motion was not in effect in the app (state '\(state)'): not verified") }
-        rapidSwipes(mode: "Stack", container: "stack-cards", steps: 20)
-        rapidSwipes(mode: "Fan", container: "fan-cards", steps: 20)
+        guard state.hasPrefix("reduce-motion;") else {
+            throw XCTSkip("Reduce Motion was not in effect in the app (state '\(state)'): not verified")
+        }
+        goSpread()
+        let id = waitElements(prefix: "expand-role-").first!.identifier
+        for index in 0..<20 {
+            tapID(id)
+            let expected = index.isMultiple(of: 2) ? "Collapse" : "Expand"
+            XCTAssertTrue(eventually { self.el(id).label.hasPrefix(expected) },
+                          "Wallet card stopped responding with Reduce Motion")
+        }
+        tapID("edit-spreads")
+        XCTAssertFalse(elements(prefix: "remove-role-").isEmpty)
+        tapID("dock-done")
         goWeek()
         let before = crownValue
         tapButton("Next week")
-        XCTAssertTrue(eventually { self.crownValue != before }, "The Crown arrows must work with Reduce Motion")
-        let from = el("week-crown").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: -70, dy: 0)))
-        XCTAssertTrue(eventually { self.crownValue == before }, "A drag must still move one week with Reduce Motion")
-        capture("reduce-motion-verified")
+        XCTAssertTrue(eventually { self.crownValue != before })
+        capture("reduce-motion-wallet-verified")
     }
 
-    /// A selected responsibility that no longer exists falls back to the first one in every mode.
-    func testSelectedRoleFallsBackAfterDeletion() {
+    func testWalletQuickDeleteRequiresConfirmationAndFallsBack() throws {
         let tag = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(5))
-        let doomed = "Fallback \(tag)"
+        let doomed = "Fallback " + tag
         tapID("open-more"); tapID("more-new-spread")
         typeInto("role-name-field", doomed); tapID("save-spreads")
-        closeNativeSheets()
-        let names = roleNames()
-        XCTAssertEqual(names.last, doomed)
-        let first = names[0]
-        tapButton(doomed)
-        tapID("manage-selected")
-        tapID("delete-role-button")
-        tapID("confirm-delete-role")
-        XCTAssertTrue(eventually { !self.app.buttons[doomed].exists }, "The responsibility was not deleted")
-        for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] {
-            chooseMode(mode)
-            XCTAssertTrue(eventually { self.selectedRoleLabel == "Manage \(first)" }, "\(mode): fell back to \(self.selectedRoleLabel) instead of \(first)")
-        }
-        capture("selection-fallback")
+        closeNativeSheets(); openWalletCard(doomed)
+        let role = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == doomed })
+        let roleId = String(role.identifier.dropFirst("select-role-".count))
+        tapID("edit-spreads")
+        tapID("remove-role-" + roleId)
+        XCTAssertTrue(app.buttons["Delete responsibility"].waitForExistence(timeout: 10),
+                      "Quick delete bypassed confirmation")
+        tapButton("Cancel")
+        XCTAssertTrue(el("role-block-" + roleId).exists, "Cancel deleted the card")
+        tapID("remove-role-" + roleId)
+        tapButton("Delete responsibility")
+        XCTAssertTrue(eventually { !self.el("role-block-" + roleId).exists }, "Confirmed removal failed")
+        tapID("dock-done")
+        XCTAssertTrue(el("stack-cards").exists)
+        capture("wallet-delete-confirmed")
     }
 
-    /// Many and long tasks must stay inside the Fan: nothing clipped, the rest reachable.
-    func testFanKeepsLargeContentInsideItsFrame() {
+    func testWalletCardGrowsWithTasksAndKeepsRowsReachable() throws {
         let tag = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(5))
-        let name = "Large \(tag) responsibility with a deliberately long name"
+        let name = "Large " + tag + " responsibility with a long name"
         tapID("open-more"); tapID("more-new-spread")
         typeInto("role-name-field", name); tapID("save-spreads")
-        selectRole(name)
-        tapID("manage-selected")
+        closeNativeSheets(); openWalletCard(name)
+        let role = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == name })
+        let block = el("role-block-" + String(role.identifier.dropFirst("select-role-".count)))
+        let initialHeight = block.frame.height
         for n in 1...6 {
-            typeInto("new-task-field", "Task \(n) \(tag) with enough words to wrap onto a second and third line of the card")
-            tapID("add-task-button")
-            XCTAssertTrue(eventually { self.app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Task \(n) \(tag)")).firstMatch.exists })
+            typeInto("new-task-field", "Task \(n) \(tag) with enough words to wrap onto multiple lines\n")
+            XCTAssertTrue(eventually {
+                self.app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Task \(n) \(tag)")).firstMatch.exists
+            })
         }
-        tapButton("Done")
-        selectRole(name); chooseMode("Fan")
-        XCTAssertEqual(selectedRoleLabel, "Manage \(name)")
-        let fan = el("fan-cards")
-        XCTAssertTrue(fan.waitForExistence(timeout: 20))
+        XCTAssertGreaterThan(block.frame.height, initialHeight + 120,
+                             "Expanded Wallet card did not grow with its tasks")
         let rows = elements(prefix: "task-row-").filter { $0.label.contains(tag) }
-        XCTAssertEqual(rows.count, 6, "Fan must keep every task reachable below its card stage")
+        XCTAssertEqual(rows.count, 6)
         for row in rows {
             scrollIntoView(row)
             XCTAssertTrue(row.isHittable, "Task is unreachable: " + row.label)
             XCTAssertGreaterThanOrEqual(row.frame.minX, app.frame.minX)
             XCTAssertLessThanOrEqual(row.frame.maxX, app.frame.maxX + 1)
         }
-        capture("fan-large-content")
+        capture("wallet-six-tasks-full-width")
     }
 
     // MARK: Layout evidence (screens and Month at the matching width; audits are separate tests)
