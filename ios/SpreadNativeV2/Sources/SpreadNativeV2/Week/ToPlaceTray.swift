@@ -135,10 +135,7 @@ struct TaskLine: View {
     let currentAllocation: DayAllocation?
     let onOpenTask: (String, String) -> Void
 
-    @State private var expanded = false
-
-    private var role: Responsibility? { snapshot.roles.first { $0.id == task.roleId } }
-    private var choices: [DayAllocation] { snapshot.eligibleAllocations(for: task) }
+    @State private var showMove = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -164,70 +161,125 @@ struct TaskLine: View {
                 .accessibilityIdentifier("task-row-\(task.id)")
 
                 if !task.done {
-                    Button { expanded.toggle() } label: {
+                    Button { showMove = true } label: {
                         Text(currentAllocation == nil ? "Place" : "Move to")
                             .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
                             .padding(.horizontal, 12).frame(minHeight: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityValue(expanded ? "Days shown" : "Days hidden")
                     .accessibilityIdentifier("task-move-\(task.id)")
                 }
-            }
-            if expanded && !task.done {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        if choices.isEmpty {
-                            Text("This responsibility isn’t on a day yet. Add it to a day first.")
-                                .font(Spread.footnote).foregroundStyle(Spread.tertiary)
-                                .frame(minHeight: 44)
-                        }
-                        ForEach(choices) { allocation in
-                            let current = allocation.id == currentAllocation?.id
-                            Button {
-                                Task {
-                                    if await planner.send(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": allocation.id]) {
-                                        expanded = false
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Text(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEE"))
-                                    Text("\(SpreadHours.text(allocation.hours))h").foregroundStyle(Spread.secondary).monospacedDigit()
-                                }
-                                .font(.system(.subheadline, weight: .semibold))
-                                .padding(.horizontal, 14).frame(minHeight: 44)
-                                .background(Spread.fill, in: Capsule())
-                                .opacity(current ? 0.4 : 1)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(current)
-                            .accessibilityLabel("\(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE")), \(SpreadHours.spoken(allocation.hours))")
-                            .accessibilityIdentifier("eligible-day-\(allocation.id)")
-                        }
-                        if currentAllocation != nil {
-                            Button {
-                                Task { await planner.send(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": NSNull()]) }
-                            } label: {
-                                Text("Take off this day")
-                                    .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.danger)
-                                    .padding(.horizontal, 14).frame(minHeight: 44)
-                                    .background(Spread.fill, in: Capsule())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.horizontal, 44)
-                    .padding(.bottom, 8)
-                }
-                .scrollIndicators(.hidden)
             }
             Rectangle().fill(Spread.line).frame(height: 0.5).padding(.leading, 44)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(task.text)
         .accessibilityAddTraits(task.done ? .isSelected : [])
+        .sheet(isPresented: $showMove) { MoveToSheet(planner: planner, taskId: task.id) }
+    }
+}
+
+/// Move to (or Place): the days this responsibility is already on, each with its hours, plus "Not scheduled" to take
+/// the task off its day. A task can only go on its own responsibility's days, so nothing else is offered; when
+/// there are none it says why and what to do. The change is one store command, and the dock offers Undo after it.
+struct MoveToSheet: View {
+    @ObservedObject var planner: LivePlanner
+    let taskId: String
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        SpreadSheetStack {
+            Group {
+                if let snapshot = planner.snapshot,
+                   let task = snapshot.tasks.first(where: { $0.id == taskId }),
+                   let role = snapshot.roles.first(where: { $0.id == task.roleId }) {
+                    content(snapshot: snapshot, task: task, role: role)
+                } else {
+                    ContentUnavailableView("This task is no longer in the plan.", systemImage: "checkmark.circle")
+                }
+            }
+            .navigationTitle("Move to")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Text("Cancel").tapTarget() }
+                        .accessibilityIdentifier("move-cancel")
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .accessibilityIdentifier("move-to-sheet")
+    }
+
+    private func content(snapshot: PlannerSnapshot, task: PlannerTask, role: Responsibility) -> some View {
+        let choices = snapshot.eligibleAllocations(for: task)
+        let tint = Color(hex: role.color)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 40)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(task.text.isEmpty ? "Untitled task" : task.text).font(.system(.headline, weight: .semibold)).lineLimit(2)
+                        Text(role.name).font(.system(.footnote)).foregroundStyle(Spread.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.bottom, 4)
+
+                if choices.isEmpty {
+                    Text("\(role.name) isn’t on a day yet. Add it to a day on the Week first, then place this task there.")
+                        .font(.system(.subheadline)).foregroundStyle(Spread.secondary)
+                        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                        .spreadCard()
+                }
+                ForEach(choices) { allocation in
+                    let current = allocation.id == task.allocationId
+                    Button {
+                        Task { if await planner.send(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": allocation.id]) { dismiss() } }
+                    } label: {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE")).font(.system(.headline, weight: .semibold))
+                                Text(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "MMM d")).font(.system(.footnote)).foregroundStyle(Spread.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            Text("\(SpreadHours.text(allocation.hours))h").font(.system(.title3, weight: .bold)).monospacedDigit()
+                            Image(systemName: current ? "checkmark.circle.fill" : "circle")
+                                .font(.system(.title3)).foregroundStyle(current ? tint : Spread.tertiary)
+                        }
+                        .padding(.horizontal, 16).frame(maxWidth: .infinity, minHeight: 60)
+                        .spreadCard(edge: tint, active: current)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.spreadPress)
+                    .disabled(current)
+                    .accessibilityLabel("\(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE")), \(SpreadHours.spoken(allocation.hours))\(current ? ", current" : "")")
+                    .accessibilityIdentifier("eligible-day-\(allocation.id)")
+                }
+                if task.allocationId != nil {
+                    Button {
+                        Task { if await planner.send(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": NSNull()]) { dismiss() } }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "tray")
+                            Text("Not scheduled").font(.system(.subheadline, weight: .semibold))
+                            Spacer(minLength: 0)
+                            Text("Back to To place").font(.system(.footnote)).foregroundStyle(Spread.secondary)
+                        }
+                        .foregroundStyle(Spread.danger)
+                        .padding(.horizontal, 16).frame(maxWidth: .infinity, minHeight: 52)
+                        .spreadCard()
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.spreadPress)
+                    .accessibilityLabel("Not scheduled. Take this task off its day.")
+                    .accessibilityIdentifier("task-unplace")
+                }
+            }
+            .padding(16)
+        }
     }
 }
 #endif
