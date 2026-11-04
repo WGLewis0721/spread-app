@@ -28,7 +28,7 @@ Initial candidate `de56e46`: native iOS compile, portable Swift contracts and th
 The 1024pt iPad tour and orientation test passed. Its hit-region audit found ten reports, all the same 14.5pt day-mark region; this revision enlarges it within the existing illustration band.
 The 820pt dark-large-text tour timed out in the accessibility query; its other tours completed. Initial captures labeled dark actually rendered light. This revision checks the rendered appearance and tests the real preference controls and live system changes.
 The 390pt layout job failed before launch because the simulator service timed out; discovery now retries that transient error.
-Native checks for this revision, actual Duo results and a signed artifact remain pending.
+This revision passed 28 portable Swift tests. Initial iPhone flow checks passed placement/Undo, Crown, Month/day selection and Move to. Full journeys exposed inherited SwiftUI accessibility identifiers and lazy-list navigation failures; this revision gives named surfaces their own accessibility containers and scrolls lazy rows before requiring them. Native UI reruns, actual Duo results and a signed artifact remain pending.
 No claim of physical-device, fold-pose, reference-image or App Store acceptance for this new binary.
 
 ## Build route
@@ -37,7 +37,7 @@ No claim of physical-device, fold-pose, reference-image or App Store acceptance 
 runs actual Duo modes/appearance/rotation tests, then builds an App Store-eligible signed IPA and uploads to App Store Connect.
 It never submits for App Review or releases the app. The existing PR119 internal-only workflow is untouched.
 Codemagic is connected. Existing main build 16 completed signing/upload; that is not this candidate.
-The candidate route has not yet been started.
+Candidate run `6aeaa7bfa87b4d255fde5ec8` passed its checks/bundle step, then was deliberately stopped before signing/upload to correct navigation failures found in the parallel UI suite.
 
 ## Scope retained
 

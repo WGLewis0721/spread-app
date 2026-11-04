@@ -11,7 +11,7 @@ permissions:
   contents: read
 concurrency:
   group: native-layout-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   viewport:
     runs-on: macos-15

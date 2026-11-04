@@ -65,6 +65,7 @@ struct MonthSurface: View {
         }
         .padding(.horizontal, 4)
         .padding(.top, 16)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("month")
         .task(id: marksKey) {
             let parts = PlannerDates.calendar.dateComponents([.year, .month], from: anchor)

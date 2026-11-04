@@ -36,6 +36,7 @@ struct WeekSurface: View {
             onOpenRole: onOpenRole
         )
         .id(iso)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("day-card-\(iso)")
     }
 
@@ -92,6 +93,7 @@ struct WeekSurface: View {
         }
         .id(snapshot.weekKey)
         .transition(weekTransition)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("week-surface")
     }
 

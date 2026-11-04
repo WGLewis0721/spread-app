@@ -15,7 +15,7 @@ permissions:
   contents: read
 concurrency:
   group: native-journeys-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   group:
     runs-on: macos-15

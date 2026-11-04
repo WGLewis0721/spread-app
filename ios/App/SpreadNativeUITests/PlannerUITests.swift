@@ -60,10 +60,11 @@ class NativeUITestCase: XCTestCase {
     /// would dismiss a sheet that is already at its top.
     func scrollIntoView(_ element: XCUIElement, maxSwipes: Int = 8) {
         var swipes = 0
-        while element.exists && !element.isHittable && swipes < maxSwipes { app.swipeUp(); swipes += 1 }
+        while (!element.exists || !element.isHittable) && swipes < maxSwipes { app.swipeUp(); swipes += 1 }
     }
     @discardableResult func tapID(_ id: String, timeout: TimeInterval = 30, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
         let element = el(id)
+        if !element.waitForExistence(timeout: min(timeout, 3)) { scrollIntoView(element) }
         XCTAssertTrue(element.waitForExistence(timeout: timeout), "Missing element with identifier \(id)", file: file, line: line)
         scrollIntoView(element)
         element.tap()
@@ -71,6 +72,7 @@ class NativeUITestCase: XCTestCase {
     }
     @discardableResult func tapButton(_ label: String, timeout: TimeInterval = 30, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
         let element = app.buttons[label].firstMatch
+        if !element.waitForExistence(timeout: min(timeout, 3)) { scrollIntoView(element) }
         XCTAssertTrue(element.waitForExistence(timeout: timeout), "Missing button \(label)", file: file, line: line)
         scrollIntoView(element)
         element.tap()
@@ -113,9 +115,10 @@ class NativeUITestCase: XCTestCase {
     }
     func closeNativeSheets() {
         for _ in 0..<4 {
-            let button = ["Done", "Close", "Cancel"].map { app.buttons[$0].firstMatch }.first { $0.exists && $0.isHittable }
+            let button = ["Done", "Close", "Cancel"].map { app.navigationBars.buttons[$0].firstMatch }.first { $0.exists && $0.isHittable }
             guard let button else { return }
             button.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.6))
         }
     }
     func selectRole(_ name: String) {

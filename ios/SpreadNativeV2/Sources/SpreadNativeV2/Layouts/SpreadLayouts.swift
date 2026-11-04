@@ -341,6 +341,7 @@ struct TabsLayout: View {
         }
         .onAppear { lastIndex = index }
         .onChange(of: tab) { _, _ in lastIndex = index }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("tabs-panel")
     }
 
@@ -523,6 +524,7 @@ struct DayLayout: View {
                     .spreadCard(edge: Color(hex: role.color), active: true)
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("day-layout")
     }
 }

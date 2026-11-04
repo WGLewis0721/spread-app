@@ -48,6 +48,7 @@ struct SpreadSurface: View {
                 daySelection = PlannerOrder.day(weekKey: key, displayPosition: 0)
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("spread-surface")
     }
 
