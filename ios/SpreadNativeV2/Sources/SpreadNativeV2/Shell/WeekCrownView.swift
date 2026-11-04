@@ -94,6 +94,9 @@ struct WeekCrownView: View {
             }
         }
         .frame(minHeight: height)
+        // The decorative Canvas accepts all proposed space. Keep the wheel at its content's
+        // ideal height, including larger readout text, instead of splitting the screen with the list.
+        .fixedSize(horizontal: false, vertical: true)
         .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .gesture(dragGesture)
         .onChange(of: gestureActive) { _, active in

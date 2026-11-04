@@ -78,7 +78,6 @@ public struct SpreadLiveRoot: View {
     /// Sheets, the error alert, the week tick and the keyboard/first-touch hooks.
     private var presented: some View {
         observed
-            .preferredColorScheme(appearance.scheme)
             .sheet(item: $sheet) { current in sheetContent(current) }
             .alert("Spread", isPresented: errorShown) { errorActions } message: { Text(planner.error ?? "") }
             // A light tick for an accepted week change only: not at launch, and not when a profile opens on its own week.

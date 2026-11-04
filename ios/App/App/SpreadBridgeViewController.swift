@@ -79,7 +79,7 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         webView.accessibilityElementsHidden = true
         webView.isUserInteractionEnabled = false
         planner = model
-        // Light and dark follow the device (system-aware tokens in SpreadTheme). The host never forces a scheme.
+        // Inherit the container's appearance. It owns the user's override for both UIKit and SwiftUI.
         let host = UIHostingController(rootView: SpreadLiveRoot(planner: model, recovery: { [weak self] in self?.openRecovery() }))
         host.view.backgroundColor = .clear
         stage.addChild(host)
@@ -133,6 +133,8 @@ private final class PlannerReadyHandler: NSObject, WKScriptMessageHandler {
 /// Capacitor's root view is WKWebView. Native UI must be a sibling, never its descendant.
 final class SpreadContainerViewController: UIViewController {
     @objc private func updateAppearance() {
+        // Keep one appearance owner. A second preferredColorScheme on the SwiftUI root can leave
+        // the hosting presentation forced to Light when the container returns to System.
         let stored = UserDefaults.standard.string(forKey: Spread.appearancePreferenceKey)
         let style: UIUserInterfaceStyle = stored == "dark" ? .dark : (stored == "light" ? .light : .unspecified)
         guard overrideUserInterfaceStyle != style else { return }
@@ -141,7 +143,7 @@ final class SpreadContainerViewController: UIViewController {
     }
 
     private let engine = SpreadBridgeViewController()
-    /// The native planner's status bar follows the device appearance, as the canvas does.
+    /// The native planner's status bar follows the same resolved appearance as its canvas.
     override var preferredStatusBarStyle: UIStatusBarStyle {
         guard engine.isShowingNative else { return engine.preferredStatusBarStyle }
         return traitCollection.userInterfaceStyle == .dark ? .lightContent : .darkContent

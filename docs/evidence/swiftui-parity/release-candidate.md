@@ -17,7 +17,7 @@ Owner objective (November 3, America/Chicago): a paid-app candidate tonight, wit
 - Flush rich content on Done before dismissing; show the allocation date and responsibility hours on the task sheet.
 - Keep appearance consistent through the native container and status bar; test actual device appearance instead of an ignored launch flag.
 - Preserve rollover confirmation from More, and wrap the full color palette at narrow widths.
-- Adapt the existing F1–F10 journeys to the current controls. Repair 390pt simulator selection and before-tour source compatibility.
+- Adapt the existing F1–F10 journeys to the current controls. Repair 390pt simulator selection; retain historical before captures outside the current-code acceptance matrix.
 - Restore Studio cutout-local pivots, layer-relative translation, CSS easing/keyframes and seven decorative FX, sharing one paused/reduced-motion-aware clock.
 - Confirm destructive responsibility removal; keep appearance controls and day-mark hit regions at least 44pt.
 
@@ -58,3 +58,7 @@ Largest-text captures showed the Crown date/hint and destination rail exceeding 
 PR #123 verifies the actual simulator hinge and orientation using pinned, provenance-checked CI tooling, with state readback and unmodified screenshots. A passed XCUIDevice orientation assignment is not rotation evidence.
 
 The rendered dark capture from `94e7e9b` confirmed that a safe-area inset still lets scroll content draw beneath the floating dock. The follow-up puts content and dock in separate vertical layout regions, sized from their actual contents, so visible task fields and card controls stay above the dock.
+
+Candidate `dc2f870`: native compile, 28 portable Swift tests, planner/script checks, bridge simulations and App Store preflight passed. Codemagic run `6aeab1d1a87b4d255fde60dd` passed the actual Duo test of all five modes plus Week, Month and More in forced Light and Dark. Its separate preference test passed Dark and Light choices but failed when changing the device to Dark after selecting System. The test gate prevented signing/upload. The focused follow-up removes the duplicate SwiftUI appearance override, leaving the native container as the sole appearance owner for the canvas, sheets and status bar. It also verifies the selected preference, waits for sheet transitions and captures both live System changes. These changes require a fresh native compile and Duo run.
+
+The same candidate's 1024pt screen and orientation tests passed, but inspection of its exported screenshot found a stretched Crown: the decorative Canvas accepted the parent's proposed height after the dock became a real layout sibling. The follow-up preserves the wheel's intrinsic vertical size while allowing larger text to grow it, and asserts a 120pt ceiling at standard text size in viewport and Duo acceptance. Its remaining hit-region reports all identify static day marks whose accessibility frame follows 14.5pt glyphs despite the 44pt visual layout region; an explicit accessibility content shape now matches that region. The view-mode swipe failure was caused by the stretched header putting the rail outside the visible scroll region. Fresh captures and audits are required.

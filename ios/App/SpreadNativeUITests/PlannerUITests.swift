@@ -75,7 +75,9 @@ class NativeUITestCase: XCTestCase {
         if !element.waitForExistence(timeout: min(timeout, 3)) { scrollIntoView(element) }
         XCTAssertTrue(element.waitForExistence(timeout: timeout), "Missing element with identifier \(id)", file: file, line: line)
         scrollIntoView(element)
+        XCTAssertTrue(element.isHittable, "Element is covered or offscreen: \(id)", file: file, line: line)
         element.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
         return element
     }
     @discardableResult func tapButton(_ label: String, timeout: TimeInterval = 30, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
@@ -83,7 +85,9 @@ class NativeUITestCase: XCTestCase {
         if !element.waitForExistence(timeout: min(timeout, 3)) { scrollIntoView(element) }
         XCTAssertTrue(element.waitForExistence(timeout: timeout), "Missing button \(label)", file: file, line: line)
         scrollIntoView(element)
+        XCTAssertTrue(element.isHittable, "Button is covered or offscreen: \(label)", file: file, line: line)
         element.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
         return element
     }
     func typeInto(_ id: String, _ text: String, file: StaticString = #filePath, line: UInt = #line) {
@@ -124,6 +128,9 @@ class NativeUITestCase: XCTestCase {
         }
     }
     func closeNativeSheets() {
+        // Changing appearance rebuilds sheet chrome asynchronously. Wait before testing whether
+        // Done exists, otherwise the next tap can land on a still-present sheet behind that chrome.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.7))
         for _ in 0..<4 {
             let button = ["Done", "Close", "Cancel"].map { app.navigationBars.buttons[$0].firstMatch }.first { $0.exists && $0.isHittable }
             guard let button else { return }
@@ -614,6 +621,7 @@ final class PlannerUITests: NativeUITestCase {
         let content = app.otherElements["native-content"].firstMatch
         XCTAssertTrue(content.waitForExistence(timeout: 30))
         XCTAssertEqual(content.frame.width, CGFloat(width), accuracy: 1)
+        XCTAssertLessThanOrEqual(el("week-crown").frame.height, 120, "The standard-size Crown expanded into the planner's scroll region")
     }
     private func layout(width: Int) throws {
         try startAtWidth(width)
@@ -931,6 +939,7 @@ final class DuoUITests: NativeUITestCase {
         for style in ["dark", "light", "system"] {
             tapID("open-more")
             tapID("appearance-" + style)
+            XCTAssertTrue(eventually { self.el("appearance-" + style).isSelected }, "The appearance choice was not selected")
             closeNativeSheets()
             if style != "system" {
                 XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(";" + style) == true }, "Appearance choice did not reach the planner")
@@ -938,7 +947,8 @@ final class DuoUITests: NativeUITestCase {
         }
         for dark in [true, false] {
             XCUIDevice.shared.appearance = dark ? .dark : .light
-            XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(dark ? ";dark" : ";light") == true }, "System appearance change did not reach the planner")
+            XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(dark ? ";dark" : ";light") == true }, "System appearance change did not reach the planner (device: \(XCUIDevice.shared.appearance), rendered: \(self.el("native-content").value ?? "missing"))")
+            capture("duo-system-" + (dark ? "dark" : "light"))
         }
     }
 
@@ -955,6 +965,7 @@ final class DuoUITests: NativeUITestCase {
                 let bounds = app.frame
                 XCTAssertGreaterThan(bounds.width, 0)
                 XCTAssertGreaterThan(bounds.height, 0)
+                XCTAssertLessThanOrEqual(el("week-crown").frame.height, 120, "The standard-size Crown expanded into the planner's scroll region")
                 for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] {
                     chooseMode(mode)
                     capture("duo-\(dark ? "dark" : "light")-\(name)-\(mode.lowercased())")
