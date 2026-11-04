@@ -93,6 +93,24 @@ final class NativeContractsTests: XCTestCase {
         }
     }
 
+    #if os(iOS)
+    func testAllElevenChalkIllustrationsHaveDecodableAnimationResources() {
+        let categories = ChalkArtwork.categories
+        let layers = categories.flatMap { ChalkMotionTable.layers(for: $0) }
+        XCTAssertEqual(categories.count, 11)
+        XCTAssertEqual(layers.count, 40, "Keep all 40 original Studio motion cutouts")
+        XCTAssertEqual(Set(layers.map(\.src)).count, 40)
+        for category in categories {
+            let motions = ChalkMotionTable.layers(for: category)
+            XCTAssertFalse(motions.isEmpty, "\(category) must never fall back to a static drawing")
+            for layer in motions {
+                XCTAssertGreaterThan(layer.dur, 0)
+                XCTAssertNotNil(ChalkMotionImage.load(layer.src), "Missing or undecodable \(layer.src).webp")
+            }
+        }
+    }
+    #endif
+
     func testTaskCanOnlyTargetItsOwnResponsibilityAllocation() {
         let source = SpreadV2Fixture.week
         let task = source.tasks.first(where: { $0.id == "t-2" })!

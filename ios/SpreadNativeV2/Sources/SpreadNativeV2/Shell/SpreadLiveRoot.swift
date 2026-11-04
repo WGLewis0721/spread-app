@@ -211,7 +211,7 @@ public struct SpreadLiveRoot: View {
     /// An illustrated empty state: the notebook drawing, one sentence, one lit action.
     private var emptyPlan: some View {
         VStack(spacing: 14) {
-            ChalkIllustration(category: "custom", maxWidth: 230, maxHeight: 160)
+            ChalkMotionArt(category: "custom", size: 230)
             Text("Make room for what matters")
                 .font(.system(.title2, weight: .bold)).multilineTextAlignment(.center)
             Text("Name a responsibility, give it hours, then place those hours in your week.")
