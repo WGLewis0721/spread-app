@@ -18,6 +18,7 @@ struct SpreadSurface: View {
     @State private var tabSelection = "all"
     @State private var daySelection = PlannerDates.localISO()
     @State private var dropOpen = false
+    @State private var summaryExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var totalHours: Double { snapshot.roles.reduce(0) { $0 + $1.hours } }
@@ -48,65 +49,169 @@ struct SpreadSurface: View {
         .accessibilityIdentifier("spread-surface")
     }
 
-    // MARK: Summary
+    // MARK: Compact weekly summary
 
-    /// The real hour summary: total hours, how many spreads they cover, an hour-proportional bar to choose a
-    /// responsibility, and the two quiet planning actions. One card, one row of actions.
+    /// An actionable status strip. The full hour distribution and the existing
+    /// Rollover/Review actions remain available on disclosure, not permanently
+    /// consuming a quarter of the screen above the Wallet cards.
     private var summary: some View {
-        let spreads = snapshot.roles.count
-        let spreadWord = spreads == 1 ? "spread" : "spreads"
-        let spoken = SpreadHours.spoken(totalHours) + " across \(spreads) \(spreadWord)" + (taskCount > 0 ? ", \(doneCount) of \(taskCount) tasks done" : "")
-        return VStack(alignment: .leading, spacing: 14) {
-            // iOS 27 resizable scenes: let content choose a compact two-line
-            // heading when space or Dynamic Type makes the one-line form clip.
-            // Never shrink the hours or overlap the completed-task count.
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text(SpreadHours.text(totalHours)).font(.system(.title, weight: .bold)).monospacedDigit()
-                        Text("h").font(.system(.headline, weight: .semibold)).foregroundStyle(Spread.secondary)
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                    Text("across \(spreads) \(spreadWord)")
-                        .font(.system(.subheadline)).foregroundStyle(Spread.secondary)
-                        .fixedSize(horizontal: true, vertical: false)
-                    Spacer(minLength: 8)
-                    if taskCount > 0 {
-                        Text("\(doneCount) of \(taskCount) done")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(Spread.secondary).monospacedDigit()
-                            .fixedSize(horizontal: true, vertical: false)
-                    }
+        let status = WeeklyHourStatus(snapshot: snapshot)
+        let spoken = "\(SpreadHours.spoken(status.remaining)) remaining to plan, " +
+            "\(SpreadHours.spoken(status.scheduled)) scheduled across \(status.spreadCount) " +
+            (status.spreadCount == 1 ? "spread" : "spreads") +
+            (status.overbooked > 0 ? ", \(SpreadHours.spoken(status.overbooked)) overbooked" : "")
+
+        return VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
+                    summaryExpanded.toggle()
                 }
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text(SpreadHours.text(totalHours)).font(.system(.title, weight: .bold)).monospacedDigit()
-                        Text("h").font(.system(.headline, weight: .semibold)).foregroundStyle(Spread.secondary)
-                        Text("across \(spreads) \(spreadWord)")
-                            .font(.system(.subheadline)).foregroundStyle(Spread.secondary)
-                            .padding(.leading, 6)
-                    }
-                    if taskCount > 0 {
-                        Text("\(doneCount) of \(taskCount) done")
-                            .font(.system(.subheadline, weight: .medium))
-                            .foregroundStyle(Spread.secondary).monospacedDigit()
-                    }
+                SpreadHaptics.selection()
+            } label: {
+                ViewThatFits(in: .horizontal) {
+                    summaryWideRow(status)
+                    summaryNarrowRow(status)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("hour-summary")
+            .accessibilityLabel(spoken)
+            .accessibilityValue(summaryExpanded ? "Expanded" : "Collapsed")
+            .accessibilityHint("Show the hour breakdown, Rollover and task review")
+
+            if summaryExpanded {
+                Rectangle()
+                    .fill(Spread.secondary.opacity(0.16))
+                    .frame(height: 0.5)
+                    .padding(.vertical, 10)
+                summaryDetails(status)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .spreadCard()
+        .onChange(of: snapshot.weekKey) { _, _ in summaryExpanded = false }
+    }
+
+    private var summaryIcon: some View {
+        Image(systemName: "calendar.badge.clock")
+            .font(.system(.title3, weight: .semibold))
+            .foregroundStyle(Spread.accent)
+            .frame(width: 44, height: 44)
+            .background(Spread.accent.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .accessibilityHidden(true)
+    }
+
+    private func summaryTitle(_ status: WeeklyHourStatus) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(SpreadHours.text(status.headlineHours) + "h")
+                .font(.system(.title2, weight: .bold))
+                .monospacedDigit()
+                .foregroundStyle(Spread.ink)
+            Text(status.headlineLabel)
+                .font(.system(.subheadline, weight: .medium))
+                .foregroundStyle(Spread.ink)
+        }
+    }
+
+    private func summaryWideRow(_ status: WeeklyHourStatus) -> some View {
+        HStack(spacing: 9) {
+            summaryIcon
+            VStack(alignment: .leading, spacing: 2) {
+                summaryTitle(status).fixedSize(horizontal: true, vertical: false)
+                Text("Across \(status.spreadCount) \(status.spreadCount == 1 ? "spread" : "spreads")")
+                    .font(.system(.caption))
+                    .foregroundStyle(Spread.secondary)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            Spacer(minLength: 3)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text("\(SpreadHours.text(status.scheduled))h scheduled")
+                    .font(.system(.caption2))
+                    .foregroundStyle(Spread.secondary)
+                Text(status.overbooked > 0
+                     ? "\(SpreadHours.text(status.overbooked))h overbooked"
+                     : "\(SpreadHours.text(status.remaining))h remaining")
+                    .font(.system(.caption2, weight: .medium))
+                    .foregroundStyle(status.overbooked > 0 ? Spread.caution : Spread.secondary)
+                summaryRoleColors
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            Image(systemName: summaryExpanded ? "chevron.down" : "chevron.right")
+                .font(.system(.subheadline, weight: .bold))
+                .foregroundStyle(Spread.ink)
+                .frame(width: 20, height: 44)
+                .accessibilityHidden(true)
+        }
+    }
+
+    /// Narrow / accessibility scenes can grow vertically instead of clipping.
+    private func summaryNarrowRow(_ status: WeeklyHourStatus) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            summaryIcon
+            VStack(alignment: .leading, spacing: 3) {
+                summaryTitle(status)
+                Text("Across \(status.spreadCount) \(status.spreadCount == 1 ? "spread" : "spreads")")
+                    .font(.system(.caption))
+                    .foregroundStyle(Spread.secondary)
+                Text("\(SpreadHours.text(status.scheduled))h scheduled · \(SpreadHours.text(status.remaining))h remaining")
+                    .font(.system(.caption))
+                    .foregroundStyle(Spread.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if status.overbooked > 0 {
+                    Text("\(SpreadHours.text(status.overbooked))h overbooked")
+                        .font(.system(.caption, weight: .semibold))
+                        .foregroundStyle(Spread.caution)
+                }
+                summaryRoleColors
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer(minLength: 0)
+            Image(systemName: summaryExpanded ? "chevron.down" : "chevron.right")
+                .font(.system(.subheadline, weight: .bold))
+                .foregroundStyle(Spread.ink)
+                .frame(width: 20, height: 44)
+                .accessibilityHidden(true)
+        }
+    }
+
+    /// These small coloured segments identify the hour banks, NOT progress.
+    /// They are proportional to each responsibility's planned hours; the
+    /// full-sized, 44pt-tappable selectors are inside the expanded details.
+    private var summaryRoleColors: some View {
+        let roles = Array(snapshot.roles.filter { $0.hours > 0 }.prefix(6))
+        let sum = max(roles.reduce(0) { $0 + $1.hours }, 0.5)
+        return GeometryReader { geometry in
+            let gap: CGFloat = 3
+            let usable = max(0, geometry.size.width - CGFloat(max(0, roles.count - 1)) * gap)
+            HStack(spacing: gap) {
+                ForEach(roles) { role in
+                    Capsule().fill(Color(hex: role.color))
+                        .frame(width: usable * CGFloat(role.hours / sum), height: 6)
                 }
             }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(spoken)
-            .accessibilityIdentifier("hour-summary")
+        }
+        .frame(width: 116, height: 6)
+        .accessibilityHidden(true)
+    }
 
+    /// Disclosed controls preserve existing role selection and planning flows.
+    private func summaryDetails(_ status: WeeklyHourStatus) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if taskCount > 0 {
+                Text("\(doneCount) of \(taskCount) tasks done")
+                    .font(.system(.footnote, weight: .medium))
+                    .foregroundStyle(Spread.secondary)
+            }
             if totalHours > 0 {
-                // One segment per responsibility, sized by its hours. Choosing one selects that responsibility in
-                // every layout (the selection is shared) and never switches the layout or writes planner data.
-                // Fitts's Law: the hour bar must not shrink each role's target
-                // below 44pt in a dense plan. A horizontal scroll keeps the
-                // proportional bar AND usable targets on a narrow/resized scene.
-                // Its width comes from this container, never the device model.
                 GeometryReader { geometry in
                     let visibleRoles = snapshot.roles.filter { $0.hours > 0 }
-                    let minWidth = CGFloat(visibleRoles.count) * 44
+                    let minimumWidth = CGFloat(visibleRoles.count) * 44
                         + CGFloat(max(0, visibleRoles.count - 1)) * 4
                     ScrollView(.horizontal) {
                         HourStripRow(spacing: 4) {
@@ -129,23 +234,25 @@ struct SpreadSurface: View {
                                 .accessibilityIdentifier("hour-segment-\(role.id)")
                             }
                         }
-                        .frame(width: max(geometry.size.width, minWidth), height: 44)
+                        .frame(width: max(geometry.size.width, minimumWidth), height: 44)
                     }
                     .scrollIndicators(.automatic)
                 }
                 .frame(height: 44)
                 .animation(reduceMotion ? nil : SpreadMotion.cascade, value: selectedRole)
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("\(SpreadHours.spoken(totalHours)) across responsibilities. Scroll to access every responsibility.")
             }
-
             if taskCount == 0 {
-                Text("List the work that fits.").font(Spread.footnote).foregroundStyle(Spread.secondary)
+                Text("List the work that fits.")
+                    .font(Spread.footnote)
+                    .foregroundStyle(Spread.secondary)
             }
-            if totalHours > 45 {
-                Text("If the hours don’t fit, something is lying.").font(Spread.footnote).foregroundStyle(Spread.caution)
+            if totalHours > 45 || status.overbooked > 0 {
+                Text(status.overbooked > 0
+                     ? "Your week has more scheduled hours than its spread budgets."
+                     : "If the hours don’t fit, something is lying.")
+                    .font(Spread.footnote)
+                    .foregroundStyle(Spread.caution)
             }
-
             FlowRow(spacing: 8) {
                 Button(action: onRollover) {
                     HStack(spacing: 6) {
@@ -158,9 +265,11 @@ struct SpreadSurface: View {
                 }
                 .buttonStyle(.spreadPress)
                 .accessibilityIdentifier("rollover")
+
                 if snapshot.tasks.contains(where: { !$0.done }) {
                     Button(action: onReview) {
-                        Text("Review open tasks").font(.system(.subheadline, weight: .semibold))
+                        Text("Review open tasks")
+                            .font(.system(.subheadline, weight: .semibold))
                             .foregroundStyle(Spread.accent)
                             .padding(.horizontal, 14).frame(minHeight: 44)
                             .spreadChip(selected: false)
@@ -170,9 +279,7 @@ struct SpreadSurface: View {
                 }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .spreadCard()
+        .accessibilityIdentifier("weekly-hours-details")
     }
 
     // MARK: The single responsibility presentation
