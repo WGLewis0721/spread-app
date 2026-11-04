@@ -530,15 +530,10 @@ struct RoleRow: View {
         .padding(.bottom, 8)
     }
 
-    /// The role's Chalkboard drawing. Only the focused card animates it; where several cards are open at once
-    /// (Tabs "All") the drawings stay still, so no more than one set of cutouts is ever running.
-    @ViewBuilder private var artwork: some View {
-        if focused {
-            ChalkMotionArt(category: role.category, size: 132)
-        } else {
-            ChalkIllustration(category: role.category, maxWidth: 132, maxHeight: 92)
-                .frame(width: 132, height: 92)
-        }
+    /// Every visible responsibility illustration moves, including unfocused cards and Tabs "All".
+    /// The animation clock pauses while offscreen or when Reduce Motion is enabled.
+    private var artwork: some View {
+        ChalkMotionArt(category: role.category, size: 132)
     }
 
     /// The tasks in a recessed list, so the open card reads as: identity, placement, work.
