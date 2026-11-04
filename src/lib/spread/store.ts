@@ -414,6 +414,7 @@ export function flushSpread() {
 }
 
 function commit(set: (partial: { data: SpreadData }) => void, next: SpreadData) {
+  next = purgeExpiredDeletedTasks(next);
   pending = null;
   if (persistTimer !== null) {
     window.clearTimeout(persistTimer);
@@ -424,6 +425,7 @@ function commit(set: (partial: { data: SpreadData }) => void, next: SpreadData) 
 }
 
 function stage(set: (partial: { data: SpreadData }) => void, next: SpreadData) {
+  next = purgeExpiredDeletedTasks(next);
   pending = next;
   set({ data: next });
   if (persistTimer !== null) window.clearTimeout(persistTimer);
