@@ -25,7 +25,16 @@ export function chooseSimulator(runtimes, types, width) {
   throw new Error(`No installed iOS 17+ runtime has a compatible device for ${width} pt.`);
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const list = (kind) => JSON.parse(execFileSync('xcrun', ['simctl', 'list', kind, '-j'], { encoding: 'utf8', timeout: 60000 }));
+  const list = (kind) => {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        return JSON.parse(execFileSync('xcrun', ['simctl', 'list', kind, '-j'], { encoding: 'utf8', timeout: 60000 }));
+      } catch (error) {
+        if (error.code !== 'ETIMEDOUT' || attempt === 3) throw error;
+        console.error(`Simulator service timed out listing ${kind}; retry ${attempt}/3`);
+      }
+    }
+  };
   const selected = chooseSimulator(list('runtimes').runtimes, list('devicetypes').devicetypes, process.argv[2] === 'duo' ? 'duo' : Number(process.argv[2]));
   console.log(`Selected ${selected.device.name} (${selected.device.identifier}), iOS ${selected.runtime.version}`);
   const udid = execFileSync('xcrun', ['simctl', 'create', `Spread ${process.argv[2]} pt`, selected.device.identifier, selected.runtime.identifier], { encoding: 'utf8', timeout: 120000 }).trim();

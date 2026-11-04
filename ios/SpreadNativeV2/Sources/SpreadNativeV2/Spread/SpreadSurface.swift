@@ -564,6 +564,7 @@ struct DayMarks: View {
                     .foregroundStyle(on ? Color(hex: role.color) : Spread.tertiary)
             }
         }
+        .frame(minHeight: 44)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken.isEmpty ? "Not placed on any day" : "\(role.name) on \(spoken.map { PlannerDates.label(PlannerDates.date($0), pattern: "EEEE") }.joined(separator: ", "))")
     }

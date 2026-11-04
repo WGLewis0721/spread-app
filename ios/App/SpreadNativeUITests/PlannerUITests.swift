@@ -370,7 +370,7 @@ final class JourneyUITests: NativeUITestCase {
         // Keep every unrelated task and Charlie in this week; carry only Bravo.
         for toggle in elements(prefix: "carry-") {
             let desired = toggle.identifier == "carry-" + (Dataset.taskIds[Dataset.taskB] ?? "")
-            let selected = (toggle.value as? String) == "1"
+            let selected = toggle.isSelected
             if selected != desired { scrollIntoView(toggle); toggle.tap() }
         }
         tapID("carry-selected"); closeNativeSheets(); goWeek(); tapID("crown-next")
@@ -523,7 +523,7 @@ final class PlannerUITests: NativeUITestCase {
     /// system setting did to the app; if it is not in effect the test is skipped, never passed.
     func testReduceMotionKeepsFunction() throws {
         let state = (app.otherElements["native-content"].firstMatch.value as? String) ?? ""
-        guard state == "reduce-motion" else { throw XCTSkip("Reduce Motion was not in effect in the app (state '\(state)'): not verified") }
+        guard state.hasPrefix("reduce-motion;") else { throw XCTSkip("Reduce Motion was not in effect in the app (state '\(state)'): not verified") }
         rapidSwipes(mode: "Stack", container: "stack-cards", steps: 20)
         rapidSwipes(mode: "Fan", container: "fan-cards", steps: 20)
         goWeek()
@@ -542,15 +542,14 @@ final class PlannerUITests: NativeUITestCase {
         let doomed = "Fallback \(tag)"
         tapID("open-more"); tapID("more-new-spread")
         typeInto("role-name-field", doomed); tapID("save-spreads")
+        closeNativeSheets()
         let names = roleNames()
         XCTAssertEqual(names.last, doomed)
         let first = names[0]
         tapButton(doomed)
         tapID("manage-selected")
-        tapButton("Delete responsibility")
-        let confirm = app.buttons["confirm-delete-role"]
-        if confirm.waitForExistence(timeout: 10) { confirm.tap() }
-        else { app.buttons.matching(NSPredicate(format: "label == %@", "Delete responsibility")).allElementsBoundByIndex.last?.tap() }
+        tapID("delete-role-button")
+        tapID("confirm-delete-role")
         XCTAssertTrue(eventually { !self.app.buttons[doomed].exists }, "The responsibility was not deleted")
         for mode in ["Stack", "Fan", "Dial", "Tabs", "Day"] {
             chooseMode(mode)
@@ -701,16 +700,16 @@ final class VisualTourUITests: NativeUITestCase {
     func testTourDark() throws {
         XCUIDevice.shared.appearance = .dark
         defer { XCUIDevice.shared.appearance = .light }
-        try tour("dark", arguments: ["-spread.native.appearance", "system"])
+        try tour("dark", arguments: ["-spread.native.appearance", "dark"])
     }
     func testTourLight() throws {
         XCUIDevice.shared.appearance = .light
-        try tour("light", arguments: ["-spread.native.appearance", "system"])
+        try tour("light", arguments: ["-spread.native.appearance", "light"])
     }
     func testTourDarkLargeText() throws {
         XCUIDevice.shared.appearance = .dark
         defer { XCUIDevice.shared.appearance = .light }
-        try tour("dark-large-text", arguments: ["-spread.native.appearance", "system", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"], short: true)
+        try tour("dark-large-text", arguments: ["-spread.native.appearance", "dark", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"], short: true)
     }
 
     private var notes: [String] = []
@@ -731,6 +730,8 @@ final class VisualTourUITests: NativeUITestCase {
         notes = []
         launch(arguments)
         settle(1.5)
+        let expectedAppearance = style.hasPrefix("dark") ? "dark" : "light"
+        XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(";" + expectedAppearance) == true }, "The requested appearance did not render")
         capture("tour-\(style)-01-spread-stack")
 
         if !short {
@@ -906,13 +907,31 @@ final class SpreadFlowUITests: NativeUITestCase {
 /// Runs only on the real Duo destination selected by the candidate workflow. Window geometry and the
 /// real system appearance drive layout; no fixed screen mock or device-name branch enters the app.
 final class DuoUITests: NativeUITestCase {
+    func testAppearanceChoiceAndSystemChanges() throws {
+        defer { XCUIDevice.shared.appearance = .light }
+        launch()
+        for style in ["dark", "light", "system"] {
+            tapID("open-more")
+            tapID("appearance-" + style)
+            closeNativeSheets()
+            if style != "system" {
+                XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(";" + style) == true }, "Appearance choice did not reach the planner")
+            }
+        }
+        for dark in [true, false] {
+            XCUIDevice.shared.appearance = dark ? .dark : .light
+            XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(dark ? ";dark" : ";light") == true }, "System appearance change did not reach the planner")
+        }
+    }
+
     func testResizablePlannerInBothAppearancesAndOrientations() throws {
         defer { XCUIDevice.shared.orientation = .portrait; XCUIDevice.shared.appearance = .light }
         for dark in [false, true] {
             XCUIDevice.shared.appearance = dark ? .dark : .light
             for (name, orientation) in [("portrait", UIDeviceOrientation.portrait), ("landscape", .landscapeLeft)] {
                 XCUIDevice.shared.orientation = orientation
-                launch(["-spread.native.appearance", "system"])
+                launch(["-spread.native.appearance", dark ? "dark" : "light"])
+                XCTAssertTrue(eventually { (self.el("native-content").value as? String)?.hasSuffix(dark ? ";dark" : ";light") == true })
                 goSpread()
                 let bounds = app.frame
                 XCTAssertGreaterThan(bounds.width, 0)

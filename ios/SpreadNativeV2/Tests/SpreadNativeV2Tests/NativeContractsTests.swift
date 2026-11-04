@@ -2,6 +2,24 @@ import XCTest
 @testable import SpreadNativeV2
 
 final class NativeContractsTests: XCTestCase {
+    func testStudioMotionNegativeDelayAndAlternateCycles() {
+        XCTAssertEqual(ChalkTiming.phase(0, duration: 4, delay: -1), 0.25)
+        XCTAssertEqual(ChalkTiming.phase(4, duration: 4, alternate: true), 1)
+        XCTAssertEqual(ChalkTiming.phase(6, duration: 4, alternate: true), 0.5)
+        XCTAssertEqual(ChalkTiming.phase(8, duration: 4, alternate: true), 0)
+        XCTAssertEqual(ChalkTiming.phase(2, duration: 4, delay: 3), 0)
+    }
+
+    func testStudioEasingAndHeartbeatRestInterval() {
+        XCTAssertEqual(ChalkTiming.ease(0.5), 0.5, accuracy: 0.000001)
+        XCTAssertEqual(ChalkTiming.ease(0.25), 0.1291619, accuracy: 0.000001)
+        XCTAssertGreaterThan(ChalkTiming.ease(0.25, out: true), 0.25)
+        let beat: [(Double, Double)] = [(0, 1), (0.12, 1.12), (0.22, 1.06), (0.32, 1), (1, 1)]
+        XCTAssertEqual(ChalkTiming.sample(0.12, beat, out: true), 1.12, accuracy: 0.000001)
+        XCTAssertEqual(ChalkTiming.sample(0.7, beat, out: true), 1)
+        XCTAssertEqual(ChalkTiming.sample(1, beat, out: true), 1)
+    }
+
     func testCrownSubDetentNeverChangesWeek() {
         var crown = CrownTravel()
         XCTAssertEqual(crown.update(translation: 63.9), 0)

@@ -149,6 +149,7 @@ struct RoleSheet: View {
     @State private var name = ""
     @State private var placeDay = ""
     @State private var placeHours = 1.0
+    @State private var confirmRemoval = false
 
     private var role: Responsibility? { planner.snapshot?.roles.first { $0.id == roleId } }
 
@@ -233,11 +234,7 @@ struct RoleSheet: View {
                     }
                         .listRowBackground(Spread.elevated)
                     Section {
-                        Button("Remove responsibility", role: .destructive) {
-                            Task {
-                                if await planner.send(["type": "removeRole", "roleId": role.id]) { dismiss() }
-                            }
-                        }
+                        Button("Remove responsibility", role: .destructive) { confirmRemoval = true }
                         .accessibilityIdentifier("delete-role-button")
                     } footer: {
                         Text("The hours and tasks for this spread leave every week.")
@@ -263,6 +260,17 @@ struct RoleSheet: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .confirmationDialog("Remove \(role?.name ?? "this responsibility")?", isPresented: $confirmRemoval, titleVisibility: .visible) {
+            Button("Remove responsibility", role: .destructive) {
+                Task {
+                    if await planner.send(["type": "removeRole", "roleId": roleId]) { dismiss() }
+                }
+            }
+            .accessibilityIdentifier("confirm-delete-role")
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The hours and tasks for this spread leave every week.")
+        }
     }
 
     private func rename(_ role: Responsibility) {
@@ -510,11 +518,19 @@ struct MoreSheet: View {
                 }
                     .listRowBackground(Spread.elevated)
                 Section("Appearance") {
-                    Picker("Appearance", selection: $appearance) {
-                        ForEach(SpreadAppearance.allCases) { item in Text(item.title).tag(item) }
+                    FlowRow(spacing: 6) {
+                        ForEach(SpreadAppearance.allCases) { item in
+                            Button { appearance = item } label: {
+                                Text(item.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                                    .padding(.horizontal, 16).frame(minWidth: 44, minHeight: 44)
+                                    .spreadChip(selected: appearance == item)
+                            }
+                            .buttonStyle(.spreadPress)
+                            .accessibilityAddTraits(appearance == item ? .isSelected : [])
+                            .accessibilityIdentifier("appearance-" + item.rawValue)
+                        }
                     }
-                    .pickerStyle(.segmented)
-                    .frame(minHeight: 44)
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("appearance-picker")
                 }
                     .listRowBackground(Spread.elevated)

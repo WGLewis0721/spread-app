@@ -18,11 +18,17 @@ Owner objective (November 3, America/Chicago): a paid-app candidate tonight, wit
 - Keep appearance consistent through the native container and status bar; test actual device appearance instead of an ignored launch flag.
 - Preserve rollover confirmation from More, and wrap the full color palette at narrow widths.
 - Adapt the existing F1–F10 journeys to the current controls. Repair 390pt simulator selection and before-tour source compatibility.
+- Restore Studio cutout-local pivots, layer-relative translation, CSS easing/keyframes and seven decorative FX, sharing one paused/reduced-motion-aware clock.
+- Confirm destructive responsibility removal; keep appearance controls and day-mark hit regions at least 44pt.
 
 ## Verification
 
 Planner tests: 437 pass locally. Script suite: 210 pass / 4 existing skips. TypeScript typecheck passed.
-Native compile, actual UI runs, screenshots and signed artifact are pending CI/build-service evidence at this checkpoint.
+Initial candidate `de56e46`: native iOS compile, portable Swift contracts and the main CI checks passed.
+The 1024pt iPad tour and orientation test passed. Its hit-region audit found ten reports, all the same 14.5pt day-mark region; this revision enlarges it within the existing illustration band.
+The 820pt dark-large-text tour timed out in the accessibility query; its other tours completed. Initial captures labeled dark actually rendered light. This revision checks the rendered appearance and tests the real preference controls and live system changes.
+The 390pt layout job failed before launch because the simulator service timed out; discovery now retries that transient error.
+Native checks for this revision, actual Duo results and a signed artifact remain pending.
 No claim of physical-device, fold-pose, reference-image or App Store acceptance for this new binary.
 
 ## Build route
@@ -30,7 +36,8 @@ No claim of physical-device, fold-pose, reference-image or App Store acceptance 
 `spread-release-candidate` in `codemagic.yaml` is manual, selects only this exact branch tip, uses Xcode 27.1,
 runs actual Duo modes/appearance/rotation tests, then builds an App Store-eligible signed IPA and uploads to App Store Connect.
 It never submits for App Review or releases the app. The existing PR119 internal-only workflow is untouched.
-Codemagic is signed out in this session, so this route has not been started.
+Codemagic is connected. Existing main build 16 completed signing/upload; that is not this candidate.
+The candidate route has not yet been started.
 
 ## Scope retained
 

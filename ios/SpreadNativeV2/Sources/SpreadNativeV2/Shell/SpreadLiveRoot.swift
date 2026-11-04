@@ -55,7 +55,7 @@ public struct SpreadLiveRoot: View {
         .tint(Spread.accent)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("native-content")
-        .accessibilityValue(reduceMotion ? "reduce-motion" : "motion")
+        .modifier(PlannerAccessibilityState())
     }
 
     /// Everything that reacts to the planner or the system: refresh, the Undo window, profile and view memory.
@@ -625,6 +625,15 @@ private struct RoleDeleteConfirm: View {
         .padding(24)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
+    }
+}
+/// Reports the environment inside the appearance override, so acceptance tests verify what rendered.
+private struct PlannerAccessibilityState: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        content.accessibilityValue("\(reduceMotion ? "reduce-motion" : "motion");\(scheme == .dark ? "dark" : "light")")
     }
 }
 #endif

@@ -24,7 +24,7 @@ struct WeekCrownView: View {
     @State private var hintVisible = !UserDefaults.standard.bool(forKey: SpreadViewMemory.crownUsedKey)
 
     /// 3.85rem, growing with Dynamic Type so the recessed readout never clips its text.
-    @ScaledMetric(relativeTo: .callout) private var height: CGFloat = 88
+    @ScaledMetric(relativeTo: .callout) private var height: CGFloat = 62
     private let radius: CGFloat = 18.4   // 1.15rem
     private let knurlPeriod: CGFloat = 22
     @Environment(\.displayScale) private var displayScale
@@ -125,42 +125,39 @@ struct WeekCrownView: View {
     }
 
     private var readout: some View {
-        VStack(spacing: 1) {
-            Text(title)
-                .font(.system(.callout, weight: .semibold))
-                .foregroundStyle(Spread.ink)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .truncationMode(.tail)
-            if let detail {
-                if let onDetail {
-                    Button(action: onDetail) {
-                        Text(detail).font(.system(.caption, weight: .medium)).foregroundStyle(Spread.accent)
-                            .tapTarget(minWidth: 44, minHeight: 44)
-                    }
+        HStack(spacing: 0) {
+            Color.clear.frame(width: 44).allowsHitTesting(false).accessibilityHidden(true)
+            if let onDetail {
+                Button(action: onDetail) { readoutLabels.contentShape(Rectangle()) }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("week-crown-detail")
-                } else {
-                    Text(detail)
-                        .font(.system(.caption))
-                        .foregroundStyle(Spread.secondary)
-                        .lineLimit(1)
-                        .monospacedDigit()
-                }
+            } else {
+                readoutLabels.accessibilityHidden(true)
             }
+            Color.clear.frame(width: 44).allowsHitTesting(false).accessibilityHidden(true)
         }
-        .padding(.horizontal, 44)
         .padding(.vertical, 2)
-        .frame(maxWidth: .infinity)
-        // The recess fills the space between the end caps and leaves the ribbed shoulders visible, as in the specimen.
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Spread.crownRecess))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Spread.crownRecessStroke, lineWidth: 1))
         .padding(.horizontal, 50)
         .padding(.vertical, 7)
-        .allowsHitTesting(onDetail != nil)
-        // The Crown's own label already says the week; hide the readout only while it is purely a label. When it offers
-        // "Back to this week", that button must stay reachable by VoiceOver, Switch Control and UI tests.
-        .accessibilityHidden(onDetail == nil)
+    }
+
+    /// The whole central readout is a 44pt action when returning to this week. Giving that action both
+    /// lines avoids an undersized detail target without growing the Crown or shifting the page header.
+    private var readoutLabels: some View {
+        VStack(spacing: 1) {
+            Text(title)
+                .font(.system(.callout, weight: .semibold))
+                .foregroundStyle(Spread.ink)
+                .lineLimit(2).minimumScaleFactor(0.8)
+            if let detail {
+                Text(detail).font(.system(.caption, weight: .medium))
+                    .foregroundStyle(onDetail == nil ? Spread.secondary : Spread.accent)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 44)
     }
 
     /// Metal caps: a narrow shaded edge drawn over a 44 pt hit region that moves one week.

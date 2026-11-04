@@ -357,23 +357,28 @@ struct TabsLayout: View {
         let selected = tab == id
         let tint: Color? = color.map { Color(hex: $0) }
         return Button {
-            tab = id
+            withAnimation(reduceMotion ? nil : SpreadMotion.curve) { tab = id }
         } label: {
             HStack(spacing: 8) {
                 if let color { RoleBadge(category: category == "custom" ? nil : category, color: color, size: 26) }
                 Text(title).font(.system(.subheadline, weight: .semibold)).lineLimit(1)
             }
-            .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+            .foregroundStyle(selected && color == nil ? Spread.onAccent : Spread.ink)
             .padding(.leading, color == nil ? 16 : 9).padding(.trailing, 16)
             .frame(minHeight: 44)
             .background {
                 if selected {
-                    Capsule().fill(tint.map { AnyShapeStyle($0) } ?? AnyShapeStyle(Spread.accentGradient))
+                    if let tint {
+                        Capsule().fill(Spread.elevated)
+                        Capsule().fill(tint.opacity(0.18))
+                    } else {
+                        Capsule().fill(Spread.accentGradient)
+                    }
                 } else {
                     Capsule().fill(Spread.inset)
                 }
             }
-            .overlay(Capsule().strokeBorder(Spread.line, lineWidth: selected ? 0 : 0.5))
+            .overlay(Capsule().strokeBorder(selected ? (tint ?? Spread.accent) : Spread.line, lineWidth: selected ? 1.5 : 0.5))
         }
         .buttonStyle(.spreadPress)
         // The chosen tab lifts a little and settles with a spring; no tab is ever drawn below its 44 pt target.

@@ -42,6 +42,7 @@ struct TaskSheet: View {
     let taskId: String
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var title = ""
     @State private var content = NativeTaskContent()
     @State private var loaded = false
@@ -138,7 +139,7 @@ struct TaskSheet: View {
             HStack(spacing: 12) {
                 RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(role.name).font(.system(.headline, weight: .semibold)).lineLimit(1)
+                    Text(role.name).font(.system(.headline, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
                     Text(placementText(task)).font(.system(.footnote)).foregroundStyle(Spread.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
@@ -147,7 +148,7 @@ struct TaskSheet: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
-                        Text(task.done ? "Done" : "Mark done")
+                        if !typeSize.isAccessibilitySize { Text(task.done ? "Done" : "Mark done") }
                     }
                     .font(.system(.subheadline, weight: .semibold))
                     .foregroundStyle(task.done ? Spread.onAccent : Spread.accent)
