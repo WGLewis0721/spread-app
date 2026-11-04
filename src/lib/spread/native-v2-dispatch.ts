@@ -119,6 +119,7 @@ const action = z.discriminatedUnion("type", [
     hours: hours.refine((n) => n > 0),
   }),
   z.strictObject({ type: z.literal("addTask"), roleId: id, text }),
+  z.strictObject({ type: z.literal("addTaskForDay"), roleId: id, text, day }),
   z.strictObject({ type: z.literal("editTask"), roleId: id, taskId: id, text }),
   z.strictObject({ type: z.literal("toggleTask"), roleId: id, taskId: id }),
   z.strictObject({
@@ -413,6 +414,9 @@ export function createNativeV2Dispatcher(sessionId: string) {
           case "addTask":
             state.addTask(a.roleId, a.text);
             break;
+          case "addTaskForDay":
+            if (!state.addTaskToDay(a.roleId, a.day, a.text)) throw new Error("invalid-day-or-role");
+            break;
           case "editTask":
             state.setTaskText(a.roleId, a.taskId, a.text);
             flushSpread();
@@ -456,6 +460,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
           "permanentlyDeleteTasks",
           "bulkMoveOverdue",
           "reorderDayTask",
+          "addTaskForDay",
         ].includes(a.type)
       )
         mutate();
@@ -505,7 +510,7 @@ function validateTarget(a: NativeRequest["action"], data: SpreadData): string | 
     !week?.allocations.some((p) => p.id === a.allocationId)
   )
     return "no-allocation";
-  if (a.type === "allocate" || a.type === "moveSpreadToDay" || a.type === "moveAllocation") {
+  if (a.type === "allocate" || a.type === "moveSpreadToDay" || a.type === "moveAllocation" || a.type === "addTaskForDay") {
     const date = new Date(`${a.day}T12:00:00Z`);
     if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== a.day)
       return "invalid-day";
