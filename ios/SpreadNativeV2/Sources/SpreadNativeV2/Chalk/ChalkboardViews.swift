@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import ImageIO
+import Combine
 
 /// The Chalkboard artwork: the eleven original base illustrations, unchanged, and the Studio motion layers.
 /// Images decode through ImageIO so the original WebP strokes are never regenerated.
@@ -130,7 +131,7 @@ enum ChalkMotionTable {
 }
 
 /// The base illustration with its motion layers on top. Each layer runs its own period from the Studio spec.
-/// Under Reduce Motion (or when the timeline is not visible) the layers rest at their starting pose.
+/// Animates whenever visible in the foreground. Reduce Motion keeps the original still illustration.
 struct ChalkMotionArt: View {
     let category: String
     /// The width of the art. Its height keeps the original 393:273 proportion, because every cutout box in the
@@ -138,18 +139,20 @@ struct ChalkMotionArt: View {
     var size: CGFloat = 96
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.scenePhase) private var scenePhase
     // LazyVStack may retain previously scrolled cards. The illustration remains
     // in the hierarchy, but its display-link should not keep rendering at 30 fps
     // when its card disappears from the viewport.
     @State private var isVisible = false
+    // Spread is hosted by a UIKit/Capacitor controller, not a SwiftUI App scene.
+    // Environment scenePhase may stay inactive in that host and silently freeze every cutout.
+    @State private var appIsActive = UIApplication.shared.applicationState == .active
     @State private var began = Date()
 
     static let aspect: CGFloat = 273.0 / 393.0
 
     var body: some View {
         let height = size * Self.aspect
-        let animated = isVisible && !reduceMotion && scenePhase == .active
+        let animated = isVisible && !reduceMotion && appIsActive
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !animated)) { timeline in
             let elapsed = animated ? timeline.date.timeIntervalSince(began) : 0
             ZStack {
@@ -163,8 +166,19 @@ struct ChalkMotionArt: View {
         }
         .accessibilityHidden(true)
         .allowsHitTesting(false)
-        .onAppear { isVisible = true }
+        .onAppear {
+            isVisible = true
+            appIsActive = UIApplication.shared.applicationState == .active
+            began = Date()
+        }
         .onDisappear { isVisible = false }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            appIsActive = true
+            began = Date()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            appIsActive = false
+        }
     }
 }
 
@@ -222,7 +236,7 @@ private struct ChalkImageFrame: View {
     }
 }
 
-private enum ChalkMotionImage {
+enum ChalkMotionImage {
     /// Cached: the cutouts are redrawn every frame, and decoding a WebP per frame would stall the animation.
     static let cache = NSCache<NSString, UIImage>()
 
