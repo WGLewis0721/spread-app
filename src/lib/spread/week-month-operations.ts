@@ -144,6 +144,17 @@ export function bulkRescheduleOverdue(
   const targetWeekKey = weekKey(new Date(targetDayISO + "T12:00:00"));
   const weeks: Record<string, WeekData> = { ...data.weeks };
   for (const row of valid) {
+    if (row.weekKey === targetWeekKey) {
+      const sameWeek = weeks[targetWeekKey];
+      weeks[targetWeekKey] = {
+        ...sameWeek,
+        boxes: sameWeek.boxes.map((box) => box.hatId === row.hatId
+          ? { ...box, tasks: box.tasks.map((task) => task.id === row.taskId
+              ? { ...task, allocationId: row.targetAllocationId } : task) }
+          : box),
+      };
+      continue; // Keep canonical Spread task ordering on within-week moves.
+    }
     const source = weeks[row.weekKey];
     const task = source?.boxes.find((box) => box.hatId === row.hatId)?.tasks.find((t) => t.id === row.taskId);
     if (!source || !task) continue; // impossible after preflight; guard corrupt data.
