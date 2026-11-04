@@ -1,3 +1,5 @@
+> **Historical implementation-only instructions.** For the later owner-approved PR #119 native visual correction and real QA, follow [CLAUDE_NATIVE_UI_HANDOFF.md](CLAUDE_NATIVE_UI_HANDOFF.md) and the [native brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md). Previous code-only/no-testing instructions below are superseded for this task.
+
 # CLAUDE — Spread SwiftUI working-build parity: implementation-only handoff
 
 > **Implementation-only assignment.** Start from [PR #118](https://github.com/WGLewis0721/spread-app/pull/118) and finish **every implementation checkbox below in order**, outermost identity → innermost behavior. No smoke testing, test execution or validation is part of this assignment. The completed code will be **UNVERIFIED / NOT RELEASE-READY** until a separate authorized QA pass.
