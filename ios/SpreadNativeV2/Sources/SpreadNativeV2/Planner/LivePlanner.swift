@@ -150,13 +150,15 @@ struct LiveReply: Decodable {
     /// Role dots for every cell of one calendar month, any week (`month` is 0-11 as in the planner's own month grid).
     /// A read: it changes nothing and is not queued behind writes. Returns nil when the profile has moved on or the
     /// planner cannot answer, so the caller keeps whatever it can already draw.
-    func monthMarks(year: Int, month: Int) async -> [String: NativeDayMark]? {
+    func monthMarks(year: Int, month: Int, selectedRoleId: String? = nil) async -> [String: NativeDayMark]? {
         guard let current = state else { return nil }
         let requestId = UUID().uuidString
+        var action: [String: Any] = ["type": "monthMarks", "year": year, "month": month]
+        if let selectedRoleId { action["selectedRoleId"] = selectedRoleId }
         let request: [String: Any] = ["protocolVersion": 1, "sessionId": current.sessionId,
             "requestId": requestId, "expectedProfileId": current.envelope.profileId,
             "expectedWeek": current.envelope.snapshot.weekKey, "expectedRevision": current.revision,
-            "action": ["type": "monthMarks", "year": year, "month": month]]
+            "action": action]
         guard let bytes = try? JSONSerialization.data(withJSONObject: request),
               let json = String(data: bytes, encoding: .utf8),
               let text = try? await exchange(json),
