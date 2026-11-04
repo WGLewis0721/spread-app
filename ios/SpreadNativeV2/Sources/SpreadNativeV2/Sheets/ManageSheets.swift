@@ -373,7 +373,7 @@ struct ProfilesSheet: View {
                                     if active { Image(systemName: "checkmark").foregroundStyle(Spread.accent) }
                                     Spacer(minLength: 0)
                                 }
-                                .frame(width: 24, height: 44)
+                                .frame(width: 44, height: 44)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
