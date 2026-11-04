@@ -604,12 +604,23 @@ final class PlannerUITests: NativeUITestCase {
         capture("fixed-week-after-vertical-scroll")
         let visibleCard = try XCTUnwrap(cards.first { $0.frame.intersection(viewport.frame).height > 30 })
         let visible = visibleCard.frame.intersection(viewport.frame)
+        // The Week content is capped at 1120 pt in wide/rotated windows, but its
+        // enclosing ScrollView extends to the scene edges. Swipe INSIDE a visible
+        // card, not 65 pt from the scroll viewport's right edge (which can lie
+        // outside Week and correctly be rejected by the region-gated recognizer).
         let origin = app.coordinate(withNormalizedOffset: .zero)
-        let from = origin.withOffset(CGVector(dx: viewport.frame.maxX - app.frame.minX - 65, dy: visible.midY - app.frame.minY))
+        let from = origin.withOffset(CGVector(dx: visible.minX + visible.width * 0.72 - app.frame.minX,
+                                              dy: visible.midY - app.frame.minY))
         from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: -120, dy: 0)))
         XCTAssertTrue(eventually { crown.label != initialWeek },
-                      "A horizontal Week swipe no longer changes weeks; inspect the swipe anchor bounds and scroll recognizer")
+                      "A horizontal swipe inside a visible Week card did not advance the Crown; card=\(visible), viewport=\(viewport.frame)")
         capture("fixed-week-after-horizontal-swipe")
+        let currentWeek = crown.label
+        let reverse = origin.withOffset(CGVector(dx: visible.minX + visible.width * 0.32 - app.frame.minX,
+                                                 dy: visible.midY - app.frame.minY))
+        reverse.press(forDuration: 0.05, thenDragTo: reverse.withOffset(CGVector(dx: 120, dy: 0)))
+        XCTAssertTrue(eventually { crown.label == initialWeek },
+                      "A reverse swipe inside Week did not return from \(currentWeek) to \(initialWeek)")
     }
 
     // MARK: Crown (unchanged semantics: 100 real drags including 30 reversals)
