@@ -20,9 +20,14 @@ struct WeekFocusSurface: View {
     @State private var trayOpen = false
     @State private var overdueOpen = false
     @State private var overdueRows: [NativeOverdueTask] = []
+    @State private var monthQuickAddDay: MonthAddDate?
     @State private var sidebarExpanded = false
     @State private var sidebarHidden = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private struct MonthAddDate: Identifiable {
+        let iso: String
+        var id: String { iso }
+    }
 
     private var activeRole: String? { selectedRole ?? snapshot.roles.first?.id }
     private var day: String {
@@ -83,7 +88,10 @@ struct WeekFocusSurface: View {
                         if monthPlane {
                             MonthSurface(planner: planner, snapshot: snapshot, anchor: monthAnchor,
                                          onPick: onPickDay, selectedRole: activeRole,
-                                         onLongPressAdd: { onPickDay($0) },
+                                         onLongPressAdd: { iso in
+                                            monthQuickAddDay = MonthAddDate(iso: iso)
+                                            SpreadHaptics.selection()
+                                         },
                                          onSwipeMonth: { delta in
                                             monthAnchor = PlannerDates.calendar.date(byAdding: .month, value: delta, to: monthAnchor) ?? monthAnchor
                                             SpreadHaptics.selection()
@@ -143,6 +151,9 @@ struct WeekFocusSurface: View {
             selectedDay = newWeek // Monday, by owner decision
         }
         .onChange(of: expandedByDate) { _, _ in rememberExpansions() }
+        .sheet(item: $monthQuickAddDay) { target in
+            MonthQuickAddSheet(planner: planner, roleId: activeRole ?? "", day: target.iso)
+        }
         .task(id: refreshKey) {
             overdueRows = await planner.allOverdueTasks(today: PlannerDates.localISO()) ?? []
         }
