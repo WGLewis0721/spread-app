@@ -55,7 +55,7 @@ The honest ceiling for the web layer is "feels native to the platform", not "is 
 
 ## 4. How this fits Spread's existing rules
 
-- **Unchanged:** no new colors, fonts or decorative styles in the unflagged planner [Repo: [planner/SPREAD_DESIGN_SYSTEM.md](../planner/SPREAD_DESIGN_SYSTEM.md)]. Apple's guidance is a way to use existing tokens well: hierarchy from type and spacing, one accent, hairlines.
+- **React unflagged planner:** no new colors, fonts or decorative styles [Repo: [planner/SPREAD_DESIGN_SYSTEM.md](../planner/SPREAD_DESIGN_SYSTEM.md)]. **Native SwiftUI visual exception (2026-11-03):** the owner approved deep navy, bounded luminous role accents and metal Crown on PR #119 per [the native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md). Hierarchy, restrained material use, role-data colors and all nonvisual rules continue to apply.
 - **Glass is already in the planner, on the dock.** The `glass` utility (blur 28px, saturate 1.7) and the `--glass*` tokens ship today [Repo: `src/styles.css`]. The "No gradient meshes, glassmorphism, floating blobs" line in `AGENTS.project.md` sits with the landing page work, so it does not forbid this. What is still undecided is blur on cards and sheets; Apple says cards are content layer, so the default is no glass there. The owner decides, see [../DECISIONS.md](../DECISIONS.md). The only other exception is the flagged Studio exception for material paint (see [../README.md](../README.md), section on Studio).
 - **Dark mode:** the iPhone guide's elevation ladder (lighter means higher), dimmed white text and softened accent are the same idea as Apple's materials in dark mode. Adopt them together, as tokens, not as ad hoc values [Repo: [iPhone guide section 6a](SPREAD_IPHONE_BUILD_GUIDE.md)].
 - **Dynamic Type** is still an open decision in the iPhone guide. If Spread adopts system text sizes, define the type scale once (rem based) and test at 200%.
@@ -84,5 +84,5 @@ Observed in a Studio experiment on 2026-10-28 that reskinned the planner to imit
 - [ ] Reduce Motion, Reduce Transparency, Increase Contrast, and Dynamic Type or text zoom at 200%.
 - [ ] VoiceOver on any slider, sheet or drag alternative.
 - [ ] Widths 390, 820, 1024 and 1366, both modes; no horizontal scroll [Repo: device guides].
-- [ ] No new color, font or decorative style outside an approved, flagged exception.
+- [ ] No new React paint outside a flagged exception; native SwiftUI may use only its [owner-approved visual direction](../planner/SPREAD_NATIVE_BRAND_BOARD.md).
 - [ ] A real iPhone pass for anything that moves or blurs.
