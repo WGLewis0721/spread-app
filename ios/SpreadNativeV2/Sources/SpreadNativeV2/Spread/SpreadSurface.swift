@@ -716,51 +716,108 @@ struct StackLayout: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
     @Binding var selectedRole: String?
-    let editing: Bool
+    @Binding var editing: Bool
     let onOpenTask: (String, String) -> Void
     let onOpenRole: (String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var expandedIds: Set<String> = []
 
     private var focusedId: String { selectedRole ?? snapshot.roles.first?.id ?? "" }
 
     var body: some View {
-        VStack(spacing: 10) {
+        // A single column, full-bleed inside the planner's normal safe-area margins.
+        // Closed cards overlap like Apple Wallet; opening one releases it into its
+        // natural, task-driven height without hiding any row under the next card.
+        LazyVStack(spacing: 0) {
             ForEach(Array(snapshot.roles.enumerated()), id: \.element.id) { index, role in
-                let isFocused = focusedId == role.id
+                let open = expandedIds.contains(role.id)
                 RoleRow(
                     planner: planner, snapshot: snapshot, role: role, editing: editing,
-                    focused: isFocused, expanded: isFocused,
-                    onSelect: { select(role.id) },
+                    focused: open, expanded: open,
+                    onSelect: { toggle(role.id) },
                     onOpenTask: onOpenTask, onOpenRole: onOpenRole
                 )
-                .spreadCard(edge: Color(hex: role.color), active: isFocused)
-                .zIndex(isFocused ? 1 : 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background {
+                    let tint = Color(hex: role.color)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Spread.cardFill)
+                        .overlay(alignment: .top) {
+                            // Tinted upper edge and soft colour wash echo the Wallet stack
+                            // without hiding the readable solid background.
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .fill(LinearGradient(
+                                    colors: [tint.opacity(0.19), tint.opacity(0.055), .clear],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ))
+                        }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(Color(hex: role.color).opacity(open || editing ? 0.85 : 0.48),
+                                      lineWidth: editing ? 1.5 : 1)
+                }
+                .modifier(RoleEditGlow(color: Color(hex: role.color), enabled: editing))
+                .shadow(color: Color(hex: role.color).opacity(open ? 0.18 : 0.09),
+                        radius: open ? 16 : 8, y: 4)
+                .padding(.bottom, open || editing ? 12 : -36)
+                .zIndex(Double(snapshot.roles.count - index))
+                // The long press and the bottom dock's Edit button enter the same
+                // global editing state. Normal taps, text entry and scrolling remain.
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
+                    withAnimation(reduceMotion ? nil : SpreadMotion.curve) { editing = true }
+                })
+                .accessibilityAction(named: Text("Edit \(role.name)")) { editing = true }
                 .modifier(SpreadEntrance(index: index))
             }
         }
-        .animation(reduceMotion ? nil : SpreadMotion.curve, value: focusedId)
+        .padding(.bottom, 36)
+        .animation(reduceMotion ? nil : SpreadMotion.curve, value: expandedIds)
+        .animation(reduceMotion ? nil : SpreadMotion.curve, value: editing)
+        .onChange(of: snapshot.roles.map(\.id)) { _, ids in
+            expandedIds.formIntersection(Set(ids))
+            if let selectedRole, !ids.contains(selectedRole) { self.selectedRole = ids.first }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Responsibilities in Stack view")
         .accessibilityValue(snapshot.roles.first(where: { $0.id == focusedId })?.name ?? "")
-        .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { value in
-            guard abs(value.translation.width) > abs(value.translation.height) * 1.5,
-                  abs(value.translation.width) >= 64,
-                  let index = snapshot.roles.firstIndex(where: { $0.id == focusedId }) else { return }
-            let next = min(max(0, index + (value.translation.width < 0 ? 1 : -1)), snapshot.roles.count - 1)
-            select(snapshot.roles[next].id)
-        })
-        .accessibilityAdjustableAction { direction in
-            guard let index = snapshot.roles.firstIndex(where: { $0.id == focusedId }) else { return }
-            let next = min(max(0, index + (direction == .increment ? 1 : -1)), snapshot.roles.count - 1)
-            select(snapshot.roles[next].id)
-        }
         .accessibilityIdentifier("stack-cards")
     }
 
-    private func select(_ id: String) {
-        guard selectedRole != id else { return }
-        selectedRole = id
+    private func toggle(_ id: String) {
+        withAnimation(reduceMotion ? nil : SpreadMotion.curve) {
+            if expandedIds.contains(id) { expandedIds.remove(id) }
+            else { expandedIds.insert(id) }
+            selectedRole = id
+        }
+    }
+}
+
+/// A quiet, colour-matched edit affordance. The glow breathes only in Edit mode,
+/// stops when Edit ends and remains static under the system Reduce Motion setting.
+private struct RoleEditGlow: ViewModifier {
+    let color: Color
+    let enabled: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var bright = false
+
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: enabled ? color.opacity(bright && !reduceMotion ? 0.40 : 0.16) : .clear,
+                    radius: enabled ? (bright && !reduceMotion ? 19 : 7) : 0)
+            .onAppear { animate() }
+            .onChange(of: enabled) { _, _ in animate() }
+    }
+
+    private func animate() {
+        bright = false
+        guard enabled && !reduceMotion else { return }
+        withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+            bright = true
+        }
     }
 }
 
