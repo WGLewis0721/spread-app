@@ -113,15 +113,15 @@ struct WeekSurface: View {
                         selectedRole = selected ? nil : role.id
                     } label: {
                         HStack(spacing: 8) {
-                            Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
+                            RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 26)
                             Text(role.name).font(.system(.subheadline, weight: .semibold))
                             Text("\(SpreadHours.text(left))h")
                                 .font(.system(.subheadline)).foregroundStyle(Spread.secondary).monospacedDigit()
                         }
-                        .padding(.horizontal, 12)
+                        .padding(.leading, 9).padding(.trailing, 14)
                         .frame(minHeight: 44)
-                        .background(Spread.elevated, in: Capsule())
-                        .overlay(Capsule().stroke(Color(hex: role.color), lineWidth: selected ? 2 : 0))
+                        .background(Capsule().fill(selected ? Color(hex: role.color).opacity(0.20) : Spread.elevated))
+                        .overlay(Capsule().strokeBorder(selected ? Color(hex: role.color) : Spread.line, lineWidth: selected ? 1.5 : 0.5))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(role.name), \(SpreadHours.spoken(left)) left")
@@ -237,7 +237,8 @@ struct DayCard: View {
                     }
                     .foregroundStyle(Spread.accent)
                     .frame(maxWidth: .infinity, minHeight: 44)
-                    .background(Spread.canvas, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                    .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.inset))
+                    .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).strokeBorder(Spread.accent.opacity(0.45), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("add-to-\(day)")
@@ -245,9 +246,9 @@ struct DayCard: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, allocations.isEmpty && selectedRole == nil ? 10 : 12)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        .spreadCard(edge: isToday ? Spread.accent : nil, active: isToday)
         .overlay(
-            RoundedRectangle(cornerRadius: Spread.radiusCard)
+            RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
                 .stroke(Spread.accent, lineWidth: dropTargeted ? 2 : 0)
         )
         .dropDestination(for: SpreadDragPayload.self) { items, _ in
@@ -297,7 +298,7 @@ struct AllocationRow: View {
             VStack(spacing: 0) {
                 HStack(spacing: 4) {
                     // Drag handle: the role dot. Long press starts a native drag; the Move control is the alternative.
-                    Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
+                    RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 30)
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                         .draggable(SpreadDragPayload.allocation(id: allocation.id, roleId: role.id, label: role.name))
@@ -361,7 +362,8 @@ struct AllocationRow: View {
                     .padding(.horizontal, 8).padding(.bottom, 8)
                 }
             }
-            .background(Spread.canvas, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+            .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.inset))
+            .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).strokeBorder(Color(hex: role.color).opacity(0.28), lineWidth: 1))
             .opacity(leaving ? 0 : 1)
             .offset(y: leaving ? -22 : 0)
             .animation(SpreadMotion.ascend, value: leaving)

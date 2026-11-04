@@ -133,25 +133,31 @@ enum ChalkMotionTable {
 /// Under Reduce Motion (or when the timeline is not visible) the layers rest at their starting pose.
 struct ChalkMotionArt: View {
     let category: String
+    /// The width of the art. Its height keeps the original 393:273 proportion, because every cutout box in the
+    /// motion table is a percentage of that landscape frame (the 104 x 160 plant is 26.46% x 58.61% of 393 x 273).
     var size: CGFloat = 96
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    static let aspect: CGFloat = 273.0 / 393.0
+
     var body: some View {
+        let height = size * Self.aspect
         ZStack {
-            ChalkIllustration(category: category, maxWidth: size, maxHeight: size)
+            ChalkIllustration(category: category, maxWidth: size, maxHeight: height)
             ForEach(ChalkMotionTable.layers(for: category)) { layer in
-                MotionCutout(layer: layer, size: size, animated: !reduceMotion)
+                MotionCutout(layer: layer, width: size, height: height, animated: !reduceMotion)
             }
         }
-        .frame(width: size, height: size)
+        .frame(width: size, height: height)
         .accessibilityHidden(true)
     }
 }
 
 private struct MotionCutout: View {
     let layer: ChalkMotionLayer
-    let size: CGFloat
+    let width: CGFloat
+    let height: CGFloat
     let animated: Bool
 
     var body: some View {
@@ -164,12 +170,12 @@ private struct MotionCutout: View {
         }
     }
 
-    /// The box is a percent rectangle inside the square art; the pivot is a percent point inside that box.
+    /// The box is a percent rectangle inside the landscape art; the pivot is a percent point inside that box.
     private func cutout(phase: Double) -> some View {
         let t = (phase + layer.delay) / layer.dur
         let wave = sin(t * 2 * .pi)
-        let frame = CGRect(x: layer.box.x / 100 * size, y: layer.box.y / 100 * size,
-                           width: layer.box.w / 100 * size, height: layer.box.h / 100 * size)
+        let frame = CGRect(x: layer.box.x / 100 * width, y: layer.box.y / 100 * height,
+                           width: layer.box.w / 100 * width, height: layer.box.h / 100 * height)
         let pivot = UnitPoint(x: (layer.origin.x - layer.box.x) / max(layer.box.w, 0.001),
                               y: (layer.origin.y - layer.box.y) / max(layer.box.h, 0.001))
         var angle = 0.0, scale = 1.0, dx = 0.0, dy = 0.0
@@ -177,10 +183,10 @@ private struct MotionCutout: View {
         case .sway, .flutter, .rock: angle = wave * layer.amp
         case .spin: angle = (phase.truncatingRemainder(dividingBy: layer.dur) / layer.dur) * layer.amp
         case .beat: scale = 1 + wave * layer.amp
-        case .bob: dy = wave * layer.amp * size / 100
-        case .drift: dx = wave * layer.amp * size / 100
+        case .bob: dy = wave * layer.amp * height / 100
+        case .drift: dx = wave * layer.amp * width / 100
         case .grow: scale = 1 + (wave + 1) / 2 * layer.amp
-        case .nudge: dx = wave * layer.amp * size / 100
+        case .nudge: dx = wave * layer.amp * width / 100
         }
         return ChalkImageFrame(resource: layer.src)
             .frame(width: frame.width, height: frame.height)

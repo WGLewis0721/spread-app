@@ -83,7 +83,7 @@ struct FanLayout: View {
                     }
                 }
                 .padding(.horizontal, 4)
-                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+                .spreadCard(edge: Color(hex: front.role.color), active: true)
             }
         }
     }
@@ -109,41 +109,44 @@ struct FanLayout: View {
         let ea = abs(e)
         let cardWidth = min(264, width * 0.74)
         let front = d == 0
+        let tint = Color(hex: row.role.color)
+        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
         ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color(hex: row.role.color))
-                .shadow(color: .black.opacity(0.4), radius: 16, y: 14)
-            RoleBadge(category: row.role.category == "custom" ? nil : row.role.category, color: row.role.color, size: 40)
-                .offset(x: 16 + (cardWidth - 72) * min(1, max(0, e)), y: 14)
+            // Navy body, a role-colour wash from the lit corner, and a bounded edge: the same card language as the Stack.
+            shape.fill(Spread.cardFill)
+            shape.fill(LinearGradient(colors: [tint.opacity(front ? 0.40 : 0.55), tint.opacity(0)], startPoint: .topLeading, endPoint: UnitPoint(x: 0.75, y: 0.75)))
+            shape.strokeBorder(tint.opacity(front ? 0.95 : 0.55), lineWidth: front ? 1.5 : 1)
+            RoleBadge(category: row.role.category == "custom" ? nil : row.role.category, color: row.role.color, size: 44)
+                .offset(x: 16 + (cardWidth - 76) * min(1, max(0, e)), y: 14)
             if front {
                 // The front card carries its Chalkboard art and the Studio motion layers. Only the card in front
                 // animates, so the work stays off the screen and off Reduce Motion users' screens.
-                ChalkMotionArt(category: row.role.category, size: 96)
-                    .frame(width: 96, height: 96)
-                    .offset(x: cardWidth - 104, y: 4)
+                ChalkMotionArt(category: row.role.category, size: 150)
+                    .offset(x: cardWidth - 160, y: 10)
                     .allowsHitTesting(false)
             }
             if !front {
                 Text("\(SpreadHours.text(row.hours))h")
-                    .font(.system(.footnote, weight: .bold)).foregroundStyle(.white).monospacedDigit()
+                    .font(.system(.footnote, weight: .bold)).foregroundStyle(Spread.ink).monospacedDigit()
                     .frame(width: cardWidth, alignment: .trailing)
                     .padding(.trailing, 16)
-                    .padding(.top, 60)
+                    .padding(.top, 62)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.role.name)
-                    .font(.system(size: 32, weight: .bold))
+                    .font(.system(size: 30, weight: .bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text("\(SpreadHours.text(row.hours))h")
-                    .font(.system(size: 18, weight: .bold)).foregroundStyle(.white.opacity(0.85)).monospacedDigit()
+                    .font(.system(size: 18, weight: .bold)).foregroundStyle(Spread.secondary).monospacedDigit()
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Spread.ink)
             .padding(.horizontal, 20)
             .padding(.bottom, 18)
             .frame(width: cardWidth, height: 176, alignment: .bottomLeading)
             .opacity(max(0, min(1, 1 - Double(ea) * 1.8)))
         }
+        .shadow(color: tint.opacity(front ? 0.35 : 0.14), radius: front ? 16 : 10, y: 8)
         .frame(width: cardWidth, height: 176)
         .rotationEffect(.degrees(Double(e) * 13), anchor: UnitPoint(x: 0.5, y: 1.85))
         .scaleEffect(1 - ea * 0.035)

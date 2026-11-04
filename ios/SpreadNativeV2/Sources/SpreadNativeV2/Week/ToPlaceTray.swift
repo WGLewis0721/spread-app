@@ -62,7 +62,7 @@ struct ToPlaceTray: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: Spread.radiusCard)
-                .strokeBorder(targeted ? Spread.accent : Spread.tertiary.opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
+                .strokeBorder(targeted ? Spread.accent : Spread.secondary.opacity(0.55), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
         )
         .dropDestination(for: SpreadDragPayload.self) { items, _ in
             guard let item = items.first, item.kind == .task else { return false }

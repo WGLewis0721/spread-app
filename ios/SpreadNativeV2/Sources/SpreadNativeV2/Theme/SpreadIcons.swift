@@ -34,7 +34,8 @@ struct SpreadBrandMark: View {
     }
 }
 
-/// The category glyph inside a role's coloured disc. The disc takes the role colour (data), the glyph is the
+/// The category glyph on a soft, luminous tile in the role's colour (brand board: "real category glyphs in soft
+/// luminous colour tiles; initials are not replacements"). The tile takes the role colour (data); the glyph is the
 /// original category path (`category-glyph-*`, the source SVG with only its tinted circle removed).
 struct RoleBadge: View {
     let category: String?
@@ -43,22 +44,26 @@ struct RoleBadge: View {
 
     var body: some View {
         let tint = Color(hex: color)
+        let shape = RoundedRectangle(cornerRadius: size * 0.30, style: .continuous)
         ZStack {
-            Circle().fill(tint)
+            shape.fill(LinearGradient(colors: [tint, tint.opacity(0.78)], startPoint: .top, endPoint: .bottom))
+            // A thin top light, so the tile reads as a lit surface and not a flat swatch.
+            shape.strokeBorder(LinearGradient(colors: [Color.white.opacity(0.45), Color.white.opacity(0.04)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
             if let category, ChalkArtwork.categoryGlyphNames.contains(category) {
                 Image("category-glyph-\(category)", bundle: .module)
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .foregroundStyle(.white)
-                    .padding(size * 0.08)
+                    .padding(size * 0.14)
             } else {
                 // No category: the planner shows a list mark on the role colour (lucide `List`, as before).
                 ListMark().stroke(.white, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
-                    .padding(size * 0.26)
+                    .padding(size * 0.28)
             }
         }
         .frame(width: size, height: size)
+        .shadow(color: tint.opacity(0.35), radius: size * 0.18, y: 2)
         .accessibilityHidden(true)
     }
 }
