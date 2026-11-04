@@ -248,8 +248,16 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             scroller = nil
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            guard let anchor, anchor.bounds.contains(touch.location(in: anchor)) else { return false }
-            start = touch.location(in: anchor)
+            // SwiftUI may host a background representable with a stale or zero-sized
+            // UIKit bounds during its first layout pass. Compare the touch in the
+            // scroll view's coordinates against the anchor's converted frame instead.
+            // This still excludes the independently horizontally scrolling role strip.
+            guard let anchor, let scroller else { return false }
+            let region = anchor.convert(anchor.bounds, to: scroller)
+            guard region.width > 0, region.height > 0 else { return false }
+            let point = touch.location(in: scroller)
+            guard region.contains(point) else { return false }
+            start = CGPoint(x: point.x - region.minX, y: point.y - region.minY)
             return true
         }
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
