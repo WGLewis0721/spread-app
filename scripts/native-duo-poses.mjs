@@ -52,13 +52,30 @@ async function fileSize(file) {
   try { return (await stat(file)).size; } catch { return 0; }
 }
 
+/** Diagnostic only: foldable simulators have two displays. A plain simctl screenshot
+ * can fail with 'Cannot choose between 2 displays', so always name the screen.
+ * Capture both, because the inactive one may be black in a given pose. Neither
+ * a successful screenshot nor its byte count proves the app is ready.
+ */
+export async function captureDualDisplayDiagnostics({ udid, outDir, exec = execute, size = fileSize }) {
+  const captures = [];
+  for (const display of ['primary', 'primary-1']) {
+    const file = path.join(outDir, `startup-failure-${display}.png`);
+    const result = await exec('xcrun', ['simctl', 'io', udid, 'screenshot', `--display=${display}`, file]);
+    captures.push({ display, file: path.basename(file), code: result.code, bytes: await size(file),
+      error: result.code === 0 ? null : (result.stderr || result.stdout || 'capture failed').slice(0, 300) });
+  }
+  await writeFile(path.join(outDir, 'startup-dual-display-diagnostics.json'), JSON.stringify(captures, null, 2));
+  return captures;
+}
+
 function errorText(result) {
   const error = result.parsed?.error;
   if (error) return `${error.code}: ${error.message}${error.hint ? ` (${error.hint})` : ''}`;
   return (result.stderr || result.stdout || `exit ${result.code}`).trim().slice(0, 400);
 }
 
-export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.spread', sleep = delay, write = writeFile, size = fileSize, clock = () => new Date() }) {
+export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.spread', sleep = delay, write = writeFile, size = fileSize, clock = () => new Date(), diagnosticScreens = null }) {
   await mkdir(outDir, { recursive: true });
   const cells = [];
   const record = (pose, orientation, check, status, detail, evidence = [], gating = true) => {
@@ -111,6 +128,10 @@ export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.sprea
     const tree = await snap('startup-failure');
     const failShot = await shot('startup-failure.png');
     cells[cells.length - 1].evidence.push(tree.file, failShot.file);
+    if (diagnosticScreens) {
+      const extra = await diagnosticScreens();
+      if (Array.isArray(extra)) cells[cells.length - 1].evidence.push(...extra.map((item) => item.file), 'startup-dual-display-diagnostics.json');
+    }
     return finish();
   }
 
@@ -264,7 +285,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const arg = (name) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : undefined; };
   const bin = arg('ad'); const udid = arg('udid') ?? process.env.NATIVE_UDID; const outDir = arg('out') ?? 'artifacts';
   if (!bin || !udid) { console.error('usage: native-duo-poses.mjs --ad <agent-device> --udid <udid> [--out dir]'); process.exit(2); }
-  const result = await runPoseMatrix({ ad: makeAd({ bin, udid }), outDir });
+  const result = await runPoseMatrix({
+    ad: makeAd({ bin, udid }), outDir,
+    diagnosticScreens: () => captureDualDisplayDiagnostics({ udid, outDir }),
+  });
   console.log(`pose matrix: ${JSON.stringify(result.summary.counts)}; gating not passing: ${result.summary.gatingNotPassing}/${result.summary.gatingTotal}`);
   if (process.env.GITHUB_STEP_SUMMARY) {
     const { appendFile } = await import('node:fs/promises');
