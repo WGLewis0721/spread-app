@@ -21,3 +21,6 @@ Do not merge or deploy this validation-only candidate.
 - PR #142 clears stale rollover outcomes before checking the current store acknowledgement. Copied to the integration branch.
 - Week directional day animation and visual comparison against approved shots remain outstanding. Dark Wallet tertiary text contrast needs native validation; a palette change is not present here.
 - Native CI cannot be triggered for this branch through existing PR-only workflows without opening a PR or granting a workflow dispatch path; no release action was taken.
+
+## Regression addition
+- PR #141 `627ca39a6443739cc2217ceff43253dbad001ae8` adds `WeekMonthUITests.testInsufficientHoursOffersMeasuredAdjustment` to the required Week/Month iPhone and iPad journeys. It checks half-hour budget preservation and the measured Adjust hours route. This code-level addition is unverified until the native workflows pass on the integrated SHA.

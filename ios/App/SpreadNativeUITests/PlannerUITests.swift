@@ -1700,4 +1700,42 @@ final class WeekMonthUITests: NativeUITestCase {
         XCTAssertTrue(eventually(10) { self.elements(prefix: "month-day-").first?.identifier != firstBefore },
                       "Swiping Month did not change the month")
     }
+    /// A refused hour increase must not clamp the requested time. Offer a
+    /// measured shortage and the affected responsibility's own hour editor.
+    func testInsufficientHoursOffersMeasuredAdjustment() {
+        launch(preview); openFocusedWeek()
+        tapID("sidebar-add-role")
+        let name = "Budget " + String(UUID().uuidString.prefix(6))
+        typeInto("role-name-field", name)
+        for _ in 0..<3 { tapButton("Decrease Hours for spread 1 by half an hour") }
+        tapID("save-spreads")
+        let selector = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'focus-role-' AND label == %@", name)
+        ).firstMatch
+        XCTAssertTrue(selector.waitForExistence(timeout: 20), "The new responsibility is not in Week")
+        scrollIntoView(selector)
+        selector.tap()
+        let roleID = String(selector.identifier.dropFirst("focus-role-".count))
+        let hourID = "focus-hour-" + roleID
+        let day = elements(prefix: "focus-day-").first(where: { $0.isSelected })
+        guard let day else { return XCTFail("No selected date on Week") }
+        let iso = String(day.identifier.dropFirst("focus-day-".count))
+        tapID(hourID)
+        tapButton("Allocate 30 minutes")
+        let increase = "Increase " + name + " on " + iso + " by half an hour"
+        XCTAssertTrue(app.buttons[increase].waitForExistence(timeout: 20))
+        tapButton(increase)
+        let adjust = app.buttons["Adjust hours"]
+        XCTAssertTrue(adjust.waitForExistence(timeout: 15),
+                      "A rejected allocation must offer Adjust hours")
+        XCTAssertTrue(app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "needs 0.5h more")
+        ).firstMatch.exists, "Refusal did not explain the exact missing hours")
+        capture("wm-insufficient-hours-adjustment")
+        adjust.tap()
+        XCTAssertTrue(el("role-name-field").waitForExistence(timeout: 15),
+                      "Adjust hours did not open the role editor")
+        XCTAssertEqual(fieldText("role-name-field"), name, "Opened wrong responsibility")
+    }
+
 }
