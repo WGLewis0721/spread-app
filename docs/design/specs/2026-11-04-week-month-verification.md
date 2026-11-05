@@ -40,7 +40,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | # | Decision | Status | Evidence |
 |---:|---|---|---|
 | 1 | Combined Week, selected role prominent | Implemented | Code only |
-| 2 | Seven-day overview, one selected day | Implemented | UI test written |
+| 2 | Seven-day overview, one selected day | Implemented | UI test **passed** on Duo (441da1f) |
 | 3 | Other roles as expandable compact rows | Implemented | Code only |
 | 4 | Several rows may stay open | Implemented | Code only |
 | 5 | Role-color dots per day | Implemented | Code only |
@@ -50,21 +50,21 @@ Code being present does not count as passing. Every row below still owes simulat
 | 9 | Expanded rows remembered by date | Implemented | Code only |
 | 10 | Returns to last selected day; first visit Today | Implemented in #139 | Code only |
 | 11 | Task tap: Complete, Reschedule, Edit, Delete | Implemented | UI test written |
-| 12 | Crown and strip swipe navigate weeks | Implemented | UI test written |
+| 12 | Crown and strip swipe navigate weeks | Implemented | UI test **passed** on Duo (441da1f) |
 | 13 | Empty day: Nothing planned and Add | Implemented in #139 | Code only |
 | 14 | Selecting a role expands its row | Implemented | Code only |
 | 15 | Completed tasks fold under Completed (N) | Implemented | UI test written |
 | 16 | Selected role with no tasks: compact Add | Implemented | UI test written |
 | 17 | Selection does not close other rows | Implemented | Code only |
-| 18 | Narrow persistent rail by default | Implemented | UI test written |
+| 18 | Narrow persistent rail by default | Implemented | UI test **passed** on Duo (441da1f) |
 | 19 | Move by drag or Reschedule | Implemented | Code only |
 | 20 | Invalid scheduling explained with Adjust hours action | **Partial:** explained, with no Adjust hours button | |
 | 21 | Daily total and per-role hours | Implemented | Code only |
 | 22 | Half-hour inline hour controls | Implemented (adjusts the role's first allocation that day) | Code only |
 | 23 | Inline Quick Add, optional full editor | Implemented | UI test written |
-| 24 | Hidden sidebar reopens from header | Implemented | UI test written |
-| 25 | Tap day; swipe schedule for day; strip/Crown for week | Implemented | UI test written |
-| 26 | Changing weeks selects Monday | Implemented | UI test written |
+| 24 | Hidden sidebar reopens from header | Implemented | UI test **passed** on Duo (441da1f) |
+| 25 | Tap day; swipe schedule for day; strip/Crown for week | Implemented | UI test **passed** on Duo (441da1f) |
+| 26 | Changing weeks selects Monday | Implemented | UI test **passed** on Duo (441da1f) |
 | 27 | Selected role's day dots emphasized | Implemented | Code only |
 | 28 | Overview pinned while list scrolls | Implemented (outside the scroll view) | Code only |
 | 29 | Over-cap allocation rejected with shortage and fix | **Partial:** refused with a reason; no shortage amount or one-tap fix | Store refuses (existing tests) |
@@ -88,7 +88,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 47 | Natural vertical scroll | Implemented | Code only |
 | 48 | Create role from sidebar + in Week | Implemented | Code only |
 | 49 | To Place is week-specific | Implemented | Bridge test |
-| 50 | Expanded sidebar overlays; selection collapses it | Implemented | UI test written |
+| 50 | Expanded sidebar overlays; selection collapses it | Implemented | UI test **passed** on Duo (441da1f) |
 | 51 | Day change slides by direction | **Partial:** animated, not directional | |
 | 52 | Completion never reduces hours | Implemented | Bridge test |
 | 53 | Overview morphs into Month | Implemented in #139: each strip day shares geometry with its Month cell; no movement under Reduce Motion; Classic unchanged | Code only |
@@ -99,7 +99,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 58 | Tap date opens Week; hold opens Add | Implemented | UI test written |
 | 59 | Up to 3 dots then +N, selected first | Implemented | Code only |
 | 60 | Toggle in the overview header | Implemented | UI test written |
-| 61 | Closing Month restores the prior day | Implemented | UI test written |
+| 61 | Closing Month restores the prior day | Implemented | UI test **passed** on Duo (441da1f) |
 
 **Summary:** 58 implemented and 3 partial (#20, #29, #51). The owner deferred those three to a follow-up on Nov 4. Verified so far: store and bridge behavior only. Native build, UI journeys, screenshots, VoiceOver, Dynamic Type, rotation, Duo poses and light/dark are all still owed.
 
@@ -112,7 +112,7 @@ Cloud, sync, backup, restore and schema files were not edited. The sync roundtri
 Each item closes only with evidence attached to the follow-up PR: an xcresult, screenshots, or a test name.
 
 1. **Native build: DONE.** Main 74356d5, `iOS shell` run 41931343425 (Nov 5): typecheck, `test:spread`, SpreadCloudCore `swift test`, the iPhone simulator `xcodebuild` (01:43–01:46 UTC) and Simulator install and launch all succeeded. #139's Swift compiles with no errors. Later steps in the same run: the unsigned Release archive and the Debug-hook check passed. The native journey step failed in `JourneyUITests` (F01, F02, then F03, which depends on them; the remaining 12 were skipped). Both causes were in the tests, not in the app, and are fixed in the follow-up PR: the `selectedRoleLabel` helper (348596c, before #136) prepended "Manage "; `manageSelectedRole` scrolled before entering edit mode, so the card left the screen before the swipe.
-2. **Week/Month journeys:** `native-journeys` groups `week-month` (390 pt), `week-month-ipad` (820 pt) and `reduce-motion`, plus the two journeys in `native-duo-acceptance`. Fix real failures; never skip a test.
+2. **Week/Month journeys: Duo DONE.** `iPhone Duo native acceptance` on 441da1f (run 41966956836, Nov 5) **passed all 6**: DuoUITests appearance round trip and Wallet in both appearances, Wallet cards expand and edit, Week vertical scroll with horizontal swipe, and the new `WeekMonthUITests` day selection / Month round trip / strip swipe opens Monday, and expanded sidebar overlay without squeeze or shift / hide and restore. Getting there fixed two real accessibility defects (container identifiers hid the day buttons from VoiceOver and XCTest) and one test gesture. 390 pt, 820 pt and Reduce Motion groups still pending. Original item: `native-journeys` groups `week-month` (390 pt), `week-month-ipad` (820 pt) and `reduce-motion`, plus the two journeys in `native-duo-acceptance`. Fix real failures; never skip a test.
 3. **Regression suites still green:** Classic Week, Wallet Stack, Crown, layout acceptance (390, 820, 1024, 1366), visual tour, Duo hinge and rotation.
 4. **Manual or simulator checks:** VoiceOver order and actions (Move up/down, Add task to this day, Day complete), the largest Dynamic Type size, light and dark, rotation and resizing, and Duo open and closed.
 5. **Data:** profile separation, backup and restore, and iCloud sync of `deletedTasks` and `dayTaskOrder` between two devices. Only the store-level sync test covers these today.
