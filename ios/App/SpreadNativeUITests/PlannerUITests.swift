@@ -1714,8 +1714,12 @@ final class WeekMonthUITests: NativeUITestCase {
         tapID("focus-show-sidebar")
         XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists }, "Hide did not hide the sidebar")
         capture("wm-sidebar-hidden")
-        tapID("focus-show-sidebar")
-        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5), "The hidden sidebar did not come back")
+        let restore = el("header-show-sidebar")
+        XCTAssertTrue(restore.waitForExistence(timeout: 5), "The hidden sidebar has no header restore control")
+        XCTAssertGreaterThanOrEqual(restore.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(restore.frame.height, 44)
+        tapID("header-show-sidebar")
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5), "The hidden sidebar did not come back from the header")
     }
 
     /// Task lifecycle through the store: Quick Add, complete (folded section), relaunch, uncomplete, delete,
@@ -1761,6 +1765,27 @@ final class WeekMonthUITests: NativeUITestCase {
                         .firstMatch.waitForExistence(timeout: 20),
                       "The restored task is not in its responsibility's To Place after relaunch")
         capture("wm-restored-to-place")
+    }
+
+    /// The focused surfaces must keep operational navigation at the largest Dynamic Type size.
+    func testFocusedAccessibilityHeaderKeepsNavigationUsable() {
+        launch(preview + ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        openFocusedWeek()
+        XCTAssertTrue(el("week-crown").exists, "Largest text hid the Week Crown")
+        XCTAssertTrue(el("native-spread").isHittable, "Largest text hid Spread navigation")
+        tapID("native-spread")
+        XCTAssertTrue(el("native-week").isHittable, "Largest text hid Week navigation")
+        tapID("native-week")
+        XCTAssertTrue(el("focus-week-overview").waitForExistence(timeout: 10))
+        tapID("focus-show-sidebar")
+        XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists })
+        let restore = el("header-show-sidebar")
+        XCTAssertTrue(restore.isHittable, "Header restore is unreachable at largest text")
+        XCTAssertGreaterThanOrEqual(restore.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(restore.frame.height, 44)
+        restore.tap()
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5))
+        capture("wm-largest-text-header-navigation")
     }
 
     /// Decisions 54-56: long press a Month date to add without leaving Month; Month swipe changes month.
