@@ -682,7 +682,7 @@ final class PlannerUITests: NativeUITestCase {
             "more-new-spread", "more-review-tasks", "more-rollover",
             "appearance-system", "appearance-light", "appearance-dark",
             "manage-profiles", "export-print", "export-word", "export-text",
-            "backup-and-restore"
+            "backup-and-restore", "more-recently-deleted", "calendar-design-picker"
         ]
         for id in visibleActions {
             let control = el(id)
