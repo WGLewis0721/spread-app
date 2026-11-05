@@ -927,6 +927,20 @@ final class PlannerUITests: NativeUITestCase {
         XCTAssertTrue(elements(prefix: "remove-role-").isEmpty)
         let firstCard = try XCTUnwrap(waitElements(prefix: "role-block-").first)
         let firstId = String(firstCard.identifier.dropFirst("role-block-".count))
+        // These disclosures have their own animation transactions; exercising
+        // only card expansion misses the Reduce Motion paths inside the card.
+        tapID("hours-stepper-" + firstId)
+        XCTAssertTrue(el("role-hour-editor-" + firstId).waitForExistence(timeout: 10),
+                      "Hour editor did not open with Reduce Motion")
+        tapID("hours-stepper-" + firstId)
+        XCTAssertTrue(eventually { !self.el("role-hour-editor-" + firstId).exists },
+                      "Hour editor did not close with Reduce Motion")
+        tapID("role-colour-" + firstId)
+        let colour = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use #'" )).firstMatch
+        XCTAssertTrue(colour.waitForExistence(timeout: 10),
+                      "Palette did not open with Reduce Motion")
+        tapID("role-colour-" + firstId)
+        XCTAssertTrue(eventually { !colour.exists }, "Palette did not close with Reduce Motion")
         firstCard.swipeRight()
         XCTAssertTrue(el("remove-role-" + firstId).waitForExistence(timeout: 10))
         tapID("dock-done")
