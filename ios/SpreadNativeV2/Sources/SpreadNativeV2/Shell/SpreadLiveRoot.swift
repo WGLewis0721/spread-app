@@ -549,8 +549,8 @@ public struct SpreadLiveRoot: View {
                 if reduceTransparency {
                     Capsule().fill(Spread.elevated)
                 } else {
-                    // glassEffect exists only in the iOS 26 SDK (Swift 6.2 / Xcode 26). Older toolchains, such as
-                    // the macos-15 CI runners for journeys, layout and the visual tour, must still compile.
+                    // Keep Liquid Glass with modern SDKs while allowing older
+                    // Swift toolchains to compile the native archive.
                     #if compiler(>=6.2)
                     if #available(iOS 26.0, *) {
                         Capsule().fill(Color.clear)
