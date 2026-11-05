@@ -111,11 +111,26 @@ public struct SpreadLiveRoot: View {
     }
 
     private var errorShown: Binding<Bool> {
-        Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })
+        Binding(get: { planner.error != nil }, set: {
+            if !$0 {
+                planner.error = nil
+                planner.hoursShortage = nil
+            }
+        })
     }
 
     @ViewBuilder private var errorActions: some View {
-        Button("OK") { planner.error = nil }
+        Button("OK") {
+            planner.error = nil
+            planner.hoursShortage = nil
+        }
+        if let shortage = planner.hoursShortage {
+            Button("Adjust hours") {
+                planner.error = nil
+                planner.hoursShortage = nil
+                sheet = .role(shortage.roleId)
+            }
+        }
         if planner.errorOffersRetry {
             Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
         }
