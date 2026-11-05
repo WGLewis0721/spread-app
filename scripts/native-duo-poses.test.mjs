@@ -132,6 +132,38 @@ test('the workflow runs this harness and never passes a scoped simulator set', (
   }
 });
 
+test('Duo workflow separates simulator, app, runner health and accessibility preflight', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/native-duo-poses.yml', import.meta.url), 'utf8');
+  const phases = [
+    'Select and verify Xcode',
+    'Boot actual Duo and compile the actual app',
+    'Verify Duo simulator boot independently',
+    'Build and install Spread',
+    'Verify Spread installation independently',
+    'Verify Spread launches independently of automation',
+    'Install pinned simulator test tooling',
+    'Prepare and health-check Apple automation runner',
+    'Verify accessibility transport before querying any controls',
+    'Verify real hinge poses, rotations and surfaces',
+    'Preserve automation and simulator diagnostics',
+  ];
+  let last = -1;
+  for (const phase of phases) {
+    const at = workflow.indexOf('name: ' + phase);
+    assert.ok(at > last, 'missing or out-of-order precondition: ' + phase);
+    last = at;
+  }
+  assert.match(workflow, /agent-device@0\.21\.36/, 'runner version must be pinned');
+  assert.match(workflow, /prepare ios-runner --help/, 'read installed CLI flags before invoking prepare');
+  assert.match(workflow, /prepare ios-runner --platform ios --udid/, 'preparation must target the actual Duo');
+  assert.match(workflow, /"kind"/, 'preflight must validate readable accessibility nodes');
+  assert.match(workflow, /"BLOCKED"/, 'unreadable snapshots are blocked, not app FAILs');
+  for (const evidence of ['runner.log', 'events.ndjson', 'requests', 'simulator.log', 'final-primary.png', 'final-primary-1.png']) {
+    assert.ok(workflow.includes(evidence), 'missing failure diagnostics ' + evidence);
+  }
+  assert.match(workflow, /if: always\(\)/, 'diagnostics must survive test failure');
+});
+
 test('a refused rotation (the failure seen in runs 41852591875 and 41860698620) fails loudly but does not stop the matrix', async () => {
   const result = await run({ refuseRotation: true });
   assert.equal(result.ok, false);
