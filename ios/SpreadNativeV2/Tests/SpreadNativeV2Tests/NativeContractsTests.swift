@@ -20,6 +20,25 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertNil(UserDefaults(suiteName: suite)?.string(forKey: key))
     }
 
+    func testFocusedTaskDraftPersistsWithoutLeakingAcrossDaysOrWallet() {
+        let suite = "FocusedTaskDraftTests." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let monday = TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "work", day: "2026-11-02")
+        let tuesday = TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "work", day: "2026-11-03")
+        let wallet = TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "work")
+        defaults.set("Monday draft", forKey: monday)
+        defaults.set("Tuesday draft", forKey: tuesday)
+        let reopened = UserDefaults(suiteName: suite)!
+        XCTAssertEqual(reopened.string(forKey: monday), "Monday draft")
+        XCTAssertEqual(reopened.string(forKey: tuesday), "Tuesday draft")
+        XCTAssertNil(reopened.string(forKey: wallet))
+        XCTAssertNil(reopened.string(forKey: TaskDraftMemory.key(profileId: "other", weekKey: "2026-11-02", roleId: "work", day: "2026-11-02")))
+        defaults.removeObject(forKey: monday)
+        XCTAssertNil(reopened.string(forKey: monday))
+        XCTAssertEqual(reopened.string(forKey: tuesday), "Tuesday draft")
+    }
+
     func testStudioMotionNegativeDelayAndAlternateCycles() {
         XCTAssertEqual(ChalkTiming.phase(0, duration: 4, delay: -1), 0.25)
         XCTAssertEqual(ChalkTiming.phase(4, duration: 4, alternate: true), 1)

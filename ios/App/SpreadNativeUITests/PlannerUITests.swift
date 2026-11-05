@@ -1767,6 +1767,54 @@ final class WeekMonthUITests: NativeUITestCase {
         capture("wm-restored-to-place")
     }
 
+    /// Unsubmitted focused drafts are isolated by day and survive navigation and a cold start.
+    func testFocusedDraftSurvivesDayNavigationAndRelaunch() {
+        launch(preview); openFocusedWeek()
+        let days = dayIDs()
+        let role = roleIDs()[0]
+        let draft = "Focused draft " + String(UUID().uuidString.prefix(8))
+        tapID(days[0])
+        tapID("focus-quick-add-" + role)
+        typeInto("focus-quick-add-field", draft)
+        tapID(days[1])
+        XCTAssertNotEqual(fieldText("focus-quick-add-field"), draft, "A draft leaked to another day")
+        tapID(days[0])
+        XCTAssertTrue(el("focus-quick-add-field").waitForExistence(timeout: 10))
+        XCTAssertEqual(fieldText("focus-quick-add-field"), draft)
+        relaunch(); openFocusedWeek(); tapID(days[0])
+        XCTAssertTrue(el("focus-quick-add-field").waitForExistence(timeout: 10))
+        XCTAssertEqual(fieldText("focus-quick-add-field"), draft, "The draft did not survive relaunch")
+        tapButton("Cancel")
+        relaunch(); openFocusedWeek(); tapID(days[0])
+        XCTAssertNotEqual(fieldText("focus-quick-add-field"), draft, "Explicit cancellation did not clear the draft")
+        capture("wm-focused-draft-relaunch")
+    }
+
+    /// Acknowledged within-day reordering must persist through a cold start.
+    func testFocusedReorderSurvivesRelaunch() {
+        launch(preview); openFocusedWeek()
+        let role = roleIDs()[0]
+        let suffix = String(UUID().uuidString.prefix(6))
+        let first = "First " + suffix
+        let second = "Second " + suffix
+        for title in [first, second] {
+            tapID("focus-quick-add-" + role)
+            typeInto("focus-quick-add-field", title)
+            tapButton("Save")
+            let offer = app.buttons["Add 30 minutes to this day"]
+            if offer.waitForExistence(timeout: 5) { offer.tap() }
+            XCTAssertTrue(taskRow(title).waitForExistence(timeout: 20))
+        }
+        taskRow(second).tap()
+        tapButton("Move up")
+        XCTAssertTrue(eventually(10) { self.taskRow(second).frame.minY < self.taskRow(first).frame.minY })
+        relaunch(); openFocusedWeek()
+        XCTAssertTrue(taskRow(first).waitForExistence(timeout: 20))
+        XCTAssertTrue(taskRow(second).waitForExistence(timeout: 20))
+        XCTAssertLessThan(taskRow(second).frame.minY, taskRow(first).frame.minY, "Reordered tasks reverted after relaunch")
+        capture("wm-focused-reorder-relaunch")
+    }
+
     /// The focused surfaces must keep operational navigation at the largest Dynamic Type size.
     func testFocusedAccessibilityHeaderKeepsNavigationUsable() {
         launch(preview + ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])

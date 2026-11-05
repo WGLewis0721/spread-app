@@ -479,8 +479,11 @@ struct WeekFocusSurface: View {
                     Text("Nothing planned")
                         .font(.system(.headline, weight: .semibold))
                     if rolesToday.isEmpty, let activeRole {
+                        let draftKey = TaskDraftMemory.key(profileId: planner.state?.envelope.profileId,
+                                                           weekKey: snapshot.weekKey, roleId: activeRole, day: day)
                         FocusedQuickAdd(planner: planner, roleId: activeRole, day: day,
-                                        onOpenEditor: onOpenTask)
+                                        draftKey: draftKey, onOpenEditor: onOpenTask)
+                            .id(draftKey)
                     }
                 }
                 .frame(maxWidth: .infinity)
