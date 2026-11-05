@@ -22,6 +22,8 @@ on:
       - "scripts/export-ios.mjs"
       - "package.json"
       - "package-lock.json"
+      - "scripts/native-duo-poses.mjs"
+      - "scripts/native-duo-poses.test.mjs"
       - ".github/workflows/ios.yml"
 
 concurrency:

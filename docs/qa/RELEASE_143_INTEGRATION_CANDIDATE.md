@@ -24,3 +24,11 @@ Do not merge or deploy this validation-only candidate.
 
 ## Regression addition
 - PR #141 `627ca39a6443739cc2217ceff43253dbad001ae8` adds `WeekMonthUITests.testInsufficientHoursOffersMeasuredAdjustment` to the required Week/Month iPhone and iPad journeys. It checks half-hour budget preservation and the measured Adjust hours route. This code-level addition is unverified until the native workflows pass on the integrated SHA.
+
+## Nine-cell Duo matrix and final source updates
+- PR #134 `5d78d0547d61d0b9899bd28c192c43f14821339d`: 3 confirmed hinge preset poses × 3 CLI-supported orientations. No foldable upside-down orientation. `landscape-right` is now an explicit acceptance requirement, not untested.
+- PR #141 `4f2c95cb6c2f9ebb39be384c3a8b8145d4573d4a`: implemented day direction, Reduce Motion fallback, exact allocation shortages, and Adjust hours; the three former partial decisions remain subject to native verification.
+- Source test suites cover Week gestures, rich-content dismiss persistence, precise scheduling failure, 100 Crown gestures/reversals, Wallet, screen sizes, light/dark and dynamic type.
+- Device Hub tent/laptop arrangements, Split View, true hinge obstruction geometry and physical-device tests are **not** demonstrated by `agent-device`'s three preset poses. These need separate actual-device evidence. Do not equate nine CLI states with every physical arrangement.
+- QA-only push trigger includes the iOS shell workflow when its own workflow definition changes. No packaging or deployment action was added.
+- This is a validation-only branch; its final SHA must independently pass every release gate.

@@ -58,7 +58,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 17 | Selection does not close other rows | Implemented | Code only |
 | 18 | Narrow persistent rail by default | Implemented | UI test **passed** on Duo (441da1f) |
 | 19 | Move by drag or Reschedule | Implemented | Code only |
-| 20 | Invalid scheduling explained with Adjust hours action | **Partial:** explained, with no Adjust hours button | |
+| 20 | Invalid scheduling explained with Adjust hours action | Implemented in follow-up; native test pending | LivePlanner shortage + root alert; UI test added |
 | 21 | Daily total and per-role hours | Implemented | Code only |
 | 22 | Half-hour inline hour controls | Implemented (adjusts the role's first allocation that day) | Code only |
 | 23 | Inline Quick Add, optional full editor | Implemented | UI test written |
@@ -67,7 +67,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 26 | Changing weeks selects Monday | Implemented | UI test **passed** on Duo (441da1f) |
 | 27 | Selected role's day dots emphasized | Implemented | Code only |
 | 28 | Overview pinned while list scrolls | Implemented (outside the scroll view) | Code only |
-| 29 | Over-cap allocation rejected with shortage and fix | **Partial:** refused with a reason; no shortage amount or one-tap fix | Store refuses (existing tests) |
+| 29 | Over-cap allocation rejected with shortage and fix | Implemented in follow-up; native test pending | Exact shortfall, no silent clamp, Adjust hours action |
 | 30 | Day check when selected role's tasks are complete | Implemented | Code only |
 | 31 | Weekly completion rings | Implemented | Code only |
 | 32 | Add on a day without hours: save, then offer hours | Implemented | UI test written |
@@ -89,7 +89,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 48 | Create role from sidebar + in Week | Implemented | Code only |
 | 49 | To Place is week-specific | Implemented | Bridge test |
 | 50 | Expanded sidebar overlays; selection collapses it | Implemented | UI test **passed** on Duo (441da1f) |
-| 51 | Day change slides by direction | **Partial:** animated, not directional | |
+| 51 | Day change slides by direction | Implemented in follow-up; visual verification pending | Direction-aware 28 pt transition, Reduce Motion fallback |
 | 52 | Completion never reduces hours | Implemented | Bridge test |
 | 53 | Overview morphs into Month | Implemented in #139: each strip day shares geometry with its Month cell; no movement under Reduce Motion; Classic unchanged | Code only |
 | 54 | Month replaces schedule, keeps rail and Crown | Implemented | UI test written |
@@ -101,7 +101,7 @@ Code being present does not count as passing. Every row below still owes simulat
 | 60 | Toggle in the overview header | Implemented | UI test written |
 | 61 | Closing Month restores the prior day | Implemented | UI test **passed** on Duo (441da1f) |
 
-**Summary:** 58 implemented and 3 partial (#20, #29, #51). The owner deferred those three to a follow-up on Nov 4. Verified so far: store and bridge behavior only. Native build, UI journeys, screenshots, VoiceOver, Dynamic Type, rotation, Duo poses and light/dark are all still owed.
+**Summary:** All 61 decisions are implemented in code, including follow-up repairs to #20, #29 and #51. Native, visual and accessibility acceptance remains open; this is not a release approval. Verified so far: store and bridge behavior only. Native build, UI journeys, screenshots, VoiceOver, Dynamic Type, rotation, Duo poses and light/dark are all still owed.
 
 ## Not touched (rules card boundaries)
 
@@ -116,6 +116,6 @@ Each item closes only with evidence attached to the follow-up PR: an xcresult, s
 3. **Regression suites still green:** Classic Week, Wallet Stack, Crown, layout acceptance (390, 820, 1024, 1366), visual tour, Duo hinge and rotation.
 4. **Manual or simulator checks:** VoiceOver order and actions (Move up/down, Add task to this day, Day complete), the largest Dynamic Type size, light and dark, rotation and resizing, and Duo open and closed.
 5. **Data:** profile separation, backup and restore, and iCloud sync of `deletedTasks` and `dayTaskOrder` between two devices. Only the store-level sync test covers these today.
-6. **Deferred partial decisions:** #20 and #29 (an Adjust hours action that names the shortage) and #51 (directional day slide).
+6. **Follow-up implementation verification:** #20 and #29 (exact shortfall + Adjust hours action, with UI regression) and #51 (directional day slide + Reduce Motion) require native test results and visual evidence.
 7. **Screenshots** compared with the approved review images, with differences recorded here.
 
