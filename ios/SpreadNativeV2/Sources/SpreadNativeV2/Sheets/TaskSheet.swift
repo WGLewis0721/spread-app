@@ -98,7 +98,10 @@ struct TaskSheet: View {
                         }
                         .padding(20)
                     }
-                    .scrollDismissesKeyboard(.interactively)
+                    // The rich-content Add control can sit below the keyboard.
+                    // Dismiss on an intentional scroll so it stays reachable
+                    // without ending the task editing session.
+                    .scrollDismissesKeyboard(.immediately)
                     .onAppear { title = task.text }
                     .onChange(of: task.text) { _, value in if title != value { title = value } }
                 } else {
