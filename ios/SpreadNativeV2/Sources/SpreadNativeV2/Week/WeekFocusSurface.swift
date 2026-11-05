@@ -15,6 +15,7 @@ struct WeekFocusSurface: View {
     let onPickDay: (String) -> Void
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
+    let onAdjustHours: (String) -> Void
 
     @State private var expandedByDate: [String: Set<String>] = [:]
     @State private var trayOpen = false
@@ -24,6 +25,8 @@ struct WeekFocusSurface: View {
     @State private var sidebarExpanded = false
     @Binding var sidebarHidden: Bool
     @State private var showDayDone = false
+    @State private var invalidDropRole: String?
+    @State private var showInvalidDrop = false
     @State private var daySlideDirection = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 53: each strip day and its Month cell share an id, so opening Month morphs the week into the grid.
@@ -220,6 +223,17 @@ struct WeekFocusSurface: View {
             selectedDay = newWeek // Monday, by owner decision
         }
         .onChange(of: expandedByDate) { _, _ in rememberExpansions() }
+        .confirmationDialog("Time allocation needed", isPresented: $showInvalidDrop, titleVisibility: .visible) {
+            if let invalidDropRole {
+                Button("Adjust weekly hours") { onAdjustHours(invalidDropRole) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let invalidDropRole {
+                let name = snapshot.roles.first(where: { $0.id == invalidDropRole })?.name ?? "Responsibility"
+                Text("\(name) has no hours allocated on this day. Allocate time before moving this task; the task has not moved.")
+            }
+        }
         .onChange(of: dayCompletion) { old, new in
             // Decision 35: a brief check when the open day becomes complete. The haptic is played by the
             // completing row (one per tap); this view only draws.
@@ -341,7 +355,8 @@ struct WeekFocusSurface: View {
                                                             "taskId": item.itemId, "allocationId": target.id])
                                 }
                             } else {
-                                planner.error = "Place hours for this responsibility on that day first."
+                                invalidDropRole = item.roleId
+                                showInvalidDrop = true
                             }
                             return true
                         } isTargeted: { _ in }
@@ -482,7 +497,7 @@ struct WeekFocusSurface: View {
                         let draftKey = TaskDraftMemory.key(profileId: planner.state?.envelope.profileId,
                                                            weekKey: snapshot.weekKey, roleId: activeRole, day: day)
                         FocusedQuickAdd(planner: planner, roleId: activeRole, day: day,
-                                        draftKey: draftKey, onOpenEditor: onOpenTask)
+                                        draftKey: draftKey, onOpenEditor: onOpenTask, onAdjustHours: onAdjustHours)
                             .id(draftKey)
                     }
                 }
@@ -502,7 +517,7 @@ struct WeekFocusSurface: View {
                         if expanded { expandedByDate[day, default: []].remove(role.id) }
                         else { expandedByDate[day, default: []].insert(role.id) }
                         SpreadHaptics.selection()
-                    }, onOpenTask: onOpenTask
+                    }, onOpenTask: onOpenTask, onAdjustHours: onAdjustHours
                 )
                 .id(role.id)
             }
