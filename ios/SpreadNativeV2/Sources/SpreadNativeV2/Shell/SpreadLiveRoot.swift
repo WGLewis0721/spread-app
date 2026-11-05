@@ -690,7 +690,9 @@ public struct SpreadLiveRoot: View {
     }
 
     private func rollover() async {
-        _ = await planner.send(["type": "rollover", "force": false])
+        // A previous confirmation must never be reused if this request fails.
+        planner.rolloverOutcome = nil
+        guard await planner.send(["type": "rollover", "force": false]) else { return }
         if planner.rolloverOutcome == "confirm" { sheet = .confirmRollover }
     }
 
