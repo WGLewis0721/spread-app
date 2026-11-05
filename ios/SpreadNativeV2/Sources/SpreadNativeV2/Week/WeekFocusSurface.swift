@@ -107,6 +107,7 @@ struct WeekFocusSurface: View {
         UserDefaults.standard.set(data, forKey: storeKey)
     }
     private func restoreExpansions() {
+        expandedByDate = [:]
         guard let data = UserDefaults.standard.data(forKey: storeKey),
               let saved = try? JSONDecoder().decode([String: [String]].self, from: data) else { return }
         expandedByDate = saved.mapValues { Set($0) }
