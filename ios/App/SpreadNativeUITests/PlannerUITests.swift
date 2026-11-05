@@ -1407,6 +1407,39 @@ final class DuoUITests: NativeUITestCase {
         XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The edited title did not survive a relaunch")
     }
 
+    /// Swipe-dismiss must flush the final edits of each rich block, not just the task title.
+    /// The immediate relaunch catches a pending debounce that was canceled with the sheet.
+    func testNotesOutlineAndTableSurviveSwipeDismissAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let title = "Rich " + stamp
+        let note = "Note " + stamp
+        let outline = "Outline " + stamp
+        let cell = "Cell " + stamp
+        addAndOpenTask(title)
+        tapID("format-notes")
+        typeInto("content-notes", note)
+        tapID("add-block"); tapID("format-outline")
+        typeInto("content-outline-0", outline)
+        tapID("add-block"); tapID("format-table")
+        typeInto("content-cell-0-0", cell)
+        let bar = app.navigationBars.firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10))
+        let from = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: app.frame.height * 0.6)))
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "Rich task sheet did not dismiss")
+        relaunch(); selectRole("Work")
+        let row = taskRow(containing: title)
+        XCTAssertTrue(row.waitForExistence(timeout: 20))
+        scrollIntoView(row); row.tap()
+        XCTAssertTrue(el("content-notes").waitForExistence(timeout: 20))
+        XCTAssertTrue(fieldText("content-notes").contains(note), "Notes were lost across dismissal/relaunch")
+        XCTAssertTrue(fieldText("content-outline-0").contains(outline), "Outline text was lost across dismissal/relaunch")
+        XCTAssertTrue(fieldText("content-cell-0-0").contains(cell), "Table cell was lost across dismissal/relaunch")
+        capture("rich-content-kept-after-swipe-relaunch")
+        tapID("task-sheet-done")
+    }
+
     /// "Add line" and "Add row" hand the keyboard to the field they create, so typing continues without another tap.
     func testAddingOutlineLineAndTableRowFocusesTheNewField() throws {
         launch()
