@@ -3,6 +3,9 @@ name: Native visual tour
 # evidence. It builds a simulator app only (never a distributable, never signed, never uploaded). Artifacts are the
 # exported attachments from the XCUITest result bundle.
 on:
+  # Verification-only branch; does not publish, sign, merge or deploy.
+  push:
+    branches: [qa/release-143-integrated-20261105]
   # Runs from the PR's own copy of this file (a dispatch-only workflow must already be on the default branch).
   pull_request:
     paths:

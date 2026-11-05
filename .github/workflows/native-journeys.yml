@@ -3,6 +3,9 @@ name: Native acceptance journeys
 # Dynamic Type / long-name / 44 pt checks. Each group runs on its own fresh simulator so a failure
 # in one cannot hide evidence from another. Results are the real xcresult and exported screenshots.
 on:
+  # Verification-only branch; does not publish, sign, merge or deploy.
+  push:
+    branches: [qa/release-143-integrated-20261105]
   pull_request:
     paths:
       - 'ios/**'

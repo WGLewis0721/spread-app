@@ -1,5 +1,8 @@
 name: Duo hinge and rotation acceptance
 on:
+  # Verification-only branch; does not publish, sign, merge or deploy.
+  push:
+    branches: [qa/release-143-integrated-20261105]
   pull_request:
     paths:
       - "ios/**"
