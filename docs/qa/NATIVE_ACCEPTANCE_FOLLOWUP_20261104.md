@@ -23,3 +23,9 @@ This document records unresolved failures; it does not claim they have been fixe
 
 ## Rollback
 Revert individual focused commits or the follow-up PR if any layout, gesture, or planner regression is detected.
+
+## 2026-11-05 focused repair — rollover confirmation
+- Commit `3943563d6d88327ea39efa0bad396400225e5715` on this draft branch fixes a control-flow defect in `MoreSheet.rollover()`: it previously required `send()` to report a successful mutation **and** `rolloverOutcome == "confirm"`. A conflict that requests confirmation is non-mutating, so the extra success requirement could suppress the confirmation dialog. The native shell's separate rollover path already checks the outcome without that requirement.
+- **Verification:** source-level comparison only. Native simulator UI test for More → Rollover with next-week data, Cancel preserves both weeks, Replace updates only the intended week, and empty-next-week path is still required. No simulator PASS is claimed.
+- **Rollback:** revert commit `3943563d6d88327ea39efa0bad396400225e5715` if the confirmation state regresses. No planner schema, storage, cloud, or privacy changes.
+- Unified release gate: #143. All other outstanding items above remain open.
