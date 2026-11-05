@@ -156,7 +156,7 @@ test('Duo workflow separates simulator, app, runner health and accessibility pre
   assert.match(workflow, /agent-device@0\.21\.36/, 'runner version must be pinned');
   assert.match(workflow, /prepare ios-runner --help/, 'read installed CLI flags before invoking prepare');
   assert.match(workflow, /prepare ios-runner --platform ios --udid/, 'preparation must target the actual Duo');
-  assert.match(workflow, /"kind"/, 'preflight must validate readable accessibility nodes');
+  assert.match(workflow, /v\.kind/, 'preflight must validate readable accessibility nodes');
   assert.match(workflow, /"BLOCKED"/, 'unreadable snapshots are blocked, not app FAILs');
   for (const evidence of ['runner.log', 'events.ndjson', 'requests', 'simulator.log', 'final-primary.png', 'final-primary-1.png']) {
     assert.ok(workflow.includes(evidence), 'missing failure diagnostics ' + evidence);
