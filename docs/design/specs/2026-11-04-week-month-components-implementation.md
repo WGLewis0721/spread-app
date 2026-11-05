@@ -35,6 +35,22 @@ Refero research was performed before design decisions were translated to code:
 - **Rejected — seven full vertical day cards:** too much scrolling and doesn't communicate selected-day focus.
 - **Rejected — freeform calendar grid as sole navigation:** compact but makes task actions and selected responsibility difficult to reach.
 
+### November 5 Refero and review ZIP refinement (PR #144)
+
+Fresh Refero inspection corroborated the existing component architecture without changing Spread's palette or native brand authority:
+
+| Newly inspected reference | Specific component lesson | Constraint retained |
+| --- | --- | --- |
+| [Structured iOS day planner](https://refero.design/screens/5a371bb8-48c7-4528-a248-d4d5e2857b6a) | Pinned seven-day strip and one selected task list, completion and Add actions remain visible | Spread is **hours-budgeted**, not an hourly appointment timeline |
+| [Foodvisor calendar grid](https://refero.design/screens/7ca38fcb-fb29-451d-9422-5deb0c85b834) | Seven-column month with tiny event dots and an unambiguous selected date | Use actual responsibility colors, max three dots +N |
+| [Freeform Recently Deleted](https://refero.design/screens/e4030ccf-2cdc-4b15-99a8-f5dcc83ba756) | Recoverable list is scannable by task/title, origin and deletion time | No account requirement or cloud-only restore |
+| [Dropbox recovery](https://refero.design/flows/2437) and [Pool trash management](https://refero.design/flows/11993) | Separate restore from permanent deletion, explicit selected count, clear success/failure | Keep existing native local-first recovery engine and confirmation |
+| [Linear](https://linear.app), [Shortcut](https://www.shortcut.com) and [Paste](https://pasteapp.io) styles | Controlled selected-state contrast, compact nested surfaces and focused light appearance | **Do not copy** lime/amber/violet accents, external typefaces or site radii |
+
+**Reference lock:** the owner's `Spread_Week_Month_Review.zip` remains the visual hierarchy target. The existing native design board owns dark navy/cream, system typography, action blue, role colors, Crown, Chalkboard and materials. Use Refero as pattern research, **not a second design system**.
+
+**Components tightened on PR #144:** `InlineHoursRefusal` computes exact half-hour shortage without silently placing fewer hours and exposes a real RoleSheet adjustment action; `DayDirectionalMotion` slides selected daily content in navigation direction and dissolves under Reduce Motion; `SidebarRestore` lives beside the Spread brand when fully hidden; `ResponsiveHeader` retains Crown/navigation at accessibility text sizes. Their UI, portable tests and QA gates remain mandatory before release.
+
 ## 2. Component inventory and implementation contracts
 
 | Component | Visual source | State and interactions | Code home | Acceptance |
