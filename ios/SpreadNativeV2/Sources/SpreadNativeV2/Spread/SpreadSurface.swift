@@ -489,12 +489,16 @@ struct RoleRow: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    // The small static summary line is spoken as part of the
+                    // 44pt role selector instead of a separate 16pt hit region.
+                    .accessibilityValue(summaryLine)
                     .accessibilityIdentifier("select-role-\(role.id)")
                 }
                 Text(summaryLine)
                     .font(.system(.footnote))
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true) // Already exposed by the adjacent role selector
             }
             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             .layoutPriority(-1)
