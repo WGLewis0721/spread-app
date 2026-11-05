@@ -16,7 +16,7 @@ const contrast = (a, b) => {
 };
 const blended = (text, surface, alpha) => text.map((value, i) => value * alpha + surface[i] * (1 - alpha));
 function sample(name, mode) {
-  const pattern = new RegExp('(?:private )?static let ' + name + ' = dynamic\\(light: 0x([0-9A-F]+), dark: 0x([0-9A-F]+)\\)');
+  const pattern = new RegExp('(?:public |private )?static let ' + name + ' = dynamic\\(light: 0x([0-9A-F]+), dark: 0x([0-9A-F]+)\\)');
   const line = theme.match(pattern);
   assert.ok(line, 'missing theme surface ' + name);
   return hexColor(parseInt(line[mode === 'light' ? 1 : 2], 16));
