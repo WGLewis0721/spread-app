@@ -49,6 +49,11 @@ struct TaskSheet: View {
     @State private var expandedNote: String?
     @State private var showFormats = false
     @State private var saveTask: Task<Void, Never>?
+    // A revision is acknowledged only after the real planner store commits its content.
+    // A dismissed sheet waits for any in-flight debounce before flushing the final revision.
+    @State private var contentRevision = 0
+    @State private var savedContentRevision = 0
+    @State private var finishing = false
     @State private var photoPick: PhotosPickerItem?
     @State private var confirmDelete = false
     /// Which rich-content field has the keyboard. Only set when the user adds a line, row or column.
@@ -122,7 +127,7 @@ struct TaskSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .task { await load() }
-        .onDisappear { commitTitle() }
+        .onDisappear { saveOnDismiss() }
         .onChange(of: planner.details[taskId]) { _, value in
             if let value, !loaded { content = value; loaded = true }
         }
@@ -191,45 +196,85 @@ struct TaskSheet: View {
         }
     }
 
-    /// Save the whole block list after a short pause. The store is the only writer; the sheet never keeps a second copy.
+    /// Store acknowledgements, not the debounce timer, determine whether content is saved.
+    private func persistContent(_ draft: NativeTaskContent) async -> Bool {
+        guard let encoded = try? JSONEncoder().encode(draft),
+              let object = try? JSONSerialization.jsonObject(with: encoded) else { return false }
+        return await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+    }
+
+    /// Serialize debounced edits, so an older send cannot finish after a newer one and
+    /// replace the latest notes, outline or table cells with stale content.
     private func scheduleSave() {
         guard loaded, supported else { return }
-        saveTask?.cancel()
+        contentRevision += 1
+        let revision = contentRevision
         let snapshot = content
+        let preceding = saveTask
+        preceding?.cancel()
         saveTask = Task {
+            await preceding?.value
             try? await Task.sleep(nanoseconds: 450_000_000)
             guard !Task.isCancelled else { return }
-            let encoded = try? JSONEncoder().encode(snapshot)
-            guard let encoded, let object = try? JSONSerialization.jsonObject(with: encoded) else { return }
-            _ = await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+            guard await persistContent(snapshot) else { return }
+            if contentRevision == revision { savedContentRevision = revision }
         }
     }
 
-    /// Done flushes the pending debounced block edit before dismissal. A quick Done/relaunch cannot
-    /// drop the last keystroke, and failed saves keep the sheet open with its original draft.
+    /// Done waits for the earlier write and flushes the final revision before leaving.
+    /// A failed store acknowledgement keeps the sheet open for retry.
     private func finishEditing() {
-        saveTask?.cancel()
+        guard !finishing else { return }
+        finishing = true
+        let preceding = saveTask
+        preceding?.cancel()
         let draft = content
+        let revision = contentRevision
         let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         Task {
-            if loaded && supported {
-                guard let bytes = try? JSONEncoder().encode(draft),
-                      let object = try? JSONSerialization.jsonObject(with: bytes),
-                      await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object]) else { return }
+            await preceding?.value
+            if loaded && supported && revision > savedContentRevision {
+                guard await persistContent(draft) else { finishing = false; return }
+                if contentRevision == revision { savedContentRevision = revision }
             }
-            if !newTitle.isEmpty, newTitle != task?.text {
-                guard await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": newTitle]) else { return }
+            if task != nil, !newTitle.isEmpty, newTitle != task?.text {
+                guard await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": newTitle]) else {
+                    finishing = false
+                    return
+                }
             }
             dismiss()
         }
     }
 
-    /// Saves a changed title. Also runs when the sheet disappears, so swiping the sheet down never discards a title
-    /// that was typed but not yet submitted. A deleted task (`task == nil`), an unchanged title and an empty one are no-ops.
+    /// System swipe-to-dismiss has no async dismissal callback. Drain the pending
+    /// debouncer, then save the newest dirty revision and title in store order.
+    /// Deleting a task must never recreate it from an outgoing sheet.
+    private func saveOnDismiss() {
+        guard !finishing, task != nil else { return }
+        let preceding = saveTask
+        preceding?.cancel()
+        let draft = content
+        let revision = contentRevision
+        let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task {
+            await preceding?.value
+            if loaded && supported && revision > savedContentRevision {
+                if await persistContent(draft), contentRevision == revision {
+                    savedContentRevision = revision
+                }
+            }
+            if !newTitle.isEmpty, newTitle != task?.text {
+                _ = await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": newTitle])
+            }
+        }
+    }
+
+    /// Submit can commit just the title without closing the editor.
     private func commitTitle() {
         let value = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard task != nil, !value.isEmpty, value != task?.text else { return }
-        Task { await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) }
+        Task { _ = await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) }
     }
 
     /// Moves the keyboard to a field the user just added, so they can keep typing. The field exists only once this
