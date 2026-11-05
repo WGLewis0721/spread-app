@@ -20,7 +20,7 @@ jobs:
       - name: Select and verify Xcode
         run: |
           sudo xcode-select -s /Applications/Xcode_27.1.app
-          xcodebuild -version | tee artifacts-xcode-version.txt
+          xcodebuild -version
           xcrun --sdk iphonesimulator --show-sdk-version
       - uses: actions/setup-node@v4
         with:
@@ -109,6 +109,11 @@ jobs:
         if: always()
         run: |
           mkdir -p artifacts/agent-device-logs
+          # A failed runner preparation or snapshot command is a blocked automation
+          # precondition. It is not evidence of a Spread UI or navigation failure.
+          if [ ! -s artifacts/automation-preflight.json ] && { [ -f artifacts/agent-device-prepare.json ] || [ -f artifacts/preflight-accessibility.json ]; }; then
+            printf '%s\n' '{"status":"BLOCKED","reason":"Apple runner or accessibility snapshot failed before selectors; inspect prepare/snapshot stderr and runner logs"}' > artifacts/automation-preflight.json
+          fi
           SESSION="$HOME/.agent-device/sessions/spread-duo-poses"
           for file in runner.log events.ndjson session.json; do
             if [ -f "$SESSION/$file" ]; then cp "$SESSION/$file" "artifacts/agent-device-logs/$file"; fi
