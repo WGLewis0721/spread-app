@@ -198,22 +198,31 @@ struct LiveReply: Decodable {
     /// Adds hours for a responsibility to a day, and says why when it cannot. The store quietly does nothing when a
     /// responsibility's weekly hours are all placed, so a tap would otherwise look broken: this explains it first.
     @discardableResult func placeHours(roleId: String, day: String, hours: Double) async -> Bool {
-        if let snapshot, snapshot.remainingHours(for: roleId) <= 0 {
-            let name = snapshot.roles.first { $0.id == roleId }?.name ?? "This responsibility"
-            refuse("\(name) has no hours left this week. Raise its weekly hours, or take an hour off another day first.")
-            return false
+        // Never silently shrink the request to fit the bank. That makes a 1h action appear
+        // successful after placing only 30m (owner decisions 20 and 29).
+        if let snapshot {
+            let available = max(0, snapshot.remainingHours(for: roleId))
+            guard hours <= available else {
+                let name = snapshot.roles.first { $0.id == roleId }?.name ?? "This responsibility"
+                let shortage = hours - available
+                refuse("\(name) needs \(SpreadHours.text(shortage))h more in this week's bank to place \(SpreadHours.text(hours))h. Adjust weekly hours or remove time from another day.")
+                return false
+            }
         }
-        let amount = min(hours, snapshot?.remainingHours(for: roleId) ?? hours)
-        return await send(["type": "moveSpreadToDay", "roleId": roleId, "day": day, "hours": amount])
+        return await send(["type": "moveSpreadToDay", "roleId": roleId, "day": day, "hours": hours])
     }
 
-    /// Changes a day's hours, refusing with a reason (instead of silently clamping) when raising them would pass the
-    /// responsibility's weekly hours.
+    /// The required *increase*, not just whether the bank is empty, is what matters.
+    /// Compare whole half-hour amounts before sending any mutation.
     @discardableResult func setAllocationHours(_ allocation: DayAllocation, to hours: Double) async -> Bool {
-        if hours > allocation.hours, let snapshot, snapshot.remainingHours(for: allocation.roleId) <= 0 {
-            let name = snapshot.roles.first { $0.id == allocation.roleId }?.name ?? "This responsibility"
-            refuse("\(name) has no hours left this week. Take an hour off another day, or raise its weekly hours.")
-            return false
+        if hours > allocation.hours, let snapshot {
+            let needed = hours - allocation.hours
+            let available = max(0, snapshot.remainingHours(for: allocation.roleId))
+            guard needed <= available else {
+                let name = snapshot.roles.first { $0.id == allocation.roleId }?.name ?? "This responsibility"
+                refuse("\(name) needs \(SpreadHours.text(needed - available))h more to increase this day to \(SpreadHours.text(hours))h. Adjust weekly hours or take time off another day.")
+                return false
+            }
         }
         return await send(["type": "allocationHours", "allocationId": allocation.id, "hours": hours])
     }
