@@ -508,10 +508,11 @@ struct MoreSheet: View {
 
     private func rollover() {
         Task {
-            _ = await planner.send(["type": "rollover", "force": false])
-            // "confirm" is a valid non-mutating outcome: the next week already
-            // contains data. Do not require send() to report a committed write
-            // before presenting the user's explicit replacement choice.
+            // Clear a previous confirmation before requesting the current week's
+            // outcome. The dispatcher returns ok=true even when the current
+            // rollover is a non-mutating "confirm" response.
+            planner.rolloverOutcome = nil
+            guard await planner.send(["type": "rollover", "force": false]) else { return }
             if planner.rolloverOutcome == "confirm" {
                 confirmRollover = true
             }
