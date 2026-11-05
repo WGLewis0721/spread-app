@@ -554,8 +554,15 @@ struct MoreSheet: View {
             .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
             .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous))
         }
+        // The tappable control, not just its label, owns the full tile bounds.
+        // A SwiftUI custom button style can otherwise expose only its inner
+        // text frame to accessibility hit-target measurements.
+        .frame(maxWidth: .infinity, minHeight: 78)
+        .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous))
         .buttonStyle(.spreadPress)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel ?? title)
+        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier(id)
     }
 
