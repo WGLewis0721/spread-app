@@ -13,6 +13,8 @@ export type NativeV2Snapshot = {
   roles: { id: string; name: string; category: string; color: string; hours: number }[];
   allocations: { id: string; roleId: string; day: string; hours: number; order: number }[];
   tasks: { id: string; roleId: string; text: string; done: boolean; allocationId: string | null }[];
+  /** Only present when the user has manually reordered tasks in Week. */
+  dayTaskOrder?: Record<string, string[]>;
 };
 
 export type NativeV2Envelope = {
@@ -53,6 +55,7 @@ export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): 
         hours: allocation.hours,
         order: allocation.order,
       })),
+      ...(week?.dayTaskOrder ? { dayTaskOrder: week.dayTaskOrder } : {}),
       tasks: data.hats.flatMap((hat) =>
         (boxes.get(hat.id)?.tasks ?? []).map((task) => ({
           id: task.id,
