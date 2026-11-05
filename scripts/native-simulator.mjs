@@ -10,6 +10,7 @@ export function chooseSimulator(runtimes, types, width) {
     390: (d) => ['iPhone 14', 'iPhone 13', 'iPhone 12'].includes(d.name),
     820: (d) => /iPad Air.*5th generation/.test(d.name),
     1024: (d) => /iPad Pro.*12\.9/.test(d.name),
+    1366: (d) => /iPad Pro.*12\.9/.test(d.name),
   }[width];
   if (!matches) throw new Error(`Unsupported verification width: ${width}`);
   for (const runtime of runtimes.filter((r) => r.identifier.includes('iOS-') && r.isAvailable !== false && version(r.version) >= version(width === 'duo' ? '27.1' : '17.0')).sort((a, b) => version(b.version) - version(a.version))) {
