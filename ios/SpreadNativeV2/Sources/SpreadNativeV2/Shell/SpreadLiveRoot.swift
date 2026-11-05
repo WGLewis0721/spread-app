@@ -178,7 +178,8 @@ public struct SpreadLiveRoot: View {
                     onWeekChange: { goWeek($0) },
                     onPickDay: { pickDay($0) },
                     onOpenTask: { sheet = .task($0, $1) },
-                    onNewRole: { sheet = .newRole }
+                    onNewRole: { sheet = .newRole },
+                    onAdjustHours: { sheet = .role($0) }
                 )
             } else if weekFocusEnabled && destination == .spread {
                 HStack(alignment: .top, spacing: 8) {
