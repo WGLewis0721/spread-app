@@ -197,6 +197,7 @@ public struct SpreadLiveRoot: View {
                     onPickDay: { pickDay($0) },
                     onOpenTask: { sheet = .task($0, $1) },
                     onNewRole: { sheet = .newRole },
+                    onAdjustHours: { sheet = .role($0) },
                     sidebarHidden: $weekSidebarHidden
                 )
                 // Expansion memory and open trays belong to this profile. Recreate the
