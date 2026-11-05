@@ -37,6 +37,13 @@ jobs:
       - run: npm run ios:sync
       - name: Create actual compatible simulator
         run: node scripts/native-simulator.mjs ${{ matrix.width }}
+      - name: Independent XCTest launch and native navigation canary (${{ matrix.width }} pt)
+        run: |
+          mkdir -p artifacts
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -only-testing:SpreadNativeUITests/LaunchSmokeUITests/testSpreadLaunchesAndExposesNativeNavigation \
+            -resultBundlePath artifacts/Launch${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Native viewport screens (${{ matrix.width }} pt)
         run: |
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO -only-testing:SpreadNativeUITests/PlannerUITests/testLayout${{ matrix.width }} -resultBundlePath artifacts/Layout${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
