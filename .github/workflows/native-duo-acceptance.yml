@@ -37,6 +37,13 @@ jobs:
             echo "Simulator service not ready; attempt $attempt"
           done
           exit 1
+      - name: Independent XCTest launch and native navigation canary (Duo)
+        run: |
+          mkdir -p artifacts
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -only-testing:SpreadNativeUITests/LaunchSmokeUITests/testSpreadLaunchesAndExposesNativeNavigation \
+            -resultBundlePath artifacts/DuoLaunch.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Test the real Duo app
         run: |
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
