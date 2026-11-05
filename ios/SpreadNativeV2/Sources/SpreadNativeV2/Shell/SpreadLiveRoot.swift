@@ -509,10 +509,10 @@ public struct SpreadLiveRoot: View {
                 // The accessibility fallback is fully opaque and high-contrast.
                 if reduceTransparency {
                     Capsule().fill(Spread.elevated)
-                } else if #available(iOS 26.0, *) {
-                    Capsule().fill(Color.clear)
-                        .glassEffect(.regular, in: Capsule())
                 } else {
+                    // The current simulator compiler does not expose glassEffect.
+                    // Keep the dock translucent with system material until the
+                    // CI toolchain supports the newer SwiftUI glass API.
                     Capsule().fill(.regularMaterial)
                 }
             }
