@@ -68,6 +68,8 @@ struct MonthQuickAddSheet: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onAppear { focused = true }
+        // A container identifier otherwise replaces its children's own identifiers.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("month-quick-add-sheet")
     }
 

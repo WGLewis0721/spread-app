@@ -110,6 +110,8 @@ struct RecentlyDeletedSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .task { await reload() }
+        // A container identifier otherwise replaces its children's own identifiers.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("recently-deleted-sheet")
     }
 
