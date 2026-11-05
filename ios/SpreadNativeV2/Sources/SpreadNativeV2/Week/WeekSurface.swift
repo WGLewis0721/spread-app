@@ -171,7 +171,7 @@ struct WeekSurface: View {
                                 Image(systemName: "plus").font(.system(.footnote, weight: .bold))
                                 Circle().fill(Color(hex: role?.color ?? "#8E8E93")).frame(width: 8, height: 8)
                                 Text(role?.name ?? "").foregroundStyle(Spread.ink)
-                                Text(String(item.dayLabel.prefix(3)))
+                                Text(String(item.dayLabel.prefix(3))).foregroundStyle(Spread.ink)
                                 Text("\(SpreadHours.text(item.hours))h").foregroundStyle(Spread.ink).monospacedDigit()
                             }
                             .font(.system(.subheadline, weight: .semibold))
@@ -321,7 +321,7 @@ struct DayCard: View {
                     .font(.system(.body, weight: .semibold))
                     .accessibilityAddTraits(isToday ? .isHeader : [])
                 if isToday {
-                    Text("Today").font(.system(.caption, weight: .semibold)).foregroundStyle(Spread.accent)
+                    Text("Today").font(.system(.caption, weight: .semibold)).foregroundStyle(Spread.ink)
                 }
                 Spacer()
                 Text(PlannerDates.label(PlannerDates.date(day), pattern: "MM/dd"))

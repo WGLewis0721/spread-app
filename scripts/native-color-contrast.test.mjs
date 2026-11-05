@@ -42,3 +42,18 @@ test('tertiary text meets 4.5:1 on light Wallet card', () => {
   const [r, g, b, alpha] = tertiary('light');
   assert.ok(contrast(blended([r, g, b], surface, alpha), surface) >= 4.5);
 });
+test('Week date labels and suggestion text meet 4.5:1 on both appearances', () => {
+  const secondary = theme.match(/public static let secondary = adaptive\(\s*light:\s*\(([\d.,\s]+)\),\s*dark:\s*\(([\d.,\s]+)\)/);
+  assert.ok(secondary);
+  for (const mode of ['light', 'dark']) {
+    const [r, g, b, alpha] = secondary[mode === 'light' ? 1 : 2].split(',').map(Number);
+    const canvas = sample('canvas', mode);
+    const card = sample('cardTop', mode);
+    const accent = sample('accent', mode);
+    const chip = blended(accent, canvas, 0.10);
+    assert.ok(contrast(blended([r, g, b], canvas, alpha), canvas) >= 4.5, `${mode} Week instruction`);
+    assert.ok(contrast(blended([r, g, b], card, alpha), card) >= 4.5, `${mode} Week date`);
+    assert.ok(contrast(sample('ink', mode), card) >= 4.5, `${mode} Today label`);
+    assert.ok(contrast(sample('ink', mode), chip) >= 4.5, `${mode} suggestion text`);
+  }
+});
