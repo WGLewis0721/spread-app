@@ -1436,6 +1436,15 @@ final class WeekMonthUITests: NativeUITestCase {
     private func taskRow(_ title: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'focus-task-' AND label == %@", title)).firstMatch
     }
+    /// A real finger drag across the seven-day strip. `swipeLeft()` on one narrow day button travels about that
+    /// button's width, under the strip's 65 pt minimum, so it never reached the week-change gesture.
+    private func dragStrip(towardNextWeek: Bool) {
+        let days = dayIDs().map { el($0) }
+        let start = towardNextWeek ? days[5] : days[1]
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let from = origin.withOffset(CGVector(dx: start.frame.midX - app.frame.minX, dy: start.frame.midY - app.frame.minY))
+        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: towardNextWeek ? -180 : 180, dy: 0)))
+    }
 
     /// Decisions 25, 54 and 90-91: tap a day, Month round trip keeps it, a strip swipe changes week and opens Monday.
     func testDaySelectionSurvivesMonthAndStripSwipeOpensMonday() {
@@ -1450,12 +1459,12 @@ final class WeekMonthUITests: NativeUITestCase {
         tapID("focus-week-month-toggle")
         XCTAssertTrue(eventually(10) { self.el(thursday).exists && self.el(thursday).isSelected },
                       "Closing Month without choosing a date must restore the previous day")
-        el(thursday).swipeLeft()
+        dragStrip(towardNextWeek: true)
         XCTAssertTrue(eventually(15) { self.dayIDs().first != days.first }, "Swiping the seven-day strip did not change week")
         let next = dayIDs()
         XCTAssertTrue(eventually(5) { self.el(next[0]).isSelected }, "Changing weeks must open Monday")
         capture("wm-next-week-opens-monday")
-        el(next[0]).swipeRight()
+        dragStrip(towardNextWeek: false)
         XCTAssertTrue(eventually(15) { self.dayIDs().first == days.first }, "Swiping back did not return to the first week")
     }
 
