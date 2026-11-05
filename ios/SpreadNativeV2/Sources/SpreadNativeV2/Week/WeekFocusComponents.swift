@@ -111,6 +111,7 @@ struct FocusedQuickAdd: View {
     let roleId: String
     let day: String
     let onOpenEditor: (String, String) -> Void
+    let onAdjustHours: (String) -> Void
     let draftKey: String
 
     @State private var expanded = false
@@ -121,12 +122,13 @@ struct FocusedQuickAdd: View {
     @FocusState private var focused: Bool
 
     init(planner: LivePlanner, roleId: String, day: String, draftKey: String,
-         onOpenEditor: @escaping (String, String) -> Void) {
+         onOpenEditor: @escaping (String, String) -> Void, onAdjustHours: @escaping (String) -> Void) {
         self.planner = planner
         self.roleId = roleId
         self.day = day
         self.draftKey = draftKey
         self.onOpenEditor = onOpenEditor
+        self.onAdjustHours = onAdjustHours
         _text = AppStorage(wrappedValue: "", draftKey)
     }
 
@@ -178,6 +180,7 @@ struct FocusedQuickAdd: View {
         .onAppear { expanded = !text.isEmpty }
         .confirmationDialog("Schedule this task?", isPresented: $wantsHours, titleVisibility: .visible) {
             Button("Add 30 minutes to this day") { Task { await allocateAndSchedule() } }
+            Button("Adjust weekly hours") { onAdjustHours(roleId); pendingTaskId = nil }
             Button("Keep in To Place", role: .cancel) { pendingTaskId = nil }
         } message: {
             Text("No time has been allocated to this responsibility on the selected day. The task has been saved to To Place.")
@@ -236,6 +239,7 @@ struct FocusedRoleCard: View {
     let expanded: Bool
     let onToggle: () -> Void
     let onOpenTask: (String, String) -> Void
+    let onAdjustHours: (String) -> Void
 
     @State private var showCompleted = false
     @State private var showHours = false
@@ -318,6 +322,18 @@ struct FocusedRoleCard: View {
                 .accessibilityIdentifier("focus-hour-\(role.id)")
             }
             if showHours {
+                HStack(spacing: 6) {
+                    Text(snapshot.remainingHours(for: role.id) < 0.5
+                         ? "No unallocated time remaining this week."
+                         : "\(SpreadHours.text(snapshot.remainingHours(for: role.id)))h unallocated this week")
+                        .font(Spread.caption).foregroundStyle(Spread.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 2)
+                    Button("Adjust weekly hours") { onAdjustHours(role.id) }
+                        .font(Spread.caption)
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("focus-adjust-hours-\(role.id)")
+                }
                 if let first = allocations.first {
                     HourStepper(value: first.hours, label: "\(role.name) on \(day)", step: 0.5) { amount in
                         Task { await planner.setAllocationHours(first, to: amount) }
@@ -359,7 +375,7 @@ struct FocusedRoleCard: View {
                     let draftKey = TaskDraftMemory.key(profileId: planner.state?.envelope.profileId,
                                                        weekKey: snapshot.weekKey, roleId: role.id, day: day)
                     FocusedQuickAdd(planner: planner, roleId: role.id, day: day,
-                                    draftKey: draftKey, onOpenEditor: onOpenTask)
+                                    draftKey: draftKey, onOpenEditor: onOpenTask, onAdjustHours: onAdjustHours)
                         .id(draftKey)
                 }
                 .padding(.top, 3)
