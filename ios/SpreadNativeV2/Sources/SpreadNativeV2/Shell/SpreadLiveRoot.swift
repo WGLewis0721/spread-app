@@ -195,6 +195,9 @@ public struct SpreadLiveRoot: View {
                     onOpenTask: { sheet = .task($0, $1) },
                     onNewRole: { sheet = .newRole }
                 )
+                // Expansion memory and open trays belong to this profile. Recreate the
+                // surface on a switch so it restores that profile's own saved day/groups.
+                .id(planner.state?.envelope.profileId)
             } else if weekFocusEnabled && destination == .spread {
                 HStack(alignment: .top, spacing: 8) {
                     ResponsibilitySidebar(

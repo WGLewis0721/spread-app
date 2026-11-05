@@ -1443,6 +1443,30 @@ final class WeekMonthUITests: NativeUITestCase {
     private func taskRow(_ title: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'focus-task-' AND label == %@", title)).firstMatch
     }
+    /// Switching between two profiles whose remembered destination is Week must not
+    /// carry the first person's hidden rail or open trays into the second profile.
+    func testFocusedWeekResetsTransientStateAcrossProfiles() throws {
+        launch(preview); openFocusedWeek()
+        tapID("open-more"); tapID("manage-profiles")
+        let profiles = elements(prefix: "profile-")
+        let original = try XCTUnwrap(profiles.first { ($0.value as? String) == "Current profile" } ?? profiles.first).identifier
+        typeInto("new-profile-field", "Week isolation " + String(UUID().uuidString.prefix(6)))
+        tapID("create-profile")
+        closeNativeSheets(); openFocusedWeek()
+        tapID("open-more"); tapID("manage-profiles")
+        let other = try XCTUnwrap(elements(prefix: "profile-").first {
+            ($0.value as? String) == "Current profile" || $0.isSelected
+        }).identifier
+        tapID(original); closeNativeSheets(); openFocusedWeek()
+        tapID("focus-show-sidebar")
+        XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists })
+        tapID("open-more"); tapID("manage-profiles"); tapID(other); closeNativeSheets()
+        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20))
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5),
+                      "The previous profile's hidden rail leaked into this profile's Week")
+        capture("wm-profile-isolated-rail")
+        tapID("open-more"); tapID("manage-profiles"); tapID(original); closeNativeSheets()
+    }
     /// A real finger drag across the seven-day strip. `swipeLeft()` on one narrow day button travels about that
     /// button's width, under the strip's 65 pt minimum, so it never reached the week-change gesture.
     private func dragStrip(towardNextWeek: Bool) {
