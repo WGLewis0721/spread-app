@@ -213,7 +213,7 @@ export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.sprea
   record('open', 'portrait', 'continuity-precondition', entered ? 'PASS' : 'BLOCKED',
     entered ? 'a Wallet card is expanded and holds an unsaved draft' : 'could not expand a card and enter an unsaved draft; continuity cannot be judged', [tree.file]);
   if (entered) {
-    const steps = [['closed', 'portrait'], ['half-open', 'portrait'], ['half-open', 'landscape-left'], ['open', 'landscape-left'], ['open', 'portrait']];
+    const steps = POSES.flatMap((pose) => ORIENTATIONS.map((orientation) => [pose, orientation]));
     for (const [pose, orientation] of steps) {
       const f = await ad(['fold', pose], { json: true, timeoutMs: 180000 });
       const o = await ad(['orientation', orientation], { json: true, timeoutMs: 120000 });
@@ -233,13 +233,15 @@ export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.sprea
   await sleep(800);
   await press('id="week-month-toggle"');
   await sleep(1000);
-  for (const pose of ['closed', 'open']) {
+  for (const pose of POSES) for (const orientation of ORIENTATIONS) {
     const f = await ad(['fold', pose], { json: true, timeoutMs: 180000 });
+    const o = await ad(['orientation', orientation], { json: true, timeoutMs: 120000 });
     await sleep(1500);
-    const t = await snap(`continuity-month-${pose}`);
-    const stillMonth = f.ok ? await onMonth(t.text) : { ok: false };
-    record(pose, '-', 'continuity-month-kept', f.ok ? (stillMonth.ok ? 'PASS' : 'FAIL') : 'BLOCKED',
-      f.ok ? (stillMonth.ok ? 'still on Month after the fold' : 'left Month during the fold') : errorText(f), [t.file]);
+    const t = await snap(`continuity-month-${pose}-${orientation}`);
+    const established = f.ok && o.ok;
+    const stillMonth = established ? await onMonth(t.text) : { ok: false };
+    record(pose, orientation, 'continuity-month-kept', established ? (stillMonth.ok ? 'PASS' : 'FAIL') : 'BLOCKED',
+      established ? (stillMonth.ok ? 'still on Month after fold and rotation' : 'left Month during fold or rotation') : errorText(f.ok ? o : f), [t.file]);
   }
   // Exploratory (not gating): a timed hinge sweep must leave the app responsive.
   const sweep = JSON.stringify([{ atMs: 0, angle: 180 }, { atMs: 1500, angle: 100 }, { atMs: 3000, angle: 0 }, { atMs: 4500, angle: 180 }]);
