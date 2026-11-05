@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - "ios/**"
+      - "scripts/native-duo-poses*"
       - ".github/workflows/native-duo-poses.yml"
   workflow_dispatch:
 permissions:

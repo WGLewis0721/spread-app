@@ -125,6 +125,11 @@ test('the workflow runs this harness and never passes a scoped simulator set', (
   const workflow = readFileSync(new URL('../.github/workflows/native-duo-poses.yml', import.meta.url), 'utf8');
   assert.match(workflow, /scripts\/native-duo-poses\.mjs/);
   assert.doesNotMatch(workflow, /--ios-simulator-device-set/);
+  for (const filename of ['native-duo-poses.yml', 'native-duo-acceptance.yml']) {
+    const nativeWorkflow = readFileSync(new URL('../.github/workflows/' + filename, import.meta.url), 'utf8');
+    assert.ok(nativeWorkflow.includes('- "scripts/native-duo-poses*"'),
+      filename + ' must rerun native acceptance for pose harness and regression test changes');
+  }
 });
 
 test('a refused rotation (the failure seen in runs 41852591875 and 41860698620) fails loudly but does not stop the matrix', async () => {

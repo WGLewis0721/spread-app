@@ -5,7 +5,8 @@
       "fix/duo-optimization-repair-20261104": false,
       "fix/redesign-verify-followup": false,
       "fix/native-acceptance-followup-20261104": false,
-      "qa/release-143-integrated-20261105": false
+      "qa/release-143-integrated-20261105": false,
+      "fix/release-143-native-followup": false
     }
   }
 }
