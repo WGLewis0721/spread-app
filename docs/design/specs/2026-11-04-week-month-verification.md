@@ -7,7 +7,7 @@
 | Base | `main` 51f9a7c (#136 and #140), plus #138's compile fix |
 | Merged | PR #139 as 74356d5 on Nov 4, at the owner's request, **before** the macOS build and simulator runs finished |
 | Follow-up | `fix/redesign-verify-followup` |
-| Release status | **NO-GO.** No macOS build or simulator run had passed when #139 merged |
+| Release status | **NO-GO.** The native build and Simulator launch pass on main (run 41931343425); UI journeys and device checks are still owed |
 
 ## Where evidence comes from
 
@@ -111,7 +111,7 @@ Cloud, sync, backup, restore and schema files were not edited. The sync roundtri
 
 Each item closes only with evidence attached to the follow-up PR: an xcresult, screenshots, or a test name.
 
-1. **Native build:** `iOS shell` xcodebuild green on main after #139. Fix any Swift compile errors first; #139's Swift was not compiled before merge.
+1. **Native build: DONE.** Main 74356d5, `iOS shell` run 41931343425 (Nov 5): typecheck, `test:spread`, SpreadCloudCore `swift test`, the iPhone simulator `xcodebuild` (01:43–01:46 UTC) and Simulator install and launch all succeeded. #139's Swift compiles with no errors. The native journey and Release archive steps were still running when this was recorded.
 2. **Week/Month journeys:** `native-journeys` groups `week-month` (390 pt), `week-month-ipad` (820 pt) and `reduce-motion`, plus the two journeys in `native-duo-acceptance`. Fix real failures; never skip a test.
 3. **Regression suites still green:** Classic Week, Wallet Stack, Crown, layout acceptance (390, 820, 1024, 1366), visual tour, Duo hinge and rotation.
 4. **Manual or simulator checks:** VoiceOver order and actions (Move up/down, Add task to this day, Day complete), the largest Dynamic Type size, light and dark, rotation and resizing, and Duo open and closed.
