@@ -167,7 +167,12 @@ public struct SpreadLiveRoot: View {
         let isMonth = destination == .week && monthPlane
         return VStack(spacing: 0) {
             // The header is sticky, as the web header was: it stays put while the surface scrolls under it.
-            if !typeSize.isAccessibilitySize { header(snapshot, isMonth: isMonth) }
+            // Classic moves the header into its ScrollView at accessibility sizes.
+            // The redesigned Week/Spread have their own independent scrolling surfaces,
+            // so omitting this header would hide the Crown, brand and navigation entirely.
+            if !typeSize.isAccessibilitySize || weekFocusEnabled {
+                header(snapshot, isMonth: isMonth)
+            }
             if weekFocusEnabled && destination == .week {
                 WeekFocusSurface(
                     planner: planner,
