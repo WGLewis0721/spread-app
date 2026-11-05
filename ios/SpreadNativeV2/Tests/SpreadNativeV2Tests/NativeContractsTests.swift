@@ -118,6 +118,20 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertEqual(source.unplacedTasks.map(\.id), ["t-2"])
     }
 
+    /// Decisions 20 and 29: refusing an over-budget change must never quietly
+    /// place a smaller amount. The store independently re-validates the request.
+    func testNativeHoursBudgetRefusesShortageExactly() {
+        XCTAssertTrue(NativeHourBudget.canPlace(requested: 0.5, available: 0.5))
+        XCTAssertTrue(NativeHourBudget.canPlace(requested: 2, available: 4))
+        XCTAssertFalse(NativeHourBudget.canPlace(requested: 1, available: 0.5))
+        XCTAssertEqual(NativeHourBudget.shortage(requested: 1, available: 0.5), 0.5)
+        XCTAssertEqual(NativeHourBudget.shortage(requested: 2, available: 0), 2)
+        XCTAssertEqual(NativeHourBudget.shortage(requested: 0.5, available: -2), 0.5)
+        XCTAssertEqual(NativeHourBudget.shortage(requested: 2, available: 4), 0)
+        XCTAssertFalse(NativeHourBudget.canPlace(requested: 0, available: 4))
+        XCTAssertFalse(NativeHourBudget.canPlace(requested: .infinity, available: 4))
+    }
+
     func testHourMathIsProjectedNotPersisted() {
         let source = SpreadV2Fixture.week
         XCTAssertEqual(source.placedHours(for: "work"), 2)
