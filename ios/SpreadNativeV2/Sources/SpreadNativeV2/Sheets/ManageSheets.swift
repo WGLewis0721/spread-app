@@ -228,8 +228,9 @@ struct RoleSheet: View {
                         ForEach(snapshot.tasks(for: role.id)) { task in
                             TaskRow(planner: planner, snapshot: snapshot, task: task, roleId: role.id, onOpen: { onOpenTask(task.id) })
                         }
-                        AddTaskRow(placeholder: "Add a task") { text in
-                            Task { await planner.send(["type": "addTask", "roleId": role.id, "text": text]) }
+                        AddTaskRow(placeholder: "Add a task",
+                               draftKey: TaskDraftMemory.key(profileId: planner.state?.envelope.profileId, weekKey: snapshot.weekKey, roleId: role.id)) { text in
+                            await planner.send(["type": "addTask", "roleId": role.id, "text": text])
                         }
                     }
                         .listRowBackground(Spread.elevated)
@@ -567,6 +568,12 @@ struct MoreSheet: View {
         .accessibilityIdentifier(id)
     }
 
+    /// The Appearance choices share one row, identical to the previous HStack. At accessibility text sizes a third of
+    /// the width cannot hold "System" on one line (the labels are single-line), so the row stacks instead of truncating.
+    private var appearanceLayout: AnyLayout {
+        typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 6)) : AnyLayout(HStackLayout(spacing: 6))
+    }
+
     var body: some View {
         SpreadSheetStack {
             GeometryReader { geometry in
@@ -596,7 +603,7 @@ struct MoreSheet: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Appearance")
-                            HStack(spacing: 6) {
+                            appearanceLayout {
                                 ForEach(SpreadAppearance.allCases) { item in
                                     Button { appearance = item } label: {
                                         Text(item.title)

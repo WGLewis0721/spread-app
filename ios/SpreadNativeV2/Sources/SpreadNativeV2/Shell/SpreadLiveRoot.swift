@@ -111,11 +111,26 @@ public struct SpreadLiveRoot: View {
     }
 
     private var errorShown: Binding<Bool> {
-        Binding(get: { planner.error != nil }, set: { if !$0 { planner.error = nil } })
+        Binding(get: { planner.error != nil }, set: {
+            if !$0 {
+                planner.error = nil
+                planner.hoursShortage = nil
+            }
+        })
     }
 
     @ViewBuilder private var errorActions: some View {
-        Button("OK") { planner.error = nil }
+        Button("OK") {
+            planner.error = nil
+            planner.hoursShortage = nil
+        }
+        if let shortage = planner.hoursShortage {
+            Button("Adjust hours") {
+                planner.error = nil
+                planner.hoursShortage = nil
+                sheet = .role(shortage.roleId)
+            }
+        }
         if planner.errorOffersRetry {
             Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
         }
@@ -180,6 +195,9 @@ public struct SpreadLiveRoot: View {
                     onOpenTask: { sheet = .task($0, $1) },
                     onNewRole: { sheet = .newRole }
                 )
+                // Expansion memory and open trays belong to this profile. Recreate the
+                // surface on a switch so it restores that profile's own saved day/groups.
+                .id(planner.state?.envelope.profileId)
             } else if weekFocusEnabled && destination == .spread {
                 HStack(alignment: .top, spacing: 8) {
                     ResponsibilitySidebar(
@@ -675,7 +693,9 @@ public struct SpreadLiveRoot: View {
     }
 
     private func rollover() async {
-        _ = await planner.send(["type": "rollover", "force": false])
+        // A previous confirmation must never be reused if this request fails.
+        planner.rolloverOutcome = nil
+        guard await planner.send(["type": "rollover", "force": false]) else { return }
         if planner.rolloverOutcome == "confirm" { sheet = .confirmRollover }
     }
 

@@ -59,6 +59,12 @@ struct LiveReply: Decodable {
 }
 
 /// Read-only observable projection; all mutations are awaited intents to the React store.
+struct HoursShortage: Equatable {
+    let roleId: String
+    let missingHours: Double
+}
+
+/// One adjustment offer for a rejected allocation. The store remains the sole writer.
 @MainActor public final class LivePlanner: ObservableObject {
     @Published var state: LiveState?
     @Published var profiles: [NativeProfile] = []
@@ -70,6 +76,7 @@ struct LiveReply: Decodable {
     /// a refusal such as "Place hours for this responsibility on that day first." gets a plain OK.
     @Published var errorOffersRetry = false
     @Published var errorOffersBackup = false
+    @Published var hoursShortage: HoursShortage?
     @Published var saveFailure: String?
     @Published var recoveryNotice: String?
     @Published var busy = false
@@ -195,31 +202,46 @@ struct LiveReply: Decodable {
                                "targetDay": targetDay, "today": today])?.bulkPreview
     }
 
-    /// Adds hours for a responsibility to a day, and says why when it cannot. The store quietly does nothing when a
-    /// responsibility's weekly hours are all placed, so a tap would otherwise look broken: this explains it first.
+    /// Never silently place fewer hours than the person requested. When there
+    /// is a shortage, explain the exact missing amount and offer the same role editor
+    /// used elsewhere to adjust that responsibility's weekly hour budget.
     @discardableResult func placeHours(roleId: String, day: String, hours: Double) async -> Bool {
-        if let snapshot, snapshot.remainingHours(for: roleId) <= 0 {
-            let name = snapshot.roles.first { $0.id == roleId }?.name ?? "This responsibility"
-            refuse("\(name) has no hours left this week. Raise its weekly hours, or take an hour off another day first.")
-            return false
+        if let snapshot {
+            let remaining = max(0, snapshot.remainingHours(for: roleId))
+            let missing = max(0, hours - remaining)
+            if missing > 0.0001 {
+                let name = snapshot.roles.first { $0.id == roleId }?.name ?? "This responsibility"
+                refuse("\(name) needs \(SpreadHours.text(missing))h more to place \(SpreadHours.text(hours))h on this day. Adjust its weekly hours or take time from another day.",
+                       roleId: roleId, missing: missing)
+                return false
+            }
         }
-        let amount = min(hours, snapshot?.remainingHours(for: roleId) ?? hours)
-        return await send(["type": "moveSpreadToDay", "roleId": roleId, "day": day, "hours": amount])
+        hoursShortage = nil
+        return await send(["type": "moveSpreadToDay", "roleId": roleId, "day": day, "hours": hours])
     }
 
-    /// Changes a day's hours, refusing with a reason (instead of silently clamping) when raising them would pass the
-    /// responsibility's weekly hours.
+    /// An allocation increase needs only the difference in hours, not the
+    /// entire new allocation. Refuse with a measured shortage before a store call.
     @discardableResult func setAllocationHours(_ allocation: DayAllocation, to hours: Double) async -> Bool {
-        if hours > allocation.hours, let snapshot, snapshot.remainingHours(for: allocation.roleId) <= 0 {
-            let name = snapshot.roles.first { $0.id == allocation.roleId }?.name ?? "This responsibility"
-            refuse("\(name) has no hours left this week. Take an hour off another day, or raise its weekly hours.")
-            return false
+        if let snapshot, hours > allocation.hours {
+            let increase = hours - allocation.hours
+            let remaining = max(0, snapshot.remainingHours(for: allocation.roleId))
+            let missing = max(0, increase - remaining)
+            if missing > 0.0001 {
+                let name = snapshot.roles.first { $0.id == allocation.roleId }?.name ?? "This responsibility"
+                refuse("\(name) needs \(SpreadHours.text(missing))h more for this increase. Adjust its weekly hours or reduce another day.",
+                       roleId: allocation.roleId, missing: missing)
+                return false
+            }
         }
+        hoursShortage = nil
         return await send(["type": "allocationHours", "allocationId": allocation.id, "hours": hours])
     }
 
-    /// A refusal the person should read: plain OK, never Retry saving or Backup.
-    private func refuse(_ message: String) {
+    /// Refusal never offers a save retry; Adjust hours is relevant only to
+    /// insufficient allocation budgets, and never changes an hour automatically.
+    private func refuse(_ message: String, roleId: String? = nil, missing: Double = 0) {
+        hoursShortage = roleId.map { HoursShortage(roleId: $0, missingHours: missing) }
         error = message
         errorOffersRetry = false
         errorOffersBackup = false

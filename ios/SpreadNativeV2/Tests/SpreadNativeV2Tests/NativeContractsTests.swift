@@ -2,6 +2,24 @@ import XCTest
 @testable import SpreadNativeV2
 
 final class NativeContractsTests: XCTestCase {
+    func testUnsubmittedTaskDraftPersistsAndIsIsolatedByProfileWeekAndRole() {
+        let suite = "TaskDraftTests." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let key = TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "work")
+        defaults.set("Unsubmitted work", forKey: key)
+        XCTAssertEqual(UserDefaults(suiteName: suite)?.string(forKey: key), "Unsubmitted work")
+        for other in [TaskDraftMemory.key(profileId: "other", weekKey: "2026-11-02", roleId: "work"),
+                      TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-09", roleId: "work"),
+                      TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "home")] {
+            XCTAssertNil(defaults.string(forKey: other))
+        }
+        XCTAssertNotEqual(TaskDraftMemory.key(profileId: "a.b", weekKey: "c", roleId: "d"),
+                          TaskDraftMemory.key(profileId: "a", weekKey: "b.c", roleId: "d"))
+        defaults.removeObject(forKey: key)
+        XCTAssertNil(UserDefaults(suiteName: suite)?.string(forKey: key))
+    }
+
     func testStudioMotionNegativeDelayAndAlternateCycles() {
         XCTAssertEqual(ChalkTiming.phase(0, duration: 4, delay: -1), 0.25)
         XCTAssertEqual(ChalkTiming.phase(4, duration: 4, alternate: true), 1)
@@ -363,5 +381,49 @@ extension NativeContractsTests {
         for width in [358.0, 788, 992, 1334] {
             XCTAssertEqual(PlannerLayout.dayColumns(availableWidth: width, accessibilityText: true), 1)
         }
+    }
+}
+
+extension NativeContractsTests {
+    private func point(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: x, y: y) }
+
+    func testWeekSwipeCommitsOnlyPastTheThresholdAndOnlyWhenHorizontal() {
+        let width: CGFloat = 400
+        XCTAssertEqual(WeekSwipeRules.direction(start: point(200, 300), end: point(80, 300), width: width), 1, "dragging left is the next week")
+        XCTAssertEqual(WeekSwipeRules.direction(start: point(200, 300), end: point(320, 300), width: width), -1, "dragging right is the previous week")
+        XCTAssertNil(WeekSwipeRules.direction(start: point(200, 300), end: point(136, 300), width: width), "exactly 64 points is not past the threshold")
+        XCTAssertEqual(WeekSwipeRules.direction(start: point(200, 300), end: point(135, 300), width: width), 1)
+        XCTAssertNil(WeekSwipeRules.direction(start: point(200, 300), end: point(80, 420), width: width), "a mostly diagonal drag never changes the week")
+        XCTAssertNil(WeekSwipeRules.direction(start: point(10, 300), end: point(130, 300), width: width), "a swipe never starts in the left edge guard")
+        XCTAssertNil(WeekSwipeRules.direction(start: point(390, 300), end: point(270, 300), width: width), "a swipe never starts in the right edge guard")
+        XCTAssertEqual(WeekSwipeRules.direction(start: point(10, 300), end: point(130, 300), width: 0), -1, "an unknown width applies no edge guard")
+    }
+
+    func testWeekSwipeBeginsFromTravelEvenWhenVelocityReadsZero() {
+        let width: CGFloat = 400
+        // The recognizer can be asked to begin before it has a velocity. Travel decides.
+        XCTAssertTrue(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: point(12, 1), velocity: .zero, width: width))
+        XCTAssertTrue(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: point(-12, 2), velocity: .zero, width: width))
+        // Vertical scrolling is never taken over.
+        XCTAssertFalse(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: point(2, 12), velocity: .zero, width: width))
+        XCTAssertFalse(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: point(10, 10), velocity: point(500, 0), width: width),
+                       "travel outranks velocity once any travel is reported")
+        // The dominance ratio is 1.5 to 1: exactly 1.5 does not begin, just over does.
+        XCTAssertFalse(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: point(15, 10), velocity: .zero, width: width))
+        XCTAssertTrue(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: point(16, 10), velocity: .zero, width: width))
+        // With no travel reported yet, velocity is the fallback, and zero velocity never begins.
+        XCTAssertTrue(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: .zero, velocity: point(400, 10), width: width))
+        XCTAssertFalse(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: .zero, velocity: .zero, width: width))
+        // The edge guard still applies, and an unusable width refuses.
+        XCTAssertFalse(WeekSwipeRules.shouldBegin(start: point(10, 300), translation: point(30, 0), velocity: .zero, width: width))
+        XCTAssertFalse(WeekSwipeRules.shouldBegin(start: point(395, 300), translation: point(-30, 0), velocity: .zero, width: width))
+        XCTAssertFalse(WeekSwipeRules.shouldBegin(start: point(200, 300), translation: point(30, 0), velocity: .zero, width: 0))
+    }
+
+    func testWeekSwipeShiftFollowsTheFingerAndIsCapped() {
+        XCTAssertEqual(WeekSwipeRules.shift(start: point(200, 300), current: point(204, 300)), 0, "under 8 points does not move the week")
+        XCTAssertEqual(WeekSwipeRules.shift(start: point(200, 300), current: point(230, 300)), 30)
+        XCTAssertEqual(WeekSwipeRules.shift(start: point(200, 300), current: point(120, 300)), -72, "capped at 72 points")
+        XCTAssertEqual(WeekSwipeRules.shift(start: point(200, 300), current: point(230, 380)), 0, "a vertical drag never shifts the week")
     }
 }

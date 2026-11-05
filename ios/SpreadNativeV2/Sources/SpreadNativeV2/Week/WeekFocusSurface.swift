@@ -24,6 +24,7 @@ struct WeekFocusSurface: View {
     @State private var sidebarExpanded = false
     @State private var sidebarHidden = false
     @State private var showDayDone = false
+    @State private var daySlideDirection = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 53: each strip day and its Month cell share an id, so opening Month morphs the week into the grid.
     @Namespace private var calendarMorph
@@ -41,6 +42,23 @@ struct WeekFocusSurface: View {
     private var weekDays: [String] {
         (0..<7).map { PlannerDates.dayISO(weekKey: snapshot.weekKey, index: $0) }
     }
+    /// Animate calendar progression while Reduce Motion removes directional movement.
+    private var dayTransition: AnyTransition {
+        guard !reduceMotion, daySlideDirection != 0 else { return .opacity }
+        let offset = CGFloat(daySlideDirection) * 28
+        return .asymmetric(
+            insertion: .offset(x: offset).combined(with: .opacity),
+            removal: .offset(x: -offset).combined(with: .opacity)
+        )
+    }
+
+    private func selectWeekDay(_ iso: String) {
+        guard iso != day, weekDays.contains(iso) else { return }
+        daySlideDirection = iso > day ? 1 : -1
+        withAnimation(reduceMotion ? nil : SpreadMotion.weekSlide) { selectedDay = iso }
+        SpreadHaptics.selection()
+    }
+
     private var todaysAllocations: [DayAllocation] {
         snapshot.allocations.filter { $0.day == day && $0.hours > 0 }
             .sorted { $0.order < $1.order }
@@ -89,23 +107,37 @@ struct WeekFocusSurface: View {
         UserDefaults.standard.set(data, forKey: storeKey)
     }
     private func restoreExpansions() {
+        expandedByDate = [:]
         guard let data = UserDefaults.standard.data(forKey: storeKey),
               let saved = try? JSONDecoder().decode([String: [String]].self, from: data) else { return }
         expandedByDate = saved.mapValues { Set($0) }
     }
 
     var body: some View {
+        GeometryReader { geometry in
+        // Seven 44pt dates, six 6pt gaps and Month's 8pt padding need 352pt.
+        // With the 56pt rail, 8pt gap and 20pt outer padding that means 436pt.
+        // Below that width retain every rail action in a row above the calendar.
+        let horizontalMonthRail = monthPlane && geometry.size.width < 436
         VStack(spacing: 0) {
             overview
                 .padding(.horizontal, 10)
                 .padding(.top, 4)
                 .padding(.bottom, 6)
+            if horizontalMonthRail && !sidebarHidden {
+                responsibilityRail(horizontal: true)
+                    .opacity(sidebarExpanded ? 0 : 1)
+                    .allowsHitTesting(!sidebarExpanded)
+                    .accessibilityHidden(sidebarExpanded)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 8)
+            }
             HStack(alignment: .top, spacing: 8) {
-                if !sidebarHidden {
+                if !sidebarHidden && !horizontalMonthRail {
                     // Keep the compact rail's slot while the expanded rail overlays the schedule, so the
                     // schedule is neither squeezed nor shifted (owner decision 50). Hidden from VoiceOver
                     // and hit testing while the overlay is up, so each control exists once.
-                    responsibilityRail
+                    responsibilityRail()
                         .frame(width: 56)
                         .opacity(sidebarExpanded ? 0 : 1)
                         .allowsHitTesting(!sidebarExpanded)
@@ -127,20 +159,22 @@ struct WeekFocusSurface: View {
                                          }, mondayFirst: true, morphNamespace: calendarMorph)
                         } else {
                             dailyDetails
+                                .id(day)
+                                .transition(dayTransition)
                                 .simultaneousGesture(
                                     DragGesture(minimumDistance: 70).onEnded { gesture in
                                         guard abs(gesture.translation.width) > abs(gesture.translation.height) * 1.8,
                                               let index = weekDays.firstIndex(of: day) else { return }
                                         let next = index + (gesture.translation.width < 0 ? 1 : -1)
                                         if weekDays.indices.contains(next) {
-                                            selectedDay = weekDays[next]
-                                            SpreadHaptics.selection()
+                                            selectWeekDay(weekDays[next])
                                         }
                                     }
                                 )
                         }
                     }
                     .scrollIndicators(.hidden)
+                    .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: day)
                     .onChange(of: selectedRole) { _, role in
                         guard let role else { return }
                         expandedByDate[day, default: []].insert(role)
@@ -158,7 +192,7 @@ struct WeekFocusSurface: View {
                         Color.black.opacity(0.12)
                             .contentShape(Rectangle())
                             .onTapGesture { sidebarExpanded = false }
-                        responsibilityRail
+                        responsibilityRail()
                             .frame(width: 148)
                             .shadow(color: Spread.shadow, radius: 14, x: 6, y: 0)
                     }
@@ -182,6 +216,7 @@ struct WeekFocusSurface: View {
             }
         }
         .onChange(of: snapshot.weekKey) { _, newWeek in
+            daySlideDirection = 0
             selectedDay = newWeek // Monday, by owner decision
         }
         .onChange(of: expandedByDate) { _, _ in rememberExpansions() }
@@ -218,9 +253,10 @@ struct WeekFocusSurface: View {
         .task(id: refreshKey) {
             overdueRows = await planner.allOverdueTasks(today: PlannerDates.localISO()) ?? []
         }
-        // Keep the overview, sidebar, and daily schedule independently discoverable.
+        // A container identifier otherwise replaces its children's own identifiers.
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("week-focus-surface")
+        }
     }
 
     private var overview: some View {
@@ -261,8 +297,7 @@ struct WeekFocusSurface: View {
                     ForEach(weekDays, id: \.self) { iso in
                         let active = iso == day
                         Button {
-                            selectedDay = iso
-                            SpreadHaptics.selection()
+                            selectWeekDay(iso)
                         } label: {
                             VStack(spacing: 4) {
                                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEEE"))
@@ -320,17 +355,16 @@ struct WeekFocusSurface: View {
         }
         .padding(10)
         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
-        // The strip is a container of seven separate accessible day buttons.
-        // Without containment, SwiftUI can expose only the overview itself.
+        // A container identifier otherwise replaces its children's own identifiers.
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("focus-week-overview")
     }
 
-    private var responsibilityRail: some View {
+    private func responsibilityRail(horizontal: Bool = false) -> some View {
         ResponsibilitySidebar(
             snapshot: snapshot,
             selectedRole: $selectedRole,
-            expanded: sidebarExpanded,
+            expanded: horizontal ? false : sidebarExpanded,
             onAdd: onNewRole,
             onToggle: {
                 withAnimation(reduceMotion ? nil : SpreadMotion.curve) {
@@ -341,7 +375,8 @@ struct WeekFocusSurface: View {
                 if sidebarExpanded {
                     withAnimation(reduceMotion ? nil : SpreadMotion.curve) { sidebarExpanded = false }
                 }
-            }
+            },
+            horizontal: horizontal
         )
     }
 
@@ -469,7 +504,6 @@ struct WeekFocusSurface: View {
             Color.clear.frame(height: 12)
         }
         .padding(.vertical, 6)
-        .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: day)
     }
 
 }

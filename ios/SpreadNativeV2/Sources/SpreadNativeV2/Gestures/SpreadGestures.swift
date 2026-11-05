@@ -44,32 +44,6 @@ enum SpreadHours {
     }
 }
 
-/// Week swipe arbitration, lifted directly from `src/spread/gestures/swipe.ts`.
-/// A swipe is 64 points of horizontal travel that dominates vertical travel 1.5 to 1, and never starts within
-/// 24 points of a screen edge. While the finger is down the visual shift is capped at 72 points.
-enum WeekSwipeRules {
-    static let threshold: CGFloat = 64
-    static let dominance: CGFloat = 1.5
-    static let edgeGuard: CGFloat = 24
-    static let maxShift: CGFloat = 72
-
-    /// -1 is the previous week (dragging right), 1 the next (dragging left), nil for no commit.
-    static func direction(start: CGPoint, end: CGPoint, width: CGFloat) -> Int? {
-        if width > 0, start.x < edgeGuard || start.x > width - edgeGuard { return nil }
-        let dx = end.x - start.x
-        let dy = end.y - start.y
-        if abs(dx) > threshold, abs(dx) > abs(dy) * dominance { return dx < 0 ? 1 : -1 }
-        return nil
-    }
-
-    static func shift(start: CGPoint, current: CGPoint) -> CGFloat {
-        let dx = current.x - start.x
-        let dy = current.y - start.y
-        if abs(dx) < 8 || abs(dx) < abs(dy) { return 0 }
-        return min(maxShift, max(-maxShift, dx))
-    }
-}
-
 /// Places `followStyle(shift)` from spread-app.tsx: the week follows a little with the finger and fades.
 struct WeekFollow: ViewModifier {
     let shift: CGFloat

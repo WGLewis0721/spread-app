@@ -202,6 +202,19 @@ For the promo film, a Duo cut is not planned. If you add one, capture real UI fr
 
 Also run the standard commands and browser widths from `SPREAD_IPHONE_BUILD_GUIDE.md` section 9, plus a width sweep that simulates the Duo sizes in Chromium. Browser emulation does not show the fold. Only the simulator does.
 
+### 10.1 Native pose verification in CI (added 2026-11-04, PR #134)
+
+**Status: the protocol exists and is unit-tested; no run has yet completed on a simulator.** Evidence for every claim below is in [`docs/qa/DUO_REPAIR_PR134_2026-11-04.md`](../../qa/DUO_REPAIR_PR134_2026-11-04.md). **[Repo]**
+
+- **What drives it.** `.github/workflows/native-duo-poses.yml` boots an actual iPhone Duo simulator and runs `scripts/native-duo-poses.mjs`, which calls the pinned `agent-device@0.21.36`. It attempts closed, half-open and open, each in portrait, landscape-left and landscape-right (nine required configuration cells). Each cell saves the hinge readback (`hinge-<pose>.json`), the rotation result, an accessibility tree and a native-resolution screenshot, then writes `pose-matrix.json` and `pose-matrix.md`. Agent-device only exposes three preset hinge poses; these nine cells do not prove separately staged tent/laptop/book or split-screen placements. Inspect Device Hub poses and reserved regions before claiming all physical configurations.
+- **Result vocabulary.** PASS means the command succeeded and its assertion held. FAIL means it ran and the assertion did not hold. BLOCKED means a precondition could not be established. Only an all-PASS gating matrix exits 0. A launch or a build is not a pose test; a BLOCKED or queued run is not a pass.
+- **Never scope the simulator set.** `agent-device` refuses every rotation of a foldable simulator when `--ios-simulator-device-set` is passed, even with the default set's path (`UNSUPPORTED_OPERATION / unsupported-device-scope`). Two earlier hinge runs failed exactly there, after the app had opened and `fold closed` had succeeded (hinge 0 degrees, LCD native panel 466 x 678 pt). The harness test fails if the flag returns.
+- **What the matrix checks per pose and orientation.** The fold is verified by hinge readback (`pose` equals the requested pose). Rotation is set. The Spread, Week and Edit controls are reachable. The Wallet stack, Edit mode, Week (Crown visible) and Month (day cells, or the toggle reading Month) are on screen, each with a screenshot.
+- **Continuity across a change of configuration.** With a Wallet card expanded and an unsaved draft typed into its new-task field, the harness folds and rotates through five configurations and requires the draft and the expanded card to survive each. It then folds with Month open and requires Month to remain. A timed hinge sweep (`fold --keyframes`) is recorded as advisory.
+- **Screenshots are evidence, not a verdict.** The matrix cannot judge clipping, a card under the hinge or an awkward stretch. Every pose screenshot is to be looked at, and a visual defect is a failure even when every cell is PASS.
+- **Reserved regions are not implemented.** Native Spread sizes from the window it is given (Wallet fills the width; Week caps at 1120 pt and uses two day columns from 744 pt), and has no hinge-aware code. The workflow also saves the real SDK declarations for hinge and `reservedRegions` (`sdk-reserved-regions-probe.txt`). Read that artifact before writing any hinge-aware layout; the signature in section 4.4 is unverified.
+- **Week swipe diagnostics.** The Duo acceptance run exports `week-swipe.log`, a Debug-only trace of the recognizer (attach, touch, begin, end). An empty log means the swipe never reached a recognizer.
+
 ---
 
 ## 11. Do and do not summary

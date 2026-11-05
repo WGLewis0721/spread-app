@@ -235,6 +235,8 @@ class NativeUITestCase: XCTestCase {
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
     // The old bottom Manage card is gone; selection lives on the Stack itself.
+    /// The Wallet Stack's selected responsibility name (its accessibility value). Callers compare it with the plain
+    /// name; prefixing "Manage " (348596c) made F01 and the long-name check fail on every run.
     var selectedRoleLabel: String { (el("stack-cards").value as? String) ?? "" }
 
     // MARK: dates (the planner keeps date-only UTC weeks that start on Monday)
@@ -358,6 +360,13 @@ final class JourneyUITests: NativeUITestCase {
         for toggle in card.descendants(matching: .button).matching(NSPredicate(format: "identifier BEGINSWITH 'allocation-toggle-'")).allElementsBoundByIndex
             where (toggle.value as? String) == "Tasks folded" { toggle.tap() }
     }
+    /// The bank label sits in the Manage form's first section. Choosing a day scrolls the form down, and the lazy
+    /// List then drops that row from the hierarchy, so scroll back toward the top before reading it.
+    private var bankLabel: String {
+        let bank = el("bank-remaining")
+        for _ in 0..<6 where !bank.exists { scrollPage(up: false) }
+        return bank.label
+    }
     private func revealTray() {
         for group in elements(prefix: "tray-role-") where group.label.hasPrefix(Dataset.role) && (group.value as? String) == "Collapsed" {
             scrollIntoView(group); group.tap()
@@ -383,9 +392,9 @@ final class JourneyUITests: NativeUITestCase {
         tapButton("Increase \(Dataset.role) hours by half an hour")
         XCTAssertTrue(eventually { self.el("bank-remaining").label == "3h left in this week’s bank" })
         chooseDay("Monday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2h left in this week’s bank" })
+        XCTAssertTrue(eventually { self.bankLabel == "2h left in this week’s bank" }, "Bank reads \(bankLabel) after Monday")
         chooseDay("Wednesday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "1h left in this week’s bank" })
+        XCTAssertTrue(eventually { self.bankLabel == "1h left in this week’s bank" }, "Bank reads \(bankLabel) after Wednesday")
         tapButton("Done"); goWeek()
         let allocations = elements(prefix: "allocation-").filter { $0.label == "Move " + Dataset.role }
         XCTAssertEqual(allocations.count, 2)
@@ -1395,6 +1404,153 @@ final class DuoUITests: NativeUITestCase {
         // the actual rendered root. XCUIDevice's reported setting alone does not prove an OS change.
     }
 
+    // MARK: Task editing that must never lose what the user typed
+
+    func testUnsubmittedWalletDraftSurvivesNavigationAndRelaunch() throws {
+        launch(); selectRole("Work")
+        let draft = "Draft " + String(UUID().uuidString.prefix(6))
+        typeInto("new-task-field", draft)
+        tapID("native-week"); tapID("native-spread"); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").contains(draft) }, "Navigation lost the unsent draft")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").contains(draft) }, "Relaunch lost the unsent draft")
+        XCTAssertFalse(taskRow(containing: draft).exists, "Remembering a draft must not create a task")
+        tapID("add-task-button")
+        XCTAssertTrue(taskRow(containing: draft).waitForExistence(timeout: 20))
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").isEmpty }, "An acknowledged add must clear the draft")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").isEmpty }, "The submitted draft returned on relaunch")
+    }
+
+    private func taskRow(containing text: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'task-row-' AND label CONTAINS %@", text)).firstMatch
+    }
+
+    /// Adds a uniquely named task to the Work card and opens its sheet.
+    private func addAndOpenTask(_ title: String) {
+        selectRole("Work")
+        typeInto("new-task-field", title); tapID("add-task-button")
+        let row = taskRow(containing: title)
+        XCTAssertTrue(row.waitForExistence(timeout: 20), "The new task never appeared")
+        scrollIntoView(row); row.tap()
+        XCTAssertTrue(el("task-editor").waitForExistence(timeout: 20), "The Task sheet did not open")
+    }
+
+    /// A title typed into the Task sheet is saved even when the sheet is closed with the system swipe-down
+    /// gesture instead of Done. Before this repair the typed title was silently discarded.
+    func testTaskTitleEditSurvivesSwipeDismissAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let marker = "Kept" + stamp
+        addAndOpenTask("Dismiss " + stamp)
+        typeInto("task-editor", marker)
+        XCTAssertTrue(eventually { self.fieldText("task-editor").contains(marker) }, "The title field did not take the typed text")
+        // Drag the sheet down from its navigation bar. This is never the Done button.
+        let bar = app.navigationBars.firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "The Task sheet has no navigation bar to drag")
+        let from = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: app.frame.height * 0.6)))
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "Dragging the sheet down did not dismiss it")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The title typed before the swipe-dismiss was lost")
+        capture("task-title-kept-after-swipe-dismiss")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The edited title did not survive a relaunch")
+    }
+
+    /// Home does not dismiss a presented sheet. Its title must reach durable storage
+    /// before the suspended process is terminated, without Submit or Done.
+    func testTaskTitleSurvivesBackgroundTerminationAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let marker = "Background " + stamp
+        addAndOpenTask("Original " + stamp)
+        typeInto("task-editor", marker)
+        XCTAssertTrue(eventually { self.fieldText("task-editor").contains(marker) })
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10), "Home did not background the app")
+        // Give the local asynchronous store acknowledgement time to complete;
+        // termination itself cannot promise a last lifecycle callback.
+        Thread.sleep(forTimeInterval: 2)
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20),
+                      "The title was lost when the process terminated with its editor still presented")
+        capture("task-title-kept-after-background-termination")
+    }
+
+    /// Swipe-dismiss must flush the final edits of each rich block, not just the task title.
+    /// The immediate relaunch catches a pending debounce that was canceled with the sheet.
+    func testNotesOutlineAndTableSurviveSwipeDismissAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let title = "Rich " + stamp
+        let note = "Note " + stamp
+        let outline = "Outline " + stamp
+        let cell = "Cell " + stamp
+        addAndOpenTask(title)
+        tapID("format-notes")
+        typeInto("content-notes", note)
+        tapID("add-block"); tapID("format-outline")
+        typeInto("content-outline-0", outline)
+        tapID("add-block"); tapID("format-table")
+        typeInto("content-cell-0-0", cell)
+        let bar = app.navigationBars.firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10))
+        let from = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: app.frame.height * 0.6)))
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "Rich task sheet did not dismiss")
+        relaunch(); selectRole("Work")
+        let row = taskRow(containing: title)
+        XCTAssertTrue(row.waitForExistence(timeout: 20))
+        scrollIntoView(row); row.tap()
+        XCTAssertTrue(el("content-notes").waitForExistence(timeout: 20))
+        XCTAssertTrue(fieldText("content-notes").contains(note), "Notes were lost across dismissal/relaunch")
+        XCTAssertTrue(fieldText("content-outline-0").contains(outline), "Outline text was lost across dismissal/relaunch")
+        XCTAssertTrue(fieldText("content-cell-0-0").contains(cell), "Table cell was lost across dismissal/relaunch")
+        capture("rich-content-kept-after-swipe-relaunch")
+        tapID("task-sheet-done")
+    }
+
+    /// "Add line" and "Add row" hand the keyboard to the field they create, so typing continues without another tap.
+    func testAddingOutlineLineAndTableRowFocusesTheNewField() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        addAndOpenTask("Focus " + stamp)
+        tapID("format-outline")
+        typeInto("content-outline-0", "First")
+        tapButton("Add line")
+        XCTAssertTrue(el("content-outline-1").waitForExistence(timeout: 20), "Add line did not create a second outline line")
+        app.typeText("Second") // no tap: this lands only if the new line has the keyboard
+        XCTAssertTrue(eventually { self.fieldText("content-outline-1") == "Second" }, "The new outline line did not receive the keyboard focus")
+        XCTAssertEqual(fieldText("content-outline-0"), "First", "Typing after Add line altered the first line")
+        tapID("add-block"); tapID("format-table")
+        typeInto("content-cell-0-0", "A")
+        tapButton("Add row")
+        XCTAssertTrue(el("content-cell-2-0").waitForExistence(timeout: 20), "Add row did not create a third row")
+        app.typeText("B")
+        XCTAssertTrue(eventually { self.fieldText("content-cell-2-0") == "B" }, "The new table row did not receive the keyboard focus")
+        XCTAssertEqual(fieldText("content-cell-0-0"), "A", "Typing after Add row altered the first cell")
+        capture("task-add-line-and-row-focus")
+        tapID("task-sheet-done")
+    }
+
+    /// Create, then delete, a task from its sheet, and confirm it stays deleted after a relaunch.
+    func testTaskCanBeDeletedFromItsSheet() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let title = "Remove " + stamp
+        addAndOpenTask(title)
+        tapID("delete-task")
+        // The confirmation is a dialog: an action sheet on a phone, a popover in a wide window.
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Delete task'")).allElementsBoundByIndex.last { $0.exists && $0.isHittable }
+        if confirm == nil { attach(app.debugDescription, "hierarchy-without-delete-confirmation") }
+        try XCTUnwrap(confirm, "The delete confirmation did not offer a Delete task button").tap()
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "The sheet stayed open after deleting the task")
+        XCTAssertTrue(eventually { !self.taskRow(containing: title).exists }, "The deleted task is still listed")
+        capture("task-deleted")
+        relaunch(); selectRole("Work")
+        XCTAssertFalse(taskRow(containing: title).waitForExistence(timeout: 5), "The deleted task came back after a relaunch")
+    }
+
     /// Actual hinge and rotation changes run in native-duo-poses.yml. XCTest's orientation setter
     /// does not prove that a multi-panel simulator rotated, so this test makes no pose claim.
     func testWalletStackInBothAppearances() throws {
@@ -1456,6 +1612,39 @@ final class WeekMonthUITests: NativeUITestCase {
     private func taskRow(_ title: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'focus-task-' AND label == %@", title)).firstMatch
     }
+    /// Switching between two profiles whose remembered destination is Week must not
+    /// carry the first person's hidden rail or open trays into the second profile.
+    func testFocusedWeekResetsTransientStateAcrossProfiles() throws {
+        launch(preview); openFocusedWeek()
+        tapID("open-more"); tapID("manage-profiles")
+        let profiles = elements(prefix: "profile-")
+        let original = try XCTUnwrap(profiles.first { ($0.value as? String) == "Current profile" } ?? profiles.first).identifier
+        typeInto("new-profile-field", "Week isolation " + String(UUID().uuidString.prefix(6)))
+        tapID("create-profile")
+        closeNativeSheets(); openFocusedWeek()
+        tapID("open-more"); tapID("manage-profiles")
+        let other = try XCTUnwrap(elements(prefix: "profile-").first {
+            ($0.value as? String) == "Current profile" || $0.isSelected
+        }).identifier
+        tapID(original); closeNativeSheets(); openFocusedWeek()
+        tapID("focus-show-sidebar")
+        XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists })
+        tapID("open-more"); tapID("manage-profiles"); tapID(other); closeNativeSheets()
+        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20))
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5),
+                      "The previous profile's hidden rail leaked into this profile's Week")
+        capture("wm-profile-isolated-rail")
+        tapID("open-more"); tapID("manage-profiles"); tapID(original); closeNativeSheets()
+    }
+    /// A real finger drag across the seven-day strip. `swipeLeft()` on one narrow day button travels about that
+    /// button's width, under the strip's 65 pt minimum, so it never reached the week-change gesture.
+    private func dragStrip(towardNextWeek: Bool) {
+        let days = dayIDs().map { el($0) }
+        let start = towardNextWeek ? days[5] : days[1]
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let from = origin.withOffset(CGVector(dx: start.frame.midX - app.frame.minX, dy: start.frame.midY - app.frame.minY))
+        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: towardNextWeek ? -180 : 180, dy: 0)))
+    }
 
     /// Decisions 25, 54 and 90-91: tap a day, Month round trip keeps it, a strip swipe changes week and opens Monday.
     func testDaySelectionSurvivesMonthAndStripSwipeOpensMonday() {
@@ -1466,16 +1655,22 @@ final class WeekMonthUITests: NativeUITestCase {
         XCTAssertTrue(eventually(5) { self.el(thursday).isSelected }, "Tapping a day did not select it")
         tapID("focus-week-month-toggle")
         XCTAssertTrue(el("month").waitForExistence(timeout: 10), "Month did not open")
+        let dates = waitElements(prefix: "month-day-", minimum: 28)
+        for date in dates {
+            XCTAssertGreaterThanOrEqual(date.frame.width, 43.5, "Month date target is narrower than 44pt: " + date.identifier)
+            XCTAssertGreaterThanOrEqual(date.frame.height, 43.5, "Month date target is shorter than 44pt: " + date.identifier)
+        }
+        XCTAssertTrue(el("responsibility-sidebar").exists, "Month must retain responsibility controls")
         capture("wm-month-from-thursday")
         tapID("focus-week-month-toggle")
         XCTAssertTrue(eventually(10) { self.el(thursday).exists && self.el(thursday).isSelected },
                       "Closing Month without choosing a date must restore the previous day")
-        el(thursday).swipeLeft()
+        dragStrip(towardNextWeek: true)
         XCTAssertTrue(eventually(15) { self.dayIDs().first != days.first }, "Swiping the seven-day strip did not change week")
         let next = dayIDs()
         XCTAssertTrue(eventually(5) { self.el(next[0]).isSelected }, "Changing weeks must open Monday")
         capture("wm-next-week-opens-monday")
-        el(next[0]).swipeRight()
+        dragStrip(towardNextWeek: false)
         XCTAssertTrue(eventually(15) { self.dayIDs().first == days.first }, "Swiping back did not return to the first week")
     }
 
@@ -1588,4 +1783,42 @@ final class WeekMonthUITests: NativeUITestCase {
         XCTAssertTrue(eventually(10) { self.elements(prefix: "month-day-").first?.identifier != firstBefore },
                       "Swiping Month did not change the month")
     }
+    /// A refused hour increase must not clamp the requested time. Offer a
+    /// measured shortage and the affected responsibility's own hour editor.
+    func testInsufficientHoursOffersMeasuredAdjustment() {
+        launch(preview); openFocusedWeek()
+        tapID("sidebar-add-role")
+        let name = "Budget " + String(UUID().uuidString.prefix(6))
+        typeInto("role-name-field", name)
+        for _ in 0..<3 { tapButton("Decrease Hours for spread 1 by half an hour") }
+        tapID("save-spreads")
+        let selector = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'focus-role-' AND label == %@", name)
+        ).firstMatch
+        XCTAssertTrue(selector.waitForExistence(timeout: 20), "The new responsibility is not in Week")
+        scrollIntoView(selector)
+        selector.tap()
+        let roleID = String(selector.identifier.dropFirst("focus-role-".count))
+        let hourID = "focus-hour-" + roleID
+        let day = elements(prefix: "focus-day-").first(where: { $0.isSelected })
+        guard let day else { return XCTFail("No selected date on Week") }
+        let iso = String(day.identifier.dropFirst("focus-day-".count))
+        tapID(hourID)
+        tapButton("Allocate 30 minutes")
+        let increase = "Increase " + name + " on " + iso + " by half an hour"
+        XCTAssertTrue(app.buttons[increase].waitForExistence(timeout: 20))
+        tapButton(increase)
+        let adjust = app.buttons["Adjust hours"]
+        XCTAssertTrue(adjust.waitForExistence(timeout: 15),
+                      "A rejected allocation must offer Adjust hours")
+        XCTAssertTrue(app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "needs 0.5h more")
+        ).firstMatch.exists, "Refusal did not explain the exact missing hours")
+        capture("wm-insufficient-hours-adjustment")
+        adjust.tap()
+        XCTAssertTrue(el("role-name-field").waitForExistence(timeout: 15),
+                      "Adjust hours did not open the role editor")
+        XCTAssertEqual(fieldText("role-name-field"), name, "Opened wrong responsibility")
+    }
+
 }

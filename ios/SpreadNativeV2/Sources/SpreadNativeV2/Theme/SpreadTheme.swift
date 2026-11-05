@@ -31,7 +31,7 @@ public enum Spread {
         light: (74, 86, 112, 1), dark: (176, 188, 209, 1),
         highLight: (14, 26, 46, 0.92), highDark: (247, 250, 255, 0.92))
     public static let tertiary = adaptive(
-        light: (95, 107, 133, 1), dark: (176, 188, 209, 0.66),
+        light: (95, 107, 133, 1), dark: (176, 188, 209, 0.80),
         highLight: (74, 86, 112, 1), highDark: (176, 188, 209, 0.92))
     /// Hairline separation instead of chunky outlines (white 10-16% on dark).
     public static let line = adaptive(
