@@ -87,9 +87,14 @@ struct MonthSurface: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("month")
         .task(id: marksKey) {
+            // A failed refresh must fall back to the current snapshot, never keep
+            // another month's/profile's cached marks. A superseded request may
+            // finish after cancellation, so it must not replace the new result.
+            marks = [:]
             let parts = PlannerDates.calendar.dateComponents([.year, .month], from: anchor)
             guard let year = parts.year, let month = parts.month else { return }
-            if let fresh = await planner.monthMarks(year: year, month: month - 1, selectedRoleId: selectedRole) { marks = fresh }
+            if let fresh = await planner.monthMarks(year: year, month: month - 1, selectedRoleId: selectedRole),
+               !Task.isCancelled { marks = fresh }
         }
     }
 
