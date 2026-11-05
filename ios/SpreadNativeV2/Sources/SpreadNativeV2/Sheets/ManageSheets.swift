@@ -508,8 +508,11 @@ struct MoreSheet: View {
 
     private func rollover() {
         Task {
-            if await planner.send(["type": "rollover", "force": false]),
-               planner.rolloverOutcome == "confirm" {
+            _ = await planner.send(["type": "rollover", "force": false])
+            // "confirm" is a valid non-mutating outcome: the next week already
+            // contains data. Do not require send() to report a committed write
+            // before presenting the user's explicit replacement choice.
+            if planner.rolloverOutcome == "confirm" {
                 confirmRollover = true
             }
         }
