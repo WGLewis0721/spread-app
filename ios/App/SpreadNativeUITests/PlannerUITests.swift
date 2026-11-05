@@ -352,6 +352,13 @@ final class JourneyUITests: NativeUITestCase {
         for toggle in card.descendants(matching: .button).matching(NSPredicate(format: "identifier BEGINSWITH 'allocation-toggle-'")).allElementsBoundByIndex
             where (toggle.value as? String) == "Tasks folded" { toggle.tap() }
     }
+    /// The bank label sits in the Manage form's first section. Choosing a day scrolls the form down, and the lazy
+    /// List then drops that row from the hierarchy, so scroll back toward the top before reading it.
+    private var bankLabel: String {
+        let bank = el("bank-remaining")
+        for _ in 0..<6 where !bank.exists { scrollPage(up: false) }
+        return bank.label
+    }
     private func revealTray() {
         for group in elements(prefix: "tray-role-") where group.label.hasPrefix(Dataset.role) && (group.value as? String) == "Collapsed" {
             scrollIntoView(group); group.tap()
@@ -377,9 +384,9 @@ final class JourneyUITests: NativeUITestCase {
         tapButton("Increase \(Dataset.role) hours by half an hour")
         XCTAssertTrue(eventually { self.el("bank-remaining").label == "3h left in this week’s bank" })
         chooseDay("Monday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2h left in this week’s bank" })
+        XCTAssertTrue(eventually { self.bankLabel == "2h left in this week’s bank" }, "Bank reads \(bankLabel) after Monday")
         chooseDay("Wednesday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "1h left in this week’s bank" })
+        XCTAssertTrue(eventually { self.bankLabel == "1h left in this week’s bank" }, "Bank reads \(bankLabel) after Wednesday")
         tapButton("Done"); goWeek()
         let allocations = elements(prefix: "allocation-").filter { $0.label == "Move " + Dataset.role }
         XCTAssertEqual(allocations.count, 2)
