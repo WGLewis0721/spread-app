@@ -43,6 +43,7 @@ struct TaskSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.scenePhase) private var scenePhase
     @State private var title = ""
     @State private var content = NativeTaskContent()
     @State private var loaded = false
@@ -129,6 +130,11 @@ struct TaskSheet: View {
         .presentationDragIndicator(.visible)
         .task { await load() }
         .onDisappear { saveOnDismiss() }
+        // A sheet remains presented when the app leaves the foreground; onDisappear
+        // does not run. Flush before suspension, while the local bridge is active.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .inactive { saveOnDismiss() }
+        }
         .onChange(of: planner.details[taskId]) { _, value in
             if let value, !loaded { content = value; loaded = true }
         }

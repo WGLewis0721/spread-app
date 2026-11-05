@@ -1424,6 +1424,26 @@ final class DuoUITests: NativeUITestCase {
         XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The edited title did not survive a relaunch")
     }
 
+    /// Home does not dismiss a presented sheet. Its title must reach durable storage
+    /// before the suspended process is terminated, without Submit or Done.
+    func testTaskTitleSurvivesBackgroundTerminationAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let marker = "Background " + stamp
+        addAndOpenTask("Original " + stamp)
+        typeInto("task-editor", marker)
+        XCTAssertTrue(eventually { self.fieldText("task-editor").contains(marker) })
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10), "Home did not background the app")
+        // Give the local asynchronous store acknowledgement time to complete;
+        // termination itself cannot promise a last lifecycle callback.
+        Thread.sleep(forTimeInterval: 2)
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20),
+                      "The title was lost when the process terminated with its editor still presented")
+        capture("task-title-kept-after-background-termination")
+    }
+
     /// Swipe-dismiss must flush the final edits of each rich block, not just the task title.
     /// The immediate relaunch catches a pending debounce that was canceled with the sheet.
     func testNotesOutlineAndTableSurviveSwipeDismissAndRelaunch() throws {
