@@ -292,15 +292,17 @@ struct FocusedRoleCard: View {
                 .accessibilityIdentifier("focus-hour-\(role.id)")
             }
             if showHours {
-                if snapshot.remainingHours(for: role.id) < 0.5 {
-                    HStack(spacing: 6) {
-                        Text("No unallocated time remaining this week.")
-                            .font(Spread.caption).foregroundStyle(Spread.secondary)
-                        Spacer(minLength: 2)
-                        Button("Adjust weekly hours") { onAdjustHours(role.id) }
-                            .font(Spread.caption).frame(minHeight: 44)
-                            .accessibilityIdentifier("focus-adjust-hours-\(role.id)")
-                    }
+                HStack(spacing: 6) {
+                    Text(snapshot.remainingHours(for: role.id) < 0.5
+                         ? "No unallocated time remaining this week."
+                         : "\(SpreadHours.text(snapshot.remainingHours(for: role.id)))h unallocated this week")
+                        .font(Spread.caption).foregroundStyle(Spread.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 2)
+                    Button("Adjust weekly hours") { onAdjustHours(role.id) }
+                        .font(Spread.caption)
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("focus-adjust-hours-\(role.id)")
                 }
                 if let first = allocations.first {
                     HourStepper(value: first.hours, label: "\(role.name) on \(day)", step: 0.5) { amount in
