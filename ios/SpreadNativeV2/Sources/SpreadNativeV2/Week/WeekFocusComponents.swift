@@ -59,8 +59,10 @@ struct FocusedTaskRow: View {
         .dropDestination(for: SpreadDragPayload.self) { items, _ in
             guard let item = items.first, item.kind == .task, item.roleId == roleId, item.itemId != task.id else { return false }
             Task {
-                _ = await planner.send(["type": "reorderDayTask", "roleId": roleId,
-                                        "day": day, "taskId": item.itemId, "beforeId": task.id])
+                if await planner.send(["type": "reorderDayTask", "roleId": roleId,
+                                       "day": day, "taskId": item.itemId, "beforeId": task.id]) {
+                    SpreadHaptics.selection()
+                }
             }
             return true
         } isTargeted: { _ in }
@@ -249,10 +251,11 @@ struct FocusedRoleCard: View {
     private func reorder(_ taskId: String, before beforeId: String?) {
         let target: Any = beforeId.map { $0 as Any } ?? NSNull()
         Task {
-            _ = await planner.send(["type": "reorderDayTask", "roleId": role.id, "day": day,
-                                    "taskId": taskId, "beforeId": target])
+            if await planner.send(["type": "reorderDayTask", "roleId": role.id, "day": day,
+                                   "taskId": taskId, "beforeId": target]) {
+                SpreadHaptics.selection()
+            }
         }
-        SpreadHaptics.selection()
     }
 
     var body: some View {
