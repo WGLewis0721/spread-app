@@ -87,7 +87,7 @@ struct SpreadSurface: View {
                     .frame(height: 0.5)
                     .padding(.vertical, 10)
                 summaryDetails(status)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(.horizontal, 12)
@@ -409,7 +409,7 @@ struct RoleRow: View {
             if isOpen { placementBand.transition(.opacity) }
             if palette {
                 PalettePanel(planner: planner, role: role)
-                    .transition(.opacity.combined(with: .offset(y: 14)))
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 14)))
             }
             if isOpen { taskList.transition(.opacity) }
         }
@@ -448,7 +448,7 @@ struct RoleRow: View {
             // icon, name, hour count and chevron every time editing starts.
             Button {
                 if editing {
-                    withAnimation(SpreadMotion.cascade) { palette.toggle() }
+                    withAnimation(reduceMotion ? nil : SpreadMotion.cascade) { palette.toggle() }
                 } else {
                     toggleOpen()
                 }
@@ -506,7 +506,7 @@ struct RoleRow: View {
             // The number never shares a row with plus/minus controls; the hour
             // editor opens *below* the title. No more mangled names on small phones.
             Button {
-                withAnimation(SpreadMotion.press) { adjusting.toggle() }
+                withAnimation(reduceMotion ? nil : SpreadMotion.press) { adjusting.toggle() }
             } label: {
                 Text("\(SpreadHours.text(role.hours))h")
                     .font(.system(.subheadline, weight: .bold))
@@ -632,7 +632,7 @@ struct RoleRow: View {
         if expanded != nil {
             onSelect()
         } else {
-            withAnimation(SpreadMotion.curve) { tasksOpen.toggle() }
+            withAnimation(reduceMotion ? nil : SpreadMotion.curve) { tasksOpen.toggle() }
         }
     }
 
