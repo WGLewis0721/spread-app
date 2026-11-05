@@ -74,8 +74,10 @@ export async function runPoseMatrix({ ad, outDir, bundle = 'com.graymatter.sprea
   };
   const shot = async (name) => {
     const file = path.join(outDir, name);
-    let r = await ad(['screenshot', file, '--pixel-density', '2']);
-    let method = '2x';
+    // --scale 1 keeps the simulator's native pixels. agent-device does not
+    // accept the older --pixel-density option; the fallback remains diagnostic.
+    let r = await ad(['screenshot', file, '--scale', '1']);
+    let method = 'native';
     if (!r.ok) { r = await ad(['screenshot', file]); method = '1x'; }
     const bytes = await size(file);
     return { ok: r.ok && bytes >= MIN_SCREENSHOT_BYTES, detail: r.ok ? `${bytes} bytes (${method})` : errorText(r), file: name };
