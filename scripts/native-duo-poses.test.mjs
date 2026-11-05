@@ -68,7 +68,7 @@ test('a healthy Duo passes every gating cell and writes full evidence', async ()
   assert.equal(result.summary.counts.FAIL, 0);
   assert.equal(result.summary.counts.BLOCKED, 0);
   for (const pose of POSES) for (const orientation of ORIENTATIONS) {
-    for (const check of ['orientation-set', 'spread-button', 'wallet', 'wallet-edit', 'week', 'month']) {
+    for (const check of ['orientation-set', 'spread-button', 'wallet', 'wallet-edit', 'week', 'month', 'continuity-draft-and-selection', 'continuity-month-kept']) {
       assert.equal(cell(result, pose, orientation, check)?.status, 'PASS', `${pose}/${orientation}/${check}`);
     }
   }
