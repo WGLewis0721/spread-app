@@ -16,6 +16,7 @@ struct WeekFocusSurface: View {
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
     let onAdjustHours: (String) -> Void
+    @Binding var sidebarHidden: Bool
 
     @State private var expandedByDate: [String: Set<String>] = [:]
     @State private var trayOpen = false
@@ -23,7 +24,6 @@ struct WeekFocusSurface: View {
     @State private var overdueRows: [NativeOverdueTask] = []
     @State private var monthQuickAddDay: MonthAddDate?
     @State private var sidebarExpanded = false
-    @State private var sidebarHidden = false
     @State private var showDayDone = false
     @State private var invalidDropRole: String?
     @State private var showInvalidDrop = false
@@ -254,6 +254,7 @@ struct WeekFocusSurface: View {
     private var overview: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
+                if !sidebarHidden {
                 Button {
                     sidebarHidden.toggle()
                     if sidebarHidden { sidebarExpanded = false }
@@ -264,6 +265,7 @@ struct WeekFocusSurface: View {
                 }
                 .accessibilityLabel(sidebarHidden ? "Show responsibilities" : "Hide responsibilities")
                 .accessibilityIdentifier("focus-show-sidebar")
+                }
                 Text(monthPlane ? PlannerDates.label(monthAnchor, pattern: "MMMM yyyy") : "This week")
                     .font(.system(.headline, weight: .semibold))
                 Spacer()
