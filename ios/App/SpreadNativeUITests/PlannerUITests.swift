@@ -1031,6 +1031,14 @@ final class PlannerUITests: NativeUITestCase {
     func testLayout390() throws { try layout(width: 390) }
     func testLayout820() throws { try layout(width: 820) }
     func testLayout1024() throws { try layout(width: 1024) }
+    func testLayout1366() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        launch()
+        XCTAssertTrue(eventually(20) { self.app.frame.width >= 1365 },
+                      "The landscape iPad did not reach the required 1366pt viewport")
+        try layout(width: 1366)
+    }
 
     private func startAtWidth(_ width: Int) throws {
         guard app.frame.width >= CGFloat(width) else { throw XCTSkip("Viewport requires the matching destination; verified in the layout matrix.") }
@@ -1072,6 +1080,14 @@ final class PlannerUITests: NativeUITestCase {
     func testAudit390() throws { try auditEverything(width: 390) }
     func testAudit820() throws { try auditEverything(width: 820) }
     func testAudit1024() throws { try auditEverything(width: 1024) }
+    func testAudit1366() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        launch()
+        XCTAssertTrue(eventually(20) { self.app.frame.width >= 1365 },
+                      "The 1366pt landscape iPad viewport was not established")
+        try auditEverything(width: 1366)
+    }
     private func auditEverything(width: Int, types: XCUIAccessibilityAuditType = NativeUITestCase.requiredAudits, label: String = "") throws {
         try startAtWidth(width)
         goWeek()
