@@ -45,6 +45,18 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
     }
 }
 
+/// Read-only hours eligibility used by SwiftUI before any store command is sent.
+/// The TypeScript planner remains the sole authority for committing allocation changes.
+public enum NativeHourBudget {
+    public static func shortage(requested: Double, available: Double) -> Double {
+        guard requested.isFinite, available.isFinite else { return .infinity }
+        return max(0, requested - max(0, available))
+    }
+    public static func canPlace(requested: Double, available: Double) -> Bool {
+        requested.isFinite && requested > 0 && shortage(requested: requested, available: available) == 0
+    }
+}
+
 public struct Responsibility: Codable, Equatable, Identifiable, Sendable {
     public let id: String
     public let name: String
