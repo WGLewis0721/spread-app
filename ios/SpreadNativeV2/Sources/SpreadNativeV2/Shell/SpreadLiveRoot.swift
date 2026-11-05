@@ -548,11 +548,19 @@ public struct SpreadLiveRoot: View {
                 // The accessibility fallback is fully opaque and high-contrast.
                 if reduceTransparency {
                     Capsule().fill(Spread.elevated)
-                } else if #available(iOS 26.0, *) {
-                    Capsule().fill(Color.clear)
-                        .glassEffect(.regular, in: Capsule())
                 } else {
+                    // glassEffect exists only in the iOS 26 SDK (Swift 6.2 / Xcode 26). Older toolchains, such as
+                    // the macos-15 CI runners for journeys, layout and the visual tour, must still compile.
+                    #if compiler(>=6.2)
+                    if #available(iOS 26.0, *) {
+                        Capsule().fill(Color.clear)
+                            .glassEffect(.regular, in: Capsule())
+                    } else {
+                        Capsule().fill(.regularMaterial)
+                    }
+                    #else
                     Capsule().fill(.regularMaterial)
+                    #endif
                 }
             }
             .overlay {
