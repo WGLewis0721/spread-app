@@ -4,6 +4,7 @@ on:
     paths:
       - "ios/**"
       - "scripts/native-duo-poses*"
+      - "scripts/verify-native-accessibility*"
       - ".github/workflows/native-duo-poses.yml"
   workflow_dispatch:
 permissions:
@@ -93,7 +94,7 @@ jobs:
           # Capture full structured tree first: no button search is legitimate until it is readable.
           "$AD" snapshot --platform ios --udid "$NATIVE_UDID" --session spread-duo-poses --json \
             > artifacts/preflight-accessibility.json 2> artifacts/preflight-accessibility.stderr
-          node -e 'const fs=require("fs"); let ok=false,reason="unreadable or empty accessibility tree"; try { const data=JSON.parse(fs.readFileSync("artifacts/preflight-accessibility.json","utf8")); const nodes=[]; const walk=(v)=>{if(!v||typeof v!=="object")return; if(typeof v.kind==="string")nodes.push(v); Object.values(v).forEach(walk)}; walk(data); ok=data.success!==false && nodes.some(n=>n.kind==="button" || n.kind==="text" || n.kind==="application" || n.kind==="text-field"); if(!ok)reason="snapshot contained no readable UI nodes"; } catch(e){reason=e.message} fs.writeFileSync("artifacts/automation-preflight.json",JSON.stringify({status:ok?"PASS":"BLOCKED",reason:ok?"accessibility tree readable":reason},null,2)); if(!ok){console.error("BLOCKED (automation service): "+reason);process.exit(1)}}'
+          node scripts/verify-native-accessibility.mjs artifacts/preflight-accessibility.json artifacts/automation-preflight.json
       - name: Verify real hinge poses, rotations and surfaces
         run: |
           mkdir -p artifacts

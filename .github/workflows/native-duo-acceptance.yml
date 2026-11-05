@@ -4,6 +4,7 @@ on:
     paths:
       - "ios/**"
       - "scripts/native-duo-poses*"
+      - "scripts/verify-native-accessibility*"
       - "scripts/native-simulator*"
       - ".github/workflows/native-duo-acceptance.yml"
   workflow_dispatch:
