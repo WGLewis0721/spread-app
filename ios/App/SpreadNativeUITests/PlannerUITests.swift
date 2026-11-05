@@ -1,6 +1,27 @@
 import XCTest
 import UIKit
 
+// Independent XCTest launch canary. It does not depend on agent-device or hinge automation.
+final class LaunchSmokeUITests: XCTestCase {
+    func testSpreadLaunchesAndExposesNativeNavigation() {
+        let app = XCUIApplication(bundleIdentifier: "com.graymatter.spread")
+        app.launch()
+        let nativeSpread = app.buttons["native-spread"]
+        let found = nativeSpread.waitForExistence(timeout: 90)
+        if !found {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "launch-canary-accessibility-tree"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "launch-canary-screenshot"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+        }
+        XCTAssertTrue(found, "Spread must launch and expose the native-spread navigation button")
+    }
+}
+
 // MARK: - Shared harness
 
 /// Every helper waits for the real accessibility element, and a failing test attaches the whole
