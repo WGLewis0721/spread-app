@@ -240,6 +240,17 @@ struct WeekFocusSurface: View {
         .accessibilityIdentifier("week-focus-surface")
     }
 
+    /// A direction-aware day change. The strip/Crown still own week changes and remain fixed.
+    /// iPhone VoiceOver/tap paths use this same intent; Reduce Motion removes travel entirely.
+    private func selectDay(_ iso: String) {
+        guard iso != day, weekDays.contains(iso) else { return }
+        dayDirection = iso > day ? 1 : -1
+        withAnimation(reduceMotion ? nil : SpreadMotion.weekSlide) {
+            selectedDay = iso
+        }
+        SpreadHaptics.selection()
+    }
+
     private var overview: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
