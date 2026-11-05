@@ -279,6 +279,7 @@ struct SpreadSurface: View {
                 }
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("weekly-hours-details")
     }
 

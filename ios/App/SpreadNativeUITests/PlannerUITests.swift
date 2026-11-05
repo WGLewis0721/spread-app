@@ -213,10 +213,18 @@ class NativeUITestCase: XCTestCase {
         let name = try XCTUnwrap(el("stack-cards").value as? String)
         let button = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == name })
         let id = String(button.identifier.dropFirst("select-role-".count))
-        let card = el("role-block-" + id)
-        scrollIntoView(card)
+        let badge = el("role-colour-" + id)
+        scrollIntoView(badge)
+        XCTAssertTrue(badge.isHittable, "The responsibility must be visible before editing")
         if !el("dock-done").exists { tapID("edit-spreads") }
-        card.swipeLeft()
+        // Drag across the card's visible header. A lazy container can report an
+        // empty accessibility frame while its actual buttons are on screen.
+        let startX = min(app.frame.maxX - 30, badge.frame.maxX + 130)
+        let endX = max(app.frame.minX + 24, startX - 120)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let start = origin.withOffset(CGVector(dx: startX - app.frame.minX, dy: badge.frame.midY - app.frame.minY))
+        let end = origin.withOffset(CGVector(dx: endX - app.frame.minX, dy: badge.frame.midY - app.frame.minY))
+        start.press(forDuration: 0.05, thenDragTo: end)
         let manage = el("manage-role-" + id)
         XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
         XCTAssertTrue(manage.isHittable)
