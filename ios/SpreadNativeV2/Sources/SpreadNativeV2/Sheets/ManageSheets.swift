@@ -509,8 +509,12 @@ struct MoreSheet: View {
 
     private func rollover() {
         Task {
-            if await planner.send(["type": "rollover", "force": false]),
-               planner.rolloverOutcome == "confirm" {
+            // Clear a previous confirmation before requesting the current week's
+            // outcome. The dispatcher returns ok=true even when the current
+            // rollover is a non-mutating "confirm" response.
+            planner.rolloverOutcome = nil
+            guard await planner.send(["type": "rollover", "force": false]) else { return }
+            if planner.rolloverOutcome == "confirm" {
                 confirmRollover = true
             }
         }
@@ -552,8 +556,15 @@ struct MoreSheet: View {
             .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
             .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous))
         }
+        // The tappable control, not just its label, owns the full tile bounds.
+        // A SwiftUI custom button style can otherwise expose only its inner
+        // text frame to accessibility hit-target measurements.
+        .frame(maxWidth: .infinity, minHeight: 78)
+        .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous))
         .buttonStyle(.spreadPress)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel ?? title)
+        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier(id)
     }
 
@@ -640,10 +651,14 @@ struct MoreSheet: View {
                                     .foregroundStyle(Spread.ink)
                                     .lineLimit(1)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                Button("Manage") { showProfiles() }
-                                    .font(.system(.subheadline, weight: .semibold))
-                                    .frame(minWidth: 64, minHeight: 44)
-                                    .accessibilityLabel("Manage profiles")
+                                Button { showProfiles() } label: {
+                                    Text("Manage")
+                                        .font(.system(.subheadline, weight: .semibold))
+                                        .frame(minWidth: 64, minHeight: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.spreadPress)
+                                .accessibilityLabel("Manage profiles")
                                     .accessibilityIdentifier("manage-profiles")
                             }
                             .padding(.horizontal, 12)
@@ -706,6 +721,7 @@ struct MoreSheet: View {
                     .frame(maxWidth: .infinity, alignment: .top)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("more-overview")
             }
             .navigationTitle("More")

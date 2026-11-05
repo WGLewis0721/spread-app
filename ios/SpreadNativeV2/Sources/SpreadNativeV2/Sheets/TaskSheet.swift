@@ -106,7 +106,10 @@ struct TaskSheet: View {
                         }
                         .padding(20)
                     }
-                    .scrollDismissesKeyboard(.interactively)
+                    // The rich-content Add control can sit below the keyboard.
+                    // Dismiss on an intentional scroll so it stays reachable
+                    // without ending the task editing session.
+                    .scrollDismissesKeyboard(.immediately)
                     .onAppear { title = task.text }
                     // Adopt a changed stored title only while the field still shows the previous stored one. If the user
                     // has typed since (for example after a submit), the acknowledgement of an earlier edit must not

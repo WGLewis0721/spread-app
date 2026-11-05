@@ -87,7 +87,7 @@ struct SpreadSurface: View {
                     .frame(height: 0.5)
                     .padding(.vertical, 10)
                 summaryDetails(status)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(.horizontal, 12)
@@ -279,6 +279,7 @@ struct SpreadSurface: View {
                 }
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("weekly-hours-details")
     }
 
@@ -408,7 +409,7 @@ struct RoleRow: View {
             if isOpen { placementBand.transition(.opacity) }
             if palette {
                 PalettePanel(planner: planner, role: role)
-                    .transition(.opacity.combined(with: .offset(y: 14)))
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 14)))
             }
             if isOpen { taskList.transition(.opacity) }
         }
@@ -447,7 +448,7 @@ struct RoleRow: View {
             // icon, name, hour count and chevron every time editing starts.
             Button {
                 if editing {
-                    withAnimation(SpreadMotion.cascade) { palette.toggle() }
+                    withAnimation(reduceMotion ? nil : SpreadMotion.cascade) { palette.toggle() }
                 } else {
                     toggleOpen()
                 }
@@ -467,7 +468,11 @@ struct RoleRow: View {
                         .font(.system(.headline, weight: .semibold))
                         .lineLimit(1...3)
                         .fixedSize(horizontal: false, vertical: true)
-                        .frame(minHeight: 44)
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44)
+                        // The multiline editor must yield width to the badge, hours,
+                        // and chevron. Its intrinsic ideal width previously grew
+                        // a 358pt Wallet card to 434pt as soon as Edit was enabled.
+                        .layoutPriority(-1)
                         .focused($nameFocused)
                         .submitLabel(.done)
                         .onSubmit { commitName() }
@@ -484,19 +489,24 @@ struct RoleRow: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    // The small static summary line is spoken as part of the
+                    // 44pt role selector instead of a separate 16pt hit region.
+                    .accessibilityValue(summaryLine)
                     .accessibilityIdentifier("select-role-\(role.id)")
                 }
                 Text(summaryLine)
                     .font(.system(.footnote))
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true) // Already exposed by the adjacent role selector
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(-1)
 
             // The number never shares a row with plus/minus controls; the hour
             // editor opens *below* the title. No more mangled names on small phones.
             Button {
-                withAnimation(SpreadMotion.press) { adjusting.toggle() }
+                withAnimation(reduceMotion ? nil : SpreadMotion.press) { adjusting.toggle() }
             } label: {
                 Text("\(SpreadHours.text(role.hours))h")
                     .font(.system(.subheadline, weight: .bold))
@@ -623,7 +633,7 @@ struct RoleRow: View {
         if expanded != nil {
             onSelect()
         } else {
-            withAnimation(SpreadMotion.curve) { tasksOpen.toggle() }
+            withAnimation(reduceMotion ? nil : SpreadMotion.curve) { tasksOpen.toggle() }
         }
     }
 
@@ -967,11 +977,7 @@ struct StackLayout: View {
         // Custom accessibility actions give VoiceOver/keyboard users a way to
         // reach swipe-only actions, without another permanent button row.
         .accessibilityAction(named: Text("Manage \(role.name)")) {
-            guard editing else { editing = true; return }
-            closeReveal()
-            editing = false
-            SpreadHaptics.selection()
-            onOpenRole(role.id)
+            manage(role.id)
         }
         .accessibilityAction(named: Text("Delete \(role.name)")) {
             if !editing { editing = true }
@@ -1025,10 +1031,7 @@ struct StackLayout: View {
             Spacer(minLength: 0)
             if visibleSide(for: role.id) == .manage {
                 swipeAction("Manage", symbol: "slider.horizontal.3", id: "manage-role-\(role.id)", roleName: role.name, destructive: false) {
-                    closeReveal()
-                    editing = false
-                    SpreadHaptics.selection()
-                    onOpenRole(role.id)
+                    manage(role.id)
                 }
             }
         }
@@ -1108,6 +1111,15 @@ struct StackLayout: View {
                     revealedSide = side
                 }
             }
+    }
+
+    /// Named accessibility actions and the revealed button must perform the
+    /// same operation immediately, including when Edit has not been entered.
+    private func manage(_ id: String) {
+        closeReveal()
+        editing = false
+        SpreadHaptics.selection()
+        onOpenRole(id)
     }
 
     private func closeReveal() {

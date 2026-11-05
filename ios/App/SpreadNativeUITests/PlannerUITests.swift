@@ -213,17 +213,25 @@ class NativeUITestCase: XCTestCase {
         let name = try XCTUnwrap(el("stack-cards").value as? String)
         let button = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == name })
         let id = String(button.identifier.dropFirst("select-role-".count))
-        let card = el("role-block-" + id)
-        // Enter edit mode first: it re-lays out the stack, so a card scrolled into view before it can end up
-        // offscreen ("visible frame is empty" on the swipe, F02 on main 74356d5).
+        let badge = el("role-colour-" + id)
+        scrollIntoView(badge)
+        XCTAssertTrue(badge.isHittable, "The responsibility must be visible before editing")
         if !el("dock-done").exists { tapID("edit-spreads") }
-        scrollIntoView(card)
-        XCTAssertTrue(eventually(10) { card.exists && card.isHittable }, "Card \(name) is not on screen to swipe")
-        card.swipeLeft()
+        // Drag across the card's visible header. A lazy container can report an
+        // empty accessibility frame while its actual buttons are on screen.
+        let startX = min(app.frame.maxX - 30, badge.frame.maxX + 130)
+        let endX = max(app.frame.minX + 24, startX - 120)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let start = origin.withOffset(CGVector(dx: startX - app.frame.minX, dy: badge.frame.midY - app.frame.minY))
+        let end = origin.withOffset(CGVector(dx: endX - app.frame.minX, dy: badge.frame.midY - app.frame.minY))
+        start.press(forDuration: 0.05, thenDragTo: end)
         let manage = el("manage-role-" + id)
         XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
         XCTAssertTrue(manage.isHittable)
         manage.tap()
+        let editorName = el("role-name-field")
+        XCTAssertTrue(editorName.waitForExistence(timeout: 10), "Manage did not open the responsibility editor")
+        XCTAssertEqual(editorName.value as? String, name, "Manage opened a different responsibility")
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
     // The old bottom Manage card is gone; selection lives on the Stack itself.
@@ -694,7 +702,7 @@ final class PlannerUITests: NativeUITestCase {
             "more-new-spread", "more-review-tasks", "more-rollover",
             "appearance-system", "appearance-light", "appearance-dark",
             "manage-profiles", "export-print", "export-word", "export-text",
-            "backup-and-restore"
+            "backup-and-restore", "more-recently-deleted", "calendar-design-picker"
         ]
         for id in visibleActions {
             let control = el(id)
@@ -922,6 +930,20 @@ final class PlannerUITests: NativeUITestCase {
         XCTAssertTrue(elements(prefix: "remove-role-").isEmpty)
         let firstCard = try XCTUnwrap(waitElements(prefix: "role-block-").first)
         let firstId = String(firstCard.identifier.dropFirst("role-block-".count))
+        // These disclosures have their own animation transactions; exercising
+        // only card expansion misses the Reduce Motion paths inside the card.
+        tapID("hours-stepper-" + firstId)
+        XCTAssertTrue(el("role-hour-editor-" + firstId).waitForExistence(timeout: 10),
+                      "Hour editor did not open with Reduce Motion")
+        tapID("hours-stepper-" + firstId)
+        XCTAssertTrue(eventually { !self.el("role-hour-editor-" + firstId).exists },
+                      "Hour editor did not close with Reduce Motion")
+        tapID("role-colour-" + firstId)
+        let colour = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use #'" )).firstMatch
+        XCTAssertTrue(colour.waitForExistence(timeout: 10),
+                      "Palette did not open with Reduce Motion")
+        tapID("role-colour-" + firstId)
+        XCTAssertTrue(eventually { !colour.exists }, "Palette did not close with Reduce Motion")
         firstCard.swipeRight()
         XCTAssertTrue(el("remove-role-" + firstId).waitForExistence(timeout: 10))
         tapID("dock-done")
