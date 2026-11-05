@@ -202,9 +202,9 @@ struct LiveReply: Decodable {
         // successful after placing only 30m (owner decisions 20 and 29).
         if let snapshot {
             let available = max(0, snapshot.remainingHours(for: roleId))
-            guard hours <= available else {
+            let shortage = NativeHourBudget.shortage(requested: hours, available: available)
+            guard shortage == 0 else {
                 let name = snapshot.roles.first { $0.id == roleId }?.name ?? "This responsibility"
-                let shortage = hours - available
                 refuse("\(name) needs \(SpreadHours.text(shortage))h more in this week's bank to place \(SpreadHours.text(hours))h. Adjust weekly hours or remove time from another day.")
                 return false
             }
@@ -218,9 +218,10 @@ struct LiveReply: Decodable {
         if hours > allocation.hours, let snapshot {
             let needed = hours - allocation.hours
             let available = max(0, snapshot.remainingHours(for: allocation.roleId))
-            guard needed <= available else {
+            let shortage = NativeHourBudget.shortage(requested: needed, available: available)
+            guard shortage == 0 else {
                 let name = snapshot.roles.first { $0.id == allocation.roleId }?.name ?? "This responsibility"
-                refuse("\(name) needs \(SpreadHours.text(needed - available))h more to increase this day to \(SpreadHours.text(hours))h. Adjust weekly hours or take time off another day.")
+                refuse("\(name) needs \(SpreadHours.text(shortage))h more to increase this day to \(SpreadHours.text(hours))h. Adjust weekly hours or take time off another day.")
                 return false
             }
         }
