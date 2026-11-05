@@ -229,6 +229,9 @@ class NativeUITestCase: XCTestCase {
         XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
         XCTAssertTrue(manage.isHittable)
         manage.tap()
+        let editorName = el("role-name-field")
+        XCTAssertTrue(editorName.waitForExistence(timeout: 10), "Manage did not open the responsibility editor")
+        XCTAssertEqual(editorName.value as? String, name, "Manage opened a different responsibility")
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
     // The old bottom Manage card is gone; selection lives on the Stack itself.

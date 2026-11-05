@@ -964,11 +964,7 @@ struct StackLayout: View {
         // Custom accessibility actions give VoiceOver/keyboard users a way to
         // reach swipe-only actions, without another permanent button row.
         .accessibilityAction(named: Text("Manage \(role.name)")) {
-            guard editing else { editing = true; return }
-            closeReveal()
-            editing = false
-            SpreadHaptics.selection()
-            onOpenRole(role.id)
+            manage(role.id)
         }
         .accessibilityAction(named: Text("Delete \(role.name)")) {
             if !editing { editing = true }
@@ -1022,10 +1018,7 @@ struct StackLayout: View {
             Spacer(minLength: 0)
             if visibleSide(for: role.id) == .manage {
                 swipeAction("Manage", symbol: "slider.horizontal.3", id: "manage-role-\(role.id)", roleName: role.name, destructive: false) {
-                    closeReveal()
-                    editing = false
-                    SpreadHaptics.selection()
-                    onOpenRole(role.id)
+                    manage(role.id)
                 }
             }
         }
@@ -1102,6 +1095,15 @@ struct StackLayout: View {
                     revealedSide = side
                 }
             }
+    }
+
+    /// Named accessibility actions and the revealed button must perform the
+    /// same operation immediately, including when Edit has not been entered.
+    private func manage(_ id: String) {
+        closeReveal()
+        editing = false
+        SpreadHaptics.selection()
+        onOpenRole(id)
     }
 
     private func closeReveal() {
