@@ -109,6 +109,7 @@ struct FocusedQuickAdd: View {
     let roleId: String
     let day: String
     let onOpenEditor: (String, String) -> Void
+    let onAdjustHours: (String) -> Void
 
     @State private var expanded = false
     @State private var text = ""
@@ -156,6 +157,7 @@ struct FocusedQuickAdd: View {
         }
         .confirmationDialog("Schedule this task?", isPresented: $wantsHours, titleVisibility: .visible) {
             Button("Add 30 minutes to this day") { Task { await allocateAndSchedule() } }
+            Button("Adjust weekly hours") { onAdjustHours(roleId); pendingTaskId = nil }
             Button("Keep in To Place", role: .cancel) { pendingTaskId = nil }
         } message: {
             Text("No time has been allocated to this responsibility on the selected day. The task has been saved to To Place.")
@@ -208,6 +210,7 @@ struct FocusedRoleCard: View {
     let expanded: Bool
     let onToggle: () -> Void
     let onOpenTask: (String, String) -> Void
+    let onAdjustHours: (String) -> Void
 
     @State private var showCompleted = false
     @State private var showHours = false
@@ -289,6 +292,16 @@ struct FocusedRoleCard: View {
                 .accessibilityIdentifier("focus-hour-\(role.id)")
             }
             if showHours {
+                if snapshot.remainingHours(for: role.id) < 0.5 {
+                    HStack(spacing: 6) {
+                        Text("No unallocated time remaining this week.")
+                            .font(Spread.caption).foregroundStyle(Spread.secondary)
+                        Spacer(minLength: 2)
+                        Button("Adjust weekly hours") { onAdjustHours(role.id) }
+                            .font(Spread.caption).frame(minHeight: 44)
+                            .accessibilityIdentifier("focus-adjust-hours-\(role.id)")
+                    }
+                }
                 if let first = allocations.first {
                     HourStepper(value: first.hours, label: "\(role.name) on \(day)", step: 0.5) { amount in
                         Task { await planner.setAllocationHours(first, to: amount) }
@@ -327,7 +340,7 @@ struct FocusedRoleCard: View {
                             }
                         }
                     }
-                    FocusedQuickAdd(planner: planner, roleId: role.id, day: day, onOpenEditor: onOpenTask)
+                    FocusedQuickAdd(planner: planner, roleId: role.id, day: day, onOpenEditor: onOpenTask, onAdjustHours: onAdjustHours)
                 }
                 .padding(.top, 3)
                 .padding(.bottom, 8)
