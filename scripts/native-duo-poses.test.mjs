@@ -89,6 +89,15 @@ test('the harness never scopes the simulator set, which makes agent-device refus
   }
 });
 
+test('Duo screenshots use the supported full-resolution scale option', async () => {
+  const result = await run();
+  const shots = result.device.calls.filter((argv) => argv[0] === 'screenshot');
+  assert.ok(shots.length >= 20, 'each pose and view must be captured');
+  assert.ok(shots.every((argv) => !argv.includes('--pixel-density')), 'invalid option can silently cause retries');
+  assert.ok(shots.every((argv) => argv.includes('--scale') && argv[argv.indexOf('--scale') + 1] === '1'),
+    'retain native resolution for visual acceptance');
+});
+
 test('the workflow runs this harness and never passes a scoped simulator set', () => {
   const workflow = readFileSync(new URL('../.github/workflows/native-duo-poses.yml', import.meta.url), 'utf8');
   assert.match(workflow, /scripts\/native-duo-poses\.mjs/);
