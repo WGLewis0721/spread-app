@@ -1494,8 +1494,8 @@ final class WeekMonthUITests: NativeUITestCase {
         tapID("focus-show-sidebar")
         XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists }, "Hide did not hide the sidebar")
         capture("wm-sidebar-hidden")
-        tapID("focus-show-sidebar")
-        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5), "The hidden sidebar did not come back")
+        tapID("header-show-sidebar")
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5), "The hidden sidebar did not come back from the Spread header")
     }
 
     /// Task lifecycle through the store: Quick Add, complete (folded section), relaunch, uncomplete, delete,
