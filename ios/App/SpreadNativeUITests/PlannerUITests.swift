@@ -1877,6 +1877,37 @@ final class WeekMonthUITests: NativeUITestCase {
         XCTAssertTrue(eventually(10) { self.elements(prefix: "month-day-").first?.identifier != firstBefore },
                       "Swiping Month did not change the month")
     }
+    /// #144 reconciliation: the focused Hour control must offer the existing Role editor.
+    func testFocusedWeekHourControlOpensRealWeeklyBudget() {
+        launch(preview); openFocusedWeek()
+        let role = roleIDs()[0]
+        tapID("focus-hour-" + role)
+        let adjust = el("focus-adjust-hours-" + role)
+        XCTAssertTrue(adjust.waitForExistence(timeout: 10), "Missing direct weekly hour adjustment action")
+        XCTAssertGreaterThanOrEqual(adjust.frame.height, 44)
+        adjust.tap()
+        XCTAssertTrue(el("bank-remaining").waitForExistence(timeout: 15),
+                      "Adjust weekly hours must open the authoritative Role editor")
+        capture("wm-adjust-weekly-hours")
+    }
+
+    /// Both day directions keep the same week and responsibility rail.
+    func testFocusedDayNavigationBothDirectionsKeepsWeek() {
+        launch(preview); openFocusedWeek()
+        let days = dayIDs()
+        guard days.count == 7 else { return XCTFail("Expected seven day controls") }
+        tapID(days[2])
+        XCTAssertTrue(eventually(5) { self.el(days[2]).isSelected })
+        tapID(days[1])
+        XCTAssertTrue(eventually(5) { self.el(days[1]).isSelected })
+        XCTAssertEqual(dayIDs(), days, "Backward day selection changed weeks")
+        tapID(days[4])
+        XCTAssertTrue(eventually(5) { self.el(days[4]).isSelected })
+        XCTAssertEqual(dayIDs(), days, "Forward day selection changed weeks")
+        XCTAssertTrue(el("responsibility-sidebar").exists)
+        capture("wm-day-both-directions")
+    }
+
     /// A refused hour increase must not clamp the requested time. Offer a
     /// measured shortage and the affected responsibility's own hour editor.
     func testInsufficientHoursOffersMeasuredAdjustment() {
