@@ -112,6 +112,8 @@ struct OverdueSelectionTray: View {
         .onChange(of: currentDay) { _, newDay in targetDay = newDay }
         .onChange(of: rows.map(\.id)) { _, ids in selection = selection.intersection(Set(ids)) }
         .sheet(isPresented: $showingPreview) { previewSheet }
+        // A container identifier otherwise replaces its children's own identifiers.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("overdue-selection-tray")
     }
 

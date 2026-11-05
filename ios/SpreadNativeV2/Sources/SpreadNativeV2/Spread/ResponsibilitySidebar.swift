@@ -10,6 +10,7 @@ struct ResponsibilitySidebar: View {
     let onAdd: () -> Void
     let onToggle: () -> Void
     var onSelected: ((String) -> Void)? = nil
+    var horizontal = false
 
     private func weeklyCompletion(_ roleId: String) -> Double {
         let tasks = snapshot.tasks.filter { $0.roleId == roleId }
@@ -18,9 +19,11 @@ struct ResponsibilitySidebar: View {
     }
 
     var body: some View {
-        VStack(spacing: 5) {
-            ScrollView {
-                LazyVStack(spacing: 6) {
+        let layout = horizontal ? AnyLayout(HStackLayout(spacing: 5)) : AnyLayout(VStackLayout(spacing: 5))
+        let items = horizontal ? AnyLayout(HStackLayout(spacing: 6)) : AnyLayout(VStackLayout(spacing: 6))
+        return layout {
+            ScrollView(horizontal ? .horizontal : .vertical) {
+                items {
                     ForEach(snapshot.roles) { role in
                         Button {
                             selectedRole = role.id
@@ -50,6 +53,7 @@ struct ResponsibilitySidebar: View {
                                 }
                             }
                             .frame(maxWidth: .infinity, minHeight: expanded ? 74 : 52)
+                            .frame(width: horizontal ? 52 : nil)
                             .background(role.id == selectedRole ? Color(hex: role.color).opacity(0.14) : Color.clear,
                                         in: RoundedRectangle(cornerRadius: 12))
                             .contentShape(Rectangle())
@@ -66,6 +70,7 @@ struct ResponsibilitySidebar: View {
             Button(action: onAdd) {
                 Image(systemName: "plus").font(.system(.headline, weight: .medium))
                     .frame(maxWidth: .infinity, minHeight: 44)
+                    .frame(width: horizontal ? 44 : nil)
             }
             .buttonStyle(.spreadPress)
             .accessibilityLabel("Add responsibility")
@@ -75,11 +80,13 @@ struct ResponsibilitySidebar: View {
                 Image(systemName: expanded ? "chevron.left.2" : "chevron.right.2")
                     .font(.system(.subheadline, weight: .semibold))
                     .frame(maxWidth: .infinity, minHeight: 44)
+                    .frame(width: horizontal ? 44 : nil)
             }
             .buttonStyle(.spreadPress)
             .accessibilityLabel(expanded ? "Condense sidebar" : "Expand sidebar")
             .accessibilityIdentifier("sidebar-expand-collapse")
         }
+        .frame(height: horizontal ? 60 : nil)
         .padding(4)
         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 18))
         .accessibilityElement(children: .contain)

@@ -214,8 +214,11 @@ class NativeUITestCase: XCTestCase {
         let button = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == name })
         let id = String(button.identifier.dropFirst("select-role-".count))
         let card = el("role-block-" + id)
-        scrollIntoView(card)
+        // Enter edit mode first: it re-lays out the stack, so a card scrolled into view before it can end up
+        // offscreen ("visible frame is empty" on the swipe, F02 on main 74356d5).
         if !el("dock-done").exists { tapID("edit-spreads") }
+        scrollIntoView(card)
+        XCTAssertTrue(eventually(10) { card.exists && card.isHittable }, "Card \(name) is not on screen to swipe")
         card.swipeLeft()
         let manage = el("manage-role-" + id)
         XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
@@ -224,7 +227,9 @@ class NativeUITestCase: XCTestCase {
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
     // The old bottom Manage card is gone; selection lives on the Stack itself.
-    var selectedRoleLabel: String { "Manage " + ((el("stack-cards").value as? String) ?? "") }
+    /// The Wallet Stack's selected responsibility name (its accessibility value). Callers compare it with the plain
+    /// name; prefixing "Manage " (348596c) made F01 and the long-name check fail on every run.
+    var selectedRoleLabel: String { (el("stack-cards").value as? String) ?? "" }
 
     // MARK: dates (the planner keeps date-only UTC weeks that start on Monday)
 
@@ -347,6 +352,13 @@ final class JourneyUITests: NativeUITestCase {
         for toggle in card.descendants(matching: .button).matching(NSPredicate(format: "identifier BEGINSWITH 'allocation-toggle-'")).allElementsBoundByIndex
             where (toggle.value as? String) == "Tasks folded" { toggle.tap() }
     }
+    /// The bank label sits in the Manage form's first section. Choosing a day scrolls the form down, and the lazy
+    /// List then drops that row from the hierarchy, so scroll back toward the top before reading it.
+    private var bankLabel: String {
+        let bank = el("bank-remaining")
+        for _ in 0..<6 where !bank.exists { scrollPage(up: false) }
+        return bank.label
+    }
     private func revealTray() {
         for group in elements(prefix: "tray-role-") where group.label.hasPrefix(Dataset.role) && (group.value as? String) == "Collapsed" {
             scrollIntoView(group); group.tap()
@@ -372,9 +384,9 @@ final class JourneyUITests: NativeUITestCase {
         tapButton("Increase \(Dataset.role) hours by half an hour")
         XCTAssertTrue(eventually { self.el("bank-remaining").label == "3h left in this week’s bank" })
         chooseDay("Monday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2h left in this week’s bank" })
+        XCTAssertTrue(eventually { self.bankLabel == "2h left in this week’s bank" }, "Bank reads \(bankLabel) after Monday")
         chooseDay("Wednesday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "1h left in this week’s bank" })
+        XCTAssertTrue(eventually { self.bankLabel == "1h left in this week’s bank" }, "Bank reads \(bankLabel) after Wednesday")
         tapButton("Done"); goWeek()
         let allocations = elements(prefix: "allocation-").filter { $0.label == "Move " + Dataset.role }
         XCTAssertEqual(allocations.count, 2)
@@ -1578,6 +1590,39 @@ final class WeekMonthUITests: NativeUITestCase {
     private func taskRow(_ title: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'focus-task-' AND label == %@", title)).firstMatch
     }
+    /// Switching between two profiles whose remembered destination is Week must not
+    /// carry the first person's hidden rail or open trays into the second profile.
+    func testFocusedWeekResetsTransientStateAcrossProfiles() throws {
+        launch(preview); openFocusedWeek()
+        tapID("open-more"); tapID("manage-profiles")
+        let profiles = elements(prefix: "profile-")
+        let original = try XCTUnwrap(profiles.first { ($0.value as? String) == "Current profile" } ?? profiles.first).identifier
+        typeInto("new-profile-field", "Week isolation " + String(UUID().uuidString.prefix(6)))
+        tapID("create-profile")
+        closeNativeSheets(); openFocusedWeek()
+        tapID("open-more"); tapID("manage-profiles")
+        let other = try XCTUnwrap(elements(prefix: "profile-").first {
+            ($0.value as? String) == "Current profile" || $0.isSelected
+        }).identifier
+        tapID(original); closeNativeSheets(); openFocusedWeek()
+        tapID("focus-show-sidebar")
+        XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists })
+        tapID("open-more"); tapID("manage-profiles"); tapID(other); closeNativeSheets()
+        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20))
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5),
+                      "The previous profile's hidden rail leaked into this profile's Week")
+        capture("wm-profile-isolated-rail")
+        tapID("open-more"); tapID("manage-profiles"); tapID(original); closeNativeSheets()
+    }
+    /// A real finger drag across the seven-day strip. `swipeLeft()` on one narrow day button travels about that
+    /// button's width, under the strip's 65 pt minimum, so it never reached the week-change gesture.
+    private func dragStrip(towardNextWeek: Bool) {
+        let days = dayIDs().map { el($0) }
+        let start = towardNextWeek ? days[5] : days[1]
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let from = origin.withOffset(CGVector(dx: start.frame.midX - app.frame.minX, dy: start.frame.midY - app.frame.minY))
+        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: towardNextWeek ? -180 : 180, dy: 0)))
+    }
 
     /// Decisions 25, 54 and 90-91: tap a day, Month round trip keeps it, a strip swipe changes week and opens Monday.
     func testDaySelectionSurvivesMonthAndStripSwipeOpensMonday() {
@@ -1588,16 +1633,22 @@ final class WeekMonthUITests: NativeUITestCase {
         XCTAssertTrue(eventually(5) { self.el(thursday).isSelected }, "Tapping a day did not select it")
         tapID("focus-week-month-toggle")
         XCTAssertTrue(el("month").waitForExistence(timeout: 10), "Month did not open")
+        let dates = waitElements(prefix: "month-day-", minimum: 28)
+        for date in dates {
+            XCTAssertGreaterThanOrEqual(date.frame.width, 43.5, "Month date target is narrower than 44pt: " + date.identifier)
+            XCTAssertGreaterThanOrEqual(date.frame.height, 43.5, "Month date target is shorter than 44pt: " + date.identifier)
+        }
+        XCTAssertTrue(el("responsibility-sidebar").exists, "Month must retain responsibility controls")
         capture("wm-month-from-thursday")
         tapID("focus-week-month-toggle")
         XCTAssertTrue(eventually(10) { self.el(thursday).exists && self.el(thursday).isSelected },
                       "Closing Month without choosing a date must restore the previous day")
-        el(thursday).swipeLeft()
+        dragStrip(towardNextWeek: true)
         XCTAssertTrue(eventually(15) { self.dayIDs().first != days.first }, "Swiping the seven-day strip did not change week")
         let next = dayIDs()
         XCTAssertTrue(eventually(5) { self.el(next[0]).isSelected }, "Changing weeks must open Monday")
         capture("wm-next-week-opens-monday")
-        el(next[0]).swipeRight()
+        dragStrip(towardNextWeek: false)
         XCTAssertTrue(eventually(15) { self.dayIDs().first == days.first }, "Swiping back did not return to the first week")
     }
 
@@ -1710,4 +1761,42 @@ final class WeekMonthUITests: NativeUITestCase {
         XCTAssertTrue(eventually(10) { self.elements(prefix: "month-day-").first?.identifier != firstBefore },
                       "Swiping Month did not change the month")
     }
+    /// A refused hour increase must not clamp the requested time. Offer a
+    /// measured shortage and the affected responsibility's own hour editor.
+    func testInsufficientHoursOffersMeasuredAdjustment() {
+        launch(preview); openFocusedWeek()
+        tapID("sidebar-add-role")
+        let name = "Budget " + String(UUID().uuidString.prefix(6))
+        typeInto("role-name-field", name)
+        for _ in 0..<3 { tapButton("Decrease Hours for spread 1 by half an hour") }
+        tapID("save-spreads")
+        let selector = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'focus-role-' AND label == %@", name)
+        ).firstMatch
+        XCTAssertTrue(selector.waitForExistence(timeout: 20), "The new responsibility is not in Week")
+        scrollIntoView(selector)
+        selector.tap()
+        let roleID = String(selector.identifier.dropFirst("focus-role-".count))
+        let hourID = "focus-hour-" + roleID
+        let day = elements(prefix: "focus-day-").first(where: { $0.isSelected })
+        guard let day else { return XCTFail("No selected date on Week") }
+        let iso = String(day.identifier.dropFirst("focus-day-".count))
+        tapID(hourID)
+        tapButton("Allocate 30 minutes")
+        let increase = "Increase " + name + " on " + iso + " by half an hour"
+        XCTAssertTrue(app.buttons[increase].waitForExistence(timeout: 20))
+        tapButton(increase)
+        let adjust = app.buttons["Adjust hours"]
+        XCTAssertTrue(adjust.waitForExistence(timeout: 15),
+                      "A rejected allocation must offer Adjust hours")
+        XCTAssertTrue(app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "needs 0.5h more")
+        ).firstMatch.exists, "Refusal did not explain the exact missing hours")
+        capture("wm-insufficient-hours-adjustment")
+        adjust.tap()
+        XCTAssertTrue(el("role-name-field").waitForExistence(timeout: 15),
+                      "Adjust hours did not open the role editor")
+        XCTAssertEqual(fieldText("role-name-field"), name, "Opened wrong responsibility")
+    }
+
 }
