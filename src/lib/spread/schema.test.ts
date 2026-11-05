@@ -113,3 +113,15 @@ test("a full store fails safely and leaves data readable", () => {
   assert.equal(runMigrations(store).status, "failed");
   assert.ok(store.getItem(STORE_KEY));
 });
+
+
+test("v2 planner migrates to v3 without rewriting stored tasks or allocations", () => {
+  const store = planner();
+  const original = store.getItem(STORE_KEY);
+  store.setItem(SCHEMA_KEY, "2");
+  const result = runMigrations(store);
+  assert.deepEqual(result, { status: "migrated", from: 2, to: 3 });
+  assert.equal(store.getItem(STORE_KEY), original);
+  assert.equal(readSchemaVersion(store), 3);
+  assert.deepEqual(runMigrations(store, { current: 2 }), { status: "newer", version: 3 });
+});

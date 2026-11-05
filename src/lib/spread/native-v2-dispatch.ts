@@ -6,6 +6,7 @@ import { flushSpread, retrySpreadSave, useSpread } from "./store.ts";
 import { buildWeekDocument, weekDocumentText } from "./week-document.ts";
 import { weekDocumentHTML } from "./native-v2-export.ts";
 import { dayMarks, monthGrid } from "./month.ts";
+import { activeDeletedTasks } from "./week-month-operations.ts";
 
 const id = z.string().trim().min(1).max(200);
 const text = z.string().trim().min(1).max(10000);
@@ -56,6 +57,13 @@ const action = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("retrySave") }),
   z.strictObject({ type: z.literal("deleteTask"), roleId: id, taskId: id }),
+  z.strictObject({ type: z.literal("readDeletedTasks") }),
+  z.strictObject({ type: z.literal("restoreDeletedTask"), taskId: id }),
+  z.strictObject({ type: z.literal("permanentlyDeleteTasks"), taskIds: z.array(id).min(1).max(1000) }),
+  z.strictObject({ type: z.literal("readOverdueTasks"), today: day }),
+  z.strictObject({ type: z.literal("previewBulkOverdue"), today: day, targetDay: day, taskIds: z.array(id).min(1).max(1000) }),
+  z.strictObject({ type: z.literal("bulkMoveOverdue"), today: day, targetDay: day, taskIds: z.array(id).min(1).max(1000) }),
+  z.strictObject({ type: z.literal("reorderDayTask"), roleId: id, day, taskId: id, beforeId: id.nullable() }),
   z.strictObject({ type: z.literal("allocationHours"), allocationId: id, hours }),
   z.strictObject({ type: z.literal("removeAllocation"), allocationId: id }),
   z.strictObject({ type: z.literal("renameRole"), roleId: id, name: text }),
@@ -70,6 +78,7 @@ const action = z.discriminatedUnion("type", [
     type: z.literal("monthMarks"),
     year: z.number().int().min(1970).max(2200),
     month: z.number().int().min(0).max(11),
+    selectedRoleId: id.optional(),
   }),
   z.strictObject({ type: z.literal("rollover"), force: z.boolean() }),
   z.strictObject({
@@ -110,6 +119,7 @@ const action = z.discriminatedUnion("type", [
     hours: hours.refine((n) => n > 0),
   }),
   z.strictObject({ type: z.literal("addTask"), roleId: id, text }),
+  z.strictObject({ type: z.literal("addTaskForDay"), roleId: id, text, day }),
   z.strictObject({ type: z.literal("editTask"), roleId: id, taskId: id, text }),
   z.strictObject({ type: z.literal("toggleTask"), roleId: id, taskId: id }),
   z.strictObject({
@@ -149,6 +159,10 @@ export type NativeReply = {
   exported?: { format: "text" | "html" | "docx"; content: string };
   /** Read-only role dots per ISO date for one month; never persisted and never part of planner state. */
   monthMarks?: Record<string, { colors: string[]; extra: number }>;
+  deletedTasks?: { id: string; hatId: string; weekKey: string; deletedAt: number; task: { id: string; text: string; done: boolean } }[];
+  overdueTasks?: { weekKey: string; hatId: string; day: string; task: { id: string; text: string; done: boolean } }[];
+  bulkPreview?: { taskId: string; weekKey: string; hatId: string; targetAllocationId?: string; error?: string }[];
+  bulkMoved?: number;
   state: NativeRead | null;
 };
 
@@ -195,7 +209,10 @@ export function createNativeV2Dispatcher(sessionId: string) {
     // Exports are reads: they are not replay-protected and never change planner state.
     if (command.action.type === "exportWeek") return exportWeek(command, command.action.format, fail);
     if (command.action.type === "monthMarks")
-      return monthMarks(command, command.action.year, command.action.month, fail);
+      return monthMarks(command, command.action.year, command.action.month, command.action.selectedRoleId, fail);
+    // Volatile, read-only result sets: never cache task text in replay receipts.
+    if (["readDeletedTasks", "readOverdueTasks", "previewBulkOverdue"].includes(command.action.type))
+      return run(command, fail);
     const prior = requests.get(command.requestId);
     if (prior) {
       if (prior.fingerprint !== fingerprint) return fail("request-id-reused");
@@ -259,13 +276,14 @@ export function createNativeV2Dispatcher(sessionId: string) {
     command: NativeRequest,
     year: number,
     month: number,
+    selectedRoleId: string | undefined,
     fail: (error: string) => NativeReply,
   ): NativeReply {
     const state = useSpread.getState();
     if (!state.ready || !state.activeId) return fail("not-ready");
     if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
     const marks: Record<string, { colors: string[]; extra: number }> = {};
-    for (const cell of monthGrid(year, month)) marks[cell.date] = dayMarks(state.data, cell.date);
+    for (const cell of monthGrid(year, month)) marks[cell.date] = dayMarks(state.data, cell.date, selectedRoleId);
     return { requestId: command.requestId, ok: true, state: read(), monthMarks: marks };
   }
   function run(command: NativeRequest, fail: (error: string) => NativeReply): NativeReply {
@@ -274,11 +292,25 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
     if (command.expectedWeek !== state.data.currentWeek) return fail("stale-week");
     if (command.expectedRevision !== revision) return fail("stale-revision");
-    if (getSaveFacts().failed && !["retrySave", "readTaskContent"].includes(command.action.type))
+    if (getSaveFacts().failed && !["retrySave", "readTaskContent", "readDeletedTasks", "readOverdueTasks", "previewBulkOverdue"].includes(command.action.type))
       return fail("save-unavailable");
     const a = command.action;
     if (a.type === "exportWeek") return fail("export-not-here");
     if (a.type === "monthMarks") return fail("read-not-here");
+    if (a.type === "readDeletedTasks") {
+      return { requestId: command.requestId, ok: true, state: read(),
+        deletedTasks: activeDeletedTasks(state.data).map(({ id, hatId, weekKey, deletedAt, task }) =>
+          ({ id, hatId, weekKey, deletedAt, task: { id: task.id, text: task.text, done: task.done } })) };
+    }
+    if (a.type === "readOverdueTasks") {
+      return { requestId: command.requestId, ok: true, state: read(),
+        overdueTasks: state.overdueTasks(a.today).map(({ weekKey, hatId, day, task }) =>
+          ({ weekKey, hatId, day, task: { id: task.id, text: task.text, done: task.done } })) };
+    }
+    if (a.type === "previewBulkOverdue") {
+      return { requestId: command.requestId, ok: true, state: read(),
+        bulkPreview: state.previewOverdueMove(a.taskIds, a.targetDay, a.today) };
+    }
     const invalid =
       a.type === "switchProfile" && !state.profiles.some((p) => p.id === a.profileId)
         ? "no-profile"
@@ -296,6 +328,8 @@ export function createNativeV2Dispatcher(sessionId: string) {
       };
     }
     let undoId: string | null = null;
+    let bulkMoved: number | undefined;
+    let bulkPreview: NativeReply["bulkPreview"];
     let rolloverOutcome: "done" | "confirm" | "empty" | undefined;
     try {
       const mutate = () => {
@@ -309,6 +343,24 @@ export function createNativeV2Dispatcher(sessionId: string) {
             break;
           case "deleteTask":
             state.deleteTask(a.roleId, a.taskId);
+            break;
+          case "restoreDeletedTask": {
+            const result = state.restoreDeletedTask(a.taskId);
+            if (!result.ok) throw new Error(result.reason ?? "restore-refused");
+            break;
+          }
+          case "permanentlyDeleteTasks":
+            state.permanentlyDeleteTasks(a.taskIds);
+            break;
+          case "bulkMoveOverdue": {
+            const result = state.bulkMoveOverdue(a.taskIds, a.targetDay, a.today);
+            bulkMoved = result.moved;
+            bulkPreview = result.outcomes;
+            break;
+          }
+          case "reorderDayTask":
+            if (!state.reorderDayTask(a.roleId, a.day, a.taskId, a.beforeId))
+              throw new Error("invalid-order");
             break;
           case "allocationHours":
             state.setAllocationHours(a.allocationId, a.hours);
@@ -362,6 +414,9 @@ export function createNativeV2Dispatcher(sessionId: string) {
           case "addTask":
             state.addTask(a.roleId, a.text);
             break;
+          case "addTaskForDay":
+            if (!state.addTaskToDay(a.roleId, a.day, a.text)) throw new Error("invalid-day-or-role");
+            break;
           case "editTask":
             state.setTaskText(a.roleId, a.taskId, a.text);
             flushSpread();
@@ -401,6 +456,10 @@ export function createNativeV2Dispatcher(sessionId: string) {
           "removeProfile",
           "removeRole",
           "rollover",
+          "restoreDeletedTask",
+          "permanentlyDeleteTasks",
+          "bulkMoveOverdue",
+          "addTaskForDay",
         ].includes(a.type)
       )
         mutate();
@@ -411,6 +470,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
         ok: true,
         undoId,
         ...(rolloverOutcome ? { rollover: rolloverOutcome } : {}),
+        ...(bulkMoved !== undefined ? { bulkMoved, bulkPreview } : {}),
         state: read(),
       };
     } catch {
@@ -449,14 +509,14 @@ function validateTarget(a: NativeRequest["action"], data: SpreadData): string | 
     !week?.allocations.some((p) => p.id === a.allocationId)
   )
     return "no-allocation";
-  if (a.type === "allocate" || a.type === "moveSpreadToDay" || a.type === "moveAllocation") {
+  if (a.type === "allocate" || a.type === "moveSpreadToDay" || a.type === "moveAllocation" || a.type === "addTaskForDay") {
     const date = new Date(`${a.day}T12:00:00Z`);
     if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== a.day)
       return "invalid-day";
   }
   if ("roleId" in a && !data.hats.some((r) => r.id === a.roleId)) return "no-role";
   if (
-    "taskId" in a &&
+    "taskId" in a && "roleId" in a &&
     !week?.boxes.find((b) => b.hatId === a.roleId)?.tasks.some((t) => t.id === a.taskId)
   )
     return "no-task";

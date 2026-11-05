@@ -20,8 +20,10 @@ export const SCHEMA_KEY = "spread.schema";
  * 1: the shape every build up to and including the first TestFlight candidate wrote (no marker).
  * 2: entity metadata (device id, version vectors, tombstones, profile `syncId`) may be present.
  *    Written lazily on edit, never by a bulk rewrite.
+ * 3: optional recoverable task tombstones and per-day display order. Older builds must not
+ *    silently rewrite these records away after downgrade; existing profiles need no rewrite.
  */
-export const CURRENT_SCHEMA = 2;
+export const CURRENT_SCHEMA = 3;
 
 export type SchemaStorage = KeyStore & { removeItem?(key: string): void };
 
@@ -35,6 +37,9 @@ export const STEPS: MigrationStep[] = [
   // 1 -> 2 changes no stored data. It exists so the marker, snapshot and newer-version rules are
   // exercised on real devices before a step that does change data ships.
   { from: 1, run: () => undefined },
+  // 2 -> 3 adds new optional planner fields only when someone uses the new feature.
+  // The version guard keeps a downgraded reader from destructively rewriting them.
+  { from: 2, run: () => undefined },
 ];
 
 export type SchemaOutcome =

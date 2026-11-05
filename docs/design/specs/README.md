@@ -17,4 +17,6 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 | 2026-11-03 | [Spread 2.0 native completion, integrated backlog](2026-11-03-spread-2-native-completion.md) | Ready for implementation; release gated |
 | 2026-11-03 | [Spread 2.0 native acceptance, remaining work after PR #117](2026-11-03-spread-2-native-acceptance-remaining.md) | Native release NO-GO; final-head evidence open |
 | 2026-11-04 | [Week/Month: 61 owner decisions](2026-11-04-week-month-owner-decisions.md) | Owner-approved direction; opt-in UI preview, release gated |
+| 2026-11-04 | [Week/Month component specification](2026-11-04-week-month-components-implementation.md) | Component source of truth for the 61 decisions; release gated |
+| 2026-11-04 | [Week/Month 61-decision verification status](2026-11-04-week-month-verification.md) | PR #139 status; release NO-GO until simulator evidence |
 | 2026-11-03 | [Working-build SwiftUI parity spec (root)](../../../SPREAD_SWIFTUI_PARITY_SPEC.md) and [implementation instructions](../../../SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) | Owner direction; reference capture required; no merge/release authorization |

@@ -485,6 +485,7 @@ struct MoreSheet: View {
     @State private var openTasks = false
     @State private var confirmRollover = false
     @State private var showCalendarPicker = false
+    @State private var showRecentlyDeleted = false
 
     private var activeProfileName: String {
         planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId })?.name ?? "Current profile"
@@ -668,19 +669,33 @@ struct MoreSheet: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Data")
-                            Button {
-                                dismiss()
-                                recovery()
-                            } label: {
-                                Label("Backup and restore", systemImage: "externaldrive")
-                                    .font(.system(.subheadline, weight: .semibold))
-                                    .foregroundStyle(Spread.ink)
-                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-                                    .padding(.horizontal, 14)
-                                    .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                            HStack(spacing: 8) {
+                                Button {
+                                    dismiss()
+                                    recovery()
+                                } label: {
+                                    Label("Backup and restore", systemImage: "externaldrive")
+                                        .font(.system(.subheadline, weight: .semibold))
+                                        .foregroundStyle(Spread.ink)
+                                        .lineLimit(2)
+                                        .frame(maxWidth: .infinity, minHeight: 48)
+                                        .padding(.horizontal, 8)
+                                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                                }
+                                .buttonStyle(.spreadPress)
+                                .accessibilityIdentifier("backup-and-restore")
+                                Button { showRecentlyDeleted = true } label: {
+                                    Label("Recently Deleted", systemImage: "trash")
+                                        .font(.system(.subheadline, weight: .semibold))
+                                        .foregroundStyle(Spread.ink)
+                                        .lineLimit(2)
+                                        .frame(maxWidth: .infinity, minHeight: 48)
+                                        .padding(.horizontal, 8)
+                                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                                }
+                                .buttonStyle(.spreadPress)
+                                .accessibilityIdentifier("more-recently-deleted")
                             }
-                            .buttonStyle(.spreadPress)
-                            .accessibilityIdentifier("backup-and-restore")
                         }
                     }
                     .frame(maxWidth: 620)
@@ -702,6 +717,7 @@ struct MoreSheet: View {
             }
             .sheet(isPresented: $newSpread) { NewSpreadSheet(planner: planner) }
             .sheet(isPresented: $openTasks) { CarryOverSheet(planner: planner) }
+            .sheet(isPresented: $showRecentlyDeleted) { RecentlyDeletedSheet(planner: planner) }
             .confirmationDialog("Replace next week?", isPresented: $confirmRollover, titleVisibility: .visible) {
                 Button("Replace", role: .destructive) { Task { await planner.send(["type": "rollover", "force": true]) } }
                 Button("Cancel", role: .cancel) {}

@@ -7,6 +7,8 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
     public var roles: [Responsibility]
     public var allocations: [DayAllocation]
     public var tasks: [PlannerTask]
+    /** Optional presentation ordering; absent from Classic/older snapshots. */
+    public var dayTaskOrder: [String: [String]]? = nil
 
     public init(weekKey: String, roles: [Responsibility], allocations: [DayAllocation], tasks: [PlannerTask]) {
         self.weekKey = weekKey
