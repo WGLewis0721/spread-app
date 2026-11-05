@@ -218,6 +218,8 @@ struct WeekFocusSurface: View {
         .task(id: refreshKey) {
             overdueRows = await planner.allOverdueTasks(today: PlannerDates.localISO()) ?? []
         }
+        // Keep the overview, sidebar, and daily schedule independently discoverable.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("week-focus-surface")
     }
 
@@ -318,6 +320,9 @@ struct WeekFocusSurface: View {
         }
         .padding(10)
         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        // The strip is a container of seven separate accessible day buttons.
+        // Without containment, SwiftUI can expose only the overview itself.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("focus-week-overview")
     }
 

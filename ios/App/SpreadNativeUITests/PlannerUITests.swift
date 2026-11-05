@@ -224,7 +224,7 @@ class NativeUITestCase: XCTestCase {
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
     // The old bottom Manage card is gone; selection lives on the Stack itself.
-    var selectedRoleLabel: String { "Manage " + ((el("stack-cards").value as? String) ?? "") }
+    var selectedRoleLabel: String { (el("stack-cards").value as? String) ?? "" }
 
     // MARK: dates (the planner keeps date-only UTC weeks that start on Monday)
 

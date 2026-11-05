@@ -643,10 +643,14 @@ struct MoreSheet: View {
                                     .foregroundStyle(Spread.ink)
                                     .lineLimit(1)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                Button("Manage") { showProfiles() }
-                                    .font(.system(.subheadline, weight: .semibold))
-                                    .frame(minWidth: 64, minHeight: 44)
-                                    .accessibilityLabel("Manage profiles")
+                                Button { showProfiles() } label: {
+                                    Text("Manage")
+                                        .font(.system(.subheadline, weight: .semibold))
+                                        .frame(minWidth: 64, minHeight: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.spreadPress)
+                                .accessibilityLabel("Manage profiles")
                                     .accessibilityIdentifier("manage-profiles")
                             }
                             .padding(.horizontal, 12)
@@ -709,6 +713,7 @@ struct MoreSheet: View {
                     .frame(maxWidth: .infinity, alignment: .top)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("more-overview")
             }
             .navigationTitle("More")
