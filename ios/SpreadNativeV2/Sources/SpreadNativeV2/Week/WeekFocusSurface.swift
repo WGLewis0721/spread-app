@@ -114,17 +114,30 @@ struct WeekFocusSurface: View {
     }
 
     var body: some View {
+        GeometryReader { geometry in
+        // Seven 44pt dates, six 6pt gaps and Month's 8pt padding need 352pt.
+        // With the 56pt rail, 8pt gap and 20pt outer padding that means 436pt.
+        // Below that width retain every rail action in a row above the calendar.
+        let horizontalMonthRail = monthPlane && geometry.size.width < 436
         VStack(spacing: 0) {
             overview
                 .padding(.horizontal, 10)
                 .padding(.top, 4)
                 .padding(.bottom, 6)
+            if horizontalMonthRail && !sidebarHidden {
+                responsibilityRail(horizontal: true)
+                    .opacity(sidebarExpanded ? 0 : 1)
+                    .allowsHitTesting(!sidebarExpanded)
+                    .accessibilityHidden(sidebarExpanded)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 8)
+            }
             HStack(alignment: .top, spacing: 8) {
-                if !sidebarHidden {
+                if !sidebarHidden && !horizontalMonthRail {
                     // Keep the compact rail's slot while the expanded rail overlays the schedule, so the
                     // schedule is neither squeezed nor shifted (owner decision 50). Hidden from VoiceOver
                     // and hit testing while the overlay is up, so each control exists once.
-                    responsibilityRail
+                    responsibilityRail()
                         .frame(width: 56)
                         .opacity(sidebarExpanded ? 0 : 1)
                         .allowsHitTesting(!sidebarExpanded)
@@ -179,7 +192,7 @@ struct WeekFocusSurface: View {
                         Color.black.opacity(0.12)
                             .contentShape(Rectangle())
                             .onTapGesture { sidebarExpanded = false }
-                        responsibilityRail
+                        responsibilityRail()
                             .frame(width: 148)
                             .shadow(color: Spread.shadow, radius: 14, x: 6, y: 0)
                     }
@@ -243,6 +256,7 @@ struct WeekFocusSurface: View {
         // A container identifier otherwise replaces its children's own identifiers.
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("week-focus-surface")
+        }
     }
 
     private var overview: some View {
@@ -346,11 +360,11 @@ struct WeekFocusSurface: View {
         .accessibilityIdentifier("focus-week-overview")
     }
 
-    private var responsibilityRail: some View {
+    private func responsibilityRail(horizontal: Bool = false) -> some View {
         ResponsibilitySidebar(
             snapshot: snapshot,
             selectedRole: $selectedRole,
-            expanded: sidebarExpanded,
+            expanded: horizontal ? false : sidebarExpanded,
             onAdd: onNewRole,
             onToggle: {
                 withAnimation(reduceMotion ? nil : SpreadMotion.curve) {
@@ -361,7 +375,8 @@ struct WeekFocusSurface: View {
                 if sidebarExpanded {
                     withAnimation(reduceMotion ? nil : SpreadMotion.curve) { sidebarExpanded = false }
                 }
-            }
+            },
+            horizontal: horizontal
         )
     }
 

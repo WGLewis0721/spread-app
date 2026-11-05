@@ -1486,6 +1486,12 @@ final class WeekMonthUITests: NativeUITestCase {
         XCTAssertTrue(eventually(5) { self.el(thursday).isSelected }, "Tapping a day did not select it")
         tapID("focus-week-month-toggle")
         XCTAssertTrue(el("month").waitForExistence(timeout: 10), "Month did not open")
+        let dates = waitElements(prefix: "month-day-", minimum: 28)
+        for date in dates {
+            XCTAssertGreaterThanOrEqual(date.frame.width, 43.5, "Month date target is narrower than 44pt: " + date.identifier)
+            XCTAssertGreaterThanOrEqual(date.frame.height, 43.5, "Month date target is shorter than 44pt: " + date.identifier)
+        }
+        XCTAssertTrue(el("responsibility-sidebar").exists, "Month must retain responsibility controls")
         capture("wm-month-from-thursday")
         tapID("focus-week-month-toggle")
         XCTAssertTrue(eventually(10) { self.el(thursday).exists && self.el(thursday).isSelected },
