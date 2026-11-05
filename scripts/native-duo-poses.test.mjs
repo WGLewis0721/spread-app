@@ -4,7 +4,7 @@ import { mkdtemp, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DRAFT, ORIENTATIONS, POSES, makeAd, renderMarkdown, runPoseMatrix } from './native-duo-poses.mjs';
+import { DRAFT, ORIENTATIONS, POSES, makeAd, renderMarkdown, runPoseMatrix, captureDualDisplayDiagnostics } from './native-duo-poses.mjs';
 
 /** A fake agent-device that models just enough of the app to exercise the harness. */
 function fakeDevice(options = {}) {
@@ -96,6 +96,28 @@ test('Duo screenshots use the supported full-resolution scale option', async () 
   assert.ok(shots.every((argv) => !argv.includes('--pixel-density')), 'invalid option can silently cause retries');
   assert.ok(shots.every((argv) => argv.includes('--scale') && argv[argv.indexOf('--scale') + 1] === '1'),
     'retain native resolution for visual acceptance');
+});
+
+test('blocked Duo startup retains separate outer and inner display diagnostics without passing', async () => {
+  const outDir = await mkdtemp(path.join(os.tmpdir(), 'duo-screens-'));
+  const calls = [];
+  const captures = await captureDualDisplayDiagnostics({
+    udid: 'DUO-UDID', outDir,
+    exec: async (bin, args) => {
+      calls.push([bin, ...args]);
+      await writeFile(args.at(-1), Buffer.alloc(4096, 1));
+      return { code: 0, stdout: '', stderr: '' };
+    },
+  });
+  assert.deepEqual(captures.map((x) => x.display), ['primary', 'primary-1']);
+  assert.ok(calls.every((argv) => argv[0] === 'xcrun' && argv.includes('DUO-UDID')));
+  assert.deepEqual(calls.map((argv) => argv.find((x) => x.startsWith('--display='))),
+    ['--display=primary', '--display=primary-1']);
+  const metadata = JSON.parse(await readFile(path.join(outDir, 'startup-dual-display-diagnostics.json'), 'utf8'));
+  assert.equal(metadata.length, 2);
+  assert.ok(metadata.every((x) => x.bytes >= 2048));
+  const result = await run({ neverReady: true });
+  assert.equal(cell(result, '-', '-', 'startup').status, 'BLOCKED', 'diagnostics cannot bypass readiness');
 });
 
 test('the workflow runs this harness and never passes a scoped simulator set', () => {
