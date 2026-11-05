@@ -1543,6 +1543,18 @@ final class WeekMonthUITests: NativeUITestCase {
         capture("wm-restored-to-place")
     }
 
+    /// Accessibility-size preview must not lose the brand, week Crown or navigation.
+    /// Classic's large-type header lives inside a different scrolling hierarchy.
+    func testAccessibilitySizeStillExposesCrownAndNavigation() {
+        launch(preview + ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"])
+        openFocusedWeek()
+        XCTAssertTrue(el("top-header").exists, "Large text hid the native app header")
+        XCTAssertTrue(el("week-crown").exists, "Large text hid the Week Crown")
+        XCTAssertTrue(el("native-spread").exists, "Large text hid the Spread navigation control")
+        XCTAssertTrue(el("focus-week-overview").exists, "Large text hid the seven-day overview")
+        capture("wm-accessibility-large-text-header")
+    }
+
     /// Decisions 20 and 29: an inline day hour control must lead to the actual budget editor,
     /// not a non-functional explanation. Classic remains unaffected by this opt-in journey.
     func testFocusedWeekHoursOpensRealWeeklyBudget() {
