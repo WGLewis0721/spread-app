@@ -109,6 +109,10 @@ struct WeekCrownView: View {
             withAnimation(reduceMotion ? nil : SpreadMotion.press) { translation = 0 }
         }
         .shadow(color: Spread.shadow, radius: 8, y: 4)
+        // Key handlers run only on a focused view. Make the wheel reachable
+        // through Full Keyboard Access without adding a permanent focus glow.
+        .focusable()
+        .focusEffectDisabled()
         .onKeyPress(.leftArrow) { move(-1); return .handled }
         .onKeyPress(.rightArrow) { move(1); return .handled }
         .accessibilityElement(children: .contain)
