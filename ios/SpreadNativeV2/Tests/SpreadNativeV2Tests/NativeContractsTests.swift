@@ -2,6 +2,24 @@ import XCTest
 @testable import SpreadNativeV2
 
 final class NativeContractsTests: XCTestCase {
+    func testUnsubmittedTaskDraftPersistsAndIsIsolatedByProfileWeekAndRole() {
+        let suite = "TaskDraftTests." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let key = TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "work")
+        defaults.set("Unsubmitted work", forKey: key)
+        XCTAssertEqual(UserDefaults(suiteName: suite)?.string(forKey: key), "Unsubmitted work")
+        for other in [TaskDraftMemory.key(profileId: "other", weekKey: "2026-11-02", roleId: "work"),
+                      TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-09", roleId: "work"),
+                      TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "home")] {
+            XCTAssertNil(defaults.string(forKey: other))
+        }
+        XCTAssertNotEqual(TaskDraftMemory.key(profileId: "a.b", weekKey: "c", roleId: "d"),
+                          TaskDraftMemory.key(profileId: "a", weekKey: "b.c", roleId: "d"))
+        defaults.removeObject(forKey: key)
+        XCTAssertNil(UserDefaults(suiteName: suite)?.string(forKey: key))
+    }
+
     func testStudioMotionNegativeDelayAndAlternateCycles() {
         XCTAssertEqual(ChalkTiming.phase(0, duration: 4, delay: -1), 0.25)
         XCTAssertEqual(ChalkTiming.phase(4, duration: 4, alternate: true), 1)

@@ -1403,6 +1403,22 @@ final class DuoUITests: NativeUITestCase {
 
     // MARK: Task editing that must never lose what the user typed
 
+    func testUnsubmittedWalletDraftSurvivesNavigationAndRelaunch() throws {
+        launch(); selectRole("Work")
+        let draft = "Draft " + String(UUID().uuidString.prefix(6))
+        typeInto("new-task-field", draft)
+        tapID("native-week"); tapID("native-spread"); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").contains(draft) }, "Navigation lost the unsent draft")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").contains(draft) }, "Relaunch lost the unsent draft")
+        XCTAssertFalse(taskRow(containing: draft).exists, "Remembering a draft must not create a task")
+        tapID("add-task-button")
+        XCTAssertTrue(taskRow(containing: draft).waitForExistence(timeout: 20))
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").isEmpty }, "An acknowledged add must clear the draft")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").isEmpty }, "The submitted draft returned on relaunch")
+    }
+
     private func taskRow(containing text: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'task-row-' AND label CONTAINS %@", text)).firstMatch
     }
