@@ -105,7 +105,8 @@ struct TaskSheet: View {
                         }
                         .padding(20)
                     }
-                    .scrollDismissesKeyboard(.interactively)
+                    // A deliberate scroll releases the keyboard to expose the Add controls.
+                    .scrollDismissesKeyboard(.immediately)
                     .onAppear { title = task.text }
                     // Adopt a changed stored title only while the field still shows the previous stored one. If the user
                     // has typed since (for example after a submit), the acknowledgement of an earlier edit must not

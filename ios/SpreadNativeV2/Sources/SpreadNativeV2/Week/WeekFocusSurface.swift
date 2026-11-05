@@ -218,6 +218,8 @@ struct WeekFocusSurface: View {
         .task(id: refreshKey) {
             overdueRows = await planner.allOverdueTasks(today: PlannerDates.localISO()) ?? []
         }
+        // A container identifier otherwise replaces its children's own identifiers.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("week-focus-surface")
     }
 
@@ -318,6 +320,8 @@ struct WeekFocusSurface: View {
         }
         .padding(10)
         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        // A container identifier otherwise replaces its children's own identifiers.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("focus-week-overview")
     }
 

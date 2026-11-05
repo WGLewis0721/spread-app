@@ -213,10 +213,18 @@ class NativeUITestCase: XCTestCase {
         let name = try XCTUnwrap(el("stack-cards").value as? String)
         let button = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == name })
         let id = String(button.identifier.dropFirst("select-role-".count))
-        let card = el("role-block-" + id)
-        scrollIntoView(card)
+        let badge = el("role-colour-" + id)
+        scrollIntoView(badge)
+        XCTAssertTrue(badge.isHittable, "The responsibility must be visible before editing")
         if !el("dock-done").exists { tapID("edit-spreads") }
-        card.swipeLeft()
+        // Drag across the card's visible header. A lazy container can report an
+        // empty accessibility frame while its actual buttons are on screen.
+        let startX = min(app.frame.maxX - 30, badge.frame.maxX + 130)
+        let endX = max(app.frame.minX + 24, startX - 120)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let start = origin.withOffset(CGVector(dx: startX - app.frame.minX, dy: badge.frame.midY - app.frame.minY))
+        let end = origin.withOffset(CGVector(dx: endX - app.frame.minX, dy: badge.frame.midY - app.frame.minY))
+        start.press(forDuration: 0.05, thenDragTo: end)
         let manage = el("manage-role-" + id)
         XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
         XCTAssertTrue(manage.isHittable)
@@ -224,7 +232,9 @@ class NativeUITestCase: XCTestCase {
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
     // The old bottom Manage card is gone; selection lives on the Stack itself.
-    var selectedRoleLabel: String { "Manage " + ((el("stack-cards").value as? String) ?? "") }
+    /// The Wallet Stack's selected responsibility name (its accessibility value). Callers compare it with the plain
+    /// name; prefixing "Manage " (348596c) made F01 and the long-name check fail on every run.
+    var selectedRoleLabel: String { (el("stack-cards").value as? String) ?? "" }
 
     // MARK: dates (the planner keeps date-only UTC weeks that start on Monday)
 
@@ -347,6 +357,13 @@ final class JourneyUITests: NativeUITestCase {
         for toggle in card.descendants(matching: .button).matching(NSPredicate(format: "identifier BEGINSWITH 'allocation-toggle-'")).allElementsBoundByIndex
             where (toggle.value as? String) == "Tasks folded" { toggle.tap() }
     }
+    /// The bank label sits in the Manage form's first section. Choosing a day scrolls the form down, and the lazy
+    /// List then drops that row from the hierarchy, so scroll back toward the top before reading it.
+    private var bankLabel: String {
+        let bank = el("bank-remaining")
+        for _ in 0..<6 where !bank.exists { scrollPage(up: false) }
+        return bank.label
+    }
     private func revealTray() {
         for group in elements(prefix: "tray-role-") where group.label.hasPrefix(Dataset.role) && (group.value as? String) == "Collapsed" {
             scrollIntoView(group); group.tap()
@@ -372,9 +389,9 @@ final class JourneyUITests: NativeUITestCase {
         tapButton("Increase \(Dataset.role) hours by half an hour")
         XCTAssertTrue(eventually { self.el("bank-remaining").label == "3h left in this week’s bank" })
         chooseDay("Monday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2h left in this week’s bank" })
+        XCTAssertTrue(eventually { self.bankLabel == "2h left in this week’s bank" }, "Bank reads \(bankLabel) after Monday")
         chooseDay("Wednesday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "1h left in this week’s bank" })
+        XCTAssertTrue(eventually { self.bankLabel == "1h left in this week’s bank" }, "Bank reads \(bankLabel) after Wednesday")
         tapButton("Done"); goWeek()
         let allocations = elements(prefix: "allocation-").filter { $0.label == "Move " + Dataset.role }
         XCTAssertEqual(allocations.count, 2)
@@ -682,7 +699,7 @@ final class PlannerUITests: NativeUITestCase {
             "more-new-spread", "more-review-tasks", "more-rollover",
             "appearance-system", "appearance-light", "appearance-dark",
             "manage-profiles", "export-print", "export-word", "export-text",
-            "backup-and-restore"
+            "backup-and-restore", "more-recently-deleted", "calendar-design-picker"
         ]
         for id in visibleActions {
             let control = el(id)
@@ -1542,6 +1559,15 @@ final class WeekMonthUITests: NativeUITestCase {
     private func taskRow(_ title: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'focus-task-' AND label == %@", title)).firstMatch
     }
+    /// A real finger drag across the seven-day strip. `swipeLeft()` on one narrow day button travels about that
+    /// button's width, under the strip's 65 pt minimum, so it never reached the week-change gesture.
+    private func dragStrip(towardNextWeek: Bool) {
+        let days = dayIDs().map { el($0) }
+        let start = towardNextWeek ? days[5] : days[1]
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let from = origin.withOffset(CGVector(dx: start.frame.midX - app.frame.minX, dy: start.frame.midY - app.frame.minY))
+        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: towardNextWeek ? -180 : 180, dy: 0)))
+    }
 
     /// Decisions 25, 54 and 90-91: tap a day, Month round trip keeps it, a strip swipe changes week and opens Monday.
     func testDaySelectionSurvivesMonthAndStripSwipeOpensMonday() {
@@ -1556,12 +1582,12 @@ final class WeekMonthUITests: NativeUITestCase {
         tapID("focus-week-month-toggle")
         XCTAssertTrue(eventually(10) { self.el(thursday).exists && self.el(thursday).isSelected },
                       "Closing Month without choosing a date must restore the previous day")
-        el(thursday).swipeLeft()
+        dragStrip(towardNextWeek: true)
         XCTAssertTrue(eventually(15) { self.dayIDs().first != days.first }, "Swiping the seven-day strip did not change week")
         let next = dayIDs()
         XCTAssertTrue(eventually(5) { self.el(next[0]).isSelected }, "Changing weeks must open Monday")
         capture("wm-next-week-opens-monday")
-        el(next[0]).swipeRight()
+        dragStrip(towardNextWeek: false)
         XCTAssertTrue(eventually(15) { self.dayIDs().first == days.first }, "Swiping back did not return to the first week")
     }
 

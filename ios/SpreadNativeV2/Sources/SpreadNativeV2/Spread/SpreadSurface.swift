@@ -279,6 +279,7 @@ struct SpreadSurface: View {
                 }
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("weekly-hours-details")
     }
 
@@ -467,7 +468,11 @@ struct RoleRow: View {
                         .font(.system(.headline, weight: .semibold))
                         .lineLimit(1...3)
                         .fixedSize(horizontal: false, vertical: true)
-                        .frame(minHeight: 44)
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44)
+                        // The multiline editor must yield width to the badge, hours,
+                        // and chevron. Its intrinsic ideal width previously grew
+                        // a 358pt Wallet card to 434pt as soon as Edit was enabled.
+                        .layoutPriority(-1)
                         .focused($nameFocused)
                         .submitLabel(.done)
                         .onSubmit { commitName() }
@@ -484,14 +489,19 @@ struct RoleRow: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    // The small static summary line is spoken as part of the
+                    // 44pt role selector instead of a separate 16pt hit region.
+                    .accessibilityValue(summaryLine)
                     .accessibilityIdentifier("select-role-\(role.id)")
                 }
                 Text(summaryLine)
                     .font(.system(.footnote))
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true) // Already exposed by the adjacent role selector
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(-1)
 
             // The number never shares a row with plus/minus controls; the hour
             // editor opens *below* the title. No more mangled names on small phones.
