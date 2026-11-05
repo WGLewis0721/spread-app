@@ -214,8 +214,11 @@ class NativeUITestCase: XCTestCase {
         let button = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == name })
         let id = String(button.identifier.dropFirst("select-role-".count))
         let card = el("role-block-" + id)
-        scrollIntoView(card)
+        // Enter edit mode first: it re-lays out the stack, so a card scrolled into view before it can end up
+        // offscreen ("visible frame is empty" on the swipe, F02 on main 74356d5).
         if !el("dock-done").exists { tapID("edit-spreads") }
+        scrollIntoView(card)
+        XCTAssertTrue(eventually(10) { card.exists && card.isHittable }, "Card \(name) is not on screen to swipe")
         card.swipeLeft()
         let manage = el("manage-role-" + id)
         XCTAssertTrue(manage.waitForExistence(timeout: 10), "Left swipe did not reveal Manage")
@@ -224,7 +227,9 @@ class NativeUITestCase: XCTestCase {
     }
     var crownValue: String { (el("week-crown").value as? String) ?? "" }
     // The old bottom Manage card is gone; selection lives on the Stack itself.
-    var selectedRoleLabel: String { "Manage " + ((el("stack-cards").value as? String) ?? "") }
+    /// The Wallet Stack's selected responsibility name (its accessibility value). Callers compare it with the plain
+    /// name; prefixing "Manage " (348596c) made F01 and the long-name check fail on every run.
+    var selectedRoleLabel: String { (el("stack-cards").value as? String) ?? "" }
 
     // MARK: dates (the planner keeps date-only UTC weeks that start on Monday)
 
