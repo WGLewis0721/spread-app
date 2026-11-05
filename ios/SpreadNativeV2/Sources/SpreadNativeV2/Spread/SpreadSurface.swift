@@ -609,8 +609,9 @@ struct RoleRow: View {
                 TaskRow(planner: planner, snapshot: snapshot, task: task, roleId: role.id, onOpen: { onOpenTask(role.id, task.id) })
                     .modifier(SpreadEntrance(index: index))
             }
-            AddTaskRow(placeholder: tasks.isEmpty ? "What matters most here?" : "Add a task") { text in
-                Task { await planner.send(["type": "addTask", "roleId": role.id, "text": text]) }
+            AddTaskRow(placeholder: tasks.isEmpty ? "What matters most here?" : "Add a task",
+                       draftKey: TaskDraftMemory.key(profileId: planner.state?.envelope.profileId, weekKey: snapshot.weekKey, roleId: role.id)) { text in
+                await planner.send(["type": "addTask", "roleId": role.id, "text": text])
             }
         }
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Spread.inset))
@@ -795,9 +796,16 @@ struct TaskRow: View {
 /// The add-a-task line (`AddTaskRow`). Return adds the text and clears the field.
 struct AddTaskRow: View {
     let placeholder: String
-    let onAdd: (String) -> Void
+    let onAdd: (String) async -> Bool
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var text = ""
+    @AppStorage private var text: String
+    @State private var submitting = false
+
+    init(placeholder: String, draftKey: String, onAdd: @escaping (String) async -> Bool) {
+        self.placeholder = placeholder
+        self.onAdd = onAdd
+        _text = AppStorage(wrappedValue: "", draftKey)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -838,9 +846,14 @@ struct AddTaskRow: View {
 
     private func submit() {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else { return }
-        onAdd(value)
-        text = ""
+        guard !value.isEmpty, !submitting else { return }
+        submitting = true
+        Task {
+            let saved = await onAdd(value)
+            // Preserve a newer draft typed while the store was acknowledging this one.
+            if saved && text.trimmingCharacters(in: .whitespacesAndNewlines) == value { text = "" }
+            submitting = false
+        }
     }
 }
 

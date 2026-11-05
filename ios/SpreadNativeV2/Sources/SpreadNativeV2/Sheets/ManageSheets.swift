@@ -228,8 +228,9 @@ struct RoleSheet: View {
                         ForEach(snapshot.tasks(for: role.id)) { task in
                             TaskRow(planner: planner, snapshot: snapshot, task: task, roleId: role.id, onOpen: { onOpenTask(task.id) })
                         }
-                        AddTaskRow(placeholder: "Add a task") { text in
-                            Task { await planner.send(["type": "addTask", "roleId": role.id, "text": text]) }
+                        AddTaskRow(placeholder: "Add a task",
+                               draftKey: TaskDraftMemory.key(profileId: planner.state?.envelope.profileId, weekKey: snapshot.weekKey, roleId: role.id)) { text in
+                            await planner.send(["type": "addTask", "roleId": role.id, "text": text])
                         }
                     }
                         .listRowBackground(Spread.elevated)
