@@ -27,6 +27,8 @@ jobs:
             type: com.apple.CoreSimulator.SimDeviceType.iPad-Air-5th-generation
           - width: 1024
             type: com.apple.CoreSimulator.SimDeviceType.iPad-Pro-12-9-inch-6th-generation
+          - width: 1366
+            type: com.apple.CoreSimulator.SimDeviceType.iPad-Pro-12-9-inch-6th-generation
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,7 +54,7 @@ jobs:
         run: |
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO -only-testing:SpreadNativeUITests/PlannerUITests/testAudit${{ matrix.width }} -resultBundlePath artifacts/Audit${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Contrast, Dynamic Type and trait audits (${{ matrix.width }} pt)
-        if: ${{ !cancelled() && matrix.width != 1024 }}
+        if: ${{ !cancelled() && (matrix.width == 390 || matrix.width == 820) }}
         run: |
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO -only-testing:SpreadNativeUITests/PlannerUITests/testAuditExtended${{ matrix.width }} -resultBundlePath artifacts/AuditExtended${{ matrix.width }}.xcresult CODE_SIGNING_ALLOWED=NO
       - name: iPad orientations (${{ matrix.width }} pt)
