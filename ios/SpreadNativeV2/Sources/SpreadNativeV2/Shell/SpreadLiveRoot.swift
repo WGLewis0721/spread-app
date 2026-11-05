@@ -13,6 +13,7 @@ public struct SpreadLiveRoot: View {
 
     @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false
     @State private var focusSelectedDay: String?
+    @State private var weekSidebarHidden = false
     @State private var spreadSidebarExpanded = true
     @State private var destination: SpreadDestination = .spread
     @State private var monthPlane = false
@@ -179,7 +180,8 @@ public struct SpreadLiveRoot: View {
                     onPickDay: { pickDay($0) },
                     onOpenTask: { sheet = .task($0, $1) },
                     onNewRole: { sheet = .newRole },
-                    onAdjustHours: { sheet = .role($0) }
+                    onAdjustHours: { sheet = .role($0) },
+                    sidebarHidden: $weekSidebarHidden
                 )
             } else if weekFocusEnabled && destination == .spread {
                 HStack(alignment: .top, spacing: 8) {
@@ -350,12 +352,12 @@ public struct SpreadLiveRoot: View {
         return VStack(spacing: 10) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
-                    brandButton
+                    brandAndSidebarRestore
                     Spacer(minLength: 8)
                     destinationRail
                 }
                 VStack(spacing: 8) {
-                    HStack { brandButton; Spacer(minLength: 0) }
+                    HStack { brandAndSidebarRestore; Spacer(minLength: 0) }
                     destinationRail
                 }
             }
@@ -368,6 +370,27 @@ public struct SpreadLiveRoot: View {
         .accessibilityElement(children: .contain)
         .accessibilityValue(headerLabelsCollapsed ? "Compact navigation" : "Labeled navigation")
         .accessibilityIdentifier("top-header")
+    }
+
+    /// Owner decision 24: when the Week rail is fully hidden, restoration lives directly
+    /// beside the Spread mark in the sticky header, not inside the scrolling task surface.
+    private var brandAndSidebarRestore: some View {
+        HStack(spacing: 4) {
+            brandButton
+            if weekFocusEnabled && destination == .week && weekSidebarHidden {
+                Button {
+                    withAnimation(reduceMotion ? nil : SpreadMotion.curve) { weekSidebarHidden = false }
+                    SpreadHaptics.selection()
+                } label: {
+                    Image(systemName: "sidebar.left")
+                        .foregroundStyle(Spread.accent)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityLabel("Show responsibilities")
+                .accessibilityIdentifier("header-show-sidebar")
+            }
+        }
     }
 
     private var activeProfileName: String? {
