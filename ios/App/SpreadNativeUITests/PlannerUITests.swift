@@ -1543,6 +1543,41 @@ final class WeekMonthUITests: NativeUITestCase {
         capture("wm-restored-to-place")
     }
 
+    /// Decisions 20 and 29: an inline day hour control must lead to the actual budget editor,
+    /// not a non-functional explanation. Classic remains unaffected by this opt-in journey.
+    func testFocusedWeekHoursOpensRealWeeklyBudget() {
+        launch(preview); openFocusedWeek()
+        let role = roleIDs()[0]
+        let hourControl = el("focus-hour-" + role)
+        XCTAssertTrue(hourControl.waitForExistence(timeout: 15), "Focused role's hours must be editable")
+        hourControl.tap()
+        let adjust = el("focus-adjust-hours-" + role)
+        XCTAssertTrue(adjust.waitForExistence(timeout: 10), "Hours refusal has no adjustment path")
+        XCTAssertGreaterThanOrEqual(adjust.frame.height, 44)
+        adjust.tap()
+        XCTAssertTrue(el("bank-remaining").waitForExistence(timeout: 15),
+                      "Adjust weekly hours must open the existing authoritative Role editor")
+        capture("wm-adjust-weekly-hours")
+    }
+
+    /// Decision 51: day selection must work in both directions without moving the Week or hiding the rail.
+    func testDayNavigationKeepsSidebarAndWeekFixed() {
+        launch(preview); openFocusedWeek()
+        let days = dayIDs()
+        tapID(days[2])
+        XCTAssertTrue(eventually(5) { self.el(days[2]).isSelected })
+        tapID(days[1])
+        XCTAssertTrue(eventually(5) { self.el(days[1]).isSelected })
+        XCTAssertEqual(dayIDs(), days, "Navigating days must not change weeks")
+        XCTAssertTrue(el("responsibility-sidebar").exists,
+                      "Day transition must not remove the persistent sidebar")
+        capture("wm-day-backward")
+        tapID(days[4])
+        XCTAssertTrue(eventually(5) { self.el(days[4]).isSelected })
+        XCTAssertEqual(dayIDs(), days)
+        capture("wm-day-forward")
+    }
+
     /// Decisions 54-56: long press a Month date to add without leaving Month; Month swipe changes month.
     func testMonthLongPressAddsWithoutLeavingMonthAndSwipeChangesMonth() {
         launch(preview); openFocusedWeek()
