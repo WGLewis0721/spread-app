@@ -1370,6 +1370,153 @@ final class DuoUITests: NativeUITestCase {
         // the actual rendered root. XCUIDevice's reported setting alone does not prove an OS change.
     }
 
+    // MARK: Task editing that must never lose what the user typed
+
+    func testUnsubmittedWalletDraftSurvivesNavigationAndRelaunch() throws {
+        launch(); selectRole("Work")
+        let draft = "Draft " + String(UUID().uuidString.prefix(6))
+        typeInto("new-task-field", draft)
+        tapID("native-week"); tapID("native-spread"); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").contains(draft) }, "Navigation lost the unsent draft")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").contains(draft) }, "Relaunch lost the unsent draft")
+        XCTAssertFalse(taskRow(containing: draft).exists, "Remembering a draft must not create a task")
+        tapID("add-task-button")
+        XCTAssertTrue(taskRow(containing: draft).waitForExistence(timeout: 20))
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").isEmpty }, "An acknowledged add must clear the draft")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(eventually { self.fieldText("new-task-field").isEmpty }, "The submitted draft returned on relaunch")
+    }
+
+    private func taskRow(containing text: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'task-row-' AND label CONTAINS %@", text)).firstMatch
+    }
+
+    /// Adds a uniquely named task to the Work card and opens its sheet.
+    private func addAndOpenTask(_ title: String) {
+        selectRole("Work")
+        typeInto("new-task-field", title); tapID("add-task-button")
+        let row = taskRow(containing: title)
+        XCTAssertTrue(row.waitForExistence(timeout: 20), "The new task never appeared")
+        scrollIntoView(row); row.tap()
+        XCTAssertTrue(el("task-editor").waitForExistence(timeout: 20), "The Task sheet did not open")
+    }
+
+    /// A title typed into the Task sheet is saved even when the sheet is closed with the system swipe-down
+    /// gesture instead of Done. Before this repair the typed title was silently discarded.
+    func testTaskTitleEditSurvivesSwipeDismissAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let marker = "Kept" + stamp
+        addAndOpenTask("Dismiss " + stamp)
+        typeInto("task-editor", marker)
+        XCTAssertTrue(eventually { self.fieldText("task-editor").contains(marker) }, "The title field did not take the typed text")
+        // Drag the sheet down from its navigation bar. This is never the Done button.
+        let bar = app.navigationBars.firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "The Task sheet has no navigation bar to drag")
+        let from = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: app.frame.height * 0.6)))
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "Dragging the sheet down did not dismiss it")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The title typed before the swipe-dismiss was lost")
+        capture("task-title-kept-after-swipe-dismiss")
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20), "The edited title did not survive a relaunch")
+    }
+
+    /// Home does not dismiss a presented sheet. Its title must reach durable storage
+    /// before the suspended process is terminated, without Submit or Done.
+    func testTaskTitleSurvivesBackgroundTerminationAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let marker = "Background " + stamp
+        addAndOpenTask("Original " + stamp)
+        typeInto("task-editor", marker)
+        XCTAssertTrue(eventually { self.fieldText("task-editor").contains(marker) })
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10), "Home did not background the app")
+        // Give the local asynchronous store acknowledgement time to complete;
+        // termination itself cannot promise a last lifecycle callback.
+        Thread.sleep(forTimeInterval: 2)
+        relaunch(); selectRole("Work")
+        XCTAssertTrue(taskRow(containing: marker).waitForExistence(timeout: 20),
+                      "The title was lost when the process terminated with its editor still presented")
+        capture("task-title-kept-after-background-termination")
+    }
+
+    /// Swipe-dismiss must flush the final edits of each rich block, not just the task title.
+    /// The immediate relaunch catches a pending debounce that was canceled with the sheet.
+    func testNotesOutlineAndTableSurviveSwipeDismissAndRelaunch() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let title = "Rich " + stamp
+        let note = "Note " + stamp
+        let outline = "Outline " + stamp
+        let cell = "Cell " + stamp
+        addAndOpenTask(title)
+        tapID("format-notes")
+        typeInto("content-notes", note)
+        tapID("add-block"); tapID("format-outline")
+        typeInto("content-outline-0", outline)
+        tapID("add-block"); tapID("format-table")
+        typeInto("content-cell-0-0", cell)
+        let bar = app.navigationBars.firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10))
+        let from = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: app.frame.height * 0.6)))
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "Rich task sheet did not dismiss")
+        relaunch(); selectRole("Work")
+        let row = taskRow(containing: title)
+        XCTAssertTrue(row.waitForExistence(timeout: 20))
+        scrollIntoView(row); row.tap()
+        XCTAssertTrue(el("content-notes").waitForExistence(timeout: 20))
+        XCTAssertTrue(fieldText("content-notes").contains(note), "Notes were lost across dismissal/relaunch")
+        XCTAssertTrue(fieldText("content-outline-0").contains(outline), "Outline text was lost across dismissal/relaunch")
+        XCTAssertTrue(fieldText("content-cell-0-0").contains(cell), "Table cell was lost across dismissal/relaunch")
+        capture("rich-content-kept-after-swipe-relaunch")
+        tapID("task-sheet-done")
+    }
+
+    /// "Add line" and "Add row" hand the keyboard to the field they create, so typing continues without another tap.
+    func testAddingOutlineLineAndTableRowFocusesTheNewField() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        addAndOpenTask("Focus " + stamp)
+        tapID("format-outline")
+        typeInto("content-outline-0", "First")
+        tapButton("Add line")
+        XCTAssertTrue(el("content-outline-1").waitForExistence(timeout: 20), "Add line did not create a second outline line")
+        app.typeText("Second") // no tap: this lands only if the new line has the keyboard
+        XCTAssertTrue(eventually { self.fieldText("content-outline-1") == "Second" }, "The new outline line did not receive the keyboard focus")
+        XCTAssertEqual(fieldText("content-outline-0"), "First", "Typing after Add line altered the first line")
+        tapID("add-block"); tapID("format-table")
+        typeInto("content-cell-0-0", "A")
+        tapButton("Add row")
+        XCTAssertTrue(el("content-cell-2-0").waitForExistence(timeout: 20), "Add row did not create a third row")
+        app.typeText("B")
+        XCTAssertTrue(eventually { self.fieldText("content-cell-2-0") == "B" }, "The new table row did not receive the keyboard focus")
+        XCTAssertEqual(fieldText("content-cell-0-0"), "A", "Typing after Add row altered the first cell")
+        capture("task-add-line-and-row-focus")
+        tapID("task-sheet-done")
+    }
+
+    /// Create, then delete, a task from its sheet, and confirm it stays deleted after a relaunch.
+    func testTaskCanBeDeletedFromItsSheet() throws {
+        launch()
+        let stamp = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6))
+        let title = "Remove " + stamp
+        addAndOpenTask(title)
+        tapID("delete-task")
+        // The confirmation is a dialog: an action sheet on a phone, a popover in a wide window.
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Delete task'")).allElementsBoundByIndex.last { $0.exists && $0.isHittable }
+        if confirm == nil { attach(app.debugDescription, "hierarchy-without-delete-confirmation") }
+        try XCTUnwrap(confirm, "The delete confirmation did not offer a Delete task button").tap()
+        XCTAssertTrue(eventually { !self.el("task-editor").exists }, "The sheet stayed open after deleting the task")
+        XCTAssertTrue(eventually { !self.taskRow(containing: title).exists }, "The deleted task is still listed")
+        capture("task-deleted")
+        relaunch(); selectRole("Work")
+        XCTAssertFalse(taskRow(containing: title).waitForExistence(timeout: 5), "The deleted task came back after a relaunch")
+    }
+
     /// Actual hinge and rotation changes run in native-duo-poses.yml. XCTest's orientation setter
     /// does not prove that a multi-panel simulator rotated, so this test makes no pose claim.
     func testWalletStackInBothAppearances() throws {

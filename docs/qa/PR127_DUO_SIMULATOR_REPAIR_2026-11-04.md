@@ -79,3 +79,15 @@ Source: [Duo run 41860698724](https://github.com/WGLewis0721/spread-app/actions/
 ### Rollback and non-regression boundaries
 
 Revert only PR #129 commits if any follow-up change causes regression; do not remove the verified main baseline, the Wallet stack, Metal Crown, Chalkboard assets, or data already in local planner storage. These repairs introduce no schema migration. Preserve screenshots, AX trees, logs, and failing test names on the PR for any new failure; never mark a canceled, skipped, queued, or indeterminate job as passing.
+
+
+## Correction (PR #134, 2026-11-04): the hinge failure was a harness error, not a readiness stall
+
+The sections above classify the hinge/rotation workflow as "BLOCKED" because "agent-device readiness reported a still-changing surface". The uploaded artifacts do not support that.
+
+- Artifact `13337464895` (run 41852591875) and artifact `13347556086` (run 41860698620) each contain `session.json`, `hinge-closed.json` and `orientation-closed-portrait.json`, and no startup-failure files. They show the app **opened** (`session.json`, startup 20.5 s), `agent-device fold closed` **succeeded** (hinge 0°, LCD native panel 466 × 678 pt), and then `agent-device orientation portrait` **failed**:
+  `UNSUPPORTED_OPERATION: Spread duo pt cannot rotate in a scoped simulator set` (`reason: unsupported-device-scope`; hint: "Rotate it in the default device set").
+- Cause: the workflow passed `--ios-simulator-device-set "$HOME/Library/Developer/CoreSimulator/Devices"`. The pinned `agent-device@0.21.36` treats any value of that flag as a scoped set, and its help text states a foldable iPhone simulator "refuses every rotation in a scoped simulator set". Fix: do not pass the flag (PR #134).
+- The second run's pose step lasted 2 m 41 s, too short to have exhausted two 180 s readiness waits, which is consistent with this reading.
+- Consequence: **no hinge pose or rotation assertion has ever completed.** The earlier runs say nothing, in either direction, about folded, half-open or unfolded behavior. The run on `7a9cbd7` never reached the pose step at all: its build failed on the Swift exclusivity error fixed by `c1d1cc4`.
+- `ios/App/App/Cloud/**`, storage and schema were not involved.

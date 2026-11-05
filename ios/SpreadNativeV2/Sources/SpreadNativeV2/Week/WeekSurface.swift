@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import UIKit
+import os
 
 /// The Week body from `weekly-view.tsx`, top to bottom: the caption, the role bubble strip (remaining hours),
 /// Free time suggestions, the dashed To place tray, then seven solid day cards, Sunday first.
@@ -229,12 +230,48 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             self.onShift = onShift
             self.onMove = onMove
         }
+        /// Debug builds only, so none of this ships in Release. Read with
+        /// `log show --predicate 'subsystem == "com.graymatter.spread" AND category == "week-swipe"'`.
+        private static let log = Logger(subsystem: "com.graymatter.spread", category: "week-swipe")
+        private func trace(_ text: @autoclosure () -> String) {
+            #if DEBUG
+            let message = text()
+            Self.log.notice("\(message, privacy: .public)")
+            #endif
+        }
+        private func describe(_ point: CGPoint) -> String { String(format: "(%.1f, %.1f)", point.x, point.y) }
+
+        /// The scroll view that owns this surface's vertical scrolling. Normally an ancestor of the anchor. If SwiftUI
+        /// hosts the anchor beside the scroll view instead, use the scroll view that covers most of the anchor on screen.
+        private func owningScrollView(of view: UIView) -> UIScrollView? {
+            var ancestor = view.superview
+            while let current = ancestor {
+                if let scroll = current as? UIScrollView { return scroll }
+                ancestor = current.superview
+            }
+            guard let window = view.window else { return nil }
+            let target = view.convert(view.bounds, to: window)
+            var best: (scroll: UIScrollView, area: CGFloat)?
+            var pending: [UIView] = [window]
+            while let node = pending.popLast() {
+                if let scroll = node as? UIScrollView, scroll.isScrollEnabled {
+                    let overlap = scroll.convert(scroll.bounds, to: window).intersection(target)
+                    let area = overlap.isNull ? 0 : overlap.width * overlap.height
+                    if area > (best?.area ?? 0) { best = (scroll, area) }
+                }
+                pending.append(contentsOf: node.subviews)
+            }
+            return best?.scroll
+        }
+
         func attach(to view: UIView) {
             anchor = view
             guard view.window != nil else { detach(); return }
-            var ancestor = view.superview
-            while let current = ancestor, !(current is UIScrollView) { ancestor = current.superview }
-            guard let scroll = ancestor as? UIScrollView, scroll !== scroller else { return }
+            guard let scroll = owningScrollView(of: view) else {
+                trace("attach failed: no scroll view owns the anchor; superview chain \(chain(from: view))")
+                return
+            }
+            guard scroll !== scroller else { return }
             detach()
             anchor = view
             scroller = scroll
@@ -242,6 +279,16 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             pan.maximumNumberOfTouches = 1
             pan.cancelsTouchesInView = false
             scroll.addGestureRecognizer(pan)
+            trace("attached to \(String(describing: type(of: scroll))) bounds=\(scroll.bounds); superview chain \(chain(from: view))")
+        }
+        private func chain(from view: UIView) -> String {
+            var names: [String] = []
+            var node: UIView? = view
+            while let current = node, names.count < 14 {
+                names.append(String(describing: type(of: current)))
+                node = current.superview
+            }
+            return names.joined(separator: " < ")
         }
         func detach() {
             scroller?.removeGestureRecognizer(pan)
@@ -253,22 +300,30 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             // range to exclude the independently scrolling role strip and sticky
             // Crown; use the full visible viewport horizontally, including its
             // gutters, so swipes don't silently die outside the column.
-            guard let anchor, let scroller else { return false }
+            guard let anchor, let scroller else { trace("shouldReceive=false: no anchor or scroll view"); return false }
             let region = anchor.convert(anchor.bounds, to: scroller)
             let viewport = scroller.bounds
-            guard region.height > 0, viewport.width > 0 else { return false }
+            guard region.height > 0, viewport.width > 0 else {
+                trace("shouldReceive=false: empty region \(region) or viewport \(viewport)")
+                return false
+            }
             let point = touch.location(in: scroller)
             guard point.y >= region.minY, point.y <= region.maxY,
-                  point.x >= viewport.minX, point.x <= viewport.maxX else { return false }
+                  point.x >= viewport.minX, point.x <= viewport.maxX else {
+                trace("shouldReceive=false: touch \(describe(point)) outside region \(region) of viewport \(viewport)")
+                return false
+            }
             start = CGPoint(x: point.x - viewport.minX, y: point.y - region.minY)
+            trace("shouldReceive=true: touch \(describe(point)) start \(describe(start)) region \(region)")
             return true
         }
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            guard let scroller, scroller.bounds.width > 0 else { return false }
+            guard let scroller, scroller.bounds.width > 0 else { trace("shouldBegin=false: no scroll view"); return false }
+            let translation = pan.translation(in: scroller)
             let velocity = pan.velocity(in: scroller)
-            return abs(velocity.x) > abs(velocity.y) * WeekSwipeRules.dominance
-                && start.x >= WeekSwipeRules.edgeGuard
-                && start.x <= scroller.bounds.width - WeekSwipeRules.edgeGuard
+            let begin = WeekSwipeRules.shouldBegin(start: start, translation: translation, velocity: velocity, width: scroller.bounds.width)
+            trace("shouldBegin=\(begin) start \(describe(start)) translation \(describe(translation)) velocity \(describe(velocity)) width \(scroller.bounds.width)")
+            return begin
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             // Day cards use SwiftUI drag and tap recognizers. If one of those wins
@@ -285,6 +340,7 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
                 onShift(WeekSwipeRules.shift(start: start, current: end))
             case .ended:
                 let direction = WeekSwipeRules.direction(start: start, end: end, width: scroller?.bounds.width ?? 0)
+                trace("ended: start \(describe(start)) end \(describe(end)) direction \(direction.map { String($0) } ?? "none")")
                 withAnimation(SpreadMotion.press) { onShift(0) }
                 if let direction { onMove(direction) }
             case .cancelled, .failed:

@@ -78,8 +78,9 @@ struct FanLayout: View {
                     ForEach(snapshot.tasks(for: front.role.id)) { task in
                         TaskRow(planner: planner, snapshot: snapshot, task: task, roleId: front.role.id, onOpen: { onOpenTask(front.role.id, task.id) })
                     }
-                    AddTaskRow(placeholder: "Add a task") { text in
-                        Task { await planner.send(["type": "addTask", "roleId": front.role.id, "text": text]) }
+                    AddTaskRow(placeholder: "Add a task",
+                               draftKey: TaskDraftMemory.key(profileId: planner.state?.envelope.profileId, weekKey: snapshot.weekKey, roleId: front.role.id)) { text in
+                        await planner.send(["type": "addTask", "roleId": front.role.id, "text": text])
                     }
                 }
                 .padding(.horizontal, 4)

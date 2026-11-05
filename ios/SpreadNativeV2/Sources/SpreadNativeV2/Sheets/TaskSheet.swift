@@ -43,14 +43,22 @@ struct TaskSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.scenePhase) private var scenePhase
     @State private var title = ""
     @State private var content = NativeTaskContent()
     @State private var loaded = false
     @State private var expandedNote: String?
     @State private var showFormats = false
     @State private var saveTask: Task<Void, Never>?
+    // A revision is acknowledged only after the real planner store commits its content.
+    // A dismissed sheet waits for any in-flight debounce before flushing the final revision.
+    @State private var contentRevision = 0
+    @State private var savedContentRevision = 0
+    @State private var finishing = false
     @State private var photoPick: PhotosPickerItem?
     @State private var confirmDelete = false
+    /// Which rich-content field has the keyboard. Only set when the user adds a line, row or column.
+    @FocusState private var focusedField: String?
 
     private var task: PlannerTask? { planner.snapshot?.tasks.first { $0.id == taskId } }
     private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) } }
@@ -100,7 +108,10 @@ struct TaskSheet: View {
                     }
                     .scrollDismissesKeyboard(.interactively)
                     .onAppear { title = task.text }
-                    .onChange(of: task.text) { _, value in if title != value { title = value } }
+                    // Adopt a changed stored title only while the field still shows the previous stored one. If the user
+                    // has typed since (for example after a submit), the acknowledgement of an earlier edit must not
+                    // overwrite those characters.
+                    .onChange(of: task.text) { old, new in if title == old { title = new } }
                 } else {
                     ContentUnavailableView("This task is no longer in the plan.", systemImage: "checkmark.circle")
                 }
@@ -117,6 +128,12 @@ struct TaskSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .task { await load() }
+        .onDisappear { saveOnDismiss() }
+        // A sheet remains presented when the app leaves the foreground; onDisappear
+        // does not run. Flush before suspension, while the local bridge is active.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .inactive { saveOnDismiss() }
+        }
         .onChange(of: planner.details[taskId]) { _, value in
             if let value, !loaded { content = value; loaded = true }
         }
@@ -185,43 +202,91 @@ struct TaskSheet: View {
         }
     }
 
-    /// Save the whole block list after a short pause. The store is the only writer; the sheet never keeps a second copy.
+    /// Store acknowledgements, not the debounce timer, determine whether content is saved.
+    private func persistContent(_ draft: NativeTaskContent) async -> Bool {
+        guard let encoded = try? JSONEncoder().encode(draft),
+              let object = try? JSONSerialization.jsonObject(with: encoded) else { return false }
+        return await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+    }
+
+    /// Serialize debounced edits, so an older send cannot finish after a newer one and
+    /// replace the latest notes, outline or table cells with stale content.
     private func scheduleSave() {
         guard loaded, supported else { return }
-        saveTask?.cancel()
+        contentRevision += 1
+        let revision = contentRevision
         let snapshot = content
+        let preceding = saveTask
+        preceding?.cancel()
         saveTask = Task {
+            await preceding?.value
             try? await Task.sleep(nanoseconds: 450_000_000)
             guard !Task.isCancelled else { return }
-            let encoded = try? JSONEncoder().encode(snapshot)
-            guard let encoded, let object = try? JSONSerialization.jsonObject(with: encoded) else { return }
-            _ = await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+            guard await persistContent(snapshot) else { return }
+            if contentRevision == revision { savedContentRevision = revision }
         }
     }
 
-    /// Done flushes the pending debounced block edit before dismissal. A quick Done/relaunch cannot
-    /// drop the last keystroke, and failed saves keep the sheet open with its original draft.
+    /// Done waits for the earlier write and flushes the final revision before leaving.
+    /// A failed store acknowledgement keeps the sheet open for retry.
     private func finishEditing() {
-        saveTask?.cancel()
+        guard !finishing else { return }
+        finishing = true
+        let preceding = saveTask
+        preceding?.cancel()
         let draft = content
+        let revision = contentRevision
         let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         Task {
-            if loaded && supported {
-                guard let bytes = try? JSONEncoder().encode(draft),
-                      let object = try? JSONSerialization.jsonObject(with: bytes),
-                      await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object]) else { return }
+            await preceding?.value
+            if loaded && supported && revision > savedContentRevision {
+                guard await persistContent(draft) else { finishing = false; return }
+                if contentRevision == revision { savedContentRevision = revision }
             }
-            if !newTitle.isEmpty, newTitle != task?.text {
-                guard await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": newTitle]) else { return }
+            if task != nil, !newTitle.isEmpty, newTitle != task?.text {
+                guard await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": newTitle]) else {
+                    finishing = false
+                    return
+                }
             }
             dismiss()
         }
     }
 
+    /// System swipe-to-dismiss has no async dismissal callback. Drain the pending
+    /// debouncer, then save the newest dirty revision and title in store order.
+    /// Deleting a task must never recreate it from an outgoing sheet.
+    private func saveOnDismiss() {
+        guard !finishing, task != nil else { return }
+        let preceding = saveTask
+        preceding?.cancel()
+        let draft = content
+        let revision = contentRevision
+        let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task {
+            await preceding?.value
+            if loaded && supported && revision > savedContentRevision {
+                if await persistContent(draft), contentRevision == revision {
+                    savedContentRevision = revision
+                }
+            }
+            if !newTitle.isEmpty, newTitle != task?.text {
+                _ = await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": newTitle])
+            }
+        }
+    }
+
+    /// Submit can commit just the title without closing the editor.
     private func commitTitle() {
         let value = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty, value != task?.text else { return }
-        Task { await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) }
+        guard task != nil, !value.isEmpty, value != task?.text else { return }
+        Task { _ = await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) }
+    }
+
+    /// Moves the keyboard to a field the user just added, so they can keep typing. The field exists only once this
+    /// update has rendered, so focus it on the next turn of the main run loop. SwiftUI scrolls a focused field into view.
+    private func focusNewField(_ id: String) {
+        DispatchQueue.main.async { focusedField = id }
     }
 
     private func update(_ block: NativeContentBlock) {
@@ -337,6 +402,7 @@ struct TaskSheet: View {
                     .font(.system(.body))
                     .lineLimit(1...3)
                     .frame(minHeight: 44)
+                    .focused($focusedField, equals: "outline-\(block.id)-\(index)")
                     .accessibilityIdentifier("content-outline-\(index)")
                     Button {
                         guard var copy = content.blocks.first(where: { $0.id == block.id }),
@@ -360,6 +426,7 @@ struct TaskSheet: View {
                 guard var copy = content.blocks.first(where: { $0.id == block.id }) else { return }
                 copy.items = (copy.items ?? []) + [NativeOutlineItem(id: UUID().uuidString, text: "", level: 0)]
                 update(copy)
+                focusNewField("outline-\(block.id)-\(max(0, (copy.items?.count ?? 1) - 1))")
             } label: { Text("Add line").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget() }
         }
     }
@@ -389,6 +456,7 @@ struct TaskSheet: View {
                             .lineLimit(1...3)
                             .frame(width: 140)
                             .frame(minHeight: 44)
+                            .focused($focusedField, equals: "cell-\(block.id)-\(row)-\(column)")
                             .accessibilityLabel("Row \(row + 1), column \(column + 1)")
                             .accessibilityIdentifier("content-cell-\(row)-\(column)")
                         }
@@ -400,11 +468,14 @@ struct TaskSheet: View {
                         let latest = copy.cells ?? [["", ""], ["", ""]]
                         copy.cells = latest + [Array(repeating: "", count: latest.first?.count ?? 2)]
                         update(copy)
+                        focusNewField("cell-\(block.id)-\(latest.count)-0")
                     } label: { Text("Add row").font(.system(.subheadline, weight: .semibold)).tapTarget() }
                     Button {
                         guard var copy = content.blocks.first(where: { $0.id == block.id }) else { return }
-                        copy.cells = (copy.cells ?? [["", ""], ["", ""]]).map { $0 + [""] }
+                        let latest = copy.cells ?? [["", ""], ["", ""]]
+                        copy.cells = latest.map { $0 + [""] }
                         update(copy)
+                        focusNewField("cell-\(block.id)-0-\(latest.first?.count ?? 2)")
                     } label: { Text("Add column").font(.system(.subheadline, weight: .semibold)).tapTarget() }
                 }
             }
