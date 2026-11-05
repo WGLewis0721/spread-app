@@ -24,6 +24,7 @@ struct WeekFocusSurface: View {
     @State private var sidebarExpanded = false
     @State private var sidebarHidden = false
     @State private var showDayDone = false
+    @State private var daySlideDirection = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 53: each strip day and its Month cell share an id, so opening Month morphs the week into the grid.
     @Namespace private var calendarMorph
@@ -41,6 +42,23 @@ struct WeekFocusSurface: View {
     private var weekDays: [String] {
         (0..<7).map { PlannerDates.dayISO(weekKey: snapshot.weekKey, index: $0) }
     }
+    /// Animate calendar progression while Reduce Motion removes directional movement.
+    private var dayTransition: AnyTransition {
+        guard !reduceMotion, daySlideDirection != 0 else { return .opacity }
+        let offset = CGFloat(daySlideDirection) * 28
+        return .asymmetric(
+            insertion: .offset(x: offset).combined(with: .opacity),
+            removal: .offset(x: -offset).combined(with: .opacity)
+        )
+    }
+
+    private func selectWeekDay(_ iso: String) {
+        guard iso != day, weekDays.contains(iso) else { return }
+        daySlideDirection = iso > day ? 1 : -1
+        withAnimation(reduceMotion ? nil : SpreadMotion.weekSlide) { selectedDay = iso }
+        SpreadHaptics.selection()
+    }
+
     private var todaysAllocations: [DayAllocation] {
         snapshot.allocations.filter { $0.day == day && $0.hours > 0 }
             .sorted { $0.order < $1.order }
@@ -127,20 +145,22 @@ struct WeekFocusSurface: View {
                                          }, mondayFirst: true, morphNamespace: calendarMorph)
                         } else {
                             dailyDetails
+                                .id(day)
+                                .transition(dayTransition)
                                 .simultaneousGesture(
                                     DragGesture(minimumDistance: 70).onEnded { gesture in
                                         guard abs(gesture.translation.width) > abs(gesture.translation.height) * 1.8,
                                               let index = weekDays.firstIndex(of: day) else { return }
                                         let next = index + (gesture.translation.width < 0 ? 1 : -1)
                                         if weekDays.indices.contains(next) {
-                                            selectedDay = weekDays[next]
-                                            SpreadHaptics.selection()
+                                            selectWeekDay(weekDays[next])
                                         }
                                     }
                                 )
                         }
                     }
                     .scrollIndicators(.hidden)
+                    .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: day)
                     .onChange(of: selectedRole) { _, role in
                         guard let role else { return }
                         expandedByDate[day, default: []].insert(role)
@@ -182,6 +202,7 @@ struct WeekFocusSurface: View {
             }
         }
         .onChange(of: snapshot.weekKey) { _, newWeek in
+            daySlideDirection = 0
             selectedDay = newWeek // Monday, by owner decision
         }
         .onChange(of: expandedByDate) { _, _ in rememberExpansions() }
@@ -261,8 +282,7 @@ struct WeekFocusSurface: View {
                     ForEach(weekDays, id: \.self) { iso in
                         let active = iso == day
                         Button {
-                            selectedDay = iso
-                            SpreadHaptics.selection()
+                            selectWeekDay(iso)
                         } label: {
                             VStack(spacing: 4) {
                                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEEE"))
@@ -468,7 +488,6 @@ struct WeekFocusSurface: View {
             Color.clear.frame(height: 12)
         }
         .padding(.vertical, 6)
-        .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: day)
     }
 
 }
