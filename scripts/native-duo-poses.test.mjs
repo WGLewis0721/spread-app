@@ -64,6 +64,7 @@ const cell = (result, pose, orientation, check) => result.cells.find((c) => c.po
 test('a healthy Duo passes every gating cell and writes full evidence', async () => {
   const result = await run();
   assert.equal(result.ok, true, JSON.stringify(result.cells.filter((c) => c.status !== 'PASS')));
+  assert.equal(POSES.length * ORIENTATIONS.length, 9, 'all three real hinge poses and all supported Duo rotations must be gated');
   assert.equal(result.summary.counts.FAIL, 0);
   assert.equal(result.summary.counts.BLOCKED, 0);
   for (const pose of POSES) for (const orientation of ORIENTATIONS) {
@@ -73,7 +74,7 @@ test('a healthy Duo passes every gating cell and writes full evidence', async ()
   }
   const files = await readdir(result.outDir);
   for (const required of ['pose-matrix.json', 'pose-matrix.md', 'hinge-half-open.json', 'orientation-closed-landscape-left.json',
-    'duo-open-portrait-wallet.png', 'duo-half-open-landscape-left-month.png', 'duo-closed-portrait-week.png']) {
+    'duo-open-portrait-wallet.png', 'duo-half-open-landscape-left-month.png', 'duo-closed-portrait-week.png', 'duo-open-landscape-right-week.png', 'duo-half-open-landscape-right-wallet-edit.png']) {
     assert.ok(files.includes(required), `missing evidence ${required}`);
   }
   assert.ok((await stat(path.join(result.outDir, 'duo-closed-portrait-wallet.png'))).size >= 2048);

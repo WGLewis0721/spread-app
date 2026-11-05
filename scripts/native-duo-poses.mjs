@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const POSES = ['closed', 'half-open', 'open'];
-export const ORIENTATIONS = ['portrait', 'landscape-left'];
+export const ORIENTATIONS = ['portrait', 'landscape-left', 'landscape-right'];
 export const DRAFT = 'Fold keeps this draft';
 export const SESSION = 'spread-duo-poses';
 
