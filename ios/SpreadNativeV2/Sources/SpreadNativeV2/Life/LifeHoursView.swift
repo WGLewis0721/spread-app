@@ -101,8 +101,17 @@ struct LifeHoursView: View {
                 .font(.callout).foregroundStyle(LifePalette.secondary)
             orbit
             roleChoices
-            if let selected, separated, capacity != nil {
-                selectedControls(selected)
+            if let selected, separated {
+                if capacity != nil {
+                    selectedControls(selected)
+                } else {
+                    Button("Set weekly hours to adjust \(selected.name)") {
+                        capacityText = ""
+                        showCapacityField = true
+                    }
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("life-selected-hours-needs-capacity")
+                }
             }
             if saving { ProgressView("Saving hours…") }
             if rejected {
@@ -322,6 +331,7 @@ struct LifeHoursView: View {
         .accessibilityAdjustableAction { direction in changeBudget(by: direction == .increment ? 0.5 : -0.5) }
         .padding(16)
         .spreadCard(radius: 20)
+        .accessibilityIdentifier("life-selected-hours-controls")
     }
 
     private var capacityField: some View {
