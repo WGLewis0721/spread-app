@@ -22,8 +22,10 @@ export const SCHEMA_KEY = "spread.schema";
  *    Written lazily on edit, never by a bulk rewrite.
  * 3: optional recoverable task tombstones and per-day display order. Older builds must not
  *    silently rewrite these records away after downgrade; existing profiles need no rewrite.
+ * 4: optional Life capacity/priority, task estimates, attributed notes and native file references.
+ *    No bulk rewrite. Schema 3 binaries must lock writes rather than drop unfamiliar fields.
  */
-export const CURRENT_SCHEMA = 3;
+export const CURRENT_SCHEMA = 4;
 
 export type SchemaStorage = KeyStore & { removeItem?(key: string): void };
 
@@ -40,6 +42,8 @@ export const STEPS: MigrationStep[] = [
   // 2 -> 3 adds new optional planner fields only when someone uses the new feature.
   // The version guard keeps a downgraded reader from destructively rewriting them.
   { from: 2, run: () => undefined },
+  // 3 -> 4 protects the new optional native Life data from older normalizers.
+  { from: 3, run: () => undefined },
 ];
 
 export type SchemaOutcome =
