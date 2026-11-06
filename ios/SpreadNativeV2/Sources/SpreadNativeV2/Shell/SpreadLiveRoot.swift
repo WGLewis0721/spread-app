@@ -44,7 +44,27 @@ public struct SpreadLiveRoot: View {
 
     // The body is split into three short layers. One long modifier chain with closures in it exceeds the Swift
     // type-checker's budget ("unable to type-check this expression in reasonable time").
-    public var body: some View { presented }
+    public var body: some View {
+        Group {
+            if weekFocusEnabled {
+                LifeRoot(
+                    planner: planner,
+                    onMore: { sheet = .more },
+                    onOpenRole: { sheet = .role($0) },
+                    onOpenTask: { sheet = .task($0, $1) },
+                    onNewRole: { sheet = .newRole },
+                    onDeleteRole: { sheet = .confirmDeleteRole($0) }
+                )
+                // Reuse the exact existing More, profile, editor and confirmation sheets.
+                .sheet(item: $sheet) { current in sheetContent(current) }
+                .alert("Spread", isPresented: errorShown) {
+                    errorActions
+                } message: { Text(planner.error ?? "") }
+            } else {
+                presented // Classic is untouched.
+            }
+        }
+    }
 
     /// The planner layers and the standing accessibility identity.
     private var layers: some View {

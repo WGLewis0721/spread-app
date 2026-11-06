@@ -44,6 +44,7 @@ struct LiveReply: Decodable {
     let taskDetail: NativeTaskDetail?
     let error: String?
     let undoId: String?
+    let redoId: String?
     let requestId: String?
     let state: LiveState?
     let profiles: [NativeProfile]?
@@ -81,6 +82,7 @@ struct HoursShortage: Equatable {
     @Published var recoveryNotice: String?
     @Published var busy = false
     @Published var undoId: String?
+    @Published var redoId: String?
     /// Outcome of the last rollover request: "done", "confirm" (next week has content), or "empty".
     @Published var rolloverOutcome: String?
     private let exchange: (String) async throws -> String
@@ -104,7 +106,7 @@ struct HoursShortage: Equatable {
         guard let value = reply.state, value.envelope.isSupported else {
             throw NSError(domain: "Spread", code: 1, userInfo: [NSLocalizedDescriptionKey: "Planner is still starting. Try again."])
         }
-        if state?.sessionId != value.sessionId || state?.envelope.profileId != value.envelope.profileId || state?.envelope.snapshot.weekKey != value.envelope.snapshot.weekKey { details = [:]; undoId = nil }
+        if state?.sessionId != value.sessionId || state?.envelope.profileId != value.envelope.profileId || state?.envelope.snapshot.weekKey != value.envelope.snapshot.weekKey { details = [:]; undoId = nil; redoId = nil }
         state = value
         profiles = reply.profiles ?? []
         if let detail = reply.taskDetail { details = [detail.taskId: detail.content] }
@@ -123,6 +125,10 @@ struct HoursShortage: Equatable {
             case "bank-empty": error = "All hours for this responsibility are placed. Raise its weekly hours, or take hours off another day first."
             case "bank-exceeded": error = "There aren’t enough hours left in this responsibility’s bank. Choose fewer hours, or raise its weekly hours."
             case "ineligible-day": error = "Place hours for this responsibility on that day first."
+            case "capacity-not-set": error = "Set your weekly planning hours before changing a Life area's budget."
+            case "capacity-below-assigned": error = "Capacity cannot be below the hours already assigned. Reduce a budget first."
+            case "life-capacity-exceeded": error = "Your circle is full. Increase planning hours or return time from another Life area."
+            case "budget-below-reserved": error = "That area already has more hours placed on days. Return those first."
             case "save-failed", "save-unavailable":
                 error = "Couldn’t save on this device. Retry saving or back up before closing Spread."
                 errorOffersRetry = true; errorOffersBackup = true
@@ -268,7 +274,17 @@ struct HoursShortage: Equatable {
                 do { reply = try await self.receive(json, expectedRequestId: requestId) }
                 catch { reply = try await self.receive(json, expectedRequestId: requestId) } // Same correlation ID: safe after a lost ACK.
                 guard reply.ok else { return false }
-                if action["type"] as? String != "readTaskContent" { self.undoId = reply.undoId }
+                let kind = action["type"] as? String
+                if kind == "undo" {
+                    self.undoId = nil
+                    self.redoId = reply.redoId
+                } else if kind == "redo" {
+                    self.undoId = reply.undoId
+                    self.redoId = nil
+                } else if kind != "readTaskContent" {
+                    self.undoId = reply.undoId
+                    self.redoId = nil
+                }
                 if action["type"] as? String == "rollover" { self.rolloverOutcome = reply.rollover }
                 // Haptic only after the store has acknowledged the change (never on a speculative tap).
                 if completionHaptic { SpreadHaptics.completed() }
