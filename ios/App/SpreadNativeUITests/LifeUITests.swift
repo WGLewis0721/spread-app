@@ -35,6 +35,50 @@ final class LifeUITests: XCTestCase {
         add(attachment)
     }
 
+    func testLifeCardActionsRequireExplicitEditAndSwipe() throws {
+        startLife()
+        let card = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'life-card-'")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 20))
+        let id = String(card.identifier.dropFirst("life-card-".count))
+        let manage = app.buttons["life-reveal-manage-" + id]
+        let delete = app.buttons["life-reveal-delete-" + id]
+        let edit = app.buttons["life-edit"]
+
+        XCTAssertFalse(manage.exists, "Manage is visible before editing")
+        XCTAssertFalse(delete.exists, "Delete is visible before editing")
+        card.press(forDuration: 0.7)
+        XCTAssertEqual(edit.label, "Edit Life areas", "Long press must not enter Edit")
+        XCTAssertFalse(manage.exists)
+        XCTAssertFalse(delete.exists)
+        card.tap()
+        XCTAssertFalse(manage.exists, "Tapping a Life card must not show Manage")
+        XCTAssertFalse(delete.exists, "Tapping a Life card must not show Delete")
+        capture("life-card-focus-without-actions")
+
+        edit.tap()
+        XCTAssertEqual(edit.label, "Done editing Life areas")
+        XCTAssertFalse(manage.exists, "Edit alone must not reveal Manage")
+        XCTAssertFalse(delete.exists, "Edit alone must not reveal Delete")
+        card.swipeLeft()
+        XCTAssertTrue(manage.waitForExistence(timeout: 10), "Only an Edit-mode left swipe reveals Manage")
+        XCTAssertFalse(delete.exists)
+        capture("life-card-edit-swipe-manage")
+        card.swipeRight()
+        if !delete.exists { card.swipeRight() } // A first swipe may settle at neutral.
+        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Only an Edit-mode right swipe reveals Delete")
+        XCTAssertFalse(manage.exists)
+        capture("life-card-edit-swipe-delete")
+        edit.tap()
+        XCTAssertFalse(manage.exists, "Manage remains after leaving Edit")
+        XCTAssertFalse(delete.exists, "Delete remains after leaving Edit")
+        navigate("week")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-week-page").firstMatch
+            .waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'life-reveal-'")).firstMatch.exists,
+                       "Week cards have no Edit mode and must never expose Manage/Delete")
+    }
+
     func testLifeNavigationAndUnmodifiedMoreReachability() {
         startLife()
         let life = app.descendants(matching: .any).matching(identifier: "life-page").firstMatch

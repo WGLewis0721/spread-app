@@ -812,20 +812,28 @@ final class PlannerUITests: NativeUITestCase {
         closeNativeSheets()
     }
 
-    func testWalletLongPressEnablesEditing() throws {
+    func testWalletRequiresExplicitEditBeforeRevealingActions() throws {
         goSpread()
         let first = try XCTUnwrap(waitElements(prefix: "role-block-").first)
         scrollIntoView(first)
-        first.press(forDuration: 0.65)
-        XCTAssertTrue(el("dock-done").waitForExistence(timeout: 10),
-                      "Long press did not enter the same Edit mode as the dock")
-        XCTAssertTrue(elements(prefix: "remove-role-").isEmpty,
-                      "Long press should enter Edit without revealing Delete")
         let id = first.identifier.replacingOccurrences(of: "role-block-", with: "")
+        first.press(forDuration: 0.65)
+        XCTAssertFalse(el("dock-done").exists, "Long press must not enter Edit mode")
+        XCTAssertTrue(el("edit-spreads").exists, "Only the explicit Edit button enables editing")
+        XCTAssertFalse(el("remove-role-" + id).exists)
+        XCTAssertFalse(el("manage-role-" + id).exists)
+        first.swipeRight()
+        XCTAssertFalse(el("remove-role-" + id).exists, "Swipe without Edit must not reveal Delete")
+        first.tap()
+        XCTAssertFalse(el("manage-role-" + id).exists, "Tapping a card must not reveal Manage")
+        tapID("edit-spreads")
+        XCTAssertTrue(el("dock-done").waitForExistence(timeout: 10))
+        XCTAssertFalse(el("remove-role-" + id).exists, "Entering Edit alone must not reveal Delete")
         first.swipeRight()
         XCTAssertTrue(el("remove-role-" + id).waitForExistence(timeout: 10))
-        capture("wallet-long-press-edit")
+        capture("wallet-explicit-edit-only")
         tapID("dock-done")
+        XCTAssertFalse(el("remove-role-" + id).exists)
     }
 
     func testWeekScrollsVerticallyAndStillSwipesHorizontally() throws {

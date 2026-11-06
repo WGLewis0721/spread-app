@@ -42,7 +42,7 @@ jobs:
             tests: "JourneyUITests"
           - name: gestures
             width: 390
-            tests: "PlannerUITests/testWalletHundredExpandCollapseCycles PlannerUITests/testWalletLongPressEnablesEditing PlannerUITests/testWalletQuickDeleteRequiresConfirmationAndFallsBack PlannerUITests/testWalletCardGrowsWithTasksAndKeepsRowsReachable"
+            tests: "PlannerUITests/testWalletHundredExpandCollapseCycles PlannerUITests/testWalletRequiresExplicitEditBeforeRevealingActions PlannerUITests/testWalletQuickDeleteRequiresConfirmationAndFallsBack PlannerUITests/testWalletCardGrowsWithTasksAndKeepsRowsReachable"
           - name: crown
             width: 390
             tests: "PlannerUITests/testCrownHundredDragsWithThirtyReversals"

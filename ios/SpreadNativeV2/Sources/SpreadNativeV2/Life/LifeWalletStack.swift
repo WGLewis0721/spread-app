@@ -11,7 +11,6 @@ struct LifeWalletStack: View {
     var day: String? = nil
     let onManage: (String) -> Void
     let onDelete: (String) -> Void
-    let onBeginEdit: (String) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @AccessibilityFocusState private var focusedRole: String?
@@ -77,8 +76,7 @@ struct LifeWalletStack: View {
                        selected: selectedRole == role.id, editing: editing,
                        faceVisible: faceVisible,
                        onSelect: { select(role.id) },
-                       onManage: { onManage(role.id) }, onDelete: { onDelete(role.id) },
-                       onBeginEdit: { onBeginEdit(role.id) })
+                       onManage: { onManage(role.id) }, onDelete: { onDelete(role.id) })
             .frame(maxWidth: .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
     }
@@ -100,7 +98,6 @@ private struct LifeWalletFace: View {
     let onSelect: () -> Void
     let onManage: () -> Void
     let onDelete: () -> Void
-    let onBeginEdit: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
@@ -121,7 +118,11 @@ private struct LifeWalletFace: View {
     }
     var body: some View {
         ZStack {
-            revealedActions
+            // Never paint swipe actions beneath a translucent Wallet face at rest.
+            // They exist only while editing and a horizontal reveal is underway.
+            if editing && abs(reveal + translation) > 1 {
+                revealedActions
+            }
             selectionButton
         }
         .clipShape(RoundedRectangle(cornerRadius: 23))
@@ -132,8 +133,8 @@ private struct LifeWalletFace: View {
                 withAnimation(reduceMotion ? nil : SpreadTactile.snap) { translation = 0 }
             }
         }
-        .onChange(of: editing) { _, _ in reveal = 0 }
-        .onChange(of: selected) { _, _ in reveal = 0 }
+        .onChange(of: editing) { _, _ in reveal = 0; translation = 0 }
+        .onChange(of: selected) { _, _ in reveal = 0; translation = 0 }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { reveal = 0; translation = 0 }
         }
@@ -161,10 +162,13 @@ private struct LifeWalletFace: View {
         .accessibilityValue(selected ? "Focused" : "Closed")
         .accessibilityHint(selected ? "Close this area’s tasks" : "Show this area’s tasks")
         .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityAction(named: "Manage") { onManage() }
-        .accessibilityAction(named: "Delete") { onDelete() }
-        .accessibilityAction(named: "Edit Life areas") { onBeginEdit() }
-        .onLongPressGesture(minimumDuration: 0.55, perform: onBeginEdit)
+        .accessibilityActions {
+            // VoiceOver can reach swipe-only actions, but only after Edit is pressed.
+            if editing {
+                Button("Manage") { if editing { onManage() } }
+                Button("Delete", role: .destructive) { if editing { onDelete() } }
+            }
+        }
         .simultaneousGesture(swipe)
     }
 
@@ -173,17 +177,25 @@ private struct LifeWalletFace: View {
     // Keep each SwiftUI builder small enough for the release compiler to solve.
     private var revealedActions: some View {
         HStack(spacing: 0) {
-            Button(role: .destructive, action: onDelete) {
+            Button(role: .destructive) {
+                guard editing, reveal > 0 else { return }
+                onDelete()
+            } label: {
                 Label("Delete", systemImage: "trash").font(.subheadline)
                     .frame(width: 92, height: cardHeight).foregroundStyle(.white)
                     .background(Spread.danger, in: RoundedRectangle(cornerRadius: 24))
-            }.accessibilityHidden(reveal <= 0).allowsHitTesting(reveal > 0)
+            }.accessibilityIdentifier("life-reveal-delete-\(role.id)")
+                .accessibilityHidden(!editing || reveal <= 0).allowsHitTesting(editing && reveal > 0)
             Spacer(minLength: 0)
-            Button(action: onManage) {
+            Button {
+                guard editing, reveal < 0 else { return }
+                onManage()
+            } label: {
                 Label("Manage", systemImage: "pencil").font(.subheadline)
                     .frame(width: 92, height: cardHeight).foregroundStyle(.white)
                     .background(LifePalette.accent, in: RoundedRectangle(cornerRadius: 24))
-            }.accessibilityHidden(reveal >= 0).allowsHitTesting(reveal < 0)
+            }.accessibilityIdentifier("life-reveal-manage-\(role.id)")
+                .accessibilityHidden(!editing || reveal >= 0).allowsHitTesting(editing && reveal < 0)
         }
     }
 
