@@ -338,7 +338,7 @@ workflows:
       - name: Verify planner, docs, offline preflight, native Swift
         script: |
           set -eu
-          python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v
+          python3 -m unittest discover -s scripts -p 'test*.py' -v
           python3 scripts/app-store-preflight.py
           npm ci
           npm run typecheck
