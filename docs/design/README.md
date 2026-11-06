@@ -41,7 +41,7 @@ Stop at the first sufficient tier.
 | Recording a decision or checking what is undecided | [DECISIONS.md](DECISIONS.md) | |
 | Pointing an AI tool at these docs | [AI_TOOL_SETUP.md](AI_TOOL_SETUP.md) | |
 
-Planner + landing changes use both packs. Add a row for new task types.
+Cross-surface changes use both packs.
 
 ---
 
@@ -102,8 +102,8 @@ Studio lives on the `spread-studio` branch and is off by default. [Historical re
 
 ## 7. Keeping the brain healthy
 
-- New design information goes in the document whose scope it matches. If none fits, add one in the right subfolder and a row to the router and the table. Each document links back to this file near the top. Specs go in `specs/`.
-- One home per fact: link instead of copying. The only deliberate copies are the generated card blocks. No design rules in `AGENTS.project.md`, `README.md` or `ROADMAP.md` outside that block.
+- Put new facts in their owning document; link them in this map and back here. Specs go in `specs/`.
+- One home per fact; link instead of copying. Only generated rules cards are duplicated.
 - After editing `src/styles.css` tokens run `npm run docs:tokens`. After editing the rules card run `npm run docs:sync`. `npm run docs:check` (also in `test:scripts` and CI) fails when either is stale, when a link or pack pointer breaks, or when a tier passes its budget.
 - A document over 6 KB opens with a `> Summary:` line under its breadcrumb. Keep section headings short and stable, because packs point at them; if you rename one, fix the pack the check names.
 - Record a decision in the document it changes and in [DECISIONS.md](DECISIONS.md), and remove it from the open list. When a document is superseded, say so at its top and name its replacement. Do not delete history.
