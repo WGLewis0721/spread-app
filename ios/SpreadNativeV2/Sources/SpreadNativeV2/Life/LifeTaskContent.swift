@@ -72,9 +72,10 @@ enum NativeJSON: Codable, Equatable {
 extension NativeContentBlock {
     init(from decoder: Decoder) throws {
         let c = try decoder.singleValueContainer()
-        preserved = try c.decode([String: NativeJSON].self)
+        let raw = try c.decode([String: NativeJSON].self)
+        preserved = raw
         func value<T: Decodable>(_ key: String, _ type: T.Type) -> T? {
-            guard let value = preserved[key], let data = try? JSONEncoder().encode(value) else { return nil }
+            guard let value = raw[key], let data = try? JSONEncoder().encode(value) else { return nil }
             return try? JSONDecoder().decode(type, from: data)
         }
         id = value("id", String.self) ?? UUID().uuidString
