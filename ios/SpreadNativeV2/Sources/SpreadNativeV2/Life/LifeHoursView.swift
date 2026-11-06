@@ -114,7 +114,7 @@ struct LifeHoursView: View {
                 }
             }
             .padding(14)
-            .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 18))
+            .spreadCard(radius: 18)
 
             if capacity == nil {
                 Text("How many hours can you plan this week?")
@@ -332,7 +332,7 @@ struct LifeHoursView: View {
         .accessibilityValue(SpreadHours.spoken(selectedHours))
         .accessibilityAdjustableAction { direction in changeBudget(by: direction == .increment ? 0.5 : -0.5) }
         .padding(16)
-        .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 20))
+        .spreadCard(radius: 20)
     }
 
     private var capacityField: some View {
