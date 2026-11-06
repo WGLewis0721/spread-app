@@ -9,6 +9,8 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
     public var tasks: [PlannerTask]
     /** Optional presentation ordering; absent from Classic/older snapshots. */
     public var dayTaskOrder: [String: [String]]? = nil
+    /// Optional per-week Life metadata. Missing means capacity was never configured.
+    public var life: LifeWeekSnapshot? = nil
 
     public init(weekKey: String, roles: [Responsibility], allocations: [DayAllocation], tasks: [PlannerTask]) {
         self.weekKey = weekKey
@@ -43,6 +45,14 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
         return allocations.filter { $0.roleId == task.roleId && $0.hours > 0 }
             .sorted { $0.day == $1.day ? $0.order < $1.order : $0.day < $1.day }
     }
+}
+
+public struct LifeWeekSnapshot: Codable, Equatable, Sendable {
+    public let version: Int
+    public let capacityHours: Double?
+    public let priorityRoleId: String?
+    public let priorityGoalHours: Double?
+    public let priorityDay: String?
 }
 
 public struct Responsibility: Codable, Equatable, Identifiable, Sendable {
@@ -83,13 +93,15 @@ public struct PlannerTask: Codable, Equatable, Identifiable, Sendable {
     public let text: String
     public let done: Bool
     public let allocationId: String?
+    public let estimateMinutes: Int?
 
-    public init(id: String, roleId: String, text: String, done: Bool, allocationId: String?) {
+    public init(id: String, roleId: String, text: String, done: Bool, allocationId: String?, estimateMinutes: Int? = nil) {
         self.id = id
         self.roleId = roleId
         self.text = text
         self.done = done
         self.allocationId = allocationId
+        self.estimateMinutes = estimateMinutes
     }
 }
 

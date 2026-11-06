@@ -1,0 +1,57 @@
+{
+  "date": "2026-11-06",
+  "baseCommit": "b074b881ff6b1134d745ce1697f841069d92cf4b",
+  "branch": "docs/life-ios-handoff-2026-11-06",
+  "scope": "Root implementation documents and isolated approved reference; native implementation pending.",
+  "checks": {
+    "rootTypecheck": "passed",
+    "rootLint": {
+      "errors": 0,
+      "existingWarnings": 7
+    },
+    "referenceBuild": "passed",
+    "referenceModelTests": {
+      "passed": 16,
+      "failed": 0
+    },
+    "referenceDesktop": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "referencePhone": {
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0,
+      "engines": [
+        "Chrome iPhone",
+        "WebKit iPhone"
+      ]
+    },
+    "rootLinks": "passed",
+    "documentationNormalizedPaths": "passed",
+    "gitWhitespace": "passed",
+    "referenceRuntimeStagedSha256": "55 of 55 match approved source"
+  },
+  "knownBaselineLimits": {
+    "windowsDocumentationTests": {
+      "baseline": {
+        "passed": 3,
+        "failed": 8
+      },
+      "branch": {
+        "passed": 3,
+        "failed": 8
+      },
+      "cause": "Existing Windows path-separator assumptions; normalized exported checker passes. No script changes included."
+    },
+    "rootNpmAudit": "Unchanged root lockfile reports 15 vulnerabilities (2 low, 9 moderate, 3 high, 1 critical). No dependency upgrades performed.",
+    "referenceNpmAuditKnownVulnerabilities": 0
+  },
+  "notPerformed": [
+    "Native implementation or compilation",
+    "Signed iOS build or physical-device acceptance",
+    "Codemagic trigger or upload",
+    "Merge or production deployment"
+  ]
+}

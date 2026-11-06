@@ -1,0 +1,7 @@
+# Keep the approved runtime bytes identical across Windows and macOS checkouts.
+src/** -text whitespace=cr-at-eol,-blank-at-eof
+public/** -text whitespace=cr-at-eol
+index.html -text whitespace=cr-at-eol
+package.json -text whitespace=cr-at-eol
+package-lock.json -text whitespace=cr-at-eol
+vite.config.js -text whitespace=cr-at-eol

@@ -97,6 +97,7 @@ async function contentBlocks(block: ContentBlock) {
   if (block.type === "table") {
     return [text("Table", { bold: true, size: 20 }), hoursTable(block.cells.length > 0 ? block.cells : [[""]])];
   }
+  if (block.type === "file") return [text(`Attachment: ${block.file.name} (saved on this iPhone)` )];
   const image = await loadImage(block.src);
   if (!image) return [text("Photo")];
   return [

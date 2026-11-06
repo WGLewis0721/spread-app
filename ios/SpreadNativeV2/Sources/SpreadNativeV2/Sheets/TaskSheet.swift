@@ -2,36 +2,15 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import UniformTypeIdentifiers
+import QuickLook
+import CryptoKit
 
 // MARK: Rich task content (wire shape of `TaskContent` in src/lib/spread/model.ts)
 
-struct NativeOutlineItem: Codable, Identifiable, Equatable {
-    var id: String
-    var text: String
-    var level: Double
-}
-
-struct NativeContentBlock: Codable, Identifiable, Equatable {
-    var id = UUID().uuidString
-    var type: String
-    var text: String?
-    var items: [NativeOutlineItem]?
-    var cells: [[String]]?
-    var src: String?
-}
-
-struct NativeTaskContent: Codable, Equatable {
-    var blocks: [NativeContentBlock] = []
-}
-
-struct NativeTaskDetail: Decodable {
-    let taskId: String
-    let content: NativeTaskContent
-}
-
 /// The four content kinds the native editor can write. Any other kind is shown read-only and never re-sent,
 /// so a newer or unknown block is preserved in the store rather than downgraded here.
-private let editableKinds: Set<String> = ["notes", "outline", "table", "photo"]
+private let editableKinds: Set<String> = ["notes", "outline", "table", "photo", "file"]
 
 /// The task sheet (`TaskSheet` in task-sheet.tsx): the title, the rich blocks (Notes, Outline, Table, Photo) with
 /// their remove controls, the Add menu of formats, and Delete. Content is read with `readTaskContent` and saved with
@@ -40,6 +19,8 @@ struct TaskSheet: View {
     @ObservedObject var planner: LivePlanner
     let roleId: String
     let taskId: String
+    var lifeMode = false
+    @AppStorage("native.life.touchFeedback") private var lifeTouchFeedback = true
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -47,6 +28,11 @@ struct TaskSheet: View {
     @State private var title = ""
     @State private var content = NativeTaskContent()
     @State private var loaded = false
+    @State private var originProfile: String?
+    @State private var originWeek: String?
+    @State private var baseContent = NativeTaskContent()
+    @State private var baseTitle = ""
+    @State private var conflictingDraft: PendingDraft?
     @State private var expandedNote: String?
     @State private var showFormats = false
     @State private var saveTask: Task<Void, Never>?
@@ -57,11 +43,18 @@ struct TaskSheet: View {
     @State private var finishing = false
     @State private var photoPick: PhotosPickerItem?
     @State private var confirmDelete = false
+    @State private var importingFile = false
+    @State private var previewURL: URL?
+    @State private var attachmentError: String?
     /// Which rich-content field has the keyboard. Only set when the user adds a line, row or column.
     @FocusState private var focusedField: String?
 
-    private var task: PlannerTask? { planner.snapshot?.tasks.first { $0.id == taskId } }
-    private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) } }
+    private var task: PlannerTask? {
+        if let originProfile, planner.state?.envelope.profileId != originProfile { return nil }
+        if let originWeek, planner.snapshot?.weekKey != originWeek { return nil }
+        return planner.snapshot?.tasks.first { $0.id == taskId }
+    }
+    private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) && ($0.richText == nil || $0.richText?.version == 1) && !($0.preserved["richText"] != nil && $0.richText == nil) } }
 
     var body: some View {
         SpreadSheetStack {
@@ -79,6 +72,22 @@ struct TaskSheet: View {
                                 .onSubmit { commitTitle() }
                                 .accessibilityLabel("Task title")
                                 .accessibilityIdentifier("task-editor")
+                            if lifeMode { taskEstimateControl(task) }
+                            if lifeMode, let draft = conflictingDraft {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("This task changed after an earlier draft was saved on this iPhone.")
+                                    Button("Restore saved draft") {
+                                        title = draft.title
+                                        content = draft.content
+                                        conflictingDraft = nil
+                                        scheduleSave()
+                                    }
+                                    Button("Keep current task") {
+                                        conflictingDraft = nil
+                                        if let key = draftKey { UserDefaults.standard.removeObject(forKey: key) }
+                                    }
+                                }.font(.subheadline)
+                            }
                             if !loaded {
                                 ProgressView("Opening task content…")
                             } else if !supported {
@@ -128,17 +137,27 @@ struct TaskSheet: View {
                 }
             }
         }
+        .fileImporter(isPresented: $importingFile, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first { importManagedFile(url) }
+            else if case .failure = result { attachmentError = "This file could not be added. Try again or choose another file." }
+        }
+        .quickLookPreview($previewURL)
+        .interactiveDismissDisabled(lifeMode && (contentRevision > savedContentRevision || title != task?.text))
+        .alert("File unavailable", isPresented: Binding(get: { attachmentError != nil }, set: { if !$0 { attachmentError = nil } })) {
+            Button("OK") { attachmentError = nil }
+        } message: { Text(attachmentError ?? "") }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .task { await load() }
         .onDisappear { saveOnDismiss() }
+        .onChange(of: title) { _, _ in cacheDraft() }
         // A sheet remains presented when the app leaves the foreground; onDisappear
         // does not run. Flush before suspension, while the local bridge is active.
         .onChange(of: scenePhase) { _, phase in
             if phase == .inactive { saveOnDismiss() }
         }
         .onChange(of: planner.details[taskId]) { _, value in
-            if let value, !loaded { content = value; loaded = true }
+            if let value, !loaded { finishLoading(value) }
         }
         .onChange(of: photoPick) { _, item in
             guard let item else { return }
@@ -150,6 +169,40 @@ struct TaskSheet: View {
                     if await planner.send(["type": "deleteTask", "roleId": roleId, "taskId": taskId]) { dismiss() }
                 }
             }
+        }
+    }
+
+    // MARK: Life estimates (week-local task data, not an hour reservation)
+
+    private func taskEstimateControl(_ task: PlannerTask) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Menu {
+                Button("No estimate") { setEstimate(nil) }
+                ForEach([15, 30, 45, 60, 90, 120, 180, 240, 480], id: \.self) { minutes in
+                    Button("\(minutes) minutes") { setEstimate(minutes) }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "clock")
+                    Text(task.estimateMinutes.map { "Estimated time: \($0) min" } ?? "Add time estimate")
+                    Spacer()
+                    Image(systemName: "chevron.up.chevron.down")
+                }
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.horizontal, 12)
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+            }
+            .accessibilityIdentifier("task-estimate")
+            Text("Estimates help you plan; they don't reserve hours on a day.")
+                .font(.caption).foregroundStyle(Spread.secondary)
+        }
+    }
+
+    private func setEstimate(_ minutes: Int?) {
+        Task {
+            _ = await planner.send(["type": "setTaskEstimate", "roleId": roleId,
+                                     "taskId": taskId, "minutes": minutes as Any? ?? NSNull()])
         }
     }
 
@@ -167,7 +220,7 @@ struct TaskSheet: View {
                 }
                 Spacer(minLength: 8)
                 Button {
-                    Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": taskId], completionHaptic: !task.done) }
+                    Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": taskId], completionHaptic: !task.done && (!lifeMode || lifeTouchFeedback)) }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
@@ -199,23 +252,60 @@ struct TaskSheet: View {
     // MARK: Loading and saving
 
     private func load() async {
+        originProfile = planner.state?.envelope.profileId
+        originWeek = planner.snapshot?.weekKey
         if await planner.send(["type": "readTaskContent", "roleId": roleId, "taskId": taskId]), let value = planner.details[taskId] {
-            content = value
-            loaded = true
+            if !loaded { finishLoading(value) }
         }
+    }
+
+    private struct PendingDraft: Codable {
+        let title: String
+        let content: NativeTaskContent
+        let baseTitle: String
+        let baseContent: NativeTaskContent
+    }
+    private var draftKey: String? {
+        guard let originProfile, let originWeek else { return nil }
+        let identity = [originProfile, originWeek, taskId].joined(separator: "\u{0}")
+        return "native.life.taskDraft." + SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+    private func cacheDraft() {
+        guard lifeMode, loaded, supported, conflictingDraft == nil, let key = draftKey else { return }
+        let draft = PendingDraft(title: title, content: content, baseTitle: baseTitle, baseContent: baseContent)
+        if let data = try? JSONEncoder().encode(draft) { UserDefaults.standard.set(data, forKey: key) }
+    }
+    private func finishLoading(_ value: NativeTaskContent) {
+        baseContent = value
+        baseTitle = task?.text ?? title
+        content = value
+        loaded = true
+        guard lifeMode, let key = draftKey, let data = UserDefaults.standard.data(forKey: key),
+              let draft = try? JSONDecoder().decode(PendingDraft.self, from: data) else { return }
+        guard draft.baseContent == value, draft.baseTitle == baseTitle else {
+            conflictingDraft = draft
+            return
+        }
+        title = draft.title
+        content = draft.content
+        if content != value { scheduleSave() }
     }
 
     /// Store acknowledgements, not the debounce timer, determine whether content is saved.
     private func persistContent(_ draft: NativeTaskContent) async -> Bool {
+        guard task != nil, planner.state?.envelope.profileId == originProfile, planner.snapshot?.weekKey == originWeek else { return false }
         guard let encoded = try? JSONEncoder().encode(draft),
               let object = try? JSONSerialization.jsonObject(with: encoded) else { return false }
-        return await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+        let accepted = await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+        if accepted { baseContent = draft; cacheDraft() }
+        return accepted
     }
 
     /// Serialize debounced edits, so an older send cannot finish after a newer one and
     /// replace the latest notes, outline or table cells with stale content.
     private func scheduleSave() {
         guard loaded, supported else { return }
+        cacheDraft()
         contentRevision += 1
         let revision = contentRevision
         let snapshot = content
@@ -252,6 +342,7 @@ struct TaskSheet: View {
                     return
                 }
             }
+            if lifeMode, conflictingDraft == nil, let key = draftKey { UserDefaults.standard.removeObject(forKey: key) }
             dismiss()
         }
     }
@@ -260,6 +351,7 @@ struct TaskSheet: View {
     /// debouncer, then save the newest dirty revision and title in store order.
     /// Deleting a task must never recreate it from an outgoing sheet.
     private func saveOnDismiss() {
+        cacheDraft()
         guard !finishing, task != nil else { return }
         let preceding = saveTask
         preceding?.cancel()
@@ -283,7 +375,9 @@ struct TaskSheet: View {
     private func commitTitle() {
         let value = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard task != nil, !value.isEmpty, value != task?.text else { return }
-        Task { _ = await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) }
+        Task {
+            if await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) { baseTitle = value; cacheDraft() }
+        }
     }
 
     /// Moves the keyboard to a field the user just added, so they can keep typing. The field exists only once this
@@ -309,11 +403,42 @@ struct TaskSheet: View {
         scheduleSave()
     }
 
+    private func importManagedFile(_ source: URL) {
+        guard let profile = planner.state?.envelope.profileId else { return }
+        do {
+            let file = try LifeAttachmentStore.importFile(source, profile: profile, task: taskId, existing: content.blocks.compactMap(\.file))
+            append(NativeContentBlock(type: "file", file: file))
+        } catch { attachmentError = error.localizedDescription }
+    }
+
+    private func managedFileView(_ block: NativeContentBlock) -> some View {
+        Button {
+            guard let file = block.file, let profile = planner.state?.envelope.profileId else { return }
+            do { previewURL = try LifeAttachmentStore.url(profile: profile, task: taskId, file: file) }
+            catch { attachmentError = "The saved file could not be opened. Its reference is preserved. Restore the file from a full local backup." }
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Label(block.file?.name ?? "File", systemImage: "doc")
+                Text("Saved on this iPhone").font(.caption)
+            }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }.accessibilityLabel("Open file, \(block.file?.name ?? "File")")
+    }
+
     private func addPhoto(_ item: PhotosPickerItem) async {
         defer { photoPick = nil }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data),
-              let jpeg = image.jpegData(compressionQuality: 0.8) else { return }
+              let jpeg = image.jpegData(compressionQuality: 0.8) else {
+            if lifeMode { attachmentError = "This file could not be added. Try again or choose another file." }
+            return
+        }
+        if lifeMode {
+            let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".jpg")
+            defer { try? FileManager.default.removeItem(at: temporary) }
+            do { try jpeg.write(to: temporary, options: .atomic); importManagedFile(temporary) }
+            catch { attachmentError = error.localizedDescription }
+            return
+        }
         append(NativeContentBlock(type: "photo", src: "data:image/jpeg;base64," + jpeg.base64EncodedString()))
     }
 
@@ -337,13 +462,31 @@ struct TaskSheet: View {
                 .accessibilityIdentifier("remove-block-\(block.id)")
             }
             switch block.type {
-            case "notes": notesEditor(block)
+            case "notes": if lifeMode { lifeNotesEditor(block) } else { notesEditor(block) }
             case "outline": outlineEditor(block)
             case "table": tableEditor(block)
             case "photo": photoView(block)
+            case "file": managedFileView(block)
             default: EmptyView()
             }
         }
+    }
+
+    private func lifeNotesEditor(_ block: NativeContentBlock) -> some View {
+        LifeNotesEditor(text: Binding(get: {
+            content.blocks.first(where: { $0.id == block.id })?.text ?? ""
+        }, set: { text in
+            guard var current = content.blocks.first(where: { $0.id == block.id }) else { return }
+            current.text = text
+            update(current)
+        }), richText: Binding(get: {
+            content.blocks.first(where: { $0.id == block.id })?.richText
+        }, set: { value in
+            guard var current = content.blocks.first(where: { $0.id == block.id }) else { return }
+            current.richText = value
+            update(current)
+        }))
+        .frame(minHeight: 240)
     }
 
     private func notesEditor(_ block: NativeContentBlock) -> some View {
@@ -370,6 +513,9 @@ struct TaskSheet: View {
                 Spacer()
                 Button { expandedNote = nil } label: { Text("Done").font(.system(.subheadline, weight: .semibold)).tapTarget() }
             }
+            if lifeMode {
+                lifeNotesEditor(block).frame(minHeight: 360)
+            } else {
             TextEditor(text: Binding(get: {
             content.blocks.first(where: { $0.id == block.id })?.text ?? ""
         }, set: { value in
@@ -380,6 +526,7 @@ struct TaskSheet: View {
                 .frame(minHeight: 360)
                 .scrollContentBackground(.hidden)
                 .accessibilityLabel("Notes, expanded")
+            }
         }
     }
 
@@ -510,6 +657,11 @@ struct TaskSheet: View {
                     }
                     formatRow(type: "table", label: "Table", detail: "Rows and columns.", icon: "icon-table") {
                         append(NativeContentBlock(type: "table", cells: [["", ""], ["", ""]]))
+                    }
+                    if lifeMode {
+                        Button { importingFile = true } label: {
+                            formatLabel(label: "Add files", detail: "Saved on this iPhone", icon: "icon-add")
+                        }.accessibilityIdentifier("life-add-files")
                     }
                     PhotosPicker(selection: $photoPick, matching: .images) {
                         formatLabel(label: "Photo", detail: "A picture from this device.", icon: "icon-photo")

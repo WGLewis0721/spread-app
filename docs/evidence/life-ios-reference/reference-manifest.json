@@ -1,0 +1,367 @@
+{
+  "date": "2026-11-06",
+  "source": "Owner-approved isolated browser prototype; these are not native screenshots",
+  "sourcePrototype": "tools/life-reference",
+  "mainCommit": "b074b881ff6b1134d745ce1697f841069d92cf4b",
+  "humanizer": {
+    "version": "3.1.0",
+    "commit": "0ef9fe5bc3572734fd3ae6c448fe00a30cd5dcf0"
+  },
+  "images": [
+    {
+      "file": "final-calendar.png",
+      "sha256": "825616c20f305f56a94ffbd2c8007061a11613f585eddfb4be213d229f1a5e6f",
+      "width": 390,
+      "height": 844,
+      "matchesApprovedPrototype": true
+    },
+    {
+      "file": "final-hours-orbit.png",
+      "sha256": "6d9e7a1e8cdf78bd15be3aebc4806aabbf12f26df31c9ebca6d3714006c7c446",
+      "width": 390,
+      "height": 844,
+      "matchesApprovedPrototype": true
+    },
+    {
+      "file": "final-hours-separated.png",
+      "sha256": "a2a2767c94b3a1a1aef9cefd88817e36febe62d0f05c2b677e2bdf36c8d1deb0",
+      "width": 390,
+      "height": 844,
+      "matchesApprovedPrototype": true
+    },
+    {
+      "file": "final-life-focus.png",
+      "sha256": "80b9033e5bb3c0954b060c841216c0f94d7c48cb9a89d8df25e6dd5165ef5083",
+      "width": 390,
+      "height": 844,
+      "matchesApprovedPrototype": true
+    },
+    {
+      "file": "final-life-stack.png",
+      "sha256": "b1df51c7bd00ba0462c5d6d59239a6ec8b59a5ee630ee883e4a3749fcb6154e8",
+      "width": 390,
+      "height": 844,
+      "matchesApprovedPrototype": true
+    },
+    {
+      "file": "final-task-notes.png",
+      "sha256": "35b55563ef146a65a3611c4646e972c48db6aef86e7cc22cd9480013d69830bb",
+      "width": 390,
+      "height": 844,
+      "matchesApprovedPrototype": true
+    },
+    {
+      "file": "final-week-wallet.png",
+      "sha256": "98585ebfbc02d6bf27fddda90b6835fe2f4a0bbe6a33b33cc8594ff6e0c4067c",
+      "width": 390,
+      "height": 844,
+      "matchesApprovedPrototype": true
+    }
+  ],
+  "documentationValidation": {
+    "method": "Existing checkDesignDocs invoked explicitly with Windows relative-path separators normalized to forward slashes; repository scripts left unchanged.",
+    "baseline": [],
+    "handoff": []
+  },
+  "nativeBuildRun": false,
+  "codemagicRunTriggered": false,
+  "unchangedSource": [
+    {
+      "file": "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift",
+      "sha256": "a154f84db001e8afcdd2e020423d88462c91f7035a201524aa4e9e1be32248ba",
+      "unchanged": true
+    },
+    {
+      "file": "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift",
+      "sha256": "4724c75bf8c9404a5cde6541002883978d9f90ec806b9dd54924eb088d02c3ba",
+      "unchanged": true
+    },
+    {
+      "file": "codemagic.yaml",
+      "sha256": "8227eab87947f7e6360f8311edefec726fe6a47b8713585b892552e4da67f6be",
+      "unchanged": true
+    }
+  ],
+  "bundledReference": {
+    "path": "tools/life-reference",
+    "files": [
+      {
+        "file": "src/App.jsx",
+        "sha256": "7052adae553da0703098cc2d9fdc98766881fa0a588c15355d099ce9bd657938",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/HoursOrbit.jsx",
+        "sha256": "b8d61d6d3fa60e80659c92cd2d69d5f2f252ccad051aab03e8954517ac34ea4f",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/interaction-math.js",
+        "sha256": "5962601e49609f344610ff73a989d56ee8383be37cce36320eacf2643f04842b",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/iphone.css",
+        "sha256": "73a8ba7a86e9207ca13bccaa89d69c830b67c05781fe812ca7b38e33549cce59",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/IPhoneApp.jsx",
+        "sha256": "cf284113c295de8476ab193e4352032226b464b6db157ed4a222d5563fedf1a4",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/PhonePreview.jsx",
+        "sha256": "2cd00e870da23ace468af1efda9508139536e4649103e643ef7709e5b8055b29",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/planning.js",
+        "sha256": "ce6c77bb575c1a7aca71506d786b057863926ef3ae4c492a3983160fce8975c6",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/ResponsibilitySheets.jsx",
+        "sha256": "2ce4272ccbcc25b564307cf12ae254e7c4868ceec42d46ead8d4d9c07ff162ed",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/ResponsibilityStack.jsx",
+        "sha256": "e4d585dcc5dd746002b07709ade8362772dc68a25c9a1b1ed174b151dc3b647c",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/iphone/WeekCalendar.jsx",
+        "sha256": "063bd6fb85906c1099ebb5c8b5e05fda6fa0eb3f2ee821e8a2f6f01fdffc63dd",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/main.jsx",
+        "sha256": "8656d307d60446bd2c799d0173318cd10461a0d863f18601686c4341bc527d65",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/model.js",
+        "sha256": "bf3d7b1c398f534faeabf31d3b01686c8261cb6fff969fec5391869fd599d429",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/RichNotes.jsx",
+        "sha256": "e12d6819639fb7894400748f24c222661719a24f328b1cf284791672850c981f",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/styles.css",
+        "sha256": "a068ab91a4e5c3d6150f4d9972f3d55c47b8ed50ea158b829a8287315a6006c4",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/task-extras.css",
+        "sha256": "4474cf8a989d16636605ac84ea5631df81dbbc4c471075d5017913c8c35833fa",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/task-media.js",
+        "sha256": "354e3348100407dcd84129bd1fa75b51229e91ac29fc67323cc6bb819f47818b",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/TaskExtras.jsx",
+        "sha256": "01fa4881a9f759f94634be7b89681f3a22206a7ef530cea91d32ff17875697b4",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "src/use-media-session.js",
+        "sha256": "8ca2f9b2a530684c2125c60c1b1f5135053245cb931d42758effd3b8be48ca02",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/app-icon-spread-cards-square.svg",
+        "sha256": "78a5de95674d8c8ae975fff901a38af7a74b21273c5a2b48204bb645d6515ea1",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/app-icon-spread-cards.svg",
+        "sha256": "737803ffe435c137706c6ee462d9e9ed566083f2dba4e439c382fc352c8131e6",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-add.svg",
+        "sha256": "4e23248dda80df947cf86dcd9128c6b34a4fbe621fbf9886d7042dfd3d7d61f7",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-backup.svg",
+        "sha256": "d5770ec4dbba207113be8e0539ea443e9c36f3ebaa9adf53fed90b8721069087",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-business.svg",
+        "sha256": "826d3149f0415ae901c0856a0a04a34326357be79864561616095ae20d6d88e8",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-church.svg",
+        "sha256": "2dbc2af6d00eabf38148685124b7f87790122d0653705c460fe0d92c5505780d",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-family.svg",
+        "sha256": "ee30e878b3a879eabffc9e0c956309714555f1369b11e4745f2e20028187059e",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-fitness.svg",
+        "sha256": "6b7a7e59e48277166dcfb6c25c2484c2a87ccc5eaed314d8cccd625bf725a344",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-health.svg",
+        "sha256": "9576cf641f84c04fd8b13c447934d387c03e740b05830a3522a58d77bb1bae56",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-home.svg",
+        "sha256": "36f79544f8093f6a46f7e5565e6cc5acaeecb1f3c9def941f76e37de4ad5aca9",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-personal.svg",
+        "sha256": "d3a74efb337eea7a843647954bbdcbbe5f2352e890e2ab3dd9c7f57b661bbd05",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-project.svg",
+        "sha256": "490e278044d1408bbd114abe4afc5df2e137e6e265431de8235a04f317c4327d",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-school.svg",
+        "sha256": "92bc96975976c7075949df391758b1e66586576e11e6a7ff2fbe88c35a0f3a95",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-category-work.svg",
+        "sha256": "9826bab3e2a82d8690211da677bcc72b8e48093491f13262ce2ad609db219597",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-check.svg",
+        "sha256": "6fcb489f5f4c53c7785016cc9a564b39baf436dbd651a8b9d71b4305e2a7f21e",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-drag.svg",
+        "sha256": "87e5f57581b5df6889e37d940b11449a247abe13bdfd93b8fc0a4456fda27203",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-edit.svg",
+        "sha256": "9ed882f112dce8d131cbebfe76a45232894c81aebb4530ae1dfcaea1a07a8358",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-export.svg",
+        "sha256": "6bcbf559244482ecabbcad53e54617c5ac05b8ed31c0f907f10845d27e22903c",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-month.svg",
+        "sha256": "d6227b0bf2572f295dc64e3625b18915e7938b48b76f7d340767277cb9b83756",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-new-life.svg",
+        "sha256": "5ca284db0bd107257d0f59b4145bf27e98b875482374cb7430bcd3818cd02f8f",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-notes.svg",
+        "sha256": "3df6f3809cc9e2b8e235606ceebe6603b2520a212afb79f8a92ecb3668e74092",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-outline.svg",
+        "sha256": "2f8421dde8bb07489e55ea465f9225740ba75dec2e769948848ee77bb11bdf96",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-palette.svg",
+        "sha256": "3f889ec878889b54c6ce059736c80c490abe7b7fa3a84d16c5db85141f512905",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-photo.svg",
+        "sha256": "a3c266437cbcda2f7f5e9ccc90f6807d7258fcb169f11dcc2d1d94e845dc7c01",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-print.svg",
+        "sha256": "43e2a5a82085ad1c1d144746dcb0a57bf05c623768a0b46071fa70b59ecc70f4",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-restore.svg",
+        "sha256": "ece98e36c6ec70d00d873f77f5f83a3977c32c837a8a5528f89b24c913f73bdb",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-rollover.svg",
+        "sha256": "e828a0082a1fe2d619976786f43bb6d972eea727f4a8c85ec3a7b7ff67d601b3",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-settings.svg",
+        "sha256": "ee1be77bdb4af2aaaa540a7a62d02950a01a3185785f99107c8745db15f41465",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-share.svg",
+        "sha256": "f23376dcd1ef9aa6f7e22c4ab49263081afd6e9a2c0ae028c84a660bfb5a89f6",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-spread-list.svg",
+        "sha256": "c9cd74c564bdabfcab96b41b42bf590839aadae8572f951e1c2aa452dd08df54",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-table.svg",
+        "sha256": "d33ccedeb645c022f5b238b34af60c5a02f9544926d9c731b7ce2f7d45895e51",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-trash.svg",
+        "sha256": "d34e324e09af3aee03b666f7d0ffae524fc03e429e6e52aed03a5054add7fc33",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "public/icons/icon-week.svg",
+        "sha256": "49e32bfc89d9481777e441e0608a12c0d68544676d064ea00fcb479612323308",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "index.html",
+        "sha256": "30c7eb1794bd4aa4c2418c026c85de4186cbd563ad0af24769984dd6ac168e1e",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "package.json",
+        "sha256": "c92b6951efcf8ce6fe9b580f2d1d07dbce55de6ba9e07c304792409bc346fc91",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "package-lock.json",
+        "sha256": "3d66062e378a680a784bdcac47f62bd173588ee17e829c5e9ea9483bfe852050",
+        "matchesApprovedPrototype": true
+      },
+      {
+        "file": "vite.config.js",
+        "sha256": "0ea84b4e2909b04e4c1cb1b92392a9f85bcb46605472763b15935d3498ba8ed3",
+        "matchesApprovedPrototype": true
+      }
+    ],
+    "testClock": "2026-11-06T12:00:00-06:00",
+    "testAdaptation": "Shared fixed-date Playwright fixture plus pinned America/Chicago timezone/en-US locale; runtime source and assets are unchanged."
+  }
+}

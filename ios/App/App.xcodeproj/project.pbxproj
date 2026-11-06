@@ -8,8 +8,10 @@
 
         AC1130000000000000000001 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadNativeUITests/PlannerUITests.swift; sourceTree = SOURCE_ROOT; };
         AC1130000000000000000002 = { isa = PBXBuildFile; fileRef = AC1130000000000000000001; };
+        AC113000000000000000000C = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadNativeUITests/LifeUITests.swift; sourceTree = SOURCE_ROOT; };
+        AC113000000000000000000D = { isa = PBXBuildFile; fileRef = AC113000000000000000000C; };
         AC1130000000000000000003 = { isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = SpreadNativeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-        AC1130000000000000000004 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (AC1130000000000000000002,); runOnlyForDeploymentPostprocessing = 0; };
+        AC1130000000000000000004 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (AC1130000000000000000002,AC113000000000000000000D,); runOnlyForDeploymentPostprocessing = 0; };
         AC1130000000000000000005 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
         AC1130000000000000000006 = { isa = PBXNativeTarget; buildConfigurationList = AC1130000000000000000007; buildPhases = (AC1130000000000000000004, AC1130000000000000000005,); buildRules = (); dependencies = (AC113000000000000000000B,); name = SpreadNativeUITests; productName = SpreadNativeUITests; productReference = AC1130000000000000000003; productType = "com.apple.product-type.bundle.ui-testing"; };
         AC1130000000000000000007 = { isa = XCConfigurationList; buildConfigurations = (AC1130000000000000000008, AC1130000000000000000009,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };

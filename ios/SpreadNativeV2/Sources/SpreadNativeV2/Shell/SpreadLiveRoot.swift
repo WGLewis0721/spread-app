@@ -44,7 +44,28 @@ public struct SpreadLiveRoot: View {
 
     // The body is split into three short layers. One long modifier chain with closures in it exceeds the Swift
     // type-checker's budget ("unable to type-check this expression in reasonable time").
-    public var body: some View { presented }
+    public var body: some View {
+        Group {
+            if weekFocusEnabled {
+                LifeRoot(
+                    planner: planner,
+                    onMore: { sheet = .more },
+                    onOpenRole: { sheet = .role($0) },
+                    onOpenTask: { sheet = .task($0, $1) },
+                    onNewRole: { sheet = .newRole },
+                    onDeleteRole: { sheet = .confirmDeleteRole($0) }
+                )
+                .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
+                // Reuse the exact existing More, profile, editor and confirmation sheets.
+                .sheet(item: $sheet) { current in sheetContent(current) }
+                .alert("Spread", isPresented: errorShown) {
+                    errorActions
+                } message: { Text(planner.error ?? "") }
+            } else {
+                presented // Classic is untouched.
+            }
+        }
+    }
 
     /// The planner layers and the standing accessibility identity.
     private var layers: some View {
@@ -718,7 +739,7 @@ public struct SpreadLiveRoot: View {
         case .role(let roleId):
             RoleSheet(planner: planner, roleId: roleId, onOpenTask: { sheet = .task(roleId, $0) })
         case .task(let roleId, let taskId):
-            TaskSheet(planner: planner, roleId: roleId, taskId: taskId)
+            TaskSheet(planner: planner, roleId: roleId, taskId: taskId, lifeMode: weekFocusEnabled)
         case .review:
             CarryOverSheet(planner: planner)
         case .more:

@@ -1596,7 +1596,7 @@ async function applyRestore(backup: ParsedBackup, select?: string[]): Promise<{ 
   }
   const state = useSpread.getState();
   if (backup.kind === "full") {
-    const result = state.restoreAsNew(backup.payload, select);
+    const result = await state.restoreAsNew(backup.payload, select);
     if (!result.ok) {
       return {
         ok: false,

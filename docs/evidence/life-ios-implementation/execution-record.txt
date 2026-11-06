@@ -1,0 +1,140 @@
+Frozen source:9557f85dcbf32c62dcf627b13ada4bf967687383
+Git tree:466d84792857323e7312dee711d5632747051816
+All tracked non-evidence files matched source before and after checks: True
+
+=== start.txt ===
+Full log SHA256: 27885d04b4a02ccfae016ead08abec39076df7d29aae7c39bb852a82f40c7796
+2026-11-06T12:41:30Z
+
+=== environment.txt ===
+Full log SHA256: 70407a9c278919d0f0c86cdca7334ad97a11520d5c61f73487afa827e0ce1381
+v24.22.1
+11.19.1
+Swift version 6.4.2 (swift-6.4.2-RELEASE)
+Target: x86_64-unknown-linux-gnu
+Linux 24459c1d-819 6.18.56 #1 SMP Thu Oct 29 18:14:48 UTC 2026 x86_64 GNU/Linux
+
+=== results.txt ===
+Full log SHA256: 803c832dc4fb19923c2dfe9654b4b367c40d69f77deefae559705b0f234ab75e
+typecheck 0
+lint 0
+test:spread 0
+test:scripts 0
+docs:check 0
+python-tests 0
+preflight 0
+ios-sync 0
+bundle-preflight 0
+
+=== swift-results.txt ===
+Full log SHA256: a7d93924a4e1c1d9387b2b0c88632da3834300c3bb1bab11df9be27ef9368fdc
+native 0
+cloud 0
+syntax 0
+
+=== test-spread.log ===
+Full log SHA256: 59c2f124fea5dc118cebb3182c581f72363d8a364c1c38d15d125b4ae972773a
+1..474
+# tests 474
+# suites 0
+# pass 474
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8099.412995
+run-tests: 474 tests (474 passed, 0 failed, 0 skipped) from 46 files; minimum 474
+
+=== test-scripts.log ===
+Full log SHA256: cd6dd506d400bf187d9f0a314ee4c9be09c1f61729cf0b48694461493609b8b1
+1..236
+# tests 236
+# suites 0
+# pass 232
+# fail 0
+# cancelled 0
+# skipped 4
+# todo 0
+# duration_ms 2192.532155
+run-tests: 236 tests (232 passed, 0 failed, 4 skipped) from 15 files; minimum 236
+
+=== python-tests.log ===
+Full log SHA256: 22c7b218c1ed315ddb35bd60a5e0036ef597801c071796bae5ef078add38bd32
+Codemagic build abcdef123456abcdef123456: skipped
+Codemagic build abcdef123456abcdef123456: failed
+Codemagic build abcdef123456abcdef123456: timeout
+Codemagic build abcdef123456abcdef123456: canceled
+..
+----------------------------------------------------------------------
+Ran 20 tests in 0.008s
+
+OK
+Codemagic Studio build started: https://codemagic.io/app/654321abcdef123456abcdef/build/abcdef123456abcdef123456
+
+=== preflight.log ===
+Full log SHA256: 67f2fc6beb1ecb3f4189dcc998305ce50010ae79bed6f3de9ef2696e098f4159
+PASS Camera purpose string: Explain why camera access is requested
+PASS Visible app name: Unexpected display name
+PASS Tracking declaration: Tracking declaration required
+PASS Collected-data declaration: An empty list is correct only if the app truly collects no data
+PASS Required-reason declarations: Each declared API requires a reason
+PASS App icon: 1024px app icon source must exist; visually inspect it
+PASS Native auth startup: Do not eagerly create the web auth client on a native app origin
+PASS Native review access: Installed app must not require web beta approval
+PASS Web beta isolation: Native entry skips the web beta status check
+App Store technical preflight: 14 passed; 0 failed
+
+=== bundle-preflight.log ===
+Full log SHA256: 06ad883e75650508fd7a32608713332da3127075e71819d9c9d38deb69640231
+PASS Tracking declaration: Tracking declaration required
+PASS Collected-data declaration: An empty list is correct only if the app truly collects no data
+PASS Required-reason declarations: Each declared API requires a reason
+PASS App icon: 1024px app icon source must exist; visually inspect it
+PASS Native auth startup: Do not eagerly create the web auth client on a native app origin
+PASS Native review access: Installed app must not require web beta approval
+PASS Web beta isolation: Native entry skips the web beta status check
+PASS Offline bundle references: 8 paths resolved
+PASS No web-only script: Installed app must not depend on Grok script
+App Store technical preflight: 16 passed; 0 failed
+
+=== swift-native.log ===
+Full log SHA256: fd6cdc14551db659bcc00a7fda57a58267dc26265aa51c94bc98cd9e6e6e04e3
+Test Suite 'NativeContractsTests' passed at 2026-11-06 12:41:33.839
+	 Executed 36 tests, with 0 failures (0 unexpected) in 0.071 (0.071) seconds
+Test Suite 'Debug-linux-x86_64.xctest' passed at 2026-11-06 12:41:33.839
+	 Executed 50 tests, with 0 failures (0 unexpected) in 0.087 (0.087) seconds
+Test Suite 'All tests' passed at 2026-11-06 12:41:33.839
+	 Executed 50 tests, with 0 failures (0 unexpected) in 0.087 (0.087) seconds
+◇ Test run started.
+↳ Testing Library Version: 6.4.2 (288a2328ff84644)
+↳ Target Platform: x86_64-unknown-linux-gnu
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+
+=== swift-cloud.log ===
+Full log SHA256: e5e8acf15880a19997cd8b686de5d1bdc281ecce67e499b4d0876cf5f53140fc
+Test Suite 'SyncStorageTests' passed at 2026-11-06 12:41:35.263
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'Debug-linux-x86_64.xctest' passed at 2026-11-06 12:41:35.263
+	 Executed 45 tests, with 0 failures (0 unexpected) in 0.049 (0.049) seconds
+Test Suite 'All tests' passed at 2026-11-06 12:41:35.263
+	 Executed 45 tests, with 0 failures (0 unexpected) in 0.049 (0.049) seconds
+◇ Test run started.
+↳ Testing Library Version: 6.4.2 (288a2328ff84644)
+↳ Target Platform: x86_64-unknown-linux-gnu
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+
+=== ios-syntax.log ===
+Full log SHA256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+=== ios-sync.log ===
+Full log SHA256: 7f75f5c1184a01e45af270dc6151c7f41e73bc35a24af09e9ad97681d5ac43c3
+✔ Updating iOS plugins in 8.95ms
+[info] All Capacitor plugins have a Package.swift file and will be included in Package.swift
+[info] Writing Package.swift
+[info] Found 4 Capacitor plugins for ios:
+       @capacitor/filesystem@8.1.4
+       @capacitor/haptics@8.0.2
+       @capacitor/share@8.0.3
+       @capacitor/status-bar@8.0.4
+✔ update ios in 54.45ms
+[info] Sync finished in 0.174s

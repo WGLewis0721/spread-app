@@ -30,48 +30,48 @@ const imported = (() => {
   return d;
 })();
 
-test("A01: a profile customised only by hours and colour is not replaced", () => {
+test("A01: a profile customised only by hours and colour is not replaced", async () => {
   const custom = defaultData();
   custom.weeks[custom.currentWeek].boxes[0].hours = 29;
   custom.hats[0].color = "#123456";
   seed(custom);
   const before = storage.map.get(local.store);
-  const result = useSpread.getState().restoreAsNew(backupOf(imported));
+  const result = await useSpread.getState().restoreAsNew(backupOf(imported));
   assert.equal(result.ok, true);
   assert.equal(result.ok && result.replacedEmpty, false);
   assert.equal(storage.map.get(local.store), before, "the customised profile's bytes are untouched");
   assert.equal(JSON.parse(storage.map.get(PROFILES_KEY) as string).length, 2, "the backup was added beside it");
 });
 
-test("A01: a profile holding valid JSON that is not a planner is never overwritten", () => {
+test("A01: a profile holding valid JSON that is not a planner is never overwritten", async () => {
   for (const damaged of ["null", "[]", '"x"', "{}", "{ truncated"]) {
     seed(damaged);
-    const result = useSpread.getState().restoreAsNew(backupOf(imported));
+    const result = await useSpread.getState().restoreAsNew(backupOf(imported));
     assert.equal(result.ok && result.replacedEmpty, false, damaged);
     assert.equal(storage.map.get(local.store), damaged, `bytes preserved: ${damaged}`);
   }
 });
 
-test("A01: a truly new, untouched profile is still filled (a fresh install can take a full set)", () => {
+test("A01: a truly new, untouched profile is still filled (a fresh install can take a full set)", async () => {
   seed(defaultData());
-  const result = useSpread.getState().restoreAsNew(backupOf(imported));
+  const result = await useSpread.getState().restoreAsNew(backupOf(imported));
   assert.equal(result.ok && result.replacedEmpty, true);
   assert.equal(JSON.parse(storage.map.get(local.store) as string).hats[0].name, "Imported hat");
 });
 
-test("A02: a failed roster write is a failure, not a success, and changes nothing", () => {
+test("A02: a failed roster write is a failure, not a success, and changes nothing", async () => {
   const keep = defaultData();
   keep.weeks[keep.currentWeek].boxes[0].tasks.push({ id: "keep", text: "keep local", done: false });
   seed(keep);
   const snapshot = new Map(storage.map);
   storage.failWhen = (key) => key === PROFILES_KEY;
-  const result = useSpread.getState().restoreAsNew(backupOf(imported));
+  const result = await useSpread.getState().restoreAsNew(backupOf(imported));
   assert.equal(result.ok, false);
   assert.equal(useSpread.getState().profiles.length, 1, "memory matches storage");
   assert.deepEqual([...storage.map], [...snapshot], "storage is exactly as it was, no orphan bodies");
 });
 
-test("A02: a failure while writing profile bodies leaves every earlier write undone", () => {
+test("A02: a failure while writing profile bodies leaves every earlier write undone", async () => {
   const keep = defaultData();
   keep.weeks[keep.currentWeek].boxes[0].tasks.push({ id: "keep", text: "keep local", done: false });
   seed(keep);
@@ -81,16 +81,16 @@ test("A02: a failure while writing profile bodies leaves every earlier write und
   const two: FullBackupPayload = backupOf(imported);
   two.roster.push({ id: "r2", name: "Second", store: profileStore("r2"), theme: "light", accent: null });
   two.stores.r2 = JSON.stringify(imported);
-  const result = useSpread.getState().restoreAsNew(two);
+  const result = await useSpread.getState().restoreAsNew(two);
   assert.equal(result.ok, false);
   assert.deepEqual([...storage.map], [...snapshot]);
 });
 
-test("A02: a failed replacement of an untouched profile puts the original bytes back", () => {
+test("A02: a failed replacement of an untouched profile puts the original bytes back", async () => {
   seed(defaultData());
   const before = storage.map.get(local.store);
   storage.failWhen = (key) => key === PROFILES_KEY;
-  const result = useSpread.getState().restoreAsNew(backupOf(imported));
+  const result = await useSpread.getState().restoreAsNew(backupOf(imported));
   assert.equal(result.ok, false);
   assert.equal(storage.map.get(local.store), before);
 });
@@ -107,7 +107,7 @@ function tenProfiles(prefix: string) {
   return { roster, entries };
 }
 
-test("A09: with ten profiles in use, a safety copy can be rolled back in place", () => {
+test("A09: with ten profiles in use, a safety copy can be rolled back in place", async () => {
   const now = tenProfiles("now");
   const was = tenProfiles("was");
   storage.map.clear();
@@ -122,7 +122,7 @@ test("A09: with ten profiles in use, a safety copy can be rolled back in place",
   assert.equal(useSpread.getState().profiles.length, 10);
 });
 
-test("A09: a rollback that fails part-way leaves the current planner exactly as it was", () => {
+test("A09: a rollback that fails part-way leaves the current planner exactly as it was", async () => {
   const now = tenProfiles("now");
   const was = tenProfiles("was");
   storage.map.clear();
@@ -138,7 +138,7 @@ test("A09: a rollback that fails part-way leaves the current planner exactly as 
   assert.equal(useSpread.getState().profiles[0].id, "now0");
 });
 
-test("A09: a copy holding an unreadable profile is refused, not partly restored", () => {
+test("A09: a copy holding an unreadable profile is refused, not partly restored", async () => {
   const now = tenProfiles("now");
   const was = tenProfiles("was");
   was.entries[was.roster[2].store] = "null";

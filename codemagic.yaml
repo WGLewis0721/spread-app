@@ -303,3 +303,143 @@ workflows:
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
+
+  # Life PR #146: manual-only signed verification. No publishing block on purpose.
+  spread-life-verify:
+    name: Spread Life - verify and archive (NO upload)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.graymatter.spread
+      vars:
+        APP_STORE_APPLE_ID: "6821191009"
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 27.1
+    scripts:
+      - name: Fail closed outside the reviewed Life branch and report tooling
+        script: |
+          set -eu
+          test "$CM_BRANCH" = "docs/life-ios-handoff-2026-11-06" || exit 1
+          test "${CM_PULL_REQUEST:-false}" = false || { echo "Manual only" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Source moved" >&2; exit 1; }
+          mkdir -p artifacts/life
+          printf '%s\n' "$CM_COMMIT" > artifacts/life/source-sha.txt
+          xcodebuild -version | tee artifacts/life/xcode-version.txt
+          xcrun simctl list devices available | tee artifacts/life/simulator-inventory.txt
+      - name: Verify planner, docs, offline preflight, native Swift
+        script: |
+          set -eu
+          python3 -m unittest discover -s scripts -p 'test*.py' -v
+          python3 scripts/app-store-preflight.py
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:spread
+          npm run test:scripts
+          npm run docs:check
+          swift test --package-path ios/SpreadNativeV2
+          swift test --package-path ios/App/SpreadCloudCore
+          npm run ios:sync
+          python3 scripts/app-store-preflight.py --bundle dist-ios
+      - name: Native Life and Classic simulator screenshot journeys
+        script: |
+          set -eu
+          for WIDTH in 375 390 430; do
+          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/life/native-env-$WIDTH"
+          node scripts/native-simulator.mjs "$WIDTH"
+          . "$GITHUB_ENV"
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
+            -parallel-testing-enabled NO \
+            -only-testing:SpreadNativeUITests/LifeUITests \
+            -resultBundlePath artifacts/life/Life-$WIDTH.xcresult CODE_SIGNING_ALLOWED=NO
+          xcrun xcresulttool export attachments --path artifacts/life/Life.xcresult \
+            --output-path "artifacts/life/screenshots-$WIDTH"
+          xcrun simctl shutdown "$NATIVE_UDID"
+          xcrun simctl delete "$NATIVE_UDID"
+          done
+      - name: Choose unused build, sign and archive; NO publishing
+        script: |
+          set -eu
+          LATEST="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+          python3 scripts/ios_build_number.py set \
+            --latest-apple "$LATEST" --codemagic-build "$BUILD_NUMBER" \
+            --project ios/App/App.xcodeproj/project.pbxproj \
+            --record artifacts/life/build-version.json
+          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
+          xcode-project use-profiles --custom-export-options='{"testFlightInternalTestingOnly": true}'
+          xcode-project build-ipa --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" --scheme App
+          set -- build/ios/ipa/*.ipa
+          test "$#" -eq 1 && test -f "$1" || { echo "Expected exactly one signed Life IPA" >&2; exit 1; }
+          for ipa in "$@"; do
+            python3 scripts/app-store-preflight.py --ipa "$ipa"
+            shasum -a 256 "$ipa" | tee -a artifacts/life/ipa-sha256.txt
+            python3 scripts/life_artifact.py create --ipa "$ipa" --source "$CM_COMMIT" --record artifacts/life/build-version.json --manifest artifacts/life/reviewed-artifact.json
+            shasum -a 256 artifacts/life/reviewed-artifact.json | tee artifacts/life/manifest-sha256.txt
+          done
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || exit 1
+    artifacts:
+      - artifacts/life/**
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+  # Manual-only transfer of the exact owner-reviewed verification artifact; never rebuild here.
+  spread-life-internal-upload:
+    name: Spread Life - approved exact IPA internal upload ONLY
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      vars:
+        APP_STORE_APPLE_ID: "6821191009"
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 27.1
+    scripts:
+      - name: Require explicit approval of source and signed artifact
+        script: |
+          set -eu
+          test "$CM_BRANCH" = "docs/life-ios-handoff-2026-11-06" || exit 1
+          test "${CM_PULL_REQUEST:-false}" = false || exit 1
+          test -n "${SPREAD_LIFE_APPROVED_SHA:-}" && test "$SPREAD_LIFE_APPROVED_SHA" = "$CM_COMMIT" || exit 1
+          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || exit 1
+          test -n "${SPREAD_LIFE_APPROVED_IPA_SHA256:-}" || exit 1
+          test -n "${SPREAD_LIFE_APPROVED_MANIFEST_SHA256:-}" || exit 1
+          test -n "${SPREAD_LIFE_IPA_URL:-}" && test -n "${SPREAD_LIFE_MANIFEST_URL:-}" || exit 1
+          mkdir -p artifacts/life build/ios/ipa
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$SPREAD_LIFE_IPA_URL" -o build/ios/ipa/Spread.ipa
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$SPREAD_LIFE_MANIFEST_URL" -o artifacts/life/reviewed-artifact.json
+          python3 scripts/life_artifact.py verify --ipa build/ios/ipa/Spread.ipa --manifest artifacts/life/reviewed-artifact.json --source "$CM_COMMIT" --ipa-sha256 "$SPREAD_LIFE_APPROVED_IPA_SHA256" --manifest-sha256 "$SPREAD_LIFE_APPROVED_MANIFEST_SHA256" --record artifacts/life/build-version.json
+      - name: Recheck exact reviewed bytes and Apple build immediately before upload
+        script: |
+          set -eu
+          python3 scripts/life_artifact.py verify --ipa build/ios/ipa/Spread.ipa --manifest artifacts/life/reviewed-artifact.json --source "$CM_COMMIT" --ipa-sha256 "$SPREAD_LIFE_APPROVED_IPA_SHA256" --manifest-sha256 "$SPREAD_LIFE_APPROVED_MANIFEST_SHA256" --record artifacts/life/build-version.json
+          python3 scripts/app-store-preflight.py --ipa build/ios/ipa/Spread.ipa
+          LATEST="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+          python3 scripts/ios_build_number.py verify --ipa build/ios/ipa/Spread.ipa --record artifacts/life/build-version.json --latest-apple "$LATEST"
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" && test "$SPREAD_LIFE_APPROVED_SHA" = "$CM_COMMIT" || exit 1
+    artifacts:
+      - artifacts/life/**
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false

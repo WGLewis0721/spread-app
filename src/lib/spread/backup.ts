@@ -1,3 +1,4 @@
+import { exportNativeFiles, verifyNativeFiles, type NativeFileEntry } from "./native-life-files.ts";
 import { defaultData, formatWeek, LICENSE_KEY, normalizeData, type SpreadData } from "./model.ts";
 import { classifyStored } from "./pristine.ts";
 import { collectEntries, isPlannerKey, type KeyStore } from "./native-mirror.ts";
@@ -76,6 +77,7 @@ function isPayload(value: unknown): value is SpreadData {
 export const FULL_BACKUP_VERSION = 2;
 
 export type FullBackupPayload = {
+  nativeFiles?: NativeFileEntry[];
   schemaVersion: number;
   createdAt: string;
   deviceId: string | null;
@@ -155,7 +157,9 @@ export function collectFullPayload(storage: KeyStore, now: Date, deviceId: strin
 }
 
 export async function fullBackupText(payload: FullBackupPayload): Promise<string> {
-  const payloadText = JSON.stringify(payload);
+  const entries = payload.nativeFiles ?? await exportNativeFiles(payload.stores);
+  if (!await verifyNativeFiles(payload.stores, entries)) throw new Error("File backup is incomplete or damaged.");
+  const payloadText = JSON.stringify({ ...payload, ...(entries.length ? { nativeFiles: entries } : {}) });
   return JSON.stringify({
     kind: "spread-backup",
     version: FULL_BACKUP_VERSION,
@@ -200,6 +204,7 @@ export async function parseFullBackup(text: string): Promise<FullBackup | null> 
   const roster = parseProfiles(JSON.stringify(item.roster));
   if (roster.length === 0) return null;
   const payload: FullBackupPayload = {
+    ...(Array.isArray(item.nativeFiles) ? { nativeFiles: item.nativeFiles as NativeFileEntry[] } : {}),
     schemaVersion: item.schemaVersion,
     createdAt: item.createdAt,
     deviceId: typeof item.deviceId === "string" ? item.deviceId : null,
@@ -209,6 +214,7 @@ export async function parseFullBackup(text: string): Promise<FullBackup | null> 
     settings: item.settings,
     ...(isRecordOfStrings(item.recovery) && Object.keys(item.recovery).length > 0 ? { recovery: item.recovery } : {}),
   };
+  if (!await verifyNativeFiles(payload.stores, payload.nativeFiles ?? [])) return null;
   return { payload, summary: summarizeFull(payload) };
 }
 
@@ -245,6 +251,7 @@ export type RestorePlan =
       skipped: string[];
       /** An empty profile that took the place of the first restored one, if any. */
       replacedId: string | null;
+      profileMap: Record<string, string>;
     }
   | { ok: false; reason: "no-room"; needed: number; free: number };
 
@@ -302,6 +309,7 @@ export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[]
   let profiles: Profile[] = [...existing];
   const writes: { key: string; value: string }[] = [];
   let replacedId: string | null = null;
+  const profileMap: Record<string, string> = {};
   chosen.forEach((source, index) => {
     const text = payload.stores[source.id];
     const data = JSON.stringify(normalizeData(JSON.parse(text)));
@@ -309,6 +317,7 @@ export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[]
       const plainName = cleanName(source.name) || "Me";
       const name = taken.has(plainName.toLowerCase()) ? restoredName(source.name, taken) : plainName;
       taken.add(name.toLowerCase());
+      profileMap[source.id] = replaceTarget.id;
       writes.push({ key: replaceTarget.store, value: data });
       profiles = profiles.map((profile) => (profile.id === replaceTarget.id ? { id: profile.id, name, store: profile.store, theme: source.theme, accent: source.accent } : profile));
       replacedId = replaceTarget.id;
@@ -317,9 +326,10 @@ export function planRestoreAsNew(payload: FullBackupPayload, existing: Profile[]
     let id = newId();
     while (!id || used.has(id)) id = newId();
     used.add(id);
+    profileMap[source.id] = id;
     const store = profileStore(id);
     writes.push({ key: store, value: data });
     profiles.push({ id, name: restoredName(source.name, taken), store, theme: source.theme, accent: source.accent });
   });
-  return { ok: true, profiles, writes, skipped, replacedId };
+  return { ok: true, profiles, writes, skipped, replacedId, profileMap };
 }

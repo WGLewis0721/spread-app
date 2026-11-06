@@ -1,0 +1,2 @@
+import { defineConfig } from '@playwright/test';
+export default defineConfig({testDir:'./tests/browser',outputDir:'test-results/desktop-artifacts',workers:1,use:{timezoneId:'America/Chicago',locale:'en-US',baseURL:process.env.PROTOTYPE_URL||'http://127.0.0.1:4173',channel:'chrome',viewport:{width:1440,height:1100},trace:'retain-on-failure'},reporter:[['list'],['json',{outputFile:'test-results/browser-results.json'}]]});

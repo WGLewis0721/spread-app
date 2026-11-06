@@ -1,0 +1,8 @@
+const DATABASE='spread-prototype-media-v1',STORE='attachments';
+export const MAX_FILE_BYTES=25*1024*1024,MAX_TASK_BYTES=100*1024*1024;
+let connection;
+function database(){if(!connection)connection=new Promise((resolve,reject)=>{const request=indexedDB.open(DATABASE,1);request.onupgradeneeded=()=>request.result.createObjectStore(STORE,{keyPath:'id'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(new Error('This browser could not open local attachment storage.'));});return connection;}
+async function transaction(mode,operation){const db=await database();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,mode),request=operation(tx.objectStore(STORE));let value;request.onsuccess=()=>{value=request.result;};tx.oncomplete=()=>resolve(value);tx.onerror=()=>reject(new Error('Local attachment storage is unavailable or full.'));tx.onabort=()=>reject(new Error('The attachment could not be saved locally.'));});}
+export async function storeFile(file){if(file.size>MAX_FILE_BYTES)throw new Error(`${file.name} is larger than the 25 MB file limit.`);const metadata={id:crypto.randomUUID(),name:file.name,type:file.type||'application/octet-stream',size:file.size};/* Raw bytes also work in WebKit environments that cannot persist Blob objects. */const bytes=await file.arrayBuffer();await transaction('readwrite',store=>store.put({...metadata,bytes}));return metadata;}
+export async function readFile(id){const record=await transaction('readonly',store=>store.get(id));return record?{...record,blob:record.blob||(record.bytes?new Blob([record.bytes],{type:record.type}):null)}:null;}
+export async function removeFile(id){return transaction('readwrite',store=>store.delete(id));}
