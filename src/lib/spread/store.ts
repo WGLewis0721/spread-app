@@ -693,7 +693,7 @@ export const useSpread = create<Store>((set, get) => ({
     if (week.life && week.life.version !== 1) return false;
     if ((goalHours === undefined) !== (day === undefined)) return false;
     if (goalHours !== undefined && (!Number.isFinite(goalHours) || goalHours < 0 || goalHours > 168 || !Number.isInteger(goalHours * 2))) return false;
-    if (day !== undefined && (day < data.currentWeek || day >= shiftWeek(data.currentWeek, 1) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(day))) return false;
+    if (day !== undefined && (day < data.currentWeek || day >= shiftWeek(data.currentWeek, 1) || !/^\d{4}-\d{2}-\d{2}$/.test(day))) return false;
     commit(set, writeWeek(data, { ...week,
       life: { ...week.life, version: 1, priorityRoleId: hatId ?? undefined,
         priorityGoalHours: hatId === null ? undefined : goalHours, priorityDay: hatId === null ? undefined : day } }));
