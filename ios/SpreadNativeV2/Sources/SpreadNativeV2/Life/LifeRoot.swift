@@ -243,7 +243,13 @@ struct LifeRoot: View {
                 guard let id = planner.redoId else { return }
                 Task { if await planner.send(["type": "redo", "editId": id]) { LifeFeedback.accepted() } }
             }.disabled(planner.redoId == nil || planner.busy).accessibilityIdentifier("life-redo")
-        }.frame(minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .tint(LifePalette.accent)
+        .padding(.horizontal, 10).padding(.vertical, 4)
+        .background(LifePalette.surface, in: Capsule())
+        .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 0.5))
+        .shadow(color: Spread.shadow, radius: 8, y: 4)
     }
     private func bottom(_ snapshot: PlannerSnapshot) -> some View {
         VStack(spacing: 4) {
@@ -279,7 +285,7 @@ struct LifeRoot: View {
         }.fixedSize(horizontal: true, vertical: false)
     }
     private var trayButton: some View {
-        Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { navigationOpen = true } } label: {
+        Button { withAnimation(reduceMotion ? nil : SpreadMotion.curve) { navigationOpen = true } } label: {
             VStack(spacing: 2) {
                 SpreadIcon(name: destination.icon, size: 22)
                 Text(destination.rawValue).font(.caption)
@@ -338,7 +344,7 @@ struct LifeRoot: View {
             HStack {
                 if !crownRight { Spacer(minLength: 0) }
                 Button {
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { navigationOpen = false }
+                    withAnimation(reduceMotion ? nil : SpreadMotion.curve) { navigationOpen = false }
                 } label: {
                     Image(systemName: "xmark").frame(width: 44, height: 44)
                 }
