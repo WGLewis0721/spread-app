@@ -24,24 +24,22 @@ struct LifeWeekView: View {
     private var date: String { selectedDate.isEmpty ? snapshot.weekKey : selectedDate }
     private var calendar: Calendar { PlannerDates.calendar }
     private var roles: [Responsibility] { LifeCalendarRules.dailyRoles(snapshot, day: date) }
-    private var allocations: [DayAllocation] {
-        snapshot.allocations.filter { $0.day == date && $0.roleId == selectedRole && $0.hours > 0 }.sorted { $0.order < $1.order }
-    }
     private var marksKey: String { "\(profile)|\(date.prefix(7))|\(planner.state?.sessionId ?? "")|\(planner.state?.revision ?? 0)" }
     private var selectionKey: String { "native.life.selectedDate.\(profile)" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             calendarSurface
-            HStack {
-                arrow("Previous day", system: "chevron.left") { choose(LifeCalendarRules.shiftDay(date, by: -1)) }
-                VStack(spacing: 3) {
-                    Text(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))
-                        .font(.title2.weight(.semibold))
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(PlannerDates.label(PlannerDates.date(date), pattern: "MMMM d"))
                         .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                }.frame(maxWidth: .infinity).accessibilityElement(children: .combine)
-                    .accessibilityAddTraits(.isHeader).accessibilityFocused($dateHeadingFocused)
+                    Text(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))
+                        .font(.title2.weight(.semibold))
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+                    .accessibilityFocused($dateHeadingFocused)
+                arrow("Previous day", system: "chevron.left") { choose(LifeCalendarRules.shiftDay(date, by: -1)) }
                 arrow("Next day", system: "chevron.right") { choose(LifeCalendarRules.shiftDay(date, by: 1)) }
             }
             if roles.isEmpty {
@@ -64,9 +62,6 @@ struct LifeWeekView: View {
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),
                             onOpenTask: onOpenTask)
                         LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
-                        ForEach(allocations) { allocation in
-                            allocationControls(allocation, role: role)
-                        }
                     }.padding(18).background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 22))
                 }
             }
@@ -143,7 +138,7 @@ struct LifeWeekView: View {
                             dayCell(iso)
                         }
                     }
-                    .frame(height: shown ? (expanded ? 56 : 67) : 0, alignment: .top)
+                    .frame(height: shown ? (typeSize.isAccessibilitySize ? 90 : (expanded ? 56 : 67)) : 0, alignment: .top)
                     .opacity(shown ? 1 : 0).clipped().allowsHitTesting(shown).accessibilityHidden(!shown)
                 }
             }
@@ -176,7 +171,7 @@ struct LifeWeekView: View {
             }.frame(maxWidth: .infinity, minHeight: 48)
                 .opacity(iso.prefix(7) == date.prefix(7) ? 1 : 0.4)
                 .contentShape(Rectangle())
-        }.buttonStyle(.plain)
+        }.buttonStyle(.plain).disabled(planner.busy)
             .accessibilityLabel("\(today ? "Today, " : "")\(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d yyyy"))")
             .accessibilityValue("\(mark.count) Life areas planned")
             .accessibilityAddTraits(selected ? .isSelected : [])
@@ -184,36 +179,24 @@ struct LifeWeekView: View {
     }
 
     private var unplaced: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if !snapshot.unplacedTasks.isEmpty {
+        let tasks = snapshot.tasks.filter { $0.allocationId == nil }
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
                 Text("To place").font(.title3.weight(.semibold))
-                LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.unplacedTasks, onOpenTask: onOpenTask)
-                ForEach(snapshot.unplacedTasks) { task in
-                    HStack {
-                        Text(task.text).font(.subheadline).lineLimit(2)
-                        Spacer()
-                        Menu("Place") {
-                            let eligible = snapshot.eligibleAllocations(for: task)
-                            if eligible.isEmpty {
-                                Button("Reserve time for this area first") { onReserve(task.roleId) }
-                            } else {
-                                ForEach(eligible) { allocation in
-                                    Button(PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE MMM d")) {
-                                        Task { await planner.send(["type": "assignTask", "roleId": task.roleId,
-                                            "taskId": task.id, "allocationId": allocation.id], completionHaptic: true) }
-                                    }
-                                }
-                            }
-                        }.frame(minHeight: 44).disabled(planner.busy)
-                            .accessibilityLabel("Place \(task.text) on an eligible day")
-                    }
-                }
+                Spacer()
+                Text("\(tasks.count) tasks").font(.subheadline).foregroundStyle(LifePalette.secondary)
+            }
+            if tasks.isEmpty {
+                Text("Everything has a place.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+            } else {
+                LifeTaskRows(planner: planner, snapshot: snapshot, tasks: tasks, onOpenTask: onOpenTask)
             }
         }
     }
 
     private var room: some View {
         let available = snapshot.roles.filter { snapshot.remainingHours(for: $0.id) >= 0.5 }
+            .sorted { ($0.id == snapshot.life?.priorityRoleId ? 0 : 1) < ($1.id == snapshot.life?.priorityRoleId ? 0 : 1) }
         return VStack(alignment: .leading, spacing: 10) {
             if !available.isEmpty {
                 Text("Make a little room").font(.title3.weight(.semibold))
@@ -239,27 +222,6 @@ struct LifeWeekView: View {
         }
     }
 
-    private func allocationControls(_ allocation: DayAllocation, role: Responsibility) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("\(SpreadHours.text(allocation.hours)) h reserved").font(.subheadline)
-                Spacer()
-                Button {
-                    Task { if await planner.setAllocationHours(allocation, to: max(0, allocation.hours - 0.5)) { SpreadHaptics.completed() } }
-                } label: { Image(systemName: "minus").frame(minWidth: 44, minHeight: 44) }
-                    .accessibilityLabel("Return half an hour from \(role.name)")
-                Button {
-                    Task { if await planner.setAllocationHours(allocation, to: allocation.hours + 0.5) { SpreadHaptics.completed() } }
-                } label: { Image(systemName: "plus").frame(minWidth: 44, minHeight: 44) }
-                    .accessibilityLabel("Reserve another half hour for \(role.name)")
-                    .disabled(snapshot.remainingHours(for: role.id) < 0.5)
-            }
-            Button("Return this day's hours") {
-                Task { await planner.send(["type": "removeAllocation", "allocationId": allocation.id], completionHaptic: true) }
-            }.frame(minHeight: 44)
-        }.disabled(planner.busy)
-    }
-
     private func arrow(_ label: String, system: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: system).frame(minWidth: 44, minHeight: 44) }
             .accessibilityLabel(label).disabled(planner.busy)
@@ -277,9 +239,11 @@ struct LifeWeekView: View {
     private func accept(_ iso: String) {
         if selectedDate != iso { selectedRole = nil }
         selectedDate = iso
+        dateHeadingFocused = true
         UserDefaults.standard.set(iso, forKey: selectionKey)
     }
     private func choose(_ iso: String) {
+        guard !planner.busy else { return }
         let targetWeek = PlannerDates.weekKey(for: PlannerDates.date(iso))
         if targetWeek == snapshot.weekKey { accept(iso); return }
         let token = UUID(), originProfile = profile
