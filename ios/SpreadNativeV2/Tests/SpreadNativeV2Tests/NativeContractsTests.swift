@@ -31,6 +31,25 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertNil(UserDefaults(suiteName: suite)?.string(forKey: key))
     }
 
+    func testFocusedTaskDraftPersistsWithoutLeakingAcrossDaysOrWallet() {
+        let suite = "FocusedTaskDraftTests." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let monday = TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "work", day: "2026-11-02")
+        let tuesday = TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "work", day: "2026-11-03")
+        let wallet = TaskDraftMemory.key(profileId: "p", weekKey: "2026-11-02", roleId: "work")
+        defaults.set("Monday draft", forKey: monday)
+        defaults.set("Tuesday draft", forKey: tuesday)
+        let reopened = UserDefaults(suiteName: suite)!
+        XCTAssertEqual(reopened.string(forKey: monday), "Monday draft")
+        XCTAssertEqual(reopened.string(forKey: tuesday), "Tuesday draft")
+        XCTAssertNil(reopened.string(forKey: wallet))
+        XCTAssertNil(reopened.string(forKey: TaskDraftMemory.key(profileId: "other", weekKey: "2026-11-02", roleId: "work", day: "2026-11-02")))
+        defaults.removeObject(forKey: monday)
+        XCTAssertNil(reopened.string(forKey: monday))
+        XCTAssertEqual(reopened.string(forKey: tuesday), "Tuesday draft")
+    }
+
     func testStudioMotionNegativeDelayAndAlternateCycles() {
         XCTAssertEqual(ChalkTiming.phase(0, duration: 4, delay: -1), 0.25)
         XCTAssertEqual(ChalkTiming.phase(4, duration: 4, alternate: true), 1)
@@ -382,6 +401,75 @@ extension NativeContractsTests {
             XCTAssertEqual(actual, vector.expected, "free-time vector \(index)")
         }
     }
+    func testAdaptiveCrownIsVerticalOnlyWhenTwoCompletePanesFit() {
+        let regular = SpreadAdaptivePlan.fit(
+            availableWidth: 820, regularSizeClass: true,
+            accessibilityText: false, crownOnLeft: false
+        )
+        XCTAssertEqual(regular.presentation, .regular)
+        XCTAssertGreaterThanOrEqual(regular.leadingWidth, SpreadAdaptivePlan.minLeadingWidth)
+        XCTAssertGreaterThanOrEqual(regular.trailingWidth, SpreadAdaptivePlan.minTrailingWidth)
+        XCTAssertEqual(
+            regular.leadingWidth + regular.trailingWidth + regular.separation
+            + 2 * SpreadAdaptivePlan.outerPadding
+            + SpreadAdaptivePlan.crownWidth + SpreadAdaptivePlan.crownSpacing,
+            820, accuracy: 0.001
+        )
+
+        for width in [320.0, 390, 560, 680] {
+            let compact = SpreadAdaptivePlan.fit(
+                availableWidth: width, regularSizeClass: true,
+                accessibilityText: false, crownOnLeft: false
+            )
+            XCTAssertEqual(compact.presentation, .compact, "A narrow scene remains focused")
+        }
+        XCTAssertEqual(SpreadAdaptivePlan.fit(
+            availableWidth: 1100, regularSizeClass: false,
+            accessibilityText: false, crownOnLeft: false
+        ).presentation, .compact, "Compact size class wins over device width")
+        XCTAssertEqual(SpreadAdaptivePlan.fit(
+            availableWidth: 1100, regularSizeClass: true,
+            accessibilityText: true, crownOnLeft: false
+        ).presentation, .compact, "Accessibility text must never squeeze panes")
+    }
+
+    func testBookFoldRespectsDivisionAndUserChosenCrownSide() {
+        for leftHanded in [false, true] {
+            let fold = SpreadAdaptivePlan.fit(
+                availableWidth: 820,
+                regularSizeClass: true,
+                accessibilityText: false,
+                crownOnLeft: leftHanded,
+                verticalDivision: 400...420
+            )
+            XCTAssertEqual(fold.presentation, .regular)
+            XCTAssertGreaterThanOrEqual(fold.leadingWidth, SpreadAdaptivePlan.minLeadingWidth)
+            XCTAssertGreaterThanOrEqual(fold.trailingWidth, SpreadAdaptivePlan.minTrailingWidth)
+            XCTAssertEqual(fold.separation, 44, accuracy: 0.001)
+            XCTAssertEqual(
+                fold.leadingWidth + fold.trailingWidth + fold.separation
+                + 2 * SpreadAdaptivePlan.outerPadding
+                + SpreadAdaptivePlan.crownWidth + SpreadAdaptivePlan.crownSpacing,
+                820, accuracy: 0.001
+            )
+        }
+        XCTAssertEqual(SpreadAdaptivePlan.fit(
+            availableWidth: 700, regularSizeClass: true,
+            accessibilityText: false, crownOnLeft: false,
+            verticalDivision: 340...360
+        ).presentation, .compact, "Don't squeeze content across a narrow active fold")
+    }
+
+    func testVerticalCrownDetentsAndReverseDirection() {
+        var travel = CrownTravel()
+        // A finger moving up is next week; down is previous week.
+        XCTAssertEqual(travel.update(translation: -63), 0)
+        XCTAssertEqual(travel.update(translation: -64), -1)
+        XCTAssertEqual(travel.update(translation: 64), 2)
+        travel.release()
+        XCTAssertEqual(travel.update(translation: 64), 1)
+    }
+
     func testDayColumnsFollowAvailableSpaceAtEverySizeAndAccessibilityText() {
         for width in [320.0, 358, 640, 700, 743] {
             XCTAssertEqual(PlannerLayout.dayColumns(availableWidth: width, accessibilityText: false), 1)

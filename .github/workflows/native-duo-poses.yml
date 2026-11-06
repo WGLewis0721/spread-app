@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - "ios/**"
+      - "scripts/native-duo-poses*"
+      - "scripts/verify-native-accessibility*"
       - ".github/workflows/native-duo-poses.yml"
   workflow_dispatch:
 permissions:
@@ -16,7 +18,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - run: sudo xcode-select -s /Applications/Xcode_27.1.app
+      - name: Select and verify Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.1.app
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -27,6 +33,12 @@ jobs:
         run: |
           node scripts/native-simulator.mjs duo
           mkdir -p artifacts
+      - name: Verify Duo simulator boot independently
+        run: |
+          set -euo pipefail
+          xcrun simctl bootstatus "$NATIVE_UDID" -b
+          xcrun simctl list devices booted | tee artifacts/booted-devices.txt
+          grep -F "$NATIVE_UDID" artifacts/booted-devices.txt
       - name: Probe the real SDK for hinge and reserved-region APIs (diagnostic, never gating)
         run: |
           # Native code does not yet use reserved regions. Record what the installed iOS 27.1 SDK really
@@ -49,20 +61,74 @@ jobs:
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
             -derivedDataPath "$RUNNER_TEMP/spread-duo-derived" CODE_SIGNING_ALLOWED=NO
           xcrun simctl install "$NATIVE_UDID" "$RUNNER_TEMP/spread-duo-derived/Build/Products/Debug-iphonesimulator/App.app"
+      - name: Verify Spread installation independently
+        run: |
+          set -euo pipefail
+          xcrun simctl get_app_container "$NATIVE_UDID" com.graymatter.spread app | tee artifacts/installed-app-container.txt
+          test -n "$(cat artifacts/installed-app-container.txt)"
+      - name: Verify Spread launches independently of automation
+        run: |
+          set -euo pipefail
+          xcrun simctl launch --terminate-running-process "$NATIVE_UDID" com.graymatter.spread -spread.native.appearance dark | tee artifacts/simctl-launch.txt
       - name: Install pinned simulator test tooling
         run: |
           # CI tooling only. npm provenance resolves to Callstack commit ebbaff9a6be75babdb4adcb9074d7522a2773330.
           # No install hooks or application dependency changes.
           npm install --prefix "$RUNNER_TEMP/spread-duo-tools" --ignore-scripts --no-save agent-device@0.21.36
+      - name: Prepare and health-check Apple automation runner
+        run: |
+          set -euo pipefail
+          AD="$RUNNER_TEMP/spread-duo-tools/node_modules/.bin/agent-device"
+          "$AD" --version | tee artifacts/agent-device-version.txt
+          "$AD" prepare ios-runner --help > artifacts/agent-device-prepare-help.txt
+          # Do not scope the simulator device set: foldable rotations reject that scope.
+          "$AD" prepare ios-runner --platform ios --udid "$NATIVE_UDID" --session spread-duo-poses --timeout 420000 --json \
+            > artifacts/agent-device-prepare.json 2> artifacts/agent-device-prepare.stderr
+          node -e 'const p=require("./artifacts/agent-device-prepare.json"); if(p.success !== true) throw Error("Apple runner preparation did not report success")'
+      - name: Verify accessibility transport before querying any controls
+        run: |
+          set -euo pipefail
+          AD="$RUNNER_TEMP/spread-duo-tools/node_modules/.bin/agent-device"
+          "$AD" open com.graymatter.spread --platform ios --udid "$NATIVE_UDID" --session spread-duo-poses --json \
+            > artifacts/agent-device-open.json 2> artifacts/agent-device-open.stderr
+          # Capture full structured tree first: no button search is legitimate until it is readable.
+          "$AD" snapshot --platform ios --udid "$NATIVE_UDID" --session spread-duo-poses --json \
+            > artifacts/preflight-accessibility.json 2> artifacts/preflight-accessibility.stderr
+          node scripts/verify-native-accessibility.mjs artifacts/preflight-accessibility.json artifacts/automation-preflight.json
       - name: Verify real hinge poses, rotations and surfaces
         run: |
           mkdir -p artifacts
+          # The prior steps proved launch and runner health independently. Keep this launch
+          # on the simulator, separate from the agent-device startup selector.
           xcrun simctl launch --terminate-running-process "$NATIVE_UDID" com.graymatter.spread -spread.native.appearance dark
           # scripts/native-duo-poses.mjs attempts every pose and rotation, saves a screenshot, accessibility
           # tree and hinge readback for each, writes artifacts/pose-matrix.{json,md}, and exits non-zero unless
           # every gating cell passed. BLOCKED and FAIL are never a pass. It must NOT pass
           # a scoped simulator set: agent-device then refuses every rotation of a foldable simulator.
           node scripts/native-duo-poses.mjs --ad "$RUNNER_TEMP/spread-duo-tools/node_modules/.bin/agent-device" --udid "$NATIVE_UDID" --out artifacts
+      - name: Preserve automation and simulator diagnostics
+        if: always()
+        run: |
+          mkdir -p artifacts/agent-device-logs
+          # A failed runner preparation or snapshot command is a blocked automation
+          # precondition. It is not evidence of a Spread UI or navigation failure.
+          if [ ! -s artifacts/automation-preflight.json ] && { [ -f artifacts/agent-device-prepare.json ] || [ -f artifacts/preflight-accessibility.json ]; }; then
+            printf '%s\n' '{"status":"BLOCKED","reason":"Apple runner or accessibility snapshot failed before selectors; inspect prepare/snapshot stderr and runner logs"}' > artifacts/automation-preflight.json
+          fi
+          SESSION="$HOME/.agent-device/sessions/spread-duo-poses"
+          for file in runner.log events.ndjson session.json; do
+            if [ -f "$SESSION/$file" ]; then cp "$SESSION/$file" "artifacts/agent-device-logs/$file"; fi
+          done
+          if [ -d "$SESSION/requests" ]; then cp -R "$SESSION/requests" artifacts/agent-device-logs/requests; fi
+          if [ -f "$HOME/.agent-device/daemon.log" ]; then cp "$HOME/.agent-device/daemon.log" artifacts/agent-device-logs/daemon.log; fi
+          if [ -n "${NATIVE_UDID:-}" ]; then
+            xcrun simctl spawn "$NATIVE_UDID" log show --last 35m --style compact \
+              --predicate 'process == "App" OR process CONTAINS "AgentDevice" OR subsystem CONTAINS "com.graymatter.spread"' \
+              > artifacts/simulator.log 2>&1 || true
+            xcrun simctl io "$NATIVE_UDID" screenshot --display=primary artifacts/final-primary.png 2> artifacts/final-primary-error.txt || true
+            xcrun simctl io "$NATIVE_UDID" screenshot --display=primary-1 artifacts/final-primary-1.png 2> artifacts/final-primary-1-error.txt || true
+          fi
+          find artifacts/agent-device-logs -maxdepth 3 -type f -print | sort > artifacts/diagnostic-inventory.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

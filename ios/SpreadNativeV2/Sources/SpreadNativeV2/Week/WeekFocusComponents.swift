@@ -59,8 +59,10 @@ struct FocusedTaskRow: View {
         .dropDestination(for: SpreadDragPayload.self) { items, _ in
             guard let item = items.first, item.kind == .task, item.roleId == roleId, item.itemId != task.id else { return false }
             Task {
-                _ = await planner.send(["type": "reorderDayTask", "roleId": roleId,
-                                        "day": day, "taskId": item.itemId, "beforeId": task.id])
+                if await planner.send(["type": "reorderDayTask", "roleId": roleId,
+                                       "day": day, "taskId": item.itemId, "beforeId": task.id]) {
+                    SpreadHaptics.selection()
+                }
             }
             return true
         } isTargeted: { _ in }
@@ -109,13 +111,32 @@ struct FocusedQuickAdd: View {
     let roleId: String
     let day: String
     let onOpenEditor: (String, String) -> Void
+    let onAdjustHours: (String) -> Void
+    let draftKey: String
 
     @State private var expanded = false
-    @State private var text = ""
+    @AppStorage private var text: String
     @State private var pendingTaskId: String?
     @State private var wantsHours = false
     @State private var saving = false
     @FocusState private var focused: Bool
+
+    init(planner: LivePlanner, roleId: String, day: String, draftKey: String,
+         onOpenEditor: @escaping (String, String) -> Void, onAdjustHours: @escaping (String) -> Void) {
+        self.planner = planner
+        self.roleId = roleId
+        self.day = day
+        self.draftKey = draftKey
+        self.onOpenEditor = onOpenEditor
+        self.onAdjustHours = onAdjustHours
+        _text = AppStorage(wrappedValue: "", draftKey)
+    }
+
+    private var matchesContext: Bool {
+        guard let snapshot = planner.snapshot else { return false }
+        return draftKey == TaskDraftMemory.key(profileId: planner.state?.envelope.profileId,
+                                               weekKey: snapshot.weekKey, roleId: roleId, day: day)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -134,6 +155,7 @@ struct FocusedQuickAdd: View {
             } else {
                 TextField("Task name", text: $text)
                     .focused($focused)
+                    .disabled(saving)
                     .font(.system(.subheadline))
                     .submitLabel(.done)
                     .onSubmit { Task { await save(openDetails: false) } }
@@ -149,13 +171,16 @@ struct FocusedQuickAdd: View {
                         .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || saving)
                         .frame(minHeight: 44)
                     Button("Cancel") { expanded = false; text = "" }
+                        .disabled(saving)
                         .frame(minHeight: 44)
                 }
                 .font(.system(.footnote, weight: .semibold))
             }
         }
+        .onAppear { expanded = !text.isEmpty }
         .confirmationDialog("Schedule this task?", isPresented: $wantsHours, titleVisibility: .visible) {
             Button("Add 30 minutes to this day") { Task { await allocateAndSchedule() } }
+            Button("Adjust weekly hours") { onAdjustHours(roleId); pendingTaskId = nil }
             Button("Keep in To Place", role: .cancel) { pendingTaskId = nil }
         } message: {
             Text("No time has been allocated to this responsibility on the selected day. The task has been saved to To Place.")
@@ -164,15 +189,21 @@ struct FocusedQuickAdd: View {
 
     private func save(openDetails: Bool) async {
         let title = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty, !saving else { return }
+        guard !title.isEmpty, !saving, matchesContext else { return }
         saving = true
         let previous = Set(planner.snapshot?.tasks.map(\.id) ?? [])
         let ok = await planner.send(["type": "addTask", "roleId": roleId, "text": title])
-        guard ok, let added = planner.snapshot?.tasks.first(where: { $0.roleId == roleId && !previous.contains($0.id) }) else {
+        guard ok else { saving = false; return }
+        // Clear only the submitted scope after acknowledgement, even if its view was removed.
+        // A newer draft from another view or profile must not be erased.
+        if UserDefaults.standard.string(forKey: draftKey)?.trimmingCharacters(in: .whitespacesAndNewlines) == title {
+            UserDefaults.standard.removeObject(forKey: draftKey)
+        }
+        guard matchesContext,
+              let added = planner.snapshot?.tasks.first(where: { $0.roleId == roleId && !previous.contains($0.id) }) else {
             saving = false
             return
         }
-        text = ""
         expanded = false
         saving = false
         if openDetails { onOpenEditor(roleId, added.id) }
@@ -187,8 +218,8 @@ struct FocusedQuickAdd: View {
     }
 
     private func allocateAndSchedule() async {
-        guard let pendingTaskId else { return }
-        if await planner.placeHours(roleId: roleId, day: day, hours: 0.5),
+        guard let pendingTaskId, matchesContext else { return }
+        if await planner.placeHours(roleId: roleId, day: day, hours: 0.5), matchesContext,
            let allocation = planner.snapshot?.allocations.first(where: { $0.day == day && $0.roleId == roleId && $0.hours > 0 }) {
             _ = await planner.send(["type": "assignTask", "roleId": roleId,
                                     "taskId": pendingTaskId, "allocationId": allocation.id])
@@ -208,6 +239,7 @@ struct FocusedRoleCard: View {
     let expanded: Bool
     let onToggle: () -> Void
     let onOpenTask: (String, String) -> Void
+    let onAdjustHours: (String) -> Void
 
     @State private var showCompleted = false
     @State private var showHours = false
@@ -246,10 +278,11 @@ struct FocusedRoleCard: View {
     private func reorder(_ taskId: String, before beforeId: String?) {
         let target: Any = beforeId.map { $0 as Any } ?? NSNull()
         Task {
-            _ = await planner.send(["type": "reorderDayTask", "roleId": role.id, "day": day,
-                                    "taskId": taskId, "beforeId": target])
+            if await planner.send(["type": "reorderDayTask", "roleId": role.id, "day": day,
+                                   "taskId": taskId, "beforeId": target]) {
+                SpreadHaptics.selection()
+            }
         }
-        SpreadHaptics.selection()
     }
 
     var body: some View {
@@ -289,6 +322,18 @@ struct FocusedRoleCard: View {
                 .accessibilityIdentifier("focus-hour-\(role.id)")
             }
             if showHours {
+                HStack(spacing: 6) {
+                    Text(snapshot.remainingHours(for: role.id) < 0.5
+                         ? "No unallocated time remaining this week."
+                         : "\(SpreadHours.text(snapshot.remainingHours(for: role.id)))h unallocated this week")
+                        .font(Spread.caption).foregroundStyle(Spread.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 2)
+                    Button("Adjust weekly hours") { onAdjustHours(role.id) }
+                        .font(Spread.caption)
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("focus-adjust-hours-\(role.id)")
+                }
                 if let first = allocations.first {
                     HourStepper(value: first.hours, label: "\(role.name) on \(day)", step: 0.5) { amount in
                         Task { await planner.setAllocationHours(first, to: amount) }
@@ -327,7 +372,11 @@ struct FocusedRoleCard: View {
                             }
                         }
                     }
-                    FocusedQuickAdd(planner: planner, roleId: role.id, day: day, onOpenEditor: onOpenTask)
+                    let draftKey = TaskDraftMemory.key(profileId: planner.state?.envelope.profileId,
+                                                       weekKey: snapshot.weekKey, roleId: role.id, day: day)
+                    FocusedQuickAdd(planner: planner, roleId: role.id, day: day,
+                                    draftKey: draftKey, onOpenEditor: onOpenTask, onAdjustHours: onAdjustHours)
+                        .id(draftKey)
                 }
                 .padding(.top, 3)
                 .padding(.bottom, 8)

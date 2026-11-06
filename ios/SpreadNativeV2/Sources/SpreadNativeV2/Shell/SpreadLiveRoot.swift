@@ -12,7 +12,9 @@ public struct SpreadLiveRoot: View {
     let recovery: () -> Void
 
     @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false
+    @AppStorage("native.duo.crownOnLeft") private var crownOnLeft = false
     @State private var focusSelectedDay: String?
+    @State private var weekSidebarHidden = false
     @State private var spreadSidebarExpanded = true
     @State private var destination: SpreadDestination = .spread
     @State private var monthPlane = false
@@ -31,11 +33,15 @@ public struct SpreadLiveRoot: View {
     @State private var loadedProfile: String?
     /// Counts week moves the store has acknowledged. The selection haptic listens to it, so it never fires at launch.
     @State private var weekTick = 0
+    /// UI-only, read from the current container. Keeps the shared bottom dock
+    /// from duplicating Week/Month controls in the expanded two-pane layout.
+    @State private var regularLayoutActive = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     public init(planner: LivePlanner, recovery: @escaping () -> Void) {
         self.planner = planner
@@ -181,6 +187,7 @@ public struct SpreadLiveRoot: View {
         focusSelectedDay = nil
         editing = false
         sheet = nil
+        weekSidebarHidden = false
         loadedProfile = profile
     }
 
@@ -198,11 +205,182 @@ public struct SpreadLiveRoot: View {
 
     // MARK: Main content
 
+    /// Compact remains the existing focused Spread/Week experience. Only when
+    /// two *complete* panes fit does the current scene show both together.
+    /// The panel widths respond to live geometry, not a Duo model or pose number.
     private func content(_ snapshot: PlannerSnapshot) -> some View {
+        GeometryReader { geometry in
+            let plan = SpreadAdaptivePlan.fit(
+                availableWidth: Double(geometry.size.width),
+                regularSizeClass: horizontalSizeClass == .regular,
+                accessibilityText: typeSize.isAccessibilitySize,
+                crownOnLeft: crownOnLeft,
+                verticalDivision: activeVerticalDivision(in: geometry)
+            )
+            VStack(spacing: 0) {
+                if plan.presentation == .regular {
+                    header(snapshot, isMonth: monthPlane, includesCrown: false)
+                    regularContent(snapshot, plan: plan)
+                } else {
+                    compactContent(snapshot)
+                }
+            }
+            .onAppear { regularLayoutActive = plan.presentation == .regular }
+            .onChange(of: plan.presentation) { _, updated in
+                regularLayoutActive = updated == .regular
+            }
+        }
+    }
+
+    /// Under Xcode 27.1 the actual *active* fold is a division reserved region.
+    /// Keep the older Xcode 26.x build path alive until its runners are retired.
+    private func activeVerticalDivision(in geometry: GeometryProxy) -> ClosedRange<Double>? {
+        #if compiler(>=6.4)
+        if #available(iOS 27.1, *) {
+            guard let region = geometry.reservedRegions(kind: .division).first(where: {
+                $0.isActive && $0.frame.width > 0 &&
+                $0.frame.height >= geometry.size.height * 0.6
+            }) else { return nil }
+            return Double(region.frame.minX)...Double(region.frame.maxX)
+        }
+        #endif
+        return nil
+    }
+
+    /// Reuse the existing Wallet and focused Week; both see one LivePlanner.
+    /// Either Crown position occupies an outer-edge rail near the lower thumb
+    /// reach, avoiding the hinge and keeping the schedule unobscured.
+    private func regularContent(_ snapshot: PlannerSnapshot, plan: SpreadAdaptivePlan) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            if crownOnLeft { sideCrown(snapshot).padding(.trailing, CGFloat(SpreadAdaptivePlan.crownSpacing)) }
+
+            ScrollView {
+                notices.padding(.horizontal, 4)
+                if snapshot.roles.isEmpty {
+                    emptyPlan
+                } else {
+                    SpreadSurface(
+                        planner: planner,
+                        snapshot: snapshot,
+                        layout: $layout,
+                        editing: $editing,
+                        selectedRole: $selectedRole,
+                        onOpenRole: { sheet = .role($0) },
+                        onOpenTask: { sheet = .task($0, $1) },
+                        onNewRole: { sheet = .newRole },
+                        onRollover: { Task { await rollover() } },
+                        onReview: { sheet = .review }
+                    )
+                    .id(planner.state?.envelope.profileId)
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .scrollIndicators(.hidden)
+            .frame(width: CGFloat(plan.leadingWidth))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Responsibilities and hours")
+            .accessibilityIdentifier("adaptive-responsibilities-pane")
+
+            Color.clear
+                .frame(width: CGFloat(plan.separation))
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+
+            regularWeek(snapshot, trailingWidth: plan.trailingWidth)
+                .frame(width: CGFloat(plan.trailingWidth))
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Week and tasks")
+                .accessibilityIdentifier("adaptive-week-pane")
+
+            if !crownOnLeft { sideCrown(snapshot).padding(.leading, CGFloat(SpreadAdaptivePlan.crownSpacing)) }
+        }
+        .padding(.horizontal, CGFloat(SpreadAdaptivePlan.outerPadding))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("adaptive-two-pane")
+    }
+
+    @ViewBuilder
+    private func regularWeek(_ snapshot: PlannerSnapshot, trailingWidth: Double) -> some View {
+        // The existing focused overview needs full 44pt day targets. If the
+        // physical fold narrows this region, reuse Classic's vertically
+        // scrollable seven-day cards rather than making the day buttons tiny.
+        if trailingWidth >= 348 {
+            WeekFocusSurface(
+                planner: planner,
+                snapshot: snapshot,
+                selectedRole: $selectedRole,
+                selectedDay: $focusSelectedDay,
+                monthPlane: $monthPlane,
+                monthAnchor: $monthAnchor,
+                onWeekChange: { goWeek($0) },
+                onPickDay: { pickDay($0) },
+                onOpenTask: { sheet = .task($0, $1) },
+                onNewRole: { sheet = .newRole },
+                onAdjustHours: { sheet = .role($0) },
+                sidebarHidden: .constant(true)
+            )
+            .id(planner.state?.envelope.profileId)
+        } else {
+            ScrollView {
+                if monthPlane {
+                    MonthSurface(
+                        planner: planner, snapshot: snapshot,
+                        anchor: monthAnchor, onPick: pickDay
+                    )
+                } else {
+                    WeekSurface(
+                        planner: planner,
+                        snapshot: snapshot,
+                        selectedRole: $selectedRole,
+                        focusDay: $focusDay,
+                        direction: weekDirection,
+                        onOpenRole: { sheet = .role($0) },
+                        onOpenTask: { sheet = .task($0, $1) },
+                        onReview: { sheet = .review },
+                        onSwipeWeek: { goWeek($0) }
+                    )
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func sideCrown(_ snapshot: PlannerSnapshot) -> some View {
+        let isMonth = monthPlane
+        let weekTitle = PlannerDates.weekRange(base: snapshot.weekKey, offset: 0)
+        let monthTitle = PlannerDates.label(monthAnchor, pattern: "MMM yyyy")
+        let onDetail: (() -> Void)?
+        if isMonth {
+            onDetail = Calendar.current.isDate(monthAnchor, equalTo: Date(), toGranularity: .month)
+                ? nil : { jumpMonth(to: Date()) }
+        } else {
+            onDetail = snapshot.weekKey == PlannerDates.currentWeekKey()
+                ? nil : { Task { await moveToToday() } }
+        }
+        return VerticalWeekCrownView(
+            title: isMonth ? monthTitle : weekTitle,
+            detail: isMonth ? "Back to this month" : "Back to this week",
+            onDetail: onDetail,
+            onMove: { delta in
+                if isMonth { changeMonth(delta) }
+                else { goWeek(delta) }
+            }
+        )
+        .frame(width: CGFloat(SpreadAdaptivePlan.crownWidth))
+        .frame(maxHeight: .infinity, alignment: .bottom)
+        .padding(.bottom, 36)
+    }
+
+    /// The original compact surface is preserved without changing its
+    /// navigation, scroll ownership, Wallet gestures or horizontal Crown.
+    private func compactContent(_ snapshot: PlannerSnapshot) -> some View {
         let isMonth = destination == .week && monthPlane
         return VStack(spacing: 0) {
             // The header is sticky, as the web header was: it stays put while the surface scrolls under it.
-            if !typeSize.isAccessibilitySize { header(snapshot, isMonth: isMonth) }
+            // Focused surfaces scroll independently and cannot inherit Classic's large-type header.
+            if !typeSize.isAccessibilitySize || weekFocusEnabled { header(snapshot, isMonth: isMonth) }
             if weekFocusEnabled && destination == .week {
                 WeekFocusSurface(
                     planner: planner,
@@ -214,7 +392,9 @@ public struct SpreadLiveRoot: View {
                     onWeekChange: { goWeek($0) },
                     onPickDay: { pickDay($0) },
                     onOpenTask: { sheet = .task($0, $1) },
-                    onNewRole: { sheet = .newRole }
+                    onNewRole: { sheet = .newRole },
+                    onAdjustHours: { sheet = .role($0) },
+                    sidebarHidden: $weekSidebarHidden
                 )
                 // Expansion memory and open trays belong to this profile. Recreate the
                 // surface on a switch so it restores that profile's own saved day/groups.
@@ -360,7 +540,7 @@ public struct SpreadLiveRoot: View {
 
     /// Compact and stable: the brand and the one Spread/Week switch share a row, the metal Crown sits below, and
     /// nothing in here changes size after launch. When large text no longer fits one row, the switch drops below.
-    private func header(_ snapshot: PlannerSnapshot, isMonth: Bool) -> some View {
+    private func header(_ snapshot: PlannerSnapshot, isMonth: Bool, includesCrown: Bool = true) -> some View {
         let isCurrent = snapshot.weekKey == PlannerDates.currentWeekKey()
         let now = Date()
         let onThisMonth = Calendar.current.isDate(monthAnchor, equalTo: now, toGranularity: .month)
@@ -388,16 +568,18 @@ public struct SpreadLiveRoot: View {
         return VStack(spacing: 10) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
-                    brandButton
+                    brandAndSidebarRestore
                     Spacer(minLength: 8)
                     destinationRail
                 }
                 VStack(spacing: 8) {
-                    HStack { brandButton; Spacer(minLength: 0) }
+                    HStack { brandAndSidebarRestore; Spacer(minLength: 0) }
                     destinationRail
                 }
             }
-            WeekCrownView(title: title, detail: detail, onDetail: detailAction, onMove: move)
+            if includesCrown {
+                WeekCrownView(title: title, detail: detail, onDetail: detailAction, onMove: move)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)
@@ -406,6 +588,27 @@ public struct SpreadLiveRoot: View {
         .accessibilityElement(children: .contain)
         .accessibilityValue(headerLabelsCollapsed ? "Compact navigation" : "Labeled navigation")
         .accessibilityIdentifier("top-header")
+    }
+
+    /// Owner decision 24: when the Week rail is fully hidden, restoration lives directly
+    /// beside the Spread mark in the sticky header, not inside the scrolling task surface.
+    private var brandAndSidebarRestore: some View {
+        HStack(spacing: 4) {
+            brandButton
+            if weekFocusEnabled && destination == .week && weekSidebarHidden && !regularLayoutActive {
+                Button {
+                    withAnimation(reduceMotion ? nil : SpreadMotion.curve) { weekSidebarHidden = false }
+                    SpreadHaptics.selection()
+                } label: {
+                    Image(systemName: "sidebar.left")
+                        .foregroundStyle(Spread.accent)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityLabel("Show responsibilities")
+                .accessibilityIdentifier("header-show-sidebar")
+            }
+        }
     }
 
     private var activeProfileName: String? {
@@ -455,7 +658,7 @@ public struct SpreadLiveRoot: View {
                 let selected = destination == item
                 Button {
                     guard destination != item else { return }
-                    if item == .spread { monthPlane = false }
+                    if item == .spread && !regularLayoutActive { monthPlane = false }
                     editing = false
                     withAnimation(reduceMotion ? nil : SpreadMotion.curve) { destination = item }
                 } label: {
@@ -542,7 +745,7 @@ public struct SpreadLiveRoot: View {
                         .padding(.trailing, 4)
                     dockDivider
                 }
-                if destination == .week && !weekFocusEnabled {
+                if destination == .week && !weekFocusEnabled && !regularLayoutActive {
                     Button {
                         if monthPlane { closeMonth() } else { openMonth() }
                     } label: {
@@ -678,7 +881,9 @@ public struct SpreadLiveRoot: View {
 
     private func keyWeek(_ delta: Int) -> KeyPress.Result {
         guard sheet == nil else { return .ignored }
-        if destination == .week && monthPlane { changeMonth(delta) } else if destination == .week { goWeek(delta) } else { return .ignored }
+        if monthPlane && (regularLayoutActive || destination == .week) { changeMonth(delta) }
+        else if regularLayoutActive || destination == .week { goWeek(delta) }
+        else { return .ignored }
         return .handled
     }
 

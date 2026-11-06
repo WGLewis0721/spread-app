@@ -1,6 +1,27 @@
 import XCTest
 import UIKit
 
+// Independent XCTest launch canary. It does not depend on agent-device or hinge automation.
+final class LaunchSmokeUITests: XCTestCase {
+    func testSpreadLaunchesAndExposesNativeNavigation() {
+        let app = XCUIApplication(bundleIdentifier: "com.graymatter.spread")
+        app.launch()
+        let nativeSpread = app.buttons["native-spread"]
+        let found = nativeSpread.waitForExistence(timeout: 90)
+        if !found {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "launch-canary-accessibility-tree"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "launch-canary-screenshot"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+        }
+        XCTAssertTrue(found, "Spread must launch and expose the native-spread navigation button")
+    }
+}
+
 // MARK: - Shared harness
 
 /// Every helper waits for the real accessibility element, and a failing test attaches the whole
@@ -1010,6 +1031,14 @@ final class PlannerUITests: NativeUITestCase {
     func testLayout390() throws { try layout(width: 390) }
     func testLayout820() throws { try layout(width: 820) }
     func testLayout1024() throws { try layout(width: 1024) }
+    func testLayout1366() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        launch()
+        XCTAssertTrue(eventually(20) { self.app.frame.width >= 1365 },
+                      "The landscape iPad did not reach the required 1366pt viewport")
+        try layout(width: 1366)
+    }
 
     private func startAtWidth(_ width: Int) throws {
         guard app.frame.width >= CGFloat(width) else { throw XCTSkip("Viewport requires the matching destination; verified in the layout matrix.") }
@@ -1051,6 +1080,14 @@ final class PlannerUITests: NativeUITestCase {
     func testAudit390() throws { try auditEverything(width: 390) }
     func testAudit820() throws { try auditEverything(width: 820) }
     func testAudit1024() throws { try auditEverything(width: 1024) }
+    func testAudit1366() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        launch()
+        XCTAssertTrue(eventually(20) { self.app.frame.width >= 1365 },
+                      "The 1366pt landscape iPad viewport was not established")
+        try auditEverything(width: 1366)
+    }
     private func auditEverything(width: Int, types: XCUIAccessibilityAuditType = NativeUITestCase.requiredAudits, label: String = "") throws {
         try startAtWidth(width)
         goWeek()
@@ -1714,8 +1751,12 @@ final class WeekMonthUITests: NativeUITestCase {
         tapID("focus-show-sidebar")
         XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists }, "Hide did not hide the sidebar")
         capture("wm-sidebar-hidden")
-        tapID("focus-show-sidebar")
-        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5), "The hidden sidebar did not come back")
+        let restore = el("header-show-sidebar")
+        XCTAssertTrue(restore.waitForExistence(timeout: 5), "The hidden sidebar has no header restore control")
+        XCTAssertGreaterThanOrEqual(restore.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(restore.frame.height, 44)
+        tapID("header-show-sidebar")
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5), "The hidden sidebar did not come back from the header")
     }
 
     /// Task lifecycle through the store: Quick Add, complete (folded section), relaunch, uncomplete, delete,
@@ -1763,6 +1804,75 @@ final class WeekMonthUITests: NativeUITestCase {
         capture("wm-restored-to-place")
     }
 
+    /// Unsubmitted focused drafts are isolated by day and survive navigation and a cold start.
+    func testFocusedDraftSurvivesDayNavigationAndRelaunch() {
+        launch(preview); openFocusedWeek()
+        let days = dayIDs()
+        let role = roleIDs()[0]
+        let draft = "Focused draft " + String(UUID().uuidString.prefix(8))
+        tapID(days[0])
+        tapID("focus-quick-add-" + role)
+        typeInto("focus-quick-add-field", draft)
+        tapID(days[1])
+        XCTAssertNotEqual(fieldText("focus-quick-add-field"), draft, "A draft leaked to another day")
+        tapID(days[0])
+        XCTAssertTrue(el("focus-quick-add-field").waitForExistence(timeout: 10))
+        XCTAssertEqual(fieldText("focus-quick-add-field"), draft)
+        relaunch(); openFocusedWeek(); tapID(days[0])
+        XCTAssertTrue(el("focus-quick-add-field").waitForExistence(timeout: 10))
+        XCTAssertEqual(fieldText("focus-quick-add-field"), draft, "The draft did not survive relaunch")
+        tapButton("Cancel")
+        relaunch(); openFocusedWeek(); tapID(days[0])
+        XCTAssertNotEqual(fieldText("focus-quick-add-field"), draft, "Explicit cancellation did not clear the draft")
+        capture("wm-focused-draft-relaunch")
+    }
+
+    /// Acknowledged within-day reordering must persist through a cold start.
+    func testFocusedReorderSurvivesRelaunch() {
+        launch(preview); openFocusedWeek()
+        let role = roleIDs()[0]
+        let suffix = String(UUID().uuidString.prefix(6))
+        let first = "First " + suffix
+        let second = "Second " + suffix
+        for title in [first, second] {
+            tapID("focus-quick-add-" + role)
+            typeInto("focus-quick-add-field", title)
+            tapButton("Save")
+            let offer = app.buttons["Add 30 minutes to this day"]
+            if offer.waitForExistence(timeout: 5) { offer.tap() }
+            XCTAssertTrue(taskRow(title).waitForExistence(timeout: 20))
+        }
+        taskRow(second).tap()
+        tapButton("Move up")
+        XCTAssertTrue(eventually(10) { self.taskRow(second).frame.minY < self.taskRow(first).frame.minY })
+        relaunch(); openFocusedWeek()
+        XCTAssertTrue(taskRow(first).waitForExistence(timeout: 20))
+        XCTAssertTrue(taskRow(second).waitForExistence(timeout: 20))
+        XCTAssertLessThan(taskRow(second).frame.minY, taskRow(first).frame.minY, "Reordered tasks reverted after relaunch")
+        capture("wm-focused-reorder-relaunch")
+    }
+
+    /// The focused surfaces must keep operational navigation at the largest Dynamic Type size.
+    func testFocusedAccessibilityHeaderKeepsNavigationUsable() {
+        launch(preview + ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        openFocusedWeek()
+        XCTAssertTrue(el("week-crown").exists, "Largest text hid the Week Crown")
+        XCTAssertTrue(el("native-spread").isHittable, "Largest text hid Spread navigation")
+        tapID("native-spread")
+        XCTAssertTrue(el("native-week").isHittable, "Largest text hid Week navigation")
+        tapID("native-week")
+        XCTAssertTrue(el("focus-week-overview").waitForExistence(timeout: 10))
+        tapID("focus-show-sidebar")
+        XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists })
+        let restore = el("header-show-sidebar")
+        XCTAssertTrue(restore.isHittable, "Header restore is unreachable at largest text")
+        XCTAssertGreaterThanOrEqual(restore.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(restore.frame.height, 44)
+        restore.tap()
+        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5))
+        capture("wm-largest-text-header-navigation")
+    }
+
     /// Decisions 54-56: long press a Month date to add without leaving Month; Month swipe changes month.
     func testMonthLongPressAddsWithoutLeavingMonthAndSwipeChangesMonth() {
         launch(preview); openFocusedWeek()
@@ -1783,6 +1893,37 @@ final class WeekMonthUITests: NativeUITestCase {
         XCTAssertTrue(eventually(10) { self.elements(prefix: "month-day-").first?.identifier != firstBefore },
                       "Swiping Month did not change the month")
     }
+    /// #144 reconciliation: the focused Hour control must offer the existing Role editor.
+    func testFocusedWeekHourControlOpensRealWeeklyBudget() {
+        launch(preview); openFocusedWeek()
+        let role = roleIDs()[0]
+        tapID("focus-hour-" + role)
+        let adjust = el("focus-adjust-hours-" + role)
+        XCTAssertTrue(adjust.waitForExistence(timeout: 10), "Missing direct weekly hour adjustment action")
+        XCTAssertGreaterThanOrEqual(adjust.frame.height, 44)
+        adjust.tap()
+        XCTAssertTrue(el("bank-remaining").waitForExistence(timeout: 15),
+                      "Adjust weekly hours must open the authoritative Role editor")
+        capture("wm-adjust-weekly-hours")
+    }
+
+    /// Both day directions keep the same week and responsibility rail.
+    func testFocusedDayNavigationBothDirectionsKeepsWeek() {
+        launch(preview); openFocusedWeek()
+        let days = dayIDs()
+        guard days.count == 7 else { return XCTFail("Expected seven day controls") }
+        tapID(days[2])
+        XCTAssertTrue(eventually(5) { self.el(days[2]).isSelected })
+        tapID(days[1])
+        XCTAssertTrue(eventually(5) { self.el(days[1]).isSelected })
+        XCTAssertEqual(dayIDs(), days, "Backward day selection changed weeks")
+        tapID(days[4])
+        XCTAssertTrue(eventually(5) { self.el(days[4]).isSelected })
+        XCTAssertEqual(dayIDs(), days, "Forward day selection changed weeks")
+        XCTAssertTrue(el("responsibility-sidebar").exists)
+        capture("wm-day-both-directions")
+    }
+
     /// A refused hour increase must not clamp the requested time. Offer a
     /// measured shortage and the affected responsibility's own hour editor.
     func testInsufficientHoursOffersMeasuredAdjustment() {

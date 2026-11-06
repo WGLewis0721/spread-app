@@ -35,6 +35,21 @@ Refero research was performed before design decisions were translated to code:
 - **Rejected — seven full vertical day cards:** too much scrolling and doesn't communicate selected-day focus.
 - **Rejected — freeform calendar grid as sole navigation:** compact but makes task actions and selected responsibility difficult to reach.
 
+### November 5 PR #144 reconciliation against merged main
+
+The owner-approved design review ZIP and 61 decisions remain the visual and behavior authority. Refero references refine interaction patterns without introducing another palette or store:
+
+| Reference | Design use | Spread constraint |
+| --- | --- | --- |
+| [Structured day planner](https://refero.design/screens/5a371bb8-48c7-4528-a248-d4d5e2857b6a) | Pinned seven-day strip with selected-day tasks | Keep hours budgeting central |
+| [Foodvisor calendar grid](https://refero.design/screens/7ca38fcb-fb29-451d-9422-5deb0c85b834) | Seven-column Month and selected-day clarity | Role colors, maximum three dots + count |
+| [Freeform Recently Deleted](https://refero.design/screens/e4030ccf-2cdc-4b15-99a8-f5dcc83ba756) | Recoverable items with original context | Existing local-first recovery store |
+| [Dropbox recovery](https://refero.design/flows/2437), [Pool trash](https://refero.design/flows/11993) | Distinct restore, bulk action, permanent delete confirmation | No destructive shortcut or account requirement |
+
+PR #145 preserves merged implementation for exact hour-shortage detection, committed-only haptics, directional selected-day transitions, responsive Month, profile-isolated selection, and the accessible sticky header. It ports only the **missing** PR #144 UI actions: direct `Adjust weekly hours` from the focused role and unallocated task, plus an actionable invalid day-drop dialog. The existing `LivePlanner` remains the sole store command path. No duplicate hour-validation type, planner store, or Recently Deleted engine has been introduced.
+
+Native XCTest checks cover the role editor path and day navigation directions; all 61 decisions still require final exact-SHA device and screenshot review under issue #143. This integration is **not release accepted** until those results pass.
+
 ## 2. Component inventory and implementation contracts
 
 | Component | Visual source | State and interactions | Code home | Acceptance |
