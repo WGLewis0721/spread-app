@@ -1159,6 +1159,7 @@ export const useSpread = create<Store>((set, get) => ({
     set({ profiles: plan.profiles });
     return { ok: true, added: plan.writes.length, replacedEmpty: plan.replacedId !== null, skipped: plan.skipped };
     };
+    const restoreBaseline = JSON.stringify({ profiles: get().profiles, activeId: get().activeId, data: get().data });
     const entries = payload.nativeFiles ?? [];
     if (!entries.length && !fileReferences(payload.stores).length) return apply();
     return (async (): Promise<RestoreResult> => {
@@ -1168,7 +1169,8 @@ export const useSpread = create<Store>((set, get) => ({
         const mapped = entries.filter(e => plan.profileMap[e.profileId]).map(e => ({ ...e, profileId: plan.profileMap[e.profileId] }));
         transaction = (await nativeFiles.install({ entries: mapped })).transaction;
       } catch { return { ok: false, reason: "write-failed" }; }
-      const result = apply();
+      const unchanged = restoreBaseline === JSON.stringify({ profiles: get().profiles, activeId: get().activeId, data: get().data });
+      const result: RestoreResult = unchanged ? apply() : { ok: false, reason: "write-failed" };
       if (!result.ok) {
         try { await nativeFiles.rollback({ transaction }); } catch { return { ok: false, reason: "rollback-failed" }; }
       } else {
