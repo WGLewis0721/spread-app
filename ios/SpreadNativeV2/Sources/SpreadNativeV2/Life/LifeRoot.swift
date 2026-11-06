@@ -34,6 +34,7 @@ struct LifeRoot: View {
     @State private var navigationOpen = false
     @State private var localSheet: LifeLocalSheet?
     @State private var dockControlsHeight: CGFloat = 62
+    @State private var dockOpenerCenterY: CGFloat = 31
     @State private var weekTick = 0
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
@@ -258,12 +259,14 @@ struct LifeRoot: View {
                     crown(snapshot)
                 }
             }
+            .coordinateSpace(name: "life-dock-controls")
             .background {
                 GeometryReader { geometry in
                     Color.clear.preference(key: LifeDockHeightKey.self, value: geometry.size.height)
                 }
             }
             .onPreferenceChange(LifeDockHeightKey.self) { dockControlsHeight = $0 }
+            .onPreferenceChange(LifeDockOpenerCenterKey.self) { if $0 > 0 { dockOpenerCenterY = $0 } }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
         .background(reduceTransparency ? LifePalette.surface : LifePalette.surface.opacity(0.94))
@@ -282,6 +285,12 @@ struct LifeRoot: View {
                 Text(destination.rawValue).font(.caption)
             }.frame(minWidth: 44, minHeight: 44)
         }.accessibilityLabel("Open navigation").accessibilityIdentifier("life-navigation")
+            .background {
+                GeometryReader { geometry in
+                    Color.clear.preference(key: LifeDockOpenerCenterKey.self,
+                        value: geometry.frame(in: .named("life-dock-controls")).midY)
+                }
+            }
     }
     private var addTaskButton: some View {
         Button { localSheet = .addTask } label: {
@@ -335,9 +344,10 @@ struct LifeRoot: View {
                 }
                 .accessibilityLabel("Close navigation")
                 .accessibilityIdentifier("life-navigation-close")
+                .offset(y: max(0, dockOpenerCenterY - 22))
                 if crownRight { Spacer(minLength: 0) }
             }
-            .frame(height: dockControlsHeight)
+            .frame(height: dockControlsHeight, alignment: .top)
             .padding(.horizontal, 16).padding(.vertical, 8)
             }
             .frame(width: min(300, max(0, width - 32))).frame(maxHeight: .infinity)
@@ -381,6 +391,11 @@ struct LifeRoot: View {
             }.presentationDragIndicator(.visible)
         }
     }
+}
+
+private struct LifeDockOpenerCenterKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 private struct LifeDockHeightKey: PreferenceKey {
