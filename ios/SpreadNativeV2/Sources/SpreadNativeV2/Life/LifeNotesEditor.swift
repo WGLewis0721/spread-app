@@ -160,15 +160,36 @@ struct LifeNotesEditor: UIViewRepresentable {
         }
         @objc func undo() { view?.undoManager?.undo() }
         @objc func redo() { view?.undoManager?.redo() }
+        private func romanMarker(_ value: Int) -> String {
+            let symbols = [(1000,"M"),(900,"CM"),(500,"D"),(400,"CD"),(100,"C"),(90,"XC"),(50,"L"),(40,"XL"),(10,"X"),(9,"IX"),(5,"V"),(4,"IV"),(1,"I")]
+            var remainder = value, result = ""
+            for (amount, symbol) in symbols {
+                while remainder >= amount { result += symbol; remainder -= amount }
+            }
+            return result
+        }
+        private func romanValue(_ text: String) -> Int? {
+            let values: [Character: Int] = ["I":1,"V":5,"X":10,"L":50,"C":100,"D":500,"M":1000]
+            var result = 0, previous = 0
+            for character in text.reversed() {
+                guard let value = values[character] else { return nil }
+                result += value < previous ? -value : value
+                previous = value
+            }
+            guard result > 0, result < 4000, romanMarker(result) == text else { return nil }
+            return result
+        }
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText replacement: String) -> Bool {
             if replacement == "\t" { indent(); return false }
             guard replacement == "\n", range.length == 0 else { return true }
             let text = textView.text as NSString
             let paragraph = text.substring(with: text.paragraphRange(for: NSRange(location: range.location, length: 0)))
-            let pattern = #"^(\s*)([0-9]+|[IVXLCDM]+|[A-Z])\. |^(\s*)([•☐☑]) "#
+            let pattern = #"^(\s*)([0-9]+|[IVXLCDM]+|[A-Z]+)\. |^(\s*)([•☐☑]) "#
             guard let regex = try? NSRegularExpression(pattern: pattern),
                   let match = regex.firstMatch(in: paragraph, range: NSRange(location: 0, length: (paragraph as NSString).length)) else { return true }
             let prefix = (paragraph as NSString).substring(with: match.range)
+            let paragraphStart = text.paragraphRange(for: NSRange(location: range.location, length: 0)).location
+            guard range.location >= paragraphStart + (prefix as NSString).length else { return true }
             if paragraph.trimmingCharacters(in: .whitespacesAndNewlines) == prefix.trimmingCharacters(in: .whitespacesAndNewlines) {
                 textView.selectedRange = NSRange(location: range.location - (prefix as NSString).length, length: (prefix as NSString).length)
                 textView.insertText("\n")
@@ -179,17 +200,22 @@ struct LifeNotesEditor: UIViewRepresentable {
             let numberPattern = #"^(\s*)([0-9]+)\. "#
             if let numbers = try? NSRegularExpression(pattern: numberPattern),
                let number = numbers.firstMatch(in: prefix, range: NSRange(location: 0, length: (prefix as NSString).length)),
-               let value = Int((prefix as NSString).substring(with: number.range(at: 2))) {
+               let value = Int((prefix as NSString).substring(with: number.range(at: 2))), value < Int.max {
                 next = (prefix as NSString).substring(with: number.range(at: 1)) + "\(value + 1). "
             } else {
                 let leading = String(prefix.prefix(while: { $0.isWhitespace }))
                 let marker = prefix.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ". ", with: "").replacingOccurrences(of: ".", with: "")
-                let roman = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"]
-                if let index = roman.firstIndex(of: marker), index + 1 < roman.count {
-                    next = leading + roman[index + 1] + ". "
-                } else if marker.count == 1, let scalar = marker.unicodeScalars.first, scalar.value >= 65, scalar.value < 90,
-                          let following = UnicodeScalar(scalar.value + 1) {
-                    next = leading + String(following) + ". "
+                if let value = romanValue(marker), value < 3999 {
+                    next = leading + romanMarker(value + 1) + ". "
+                } else if marker.unicodeScalars.allSatisfy({ $0.value >= 65 && $0.value <= 90 }) && !marker.isEmpty && marker.count <= 12 {
+                    var value = marker.unicodeScalars.reduce(0) { $0 * 26 + Int($1.value - 64) } + 1
+                    var label = ""
+                    while value > 0 {
+                        value -= 1
+                        label = String(UnicodeScalar(65 + value % 26)!) + label
+                        value /= 26
+                    }
+                    next = leading + label + ". "
                 } else if marker == "☑" { next = leading + "☐ " }
             }
             textView.insertText("\n" + next)
