@@ -40,6 +40,7 @@ struct TaskSheet: View {
     @ObservedObject var planner: LivePlanner
     let roleId: String
     let taskId: String
+    var lifeMode = false
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -79,7 +80,7 @@ struct TaskSheet: View {
                                 .onSubmit { commitTitle() }
                                 .accessibilityLabel("Task title")
                                 .accessibilityIdentifier("task-editor")
-                            taskEstimateControl(task)
+                            if lifeMode { taskEstimateControl(task) }
                             if !loaded {
                                 ProgressView("Opening task content…")
                             } else if !supported {
