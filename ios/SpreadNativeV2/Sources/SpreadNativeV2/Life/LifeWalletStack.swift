@@ -227,10 +227,10 @@ private struct LifeWalletFace: View {
         if editing {
             RoundedRectangle(cornerRadius: 23)
                 .strokeBorder(roleColor.opacity(glow || reduceMotion ? 1 : 0.82),
-                              lineWidth: 2.5 * SpreadTactile.emphasis)
+                              lineWidth: CGFloat(2.5 * SpreadTactile.emphasis))
                 // 50% stronger glow than the prior 0.65 / 0.20 values.
                 .shadow(color: roleColor.opacity(glow || reduceMotion ? 0.975 : 0.30),
-                        radius: 18 * SpreadTactile.emphasis)
+                        radius: CGFloat(18 * SpreadTactile.emphasis))
         }
     }
     private var face: some View {
