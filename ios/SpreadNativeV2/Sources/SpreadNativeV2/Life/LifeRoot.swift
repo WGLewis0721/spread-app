@@ -1,22 +1,26 @@
 #if os(iOS)
 import SwiftUI
 
-/// Life is an opt-in native presentation of the existing planner, not a second planner.
-/// All real edits continue through LivePlanner's guarded TypeScript bridge.
 enum LifeDestination: String, CaseIterable, Identifiable {
-    case life = "Life"
-    case hours = "Hours"
-    case week = "Week"
+    case life = "Life", hours = "Hours", week = "Week"
     var id: String { rawValue }
-    var icon: String {
+    var icon: String { self == .life ? "icon-spread-list" : self == .hours ? "icon-rollover" : "icon-week" }
+}
+private enum LifeLocalSheet: Identifiable {
+    case manage(String), reserve(String), priority(String), delete(String), addTask, help
+    var id: String {
         switch self {
-        case .life: "square.stack.3d.up"
-        case .hours: "circle.dotted.circle"
-        case .week: "calendar"
+        case .manage(let id): return "manage-" + id
+        case .reserve(let id): return "reserve-" + id
+        case .priority(let id): return "priority-" + id
+        case .delete(let id): return "delete-" + id
+        case .addTask: return "add-task"
+        case .help: return "help"
         }
     }
 }
 
+/// Life owns transient presentation only. Every edit is an awaited planner intent.
 struct LifeRoot: View {
     @ObservedObject var planner: LivePlanner
     let onMore: () -> Void
@@ -24,490 +28,320 @@ struct LifeRoot: View {
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
     let onDeleteRole: (String) -> Void
-
     @State private var destination: LifeDestination = .life
     @State private var focusedRole: String?
     @State private var editing = false
-    @State private var month = false
-    @State private var selectedDay = PlannerDates.localISO()
-    @State private var monthAnchor = PlannerDates.date(PlannerDates.localISO())
-    @State private var menuOpen = false
-    @State private var gestureHelp = false
+    @State private var navigationOpen = false
+    @State private var localSheet: LifeLocalSheet?
     @State private var weekTick = 0
-    @AppStorage("native.life.crownRight") private var crownRight = false
+    @AppStorage("native.life.crownRight") private var crownRight = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.dynamicTypeSize) private var typeSize
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        ZStack {
-            Spread.canvas.ignoresSafeArea()
-            VStack(spacing: 0) {
-                titleBar
-                if let snapshot = planner.snapshot {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            if planner.saveFailure != nil {
-                                Label("Changes could not be saved. Open More to back up your plan.", systemImage: "exclamationmark.triangle")
-                                    .font(.callout).foregroundStyle(Spread.danger)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                LifePalette.canvas.ignoresSafeArea()
+                VStack(spacing: 0) {
+                    header
+                    if let snapshot = planner.snapshot {
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 20) {
+                                    Color.clear.frame(height: 0).id("life-top")
+                                    if let notice = planner.recoveryNotice {
+                                        Text(notice).font(.body)
+                                        Button("Backup and restore", action: onMore).frame(minHeight: 44)
+                                    }
+                                    if planner.saveFailure != nil {
+                                        Label("Changes are not saved. Open More to back up your plan.", systemImage: "exclamationmark.triangle")
+                                            .font(.body).foregroundStyle(Spread.danger)
+                                        Button("More", action: onMore).frame(minHeight: 44)
+                                    }
+                                    surface(snapshot)
+                                }
+                                .frame(maxWidth: 700).frame(maxWidth: .infinity)
+                                .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 28)
                             }
-                            switch destination {
-                            case .life: lifePage(snapshot)
-                            case .hours:
-                                LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { gestureHelp = true })
-                            case .week: weekPage(snapshot)
-                            }
-                            Color.clear.frame(height: 8)
+                            .scrollDismissesKeyboard(.interactively).scrollIndicators(.hidden)
+                            .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
                         }
-                        .frame(maxWidth: 700)
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 16)
+                        bottom(snapshot)
+                    } else {
+                        ProgressView("Opening your plan…").frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .scrollDismissesKeyboard(.interactively)
-                    .scrollIndicators(.hidden)
-                    bottomControls(snapshot)
-                } else {
-                    ProgressView("Opening your plan…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .accessibilityHidden(navigationOpen)
+                if navigationOpen { navigation(width: geometry.size.width) }
             }
         }
-        .foregroundStyle(Spread.ink)
-        .tint(Spread.accent)
+        .foregroundStyle(LifePalette.ink).tint(LifePalette.accent)
         .task { await planner.refresh() }
-        .onChange(of: planner.state?.envelope.profileId) { _, _ in resetForContext() }
-        .onChange(of: planner.snapshot?.weekKey) { _, key in
-            guard let key else { return }
-            let days = (0..<7).map { PlannerDates.dayISO(weekKey: key, index: $0) }
-            if !days.contains(selectedDay) { selectedDay = key }
-            focusedRole = nil
+        .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await planner.refresh() } } }
+        .onChange(of: planner.state?.envelope.profileId) { _, _ in
+            focusedRole = nil; editing = false; localSheet = nil
         }
-        .sensoryFeedback(.selection, trigger: weekTick)
-        .sheet(isPresented: $gestureHelp) { LifeGestureHelp() }
+        .onChange(of: planner.snapshot?.weekKey) { _, _ in focusedRole = nil; editing = false; localSheet = nil }
+        .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
+        .sensoryFeedback(.selection, trigger: weekTick) { _, _ in LifeFeedback.enabled }
+        .sheet(item: $localSheet, content: sheetContent)
         .accessibilityIdentifier("life-root")
     }
-
-    private var titleBar: some View {
-        HStack(spacing: 12) {
-            Button { destination = .life; focusedRole = nil } label: {
-                HStack(spacing: 9) {
-                    SpreadBrandMark(size: 30)
-                    Text("Life").font(.system(.title2, weight: .bold))
-                }
-                .frame(minHeight: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("life-home")
-            Spacer(minLength: 4)
-            Button {
-                if destination == .life && focusedRole != nil { focusedRole = nil }
-                else { editing.toggle(); SpreadHaptics.editMode(entering: editing) }
-            } label: {
-                Label(focusedRole != nil ? "Back" : editing ? "Done" : "Edit",
-                      systemImage: focusedRole != nil ? "arrow.left" : "pencil")
-                    .font(.system(.subheadline, weight: .semibold))
+    private var header: some View {
+        HStack(spacing: 8) {
+            Button { navigate(.life) } label: {
+                HStack(spacing: 8) { SpreadBrandMark(size: 27); Text("Spread").font(.title3.bold()) }
                     .frame(minHeight: 44)
+            }.buttonStyle(.plain).accessibilityLabel("Spread, Life").accessibilityIdentifier("life-home")
+            Spacer(minLength: 4)
+            if let snapshot = planner.snapshot {
+                Button(action: today) {
+                    Text(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0)).font(.subheadline)
+                        .foregroundStyle(LifePalette.secondary).frame(minHeight: 44)
+                }.accessibilityLabel("Back to this week")
             }
-            .accessibilityIdentifier("life-edit")
-            Menu {
-                ForEach(LifeDestination.allCases) { page in
-                    Button { destination = page; focusedRole = nil } label: {
-                        Label(page.rawValue, systemImage: page.icon)
-                    }
-                }
-                Divider()
-                Button("Move Crown left") { crownRight = false }
-                Button("Move Crown right") { crownRight = true }
-                Button("Gesture help") { gestureHelp = true }
-                Button("More") { onMore() }
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 20, weight: .semibold))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Life navigation and options")
-            .accessibilityIdentifier("life-menu")
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+            Button(action: onMore) {
+                Image(systemName: "ellipsis").frame(width: 44, height: 44)
+                    .background(LifePalette.surface, in: Circle())
+            }.accessibilityLabel("More").accessibilityIdentifier("life-more")
+        }.padding(.horizontal, 16).padding(.vertical, 4)
     }
-
-    @ViewBuilder
-    private func lifePage(_ snapshot: PlannerSnapshot) -> some View {
-        let assigned = snapshot.roles.reduce(0) { $0 + $1.hours }
+    @ViewBuilder private func surface(_ snapshot: PlannerSnapshot) -> some View {
+        switch destination {
+        case .life: life(snapshot)
+        case .hours:
+            LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { localSheet = .help })
+        case .week:
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Your week").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                Text("One day at a time.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+                LifeWeekView(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask,
+                             onReserve: { localSheet = .reserve($0) },
+                             onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) })
+            }.accessibilityIdentifier("life-week-page")
+        }
+    }
+    private func life(_ snapshot: PlannerSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Your Life").font(.system(.largeTitle, weight: .bold))
-                    Text("Give your time to what matters.")
-                        .font(.subheadline).foregroundStyle(Spread.secondary)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                    Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
-                Spacer(minLength: 0)
-                Button { destination = .hours } label: {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(SpreadHours.text(assigned) + " h")
-                            .font(.system(.title3, weight: .bold)).monospacedDigit()
-                        Text("assigned").font(.caption).foregroundStyle(Spread.secondary)
-                    }.frame(minWidth: 58, minHeight: 44)
+                Spacer(minLength: 8)
+                Button { focusedRole = nil; editing.toggle() } label: {
+                    Group {
+                        if editing { Text("Done").font(.subheadline) }
+                        else { SpreadIcon(name: "icon-edit", size: 22) }
+                    }.frame(minWidth: 44, minHeight: 44).background(LifePalette.surface, in: Capsule())
+                }.accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
+                    .accessibilityIdentifier("life-edit")
+            }.padding(.horizontal, 4)
+            Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.plain)
+                .accessibilityLabel("Adjust weekly planning hours")
+            if editing {
+                Text("Swipe left to manage. Swipe right to delete.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+                history
+            }
+            if focusedRole != nil && !editing {
+                Button { focusedRole = nil } label: {
+                    Label("All Life areas", systemImage: "chevron.left").frame(minHeight: 44)
                 }
-                .accessibilityLabel("Open Hours, \(SpreadHours.spoken(assigned)) assigned")
             }
             if snapshot.roles.isEmpty {
-                ContentUnavailableView("Make room for what matters", systemImage: "square.stack.3d.up",
-                                       description: Text("Create a Life area to start planning."))
-                Button("Create Life area") { onNewRole() }.buttonStyle(.borderedProminent)
-            } else if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
-                LifeWalletCard(role: role, editing: editing, onTap: { focusedRole = nil },
-                               onManage: { onOpenRole(role.id) }, onDelete: { onDeleteRole(role.id) })
-                    .accessibilityIdentifier("life-focused-card")
-                Button { focusedRole = nil } label: {
-                    Label("All Life areas", systemImage: "square.stack.3d.up")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.bordered)
-                roleDetails(role, snapshot: snapshot)
+                Text("Name the responsibilities you want to plan for.").font(.body)
+                Button("Add a Life area", action: onNewRole).frame(minHeight: 44)
             } else {
-                let step: CGFloat = typeSize.isAccessibilitySize ? 105 : 67
-                ZStack(alignment: .top) {
-                    ForEach(snapshot.roles.indices, id: \.self) { index in
-                        let role = snapshot.roles[index]
-                        LifeWalletCard(role: role, editing: editing,
-                                       onTap: { withAnimation(reduceMotion ? nil : .spring(response: 0.32)) {
-                                           focusedRole = role.id
-                                       }},
-                                       onManage: { onOpenRole(role.id) },
-                                       onDelete: { onDeleteRole(role.id) })
-                            .offset(y: CGFloat(index) * step)
-                            .zIndex(Double(snapshot.roles.count - index))
-                    }
-                }
-                .frame(height: CGFloat(max(0, snapshot.roles.count - 1)) * step + 200)
-                .accessibilityIdentifier("life-wallet-stack")
-                Button { onNewRole() } label: {
-                    Label("Add Life area", systemImage: "plus")
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                }.buttonStyle(.bordered)
+                LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
+                                selectedRole: $focusedRole, editing: editing,
+                                onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) },
+                                onBeginEdit: { focusedRole = $0; editing = true })
             }
-            historyControls
-        }
-        .accessibilityIdentifier("life-page")
+            if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
+                details(role, snapshot: snapshot)
+            } else if !editing && !snapshot.roles.isEmpty {
+                Text("Tap a card to see its tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+                    .frame(maxWidth: .infinity).padding(.top, 12)
+            }
+            if !snapshot.roles.isEmpty { Button("Add a Life area", action: onNewRole).frame(minHeight: 44) }
+        }.accessibilityIdentifier("life-page")
     }
-
-    private func roleDetails(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Tasks").font(.title3.bold())
-                Spacer()
-                Text("\(snapshot.tasks(for: role.id).filter(\.done).count)/\(snapshot.tasks(for: role.id).count)")
-                    .font(.subheadline).foregroundStyle(Spread.secondary)
-                Button("Manage") { onOpenRole(role.id) }.frame(minHeight: 44)
-            }
-            let tasks = snapshot.tasks(for: role.id)
-            if tasks.isEmpty {
-                Text("No tasks yet. Add one to begin.")
-                    .font(.subheadline).foregroundStyle(Spread.secondary)
-            }
-            ForEach(tasks) { task in taskRow(task) }
-            Button { onOpenRole(role.id) } label: {
-                Label("Add task", systemImage: "plus")
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.bordered)
+    private func summary(_ snapshot: PlannerSnapshot) -> some View {
+        let assigned = snapshot.roles.reduce(0) { $0 + $1.hours }
+        return VStack(spacing: 10) {
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    Text("\(SpreadHours.text(assigned))h assigned")
+                    Spacer()
+                    capacitySummary(snapshot, assigned: assigned)
+                }
+                VStack(alignment: .leading) {
+                    Text("\(SpreadHours.text(assigned))h assigned")
+                    capacitySummary(snapshot, assigned: assigned)
+                }
+            }.font(.subheadline)
+            GeometryReader { geometry in
+                let capacity = max(max(assigned, snapshot.life?.capacityHours ?? assigned), 1)
+                HStack(spacing: 2) {
+                    ForEach(snapshot.roles) { role in
+                        Rectangle().fill(Color(hex: role.color))
+                            .frame(width: max(0, geometry.size.width * role.hours / capacity - 2))
+                    }
+                    Spacer(minLength: 0)
+                }.background(LifePalette.fill).clipShape(Capsule())
+            }.frame(height: 5).accessibilityHidden(true)
+        }.padding(.horizontal, 4).padding(.bottom, 8)
+    }
+    @ViewBuilder private func capacitySummary(_ snapshot: PlannerSnapshot, assigned: Double) -> some View {
+        if let capacity = snapshot.life?.capacityHours {
+            Text("\(SpreadHours.text(capacity - assigned))h unassigned").foregroundStyle(LifePalette.secondary)
+        } else {
+            Text("Set weekly hours").foregroundStyle(LifePalette.accent)
         }
-        .padding(16)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 22))
+    }
+    private func details(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(role.name) this week").font(.headline)
+                    Text("\(SpreadHours.text(snapshot.remainingHours(for: role.id)))h still to place")
+                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                }
+                Spacer(minLength: 8)
+                Button("Place hours") { localSheet = .reserve(role.id) }.frame(minHeight: 44)
+            }
+            if editing {
+                HStack {
+                    Button("Manage") { localSheet = .manage(role.id) }
+                    Button("Delete", role: .destructive) { localSheet = .delete(role.id) }
+                }.frame(minHeight: 44)
+            } else {
+                Button("Prioritize this week") { localSheet = .priority(role.id) }.frame(minHeight: 44)
+            }
+            LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
+            LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
+        }
+        .padding(16).background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 23))
         .accessibilityIdentifier("life-task-details")
     }
-
-    private func taskRow(_ task: PlannerTask) -> some View {
-        HStack(spacing: 10) {
-            Button {
-                Task { await planner.send(["type": "toggleTask", "roleId": task.roleId,
-                                           "taskId": task.id], completionHaptic: true) }
-            } label: {
-                Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 23))
-                    .foregroundStyle(task.done ? Spread.accent : Spread.secondary)
-                    .frame(width: 44, height: 44)
-            }
-            .accessibilityLabel(task.done ? "Mark \(task.text) incomplete" : "Complete \(task.text)")
-            Button { onOpenTask(task.roleId, task.id) } label: {
-                HStack {
-                    Text(task.text)
-                        .font(.body)
-                        .strikethrough(task.done)
-                        .foregroundStyle(Spread.ink)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if let estimate = task.estimateMinutes {
-                        Text("\(estimate)m").font(.caption).foregroundStyle(Spread.secondary)
-                    }
-                    Image(systemName: "chevron.right").foregroundStyle(Spread.tertiary)
-                }
-                .frame(minHeight: 44).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
-        .accessibilityElement(children: .contain)
+    private var history: some View {
+        HStack {
+            Button("Undo") {
+                guard let id = planner.undoId else { return }
+                Task { if await planner.send(["type": "undo", "editId": id]) { LifeFeedback.accepted() } }
+            }.disabled(planner.undoId == nil || planner.busy).accessibilityIdentifier("life-undo")
+            Button("Redo") {
+                guard let id = planner.redoId else { return }
+                Task { if await planner.send(["type": "redo", "editId": id]) { LifeFeedback.accepted() } }
+            }.disabled(planner.redoId == nil || planner.busy).accessibilityIdentifier("life-redo")
+        }.frame(minHeight: 44)
     }
-
-    @ViewBuilder private var historyControls: some View {
-        if planner.undoId != nil || planner.redoId != nil {
-            HStack(spacing: 10) {
-                if let undoId = planner.undoId {
-                    Button { Task { await planner.send(["type": "undo", "editId": undoId]) } } label: {
-                        Label("Undo", systemImage: "arrow.uturn.backward").frame(minHeight: 44)
-                    }
-                    .accessibilityIdentifier("life-undo")
+    private func bottom(_ snapshot: PlannerSnapshot) -> some View {
+        VStack(spacing: 4) {
+            if !editing && (planner.undoId != nil || planner.redoId != nil) { history }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    if !crownRight { crown(snapshot).frame(maxWidth: 270) }
+                    dockActions
+                    if crownRight { crown(snapshot).frame(maxWidth: 270) }
                 }
-                if let redoId = planner.redoId {
-                    Button { Task { await planner.send(["type": "redo", "editId": redoId]) } } label: {
-                        Label("Redo", systemImage: "arrow.uturn.forward").frame(minHeight: 44)
-                    }
-                    .accessibilityIdentifier("life-redo")
-                }
+                VStack(spacing: 8) { dockActions; crown(snapshot) }
             }
-            .buttonStyle(.bordered)
         }
+        .padding(.horizontal, 16).padding(.vertical, 8)
+        .background(reduceTransparency ? LifePalette.surface : LifePalette.surface.opacity(0.94))
     }
-
-    private func weekPage(_ snapshot: PlannerSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text(month ? "Month" : "Week").font(.largeTitle.bold())
-                Spacer()
-                Button { selectToday() } label: { Text("Today").frame(minHeight: 44) }
-                Button {
-                    month.toggle()
-                    monthAnchor = PlannerDates.date(selectedDay)
-                } label: {
-                    Label(month ? "Week" : "Month", systemImage: "calendar")
-                        .frame(minHeight: 44)
-                }
-                .accessibilityIdentifier("life-week-month-toggle")
-            }
-            if month {
-                MonthSurface(planner: planner, snapshot: snapshot, anchor: monthAnchor,
-                             onPick: { pickDay($0) }, mondayFirst: true)
-                HStack {
-                    Button { shiftMonth(-1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
-                    Spacer()
-                    Text(PlannerDates.label(monthAnchor, pattern: "MMMM yyyy")).font(.headline)
-                    Spacer()
-                    Button { shiftMonth(1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }
-                }
-            } else {
-                HStack(spacing: 4) {
-                    ForEach(0..<7, id: \.self) { index in
-                        let iso = PlannerDates.dayISO(weekKey: snapshot.weekKey, index: index)
-                        Button {
-                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { selectedDay = iso }
-                        } label: {
-                            VStack(spacing: 4) {
-                                Text(PlannerDates.weekday(weekKey: snapshot.weekKey, index: index))
-                                    .font(.caption2)
-                                Text(PlannerDates.dayNumber(weekKey: snapshot.weekKey, index: index))
-                                    .font(.headline)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 54)
-                            .background(selectedDay == iso ? Spread.accent : Spread.elevated,
-                                        in: RoundedRectangle(cornerRadius: 12))
-                            .foregroundStyle(selectedDay == iso ? Spread.onAccent : Spread.ink)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE, MMMM d"))
-                        .accessibilityAddTraits(selectedDay == iso ? .isSelected : [])
-                    }
-                }
-                Text(PlannerDates.label(PlannerDates.date(selectedDay), pattern: "EEEE, MMMM d"))
-                    .font(.title3.bold())
-                let allocations = snapshot.allocations.filter { $0.day == selectedDay }
-                if allocations.isEmpty {
-                    ContentUnavailableView("No time placed on this day", systemImage: "calendar")
-                }
-                ForEach(allocations) { allocation in
-                    if let role = snapshot.roles.first(where: { $0.id == allocation.roleId }) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            LifeWalletCard(role: role, editing: false,
-                                           onTap: { onOpenRole(role.id) },
-                                           onManage: { onOpenRole(role.id) },
-                                           onDelete: { onDeleteRole(role.id) })
-                            HStack {
-                                Text(SpreadHours.text(allocation.hours) + " h on this day")
-                                    .font(.subheadline).foregroundStyle(Spread.secondary)
-                                Spacer()
-                                Button("Manage") { onOpenRole(role.id) }
-                            }
-                            ForEach(snapshot.tasks.filter { $0.allocationId == allocation.id }) { task in
-                                taskRow(task)
-                            }
-                        }
-                        .padding(12)
-                        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 22))
-                    }
-                }
-                if !snapshot.unplacedTasks.isEmpty {
-                    DisclosureGroup("To place (\(snapshot.unplacedTasks.count))") {
-                        ForEach(snapshot.unplacedTasks) { task in taskRow(task) }
-                    }
-                    .padding(14)
-                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 18))
-                }
-            }
-            historyControls
-        }
-        .accessibilityIdentifier("life-week-page")
+    private var dockActions: some View {
+        HStack(spacing: 8) {
+            Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { navigationOpen = true } } label: {
+                VStack(spacing: 2) {
+                    SpreadIcon(name: destination.icon, size: 22)
+                    Text(destination.rawValue).font(.caption)
+                }.frame(minWidth: 44, minHeight: 44)
+            }.accessibilityLabel("Open navigation").accessibilityIdentifier("life-navigation")
+            Button { localSheet = .addTask } label: {
+                Image(systemName: "plus").font(.title2).frame(width: 44, height: 44)
+                    .foregroundStyle(.white).background(LifePalette.accent, in: Circle())
+            }.accessibilityLabel("Add task")
+        }.fixedSize(horizontal: true, vertical: false)
     }
-
-    private func bottomControls(_ snapshot: PlannerSnapshot) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 8) {
-                ForEach(LifeDestination.allCases) { page in
-                    Button { destination = page; focusedRole = nil } label: {
-                        VStack(spacing: 3) {
-                            Image(systemName: page.icon).font(.system(size: 18, weight: .medium))
-                            Text(page.rawValue).font(.caption2.weight(.semibold))
-                        }
-                        .foregroundStyle(destination == page ? Spread.accent : Spread.secondary)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(destination == page ? Spread.accent.opacity(0.11) : .clear,
-                                    in: RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("life-nav-\(page.rawValue.lowercased())")
-                    .accessibilityAddTraits(destination == page ? .isSelected : [])
-                }
-                Button { onMore() } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "ellipsis").font(.system(size: 18, weight: .medium))
-                        Text("More").font(.caption2.weight(.semibold))
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("life-more")
+    private func crown(_ snapshot: PlannerSnapshot) -> some View {
+        WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
+                      detail: "Week Crown", onDetail: today, onMove: goWeek)
+            .contextMenu {
+                Button("Move Crown left") { crownRight = false }
+                Button("Move Crown right") { crownRight = true }
             }
-            HStack {
-                if crownRight { Spacer(minLength: 0) }
-                WeekCrownView(
-                    title: PlannerDates.weekRange(base: snapshot.weekKey, offset: 0),
-                    detail: nil,
-                    onMove: { goWeek($0) }
-                )
-                .frame(maxWidth: 355)
-                if !crownRight { Spacer(minLength: 0) }
-            }
+            .accessibilityAction(named: "Move Crown left") { crownRight = false }
+            .accessibilityAction(named: "Move Crown right") { crownRight = true }
             .accessibilityIdentifier("life-bottom-crown")
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 6)
-        .padding(.bottom, 4)
-        .background(Spread.canvas)
     }
-
-    private func resetForContext() {
-        focusedRole = nil; editing = false; month = false
-        selectedDay = planner.snapshot?.weekKey ?? PlannerDates.localISO()
+    private func navigation(width: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            Color.black.opacity(0.28).ignoresSafeArea()
+                .onTapGesture { navigationOpen = false }.accessibilityHidden(true)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack {
+                        SpreadBrandMark(size: 27); Text("Spread").font(.title2.bold()); Spacer()
+                        Button("Close") { navigationOpen = false }.frame(minHeight: 44)
+                    }
+                    ForEach(LifeDestination.allCases) { item in
+                        Button { navigate(item) } label: {
+                            HStack { SpreadIcon(name: item.icon); Text(item.rawValue).font(.title3); Spacer(); Image(systemName: "chevron.right") }
+                                .frame(minHeight: 52)
+                        }.accessibilityAddTraits(destination == item ? .isSelected : [])
+                            .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
+                    }
+                    Menu("Crown position") {
+                        Button("Move Crown left") { crownRight = false }
+                        Button("Move Crown right") { crownRight = true }
+                    }.frame(minHeight: 44)
+                    Button("Gesture help") { navigationOpen = false; localSheet = .help }.frame(minHeight: 44)
+                    Button("More") { navigationOpen = false; onMore() }.frame(minHeight: 44)
+                }.padding(20)
+            }
+            .frame(width: min(300, max(0, width - 32))).frame(maxHeight: .infinity)
+            .background(LifePalette.surface).transition(.move(edge: .leading))
+            .accessibilityAddTraits(.isModal)
+        }
+    }
+    private func navigate(_ value: LifeDestination) {
+        if destination != value { LifeFeedback.selection() }
+        destination = value; navigationOpen = false; focusedRole = nil; editing = false
     }
     private func goWeek(_ delta: Int) {
-        Task {
-            if await planner.send(["type": "changeWeek", "direction": delta]) { weekTick += 1 }
-        }
+        Task { if await planner.send(["type": "changeWeek", "direction": delta]) { weekTick += 1 } }
     }
-    private func selectToday() {
-        let today = PlannerDates.localISO()
-        selectedDay = today
+    private func today() {
         Task { if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 } }
     }
-    private func shiftMonth(_ delta: Int) {
-        monthAnchor = PlannerDates.calendar.date(byAdding: .month, value: delta, to: monthAnchor) ?? monthAnchor
-    }
-    private func pickDay(_ iso: String) {
-        Task {
-            let key = PlannerDates.weekKey(for: PlannerDates.date(iso))
-            if await planner.send(["type": "openWeek", "weekKey": key]) {
-                selectedDay = iso
-                month = false
-            }
-        }
-    }
-}
-
-/// Entire Wallet card translates as one rigid object. Swipes reveal actions without resizing its face.
-private struct LifeWalletCard: View {
-    let role: Responsibility
-    let editing: Bool
-    let onTap: () -> Void
-    let onManage: () -> Void
-    let onDelete: () -> Void
-    @State private var reveal: Int = 0
-    @GestureState private var drag: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var shift: CGFloat { CGFloat(reveal) * 88 + drag }
-    var body: some View {
-        ZStack {
-            HStack {
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash").font(.caption.bold())
-                        .frame(width: 83, height: 60)
-                }
-                Spacer()
-                Button(action: onManage) {
-                    Label("Manage", systemImage: "pencil").font(.caption.bold())
-                        .frame(width: 86, height: 60)
-                }
-            }
-            .buttonStyle(.bordered)
-            cardFace
-                .offset(x: shift)
-                .highPriorityGesture(DragGesture(minimumDistance: 24)
-                    .updating($drag) { value, state, _ in state = value.translation.width }
-                    .onEnded { value in
-                        withAnimation(reduceMotion ? nil : .spring(response: 0.22)) {
-                            reveal = value.translation.width > 65 ? 1 : value.translation.width < -65 ? -1 : 0
+    @ViewBuilder private func sheetContent(_ item: LifeLocalSheet) -> some View {
+        switch item {
+        case .manage(let id): LifeManageSheet(planner: planner, roleId: id)
+        case .reserve(let id): LifeReserveSheet(planner: planner, roleId: id)
+        case .priority(let id): LifePrioritySheet(planner: planner, roleId: id)
+        case .delete(let id): LifeDeleteSheet(planner: planner, roleId: id)
+        case .help: LifeGestureHelp()
+        case .addTask:
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(planner.snapshot?.roles ?? []) { role in
+                            Text(role.name).font(.headline)
+                            LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: { role, task in
+                                localSheet = nil
+                                Task { @MainActor in await Task.yield(); onOpenTask(role, task) }
+                            })
                         }
-                        if reveal != 0 { SpreadHaptics.selection() }
-                    })
+                        if planner.snapshot?.roles.isEmpty == true {
+                            Button("Add a Life area") { localSheet = nil; onNewRole() }.frame(minHeight: 44)
+                        }
+                    }.padding()
+                }.navigationTitle("Add task")
+            }.presentationDragIndicator(.visible)
         }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .contain)
-        .accessibilityAction(named: Text("Manage \(role.name)")) { onManage() }
-        .accessibilityAction(named: Text("Delete \(role.name)")) { onDelete() }
-    }
-
-    private var cardFace: some View {
-        Button(action: onTap) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Image(systemName: editing ? "pencil.circle" : "circle.hexagongrid.fill")
-                        .font(.system(size: 22)).foregroundStyle(Color(hex: role.color))
-                    Spacer(minLength: 0)
-                    Text(role.name)
-                        .font(.system(.title2, weight: .bold))
-                        .lineLimit(2)
-                        .foregroundStyle(Spread.ink)
-                    Text(SpreadHours.text(role.hours) + " hours this week")
-                        .font(.subheadline).foregroundStyle(Spread.secondary)
-                }
-                Spacer(minLength: 0)
-                ChalkMotionArt(category: role.category, size: 126)
-                    .accessibilityHidden(true)
-            }
-            .padding(20)
-            .frame(maxWidth: .infinity, minHeight: 200, maxHeight: 200)
-            .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: 25))
-            .overlay(RoundedRectangle(cornerRadius: 25)
-                .strokeBorder(Color(hex: role.color).opacity(editing ? 0.82 : 0.36),
-                              lineWidth: editing ? 2.1 : 1))
-            .shadow(color: Color(hex: role.color).opacity(editing ? 0.30 : 0.07),
-                    radius: editing ? 15 : 7, y: 4)
-            .contentShape(RoundedRectangle(cornerRadius: 25))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(role.name), \(SpreadHours.spoken(role.hours))")
-        .accessibilityHint("Double tap to open tasks. Swipe left for Manage or right for Delete.")
     }
 }
 
@@ -515,14 +349,13 @@ private struct LifeGestureHelp: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("native.life.touchFeedback") private var touchFeedback = true
     @AppStorage("native.life.showTips") private var showTips = true
-
     var body: some View {
         NavigationStack {
             Form {
                 Section("Changing time") {
                     Text("Flick up or down by 1 hour. Hold and drag to change faster.")
-                    Text("Counterclockwise adds time. Clockwise returns it.")
-                    Text("Tap the center number to separate Life areas.")
+                    Text("Choose an area. Turn left to add time. Turn right to return it.")
+                    Text("Tap the center number to pause and separate Life areas.")
                 }
                 Section("Feedback") {
                     Toggle("Touch feedback", isOn: $touchFeedback)
@@ -530,11 +363,8 @@ private struct LifeGestureHelp: View {
                 }
             }
             .navigationTitle("Gesture help")
-            .toolbar { ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }
-            } }
-        }
-        .presentationDetents([.medium, .large])
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }.presentationDetents([.medium, .large])
     }
 }
 #endif
