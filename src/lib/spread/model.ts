@@ -1,6 +1,6 @@
 export type OutlineItem = { id: string; text: string; level: number };
 export type ContentBlock =
-  | { id: string; type: "notes"; text: string }
+  | { id: string; type: "notes"; text: string; richText?: { version: 1; rtf: string } }
   | { id: string; type: "outline"; items: OutlineItem[] }
   | { id: string; type: "table"; cells: string[][] }
   | { id: string; type: "photo"; src: string };
@@ -26,7 +26,7 @@ export type DeletedTask = { id: string; hatId: string; weekKey: string; task: Ta
 export type Box = { hatId: string; hours: number; tasks: Task[] };
 export type Allocation = { id: string; hatId: string; day: string; hours: number; order: number };
 /** Life is optional and week-local. Old profiles must not acquire an invented capacity. */
-export type LifeWeekMetadata = { version: 1; capacityHours?: number; priorityRoleId?: string };
+export type LifeWeekMetadata = { version: 1; capacityHours?: number; priorityRoleId?: string; priorityGoalHours?: number; priorityDay?: string };
 /** dayTaskOrder affects only Week presentation, never the responsibility's canonical task order. */
 export type WeekData = { boxes: Box[]; allocations: Allocation[]; dayTaskOrder?: Record<string, string[]>; life?: LifeWeekMetadata };
 export const TASK_ESTIMATE_CHOICES = [15, 30, 45, 60, 90, 120, 180, 240, 480] as const;
@@ -277,7 +277,7 @@ export function normalizeData(raw: unknown): SpreadData {
         (item, index) => ({ ...item, order: typeof item.order === "number" ? item.order : index }),
       );
       weeks[key] = {
-        boxes: week.boxes.filter(isBox).map((box) => restoreBank(normalizeBox(box), allocations, hats)),
+        boxes: week.boxes.filter(isBox).map((box) => (week.life ? normalizeBox(box) : restoreBank(normalizeBox(box), allocations, hats))),
         allocations,
         ...(week.dayTaskOrder && typeof week.dayTaskOrder === "object"
           ? { dayTaskOrder: normalizeDayTaskOrder(week.dayTaskOrder) } : {}),
@@ -397,9 +397,10 @@ function restoreBank(box: Box, allocations: { hatId: string; hours: number }[], 
 function normalizeLifeWeek(raw: unknown): LifeWeekMetadata | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const life = raw as Partial<LifeWeekMetadata>;
-  if (life.version !== 1) return undefined;
+  if (life.version !== 1) return structuredClone(raw) as LifeWeekMetadata;
   const capacity = life.capacityHours;
   return {
+    ...structuredClone(life),
     version: 1,
     ...(typeof capacity === "number" && Number.isFinite(capacity) && capacity >= 0 &&
         capacity <= 168 && Number.isInteger(capacity * 2) ? { capacityHours: capacity } : {}),
@@ -433,7 +434,7 @@ function isTask(value: unknown): value is Task {
 }
 
 function normalizeTask(task: Task): Task {
-  const next: Task = { id: task.id, text: task.text, done: Boolean(task.done) };
+  const next: Task = { ...structuredClone(task), id: task.id, text: task.text, done: Boolean(task.done) };
   if (typeof task.allocationId === "string") next.allocationId = task.allocationId;
   if (task.content) next.content = normalizeContent(task.content);
   if (TASK_ESTIMATE_CHOICES.some((v) => v === task.estimateMinutes)) next.estimateMinutes = task.estimateMinutes;
@@ -450,7 +451,7 @@ function normalizeContent(value: unknown): TaskContent {
     photo?: string;
   };
   if (Array.isArray(raw.blocks)) {
-    return { blocks: raw.blocks.map(normalizeBlock).filter((block) => block !== null) };
+    return { ...structuredClone(raw), blocks: raw.blocks.map(normalizeBlock).filter((block) => block !== null) };
   }
   const blocks: ContentBlock[] = [];
   if (Array.isArray(raw.bullets)) {
@@ -477,7 +478,7 @@ function normalizeBlock(value: unknown): ContentBlock | null {
   if (!value || typeof value !== "object") return null;
   const block = value as ContentBlock;
   if (typeof block.id !== "string") return null;
-  if (block.type === "notes" && typeof block.text === "string") return { id: block.id, type: "notes", text: block.text };
+  if (block.type === "notes" && typeof block.text === "string") return { ...structuredClone(block), id: block.id, type: "notes", text: block.text };
   if (block.type === "outline" && Array.isArray(block.items)) {
     const items = block.items
       .filter((item) => item && typeof item.id === "string" && typeof item.text === "string")
@@ -492,7 +493,8 @@ function normalizeBlock(value: unknown): ContentBlock | null {
   if (block.type === "photo" && typeof block.src === "string" && (block.src === "" || block.src.startsWith("data:image/"))) {
     return { id: block.id, type: "photo", src: block.src };
   }
-  return null;
+  // Future block types stay intact and are rendered read-only by older editors.
+  return structuredClone(value) as ContentBlock;
 }
 
 function walkOutline(nodes: { id?: string; text?: string; children?: unknown[] }[], level: number, items: OutlineItem[]) {
