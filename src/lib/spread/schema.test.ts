@@ -125,3 +125,26 @@ test("v2 planner migrates to v3 without rewriting stored tasks or allocations", 
   assert.equal(readSchemaVersion(store), 3);
   assert.deepEqual(runMigrations(store, { current: 2 }), { status: "newer", version: 3 });
 });
+
+
+test("Life schema upgrade is marker-only, snapshots old planner and protects it against schema3 downgrade", () => {
+  const store = planner();
+  const raw = JSON.stringify({ hats: [{ id: "work", name: "Work", defaultHours: 8, color: "#007AFF" }],
+    currentWeek: "2026-11-02", weeks: { "2026-11-02": {
+      boxes: [{ hatId: "work", hours: 2, tasks: [{ id: "t", text: "Keep", done: false, estimateMinutes: 90,
+        content: { blocks: [{ id: "n", type: "notes", text: "Styled", richText: { version: 1, rtf: "e1xydGYxfQ==" } },
+          { id: "f", type: "future", opaque: { version: 7 } }] } }] }], allocations: [],
+      life: { version: 1, capacityHours: 36, priorityRoleId: "work", priorityGoalHours: 6, priorityDay: "2026-11-03" },
+    } } });
+  store.setItem(STORE_KEY, raw);
+  store.setItem(SCHEMA_KEY, "3");
+  const snapshots: Record<string, string>[] = [];
+  assert.deepEqual(runMigrations(store, { snapshot: (_label, entries) => snapshots.push(entries) }),
+    { status: "migrated", from: 3, to: 4 });
+  assert.equal(store.getItem(STORE_KEY), raw, "upgrade never rewrites a real profile");
+  assert.equal(snapshots[0][STORE_KEY], raw);
+  const upgraded = JSON.stringify([...store.map]);
+  assert.deepEqual(runMigrations(store, { current: 3 }), { status: "newer", version: 4 });
+  assert.equal(JSON.stringify([...store.map]), upgraded, "downgraded binary must not touch native Life records");
+  assert.deepEqual(runMigrations(store), { status: "current", version: 4 });
+});
