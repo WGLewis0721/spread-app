@@ -18,6 +18,8 @@ struct NativeContentBlock: Codable, Identifiable, Equatable {
     var items: [NativeOutlineItem]?
     var cells: [[String]]?
     var src: String?
+    var richText: NativeRichText?
+    var preserved: [String: NativeJSON] = [:]
 }
 
 struct NativeTaskContent: Codable, Equatable {
@@ -62,7 +64,7 @@ struct TaskSheet: View {
     @FocusState private var focusedField: String?
 
     private var task: PlannerTask? { planner.snapshot?.tasks.first { $0.id == taskId } }
-    private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) } }
+    private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) && ($0.richText == nil || $0.richText?.version == 1) } }
 
     var body: some View {
         SpreadSheetStack {
@@ -373,13 +375,30 @@ struct TaskSheet: View {
                 .accessibilityIdentifier("remove-block-\(block.id)")
             }
             switch block.type {
-            case "notes": notesEditor(block)
+            case "notes": if lifeMode { lifeNotesEditor(block) } else { notesEditor(block) }
             case "outline": outlineEditor(block)
             case "table": tableEditor(block)
             case "photo": photoView(block)
             default: EmptyView()
             }
         }
+    }
+
+    private func lifeNotesEditor(_ block: NativeContentBlock) -> some View {
+        LifeNotesEditor(text: Binding(get: {
+            content.blocks.first(where: { $0.id == block.id })?.text ?? ""
+        }, set: { text in
+            guard var current = content.blocks.first(where: { $0.id == block.id }) else { return }
+            current.text = text
+            update(current)
+        }), richText: Binding(get: {
+            content.blocks.first(where: { $0.id == block.id })?.richText
+        }, set: { value in
+            guard var current = content.blocks.first(where: { $0.id == block.id }) else { return }
+            current.richText = value
+            update(current)
+        }))
+        .frame(minHeight: 240)
     }
 
     private func notesEditor(_ block: NativeContentBlock) -> some View {
