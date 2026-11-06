@@ -1,5 +1,7 @@
 #if os(iOS)
 import SwiftUI
+import Combine
+import UIKit
 
 /// Pure geometry and arithmetic: one 15° detent is a half hour. Direction follows the
 /// reference's pointerAngle/angleDelta, including wrapping at -180/180.
@@ -28,6 +30,22 @@ struct LifeHoursView: View {
     let onHelp: () -> Void
 
     @State private var separated = false
+    @State private var phase: Double = 0
+    @State private var phaseTime = Date()
+    @State private var isVisible = false
+    @State private var holding = false
+    @State private var holdDistance: Double = 0
+    @State private var holdCredit: Double = 0
+    @State private var holdLast = Date()
+    @State private var holdChanged = false
+    @State private var originRevision: Int?
+    @State private var saving = false
+    @State private var rejected = false
+    @GestureState private var contactActive = false
+    @ScaledMetric(relativeTo: .largeTitle) private var numberSize = 48
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var typeSize
+    private let clock = Timer.publish(every: 1.0 / 60, on: .main, in: .common).autoconnect()
     @State private var selectedRole: String?
     @State private var capacityDraft: Double?
     @State private var budgetDraft: Double?
@@ -55,7 +73,7 @@ struct LifeHoursView: View {
         snapshot.roles.first { $0.id == selectedRole }
     }
     private var context: String {
-        "\(planner.state?.envelope.profileId ?? "")/\(snapshot.weekKey)"
+        "\(planner.state?.sessionId ?? "")/\(planner.state?.envelope.profileId ?? "")/\(snapshot.weekKey)"
     }
     private var selectedHours: Double { budgetDraft ?? selected?.hours ?? 0 }
 
@@ -65,7 +83,7 @@ struct LifeHoursView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Hours").font(.system(.largeTitle, weight: .bold))
                     Text("Make the hours count.")
-                        .font(.subheadline).foregroundStyle(Spread.secondary)
+                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
                 Spacer()
                 Button(action: onHelp) {
@@ -75,40 +93,41 @@ struct LifeHoursView: View {
                 .accessibilityLabel("Gesture help")
             }
             orbit
+            Text("Time you want to plan this week.").font(.subheadline).foregroundStyle(LifePalette.secondary)
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(SpreadHours.text(assigned) + " assigned")
                         .font(.headline).monospacedDigit()
-                    Text("Hours in your Life areas").font(.caption).foregroundStyle(Spread.secondary)
+                    Text("Hours in your Life areas").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(available.map { SpreadHours.text($0) + " unassigned" } ?? "Set capacity")
                         .font(.headline).monospacedDigit()
-                    Text("Hours not assigned").font(.caption).foregroundStyle(Spread.secondary)
+                    Text("Hours not assigned").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
             }
             .padding(14)
-            .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 18))
+            .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 18))
 
             if capacity == nil {
                 Text("How many hours can you plan this week?")
                     .font(.headline)
                 Text("Set your total planning hours. Your existing Life hours stay unchanged.")
-                    .font(.subheadline).foregroundStyle(Spread.secondary)
+                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
                 capacityField
             } else {
                 if let available, available < 0 {
                     Label("You have \(SpreadHours.text(-available)) more assigned hours than your capacity. Your existing plan is unchanged.", systemImage: "exclamationmark.triangle")
                         .font(.callout).foregroundStyle(Spread.caution)
                 }
-                Text(separated ? "Choose a Life area. Circle left to add; right to subtract." :
-                        "Tap the number to separate. Flick up or down to change capacity.")
-                    .font(.subheadline).foregroundStyle(Spread.secondary)
+                Text(separated ? "Choose an area. Turn left to add time. Turn right to return it." :
+                        "Tap the number to adjust your hours.")
+                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                 if showTips {
                     Text("Flick up or down by 1 hour. Hold and drag to change faster.")
-                        .font(.caption).foregroundStyle(Spread.tertiary)
+                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
                 Button(showCapacityField ? "Hide capacity controls" : "Adjust capacity with controls") {
@@ -123,6 +142,13 @@ struct LifeHoursView: View {
             if let selected, separated, capacity != nil {
                 selectedControls(selected)
             }
+            if saving { ProgressView("Saving hours…") }
+            if rejected {
+                HStack {
+                    Button("Retry save") { retryDraft() }
+                    Button("Discard draft") { resetGestures() }
+                }.buttonStyle(.bordered).frame(minHeight: 44)
+            }
             if let message {
                 Text(message).font(.callout).foregroundStyle(Spread.caution)
                     .accessibilityIdentifier("life-hours-message")
@@ -130,17 +156,28 @@ struct LifeHoursView: View {
         }
         .onChange(of: snapshot.weekKey) { _, _ in resetGestures() }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in resetGestures() }
-        .onChange(of: selectedRole) { _, _ in budgetDraft = nil; lastAngle = nil; angleCredit = 0 }
+        .onChange(of: selectedRole) { _, _ in if !rejected { budgetDraft = nil }; lastAngle = nil; angleCredit = 0 }
+        .onChange(of: planner.state?.revision) { _, value in
+            if let originRevision, value != originRevision, !saving, !rejected { resetGestures() }
+        }
+        .onChange(of: context) { _, _ in resetGestures() }
+        .onChange(of: scenePhase) { _, next in if next != .active { resetGestures() }; phaseTime = Date() }
+        .onChange(of: contactActive) { _, active in
+            if !active { DispatchQueue.main.async { if gestureContext != nil && !saving && !rejected { resetGestures() } } }
+        }
+        .onAppear { isVisible = true; phaseTime = Date() }
+        .onDisappear { isVisible = false; resetGestures() }
+        .onReceive(clock) { now in advanceClock(now) }
         .accessibilityIdentifier("life-hours-page")
     }
 
     private var orbit: some View {
         GeometryReader { geo in
-            let diameter = min(geo.size.width, 340.0)
+            let diameter = min(geo.size.width, typeSize.isAccessibilitySize ? 500.0 : 340.0)
             let radius = diameter * 0.315
             ZStack {
                 Circle()
-                    .stroke(Spread.line, lineWidth: 17)
+                    .stroke(LifePalette.line, lineWidth: 17)
                     .padding(diameter * 0.17)
                 ForEach(segments, id: \.id) { segment in
                     Circle()
@@ -148,10 +185,10 @@ struct LifeHoursView: View {
                         .stroke(Color(hex: segment.color),
                                 style: StrokeStyle(lineWidth: selectedRole == segment.id && separated ? 24 : 18,
                                                    lineCap: .round))
-                        .rotationEffect(.degrees(-90))
+                        .rotationEffect(.degrees(-90 + phase))
                         .padding(diameter * 0.17)
-                        .offset(x: separated ? cos(segment.middle * .pi / 180) * 18 : 0,
-                                y: separated ? sin(segment.middle * .pi / 180) * 18 : 0)
+                        .offset(x: separated ? cos((segment.middle + phase) * .pi / 180) * 21 : 0,
+                                y: separated ? sin((segment.middle + phase) * .pi / 180) * 21 : 0)
                         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: separated)
                         .accessibilityHidden(true)
                 }
@@ -159,28 +196,31 @@ struct LifeHoursView: View {
                     .stroke(Color.clear, lineWidth: 48)
                     .frame(width: radius * 2, height: radius * 2)
                     .contentShape(Circle().stroke(lineWidth: 48))
-                    .gesture(DragGesture(minimumDistance: 6)
+                    .gesture(DragGesture(minimumDistance: 6, coordinateSpace: .named("life-orbit"))
+                        .updating($contactActive) { _, state, _ in state = true }
                         .onChanged { turnArc($0, diameter: diameter) }
                         .onEnded { _ in finishArc() })
                     .accessibilityHidden(true)
                 VStack(spacing: 4) {
                     Text(capacity.map(SpreadHours.text) ?? "—")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                        .minimumScaleFactor(0.7)
+                        .font(.system(size: numberSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .accessibilityIdentifier("life-capacity-number")
-                    Text("Hours available\nto plan")
+                    Text("Weekly planning hours")
                         .font(.subheadline.weight(.medium))
                         .multilineTextAlignment(.center)
                 }
-                .frame(width: diameter * 0.48, height: diameter * 0.48)
+                .frame(width: diameter * 0.54)
+                .fixedSize(horizontal: false, vertical: true)
                 .contentShape(Circle())
                 .onTapGesture {
+                    guard !saving, !rejected else { return }
                     separated.toggle()
                     if !separated { selectedRole = nil }
                     selectionTick()
                 }
                 .gesture(DragGesture(minimumDistance: 10)
+                    .updating($contactActive) { _, state, _ in state = true }
                     .onChanged { dragCapacity($0) }
                     .onEnded { _ in finishCapacity() })
                 .accessibilityElement(children: .ignore)
@@ -194,10 +234,11 @@ struct LifeHoursView: View {
                     }
                 }
             }
+            .coordinateSpace(name: "life-orbit")
             .frame(width: diameter, height: diameter)
             .frame(maxWidth: .infinity)
         }
-        .frame(height: 340)
+        .frame(height: typeSize.isAccessibilitySize ? max(390, numberSize * 5.5) : 340)
         .accessibilityIdentifier("life-orbit")
     }
 
@@ -239,14 +280,15 @@ struct LifeHoursView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text(SpreadHours.text(selectedRole == role.id ? selectedHours : role.hours) + " h")
                             .monospacedDigit().font(.headline)
-                        Image(systemName: "chevron.right").foregroundStyle(Spread.tertiary)
+                        Image(systemName: "chevron.right").foregroundStyle(LifePalette.secondary)
                     }
                     .padding(12)
                     .frame(minHeight: 50)
-                    .background(selectedRole == role.id ? Spread.accent.opacity(0.1) : Spread.elevated,
+                    .background(selectedRole == role.id ? LifePalette.accent.opacity(0.1) : LifePalette.surface,
                                 in: RoundedRectangle(cornerRadius: 15))
                 }
                 .buttonStyle(.plain)
+                .disabled(saving || rejected)
                 .accessibilityIdentifier("life-hours-role-\(role.id)")
             }
         }
@@ -264,18 +306,23 @@ struct LifeHoursView: View {
                     Label("Add ½h", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
+                .keyboardShortcut(.leftArrow, modifiers: [.option])
                 Button { changeBudget(by: -0.5) } label: {
                     Label("Return ½h", systemImage: "arrow.clockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
             }
+            .keyboardShortcut(.rightArrow, modifiers: [.option])
             .buttonStyle(.bordered)
             let reserved = snapshot.placedHours(for: role.id)
             Text("\(SpreadHours.text(reserved)) h placed on days · \(SpreadHours.text(max(0, selectedHours - reserved))) h available to place")
-                .font(.callout).foregroundStyle(Spread.secondary)
+                .font(.callout).foregroundStyle(LifePalette.secondary)
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityValue(SpreadHours.spoken(selectedHours))
+        .accessibilityAdjustableAction { direction in changeBudget(by: direction == .increment ? 0.5 : -0.5) }
         .padding(16)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 20))
+        .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 20))
     }
 
     private var capacityField: some View {
@@ -320,45 +367,38 @@ struct LifeHoursView: View {
         message = text
         if !boundaryWarned {
             boundaryWarned = true
-            if touchFeedback { SpreadHaptics.selection() }
+            if touchFeedback, Date().timeIntervalSince(lastTick) >= 0.125 {
+                lastTick = Date(); UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            }
         }
     }
     private func dragCapacity(_ value: DragGesture.Value) {
-        guard let capacity = snapshot.life?.capacityHours else { return }
+        guard !saving, !rejected, let capacity = snapshot.life?.capacityHours else { return }
         if capacityOrigin == nil {
-            capacityOrigin = capacity
-            gestureStarted = value.time
-            gestureContext = context
-            boundaryWarned = false
+            capacityOrigin = capacity; capacityDraft = capacity
+            gestureStarted = value.time; holdLast = value.time
+            holdCredit = 0; holdChanged = false; holding = true
+            beginContext()
         }
         guard gestureContext == context else { resetGestures(); return }
-        let difference = Double(-value.translation.height)
-        let elapsed = value.time.timeIntervalSince(gestureStarted ?? value.time)
-        let proposed = LifeOrbitMath.limit(
-            (capacityOrigin ?? capacity) + Double(LifeOrbitMath.capacityDelta(distance: difference, elapsed: elapsed)),
-            minimum: storedAssigned, maximum: 168)
-        if proposed == capacityDraft { return }
-        if proposed == storedAssigned || proposed == 168 { warn("Capacity must stay between assigned hours and 168.") }
-        capacityDraft = proposed
-        selectionTick()
+        holdDistance = Double(-value.translation.height)
     }
     private func finishCapacity() {
-        guard gestureContext == context, let value = capacityDraft,
-              value != snapshot.life?.capacityHours else { resetGestures(); return }
+        guard gestureContext == context else { resetGestures(); return }
+        if !holdChanged, abs(holdDistance) > 17 { applyCapacityStep(holdDistance > 0 ? 1 : -1) }
+        holding = false
+        guard let value = capacityDraft, value != snapshot.life?.capacityHours else { resetGestures(); return }
         commitCapacity(value)
-        resetGestures(keepMessage: true)
-        showTips = false
     }
     private func turnArc(_ value: DragGesture.Value, diameter: CGFloat) {
-        guard separated, let role = selected, let capacity = capacity,
+        guard !saving, !rejected, separated, let role = selected, let capacity = capacity,
               snapshot.life?.capacityHours != nil else { return }
         if gestureContext == nil {
-            gestureContext = context
-            boundaryWarned = false
+            beginContext()
         }
         guard gestureContext == context else { resetGestures(); return }
         let next = LifeOrbitMath.angle(x: Double(value.location.x), y: Double(value.location.y),
-                                       center: Double(diameter * 0.315))
+                                       center: Double(diameter / 2))
         if let lastAngle {
             angleCredit += LifeOrbitMath.delta(from: lastAngle, to: next)
             let steps = Int(angleCredit / 15)
@@ -367,12 +407,12 @@ struct LifeHoursView: View {
                 let current = budgetDraft ?? role.hours
                 let assignedElsewhere = storedAssigned - role.hours
                 let minBudget = snapshot.placedHours(for: role.id)
-                let maxBudget = max(minBudget, capacity - assignedElsewhere)
+                let maxBudget = max(current, max(minBudget, capacity - assignedElsewhere))
                 let proposed = LifeOrbitMath.limit(current - Double(steps) * 0.5,
                                                    minimum: minBudget, maximum: maxBudget)
                 if proposed == current {
-                    warn(proposed <= minBudget ? "Return the hours placed on days first." :
-                            "Your circle is full. Increase capacity to add time.")
+                    warn(proposed <= minBudget ? "\(SpreadHours.text(minBudget)) h are already reserved. Return time from a day first." :
+                            "All hours are assigned. Add weekly hours to assign more.")
                 } else {
                     budgetDraft = proposed
                     selectionTick()
@@ -386,42 +426,95 @@ struct LifeHoursView: View {
         let roleId = selectedRole
         let old = selected?.hours
         let sameContext = gestureContext == context
-        resetGestures(keepMessage: true)
-        guard sameContext, let roleId, let draft, draft != old else { return }
+        lastAngle = nil; angleCredit = 0
+        guard sameContext, let roleId, let draft, draft != old else { resetGestures(); return }
         commitBudget(roleId, hours: draft)
-        showTips = false
     }
     private func changeBudget(by delta: Double) {
-        guard let role = selected, let capacity else { return }
+        guard !saving, !rejected, let role = selected, let capacity else { return }
         let reserved = snapshot.placedHours(for: role.id)
-        let maxBudget = max(reserved, capacity - (storedAssigned - role.hours))
+        let maxBudget = max(role.hours, max(reserved, capacity - (storedAssigned - role.hours)))
         let next = role.hours + delta
         guard next >= reserved && next <= maxBudget else {
-            warn(delta < 0 ? "Return the hours placed on days first." : "Your circle is full.")
+            warn(delta < 0 ? "\(SpreadHours.text(reserved)) h are already reserved. Return time from a day first." : "All hours are assigned. Add weekly hours to assign more.")
             return
         }
         commitBudget(role.id, hours: next)
     }
-    private func commitBudget(_ roleId: String, hours: Double) {
-        message = nil
-        Task {
-            let ok = await planner.send(["type": "setLifeBudget", "roleId": roleId, "hours": hours])
-            if ok { selectionTick() } else { message = "The budget was not saved. Review the current plan." }
+
+    private func beginContext() {
+        gestureContext = context
+        originRevision = planner.state?.revision
+        boundaryWarned = false
+    }
+    private func advanceClock(_ now: Date) {
+        let elapsed = max(0, min(0.1, now.timeIntervalSince(phaseTime)))
+        phaseTime = now
+        if isVisible && scenePhase == .active && !reduceMotion && !separated && !holding && !saving {
+            phase = (phase + elapsed * 6).truncatingRemainder(dividingBy: 360)
+        }
+        guard holding, gestureContext == context else { return }
+        let interval = max(0, now.timeIntervalSince(holdLast))
+        holdLast = now
+        guard now.timeIntervalSince(gestureStarted ?? now) >= 0.35, abs(holdDistance) > 12 else { return }
+        holdCredit += interval * min(16, max(1, (abs(holdDistance) - 8) / 14))
+        let steps = Int(holdCredit)
+        if steps > 0 {
+            holdCredit -= Double(steps)
+            applyCapacityStep(Double(steps) * (holdDistance > 0 ? 1 : -1))
         }
     }
+    private func applyCapacityStep(_ step: Double) {
+        guard let current = capacityDraft ?? snapshot.life?.capacityHours else { return }
+        let minimum = min(storedAssigned, current)
+        let maximum = max(168, current)
+        let proposed = LifeOrbitMath.limit(current + step, minimum: minimum, maximum: maximum)
+        if proposed == current { warn("Capacity must stay between assigned hours and 168."); return }
+        capacityDraft = proposed; holdChanged = true
+        selectionTick()
+    }
+    private func retryDraft() {
+        beginContext()
+        if let value = capacityDraft { commitCapacity(value) }
+        else if let role = selectedRole, let value = budgetDraft { commitBudget(role, hours: value) }
+    }
+    private func commitBudget(_ roleId: String, hours: Double) {
+        guard !saving else { return }
+        if gestureContext == nil { beginContext() }
+        budgetDraft = hours
+        save(["type": "setLifeBudget", "roleId": roleId, "hours": hours])
+    }
     private func commitCapacity(_ hours: Double) {
-        message = nil
+        guard !saving else { return }
+        if gestureContext == nil { beginContext() }
+        capacityDraft = hours
+        save(["type": "setLifeCapacity", "hours": hours])
+    }
+    private func save(_ command: [String: Any]) {
+        guard gestureContext == context else { resetGestures(); return }
+        let origin = context
+        let revision = originRevision
+        saving = true; rejected = false; message = nil
         Task {
-            let ok = await planner.send(["type": "setLifeCapacity", "hours": hours])
-            if ok { capacityText = SpreadHours.text(hours); selectionTick() }
-            else { message = "Capacity was not saved. Review the current plan." }
-            capacityDraft = nil
+            let ok = await planner.send(command, expectedRevision: revision)
+            guard origin == context else { resetGestures(); return }
+            saving = false
+            if ok {
+                showTips = false
+                capacityText = capacityDraft.map(SpreadHours.text) ?? capacityText
+                resetGestures()
+                if touchFeedback { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+            } else {
+                rejected = true; holding = false
+                message = "Hours were not saved. Your draft is kept. Review the current plan, then retry or discard."
+            }
         }
     }
     private func resetGestures(keepMessage: Bool = false) {
         capacityDraft = nil; budgetDraft = nil; capacityOrigin = nil
-        lastAngle = nil; angleCredit = 0; gestureContext = nil
-        gestureStarted = nil; boundaryWarned = false
+        lastAngle = nil; angleCredit = 0; gestureContext = nil; originRevision = nil
+        gestureStarted = nil; boundaryWarned = false; holding = false
+        holdCredit = 0; holdDistance = 0; rejected = false; saving = false
         if !keepMessage { message = nil }
     }
 }
