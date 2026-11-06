@@ -17,6 +17,15 @@ final class LifeUITests: XCTestCase {
             .waitForExistence(timeout: 90), "The opted-in native Life root did not load.")
     }
 
+    private func navigate(_ page: String) {
+        let navigation = app.buttons["life-navigation"]
+        XCTAssertTrue(navigation.waitForExistence(timeout: 20))
+        navigation.tap()
+        let destination = app.buttons["life-nav-" + page]
+        XCTAssertTrue(destination.waitForExistence(timeout: 10))
+        destination.tap()
+    }
+
     private func capture(_ title: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = title
@@ -29,11 +38,11 @@ final class LifeUITests: XCTestCase {
         let life = app.descendants(matching: .any).matching(identifier: "life-page").firstMatch
         XCTAssertTrue(life.waitForExistence(timeout: 30))
         capture("life-stack")
-        app.buttons["life-nav-hours"].tap()
+        navigate("hours")
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-hours-page").firstMatch
             .waitForExistence(timeout: 20))
         capture("life-hours")
-        app.buttons["life-nav-week"].tap()
+        navigate("week")
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-week-page").firstMatch
             .waitForExistence(timeout: 20))
         capture("life-week")
@@ -49,19 +58,27 @@ final class LifeUITests: XCTestCase {
 
     func testCapacityUsesRealStoreAndSurvivesRelaunch() {
         startLife()
-        app.buttons["life-nav-hours"].tap()
+        navigate("hours")
         let field = app.descendants(matching: .any).matching(identifier: "life-capacity-input").firstMatch
-        if field.waitForExistence(timeout: 10) {
-            field.tap()
-            field.typeText("168")
-            app.buttons["Set"].tap()
-            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
-                .waitForExistence(timeout: 20))
+        if !field.waitForExistence(timeout: 5) {
+            app.buttons["Adjust capacity with controls"].tap()
         }
+        XCTAssertTrue(field.waitForExistence(timeout: 10), "The editable capacity must be reachable.")
+        field.tap()
+        let existing = (field.value as? String) ?? ""
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count) + "168")
+        app.buttons["Set"].tap()
+        let number = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
+        XCTAssertTrue(number.waitForExistence(timeout: 20))
+        let expectedValue = number.value as? String
+        XCTAssertTrue(expectedValue?.contains("168") == true, "Capacity must be acknowledged as 168, not merely render.")
         capture("life-capacity")
         app.terminate()
         startLife()
-        app.buttons["life-nav-hours"].tap()
+        navigate("hours")
+        let restored = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
+        XCTAssertTrue(restored.waitForExistence(timeout: 20))
+        XCTAssertEqual(restored.value as? String, expectedValue, "Stored capacity must survive process relaunch.")
         capture("life-capacity-after-relaunch")
     }
 
