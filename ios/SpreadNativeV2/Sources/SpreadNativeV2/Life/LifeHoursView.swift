@@ -3,6 +3,9 @@ import Foundation
 /// Pure geometry and arithmetic: one 15° detent is a half hour. Direction follows the
 /// reference's pointerAngle/angleDelta, including wrapping at -180/180.
 enum LifeOrbitMath {
+    /// Twenty-second visible orbit around the weekly capacity. Pauses on selection/Reduce Motion.
+    static let orbitDegreesPerSecond = 18.0
+
     static func delta(from old: Double, to next: Double) -> Double {
         let value = (next - old + 540).truncatingRemainder(dividingBy: 360)
         return value - 180
@@ -461,7 +464,7 @@ struct LifeHoursView: View {
         phaseTime = now
         if isVisible && scenePhase == .active && !reduceMotion && !separated && !holding && !saving {
             // One complete orbit in 20 seconds, rather than a barely noticeable minute.
-            phase = (phase + elapsed * 18).truncatingRemainder(dividingBy: 360)
+            phase = (phase + elapsed * LifeOrbitMath.orbitDegreesPerSecond).truncatingRemainder(dividingBy: 360)
         }
         guard holding, gestureContext == context else { return }
         let interval = max(0, now.timeIntervalSince(holdLast))
