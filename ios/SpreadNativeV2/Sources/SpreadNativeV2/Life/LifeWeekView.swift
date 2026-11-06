@@ -50,7 +50,7 @@ struct LifeWeekView: View {
                         Button("Place some hours") { onReserve(role.id) }.frame(minHeight: 44)
                     }
                 }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 24))
+                    .spreadCard()
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: roles,
                     selectedRole: $selectedRole, editing: false, day: date,
@@ -60,11 +60,14 @@ struct LifeWeekView: View {
                         Text(role.name).font(.title3.weight(.semibold))
                         Text("\(SpreadHours.text(snapshot.allocations.filter { $0.day == date && $0.roleId == roleID }.reduce(0) { $0 + $1.hours })) h reserved for \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))")
                             .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                        VStack(alignment: .leading, spacing: 0) {
                         LifeTaskRows(planner: planner, snapshot: snapshot,
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),
                             onOpenTask: onOpenTask)
                         LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
-                    }.padding(18).background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 22))
+                        }.padding(.horizontal, 4)
+                            .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }.padding(18).spreadCard()
                 }
             }
             unplaced
@@ -149,7 +152,7 @@ struct LifeWeekView: View {
                 Spacer(minLength: 0)
                 if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: 44) }
             }
-        }.padding(.vertical, 8).accessibilityElement(children: .contain)
+        }.padding(12).spreadCard().accessibilityElement(children: .contain)
     }
 
     private var monthControls: some View {
@@ -180,8 +183,9 @@ struct LifeWeekView: View {
                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "d"))
                     .font(.subheadline.weight(.semibold)).monospacedDigit()
                     .frame(minWidth: 30, minHeight: 30)
-                    .background(selected ? LifePalette.ink : Color.clear, in: Circle())
-                    .foregroundStyle(selected ? LifePalette.canvas : LifePalette.ink)
+                    .background(selected ? Spread.accent : Color.clear, in: Circle())
+                    .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+                    .overlay(Circle().strokeBorder(today ? Spread.accent : .clear, lineWidth: 1.5))
                 HStack(spacing: 2) {
                     ForEach(Array(mark.colors.prefix(4).enumerated()), id: \.offset) { _, color in
                         Circle().fill(Color(hex: color)).frame(width: 4, height: 4)
@@ -191,7 +195,7 @@ struct LifeWeekView: View {
             }.frame(maxWidth: .infinity, minHeight: 48)
                 .opacity(iso.prefix(7) == date.prefix(7) ? 1 : 0.4)
                 .contentShape(Rectangle())
-        }.buttonStyle(.plain).disabled(planner.busy)
+        }.buttonStyle(.spreadPress).disabled(planner.busy)
             .accessibilityLabel("\(today ? "Today, " : "")\(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d yyyy"))")
             .accessibilityValue("\(mark.count) Life areas planned")
             .accessibilityAddTraits(selected ? .isSelected : [])

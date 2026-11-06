@@ -1,49 +1,64 @@
-# Life and Classic: one Spread design language
+# Classic → Life component handoff
 
-> Part of the [Spread design brain](../README.md). Owner direction, November 6, 2026.
->
-> Summary: Keep Life's functional arrangement while restoring Classic's visual identity and interaction precision. Rename the picker to Life. Keep tray opening/closing controls at the same outer-edge dock position.
+> Part of the [Spread design brain](../README.md). Canonical correction to the first Life polish pass. Owner direction: November 6, 2026.
 
-## Evidence and scope
+## Where we are
 
-Verified source baseline: main `8def6743e926204bc50398164f3963cf018fc854`.
-Read the [native board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), shared SpreadTheme, Classic shell, Life root and existing More picker.
+- Correction branch starts from main `5b7f05c37ce8873c44b3fb6bc5b924a43b3d8d1f`, including PR #151's build fix. Owner reports a successful native build; its exact source/build/device identifiers are not recorded here.
+- Life exists: Wallet areas, separate task details, Hours orbit, Week/month calendar, placement, priority, rich notes/attachments, undo/redo and local preferences.
+- First polish pass transferred palette, card gradients, original artwork and Crown. It did **not** complete Classic's component language. A successful build does not establish parity.
+- Branch `fix/life-classic-component-parity` contains a source correction prepared for review. Nothing from this branch is merged. Native rendering and interaction acceptance remain open.
 
-The owner reports that Classic has stronger polish, vibrancy, simplicity and precision; Life has useful functionality but weaker cues and separation. These are owner observations, not observations made from videos by this implementation.
-**Both recordings have now been reviewed.** See the [Classic video specification](2026-11-06-classic-video-spec.md) and [Life video specification](2026-11-06-life-video-spec.md) for separate observations, timestamped findings and implementation requirements. Native candidate comparison remains pending.
+## Target
 
-This request supersedes Life's independent gray/black palette. Classic is the visual reference; Life retains its arrangement and capabilities. Do not repaint Classic or change planner/storage/release behavior.
+One app, one component language, two arrangements. Classic supplies materials, iconography, typography, depth, spacing, cues and motion. Life keeps its Wallet → separate details, Hours orbit and Week/month arrangement.
 
-## Reviewed recordings
+Authority: [Classic recording spec](2026-11-06-classic-video-spec.md), [Life recording spec](2026-11-06-life-video-spec.md), [native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), and actual Classic source. Recordings use different plans; do not present them as matched before/after evidence.
 
-- [Classic: design, motion and UI/UX](2026-11-06-classic-video-spec.md) — 47.93 s; complete timeline plus a denser expansion sequence.
-- [Life: design, motion and UI/UX](2026-11-06-life-video-spec.md) — 15.00 s; complete timeline plus the noisy card-focus transition.
+## Component map
 
-The recordings establish observed behavior in the recorded builds. Their build/OS identifiers are unavailable; they do not validate the new PR candidate.
+“Prepared” means changed in this branch's source, **not** verified on iPhone.
 
-## Shared component requirements
+| Component | Gap in shipped Life | Take from Classic → apply to Life | Branch status |
+| --- | --- | --- | --- |
+| Weekly summary | Flat value hierarchy; missing calendar tile | Calendar tile, bold hour value, quiet count, role segments, strong disclosure cue; keep Life capacity semantics and Hours destination | Prepared |
+| Wallet identity | Smaller badge; weaker hours/chevron; truncated names | 42pt category tile, semibold name, bold hours and rotating chevron; allow two-line names | Prepared |
+| Card depth | Normal-state outer shadow missing | Existing role gradient/edge plus closed/active shadow; keep face width stable | Prepared |
+| Stack geometry | 52pt pitch cannot clear larger identity row | Increase pitch and both face heights together; prevent title/artwork overlap | Prepared; native calibration owed |
+| Placement cues | Scheduled-day marks absent from details | Reuse actual `DayMarks`, including underline and spoken scheduled days | Prepared |
+| Task field | Rows and entry blend into outer surface | Recessed 18pt field inside elevated details card; retain Life estimates, notes and attachments | Prepared |
+| Add area | Plain text action | Original `icon-new-life`, title/subtitle and raised full-width row in empty/populated states | Prepared |
+| Calendar | Separate black selected-date language | Shared blue selection/onAccent; Today outline and selected accessibility trait | Prepared |
+| Hours/Week grouping | Uniform plain panels | Shared gradient, hairline, shadow and semantic grouping; keep orbit/calendar mechanics | Prepared |
+| Life sheets | Separate default navigation/form materials | Reuse `SpreadSheetStack`, canvas, accent and list surfaces for manage/place/priority/add/help | Prepared |
+| Action hierarchy | Bare placement/priority controls | Shared primary/secondary chips and press response; retain existing intents | Prepared |
+| Header/navigation | First pass is not a complete Classic shell audit | Compare actual brand mark, date/readout, icon family, compactness and selection cues; preserve Life destinations and outer-edge tray geometry | Audit/finish owed |
+| Focus/edit/completion | No matched proof of full interaction consistency | Same rigid card settling, press response, edit/reveal cues and acknowledged completion feedback; retain separate task details | Source partly reused; finish/verify owed |
+| Accessibility/appearance | Source aliases exist; rendered parity unknown | Same light/dark hierarchy, large-text reflow, contrast, Reduce Motion/Transparency and focus behavior | Device verification owed |
 
-| Component | Requirement |
-| --- | --- |
-| Appearance | Life aliases Classic's canvas, elevated surface, ink, secondary ink, separator, recess and accent tokens. Shared tokens remain untouched. |
-| Cards and details | Preserve Wallet selection and separate task fields; use the same card/depth vocabulary as Classic. Tune boundaries and spacing against actual native recordings/captures. |
-| Icons and type | Original Spread assets and system semantic typography; same hierarchy and action meaning in both arrangements. |
-| Motion | Reuse Classic's purposeful motion vocabulary. No ornamental motion, repeated haptics or arbitrary navigation shifts. Video calibration pending. |
-| Cues | Selected, expanded, editable, saving, rejected and completed states must be identifiable without color alone. |
-| Tray opening | With Crown right: opener, Add, Crown. With Crown left: Crown, Add, opener. Opener stays nearest its screen edge. |
-| Drawer | Opens from the opener's edge. Navigation content scrolls independently; Close is pinned at the bottom. |
-| Tray closing | Close matches the opener's horizontal dock column and vertical center. Measure actual dock controls rather than assume a fixed Crown height. |
-| Accessibility | At least 44-point controls; Dynamic Type reflow, reduced motion/transparency, contrast and focus restoration. |
+Card reference: 24pt continuous corners; role overlay 0.48 → 0.16 → clear; edge 0.48 closed / 0.85 active; shadow alpha 0.09 / 0.18, radius 8 / 16, y 4. Use existing shared motion tokens; do not create another timing system.
 
-## Implemented slice and remaining work
+## Implementation order
 
-Implemented: picker says Life; shared Classic tokens; mirrored tray controls and measured Close alignment; original card artwork, role gradient/edge/depth, stable full-width focus, clearer hours summary/history controls and shared motion tokens.
+1. Inspect current main, this branch, Classic source and the component map. Preserve other in-flight work.
+2. Finish all missing components, existing-feature access, fixes and additions above. Reuse actual shared components where possible; keep SwiftUI builders small and explicitly resolve dynamic accessibility strings.
+3. Audit every Life destination and sheet as one system. Resolve remaining header/navigation and focus/edit/completion gaps. Do not stop after repainting the home screen.
+4. Run targeted compile checks during implementation. After the complete source pass, perform the full validation/simulator/test pass; fix discrepancies and repeat affected checks.
+5. Record exact source/build/OS/device and evidence; prepare a reviewable PR and the documented Codemagic candidate. Stop at release authorization.
 
-Completed: both video reviews and the recorded design/motion/UI/UX specifications. Pending: matched before/after candidate captures, remaining visual calibration and native/device acceptance.
-Do not claim that a Swift syntax pass proves appearance or interaction quality.
+## Verification and release gates
 
-## Acceptance and rollback
+- Matched Classic/Life fixtures: same profile/week/data, light/dark, 375/390/430pt phone widths, iPad and accessibility text.
+- Capture summary, closed/focused/editing Wallet, two-line names, day marks, tasks/entry, calendar selection/Today, Hours and every Life sheet.
+- Exercise both Crown sides, opener/Close alignment, interruption/reversal, vertical/horizontal gesture arbitration, haptics, VoiceOver, reduced motion/transparency and persistence across relaunch.
+- Build against the Apple SDK; run relevant native journeys and planner regressions. Record physical iPhone evidence separately from simulator results.
+- Current correction: 50 portable Swift tests passed; final active-iOS syntax parse, whitespace and design-doc checks passed. These checks do not prove SwiftUI SDK compilation or visual parity.
+- Missing credentials/hardware/evidence are explicit blockers. No full-parity claim until evidence supports it. No merge, upload or release-control bypass without authorization.
 
-Verify left/right at standard and accessibility sizes, portrait/landscape and compact/iPad widths. Open/close must not change week, selection or planner data. Compare opener/Close frames and ensure scrolling cannot dislodge Close. Verify picker still persists the existing flag and Classic is reachable.
+## Boundaries and rollback
 
-Revert this focused branch for rollback; no schema or planner migration is introduced. Changes require a reviewed PR; no merge, distribution or production deployment is authorized by this request.
+Preserve Classic and More/Settings exactly. Existing planner remains the sole writer. No schema, backup format, persistence semantics, reference-demo or release-control changes. This is component completion, not a new product design or an unrelated feature backlog. Revert the focused PR to roll back presentation changes.
+
+## Handoff prompt
+
+Continue `fix/life-classic-component-parity` in `WGLewis0721/spread-app`; read this spec, both recording specs and the native brand board, then inspect current main and the actual Classic/Life source. Complete every missing component, existing-feature access gap, fix and addition in the component map across Life, Hours, Week and their sheets before beginning the full validation/simulator/testing pass. Reuse Classic's real components and tokens while retaining Life's arrangement; preserve Classic, More/Settings, planner authority, persistence and the reference demo. Keep SwiftUI builders small, compile incrementally, and then verify matched fixtures, gestures, accessibility, haptics and relaunch persistence, correcting every discrepancy found. Record exact source/build/device evidence, distinguish simulator results from physical iPhone results, and state unavailable credentials or hardware plainly. Finish with a reviewable PR and the documented Codemagic candidate; do not merge, distribute, bypass release controls or claim full parity without authorization and supporting evidence.
