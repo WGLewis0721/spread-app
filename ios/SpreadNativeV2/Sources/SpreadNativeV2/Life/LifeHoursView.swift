@@ -45,7 +45,10 @@ struct LifeHoursView: View {
     @AppStorage("native.life.showTips") private var showTips = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var assigned: Double { snapshot.roles.reduce(0) { $0 + $1.hours } }
+    private var storedAssigned: Double { snapshot.roles.reduce(0) { $0 + $1.hours } }
+    private var assigned: Double {
+        storedAssigned - (selected?.hours ?? 0) + (selectedRole == nil ? 0 : selectedHours)
+    }
     private var capacity: Double? { capacityDraft ?? snapshot.life?.capacityHours }
     private var available: Double? { capacity.map { $0 - assigned } }
     private var selected: Responsibility? {
@@ -187,7 +190,7 @@ struct LifeHoursView: View {
                 .accessibilityAdjustableAction { direction in
                     if let capacity {
                         let change: Double = direction == .increment ? 1 : -1
-                        commitCapacity(LifeOrbitMath.limit(capacity + change, minimum: assigned, maximum: 168))
+                        commitCapacity(LifeOrbitMath.limit(capacity + change, minimum: storedAssigned, maximum: 168))
                     }
                 }
             }
@@ -279,10 +282,10 @@ struct LifeHoursView: View {
         HStack {
             Button {
                 if let capacity {
-                    commitCapacity(LifeOrbitMath.limit(capacity - 1, minimum: assigned, maximum: 168))
+                    commitCapacity(LifeOrbitMath.limit(capacity - 1, minimum: storedAssigned, maximum: 168))
                 }
             } label: { Image(systemName: "minus").frame(width: 44, height: 44) }
-                .disabled(capacity == nil || capacity! <= assigned)
+                .disabled(capacity == nil || capacity! <= storedAssigned)
             TextField("Weekly hours", text: $capacityText)
                 .keyboardType(.decimalPad)
                 .submitLabel(.done)
@@ -291,13 +294,13 @@ struct LifeHoursView: View {
                 .multilineTextAlignment(.center)
             Button {
                 if let capacity {
-                    commitCapacity(LifeOrbitMath.limit(capacity + 1, minimum: assigned, maximum: 168))
+                    commitCapacity(LifeOrbitMath.limit(capacity + 1, minimum: storedAssigned, maximum: 168))
                 }
             } label: { Image(systemName: "plus").frame(width: 44, height: 44) }
                 .disabled(capacity == nil || capacity! >= 168)
             Button("Set") {
                 guard let entered = Double(capacityText.replacingOccurrences(of: ",", with: ".")),
-                      entered >= assigned, entered <= 168, (entered * 2).rounded() == entered * 2 else {
+                      entered >= storedAssigned, entered <= 168, (entered * 2).rounded() == entered * 2 else {
                     message = "Enter half-hour increments between \(SpreadHours.text(assigned)) and 168."
                     return
                 }
@@ -333,9 +336,9 @@ struct LifeHoursView: View {
         let elapsed = value.time.timeIntervalSince(gestureStarted ?? value.time)
         let proposed = LifeOrbitMath.limit(
             (capacityOrigin ?? capacity) + Double(LifeOrbitMath.capacityDelta(distance: difference, elapsed: elapsed)),
-            minimum: assigned, maximum: 168)
+            minimum: storedAssigned, maximum: 168)
         if proposed == capacityDraft { return }
-        if proposed == assigned || proposed == 168 { warn("Capacity must stay between assigned hours and 168.") }
+        if proposed == storedAssigned || proposed == 168 { warn("Capacity must stay between assigned hours and 168.") }
         capacityDraft = proposed
         selectionTick()
     }
@@ -355,14 +358,14 @@ struct LifeHoursView: View {
         }
         guard gestureContext == context else { resetGestures(); return }
         let next = LifeOrbitMath.angle(x: Double(value.location.x), y: Double(value.location.y),
-                                       center: Double(diameter / 2))
+                                       center: Double(diameter * 0.315))
         if let lastAngle {
             angleCredit += LifeOrbitMath.delta(from: lastAngle, to: next)
             let steps = Int(angleCredit / 15)
             if steps != 0 {
                 angleCredit -= Double(steps) * 15
                 let current = budgetDraft ?? role.hours
-                let assignedElsewhere = assigned - role.hours
+                let assignedElsewhere = storedAssigned - role.hours
                 let minBudget = snapshot.placedHours(for: role.id)
                 let maxBudget = max(minBudget, capacity - assignedElsewhere)
                 let proposed = LifeOrbitMath.limit(current - Double(steps) * 0.5,
@@ -391,7 +394,7 @@ struct LifeHoursView: View {
     private func changeBudget(by delta: Double) {
         guard let role = selected, let capacity else { return }
         let reserved = snapshot.placedHours(for: role.id)
-        let maxBudget = max(reserved, capacity - (assigned - role.hours))
+        let maxBudget = max(reserved, capacity - (storedAssigned - role.hours))
         let next = role.hours + delta
         guard next >= reserved && next <= maxBudget else {
             warn(delta < 0 ? "Return the hours placed on days first." : "Your circle is full.")

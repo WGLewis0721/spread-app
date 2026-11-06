@@ -87,7 +87,7 @@ test("Life capacity and budgets are week-only, guarded, projected and undoable",
     const initial = router.read()!;
     assert.equal(initial.envelope.snapshot.life, undefined);
     assert.equal((await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 3 }))).error, "capacity-not-set");
-    const setupCapacity = await router.dispatch(request({ type: "setLifeCapacity", hours: 18 }));
+    const setupCapacity = await router.dispatch(request({ type: "setLifeCapacity", hours: 168 }));
     assert.equal(setupCapacity.ok, true);
     const before = useSpread.getState().data;
     const oldDefault = before.hats.find((hat) => hat.id === roleId)!.defaultHours;
@@ -101,7 +101,7 @@ test("Life capacity and budgets are week-only, guarded, projected and undoable",
     assert.equal(router.read()!.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 8);
     assert.equal((await router.dispatch(request({ type: "redo", editId: changed.undoId }))).ok, true);
     assert.equal(router.read()!.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 5.5);
-    assert.equal(useSpread.getState().data.weeks[before.currentWeek].life?.capacityHours, 18);
+    assert.equal(useSpread.getState().data.weeks[before.currentWeek].life?.capacityHours, 168);
   } finally { router.dispose(); }
 });
 test("Life estimate is optional and never reserves hours", async () => {

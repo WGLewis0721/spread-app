@@ -458,7 +458,8 @@ function mapBox(data: SpreadData, hatId: string, update: (box: WeekData["boxes"]
 
 function writeWeek(data: SpreadData, week: WeekData) {
   const next = ensureWeek(data);
-  const synced = syncAllocationHours(week);
+  // Legacy week actions may supply only boxes/allocations; retain Life metadata.
+  const synced = syncAllocationHours({ ...next.weeks[next.currentWeek], ...week });
   return {
     ...next,
     weeks: { ...next.weeks, [next.currentWeek]: synced },

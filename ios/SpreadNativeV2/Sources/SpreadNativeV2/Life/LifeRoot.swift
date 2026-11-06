@@ -171,7 +171,8 @@ struct LifeRoot: View {
             } else {
                 let step: CGFloat = typeSize.isAccessibilitySize ? 105 : 67
                 ZStack(alignment: .top) {
-                    ForEach(Array(snapshot.roles.enumerated()), id: \.element.id) { index, role in
+                    ForEach(snapshot.roles.indices, id: \.self) { index in
+                        let role = snapshot.roles[index]
                         LifeWalletCard(role: role, editing: editing,
                                        onTap: { withAnimation(reduceMotion ? nil : .spring(response: 0.32)) {
                                            focusedRole = role.id
