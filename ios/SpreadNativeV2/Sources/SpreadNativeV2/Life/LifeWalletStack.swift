@@ -53,7 +53,7 @@ struct LifeWalletStack: View {
                             .allowsHitTesting(!hidden)
                             .accessibilityHidden(hidden)
                             .zIndex(selectedRole == role.id ? Double(ordered.count + 1) : Double(index))
-                            .animation(reduceMotion ? nil : (hidden ? SpreadMotion.press : SpreadMotion.curve),
+                            .animation(reduceMotion ? nil : (hidden ? SpreadTactile.snap : SpreadTactile.settle),
                                        value: focusActive)
                     }
                 }
@@ -63,7 +63,7 @@ struct LifeWalletStack: View {
                     alignment: .top)
             }
         }
-        .animation(reduceMotion ? nil : SpreadMotion.curve, value: selectedRole)
+        .animation(reduceMotion ? nil : SpreadTactile.settle, value: selectedRole)
         .onChange(of: selectedRole) { old, new in
             if let new { lastSelected = new; focusedRole = new }
             else { focusedRole = old ?? lastSelected }
@@ -139,7 +139,11 @@ private struct LifeWalletFace: View {
             .simultaneousGesture(swipe)
         }
         .clipShape(RoundedRectangle(cornerRadius: 23))
-        .onChange(of: dragging) { _, active in if !active { translation = 0 } }
+        .onChange(of: dragging) { _, active in
+            if !active && translation != 0 {
+                withAnimation(reduceMotion ? nil : SpreadTactile.snap) { translation = 0 }
+            }
+        }
         .onChange(of: editing) { _, _ in reveal = 0 }
         .onChange(of: selected) { _, _ in reveal = 0 }
         .task(id: "\(editing)-\(reduceMotion)-\(scenePhase)") {
@@ -257,9 +261,14 @@ private struct LifeWalletFace: View {
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { translation = 0; return }
                 ignoreTapUntil = Date().addingTimeInterval(0.25)
                 let offset = reveal + value.translation.width
-                let next: CGFloat = offset < -42 ? -92 : offset > 42 ? 92 : 0
+                let target = TactilePrecisionMath.revealTarget(
+                    current: Double(reveal), translation: Double(value.translation.width),
+                    projected: Double(value.predictedEndTranslation.width))
                 revealCue = 0
-                withAnimation(reduceMotion ? nil : SpreadMotion.cascade) { reveal = next; translation = 0 }
+                withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                    reveal = CGFloat(target)
+                    translation = 0
+                }
             }
     }
 }

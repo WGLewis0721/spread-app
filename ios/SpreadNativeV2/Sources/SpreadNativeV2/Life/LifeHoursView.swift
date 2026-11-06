@@ -195,7 +195,7 @@ struct LifeHoursView: View {
                         .padding(diameter * 0.185)
                         .offset(x: separated ? cos((segment.middle + phase) * .pi / 180) * 21 : 0,
                                 y: separated ? sin((segment.middle + phase) * .pi / 180) * 21 : 0)
-                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: separated)
+                        .animation(reduceMotion ? nil : SpreadTactile.settle, value: separated)
                         .accessibilityHidden(true)
                 }
                 Circle()
@@ -375,7 +375,7 @@ struct LifeHoursView: View {
     }
 
     private func selectionTick() {
-        guard touchFeedback, Date().timeIntervalSince(lastTick) >= 0.125 else { return }
+        guard touchFeedback, Date().timeIntervalSince(lastTick) >= 0.075 else { return }
         lastTick = Date()
         SpreadHaptics.selection()
     }
@@ -384,7 +384,8 @@ struct LifeHoursView: View {
         if !boundaryWarned {
             boundaryWarned = true
             if touchFeedback, Date().timeIntervalSince(lastTick) >= 0.125 {
-                lastTick = Date(); UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                lastTick = Date()
+                LifeFeedback.boundary()
             }
         }
     }
@@ -519,7 +520,7 @@ struct LifeHoursView: View {
                 showTips = false
                 capacityText = capacityDraft.map(SpreadHours.text) ?? capacityText
                 resetGestures()
-                if touchFeedback { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+                if touchFeedback { LifeFeedback.accepted() }
             } else {
                 rejected = true; holding = false
                 message = "Hours were not saved. Your draft is kept. Review the current plan, then retry or discard."

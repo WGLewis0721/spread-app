@@ -19,9 +19,10 @@ enum LifePalette {
     }
     static func selection() { if enabled { SpreadHaptics.selection() } }
     static func edit(_ active: Bool) { if enabled { SpreadHaptics.editMode(entering: active) } }
-    static func accepted() { if enabled { UIImpactFeedbackGenerator(style: .light).impactOccurred() } }
+    static func accepted() { if enabled { SpreadHaptics.completed() } }
+    static func boundary() { if enabled { SpreadHaptics.destructivePrompt() } }
     static func reveal(delete: Bool) {
-        if enabled { UIImpactFeedbackGenerator(style: delete ? .medium : .light).impactOccurred() }
+        if enabled { SpreadHaptics.revealed(destructive: delete) }
     }
 }
 #endif

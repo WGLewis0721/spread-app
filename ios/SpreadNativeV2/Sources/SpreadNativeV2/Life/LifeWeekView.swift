@@ -73,6 +73,7 @@ struct LifeWeekView: View {
         }
         .foregroundStyle(LifePalette.ink)
         .accessibilityIdentifier("life-week-page")
+        .simultaneousGesture(daySwipe)
         .onAppear { restoreProfile() }
         .onChange(of: profile) { _ in restoreProfile() }
         .onChange(of: snapshot.weekKey) { week in
@@ -103,6 +104,20 @@ struct LifeWeekView: View {
             guard !Task.isCancelled, marksKey == origin else { return }
             marks = combined
         }
+    }
+
+    /// Horizontal schedule swipes change days; vertical scrolling and task controls remain independent.
+    private var daySwipe: some Gesture {
+        DragGesture(minimumDistance: 65)
+            .onEnded { value in
+                guard !expanded, !planner.busy else { return }
+                let direction = TactilePrecisionMath.daySwipeDirection(
+                    horizontal: Double(value.translation.width),
+                    vertical: Double(value.translation.height))
+                if direction != 0 {
+                    choose(LifeCalendarRules.shiftDay(date, by: direction))
+                }
+            }
     }
 
     private var calendarSurface: some View {
@@ -160,7 +175,7 @@ struct LifeWeekView: View {
     }
     private var monthToggle: some View {
         Button {
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) { expanded.toggle() }
+            withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded.toggle() }
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: "calendar")
@@ -257,8 +272,10 @@ struct LifeWeekView: View {
             in: snapshot.weekKey, today: PlannerDates.localISO()))
     }
     private func accept(_ iso: String) {
-        if selectedDate != iso { selectedRole = nil }
-        selectedDate = iso
+        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+            if selectedDate != iso { selectedRole = nil }
+            selectedDate = iso
+        }
         dateHeadingFocused = true
         UserDefaults.standard.set(iso, forKey: selectionKey)
     }

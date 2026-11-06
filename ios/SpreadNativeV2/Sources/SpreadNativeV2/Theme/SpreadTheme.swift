@@ -184,6 +184,19 @@ public enum SpreadMotion {
     }
 }
 
+/// One tactile vocabulary for the opt-in Life experience, without repainting Classic.
+/// Finger tracking is unanimated; these animations govern stops and state changes.
+public enum SpreadTactile {
+    public static let contact = Animation.easeOut(duration: 0.10)
+    public static let snap = Animation.interactiveSpring(response: 0.22, dampingFraction: 0.91, blendDuration: 0.06)
+    public static let settle = Animation.interactiveSpring(response: 0.32, dampingFraction: 0.88, blendDuration: 0.09)
+    public static let glide = Animation.interactiveSpring(response: 0.28, dampingFraction: 0.96, blendDuration: 0.07)
+
+    public static func resolved(_ animation: Animation, reduceMotion: Bool) -> Animation? {
+        reduceMotion ? nil : animation
+    }
+}
+
 /// Per-item presentation state, discarded on profile/role changes. Delays are bounded so a dense plan
 /// never leaves tasks waiting offscreen; controls retain hit testing while the short entrance runs.
 struct SpreadEntrance: ViewModifier {
