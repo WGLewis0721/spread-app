@@ -121,45 +121,11 @@ private struct LifeWalletFace: View {
     }
     var body: some View {
         ZStack {
-            HStack(spacing: 0) {
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash").font(.subheadline)
-                        .frame(width: 92, height: cardHeight).foregroundStyle(.white)
-                        .background(Spread.danger)
-                }.accessibilityHidden(reveal <= 0).allowsHitTesting(reveal > 0)
-                Spacer(minLength: 0)
-                Button(action: onManage) {
-                    Label("Manage", systemImage: "pencil").font(.subheadline)
-                        .frame(width: 92, height: cardHeight).foregroundStyle(.white)
-                        .background(LifePalette.accent)
-                }.accessibilityHidden(reveal >= 0).allowsHitTesting(reveal < 0)
-            }
+            revealedActions
             Button {
                 if Date() >= ignoreTapUntil { onSelect() }
             } label: {
-                face
-                    .frame(maxWidth: .infinity, minHeight: cardHeight, alignment: .top)
-                    .background {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(Spread.cardFill)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .fill(LinearGradient(
-                                        colors: [Color(hex: role.color).opacity(0.48),
-                                                 Color(hex: role.color).opacity(0.16), .clear],
-                                        startPoint: .topLeading, endPoint: .bottomTrailing))
-                            }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected || editing ? 0.85 : 0.48), lineWidth: 1))
-                    .overlay {
-                        if editing {
-                            RoundedRectangle(cornerRadius: 23)
-                                .strokeBorder(Color(hex: role.color).opacity(glow ? 0.85 : 0.3), lineWidth: 1.5)
-                                .shadow(color: Color(hex: role.color).opacity(glow ? 0.28 : 0.08), radius: 8)
-                        }
-                    }
-                    .offset(x: max(-110, min(110, reveal + translation)))
+                cardSurface
             }
             .buttonStyle(.spreadPress)
             .accessibilityLabel("\(role.name), \(SpreadHours.spoken(hours))")
@@ -182,6 +148,55 @@ private struct LifeWalletFace: View {
             withAnimation(.easeInOut(duration: 1.9).repeatForever(autoreverses: true)) { glow = true }
         }
         .accessibilityIdentifier("life-card-\(role.id)")
+    }
+    private var roleColor: Color { Color(hex: role.color) }
+
+    // Keep each SwiftUI builder small enough for the release compiler to solve.
+    private var revealedActions: some View {
+        HStack(spacing: 0) {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash").font(.subheadline)
+                    .frame(width: 92, height: cardHeight).foregroundStyle(.white)
+                    .background(Spread.danger)
+            }.accessibilityHidden(reveal <= 0).allowsHitTesting(reveal > 0)
+            Spacer(minLength: 0)
+            Button(action: onManage) {
+                Label("Manage", systemImage: "pencil").font(.subheadline)
+                    .frame(width: 92, height: cardHeight).foregroundStyle(.white)
+                    .background(LifePalette.accent)
+            }.accessibilityHidden(reveal >= 0).allowsHitTesting(reveal < 0)
+        }
+    }
+
+    private var cardSurface: some View {
+        face
+            .frame(maxWidth: .infinity, minHeight: cardHeight, alignment: .top)
+            .background(cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected || editing ? 0.85 : 0.48), lineWidth: 1))
+            .overlay(editingOutline)
+            .offset(x: max(-110, min(110, reveal + translation)))
+    }
+
+    private var cardBackground: some View {
+        let tint = roleColor
+        let colors: [Color] = [tint.opacity(0.48), tint.opacity(0.16), .clear]
+        let gradient = LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+        return RoundedRectangle(cornerRadius: 24, style: .continuous)
+            .fill(Spread.cardFill)
+            .overlay {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(gradient)
+            }
+    }
+
+    @ViewBuilder
+    private var editingOutline: some View {
+        if editing {
+            RoundedRectangle(cornerRadius: 23)
+                .strokeBorder(roleColor.opacity(glow ? 0.85 : 0.3), lineWidth: 1.5)
+                .shadow(color: roleColor.opacity(glow ? 0.28 : 0.08), radius: 8)
+        }
     }
     private var face: some View {
         VStack(alignment: .leading, spacing: 10) {
