@@ -25,6 +25,12 @@ struct LifeWalletStack: View {
         return roles.filter { $0.id == priority } + roles.filter { $0.id != priority }
     }
     private var focusActive: Bool { day == nil && !editing && selectedRole != nil }
+    private var stackOrder: [Responsibility] {
+        if !focusActive, let selectedRole {
+            return ordered.filter { $0.id != selectedRole } + ordered.filter { $0.id == selectedRole }
+        }
+        return ordered
+    }
     private var shown: [Responsibility] {
         focusActive ? ordered.filter { $0.id == selectedRole } : ordered
     }
@@ -39,7 +45,7 @@ struct LifeWalletStack: View {
                 // Only the card's vertical position changes; sibling removal must
                 // never cause the selected face or its text to interpolate width.
                 ZStack(alignment: .top) {
-                    ForEach(Array(ordered.enumerated()), id: \.element.id) { index, role in
+                    ForEach(Array(stackOrder.enumerated()), id: \.element.id) { index, role in
                         let hidden = focusActive && selectedRole != role.id
                         card(role, faceVisible: focusActive || index == ordered.count - 1 || selectedRole == role.id)
                             .offset(y: focusActive ? 0 : CGFloat(index) * stackStep)
@@ -155,7 +161,7 @@ private struct LifeWalletFace: View {
                     }
                     .offset(x: max(-110, min(110, reveal + translation)))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.spreadPress)
             .accessibilityLabel("\(role.name), \(SpreadHours.spoken(hours))")
             .accessibilityValue(selected ? "Focused" : "Closed")
             .accessibilityHint("Show this area's tasks")
