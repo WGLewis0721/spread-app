@@ -320,8 +320,8 @@ struct LifeHoursView: View {
                     Label("Return ½h", systemImage: "arrow.clockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
+                .keyboardShortcut(.rightArrow, modifiers: [.option])
             }
-            .keyboardShortcut(.rightArrow, modifiers: [.option])
             .buttonStyle(.bordered)
             if budgetDraft != nil { Text("Draft · release to save").font(.subheadline).foregroundStyle(LifePalette.secondary) }
             let reserved = snapshot.placedHours(for: role.id)
