@@ -349,6 +349,7 @@ struct LifeTaskRows: View {
                 Divider()
             }
         }
+        .animation(reduceMotion ? nil : SpreadTactile.settle, value: tasks.map(\.id))
     }
 
     private func reorder(_ task: PlannerTask, before id: String?) {

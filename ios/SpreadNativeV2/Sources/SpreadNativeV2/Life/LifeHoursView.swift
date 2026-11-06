@@ -196,6 +196,7 @@ struct LifeHoursView: View {
                         .offset(x: separated ? cos((segment.middle + phase) * .pi / 180) * 21 : 0,
                                 y: separated ? sin((segment.middle + phase) * .pi / 180) * 21 : 0)
                         .animation(reduceMotion ? nil : SpreadTactile.settle, value: separated)
+                        .animation(reduceMotion ? nil : SpreadTactile.snap, value: selectedRole)
                         .accessibilityHidden(true)
                 }
                 Circle()
