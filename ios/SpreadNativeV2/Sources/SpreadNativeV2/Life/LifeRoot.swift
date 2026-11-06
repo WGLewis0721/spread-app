@@ -183,6 +183,7 @@ struct LifeRoot: View {
                     Text("\(SpreadHours.text(assigned))h assigned")
                     Spacer()
                     capacitySummary(snapshot, assigned: assigned)
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
                 }
                 VStack(alignment: .leading) {
                     Text("\(SpreadHours.text(assigned))h assigned")
@@ -199,7 +200,11 @@ struct LifeRoot: View {
                     Spacer(minLength: 0)
                 }.background(LifePalette.fill).clipShape(Capsule())
             }.frame(height: 5).accessibilityHidden(true)
-        }.padding(.horizontal, 4).padding(.bottom, 8)
+        }
+        .padding(14)
+        .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(LifePalette.line, lineWidth: 0.5))
+        .shadow(color: Spread.shadow, radius: 8, y: 4)
     }
     @ViewBuilder private func capacitySummary(_ snapshot: PlannerSnapshot, assigned: Double) -> some View {
         if let capacity = snapshot.life?.capacityHours {
