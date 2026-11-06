@@ -4,7 +4,7 @@
 
 ## Where we are
 
-- Main baseline: `4f3505a9c2698d7ea1e85d6bd3ad6def9909509b` (PR #151). Owner reports that the native build now succeeds; candidate build/device identifiers are not recorded here.
+- Correction branch starts from main `5b7f05c37ce8873c44b3fb6bc5b924a43b3d8d1f`, including PR #151's build fix. Owner reports a successful native build; its exact source/build/device identifiers are not recorded here.
 - Life exists: Wallet areas, separate task details, Hours orbit, Week/month calendar, placement, priority, rich notes/attachments, undo/redo and local preferences.
 - First polish pass transferred palette, card gradients, original artwork and Crown. It did **not** complete Classic's component language. A successful build does not establish parity.
 - Branch `fix/life-classic-component-parity` contains a source correction prepared for review. Nothing from this branch is merged. Native rendering and interaction acceptance remain open.
