@@ -1,5 +1,7 @@
 # Spread — Native iOS Brand Board (owner-approved 2026-11-03)
 
+> Part of the [Spread design brain](../README.md).
+
 > November 6 recording-review amendment: Life and Classic share one visual language, original artwork, semantic tokens and motion vocabulary while retaining their different arrangements. The [shared polish contract](../specs/2026-11-06-life-classic-polish.md) and separate Classic/Life video specifications document this newer owner direction. It supersedes Life's independent gray/black treatment; it does not authorize changes to Classic's layout or planner behavior.
 
 > November 6 scoped Life direction: the owner approved the browser Life prototype for the existing Week + Month preview choice. The [Life iOS spec](../../../SPREAD_LIFE_IOS_SPEC.md) defines its native translation. The existing Classic experience and More/Settings remain governed by their current design and behavior; do not repaint or restructure them through shared tokens. This is an implementation plan, not native-build or release evidence.
