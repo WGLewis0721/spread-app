@@ -1,0 +1,64 @@
+name: Life reference - frozen browser behavior
+
+on:
+  push:
+    branches:
+      - docs/life-ios-handoff-2026-11-06
+    paths:
+      - 'tools/life-reference/**'
+      - '.github/workflows/life-reference-verify.yml'
+      - 'ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/**'
+      - 'src/lib/spread/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference:
+    name: Reference tests and browser demo (not native acceptance)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PROTOTYPE_URL: http://127.0.0.1:4183
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frozen demo dependencies
+        run: npm --prefix tools/life-reference ci --ignore-scripts
+      - name: Reference model tests and build
+        run: |
+          npm --prefix tools/life-reference test
+          npm --prefix tools/life-reference run build
+      - name: Install reference browser engines
+        working-directory: tools/life-reference
+        run: npx playwright install --with-deps chrome webkit
+      - name: Start reference viewer and verify actual HTTP response
+        run: |
+          (npm --prefix tools/life-reference run dev -- --host 127.0.0.1 --port 4183 > /tmp/spread-life-reference.log 2>&1 &)
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:4183/iphone/app >/dev/null 2>&1; then
+              echo 'Reference viewer running'; exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/spread-life-reference.log
+          exit 1
+      - name: Exercise desktop reference
+        working-directory: tools/life-reference
+        run: npm run test:browser
+      - name: Exercise iPhone viewer reference
+        working-directory: tools/life-reference
+        run: npm run test:iphone
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frozen-life-reference-checks
+          path: |
+            tools/life-reference/test-results/
+            tools/life-reference/playwright-report/
+            /tmp/spread-life-reference.log
+          if-no-files-found: ignore
+          retention-days: 14
