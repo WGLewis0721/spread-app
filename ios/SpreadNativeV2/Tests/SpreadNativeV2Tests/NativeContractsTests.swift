@@ -2,6 +2,17 @@ import XCTest
 @testable import SpreadNativeV2
 
 final class NativeContractsTests: XCTestCase {
+#if os(iOS)
+    func testLifeOrbitAngleWrapAndDetents() {
+        XCTAssertEqual(LifeOrbitMath.delta(from: 179, to: -179), 2, accuracy: 0.00001)
+        XCTAssertEqual(LifeOrbitMath.delta(from: -179, to: 179), -2, accuracy: 0.00001)
+        XCTAssertEqual(LifeOrbitMath.delta(from: 40, to: 40), 0, accuracy: 0.00001)
+        XCTAssertEqual(LifeOrbitMath.capacityDelta(distance: 40, elapsed: 0.1), 1)
+        XCTAssertEqual(LifeOrbitMath.capacityDelta(distance: -40, elapsed: 0.1), -1)
+        XCTAssertEqual(LifeOrbitMath.capacityDelta(distance: 1, elapsed: 1), 0)
+        XCTAssertEqual(LifeOrbitMath.limit(50, minimum: 55, maximum: 168), 55)
+    }
+#endif
     func testUnsubmittedTaskDraftPersistsAndIsIsolatedByProfileWeekAndRole() {
         let suite = "TaskDraftTests." + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!

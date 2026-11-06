@@ -375,6 +375,7 @@ struct LifeRoot: View {
                                     in: RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("life-nav-\(page.rawValue.lowercased())")
                     .accessibilityAddTraits(destination == page ? .isSelected : [])
                 }
                 Button { onMore() } label: {
