@@ -18,6 +18,7 @@ export default tseslint.config(
       ".nitro/**",
       "node_modules/**",
       "tools/launch-video/**", // Standalone Remotion workspace has its own lint/typecheck.
+      "tools/life-reference/**", // Frozen, independently tested reference; never imported by the planner.
       "src/routeTree.gen.ts",
     ],
   },

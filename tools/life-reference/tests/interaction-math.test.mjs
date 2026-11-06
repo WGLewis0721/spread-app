@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {seedWeek} from '../src/model.js';
+import {angleDelta,capacityAfter,monthCells,shiftMonth,outlinePrefix} from '../src/iphone/interaction-math.js';
+import {storeFile,MAX_FILE_BYTES} from '../src/task-media.js';
+test('circle dial keeps direction across the 360-degree seam',()=>{assert.equal(angleDelta(179,-179),2);assert.equal(angleDelta(-179,179),-2);assert.equal(angleDelta(90,45),-45);});
+test('capacity cannot drop below assigned budgets or exceed 168',()=>{assert.equal(capacityAfter(seedWeek(),-100),27);assert.equal(capacityAfter(seedWeek(),500),168);assert.equal(capacityAfter(seedWeek(),1),37);});
+test('calendar preserves complete weeks and handles month/year/leap boundaries',()=>{const cells=monthCells('2026-11-06');assert.equal(cells.length,42);assert.equal(cells[0],'2026-10-26');assert.equal(cells[41],'2026-12-06');assert.equal(shiftMonth('2028-01-31',1),'2028-02-29');assert.equal(shiftMonth('2026-12-31',1),'2027-01-31');});
+test('conventional outline prefixes are detected without treating ordinary notes as outlines',()=>{assert.deepEqual(outlinePrefix('I. '),{type:'I',start:1});assert.deepEqual(outlinePrefix('A. '),{type:'A',start:1});assert.deepEqual(outlinePrefix('B. '),{type:'A',start:2});assert.equal(outlinePrefix('I think so'),null);});
+test('oversized attachments are rejected before touching browser storage',async()=>{await assert.rejects(storeFile({name:'large-video.mov',size:MAX_FILE_BYTES+1}),/25 MB file limit/);});

@@ -28,6 +28,7 @@ Stop at the first sufficient tier.
 | --- | --- | --- |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
+| Implementing the approved Life iOS demo | Root [handoff](../../SPREAD_LIFE_IOS_HANDOFF.md), [spec](../../SPREAD_LIFE_IOS_SPEC.md) and [checklist](../../SPREAD_LIFE_IOS_CHECKLIST.md) | [Runnable reference](../../tools/life-reference/README.md); root placement requested by owner |
 | Native SwiftUI / Wallet Stack (PR #127) | [current native brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [iOS 27 behavior audit](platforms/IOS27_BEHAVIOR_AUDIT.md); owner's screenshots; historical [handoff](../../CLAUDE_NATIVE_UI_HANDOFF.md) |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |

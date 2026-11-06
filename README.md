@@ -1,5 +1,7 @@
 [Live site](https://thespreadapp.com/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design docs](docs/design/README.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md)
 
+**Life iOS implementation:** start with the root [engineer handoff](SPREAD_LIFE_IOS_HANDOFF.md), [spec](SPREAD_LIFE_IOS_SPEC.md) and [step-by-step checklist](SPREAD_LIFE_IOS_CHECKLIST.md). The [approved runnable reference](tools/life-reference/README.md) is included for implementation and comparison. This is an opt-in native implementation plan; More/Settings and Classic remain unchanged.
+
 # Spread
 
 **Current design entrypoint:** [central UI/UX map](docs/design/README.md). **Native SwiftUI:** [owner-approved Wallet-style Stack brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and [iOS 27 behavior audit](docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md), implemented in draft [PR #127](https://github.com/WGLewis0721/spread-app/pull/127) stacked on Duo fixes in [PR #126](https://github.com/WGLewis0721/spread-app/pull/126). Older five-mode migration specifications are historical. No release is authorized by these docs.
