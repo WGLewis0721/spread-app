@@ -369,7 +369,10 @@ struct TaskSheet: View {
         defer { photoPick = nil }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data),
-              let jpeg = image.jpegData(compressionQuality: 0.8) else { return }
+              let jpeg = image.jpegData(compressionQuality: 0.8) else {
+            if lifeMode { attachmentError = "This file could not be added. Try again or choose another file." }
+            return
+        }
         if lifeMode {
             let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".jpg")
             defer { try? FileManager.default.removeItem(at: temporary) }
