@@ -786,6 +786,7 @@ test("Normalization, JSON recovery and week copy preserve Life budgets, metadata
   const content = { blocks: [
     { id: "rich", type: "notes", text: "Styled", richText: { version: 1, rtf: "e1xydGYxfQ==" } },
     { id: "file", type: "file", file: { id: "file-id", name: "Memo.pdf", mimeType: "application/pdf", byteCount: 12, checksum: "a".repeat(64) } },
+    { id: "outline", type: "outline", items: [{ id: "line", text: "Keep", level: 0 }], futureOutlineStyle: { version: 2 } },
     { id: "future", type: "future-kind", value: { opaque: true } },
   ] };
   week.boxes[0].tasks = [{ id: "t", text: "Keep all", done: false, estimateMinutes: 90, content: content as never }];
@@ -796,6 +797,9 @@ test("Normalization, JSON recovery and week copy preserve Life budgets, metadata
   assert.deepEqual(copied.life, week.life);
   assert.deepEqual(copied.boxes[0].tasks[0].content, content);
   assert.equal(copied.boxes[0].tasks[0].estimateMinutes, 90);
+  const invalidEstimate = structuredClone(data);
+  invalidEstimate.weeks[data.currentWeek].boxes[0].tasks[0].estimateMinutes = 999;
+  assert.equal(normalizeData(invalidEstimate).weeks[data.currentWeek].boxes[0].tasks[0].estimateMinutes, undefined);
 });
 
 test("Unknown Life metadata remains recoverable and blocks older-build Life writes", async () => {
