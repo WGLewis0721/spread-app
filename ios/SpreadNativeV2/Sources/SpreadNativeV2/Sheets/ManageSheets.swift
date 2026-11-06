@@ -624,14 +624,14 @@ struct MoreSheet: View {
                                         .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.spreadPress)
-                                .accessibilityLabel(weekFocusEnabled ? "Calendar design: New preview" : "Calendar design: Classic")
+                                .accessibilityLabel(weekFocusEnabled ? "Calendar design: Life" : "Calendar design: Classic")
                                 .accessibilityIdentifier("calendar-design-picker")
                                 .confirmationDialog("Calendar design", isPresented: $showCalendarPicker, titleVisibility: .visible) {
                                     Button("Classic (current)") { weekFocusEnabled = false }
-                                    Button("Week + Month (preview)") { weekFocusEnabled = true }
+                                    Button("Life") { weekFocusEnabled = true }
                                     Button("Cancel", role: .cancel) {}
                                 } message: {
-                                    Text("The new calendar is an opt-in preview. Existing tasks, hours and planning data are unchanged. Choose Classic anytime to return.")
+                                    Text("Life uses the same tasks, hours and planning data. Choose Classic anytime to return.")
                                 }
                             }
                             .padding(6)

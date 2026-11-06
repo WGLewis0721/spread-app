@@ -16,32 +16,54 @@ struct LifeWalletStack: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @AccessibilityFocusState private var focusedRole: String?
     @State private var lastSelected: String?
-    @ScaledMetric(relativeTo: .body) private var overlap: CGFloat = 92
+    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 144
+    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 162
+    @ScaledMetric(relativeTo: .body) private var stackStep: CGFloat = 52
 
     private var ordered: [Responsibility] {
-        // Stable partition preserves the planner's order for every non-priority area.
         let priority = snapshot.life?.priorityRoleId
         return roles.filter { $0.id == priority } + roles.filter { $0.id != priority }
     }
+    private var focusActive: Bool { day == nil && !editing && selectedRole != nil }
+    private var stackOrder: [Responsibility] {
+        if !focusActive, let selectedRole {
+            return ordered.filter { $0.id != selectedRole } + ordered.filter { $0.id == selectedRole }
+        }
+        return ordered
+    }
     private var shown: [Responsibility] {
-        guard let selectedRole else { return ordered }
-        if day == nil && !editing { return ordered.filter { $0.id == selectedRole } }
-        return ordered.filter { $0.id != selectedRole } + ordered.filter { $0.id == selectedRole }
+        focusActive ? ordered.filter { $0.id == selectedRole } : ordered
     }
     var body: some View {
-        VStack(spacing: typeSize.isAccessibilitySize ? 8 : -overlap) {
-            ForEach(Array(shown.enumerated()), id: \.element.id) { index, role in
-                LifeWalletFace(role: role, snapshot: snapshot, day: day,
-                               selected: selectedRole == role.id, editing: editing,
-                               faceVisible: index == shown.count - 1,
-                               onSelect: { select(role.id) },
-                               onManage: { onManage(role.id) }, onDelete: { onDelete(role.id) },
-                               onBeginEdit: { onBeginEdit(role.id) })
-                    .zIndex(Double(index))
-                    .accessibilityFocused($focusedRole, equals: role.id)
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(spacing: 8) {
+                    ForEach(shown) { role in card(role, faceVisible: true) }
+                }
+            } else {
+                // Preserve every role's identity and full width during focus.
+                // Only the card's vertical position changes; sibling removal must
+                // never cause the selected face or its text to interpolate width.
+                ZStack(alignment: .top) {
+                    ForEach(Array(stackOrder.enumerated()), id: \.element.id) { index, role in
+                        let hidden = focusActive && selectedRole != role.id
+                        card(role, faceVisible: focusActive || index == ordered.count - 1 || selectedRole == role.id)
+                            .offset(y: focusActive ? 0 : CGFloat(index) * stackStep)
+                            .opacity(hidden ? 0 : 1)
+                            .allowsHitTesting(!hidden)
+                            .accessibilityHidden(hidden)
+                            .zIndex(selectedRole == role.id ? Double(ordered.count + 1) : Double(index))
+                            .animation(reduceMotion ? nil : (hidden ? SpreadMotion.press : SpreadMotion.curve),
+                                       value: focusActive)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .top)
+                .frame(height: focusActive ? focusedHeight :
+                    CGFloat(max(0, ordered.count - 1)) * stackStep + (selectedRole == nil ? closedHeight : focusedHeight),
+                    alignment: .top)
             }
         }
-        .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.08), value: selectedRole)
+        .animation(reduceMotion ? nil : SpreadMotion.curve, value: selectedRole)
         .onChange(of: selectedRole) { old, new in
             if let new { lastSelected = new; focusedRole = new }
             else { focusedRole = old ?? lastSelected }
@@ -49,6 +71,16 @@ struct LifeWalletStack: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Life area cards")
         .accessibilityIdentifier("life-wallet-stack")
+    }
+    private func card(_ role: Responsibility, faceVisible: Bool) -> some View {
+        LifeWalletFace(role: role, snapshot: snapshot, day: day,
+                       selected: selectedRole == role.id, editing: editing,
+                       faceVisible: faceVisible,
+                       onSelect: { select(role.id) },
+                       onManage: { onManage(role.id) }, onDelete: { onDelete(role.id) },
+                       onBeginEdit: { onBeginEdit(role.id) })
+            .frame(maxWidth: .infinity)
+            .accessibilityFocused($focusedRole, equals: role.id)
     }
     private func select(_ id: String) {
         selectedRole = selectedRole == id ? nil : id
@@ -70,7 +102,9 @@ private struct LifeWalletFace: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
-    @ScaledMetric(relativeTo: .body) private var cardHeight: CGFloat = 144
+    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 144
+    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 162
+    private var cardHeight: CGFloat { selected ? focusedHeight : closedHeight }
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
     @State private var ignoreTapUntil = Date.distantPast
@@ -105,12 +139,19 @@ private struct LifeWalletFace: View {
             } label: {
                 face
                     .frame(maxWidth: .infinity, minHeight: cardHeight, alignment: .top)
-                    .background(LifePalette.surface)
-                    .overlay {
-                        if selected { Color(hex: role.color).opacity(0.07).allowsHitTesting(false) }
+                    .background {
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(Spread.cardFill)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    .fill(LinearGradient(
+                                        colors: [Color(hex: role.color).opacity(0.48),
+                                                 Color(hex: role.color).opacity(0.16), .clear],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                            }
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 23))
-                    .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(LifePalette.line, lineWidth: 0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected || editing ? 0.85 : 0.48), lineWidth: 1))
                     .overlay {
                         if editing {
                             RoundedRectangle(cornerRadius: 23)
@@ -120,7 +161,7 @@ private struct LifeWalletFace: View {
                     }
                     .offset(x: max(-110, min(110, reveal + translation)))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.spreadPress)
             .accessibilityLabel("\(role.name), \(SpreadHours.spoken(hours))")
             .accessibilityValue(selected ? "Focused" : "Closed")
             .accessibilityHint("Show this area's tasks")
@@ -143,7 +184,7 @@ private struct LifeWalletFace: View {
         .accessibilityIdentifier("life-card-\(role.id)")
     }
     private var face: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 RoleBadge(category: role.category, color: role.color, size: 30)
                 Text(role.name).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
@@ -157,11 +198,22 @@ private struct LifeWalletFace: View {
             }.foregroundStyle(LifePalette.ink).frame(minHeight: 28)
             if faceVisible || typeSize.isAccessibilitySize {
                 Spacer(minLength: 0)
-                HStack {
-                    Text("\(SpreadHours.text(reserved))h reserved")
-                    Spacer(minLength: 4)
-                    Text("\(openCount) open tasks")
-                }.font(.subheadline).foregroundStyle(LifePalette.secondary)
+                HStack(alignment: .bottom, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(SpreadHours.text(reserved))h reserved")
+                        Text("\(openCount) open tasks")
+                    }
+                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    if !typeSize.isAccessibilitySize {
+                        ChalkMotionArt(category: role.category, size: 100)
+                            .frame(width: 100, height: 56, alignment: .top)
+                            .clipped()
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule().fill(LifePalette.fill)
@@ -192,7 +244,7 @@ private struct LifeWalletFace: View {
                 let offset = reveal + value.translation.width
                 let next: CGFloat = offset < -42 ? -92 : offset > 42 ? 92 : 0
                 revealCue = 0
-                withAnimation(reduceMotion ? nil : .spring(duration: 0.28)) { reveal = next; translation = 0 }
+                withAnimation(reduceMotion ? nil : SpreadMotion.cascade) { reveal = next; translation = 0 }
             }
     }
 }

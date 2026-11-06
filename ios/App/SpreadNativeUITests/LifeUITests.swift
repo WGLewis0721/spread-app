@@ -93,4 +93,28 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch.exists)
         capture("classic-unchanged")
     }
+    func testTrayControlsMatchBothOuterEdges() {
+        startLife()
+        for side in ["left", "right"] {
+            app.buttons["life-navigation"].tap()
+            app.buttons["Crown position"].tap()
+            app.buttons[side == "left" ? "Move Crown right" : "Move Crown left"].tap()
+            let close = app.buttons["life-navigation-close"]
+            XCTAssertTrue(close.waitForExistence(timeout: 10))
+            close.tap()
+            let opener = app.buttons["life-navigation"]
+            XCTAssertTrue(opener.waitForExistence(timeout: 10))
+            let openingFrame = opener.frame
+            let addFrame = app.buttons["Add task"].firstMatch.frame
+            if side == "left" { XCTAssertLessThan(openingFrame.midX, addFrame.midX) }
+            else { XCTAssertGreaterThan(openingFrame.midX, addFrame.midX) }
+            opener.tap()
+            XCTAssertTrue(close.waitForExistence(timeout: 10))
+            XCTAssertEqual(close.frame.midX, openingFrame.midX, accuracy: 1)
+            XCTAssertEqual(close.frame.midY, openingFrame.midY, accuracy: 1)
+            capture("life-tray-" + side)
+            close.tap()
+        }
+    }
+
 }
