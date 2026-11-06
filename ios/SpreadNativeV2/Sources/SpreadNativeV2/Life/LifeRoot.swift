@@ -488,9 +488,10 @@ struct LifeRoot: View {
     }
 
     private func closeNavigation() {
+        // Keep the finger's last offset during dismissal, so the tray never
+        // jumps backward before leaving the screen. The opener resets it.
         withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
             navigationOpen = false
-            navigationDrag = 0
         }
     }
 
