@@ -2,7 +2,7 @@
 
 > Part of the [Spread design brain](../README.md). [Folder map](README.md) | [Dated proposal](../specs/2026-11-06-tactile-precision.md) | [Verification](VERIFICATION.md)
 >
-> Summary: Proposed Glide / Snap / Settle primitives used across native Life, Hours, Week, Wallet, sidebar, Crown and tasks. Retain approved visual identity, existing planner data and the frozen Life reference. Numbers below are prototype tuning targets only.
+> Summary: Proposed Glide / Snap / Settle primitives used across native Life, Hours, Week, Wallet, sidebar, Crown and tasks. Retain approved visual identity, existing planner data and the frozen Life reference. Numbers below are initial in-app calibration targets, not accepted shipping values.
 
 ## 1. Motion grammar
 
@@ -35,7 +35,7 @@ Rule: touching a moving control immediately redirects it. No transition blocks l
 - Responsibility cards are identity surfaces, with persisted color, icon, name and allocated hours. Closed cards overlap at full width, respecting the current native brand board and Chalkboard art.
 - Tap selected card to collapse; tap another to change focus. A focused face keeps its geometry stable. Details occupy their own neutral field **below** the card: weekly hours, tasks, Quick Add, manage actions. The details field is not painted inside the card face.
 - Transition order: touch press -> selected role changes in view state -> card moves/settles -> related details cross-fade/reveal. The details field tracks selection without becoming an independent data owner.
-- Sibling behavior is **not approved for change**. The current LifeWalletStack hides other cards during focus; the previous conceptual proposal kept them peeking. Preserve the frozen approved Life demo until a side-by-side prototype and explicit owner sign-off determine whether to expose siblings.
+- Sibling behavior is **not approved for change**. The current LifeWalletStack hides other cards during focus; the previous conceptual proposal kept them peeking. Preserve the frozen approved Life demo; compare the full native implementation with that baseline and obtain explicit owner sign-off before changing sibling visibility.
 - Swipe actions preserve the current directional contract and explicit reveal. Drag during editing only; require confirmation for deletion and accessible actions as substitutes. A partially revealed card resolves to closed or exactly one action rest state; no in-between stuck state.
 - Avoid nested scrolling in the details field. Let the main view scroll vertically, preserving selected role, scroll position and Dynamic Type legibility.
 
