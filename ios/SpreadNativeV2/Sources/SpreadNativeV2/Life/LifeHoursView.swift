@@ -128,7 +128,11 @@ struct LifeHoursView: View {
         }
         .onChange(of: snapshot.weekKey) { _, _ in resetGestures() }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in resetGestures() }
-        .onChange(of: selectedRole) { _, _ in if !rejected { budgetDraft = nil }; lastAngle = nil; angleCredit = 0 }
+        .onChange(of: selectedRole) { _, role in
+            if !rejected { budgetDraft = nil }
+            lastAngle = nil; angleCredit = 0
+            if role != nil { separated = true }
+        }
         .onChange(of: planner.state?.revision) { _, value in
             if let originRevision, value != originRevision, !saving, !rejected { resetGestures() }
         }
@@ -137,7 +141,11 @@ struct LifeHoursView: View {
         .onChange(of: contactActive) { _, active in
             if !active { DispatchQueue.main.async { if gestureContext != nil && !saving && !rejected { resetGestures() } } }
         }
-        .onAppear { isVisible = true; phaseTime = Date() }
+        .onAppear {
+            isVisible = true; phaseTime = Date()
+            // A role chosen from its Life card opens Hours ready for adjustment.
+            if selectedRole != nil { separated = true }
+        }
         .onDisappear { isVisible = false; resetGestures() }
         .onReceive(clock) { now in advanceClock(now) }
         .accessibilityIdentifier("life-hours-page")
@@ -156,6 +164,9 @@ struct LifeHoursView: View {
                                                    lineCap: .round))
                         .rotationEffect(.degrees(-90 + phase))
                         .frame(width: radius * 2, height: radius * 2)
+                        .shadow(color: Color(hex: segment.color).opacity(0.70),
+                                radius: selectedRole == segment.id ? 14 : 10)
+                        .shadow(color: Color(hex: segment.color).opacity(0.28), radius: 4)
 
                         .animation(reduceMotion ? nil : SpreadTactile.settle, value: separated)
                         .animation(reduceMotion ? nil : SpreadTactile.snap, value: selectedRole)
@@ -439,7 +450,8 @@ struct LifeHoursView: View {
         let elapsed = max(0, min(0.1, now.timeIntervalSince(phaseTime)))
         phaseTime = now
         if isVisible && scenePhase == .active && !reduceMotion && !separated && !holding && !saving {
-            phase = (phase + elapsed * 6).truncatingRemainder(dividingBy: 360)
+            // One complete orbit in 20 seconds, rather than a barely noticeable minute.
+            phase = (phase + elapsed * 18).truncatingRemainder(dividingBy: 360)
         }
         guard holding, gestureContext == context else { return }
         let interval = max(0, now.timeIntervalSince(holdLast))
