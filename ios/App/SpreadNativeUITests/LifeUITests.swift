@@ -63,15 +63,22 @@ final class LifeUITests: XCTestCase {
         navigate("hours")
         let field = app.descendants(matching: .any).matching(identifier: "life-capacity-input").firstMatch
         if !field.waitForExistence(timeout: 5) {
-            app.buttons["Adjust capacity with controls"].tap()
+            let center = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
+            XCTAssertTrue(center.waitForExistence(timeout: 10))
+            center.tap()
+            // A selected area first returns to the weekly budget; a second tap opens its editor.
+            if !field.waitForExistence(timeout: 2) { center.tap() }
         }
         XCTAssertTrue(field.waitForExistence(timeout: 10), "The editable capacity must be reachable.")
         field.tap()
         let existing = (field.value as? String) ?? ""
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count) + "168")
         app.buttons["Set"].tap()
+        app.buttons["Done"].tap()
         let number = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
         XCTAssertTrue(number.waitForExistence(timeout: 20))
+        expectation(for: NSPredicate(format: "value CONTAINS %@", "168"), evaluatedWith: number)
+        waitForExpectations(timeout: 20)
         let expectedValue = number.value as? String
         XCTAssertTrue(expectedValue?.contains("168") == true, "Capacity must be acknowledged as 168, not merely render.")
         capture("life-capacity")

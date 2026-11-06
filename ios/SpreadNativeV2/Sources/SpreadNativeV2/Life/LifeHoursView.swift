@@ -97,52 +97,9 @@ struct LifeHoursView: View {
                 }
                 .accessibilityLabel("Gesture help")
             }
+            Text(selectedRole == nil ? "Tap the center to set your weekly hours. Choose an area, then turn left to give it time or right to take time back." : "Turn left to add ½ hour. Turn right to return ½ hour to your weekly pool.")
+                .font(.callout).foregroundStyle(LifePalette.secondary)
             orbit
-            Text("Time you want to plan this week.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(SpreadHours.text(assigned) + " h assigned")
-                        .font(.headline).monospacedDigit()
-                    Text("Hours in your Life areas").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text(available.map { SpreadHours.text($0) + " h unassigned" } ?? "Set capacity")
-                        .font(.headline).monospacedDigit()
-                    Text("Hours not assigned").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                }
-            }
-            .padding(14)
-            .spreadCard(radius: 18)
-
-            if capacity == nil {
-                Text("How many hours can you plan this week?")
-                    .font(.headline)
-                Text("Set your total planning hours. Your existing Life hours stay unchanged.")
-                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                capacityField
-            } else {
-                if let available, available < 0 {
-                    Label("You have \(SpreadHours.text(-available)) more assigned hours than your capacity. Your existing plan is unchanged.", systemImage: "exclamationmark.triangle")
-                        .font(.callout).foregroundStyle(Spread.caution)
-                }
-                Text(separated ? "Choose an area. Turn left to add time. Turn right to return it." :
-                        "Tap the number to adjust your hours.")
-                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                if showTips {
-                    Text("Flick up or down by 1 hour. Hold and drag to change faster.")
-                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-                Button(showCapacityField ? "Hide capacity controls" : "Adjust capacity with controls") {
-                    showCapacityField.toggle()
-                    capacityText = capacity.map(SpreadHours.text) ?? ""
-                }
-                .font(.subheadline)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                if showCapacityField { capacityField }
-            }
             roleChoices
             if let selected, separated, capacity != nil {
                 selectedControls(selected)
@@ -158,6 +115,16 @@ struct LifeHoursView: View {
                 Text(message).font(.callout).foregroundStyle(Spread.caution)
                     .accessibilityIdentifier("life-hours-message")
             }
+        }
+        .sheet(isPresented: $showCapacityField) {
+            SpreadSheetStack {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Weekly planning hours").font(.title2.bold())
+                    Text("Choose the hours you want to divide between your Life areas.")
+                    capacityField
+                    Button("Done") { showCapacityField = false }.frame(minHeight: 44)
+                }.padding(20)
+            }.presentationDetents([.medium])
         }
         .onChange(of: snapshot.weekKey) { _, _ in resetGestures() }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in resetGestures() }
@@ -178,12 +145,9 @@ struct LifeHoursView: View {
 
     private var orbit: some View {
         GeometryReader { geo in
-            let diameter = min(geo.size.width, typeSize.isAccessibilitySize ? 500.0 : 340.0)
+            let diameter = min(geo.size.width, typeSize.isAccessibilitySize ? 500.0 : 280.0)
             let radius = diameter * 0.315
             ZStack {
-                Circle()
-                    .stroke(LifePalette.line, lineWidth: 17)
-                    .padding(diameter * 0.185)
                 ForEach(segments, id: \.id) { segment in
                     Circle()
                         .trim(from: segment.start, to: segment.end)
@@ -191,11 +155,14 @@ struct LifeHoursView: View {
                                 style: StrokeStyle(lineWidth: selectedRole == segment.id && separated ? 24 : 18,
                                                    lineCap: .round))
                         .rotationEffect(.degrees(-90 + phase))
-                        .padding(diameter * 0.185)
-                        .offset(x: separated ? cos((segment.middle + phase) * .pi / 180) * 21 : 0,
-                                y: separated ? sin((segment.middle + phase) * .pi / 180) * 21 : 0)
+                        .frame(width: radius * 2, height: radius * 2)
+
                         .animation(reduceMotion ? nil : SpreadTactile.settle, value: separated)
                         .animation(reduceMotion ? nil : SpreadTactile.snap, value: selectedRole)
+                        .contentShape(Circle().trim(from: segment.start, to: segment.end).stroke(lineWidth: 44))
+                        .onTapGesture {
+                            separated = true; selectedRole = segment.id; selectionTick()
+                        }
                         .accessibilityHidden(true)
                 }
                 Circle()
@@ -206,14 +173,25 @@ struct LifeHoursView: View {
                         .updating($contactActive) { _, state, _ in state = true }
                         .onChanged { turnArc($0, diameter: diameter) }
                         .onEnded { _ in finishArc() })
+                    .simultaneousGesture(SpatialTapGesture(coordinateSpace: .named("life-orbit")).onEnded { value in
+                        let angle = (LifeOrbitMath.angle(x: Double(value.location.x), y: Double(value.location.y), center: Double(diameter / 2)) + 90 - phase + 720).truncatingRemainder(dividingBy: 360) / 360
+                        if let segment = segments.first(where: { angle >= Double($0.start) && angle <= Double($0.end) }) {
+                            selectedRole = segment.id; separated = true; selectionTick()
+                        }
+                    })
                     .accessibilityHidden(true)
                 VStack(spacing: 4) {
-                    Text(capacity.map(SpreadHours.text) ?? "—")
+                    Text(selectedRole == nil ? (capacity.map(SpreadHours.text) ?? "Set") : SpreadHours.text(selectedHours))
                         .font(.system(size: numberSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
 
+                    Text("hours").font(.caption)
+                    if selectedRole == nil {
+                        Text(available.map { SpreadHours.text($0) + " h left to assign" } ?? "Tap to set your budget")
+                            .font(.caption).foregroundStyle(LifePalette.secondary)
+                    }
                     if capacityDraft != nil { Text("Draft").font(.subheadline.weight(.semibold)) }
-                    Text("Weekly planning hours")
+                    Text(selected?.name ?? "Weekly hours")
                         .font(.subheadline.weight(.medium))
                         .multilineTextAlignment(.center)
                 }
@@ -222,21 +200,18 @@ struct LifeHoursView: View {
                 .contentShape(Circle())
                 .onTapGesture {
                     guard !saving, !rejected else { return }
-                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
-                        separated.toggle()
-                        if !separated { selectedRole = nil }
+                    if selectedRole != nil { selectedRole = nil; separated = false }
+                    else {
+                        capacityText = capacity.map(SpreadHours.text) ?? ""
+                        showCapacityField = true
                     }
                     selectionTick()
                 }
-                .gesture(DragGesture(minimumDistance: 10)
-                    .updating($contactActive) { _, state, _ in state = true }
-                    .onChanged { dragCapacity($0) }
-                    .onEnded { _ in finishCapacity() })
                 .accessibilityElement(children: .ignore)
                 .accessibilityIdentifier("life-capacity-number")
                 .accessibilityLabel("Weekly planning hours")
                 .accessibilityValue(capacity.map(SpreadHours.spoken) ?? "Not set")
-                .accessibilityHint("Tap to separate areas. Adjust up or down by one hour.")
+                .accessibilityHint("Tap to type weekly planning hours. Select an area to adjust its hours.")
                 .accessibilityAdjustableAction { direction in
                     if let capacity {
                         let change: Double = direction == .increment ? 1 : -1
@@ -248,7 +223,7 @@ struct LifeHoursView: View {
             .frame(width: diameter, height: diameter)
             .frame(maxWidth: .infinity)
         }
-        .frame(height: typeSize.isAccessibilitySize ? max(390, numberSize * 5.5) : 340)
+        .frame(height: typeSize.isAccessibilitySize ? max(390, numberSize * 5.5) : 280)
         .accessibilityIdentifier("life-orbit")
     }
 
@@ -277,33 +252,32 @@ struct LifeHoursView: View {
     }
 
     private var roleChoices: some View {
-        VStack(spacing: 8) {
-            ForEach(snapshot.roles) { role in
-                Button {
-                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
-                        if !separated { separated = true }
-                        selectedRole = role.id
-                    }
-                    selectionTick()
-                } label: {
-                    HStack(spacing: 12) {
-                        Circle().fill(Color(hex: role.color)).frame(width: 13, height: 13)
-                        Text(role.name).font(.body.weight(.semibold))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Text(SpreadHours.text(selectedRole == role.id ? selectedHours : role.hours) + " h")
-                            .monospacedDigit().font(.headline)
-                        Image(systemName: "chevron.right").foregroundStyle(LifePalette.secondary)
-                    }
-                    .padding(12)
-                    .frame(minHeight: 50)
-                    .background(selectedRole == role.id ? LifePalette.accent.opacity(0.1) : LifePalette.surface,
-                                in: RoundedRectangle(cornerRadius: 15))
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: 16) {
+                ForEach(snapshot.roles) { role in
+                    Button {
+                        withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                            separated = true; selectedRole = role.id
+                        }
+                        selectionTick()
+                    } label: {
+                        VStack(spacing: 8) {
+                            ZStack {
+                                Circle().fill(Color(hex: role.color).opacity(0.12))
+                                Circle().strokeBorder(Color(hex: role.color), lineWidth: selectedRole == role.id ? 4 : 2)
+                                    .shadow(color: Color(hex: role.color).opacity(0.5), radius: 6)
+                                Text(SpreadHours.text(selectedRole == role.id ? selectedHours : role.hours) + "h")
+                                    .font(.headline).foregroundStyle(Spread.ink)
+                            }.frame(width: 64, height: 64)
+                            Text(role.name).font(.caption).lineLimit(2)
+                        }.frame(width: 78)
+                    }.buttonStyle(.spreadPress).disabled(saving || rejected)
+                        .accessibilityLabel(role.name + ", " + SpreadHours.spoken(role.hours))
+                        .accessibilityAddTraits(selectedRole == role.id ? .isSelected : [])
+                        .accessibilityIdentifier("life-hours-role-\(role.id)")
                 }
-                .buttonStyle(.plain)
-                .disabled(saving || rejected)
-                .accessibilityIdentifier("life-hours-role-\(role.id)")
-            }
-        }
+            }.padding(.vertical, 8)
+        }.scrollIndicators(.hidden)
     }
 
     private func selectedControls(_ role: Responsibility) -> some View {

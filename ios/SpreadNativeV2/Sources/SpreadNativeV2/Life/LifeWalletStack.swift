@@ -45,15 +45,14 @@ struct LifeWalletStack: View {
                 // Only the card's vertical position changes; sibling removal must
                 // never cause the selected face or its text to interpolate width.
                 ZStack(alignment: .top) {
-                    ForEach(Array(stackOrder.enumerated()), id: \.element.id) { index, role in
+                    ForEach(Array(ordered.enumerated()), id: \.element.id) { index, role in
                         let hidden = focusActive && selectedRole != role.id
                         card(role, faceVisible: focusActive || index == ordered.count - 1 || selectedRole == role.id)
-                            .offset(y: focusActive ? 0 : CGFloat(index) * stackStep)
-                            .opacity(hidden ? 0 : 1)
+                            .offset(y: focusActive ? (selectedRole == role.id ? 0 : focusedHeight + 18 + CGFloat(index) * stackStep) : CGFloat(index) * stackStep)
                             .allowsHitTesting(!hidden)
                             .accessibilityHidden(hidden)
                             .zIndex(selectedRole == role.id ? Double(ordered.count + 1) : Double(index))
-                            .animation(reduceMotion ? nil : (hidden ? SpreadTactile.snap : SpreadTactile.settle),
+                            .animation(reduceMotion ? nil : SpreadTactile.settle,
                                        value: focusActive)
                     }
                 }
@@ -61,6 +60,7 @@ struct LifeWalletStack: View {
                 .frame(height: focusActive ? focusedHeight :
                     CGFloat(max(0, ordered.count - 1)) * stackStep + (selectedRole == nil ? closedHeight : focusedHeight),
                     alignment: .top)
+                .clipped()
             }
         }
         .animation(reduceMotion ? nil : SpreadTactile.settle, value: selectedRole)
@@ -176,20 +176,21 @@ private struct LifeWalletFace: View {
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash").font(.subheadline)
                     .frame(width: 92, height: cardHeight).foregroundStyle(.white)
-                    .background(Spread.danger)
+                    .background(Spread.danger, in: RoundedRectangle(cornerRadius: 24))
             }.accessibilityHidden(reveal <= 0).allowsHitTesting(reveal > 0)
             Spacer(minLength: 0)
             Button(action: onManage) {
                 Label("Manage", systemImage: "pencil").font(.subheadline)
                     .frame(width: 92, height: cardHeight).foregroundStyle(.white)
-                    .background(LifePalette.accent)
+                    .background(LifePalette.accent, in: RoundedRectangle(cornerRadius: 24))
             }.accessibilityHidden(reveal >= 0).allowsHitTesting(reveal < 0)
         }
     }
 
     private var cardSurface: some View {
         face
-            .frame(maxWidth: .infinity, minHeight: cardHeight, alignment: .top)
+            .frame(maxWidth: .infinity)
+            .frame(height: typeSize.isAccessibilitySize ? nil : cardHeight, alignment: .top)
             .background(cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected || editing ? 0.85 : 0.48), lineWidth: 1))
@@ -213,15 +214,15 @@ private struct LifeWalletFace: View {
     private var editingOutline: some View {
         if editing {
             RoundedRectangle(cornerRadius: 23)
-                .strokeBorder(roleColor.opacity(glow ? 0.85 : 0.3), lineWidth: 1.5)
-                .shadow(color: roleColor.opacity(glow ? 0.28 : 0.08), radius: 8)
+                .strokeBorder(roleColor.opacity(glow || reduceMotion ? 1 : 0.55), lineWidth: 2.5)
+                .shadow(color: roleColor.opacity(glow || reduceMotion ? 0.65 : 0.2), radius: 12)
         }
     }
     private var face: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 RoleBadge(category: role.category, color: role.color, size: 42)
-                Text(role.name).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                Text(role.name).font(.title3.weight(.semibold)).frame(maxWidth: .infinity, alignment: .leading)
                     .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                 if snapshot.life?.priorityRoleId == role.id {
                     Text("Priority").font(.caption).padding(.horizontal, 5)
@@ -244,8 +245,8 @@ private struct LifeWalletFace: View {
                     .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     if !typeSize.isAccessibilitySize {
-                        ChalkMotionArt(category: role.category, size: 100)
-                            .frame(width: 100, height: 56, alignment: .top)
+                        ChalkMotionArt(category: role.category, size: 144)
+                            .frame(width: 144, height: 88, alignment: .top)
                             .clipped()
                             .allowsHitTesting(false)
                             .accessibilityHidden(true)
