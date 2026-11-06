@@ -202,7 +202,10 @@ struct LifePrioritySheet: View {
                 if planner.snapshot?.life?.priorityRoleId == roleId {
                     Section {
                         Button("Clear weekly priority") {
+                            guard !working else { return }
+                            working = true
                             Task {
+                                defer { working = false }
                                 if await planner.send(["type": "setLifePriority", "priorityRoleId": NSNull()]) {
                                     LifeFeedback.accepted(); dismiss()
                                 }
@@ -232,7 +235,11 @@ struct LifePrioritySheet: View {
         guard !working else { return }
         working = true
         defer { working = false }
-        preview = await planner.previewLifePriority(roleId: roleId, goalHours: goal, day: day)
+        let requestedGoal = goal
+        let requestedDay = day
+        let result = await planner.previewLifePriority(roleId: roleId, goalHours: requestedGoal, day: requestedDay)
+        guard goal == requestedGoal, day == requestedDay else { return }
+        preview = result
         previewRevision = planner.state?.revision
     }
     private func saveGoal() async {
@@ -244,7 +251,9 @@ struct LifePrioritySheet: View {
         }
     }
     private func apply() async {
-        guard !working, let previewRevision else { return }
+        guard !working, let previewRevision, let preview,
+              preview.goalHours == goal, preview.day == day, preview.eligible,
+              preview.shortageHours == 0 else { return }
         working = true
         defer { working = false }
         if await planner.send(["type": "applyLifePriority", "roleId": roleId, "goalHours": goal, "day": day],
