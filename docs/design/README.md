@@ -29,6 +29,7 @@ Stop at the first sufficient tier.
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
 | Implementing the approved Life iOS demo | Root [handoff](../../SPREAD_LIFE_IOS_HANDOFF.md), [spec](../../SPREAD_LIFE_IOS_SPEC.md) and [checklist](../../SPREAD_LIFE_IOS_CHECKLIST.md) | [Runnable reference](../../tools/life-reference/README.md); root placement requested by owner |
+| Native tactile motion, feedback, sidebar, Hours and Crown | [tactile-precision/](tactile-precision/README.md) | [motion](tactile-precision/MOTION_SPEC.md) and [acceptance](tactile-precision/ACCEPTANCE.md); Life handoff wins |
 | Native SwiftUI / Wallet Stack (PR #127) | [current native brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [iOS 27 behavior audit](platforms/IOS27_BEHAVIOR_AUDIT.md); owner's screenshots; historical [handoff](../../CLAUDE_NATIVE_UI_HANDOFF.md) |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
@@ -40,7 +41,7 @@ Stop at the first sufficient tier.
 | Recording a decision or checking what is undecided | [DECISIONS.md](DECISIONS.md) | |
 | Pointing an AI tool at these docs | [AI_TOOL_SETUP.md](AI_TOOL_SETUP.md) | |
 
-A change touching both planner and landing page needs both packs, kept separate. If no row fits, add one.
+Planner + landing changes use both packs. Add a row for new task types.
 
 ---
 
@@ -55,6 +56,7 @@ All paths are under `docs/design/`.
 | DECISIONS.md | Open decisions and the decision log | Current |
 | PLAN_SPEC_PROTOCOL.md, specs/TEMPLATE.md | How every plan and spec is made and shaped | New 2026-10-28. Process authority; never overrides a design rule |
 | AI_TOOL_SETUP.md | How AI tools reach these documents | Advisory. Vendor file conventions not re-verified |
+| tactile-precision/ | Life motion contract, tests and evidence; Classic unchanged |
 | specs/ (README.md is the index) | One spec per request | Plans, not approval |
 | packs/ | One digest per kind of task | Derived. The long documents win if they differ |
 | tokens.json | Planner tokens, light and dark | Generated from `src/styles.css` |
@@ -70,7 +72,7 @@ All paths are under `docs/design/`.
 | platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md | iPhone Duo | Same as above |
 | brand/ICON_HANDOFF.md | Icon files and placement (SVGs stay in `public/icons/`) | Highest for icon files |
 
-**Authority:** Verified planner behavior/data wins. Owner's Nov 4 single-Stack decision on the [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) controls SwiftUI presentation; [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) controls platform acceptance. Five-mode references are history. React and landing retain their rules.
+**Authority:** Verified planner data wins; the [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) and [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) govern native behavior. Five modes are historical. React and landing retain their rules.
 
 ---
 

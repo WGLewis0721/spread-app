@@ -4,6 +4,7 @@
 
 | Area | Read |
 | --- | --- |
+| Native tactile motion and interaction acceptance | [Tactile Precision](docs/design/tactile-precision/README.md) |
 | Current SwiftUI identity and only Wallet-style Stack | [Native brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) |
 | iOS 27 materials, adaptive behavior, accessibility and acceptance | [iOS 27 UX audit](docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md) |
 | Universal usability rules and UX laws | [UX fundamentals](docs/design/FOUNDATIONAL_UX_PRINCIPLES.md) |

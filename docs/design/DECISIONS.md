@@ -25,6 +25,7 @@ Resolve an open decision here and in its source document together, then move the
 
 | Date | Decision | Where |
 | --- | --- | --- |
+| 2026-11-06 | Owner approved direct native Life tactile-precision implementation instead of an isolated prototype: shared motion, Wallet detents, Hours, Crown, Week and compact sidebar; Classic, More and planner preserved. | [motion spec](tactile-precision/MOTION_SPEC.md), [QA](tactile-precision/ACCEPTANCE.md) |
 | 2026-11-06 | Owner requested a new implementation PR, root-level spec/checklist, and a self-contained engineer handoff. Include the runnable approved demo and fixed decisions so implementation does not depend on this chat or the owner's localhost. | Root [handoff](../../SPREAD_LIFE_IOS_HANDOFF.md), [spec](../../SPREAD_LIFE_IOS_SPEC.md) and [checklist](../../SPREAD_LIFE_IOS_CHECKLIST.md) |
 | 2026-11-06 | Owner approved the browser Life design for translation into the existing Week + Month preview choice and explicitly preserved More/Settings as is. The native plan keeps Classic, current picker labels and the existing planner. Native implementation, data extensions and device/release checks remain work to do. | [Life spec](../../SPREAD_LIFE_IOS_SPEC.md), [checklist](../../SPREAD_LIFE_IOS_CHECKLIST.md) |
 | 2026-11-04 | Owner approved the 61-decision Week/Month redesign: persistent role sidebar, focused one-day Week, seven-day strip, Month morph, task recovery and scheduling rules. **Implementation is staged and opt-in; data-model work remains open.** | [spec](specs/2026-11-04-week-month-owner-decisions.md) |
