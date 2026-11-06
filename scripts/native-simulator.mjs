@@ -7,6 +7,8 @@ const generation = (device) => Number(device.name.match(/(\d+)(?:st|nd|rd|th) ge
 export function chooseSimulator(runtimes, types, width) {
   const matches = {
     duo: (d) => d.name === 'iPhone Duo',
+    375: (d) => /^iPhone SE \\([23](?:nd|rd) generation\\)$/.test(d.name),
+    430: (d) => ['iPhone 14 Plus', 'iPhone 15 Plus', 'iPhone 14 Pro Max', 'iPhone 15 Pro Max'].includes(d.name),
     390: (d) => ['iPhone 14', 'iPhone 13', 'iPhone 12'].includes(d.name),
     820: (d) => /iPad Air.*5th generation/.test(d.name),
     1024: (d) => /iPad Pro.*12\.9/.test(d.name),
