@@ -355,7 +355,7 @@ struct SpreadPressStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .scaleEffect(configuration.isPressed && !reduceMotion ? SpreadTactile.pressScale : 1)
+                .scaleEffect(configuration.isPressed && !reduceMotion ? CGFloat(SpreadTactile.pressScale) : 1)
                 .opacity(configuration.isPressed ? SpreadTactile.pressOpacity : 1)
                 // Contact appears at the next render; only the release settles.
                 .animation(reduceMotion || configuration.isPressed ? nil : SpreadTactile.snap,
