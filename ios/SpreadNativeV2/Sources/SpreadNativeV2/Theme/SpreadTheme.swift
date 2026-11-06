@@ -195,6 +195,10 @@ public enum SpreadTactile {
     public static let enter = Animation.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)
     /// Exits are deliberately ~20% shorter than entrances.
     public static let exit = Animation.easeIn(duration: 0.18)
+    /// Shared identity-preserving reveal for a responsibility's separate detail field.
+    public static var detailReveal: AnyTransition {
+        .asymmetric(insertion: .offset(y: 8).combined(with: .opacity), removal: .opacity)
+    }
 
     public static func resolved(_ animation: Animation, reduceMotion: Bool) -> Animation? {
         reduceMotion ? nil : animation
