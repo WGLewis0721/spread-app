@@ -27,6 +27,7 @@ struct NativeContentBlock: Codable, Identifiable, Equatable {
 
 struct NativeTaskContent: Codable, Equatable {
     var blocks: [NativeContentBlock] = []
+    var preserved: [String: NativeJSON] = [:]
 }
 
 struct NativeTaskDetail: Decodable {
@@ -70,7 +71,7 @@ struct TaskSheet: View {
     @FocusState private var focusedField: String?
 
     private var task: PlannerTask? { planner.snapshot?.tasks.first { $0.id == taskId } }
-    private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) && ($0.richText == nil || $0.richText?.version == 1) } }
+    private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) && ($0.richText == nil || $0.richText?.version == 1) && !($0.preserved["richText"] != nil && $0.richText == nil) } }
 
     var body: some View {
         SpreadSheetStack {
