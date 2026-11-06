@@ -60,8 +60,8 @@ Owner: native and planner engineers.
 
 - [ ] Build the overlapping Wallet stack and sole-card focus behavior. Move accessibility focus into the selected card/details, then restore it on return.
 - [ ] Connect real tasks below the card. Preserve task completion, eligible-day placement, unscheduled work and task Undo.
-- [ ] Only the pencil/Edit button can enter editing; taps/long presses never enable it. Manage/Delete are not painted beneath resting cards. Left swipe reveals Manage and right swipe reveals Delete only within Edit mode. Move cards as rigid objects without changing their width or internal alignment.
-- [ ] Keep tap, keyboard and VoiceOver alternatives for each swipe.
+- [ ] Only pencil/Edit enables editing. Manage/Delete are invisible at rest, including translucent card backgrounds. Left swipe reveals Manage and right reveals Delete; BOTH must be tappable and execute their action. Preserve rigid card geometry and raise the breathing glow by 50% without moving text.
+- [ ] Keep tap, keyboard and VoiceOver alternatives for edit-only swipe actions. Verify no actions show in normal mode, even after press-and-hold, selection, relaunch or gesture cancellation.
 - [ ] Keep production management scope explicit. Use the current global delete only with a confirmation that says it affects all weeks. Create a separate guarded week-only operation if that behavior is later chosen; do not disguise global deletion.
 - [ ] Add grouped, guarded edit Undo/Redo to the authoritative store. Preserve tasks, budgets, allocations and relevant metadata together. Refuse stale history after unrelated edits/profile/week changes.
 
@@ -219,7 +219,7 @@ Owner: product owner and QA.
 - [ ] Wait for Apple to finish processing. Resolve any reported compliance/processing issue. Add the processed build to the existing authorized internal TestFlight group; do not invent a group name or enable external review.
 - [ ] Open TestFlight on the iPhone 15, confirm the version/build and update the existing app in place. Keep its data and the protected backup; do not delete the installed app.
 - [ ] Open More and confirm it is unchanged. Use the existing Week + Month choice to open Life.
-- [ ] Focus/restore every card. Edit a name/color, reveal both swipe actions, cancel a deletion, and verify Undo/Redo on a disposable Life area with the documented scope.
+- [ ] Focus/restore every card. Change its weekly area budget by 0.5h from its details or Manage sheet and verify relaunch persistence and full-capacity explanation. Edit name/color, reveal and ACTIVATE both swipe actions, cancel a deletion, and verify Undo/Redo.
 - [ ] Flick capacity, hold/drag slowly and quickly, turn an arc both directions and across the angle seam, fill the circle, hit a reservation limit and undo a committed change.
 - [ ] Set a priority, review its funded and unfunded cases, reserve time, and verify the week without moving unrelated work.
 - [ ] Morph Week/Month, cross month/year boundaries, open day cards and edit tasks from all three destinations.
