@@ -68,7 +68,7 @@ const action = z.discriminatedUnion("type", [
     color: z.string().regex(/^#[0-9A-Fa-f]{6}$/), category: z.union([z.literal("custom"), z.string().refine(isSpreadCategory)]) }),
   z.strictObject({ type: z.literal("removeLifeRole"), roleId: id }),
   z.strictObject({ type: z.literal("setLifeBudget"), roleId: id, hours }),
-  z.strictObject({ type: z.literal("setLifePriority"), priorityRoleId: id.nullable() }),
+  z.strictObject({ type: z.literal("setLifePriority"), priorityRoleId: id.nullable(), goalHours: hours.optional(), day: day.optional() }),
   z.strictObject({ type: z.literal("setTaskEstimate"), roleId: id, taskId: id,
     minutes: z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60),
       z.literal(90), z.literal(120), z.literal(180), z.literal(240), z.literal(480), z.null()]) }),
@@ -194,6 +194,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
   let revision = 0;
   let disposed = false;
   let chain: Promise<unknown> = Promise.resolve();
+  const lifeHistoryIds = new Set<string>();
   const requests = new Map<string, { fingerprint: string; reply: NativeReply }>();
   const unsubscribe = useSpread.subscribe((next, previous) => {
     if (next.data !== previous.data || next.activeId !== previous.activeId) revision += 1;
@@ -334,6 +335,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
       return { requestId: command.requestId, ok: true, state: read(),
         bulkPreview: state.previewOverdueMove(a.taskIds, a.targetDay, a.today) };
     }
+    if ((a.type === "undo" || a.type === "redo") && a.editId.startsWith("life-") && !lifeHistoryIds.has(a.editId)) return fail("undo-expired");
     const invalid =
       a.type === "switchProfile" && !state.profiles.some((p) => p.id === a.profileId)
         ? "no-profile"
@@ -379,7 +381,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
             if (!state.setLifeBudget(a.roleId, a.hours)) throw new Error("life-budget-refused");
             break;
           case "setLifePriority":
-            if (!state.setLifePriority(a.priorityRoleId)) throw new Error("life-priority-refused");
+            if (!state.setLifePriority(a.priorityRoleId, a.goalHours, a.day)) throw new Error("life-priority-refused");
             break;
           case "setTaskEstimate":
             if (!state.setTaskEstimate(a.roleId, a.taskId, a.minutes)) throw new Error("life-estimate-refused");
@@ -498,7 +500,10 @@ export function createNativeV2Dispatcher(sessionId: string) {
       const lifeAction = ["setLifeCapacity", "setLifeBudget", "setLifePriority", "applyLifePriority",
         "editLifeRole", "removeLifeRole", "setTaskEstimate"].includes(a.type) ||
         ((a.type === "addTask" || a.type === "addTaskForDay") && a.life === true);
-      if (lifeAction) undoId = state.lifeUndoable(mutate);
+      if (lifeAction) {
+        undoId = state.lifeUndoable(mutate);
+        if (undoId) lifeHistoryIds.add(undoId);
+      }
       else if (
         [
           "retrySave",
