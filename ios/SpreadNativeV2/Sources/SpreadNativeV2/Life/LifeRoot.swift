@@ -184,8 +184,7 @@ struct LifeRoot: View {
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole, editing: editing,
-                                onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) },
-                                onBeginEdit: { focusedRole = $0; editing = true })
+                                onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) })
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
                 details(role, snapshot: snapshot)
