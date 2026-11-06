@@ -18,7 +18,7 @@ struct SpreadSurface: View {
     @State private var tabSelection = "all"
     @State private var daySelection = PlannerDates.localISO()
     @State private var dropOpen = false
-    @State private var summaryExpanded = false
+    @Binding var summaryExpanded: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var totalHours: Double { snapshot.roles.reduce(0) { $0 + $1.hours } }
@@ -63,7 +63,7 @@ struct SpreadSurface: View {
 
         return VStack(alignment: .leading, spacing: 0) {
             Button {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
+                withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
                     summaryExpanded.toggle()
                 }
                 SpreadHaptics.selection()
@@ -159,7 +159,7 @@ struct SpreadSurface: View {
                 Text("Across \(status.spreadCount) \(status.spreadCount == 1 ? "spread" : "spreads")")
                     .font(.system(.caption))
                     .foregroundStyle(Spread.secondary)
-                Text("\(SpreadHours.text(status.scheduled))h scheduled · \(SpreadHours.text(status.remaining))h remaining")
+                Text("\(SpreadHours.text(status.scheduled))h scheduled � \(SpreadHours.text(status.remaining))h remaining")
                     .font(.system(.caption))
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -249,7 +249,7 @@ struct SpreadSurface: View {
             if totalHours > 45 || status.overbooked > 0 {
                 Text(status.overbooked > 0
                      ? "Your week has more scheduled hours than its spread budgets."
-                     : "If the hours don’t fit, something is lying.")
+                     : "If the hours don't fit, something is lying.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.caution)
             }
@@ -374,6 +374,8 @@ struct RoleRow: View {
     var onSelect: () -> Void = {}
     let onOpenTask: (String, String) -> Void
     let onOpenRole: (String) -> Void
+    var separateDetails = false
+    var detailsOnly = false
 
     @State private var name = ""
     @State private var palette = false
@@ -392,9 +394,10 @@ struct RoleRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if !detailsOnly {
             header
             if adjusting { hoursEditor.transition(.opacity) }
-            if !isOpen && !typeSize.isAccessibilitySize {
+            if (!isOpen || separateDetails) && !typeSize.isAccessibilitySize {
                 // The cutouts move on closed Wallet cards too. The next card
                 // overlaps part of this decorative band, not the title or tasks.
                 HStack {
@@ -406,25 +409,23 @@ struct RoleRow: View {
                 .clipped()
                 .accessibilityHidden(true)
             }
-            if isOpen { placementBand.transition(.opacity) }
             if palette {
                 PalettePanel(planner: planner, role: role)
                     .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 14)))
             }
-            if isOpen { taskList.transition(.opacity) }
+            }
+            if isOpen && (!separateDetails || detailsOnly) {
+                placementBand.transition(.opacity)
+                taskList.transition(.opacity)
+            }
         }
         .contentShape(Rectangle())
 
-        .id("spread-role-\(role.id)")
+        .id("spread-role-\(role.id)-\(detailsOnly ? "details" : "face")")
         .onAppear { name = role.name }
         .onChange(of: role.name) { _, value in
             name = value
-            SpreadHaptics.selection()
         }
-        .onChange(of: role.color) { _, _ in SpreadHaptics.selection() }
-        .onChange(of: role.category) { _, _ in SpreadHaptics.selection() }
-        .onChange(of: role.hours) { _, _ in SpreadHaptics.selection() }
-        .onChange(of: tasks.count) { _, _ in SpreadHaptics.selection() }
         .onChange(of: palette) { _, _ in SpreadHaptics.selection() }
         .onChange(of: adjusting) { _, _ in SpreadHaptics.selection() }
         .onChange(of: editing) { _, active in
@@ -436,7 +437,7 @@ struct RoleRow: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("role-block-\(role.id)")
+        .accessibilityIdentifier(detailsOnly ? "classic-task-details-\(role.id)" : "role-block-\(role.id)")
     }
 
     // MARK: Header
@@ -541,12 +542,12 @@ struct RoleRow: View {
         .frame(maxWidth: .infinity, minHeight: 72)
     }
 
-    /// "2 tasks • 3h placed" (the specimen's line), or the invitation to add the first task.
+    /// "2 tasks  3h placed" (the specimen's line), or the invitation to add the first task.
     private var summaryLine: String {
         let placed = "\(SpreadHours.text(placedHours))h placed"
-        if tasks.isEmpty { return "No tasks yet • \(placed)" }
+        if tasks.isEmpty { return "No tasks yet  \(placed)" }
         let noun = tasks.count == 1 ? "task" : "tasks"
-        return "\(tasks.count) \(noun) • \(placed)"
+        return "\(tasks.count) \(noun)  \(placed)"
     }
 
     private var hoursEditor: some View {
@@ -565,8 +566,14 @@ struct RoleRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
-                HourStepper(value: role.hours, label: "\(role.name) hours", step: 0.5) { hours in
-                    Task { _ = await planner.send(["type": "setHours", "roleId": role.id, "hours": hours]) }
+                HourStepper(value: role.hours, label: "\(role.name) hours", step: 0.5,
+                            revision: planner.state?.revision,
+                            context: "\(planner.state?.envelope.profileId ?? "")/\(snapshot.weekKey)/\(role.id)",
+                            onScrub: { hours, revision in
+                    await planner.send(["type": "setHours", "roleId": role.id, "hours": hours],
+                                       completionHaptic: true, expectedRevision: revision)
+                }) { hours in
+                    Task { _ = await planner.send(["type": "setHours", "roleId": role.id, "hours": hours], completionHaptic: true) }
                 }
                 Button("Done") {
                     withAnimation(reduceMotion ? nil : SpreadMotion.press) { adjusting = false }
@@ -589,7 +596,7 @@ struct RoleRow: View {
         let left = snapshot.remainingHours(for: role.id)
         return HStack(alignment: .center, spacing: 8) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("\(SpreadHours.text(placedHours)) placed · \(SpreadHours.text(left)) left")
+                Text("\(SpreadHours.text(placedHours)) placed � \(SpreadHours.text(left)) left")
                     .font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.ink).monospacedDigit()
                     .fixedSize(horizontal: false, vertical: true)
                 DayMarks(snapshot: snapshot, role: role)
@@ -641,7 +648,7 @@ struct RoleRow: View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { name = role.name; return }
         guard trimmed != role.name else { return }
-        Task { await planner.send(["type": "renameRole", "roleId": role.id, "name": trimmed], completionHaptic: false) }
+        Task { await planner.send(["type": "renameRole", "roleId": role.id, "name": trimmed], completionHaptic: true) }
     }
 }
 
@@ -695,7 +702,7 @@ struct PalettePanel: View {
             FlowRow(spacing: 4) {
                 ForEach(Self.colors, id: \.self) { color in
                     Button {
-                        Task { await planner.send(["type": "setRoleColor", "roleId": role.id, "color": color]) }
+                        Task { await planner.send(["type": "setRoleColor", "roleId": role.id, "color": color], completionHaptic: true) }
                     } label: {
                         Circle().fill(Color(hex: color)).frame(width: 28, height: 28)
                             .overlay(Circle().stroke(Spread.ink, lineWidth: role.color.lowercased() == color.lowercased() ? 2 : 0).padding(-4))
@@ -707,13 +714,13 @@ struct PalettePanel: View {
                     .accessibilityAddTraits(role.color.lowercased() == color.lowercased() ? .isSelected : [])
                 }
             }
-            Text("Symbol" + (role.category == "custom" ? "" : " · \(Self.categories.first { $0.id == role.category }?.label ?? "")"))
+            Text("Symbol" + (role.category == "custom" ? "" : " � \(Self.categories.first { $0.id == role.category }?.label ?? "")"))
                 .font(Spread.footnote).foregroundStyle(Spread.secondary)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5), spacing: 6) {
                 ForEach(Self.categories, id: \.id) { item in
                     let selected = role.category == item.id
                     Button {
-                        Task { await planner.send(["type": "setRoleCategory", "roleId": role.id, "category": item.id]) }
+                        Task { await planner.send(["type": "setRoleCategory", "roleId": role.id, "category": item.id], completionHaptic: true) }
                     } label: {
                         RoleBadge(category: item.id, color: role.color, size: 32)
                             .frame(width: 44, height: 44)
@@ -740,6 +747,8 @@ struct TaskRow: View {
     let task: PlannerTask
     let roleId: String
     let onOpen: () -> Void
+    @State private var pending = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var dayISO: String? {
         guard let allocationId = task.allocationId else { return nil }
@@ -750,7 +759,12 @@ struct TaskRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Button {
-                Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": task.id], completionHaptic: !task.done) }
+                guard !pending else { return }
+                pending = true
+                Task {
+                    _ = await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": task.id], completionHaptic: !task.done)
+                    pending = false
+                }
             } label: {
                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
                     .font(.system(.title2, weight: .regular))
@@ -758,7 +772,10 @@ struct TaskRow: View {
                     .frame(width: 56, height: 56)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.spreadPress)
+            .disabled(pending)
+            .opacity(pending ? 0.6 : 1)
+            .accessibilityValue(pending ? "Saving" : task.done ? "Completed" : "Incomplete")
             .accessibilityLabel(task.done ? "Mark not done: \(task.text)" : "Mark done: \(task.text)")
             .accessibilityAddTraits(task.done ? .isSelected : [])
             .accessibilityIdentifier("task-check-\(task.id)")
@@ -799,6 +816,7 @@ struct TaskRow: View {
             }
         }
         .padding(.leading, 12)
+        .animation(reduceMotion ? nil : SpreadTactile.snap, value: task.done)
         .overlay(alignment: .top) { Rectangle().fill(Spread.line).frame(height: 0.5).padding(.leading, 56) }
     }
 }
@@ -893,6 +911,8 @@ struct StackLayout: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.scenePhase) private var scenePhase
+    @GestureState private var contactActive = false
     @State private var expandedIds: Set<String> = []
     @State private var pendingDeleteId: String?
     @State private var revealedRoleId: String?
@@ -901,7 +921,7 @@ struct StackLayout: View {
     @State private var dragOffset: CGFloat = 0
 
     private var focusedId: String { selectedRole ?? snapshot.roles.first?.id ?? "" }
-    private var swipeAnimation: Animation? { reduceMotion ? nil : .interactiveSpring(response: 0.33, dampingFraction: 0.86) }
+    private var swipeAnimation: Animation? { reduceMotion ? nil : SpreadTactile.snap }
 
     var body: some View {
         LazyVStack(spacing: 0) {
@@ -913,8 +933,13 @@ struct StackLayout: View {
             }
         }
         .padding(.bottom, 36)
-        .animation(reduceMotion ? nil : SpreadMotion.curve, value: expandedIds)
-        .animation(reduceMotion ? nil : SpreadMotion.curve, value: editing)
+        .animation(reduceMotion ? nil : SpreadTactile.settle, value: expandedIds)
+        .animation(reduceMotion ? nil : SpreadTactile.settle, value: editing)
+        .onChange(of: contactActive) { _, active in
+            if !active { withAnimation(swipeAnimation) { draggedRoleId = nil; dragOffset = 0 } }
+        }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { closeReveal() } }
+        .onChange(of: snapshot.weekKey) { _, _ in closeReveal() }
         .onChange(of: editing) { _, active in
             if !active { closeReveal() }
         }
@@ -957,6 +982,7 @@ struct StackLayout: View {
     @ViewBuilder
     private func walletCard(_ role: Responsibility, index: Int) -> some View {
         let open = expandedIds.contains(role.id)
+        VStack(spacing: 10) {
         ZStack(alignment: .topLeading) {
             if editing {
                 actionTray(for: role)
@@ -972,7 +998,7 @@ struct StackLayout: View {
         .simultaneousGesture(swipeGesture(for: role.id))
         .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
             guard !editing else { return }
-            withAnimation(reduceMotion ? nil : SpreadMotion.curve) { editing = true }
+            withAnimation(reduceMotion ? nil : SpreadTactile.settle) { editing = true }
         })
         // Custom accessibility actions give VoiceOver/keyboard users a way to
         // reach swipe-only actions, without another permanent button row.
@@ -984,6 +1010,15 @@ struct StackLayout: View {
             pendingDeleteId = role.id
             SpreadHaptics.destructivePrompt()
         }
+        if open {
+            RoleRow(planner: planner, snapshot: snapshot, role: role, editing: false,
+                    focused: true, expanded: true, onOpenTask: onOpenTask, onOpenRole: onOpenRole,
+                    separateDetails: true, detailsOnly: true)
+                .padding(.top, 12)
+                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .transition(.opacity)
+        }
+        }
     }
 
     private func cardContents(_ role: Responsibility, open: Bool) -> some View {
@@ -991,7 +1026,7 @@ struct StackLayout: View {
             planner: planner, snapshot: snapshot, role: role, editing: editing,
             focused: open, expanded: open,
             onSelect: { toggle(role.id) },
-            onOpenTask: onOpenTask, onOpenRole: onOpenRole
+            onOpenTask: onOpenTask, onOpenRole: onOpenRole, separateDetails: true
         )
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
@@ -1082,7 +1117,8 @@ struct StackLayout: View {
     }
 
     private func swipeGesture(for id: String) -> some Gesture {
-        DragGesture(minimumDistance: 20)
+        DragGesture(minimumDistance: 20, coordinateSpace: .global)
+            .updating($contactActive) { _, active, _ in active = editing }
             .onChanged { value in
                 guard editing else { return }
                 let x = value.translation.width
@@ -1092,18 +1128,20 @@ struct StackLayout: View {
                 guard abs(x) > 22, abs(x) > abs(y) * 1.5 else { return }
                 let start = revealedRoleId == id ? revealedSide.xOffset : 0
                 draggedRoleId = id
-                dragOffset = min(88, max(-88, start + x))
+                var transaction = Transaction(); transaction.disablesAnimations = true
+                withTransaction(transaction) { dragOffset = min(88, max(-88, start + x)) }
             }
             .onEnded { value in
                 guard editing else { return }
                 defer { draggedRoleId = nil; dragOffset = 0 }
                 let x = value.translation.width
                 let y = value.translation.height
-                guard abs(x) >= 55, abs(x) > abs(y) * 1.5 else { return }
+                guard abs(x) > 12, abs(x) > abs(y) * 1.5 else { return }
                 let start = revealedRoleId == id ? revealedSide.xOffset : 0
-                let moved = start + x
-                let side: WalletReveal = moved > 48 ? .delete : (moved < -48 ? .manage : .none)
-                if side != revealedSide || (side != .none && revealedRoleId != id) {
+                let target = TactilePrecisionMath.revealTarget(current: Double(start), translation: Double(x),
+                    projected: Double(value.predictedEndTranslation.width), stop: 80)
+                let side: WalletReveal = target > 0 ? .delete : (target < 0 ? .manage : .none)
+                if side != .none && (side != revealedSide || revealedRoleId != id) {
                     SpreadHaptics.revealed(destructive: side == .delete)
                 }
                 withAnimation(swipeAnimation) {
@@ -1132,7 +1170,7 @@ struct StackLayout: View {
     }
 
     private func toggle(_ id: String) {
-        withAnimation(reduceMotion ? nil : SpreadMotion.curve) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
             if expandedIds.contains(id) { expandedIds.remove(id) }
             else { expandedIds.insert(id) }
             selectedRole = id
@@ -1148,6 +1186,7 @@ private struct RoleEditGlow: ViewModifier {
     let enabled: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var bright = false
 
     func body(content: Content) -> some View {
@@ -1169,11 +1208,12 @@ private struct RoleEditGlow: ViewModifier {
             .onAppear { animate() }
             .onChange(of: enabled) { _, _ in animate() }
             .onChange(of: reduceMotion) { _, _ in animate() }
+            .onChange(of: scenePhase) { _, _ in animate() }
     }
 
     private func animate() {
         bright = false
-        guard enabled && !reduceMotion else { return }
+        guard enabled && !reduceMotion && scenePhase == .active else { return }
         withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true)) {
             bright = true
         }

@@ -1,8 +1,35 @@
 import XCTest
 @testable import SpreadNativeV2
+#if os(iOS)
+import SwiftUI
+#endif
 
 /// Mathematical contracts for touch interactions. Device feel and haptics require an iPhone.
 final class TactilePrecisionTests: XCTestCase {
+#if os(iOS)
+    @MainActor func testAcknowledgementWithSaveFailureDoesNotReportSuccess() async throws {
+        let snapshot = SpreadV2Fixture.week
+        let envelope = NativeV2Envelope(profileId: "p", snapshot: snapshot)
+        let encoded = try JSONEncoder().encode(envelope)
+        let envelopeJSON = try JSONSerialization.jsonObject(with: encoded)
+        let state: [String: Any] = ["sessionId": "s", "revision": 1, "envelope": envelopeJSON]
+        let planner = LivePlanner { request in
+            if request == "null" {
+                let bytes = try JSONSerialization.data(withJSONObject: ["ok": true, "state": state])
+                return String(decoding: bytes, as: UTF8.self)
+            }
+            let input = try JSONSerialization.jsonObject(with: Data(request.utf8)) as! [String: Any]
+            let bytes = try JSONSerialization.data(withJSONObject: ["ok": true, "state": state,
+                "requestId": input["requestId"]!, "saveError": "save-failed"])
+            return String(decoding: bytes, as: UTF8.self)
+        }
+        await planner.refresh()
+        let accepted = await planner.send(["type": "setHours", "roleId": "work", "hours": 9], completionHaptic: true)
+        XCTAssertFalse(accepted, "A failed durable save must never confirm success to a tactile caller")
+        XCTAssertNotNil(planner.saveFailure)
+        XCTAssertNotNil(planner.error)
+    }
+#endif
     func testMagneticRevealSnapsToDetents() {
         XCTAssertEqual(TactilePrecisionMath.revealTarget(current: 0, translation: 43, projected: 43), 92)
         XCTAssertEqual(TactilePrecisionMath.revealTarget(current: 0, translation: -43, projected: -43), -92)
@@ -28,5 +55,51 @@ final class TactilePrecisionTests: XCTestCase {
     func testNonfiniteGestureValuesAreIgnored() {
         XCTAssertEqual(TactilePrecisionMath.revealTarget(current: 0, translation: .infinity, projected: 90), 0)
         XCTAssertEqual(TactilePrecisionMath.daySwipeDirection(horizontal: .nan, vertical: 0), 0)
+    }
+
+    func testVelocityCannotInventOppositeRevealOrHijackVerticalScroll() {
+        XCTAssertEqual(TactilePrecisionMath.revealTarget(current: 0, translation: 20, projected: -140), 0)
+        XCTAssertEqual(TactilePrecisionMath.revealTarget(current: 0, translation: 0, projected: 200), 0)
+        XCTAssertEqual(TactilePrecisionMath.daySwipeDirection(horizontal: -24, vertical: 3, projected: -160), 1)
+        XCTAssertEqual(TactilePrecisionMath.daySwipeDirection(horizontal: -24, vertical: 3, projected: 160), 0)
+        XCTAssertEqual(TactilePrecisionMath.daySwipeDirection(horizontal: -24, vertical: 90, projected: -160), 0)
+    }
+
+    func testMechanicalHoursReturnToTheirOriginAndRespectBounds() {
+        XCTAssertEqual(TactilePrecisionMath.hours(origin: 8, translation: 23.9, step: 0.5), 8)
+        XCTAssertEqual(TactilePrecisionMath.hours(origin: 8, translation: 48, step: 0.5), 9)
+        XCTAssertEqual(TactilePrecisionMath.hours(origin: 8, translation: -24, step: 0.5), 7.5)
+        XCTAssertEqual(TactilePrecisionMath.hours(origin: 8, translation: 0, step: 0.5), 8)
+        XCTAssertEqual(TactilePrecisionMath.hours(origin: 0, translation: -900, step: 0.5), 0)
+        XCTAssertEqual(TactilePrecisionMath.hours(origin: 167.5, translation: 900, step: 0.5), 168)
+        XCTAssertEqual(TactilePrecisionMath.hours(origin: 8, translation: .infinity, step: 0.5), 8)
+    }
+
+    func testCueCadenceBoundaryCancellationAndFeedbackOff() {
+        var gate = TactileCueGate()
+        XCTAssertFalse(gate.tick(at: 1, enabled: false))
+        XCTAssertTrue(gate.tick(at: 1))
+        XCTAssertFalse(gate.tick(at: 1.01))
+        XCTAssertFalse(gate.tick(at: 1.06))
+        XCTAssertTrue(gate.tick(at: 1.08))
+        XCTAssertFalse(gate.boundary(enabled: false))
+        XCTAssertTrue(gate.boundary())
+        XCTAssertFalse(gate.boundary())
+        gate.reset()
+        XCTAssertTrue(gate.tick(at: 1.09))
+        XCTAssertTrue(gate.boundary())
+        XCTAssertFalse(gate.tick(at: .infinity))
+    }
+
+    func testFastWeekFlickIsBoundedAndEdgeGuarded() {
+        let start = CGPoint(x: 180, y: 300)
+        XCTAssertEqual(WeekSwipeRules.direction(start: start, end: CGPoint(x: 156, y: 303), width: 390,
+                                              velocity: CGPoint(x: -800, y: 0)), 1)
+        XCTAssertNil(WeekSwipeRules.direction(start: start, end: CGPoint(x: 156, y: 360), width: 390,
+                                             velocity: CGPoint(x: -800, y: 0)))
+        XCTAssertNil(WeekSwipeRules.direction(start: CGPoint(x: 10, y: 300), end: CGPoint(x: 110, y: 300),
+                                             width: 390, velocity: CGPoint(x: 800, y: 0)))
+        XCTAssertNil(WeekSwipeRules.direction(start: start, end: CGPoint(x: 156, y: 303), width: 390,
+                                             velocity: CGPoint(x: 800, y: 0)))
     }
 }

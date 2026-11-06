@@ -28,8 +28,12 @@ struct LifeRoot: View {
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
     let onDeleteRole: (String) -> Void
+    @AccessibilityFocusState private var navigationFocused: Bool
+    @AccessibilityFocusState private var openerFocused: Bool
     @State private var destination: LifeDestination = .life
     @State private var focusedRole: String?
+    @State private var hoursSelectedRole: String?
+    @State private var weekSelectedRole: String?
     @State private var editing = false
     @State private var navigationOpen = false
     @State private var localSheet: LifeLocalSheet?
@@ -38,6 +42,7 @@ struct LifeRoot: View {
     @State private var weekTick = 0
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
+    @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
@@ -74,7 +79,7 @@ struct LifeRoot: View {
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
                     } else {
-                        ProgressView("Opening your plan…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                        ProgressView("Opening your plan.").frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                     }
                 }
@@ -87,13 +92,21 @@ struct LifeRoot: View {
         }
         .foregroundStyle(LifePalette.ink).tint(LifePalette.accent)
         .task { await planner.refresh() }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await planner.refresh() } } }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await planner.refresh() } }
+            else { navigationOpen = false }
+        }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in
             focusedRole = nil; editing = false; localSheet = nil; pendingTask = nil
+            hoursSelectedRole = nil; weekSelectedRole = nil
         }
         .onChange(of: planner.snapshot?.weekKey) { _, _ in focusedRole = nil; editing = false; localSheet = nil }
         .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
-        .sensoryFeedback(.selection, trigger: weekTick) { _, _ in LifeFeedback.enabled }
+        .onChange(of: navigationOpen) { _, open in
+            navigationFocused = open
+            if !open { openerFocused = true }
+        }
+        .onChange(of: weekTick) { _, _ in SpreadHaptics.selection() }
         .sheet(item: $localSheet, onDismiss: {
             if let pending = pendingTask {
                 pendingTask = nil
@@ -125,14 +138,15 @@ struct LifeRoot: View {
         switch destination {
         case .life: life(snapshot)
         case .hours:
-            LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { localSheet = .help })
+            LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { localSheet = .help }, selectedRole: $hoursSelectedRole)
         case .week:
             VStack(alignment: .leading, spacing: 16) {
                 Text("Your week").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
                 Text("One day at a time.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 LifeWeekView(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask,
                              onReserve: { localSheet = .reserve($0) },
-                             onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) })
+                             onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) },
+                             selectedRole: $weekSelectedRole)
             }.accessibilityIdentifier("life-week-page")
         }
     }
@@ -152,7 +166,7 @@ struct LifeRoot: View {
                 }.accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
                     .accessibilityIdentifier("life-edit")
             }.padding(.horizontal, 4)
-            Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.plain)
+            Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
                 .accessibilityLabel("Adjust weekly planning hours")
             if editing {
                 Text("Swipe left to manage. Swipe right to delete.").font(.subheadline).foregroundStyle(LifePalette.secondary)
@@ -165,7 +179,7 @@ struct LifeRoot: View {
             }
             if snapshot.roles.isEmpty {
                 Text("Name the responsibilities you want to plan for.").font(.body)
-                Button("Add a Life area", action: onNewRole).frame(minHeight: 44)
+                newLifeArea
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole, editing: editing,
@@ -174,44 +188,96 @@ struct LifeRoot: View {
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
                 details(role, snapshot: snapshot)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
             } else if !editing && !snapshot.roles.isEmpty {
                 Text("Tap a card to see its tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 12)
             }
-            if !snapshot.roles.isEmpty { Button("Add a Life area", action: onNewRole).frame(minHeight: 44) }
+            if !snapshot.roles.isEmpty { newLifeArea }
         }.accessibilityIdentifier("life-page")
     }
+    private var newLifeArea: some View {
+        Button(action: onNewRole) {
+            HStack(spacing: 12) {
+                SpreadIcon(name: "icon-new-life", size: 32, original: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Add a Life area").font(.system(.body, weight: .semibold))
+                    Text("Make room for what matters.").font(Spread.footnote)
+                        .foregroundStyle(Spread.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "plus").font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Spread.accent)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+            .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+            .contentShape(RoundedRectangle(cornerRadius: Spread.radiusCard))
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityIdentifier("life-new-area")
+    }
+
     private func summary(_ snapshot: PlannerSnapshot) -> some View {
         let assigned = snapshot.roles.reduce(0) { $0 + $1.hours }
-        return VStack(spacing: 10) {
-            ViewThatFits(in: .horizontal) {
-                HStack {
-                    Text("\(SpreadHours.text(assigned))h assigned")
-                    Spacer()
-                    capacitySummary(snapshot, assigned: assigned)
-                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
-                }
-                VStack(alignment: .leading) {
-                    Text("\(SpreadHours.text(assigned))h assigned")
-                    capacitySummary(snapshot, assigned: assigned)
-                }
-            }.font(.subheadline)
-            GeometryReader { geometry in
-                let capacity = max(max(assigned, snapshot.life?.capacityHours ?? assigned), 1)
-                HStack(spacing: 2) {
-                    ForEach(snapshot.roles) { role in
-                        Rectangle().fill(Color(hex: role.color))
-                            .frame(width: max(0, geometry.size.width * role.hours / capacity - 2))
-                    }
-                    Spacer(minLength: 0)
-                }.background(LifePalette.fill).clipShape(Capsule())
-            }.frame(height: 5).accessibilityHidden(true)
+        return HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(.title3, weight: .semibold))
+                .foregroundStyle(Spread.accent)
+                .frame(width: 44, height: 44)
+                .background(Spread.accent.opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                summaryTitle(assigned: assigned)
+                Text("Across " + String(snapshot.roles.count) + " Life areas")
+                    .font(.caption).foregroundStyle(Spread.secondary)
+                capacitySummary(snapshot, assigned: assigned)
+                    .font(.caption)
+                summaryRoleColors(snapshot, assigned: assigned)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.right")
+                .font(.system(.subheadline, weight: .bold))
+                .foregroundStyle(Spread.ink)
+                .frame(width: 20, height: 44)
+                .accessibilityHidden(true)
         }
-        .padding(14)
-        .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(LifePalette.line, lineWidth: 0.5))
-        .shadow(color: Spread.shadow, radius: 8, y: 4)
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .spreadCard()
+    }
+
+    private func summaryTitle(assigned: Double) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(SpreadHours.text(assigned) + "h")
+                    .font(.system(.title2, weight: .bold)).monospacedDigit()
+                Text("assigned").font(.system(.subheadline, weight: .medium))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(SpreadHours.text(assigned) + "h")
+                    .font(.system(.title2, weight: .bold)).monospacedDigit()
+                Text("assigned").font(.system(.subheadline, weight: .medium))
+            }
+        }
+        .foregroundStyle(Spread.ink)
+    }
+
+    private func summaryRoleColors(_ snapshot: PlannerSnapshot, assigned: Double) -> some View {
+        GeometryReader { geometry in
+            let roles = snapshot.roles.filter { $0.hours > 0 }
+            let gap: CGFloat = 3
+            let usable = max(0, geometry.size.width - CGFloat(max(0, roles.count - 1)) * gap)
+            HStack(spacing: gap) {
+                ForEach(roles) { role in
+                    Capsule().fill(Color(hex: role.color))
+                        .frame(width: usable * CGFloat(role.hours / max(assigned, 0.5)), height: 6)
+                }
+            }
+        }
+        .frame(maxWidth: 116).frame(height: 6)
+        .accessibilityHidden(true)
     }
     @ViewBuilder private func capacitySummary(_ snapshot: PlannerSnapshot, assigned: Double) -> some View {
         if let capacity = snapshot.life?.capacityHours {
@@ -229,20 +295,29 @@ struct LifeRoot: View {
                         .font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
                 Spacer(minLength: 8)
-                Button("Place hours") { localSheet = .reserve(role.id) }.frame(minHeight: 44)
+                Button("Place hours") { localSheet = .reserve(role.id) }
+                    .padding(.horizontal, 12).frame(minHeight: 44)
+                    .spreadChip(selected: true).buttonStyle(.spreadPress)
             }
+            DayMarks(snapshot: snapshot, role: role)
             if editing {
                 HStack {
                     Button("Manage") { localSheet = .manage(role.id) }
                     Button("Delete", role: .destructive) { localSheet = .delete(role.id) }
                 }.frame(minHeight: 44)
             } else {
-                Button("Prioritize this week") { localSheet = .priority(role.id) }.frame(minHeight: 44)
+                Button("Prioritize this week") { localSheet = .priority(role.id) }
+                    .padding(.horizontal, 12).frame(minHeight: 44)
+                    .spreadChip(selected: false).buttonStyle(.spreadPress)
             }
-            LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
-            LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
+            VStack(alignment: .leading, spacing: 0) {
+                LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
+                LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+            }
+            .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        .padding(16).background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 23))
+        .padding(16).spreadCard(radius: Spread.radiusCard)
         .accessibilityIdentifier("life-task-details")
     }
     private var history: some View {
@@ -306,6 +381,7 @@ struct LifeRoot: View {
                 Text(destination.rawValue).font(.caption)
             }.frame(minWidth: 44, minHeight: 44)
         }.accessibilityLabel("Open navigation").accessibilityIdentifier("life-navigation")
+            .accessibilityFocused($openerFocused)
             .background {
                 GeometryReader { geometry in
                     Color.clear.preference(key: LifeDockOpenerCenterKey.self,
@@ -321,7 +397,7 @@ struct LifeRoot: View {
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
         WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
-                      detail: "Week Crown", onDetail: today, onMove: goWeek, tactile: true)
+                      detail: "Week Crown", onDetail: today, onMove: goWeek)
             .contextMenu {
                 Button("Move Crown left") { crownRight = false }
                 Button("Move Crown right") { crownRight = true }
@@ -343,9 +419,17 @@ struct LifeRoot: View {
                     }
                     ForEach(LifeDestination.allCases) { item in
                         Button { navigate(item) } label: {
-                            HStack { SpreadIcon(name: item.icon); Text(item.rawValue).font(.title3); Spacer(); Image(systemName: "chevron.right") }
-                                .frame(minHeight: 52)
-                        }.accessibilityAddTraits(destination == item ? .isSelected : [])
+                            HStack {
+                                SpreadIcon(name: item.icon)
+                                Text(item.rawValue).font(.headline)
+                                Spacer()
+                                Image(systemName: destination == item ? "checkmark.circle.fill" : "chevron.right")
+                                    .accessibilityHidden(true)
+                            }
+                            .padding(.horizontal, 12).frame(minHeight: 52)
+                            .spreadChip(selected: destination == item)
+                        }.buttonStyle(.spreadPress)
+                            .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
                     Menu("Crown position") {
@@ -365,6 +449,7 @@ struct LifeRoot: View {
                 }
                 .accessibilityLabel("Close navigation")
                 .accessibilityIdentifier("life-navigation-close")
+                .accessibilityFocused($navigationFocused)
                 .offset(y: max(0, dockOpenerCenterY - 22))
                 if crownRight { Spacer(minLength: 0) }
             }
@@ -374,6 +459,7 @@ struct LifeRoot: View {
             .frame(width: min(300, max(0, width - 32))).frame(maxHeight: .infinity)
             .background(LifePalette.surface).transition(.move(edge: crownRight ? .leading : .trailing))
             .accessibilityAddTraits(.isModal)
+            .accessibilityAction(.escape) { navigationOpen = false }
         }
     }
     private func navigate(_ value: LifeDestination) {
@@ -381,7 +467,6 @@ struct LifeRoot: View {
         withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
             destination = value
             navigationOpen = false
-            focusedRole = nil
             editing = false
         }
     }
@@ -393,29 +478,11 @@ struct LifeRoot: View {
     /// Persistent compact navigation only when there is enough actual width.
     /// On narrow phones the existing bottom control opens an overlay instead.
     private var compactRail: some View {
-        VStack(spacing: 12) {
-            ForEach(LifeDestination.allCases) { item in
-                Button { navigate(item) } label: {
-                    VStack(spacing: 4) {
-                        SpreadIcon(name: item.icon, size: 22)
-                        Text(item.rawValue).font(.caption2).lineLimit(1)
-                    }
-                    .frame(width: 60, height: 60)
-                    .foregroundStyle(destination == item ? LifePalette.ink : LifePalette.secondary)
-                    .background(destination == item ? LifePalette.fill : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 14))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(item.rawValue)
-                .accessibilityAddTraits(destination == item ? .isSelected : [])
-                .accessibilityIdentifier("life-rail-\(item.rawValue.lowercased())")
-            }
-            Spacer(minLength: 0)
+        PlannerNavigationRail(items: LifeDestination.allCases.map {
+            PlannerNavigationItem(id: $0.rawValue.lowercased(), title: $0.rawValue, icon: $0.icon)
+        }, selected: destination.rawValue.lowercased(), expanded: $navigationExpanded) { id in
+            if let item = LifeDestination.allCases.first(where: { $0.rawValue.lowercased() == id }) { navigate(item) }
         }
-        .frame(width: 72)
-        .padding(.vertical, 12)
-        .background(LifePalette.surface)
         .accessibilityIdentifier("life-compact-rail")
     }
     private func goWeek(_ delta: Int) {
@@ -432,7 +499,7 @@ struct LifeRoot: View {
         case .delete(let id): LifeDeleteSheet(planner: planner, roleId: id)
         case .help: LifeGestureHelp()
         case .addTask:
-            NavigationStack {
+            SpreadSheetStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         ForEach(planner.snapshot?.roles ?? []) { role in
@@ -467,7 +534,7 @@ private struct LifeGestureHelp: View {
     @AppStorage("native.life.touchFeedback") private var touchFeedback = true
     @AppStorage("native.life.showTips") private var showTips = true
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             Form {
                 Section("Changing time") {
                     Text("Flick up or down by 1 hour. Hold and drag to change faster.")
@@ -478,7 +545,7 @@ private struct LifeGestureHelp: View {
                     Toggle("Touch feedback", isOn: $touchFeedback)
                     Button("Show tips again") { showTips = true }
                 }
-            }
+            }.spreadListSurface()
             .navigationTitle("Gesture help")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }.presentationDetents([.medium, .large])

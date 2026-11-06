@@ -1,6 +1,6 @@
 import Foundation
 
-/// Pure geometry and arithmetic: one 15° detent is a half hour. Direction follows the
+/// Pure geometry and arithmetic: one 15� detent is a half hour. Direction follows the
 /// reference's pointerAngle/angleDelta, including wrapping at -180/180.
 enum LifeOrbitMath {
     static func delta(from old: Double, to next: Double) -> Double {
@@ -52,7 +52,7 @@ struct LifeHoursView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
     private let clock = Timer.publish(every: 1.0 / 60, on: .main, in: .common).autoconnect()
-    @State private var selectedRole: String?
+    @Binding var selectedRole: String?
     @State private var capacityDraft: Double?
     @State private var budgetDraft: Double?
     @State private var capacityText = ""
@@ -62,8 +62,7 @@ struct LifeHoursView: View {
     @State private var lastAngle: Double?
     @State private var angleCredit: Double = 0
     @State private var gestureContext: String?
-    @State private var lastTick = Date.distantPast
-    @State private var boundaryWarned = false
+    @State private var cueGate = TactileCueGate()
     @State private var message: String?
     @AppStorage("native.life.touchFeedback") private var touchFeedback = true
     @AppStorage("native.life.showTips") private var showTips = true
@@ -114,7 +113,7 @@ struct LifeHoursView: View {
                 }
             }
             .padding(14)
-            .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 18))
+            .spreadCard(radius: 18)
 
             if capacity == nil {
                 Text("How many hours can you plan this week?")
@@ -148,7 +147,7 @@ struct LifeHoursView: View {
             if let selected, separated, capacity != nil {
                 selectedControls(selected)
             }
-            if saving { ProgressView("Saving hours…") }
+            if saving { ProgressView("Saving hours.") }
             if rejected {
                 HStack {
                     Button("Retry save") { retryDraft() }
@@ -209,7 +208,7 @@ struct LifeHoursView: View {
                         .onEnded { _ in finishArc() })
                     .accessibilityHidden(true)
                 VStack(spacing: 4) {
-                    Text(capacity.map(SpreadHours.text) ?? "—")
+                    Text(capacity.map(SpreadHours.text) ?? "-")
                         .font(.system(size: numberSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
 
@@ -317,27 +316,27 @@ struct LifeHoursView: View {
             let controls = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 12))
             controls {
                 Button { changeBudget(by: 0.5) } label: {
-                    Label("Add ½h", systemImage: "arrow.counterclockwise")
+                    Label("Add �h", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .keyboardShortcut(.leftArrow, modifiers: [.option])
                 Button { changeBudget(by: -0.5) } label: {
-                    Label("Return ½h", systemImage: "arrow.clockwise")
+                    Label("Return �h", systemImage: "arrow.clockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .keyboardShortcut(.rightArrow, modifiers: [.option])
             }
             .buttonStyle(.bordered)
-            if budgetDraft != nil { Text("Draft · release to save").font(.subheadline).foregroundStyle(LifePalette.secondary) }
+            if budgetDraft != nil { Text("Draft � release to save").font(.subheadline).foregroundStyle(LifePalette.secondary) }
             let reserved = snapshot.placedHours(for: role.id)
-            Text("\(SpreadHours.text(reserved)) h placed on days · \(SpreadHours.text(max(0, selectedHours - reserved))) h available to place")
+            Text("\(SpreadHours.text(reserved)) h placed on days � \(SpreadHours.text(max(0, selectedHours - reserved))) h available to place")
                 .font(.callout).foregroundStyle(LifePalette.secondary)
         }
         .accessibilityElement(children: .contain)
         .accessibilityValue(SpreadHours.spoken(selectedHours))
         .accessibilityAdjustableAction { direction in changeBudget(by: direction == .increment ? 0.5 : -0.5) }
         .padding(16)
-        .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 20))
+        .spreadCard(radius: 20)
     }
 
     private var capacityField: some View {
@@ -380,19 +379,12 @@ struct LifeHoursView: View {
     }
 
     private func selectionTick() {
-        guard touchFeedback, Date().timeIntervalSince(lastTick) >= 0.075 else { return }
-        lastTick = Date()
+        guard cueGate.tick(at: ProcessInfo.processInfo.systemUptime, enabled: touchFeedback) else { return }
         SpreadHaptics.selection()
     }
     private func warn(_ text: String) {
         message = text
-        if !boundaryWarned {
-            boundaryWarned = true
-            if touchFeedback, Date().timeIntervalSince(lastTick) >= 0.125 {
-                lastTick = Date()
-                LifeFeedback.boundary()
-            }
-        }
+        if cueGate.boundary(enabled: touchFeedback) { LifeFeedback.boundary() }
     }
     private func dragCapacity(_ value: DragGesture.Value) {
         guard !saving, !rejected, let capacity = snapshot.life?.capacityHours else { return }
@@ -467,7 +459,7 @@ struct LifeHoursView: View {
     private func beginContext() {
         gestureContext = context
         originRevision = planner.state?.revision
-        boundaryWarned = false
+        cueGate.reset(); SpreadHaptics.prepare()
     }
     private func advanceClock(_ now: Date) {
         let elapsed = max(0, min(0.1, now.timeIntervalSince(phaseTime)))
@@ -535,7 +527,7 @@ struct LifeHoursView: View {
     private func resetGestures(keepMessage: Bool = false) {
         capacityDraft = nil; budgetDraft = nil; capacityOrigin = nil
         lastAngle = nil; angleCredit = 0; gestureContext = nil; originRevision = nil
-        gestureStarted = nil; boundaryWarned = false; holding = false
+        gestureStarted = nil; cueGate.reset(); holding = false
         holdCredit = 0; holdDistance = 0; rejected = false; saving = false
         if !keepMessage { message = nil }
     }

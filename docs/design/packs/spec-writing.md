@@ -9,7 +9,7 @@
 **Process (short form).**
 1. Restate the request in one sentence: who, which surface (planner, landing page, a device). Ask the owner one question only if blocked; otherwise write an `[Assumption]`.
 2. Read the rules card, the map, then the pack for the surface. Open a long document only by the section the pack names.
-3. Pick a size. S: a tweak inside a pattern, one page. M: a new behavior or new use of a component, two options. L: a new screen, several surfaces, or any exception to a rule, three distinct options plus prototype and rollback plans. If unsure, take the larger.
+3. Pick a size. S: a tweak inside a pattern, one page. M: a new behavior or new use of a component, two options. L: a new screen, several surfaces, or any exception to a rule, three distinct options plus full-implementation, testing and rollback plans. If unsure, take the larger.
 4. Frame the problem as one specific story, then non-goals and an appetite (what it is worth).
 5. List the rules that apply and which part of the request touches each. If the request needs a new color, font, decorative style, blur or glass in the planner, or a do-not-touch path, put it under "Exceptions needed" for the owner. Never design around it silently.
 6. Options: distinct means different structure or interaction, not different colors. Choose one, record the rejected ones and why.
@@ -17,7 +17,7 @@
 8. Platform: widths, orientation, safe areas, appearance, accessibility settings, VoiceOver, input, haptics, a tap and keyboard path for every drag.
 9. Technical approach: where it lives, store actions, flag and default, what it must not touch, dependencies, what leaves the device.
 10. Acceptance criteria as observable "Given, when, then". Verification plan. Device checks listed as owed.
-11. Prototype plan when feel is the question: what must be real, what can be faked, where used, three tester questions (do you know how to do this, is it easy, how can we make it better). The prototype is thrown away.
+11. Full-feature implementation plan: build the complete scoped feature in the real app on a dedicated branch, run automated and physical-device tests, and refine in place. No isolated throwaway prototype or second store. Record three tester questions (do you know how to do this, is it easy, how can we make it better).
 12. Risks, rabbit holes and open questions, each with a default and an owner.
 13. Self-check, then deliver.
 

@@ -184,7 +184,7 @@ public enum SpreadMotion {
     }
 }
 
-/// One tactile vocabulary for the opt-in Life experience, without repainting Classic.
+/// One tactile vocabulary for Classic and Life, without changing their visual tokens.
 /// Finger tracking is unanimated; these animations govern stops and state changes.
 public enum SpreadTactile {
     public static let contact = Animation.easeOut(duration: 0.10)
@@ -225,38 +225,52 @@ public enum SpreadUndo {
 
 /// One light haptic when a task is completed, after the store has acknowledged the change. iPhone only.
 public enum SpreadHaptics {
+    /// Retain the existing preference key. One owner for both presentations and all cues.
+    @MainActor public static var enabled: Bool {
+        (UserDefaults.standard.object(forKey: "native.life.touchFeedback") as? Bool ?? true) &&
+            UIApplication.shared.applicationState == .active &&
+            UIDevice.current.userInterfaceIdiom == .phone
+    }
+    @MainActor private static let selectionGenerator = UISelectionFeedbackGenerator()
+    @MainActor private static let lightGenerator = UIImpactFeedbackGenerator(style: .light)
+    @MainActor private static let warningGenerator = UINotificationFeedbackGenerator()
+    @MainActor public static func prepare() {
+        guard enabled else { return }
+        selectionGenerator.prepare(); lightGenerator.prepare(); warningGenerator.prepare()
+    }
     /// Discrete feedback, never tied to repeating glow frames or drag updates.
     /// An iPhone home-screen style touch cue on edit, swipe reveal and commit.
     @MainActor public static func editMode(entering: Bool) {
-        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        guard enabled else { return }
         UIImpactFeedbackGenerator(style: entering ? .rigid : .soft)
             .impactOccurred(intensity: entering ? 0.85 : 0.55)
     }
 
     @MainActor public static func selection() {
-        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
-        UISelectionFeedbackGenerator().selectionChanged()
+        guard enabled else { return }
+        selectionGenerator.selectionChanged()
+        selectionGenerator.prepare()
     }
 
     @MainActor public static func revealed(destructive: Bool) {
-        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        guard enabled else { return }
         UIImpactFeedbackGenerator(style: destructive ? .medium : .light)
             .impactOccurred(intensity: destructive ? 0.9 : 0.65)
     }
 
     @MainActor public static func destructivePrompt() {
-        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        guard enabled else { return }
+        warningGenerator.notificationOccurred(.warning)
     }
 
     @MainActor public static func success() {
-        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        guard enabled else { return }
+        warningGenerator.notificationOccurred(.success)
     }
 
     @MainActor public static func completed() {
-        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        guard enabled else { return }
+        lightGenerator.impactOccurred()
     }
 }
 
@@ -316,7 +330,9 @@ struct SpreadPressStyle: ButtonStyle {
             configuration.label
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
                 .opacity(configuration.isPressed ? 0.72 : 1)
-                .animation(reduceMotion ? nil : SpreadMotion.press, value: configuration.isPressed)
+                // Contact appears at the next render; only the release settles.
+                .animation(reduceMotion || configuration.isPressed ? nil : SpreadTactile.snap,
+                           value: configuration.isPressed)
         }
     }
 }

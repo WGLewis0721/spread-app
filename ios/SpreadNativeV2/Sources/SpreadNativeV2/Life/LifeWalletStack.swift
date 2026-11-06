@@ -16,9 +16,9 @@ struct LifeWalletStack: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @AccessibilityFocusState private var focusedRole: String?
     @State private var lastSelected: String?
-    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 144
-    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 162
-    @ScaledMetric(relativeTo: .body) private var stackStep: CGFloat = 52
+    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 164
+    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 182
+    @ScaledMetric(relativeTo: .body) private var stackStep: CGFloat = 72
 
     private var ordered: [Responsibility] {
         let priority = snapshot.life?.priorityRoleId
@@ -104,13 +104,11 @@ private struct LifeWalletFace: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
-    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 144
-    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 162
+    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 164
+    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 182
     private var cardHeight: CGFloat { selected ? focusedHeight : closedHeight }
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
-    @State private var ignoreTapUntil = Date.distantPast
-    @State private var revealCue = 0
     @GestureState private var dragging = false
     @State private var glow = false
     private var reserved: Double {
@@ -124,23 +122,11 @@ private struct LifeWalletFace: View {
     var body: some View {
         ZStack {
             revealedActions
-            Button {
-                if Date() >= ignoreTapUntil { onSelect() }
-            } label: {
-                cardSurface
-            }
-            .buttonStyle(.spreadPress)
-            .accessibilityLabel("\(role.name), \(SpreadHours.spoken(hours))")
-            .accessibilityValue(selected ? "Focused" : "Closed")
-            .accessibilityHint("Show this area's tasks")
-            .accessibilityAddTraits(selected ? .isSelected : [])
-            .accessibilityAction(named: "Manage") { onManage() }
-            .accessibilityAction(named: "Delete") { onDelete() }
-            .accessibilityAction(named: "Edit Life areas") { onBeginEdit() }
-            .onLongPressGesture(minimumDuration: 0.55, perform: onBeginEdit)
-            .simultaneousGesture(swipe)
+            selectionButton
         }
         .clipShape(RoundedRectangle(cornerRadius: 23))
+        .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
+                radius: selected || editing ? 16 : 8, y: 4)
         .onChange(of: dragging) { _, active in
             if !active && translation != 0 {
                 withAnimation(reduceMotion ? nil : SpreadTactile.snap) { translation = 0 }
@@ -148,6 +134,9 @@ private struct LifeWalletFace: View {
         }
         .onChange(of: editing) { _, _ in reveal = 0 }
         .onChange(of: selected) { _, _ in reveal = 0 }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { reveal = 0; translation = 0 }
+        }
         .task(id: "\(editing)-\(reduceMotion)-\(scenePhase)") {
             glow = false
             guard editing, !reduceMotion, scenePhase == .active else { return }
@@ -155,6 +144,30 @@ private struct LifeWalletFace: View {
         }
         .accessibilityIdentifier("life-card-\(role.id)")
     }
+    // Resolve formatting as String before entering SwiftUI's overloaded text builders.
+    private var spokenLabel: String {
+        let spokenHours: String = SpreadHours.spoken(hours)
+        return role.name + ", " + spokenHours
+    }
+
+    private var selectionButton: some View {
+        Button {
+            if !dragging { onSelect() }
+        } label: {
+            cardSurface
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityLabel(Text(spokenLabel))
+        .accessibilityValue(selected ? "Focused" : "Closed")
+        .accessibilityHint(selected ? "Close this area's tasks" : "Show this area's tasks")
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityAction(named: "Manage") { onManage() }
+        .accessibilityAction(named: "Delete") { onDelete() }
+        .accessibilityAction(named: "Edit Life areas") { onBeginEdit() }
+        .onLongPressGesture(minimumDuration: 0.55, perform: onBeginEdit)
+        .simultaneousGesture(swipe)
+    }
+
     private var roleColor: Color { Color(hex: role.color) }
 
     // Keep each SwiftUI builder small enough for the release compiler to solve.
@@ -207,15 +220,18 @@ private struct LifeWalletFace: View {
     private var face: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
-                RoleBadge(category: role.category, color: role.color, size: 30)
+                RoleBadge(category: role.category, color: role.color, size: 42)
                 Text(role.name).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                 if snapshot.life?.priorityRoleId == role.id {
                     Text("Priority").font(.caption).padding(.horizontal, 5)
                         .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: 5))
                 }
-                Text("\(SpreadHours.text(hours))h").font(.subheadline).monospacedDigit()
-                Image(systemName: selected ? "chevron.up" : "chevron.down").font(.caption)
+                Text(SpreadHours.text(hours) + "h").font(.subheadline.bold()).monospacedDigit()
+                    .fixedSize(horizontal: true, vertical: false)
+                Image(systemName: "chevron.down").font(.subheadline.bold())
+                    .rotationEffect(.degrees(selected ? 180 : 0))
+                    .accessibilityHidden(true)
             }.foregroundStyle(LifePalette.ink).frame(minHeight: 28)
             if faceVisible || typeSize.isAccessibilitySize {
                 Spacer(minLength: 0)
@@ -246,26 +262,19 @@ private struct LifeWalletFace: View {
         }.padding(.horizontal, 18).padding(.vertical, 12)
     }
     private var swipe: some Gesture {
-        DragGesture(minimumDistance: 12)
+        DragGesture(minimumDistance: 12, coordinateSpace: .global)
             .updating($dragging) { _, active, _ in active = editing }
             .onChanged { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
-                ignoreTapUntil = Date().addingTimeInterval(0.25)
-                translation = value.translation.width
-                let offset = reveal + translation
-                let side = offset < -42 ? -1 : offset > 42 ? 1 : 0
-                if side != 0 && side != revealCue {
-                    revealCue = side
-                    LifeFeedback.reveal(delete: side > 0)
-                }
+                var transaction = Transaction(); transaction.disablesAnimations = true
+                withTransaction(transaction) { translation = value.translation.width }
             }
             .onEnded { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { translation = 0; return }
-                ignoreTapUntil = Date().addingTimeInterval(0.25)
                 let target = TactilePrecisionMath.revealTarget(
                     current: Double(reveal), translation: Double(value.translation.width),
                     projected: Double(value.predictedEndTranslation.width))
-                revealCue = 0
+                if target != 0 && CGFloat(target) != reveal { LifeFeedback.reveal(delete: target > 0) }
                 withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
                     reveal = CGFloat(target)
                     translation = 0
@@ -283,6 +292,7 @@ struct LifeTaskRows: View {
     let onOpenTask: (String, String) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var targetedTaskId: String?
+    @State private var pendingTasks: Set<String> = []
     var body: some View {
         VStack(spacing: 0) {
             if tasks.isEmpty {
@@ -291,15 +301,20 @@ struct LifeTaskRows: View {
             ForEach(tasks) { task in
                 HStack(spacing: 0) {
                     Button {
+                        guard !pendingTasks.contains(task.id) else { return }
+                        pendingTasks.insert(task.id)
                         Task {
-                            if await planner.send(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id]),
-                               LifeFeedback.enabled { SpreadHaptics.completed() }
+                            _ = await planner.send(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id],
+                                                   completionHaptic: !task.done)
+                            pendingTasks.remove(task.id)
                         }
                     } label: {
                         Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
                             .font(.title3).frame(width: 44, height: 44)
-                    }.buttonStyle(.plain).foregroundStyle(task.done ? LifePalette.accent : LifePalette.secondary)
-                        .disabled(planner.busy)
+                    }.buttonStyle(.spreadPress).foregroundStyle(task.done ? LifePalette.accent : LifePalette.secondary)
+                        .disabled(planner.busy || pendingTasks.contains(task.id))
+                        .opacity(pendingTasks.contains(task.id) ? 0.6 : 1)
+                        .accessibilityValue(pendingTasks.contains(task.id) ? "Saving" : task.done ? "Completed" : "Incomplete")
                         .accessibilityLabel("\(task.done ? "Reopen" : "Complete") \(task.text)")
                     Button { onOpenTask(task.roleId, task.id) } label: {
                         HStack {
@@ -310,7 +325,7 @@ struct LifeTaskRows: View {
                             Spacer(minLength: 6)
                             Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
                         }.frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.spreadPress)
                         .accessibilityActions {
                             if day != nil, let index = tasks.firstIndex(where: { $0.id == task.id }) {
                                 if index > 0 {
@@ -346,9 +361,10 @@ struct LifeTaskRows: View {
                     }
                     return true
                 } isTargeted: { targeted in targetedTaskId = targeted ? task.id : nil }
-                Divider()
+                Divider().overlay(Spread.line)
             }
         }
+        .padding(.horizontal, 12)
         .animation(reduceMotion ? nil : SpreadTactile.settle, value: tasks.map(\.id))
     }
 
@@ -367,7 +383,7 @@ struct LifeTaskRows: View {
     private func placement(_ task: PlannerTask) -> String {
         let day = snapshot.allocations.first { $0.id == task.allocationId }
             .map { PlannerDates.label(PlannerDates.date($0.day), pattern: "EEEE") } ?? "To place"
-        return day + (task.estimateMinutes.map { " · \($0) min" } ?? "")
+        return day + (task.estimateMinutes.map { " � \($0) min" } ?? "")
     }
 }
 
@@ -405,6 +421,7 @@ struct LifeQuickAdd: View {
                 }
             }
         }.font(.body).tint(LifePalette.accent)
+            .buttonStyle(.spreadPress)
     }
     private func save() async {
         guard !saving else { return }

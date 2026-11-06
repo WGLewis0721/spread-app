@@ -12,7 +12,8 @@ struct LifeWeekView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selectedDate = ""
-    @State private var selectedRole: String?
+    @Binding var selectedRole: String?
+    @GestureState private var dayTranslation: CGSize = .zero
     @State private var expanded = false
     @State private var marks: [String: NativeDayMark] = [:]
     @State private var navigationID = UUID()
@@ -51,7 +52,7 @@ struct LifeWeekView: View {
                         Button("Place some hours") { onReserve(role.id) }.frame(minHeight: 44)
                     }
                 }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 24))
+                    .spreadCard()
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: roles,
                     selectedRole: $selectedRole, editing: false, day: date,
@@ -61,17 +62,21 @@ struct LifeWeekView: View {
                         Text(role.name).font(.title3.weight(.semibold))
                         Text("\(SpreadHours.text(snapshot.allocations.filter { $0.day == date && $0.roleId == roleID }.reduce(0) { $0 + $1.hours })) h reserved for \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))")
                             .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                        VStack(alignment: .leading, spacing: 0) {
                         LifeTaskRows(planner: planner, snapshot: snapshot,
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),
                             day: date, onOpenTask: onOpenTask)
                         LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
-                    }.padding(18).background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 22))
+                        }.padding(.horizontal, 4)
+                            .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }.padding(18).spreadCard()
                 }
             }
             unplaced
             room
 
         }
+        .offset(x: reduceMotion ? 0 : max(-28, min(28, dayTranslation.width * 0.35)))
         .foregroundStyle(LifePalette.ink)
         .accessibilityIdentifier("life-week-page")
         .onAppear { restoreProfile() }
@@ -109,12 +114,17 @@ struct LifeWeekView: View {
     /// Horizontal drags on the calendar and date header change days. Keep task-reorder
     /// drop targets and vertical schedule scrolling outside this gesture region.
     private var daySwipe: some Gesture {
-        DragGesture(minimumDistance: 65)
+        DragGesture(minimumDistance: 12, coordinateSpace: .global)
+            .updating($dayTranslation) { value, state, transaction in
+                guard !expanded, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
+                transaction.disablesAnimations = true
+                state = value.translation
+            }
             .onEnded { value in
                 guard !expanded, !planner.busy else { return }
                 let direction = TactilePrecisionMath.daySwipeDirection(
                     horizontal: Double(value.translation.width),
-                    vertical: Double(value.translation.height))
+                    vertical: Double(value.translation.height), projected: Double(value.predictedEndTranslation.width))
                 if direction != 0 {
                     choose(LifeCalendarRules.shiftDay(date, by: direction))
                 }
@@ -165,7 +175,7 @@ struct LifeWeekView: View {
                 Spacer(minLength: 0)
                 if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: 44) }
             }
-        }.padding(.vertical, 8).accessibilityElement(children: .contain)
+        }.padding(12).spreadCard().accessibilityElement(children: .contain)
             .simultaneousGesture(daySwipe)
     }
 
@@ -197,8 +207,9 @@ struct LifeWeekView: View {
                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "d"))
                     .font(.subheadline.weight(.semibold)).monospacedDigit()
                     .frame(minWidth: 30, minHeight: 30)
-                    .background(selected ? LifePalette.ink : Color.clear, in: Circle())
-                    .foregroundStyle(selected ? LifePalette.canvas : LifePalette.ink)
+                    .background(selected ? Spread.accent : Color.clear, in: Circle())
+                    .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+                    .overlay(Circle().strokeBorder(today ? Spread.accent : .clear, lineWidth: 1.5))
                 HStack(spacing: 2) {
                     ForEach(Array(mark.colors.prefix(4).enumerated()), id: \.offset) { _, color in
                         Circle().fill(Color(hex: color)).frame(width: 4, height: 4)
@@ -208,7 +219,7 @@ struct LifeWeekView: View {
             }.frame(maxWidth: .infinity, minHeight: 48)
                 .opacity(iso.prefix(7) == date.prefix(7) ? 1 : 0.4)
                 .contentShape(Rectangle())
-        }.buttonStyle(.plain).disabled(planner.busy)
+        }.buttonStyle(.spreadPress).disabled(planner.busy)
             .accessibilityLabel("\(today ? "Today, " : "")\(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d yyyy"))")
             .accessibilityValue("\(mark.count) Life areas planned")
             .accessibilityAddTraits(selected ? .isSelected : [])
@@ -250,7 +261,7 @@ struct LifeWeekView: View {
                             Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
                             Text(role.name)
                             Spacer()
-                            Text("+ ½ h").fontWeight(.semibold)
+                            Text("+ � h").fontWeight(.semibold)
                         }.frame(minHeight: 44)
                     }.disabled(planner.busy)
                         .accessibilityLabel("Reserve half an hour for \(role.name) on \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE MMMM d"))")

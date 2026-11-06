@@ -137,6 +137,15 @@ struct TaskLine: View {
     let onOpenTask: (String, String) -> Void
 
     @State private var showMove = false
+    @State private var reorderTarget = false
+    @State private var reordering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var dayTasks: [PlannerTask] {
+        guard let currentAllocation else { return [] }
+        return LifeCalendarRules.dailyTasks(snapshot, day: currentAllocation.day, roleId: task.roleId)
+    }
+    private var index: Int? { dayTasks.firstIndex(where: { $0.id == task.id }) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -178,7 +187,44 @@ struct TaskLine: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(task.text)
         .accessibilityAddTraits(task.done ? .isSelected : [])
+        .background(reorderTarget ? Spread.fill : .clear, in: RoundedRectangle(cornerRadius: 12))
+        .animation(reduceMotion ? nil : SpreadTactile.snap, value: reorderTarget)
+        .animation(reduceMotion ? nil : SpreadTactile.settle, value: dayTasks.map(\.id))
+        .accessibilityActions {
+            if let index {
+                if index > 0 { Button("Move up") { reorder(task.id, before: dayTasks[index - 1].id) } }
+                if index + 1 < dayTasks.count {
+                    Button("Move down") { reorder(task.id, before: index + 2 < dayTasks.count ? dayTasks[index + 2].id : nil) }
+                }
+            }
+        }
+        .contextMenu {
+            if let index {
+                if index > 0 { Button("Move up") { reorder(task.id, before: dayTasks[index - 1].id) } }
+                if index + 1 < dayTasks.count {
+                    Button("Move down") { reorder(task.id, before: index + 2 < dayTasks.count ? dayTasks[index + 2].id : nil) }
+                }
+            }
+        }
+        .dropDestination(for: SpreadDragPayload.self) { items, _ in
+            guard !reordering, let item = items.first, item.kind == .task,
+                  item.roleId == task.roleId, item.itemId != task.id,
+                  dayTasks.contains(where: { $0.id == item.itemId }) else { return false }
+            reorder(item.itemId, before: task.id)
+            return true
+        } isTargeted: { reorderTarget = $0 && currentAllocation != nil }
         .sheet(isPresented: $showMove) { MoveToSheet(planner: planner, taskId: task.id) }
+    }
+    private func reorder(_ id: String, before target: String?) {
+        guard let day = currentAllocation?.day, !reordering else { return }
+        let revision = planner.state?.revision
+        reordering = true
+        Task {
+            _ = await planner.send(["type": "reorderDayTask", "roleId": task.roleId, "day": day,
+                                    "taskId": id, "beforeId": target.map { $0 as Any } ?? NSNull()],
+                                   completionHaptic: true, expectedRevision: revision)
+            reordering = false; reorderTarget = false
+        }
     }
 }
 
@@ -231,7 +277,7 @@ struct MoveToSheet: View {
                 .padding(.bottom, 4)
 
                 if choices.isEmpty {
-                    Text("\(role.name) isn’t on a day yet. Add it to a day on the Week first, then place this task there.")
+                    Text("\(role.name) isn't on a day yet. Add it to a day on the Week first, then place this task there.")
                         .font(.system(.subheadline)).foregroundStyle(Spread.secondary)
                         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                         .spreadCard()

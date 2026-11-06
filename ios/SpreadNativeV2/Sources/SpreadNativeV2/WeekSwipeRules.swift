@@ -12,11 +12,18 @@ enum WeekSwipeRules {
     static let maxShift: CGFloat = 72
 
     /// -1 is the previous week (dragging right), 1 the next (dragging left), nil for no commit.
-    static func direction(start: CGPoint, end: CGPoint, width: CGFloat) -> Int? {
+    static func direction(start: CGPoint, end: CGPoint, width: CGFloat, velocity: CGPoint = .zero) -> Int? {
+        guard start.x.isFinite, start.y.isFinite, end.x.isFinite, end.y.isFinite,
+              velocity.x.isFinite, velocity.y.isFinite, width.isFinite else { return nil }
         if width > 0, start.x < edgeGuard || start.x > width - edgeGuard { return nil }
         let dx = end.x - start.x
         let dy = end.y - start.y
         if abs(dx) > threshold, abs(dx) > abs(dy) * dominance { return dx < 0 ? 1 : -1 }
+        // A short deliberate flick may reach the adjacent week; a reversal or
+        // dominant vertical scroll cannot borrow momentum from the other axis.
+        if abs(dx) >= 12, abs(dx) > abs(dy) * dominance,
+           dx.sign == velocity.x.sign, abs(velocity.x) > abs(velocity.y) * dominance,
+           abs(dx + velocity.x * 0.18) >= threshold * 1.5 { return dx < 0 ? 1 : -1 }
         return nil
     }
 

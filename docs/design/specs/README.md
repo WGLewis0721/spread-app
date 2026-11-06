@@ -10,8 +10,8 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 
 | Date | Spec | Status |
 | --- | --- | --- |
-| 2026-11-06 | [Native tactile precision](2026-11-06-tactile-precision-native.md), [motion](../tactile-precision/MOTION_SPEC.md) and [QA](../tactile-precision/ACCEPTANCE.md) | Feature PR; release and device evidence pending |
 | 2026-11-06 | [Life on iPhone](../../../SPREAD_LIFE_IOS_SPEC.md), [implementation checklist](../../../SPREAD_LIFE_IOS_CHECKLIST.md) and [engineer handoff](../../../SPREAD_LIFE_IOS_HANDOFF.md) | Root placement requested by owner. Browser target approved; native implementation pending. More and Classic preserved. |
+| 2026-11-06 | [Tactile Precision proposal](2026-11-06-tactile-precision.md), [motion/QA map](../tactile-precision/README.md) | Draft motion calibration, no implementation or release authorization |
 | 2026-10-28 | [Token-efficient design docs](2026-10-28-token-efficient-docs.md) | Approved, implemented |
 | 2026-10-28 | [Studio rebuild](2026-10-28-studio-rebuild.md) | Draft, four owner decisions open |
 | 2026-10-28 | [Lock Screen and Home Screen widget, Live Activity later](2026-10-28-widget-live-activity.md) | Draft |

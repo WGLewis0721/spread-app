@@ -28,6 +28,15 @@ jobs:
           - name: reported-fixes
             width: 390
             tests: "PlannerUITests/testWalletCardsExpandIndependentlyAndEdit PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally PlannerUITests/testWalletSwipeActionsPreserveCardGeometry PlannerUITests/testHeaderLabelsFoldIntoIconsAndNavigationRemainsUsable PlannerUITests/testCompactWeeklySummaryDisclosesItsPlanningActions PlannerUITests/testMoreOverviewShowsEveryOptionWithoutScrolling"
+          - name: tactile-iphone
+            width: 390
+            tests: "TactileUITests LifeUITests"
+          - name: tactile-ipad
+            width: 820
+            tests: "TactileUITests LifeUITests"
+          - name: tactile-ipad-large
+            width: 1024
+            tests: "TactileUITests LifeUITests/testLifeNavigationAndUnmodifiedMoreReachability"
           - name: journey
             width: 390
             tests: "JourneyUITests"
