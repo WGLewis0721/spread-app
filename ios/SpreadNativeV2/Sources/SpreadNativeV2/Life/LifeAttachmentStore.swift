@@ -81,7 +81,9 @@ public enum LifeAttachmentStore {
         for entry in entries {
             let file = entry.file
             guard UUID(uuidString: file.id) != nil, !file.name.isEmpty,
-                file.mimeType.contains("/"), file.byteCount >= 0, file.byteCount <= fileLimit,
+                file.name.utf8.count <= 1024,
+                file.mimeType.range(of: #"^[A-Za-z0-9.+-]+/[A-Za-z0-9.+-]+$"#, options: .regularExpression) != nil,
+                file.checksum.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) != nil, file.byteCount >= 0, file.byteCount <= fileLimit,
                 let bytes = Data(base64Encoded: entry.base64), bytes.count == file.byteCount,
                 hash(bytes) == file.checksum else { throw Failure.corrupt }
             let folder = try directory(profile: entry.profileId, task: entry.taskId)
