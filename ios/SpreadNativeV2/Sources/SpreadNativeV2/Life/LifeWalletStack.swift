@@ -152,7 +152,7 @@ private struct LifeWalletFace: View {
         .buttonStyle(.spreadPress)
         .accessibilityLabel(Text(spokenLabel))
         .accessibilityValue(selected ? "Focused" : "Closed")
-        .accessibilityHint("Show this area's tasks")
+        .accessibilityHint(selected ? "Close this area’s tasks" : "Show this area’s tasks")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityAction(named: "Manage") { onManage() }
         .accessibilityAction(named: "Delete") { onDelete() }
@@ -294,12 +294,15 @@ struct LifeTaskRows: View {
                     Button {
                         Task {
                             if await planner.send(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id]),
-                               LifeFeedback.enabled { SpreadHaptics.completed() }
+                               LifeFeedback.enabled {
+                                if task.done { LifeFeedback.selection() }
+                                else { SpreadHaptics.completed() }
+                            }
                         }
                     } label: {
                         Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
                             .font(.title3).frame(width: 44, height: 44)
-                    }.buttonStyle(.plain).foregroundStyle(task.done ? LifePalette.accent : LifePalette.secondary)
+                    }.buttonStyle(.spreadPress).foregroundStyle(task.done ? LifePalette.accent : LifePalette.secondary)
                         .disabled(planner.busy)
                         .accessibilityLabel("\(task.done ? "Reopen" : "Complete") \(task.text)")
                     Button { onOpenTask(task.roleId, task.id) } label: {
@@ -311,7 +314,7 @@ struct LifeTaskRows: View {
                             Spacer(minLength: 6)
                             Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
                         }.frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.spreadPress)
                 }
                 Divider().overlay(Spread.line)
             }
@@ -350,6 +353,7 @@ struct LifeQuickAdd: View {
                 }
             }
         }.font(.body).tint(LifePalette.accent)
+            .buttonStyle(.spreadPress)
     }
     private func save() async {
         guard !saving else { return }
