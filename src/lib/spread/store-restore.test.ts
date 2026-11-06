@@ -24,7 +24,7 @@ function backupOf(body: SpreadData): FullBackupPayload {
   return { schemaVersion: 2, createdAt: new Date().toISOString(), deviceId: null, activeProfileId: "remote", roster: [source], stores: { remote: JSON.stringify(body) }, settings: {} };
 }
 
-const imported = (async () => {
+const imported = (() => {
   const d = defaultData();
   d.hats[0].name = "Imported hat";
   return d;
