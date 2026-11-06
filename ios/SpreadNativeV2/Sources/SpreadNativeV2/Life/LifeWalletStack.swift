@@ -266,7 +266,7 @@ struct LifeQuickAdd: View {
         let profile = planner.state?.envelope.profileId
         let week = planner.snapshot?.weekKey
         let before = Set(planner.snapshot?.tasks.map(\.id) ?? [])
-        guard await planner.send(["type": "addLifeTask", "roleId": roleId, "text": name]),
+        guard await planner.send(["type": "addTask", "roleId": roleId, "text": name, "life": true]),
               planner.state?.envelope.profileId == profile, planner.snapshot?.weekKey == week,
               let task = planner.snapshot?.tasks.first(where: { $0.roleId == roleId && !before.contains($0.id) }) else { return }
         if let day, let allocation = planner.snapshot?.allocations.first(where: { $0.roleId == roleId && $0.day == day && $0.hours > 0 }) {
