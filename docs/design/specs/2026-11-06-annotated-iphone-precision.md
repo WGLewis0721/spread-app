@@ -79,3 +79,15 @@ Pending implementation; intake remains open.
 | W3 | 49%, 64% | Rewrite the empty-day panel as one coherent instruction with a clear next action, instead of three disjointed statements (“A day with room”, “Start by giving a Life area some time”, “Place some hours”). Final copy must match the actual interaction. |
 
 No app code changes until the owner completes the annotations.
+
+## Photo 6 — Week quick allocation (final owner annotation)
+
+| ID | Position | Fix / acceptance |
+| --- | --- | --- |
+| W4 | 83%, 70% | Remove the entire “Make a little room” section and its half-hour rows. Replace it with simple glowing Life-area bubbles in a row directly underneath the focused weekday heading. Each tap allocates exactly 1 hour for that Life area on the focused day, through the existing planner rules. Show up to four bubbles before horizontal scrolling is needed; support horizontal scrolling when there are more than four. |
+
+W4 supersedes W2's earlier “in line with” placement: the bubble row belongs **underneath** the focused weekday. W4 identifies the replaced section as “Make a little room”; retain access to genuinely unscheduled tasks rather than deleting their functionality.
+
+## Intake complete
+
+The owner said “Done” after Photo 6. The instruction to wait for annotations is now satisfied. Proceed with implementation of the 24 recorded items on this development branch, preserving the stated application/data boundaries. No merge or deployment authorization has been given for PR #153.
