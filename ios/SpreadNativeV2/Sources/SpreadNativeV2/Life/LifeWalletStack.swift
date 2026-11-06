@@ -322,6 +322,7 @@ struct LifeTaskRows: View {
 
 struct LifeQuickAdd: View {
     @ObservedObject var planner: LivePlanner
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let roleId: String
     var day: String? = nil
     let onOpenTask: (String, String) -> Void
@@ -338,10 +339,17 @@ struct LifeQuickAdd: View {
                 HStack {
                     Button("Add task") { Task { await save() } }
                         .disabled(saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    Button("Cancel") { expanded = false; title = "" }.disabled(saving)
+                    Button("Cancel") {
+                        withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
+                        title = ""
+                    }.disabled(saving)
                 }.frame(minHeight: 44)
             } else {
-                Button { expanded = true; focused = true } label: {
+                Button {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded = true }
+                    focused = true
+                    LifeFeedback.selection()
+                } label: {
                     Label("Add a task", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }
             }
@@ -362,7 +370,9 @@ struct LifeQuickAdd: View {
         guard await planner.send(action),
               planner.state?.envelope.profileId == profile, planner.snapshot?.weekKey == week,
               let task = planner.snapshot?.tasks.first(where: { $0.roleId == roleId && !before.contains($0.id) }) else { return }
-        title = ""; expanded = false
+        title = ""
+        withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
+        LifeFeedback.accepted()
         onOpenTask(roleId, task.id)
     }
 }

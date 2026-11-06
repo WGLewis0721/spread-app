@@ -222,8 +222,10 @@ struct LifeHoursView: View {
                 .contentShape(Circle())
                 .onTapGesture {
                     guard !saving, !rejected else { return }
-                    separated.toggle()
-                    if !separated { selectedRole = nil }
+                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+                        separated.toggle()
+                        if !separated { selectedRole = nil }
+                    }
                     selectionTick()
                 }
                 .gesture(DragGesture(minimumDistance: 10)
@@ -278,8 +280,10 @@ struct LifeHoursView: View {
         VStack(spacing: 8) {
             ForEach(snapshot.roles) { role in
                 Button {
-                    if !separated { separated = true }
-                    selectedRole = role.id
+                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                        if !separated { separated = true }
+                        selectedRole = role.id
+                    }
                     selectionTick()
                 } label: {
                     HStack(spacing: 12) {
