@@ -58,6 +58,8 @@ struct LifeWeekView: View {
                 if let roleID = selectedRole, let role = roles.first(where: { $0.id == roleID }) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text(role.name).font(.title3.weight(.semibold))
+                        Text("\(SpreadHours.text(snapshot.allocations.filter { $0.day == date && $0.roleId == roleID }.reduce(0) { $0 + $1.hours })) h reserved for \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))")
+                            .font(.subheadline).foregroundStyle(LifePalette.secondary)
                         LifeTaskRows(planner: planner, snapshot: snapshot,
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),
                             onOpenTask: onOpenTask)
@@ -94,11 +96,22 @@ struct LifeWeekView: View {
         .task(id: marksKey) {
             marks = [:]
             let origin = marksKey
-            let parts = calendar.dateComponents([.year, .month], from: PlannerDates.date(date))
-            guard let year = parts.year, let month = parts.month,
-                  let fresh = await planner.monthMarks(year: year, month: month - 1),
-                  !Task.isCancelled, marksKey == origin else { return }
-            marks = fresh
+            let anchor = PlannerDates.date(date)
+            let previous = calendar.date(byAdding: .month, value: -1, to: anchor) ?? anchor
+            let next = calendar.date(byAdding: .month, value: 1, to: anchor) ?? anchor
+            // The Classic service grid may have five Sunday-first rows. Read adjacent
+            // months too so Life's fixed six Monday-first rows never invent empty dots.
+            var combined: [String: NativeDayMark] = [:]
+            for monthDate in [previous, anchor, next] {
+                guard !Task.isCancelled, marksKey == origin else { return }
+                let parts = calendar.dateComponents([.year, .month], from: monthDate)
+                guard let year = parts.year, let month = parts.month else { continue }
+                if let fresh = await planner.monthMarks(year: year, month: month - 1) {
+                    combined.merge(fresh) { _, new in new }
+                }
+            }
+            guard !Task.isCancelled, marksKey == origin else { return }
+            marks = combined
         }
     }
 
@@ -107,21 +120,19 @@ struct LifeWeekView: View {
         let monday = LifeCalendarRules.week(date).first
         let selectedRow = (cells.firstIndex(of: monday ?? date) ?? 0) / 7
         return VStack(spacing: 10) {
-            HStack(spacing: 2) {
-                arrow("Previous month", system: "chevron.left") { choose(LifeCalendarRules.shiftMonth(date, by: -1)) }
-                Text(PlannerDates.label(PlannerDates.date(date), pattern: "MMMM yyyy"))
-                    .font(.headline).frame(maxWidth: .infinity, alignment: .leading)
-                arrow("Next month", system: "chevron.right") { choose(LifeCalendarRules.shiftMonth(date, by: 1)) }
-                Button {
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) { expanded.toggle() }
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: "calendar")
-                        Text(expanded ? "Week" : "Month").font(.caption)
-                    }.frame(minWidth: 44, minHeight: 44)
-                }.accessibilityLabel(expanded ? "Show week" : "Show full calendar")
-                    .accessibilityValue(expanded ? "Expanded" : "Collapsed")
-                    .accessibilityIdentifier("life-week-month-toggle")
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(PlannerDates.label(PlannerDates.date(date), pattern: "MMMM yyyy")).font(.headline)
+                    HStack { monthControls; Spacer(minLength: 0); monthToggle }
+                }
+            } else {
+                HStack(spacing: 2) {
+                    arrow("Previous month", system: "chevron.left") { choose(LifeCalendarRules.shiftMonth(date, by: -1)) }
+                    Text(PlannerDates.label(PlannerDates.date(date), pattern: "MMMM yyyy"))
+                        .font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                    arrow("Next month", system: "chevron.right") { choose(LifeCalendarRules.shiftMonth(date, by: 1)) }
+                    monthToggle
+                }
             }
             HStack(spacing: 0) {
                 ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
@@ -149,6 +160,25 @@ struct LifeWeekView: View {
                 if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: 44) }
             }
         }.padding(.vertical, 8).accessibilityElement(children: .contain)
+    }
+
+    private var monthControls: some View {
+        HStack {
+            arrow("Previous month", system: "chevron.left") { choose(LifeCalendarRules.shiftMonth(date, by: -1)) }
+            arrow("Next month", system: "chevron.right") { choose(LifeCalendarRules.shiftMonth(date, by: 1)) }
+        }
+    }
+    private var monthToggle: some View {
+        Button {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) { expanded.toggle() }
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: "calendar")
+                Text(expanded ? "Week" : "Month").font(.caption)
+            }.frame(minWidth: 44, minHeight: 44)
+        }.accessibilityLabel(expanded ? "Show week" : "Show full calendar")
+            .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+            .accessibilityIdentifier("life-week-month-toggle")
     }
 
     private func dayCell(_ iso: String) -> some View {
