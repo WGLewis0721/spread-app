@@ -61,9 +61,22 @@ workflows:
       - name: Build signed IPA
         script: |
           set -eu
-          xcode-project build-ipa \
+          # The CLI failure summary omits Swift diagnostics. Print the underlying logs
+          # before exiting, preserving the failed archive status and blocking publication.
+          if xcode-project build-ipa \
             --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
-            --scheme App
+            --scheme App; then
+            :
+          else
+            ARCHIVE_STATUS=$?
+            echo "Archive failed; complete underlying Xcode logs follow." >&2
+            if test -d /tmp/xcodebuild_logs; then
+              find /tmp/xcodebuild_logs -type f -name '*.log' -exec cat {} +
+            else
+              echo "No /tmp/xcodebuild_logs directory was produced." >&2
+            fi
+            exit "$ARCHIVE_STATUS"
+          fi
           for ipa in build/ios/ipa/*.ipa; do
             test -f "$ipa" || { echo "No signed IPA found" >&2; exit 1; }
             python3 scripts/app-store-preflight.py --ipa "$ipa"
