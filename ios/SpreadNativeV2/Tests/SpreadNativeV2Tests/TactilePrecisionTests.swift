@@ -7,6 +7,23 @@ import SwiftUI
 /// Mathematical contracts for touch interactions. Device feel and haptics require an iPhone.
 final class TactilePrecisionTests: XCTestCase {
 #if os(iOS)
+    /// 25% more perceptible animations without altered thresholds or touch latency.
+    func testTactileEmphasisCalibration() {
+        XCTAssertEqual(SpreadTactile.emphasis, 1.25, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.contactDuration, 0.125, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.snapResponse, 0.275, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.settleResponse, 0.400, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.glideResponse, 0.350, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.enterDuration, 0.275, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.exitDuration, 0.225, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.pressScale, 0.9625, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.pressOpacity, 0.850, accuracy: 0.00001)
+        XCTAssertEqual(Double(SpreadTactile.entranceDistance), 12.5, accuracy: 0.00001)
+        XCTAssertEqual(Double(SpreadTactile.detailDistance), 10.0, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.staggerStep, 0.0375, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.staggerCap, 0.2625, accuracy: 0.00001)
+    }
+
     @MainActor func testAcknowledgementWithSaveFailureDoesNotReportSuccess() async throws {
         let snapshot = SpreadV2Fixture.week
         let envelope = NativeV2Envelope(profileId: "p", snapshot: snapshot)
