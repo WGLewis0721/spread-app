@@ -42,15 +42,10 @@ struct LifeWeekView: View {
                 arrow("Previous day", system: "chevron.left") { choose(LifeCalendarRules.shiftDay(date, by: -1)) }
                 arrow("Next day", system: "chevron.right") { choose(LifeCalendarRules.shiftDay(date, by: 1)) }
             }
+            room
             if roles.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("A day with room.").font(.title3.weight(.semibold))
-                    Text("Start by giving a Life area some time.").foregroundStyle(LifePalette.secondary)
-                    if let role = snapshot.roles.first {
-                        Button("Place some hours") { onReserve(role.id) }.frame(minHeight: 44)
-                    }
-                }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-                    .spreadCard()
+                Text("Tap a Life area above to plan 1 hour on this day.")
+                    .font(.callout).foregroundStyle(LifePalette.secondary)
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: roles,
                     selectedRole: $selectedRole, editing: false, day: date,
@@ -71,7 +66,6 @@ struct LifeWeekView: View {
                 }
             }
             unplaced
-            room
 
         }
         .foregroundStyle(LifePalette.ink)
@@ -219,31 +213,34 @@ struct LifeWeekView: View {
     }
 
     private var room: some View {
-        let available = snapshot.roles.filter { snapshot.remainingHours(for: $0.id) >= 0.5 }
-            .sorted { ($0.id == snapshot.life?.priorityRoleId ? 0 : 1) < ($1.id == snapshot.life?.priorityRoleId ? 0 : 1) }
-        return VStack(alignment: .leading, spacing: 10) {
-            if !available.isEmpty {
-                Text("Make a little room").font(.title3.weight(.semibold))
-                ForEach(available) { role in
-                    Button {
-                        let day = date
-                        Task {
-                            if await planner.placeHours(roleId: role.id, day: day, hours: 0.5) {
-                                LifeFeedback.accepted()
+        GeometryReader { geometry in
+            ScrollView(.horizontal) {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(snapshot.roles) { role in
+                        Button {
+                            let targetDay = date
+                            Task {
+                                if await planner.placeHours(roleId: role.id, day: targetDay, hours: 1) {
+                                    LifeFeedback.accepted()
+                                }
                             }
-                        }
-                    } label: {
-                        HStack {
-                            Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
-                            Text(role.name)
-                            Spacer()
-                            Text("+ ½ h").fontWeight(.semibold)
-                        }.frame(minHeight: 44)
-                    }.disabled(planner.busy)
-                        .accessibilityLabel("Reserve half an hour for \(role.name) on \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE MMMM d"))")
-                }
-            }
-        }
+                        } label: {
+                            VStack(spacing: 8) {
+                                ZStack {
+                                    Circle().fill(Color(hex: role.color).opacity(0.16))
+                                    Circle().strokeBorder(Color(hex: role.color), lineWidth: 2)
+                                        .shadow(color: Color(hex: role.color).opacity(0.5), radius: 6)
+                                    Text("+1h").font(.headline).foregroundStyle(Spread.ink)
+                                }.frame(width: 52, height: 52)
+                                Text(role.name).font(.caption).lineLimit(2)
+                            }.frame(width: max(56, (geometry.size.width - 36) / 4))
+                        }.buttonStyle(.spreadPress)
+                            .disabled(planner.busy || snapshot.remainingHours(for: role.id) < 1)
+                            .accessibilityLabel("Plan one hour of \(role.name) on \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))")
+                    }
+                }.padding(.vertical, 8)
+            }.scrollIndicators(.hidden)
+        }.frame(height: 112)
     }
 
     private func arrow(_ label: String, system: String, action: @escaping () -> Void) -> some View {
