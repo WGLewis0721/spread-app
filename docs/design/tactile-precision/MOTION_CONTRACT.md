@@ -84,3 +84,11 @@ Rule: touching a moving control immediately redirects it. No transition blocks l
 - Stop active gesture cues when the scene becomes inactive. Never attach planner mutations to animation completion, animation frames or transient drag translations.
 - Do not change the planner schema, cloud features, profile storage, default hour semantics, task eligibility or scheduling rules for visual polish. Any new persisted ordering or capacity change requires a separate, approved data-engine spec.
 - No new fonts, gradients, palette, assets, dependencies, remote telemetry or compulsive reward mechanics. The app should feel enjoyable to use, not incentivize aimless interaction.
+
+### November 6 integrated Life repair calibration
+
+- **Hour editing after creation:** Life card -> Change area hours preserves that role selection in Hours, opens its controls, and explains capacity restrictions. Manage also presents a bounded half-hour control and explicit saved confirmation.
+- **Swipe reveal:** Action layer remains structurally stable during a gesture, but must be transparent and noninteractive at rest. The gesture attaches to the card container; an edit-mode horizontal swipe is the only visible Manage/Delete entry. No duplicate actions in the detail field.
+- **Glow:** Raise edit shadow opacity by 50% in Life and Classic with a pulsing visual outline. Reduce Motion keeps a static outline; never pulse haptics.
+- **Orbit:** With no area selected, rotate colored weekly capacity arcs at 18 degrees/sec (20-sec revolution) with a bounded color glow. Selection/separation, Reduce Motion or inactive scene pauses movement.
+- **Tray:** Open/close with shared Glide from its actual edge. Finger-following horizontal dismissal uses a bounded threshold with vertical scroll priority and an interruptible Settle back to open.
