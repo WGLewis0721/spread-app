@@ -36,7 +36,7 @@ Stop at the first sufficient tier.
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
 | iPhone, iPad, Duo and resize / hinge support | [packs/device-layout.md](packs/device-layout.md) | [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) and device guides |
 | Apply iOS design language + UI/UX fundamentals | [packs/apple-native-feel.md](packs/apple-native-feel.md), [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md), [iOS audit](platforms/IOS27_BEHAVIOR_AUDIT.md), [tactile motion](tactile-precision/README.md) |
-| Classic/Life tactile motion and haptics | [tactile-precision/README.md](tactile-precision/README.md) | Life iOS spec has priority |
+| Classic/Life tactile motion and haptics | [Contract](tactile-precision/README.md) | [Implementation](tactile-precision/IMPLEMENTATION.md); Life spec wins |
 | App icon, UI action icons, category badges | [brand/ICON_HANDOFF.md](brand/ICON_HANDOFF.md) | Files in `public/icons/` |
 | Why a planner behavior exists, or what was verified and deferred | [planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md](planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md) (historical record) | `ROADMAP.md` |
 | Wallpaper-driven personalization (Studio) | Section 5 below: it lives on a branch | |
