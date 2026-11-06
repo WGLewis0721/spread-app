@@ -191,6 +191,10 @@ public enum SpreadTactile {
     public static let snap = Animation.interactiveSpring(response: 0.22, dampingFraction: 0.91, blendDuration: 0.06)
     public static let settle = Animation.interactiveSpring(response: 0.32, dampingFraction: 0.88, blendDuration: 0.09)
     public static let glide = Animation.interactiveSpring(response: 0.28, dampingFraction: 0.96, blendDuration: 0.07)
+    /// Calm ease-out for elements entering from a known trigger. No bounce on routine UI.
+    public static let enter = Animation.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)
+    /// Exits are deliberately ~20% shorter than entrances.
+    public static let exit = Animation.easeIn(duration: 0.18)
 
     public static func resolved(_ animation: Animation, reduceMotion: Bool) -> Animation? {
         reduceMotion ? nil : animation
@@ -207,11 +211,11 @@ struct SpreadEntrance: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(visible || reduceMotion ? 1 : 0)
-            .offset(y: visible || reduceMotion ? 0 : 14)
+            .offset(y: visible || reduceMotion ? 0 : 10)
             .task {
                 await Task.yield()
                 guard !Task.isCancelled else { return }
-                withAnimation(reduceMotion ? nil : SpreadMotion.cascade.delay(min(0.315, SpreadMotion.stagger(index)))) {
+                withAnimation(reduceMotion ? nil : SpreadTactile.enter.delay(min(0.21, SpreadMotion.stagger(index, step: 0.03)))) {
                     visible = true
                 }
             }
@@ -328,8 +332,8 @@ struct SpreadPressStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
-                .opacity(configuration.isPressed ? 0.72 : 1)
+                .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+                .opacity(configuration.isPressed ? 0.88 : 1)
                 // Contact appears at the next render; only the release settles.
                 .animation(reduceMotion || configuration.isPressed ? nil : SpreadTactile.snap,
                            value: configuration.isPressed)
