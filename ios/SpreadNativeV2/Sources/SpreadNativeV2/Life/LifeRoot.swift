@@ -146,7 +146,7 @@ struct LifeRoot: View {
                 }.accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
                     .accessibilityIdentifier("life-edit")
             }.padding(.horizontal, 4)
-            Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.plain)
+            Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
                 .accessibilityLabel("Adjust weekly planning hours")
             if editing {
                 Text("Swipe left to manage. Swipe right to delete.").font(.subheadline).foregroundStyle(LifePalette.secondary)
@@ -159,7 +159,7 @@ struct LifeRoot: View {
             }
             if snapshot.roles.isEmpty {
                 Text("Name the responsibilities you want to plan for.").font(.body)
-                Button("Add a Life area", action: onNewRole).frame(minHeight: 44)
+                newLifeArea
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole, editing: editing,
@@ -172,39 +172,91 @@ struct LifeRoot: View {
                 Text("Tap a card to see its tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 12)
             }
-            if !snapshot.roles.isEmpty { Button("Add a Life area", action: onNewRole).frame(minHeight: 44) }
+            if !snapshot.roles.isEmpty { newLifeArea }
         }.accessibilityIdentifier("life-page")
     }
+    private var newLifeArea: some View {
+        Button(action: onNewRole) {
+            HStack(spacing: 12) {
+                SpreadIcon(name: "icon-new-life", size: 32, original: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Add a Life area").font(.system(.body, weight: .semibold))
+                    Text("Make room for what matters.").font(Spread.footnote)
+                        .foregroundStyle(Spread.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "plus").font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Spread.accent)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+            .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+            .contentShape(RoundedRectangle(cornerRadius: Spread.radiusCard))
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityIdentifier("life-new-area")
+    }
+
     private func summary(_ snapshot: PlannerSnapshot) -> some View {
         let assigned = snapshot.roles.reduce(0) { $0 + $1.hours }
-        return VStack(spacing: 10) {
-            ViewThatFits(in: .horizontal) {
-                HStack {
-                    Text("\(SpreadHours.text(assigned))h assigned")
-                    Spacer()
-                    capacitySummary(snapshot, assigned: assigned)
-                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
-                }
-                VStack(alignment: .leading) {
-                    Text("\(SpreadHours.text(assigned))h assigned")
-                    capacitySummary(snapshot, assigned: assigned)
-                }
-            }.font(.subheadline)
-            GeometryReader { geometry in
-                let capacity = max(max(assigned, snapshot.life?.capacityHours ?? assigned), 1)
-                HStack(spacing: 2) {
-                    ForEach(snapshot.roles) { role in
-                        Rectangle().fill(Color(hex: role.color))
-                            .frame(width: max(0, geometry.size.width * role.hours / capacity - 2))
-                    }
-                    Spacer(minLength: 0)
-                }.background(LifePalette.fill).clipShape(Capsule())
-            }.frame(height: 5).accessibilityHidden(true)
+        return HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(.title3, weight: .semibold))
+                .foregroundStyle(Spread.accent)
+                .frame(width: 44, height: 44)
+                .background(Spread.accent.opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                summaryTitle(assigned: assigned)
+                Text("Across " + String(snapshot.roles.count) + " Life areas")
+                    .font(.caption).foregroundStyle(Spread.secondary)
+                capacitySummary(snapshot, assigned: assigned)
+                    .font(.caption)
+                summaryRoleColors(snapshot, assigned: assigned)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.right")
+                .font(.system(.subheadline, weight: .bold))
+                .foregroundStyle(Spread.ink)
+                .frame(width: 20, height: 44)
+                .accessibilityHidden(true)
         }
-        .padding(14)
-        .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(LifePalette.line, lineWidth: 0.5))
-        .shadow(color: Spread.shadow, radius: 8, y: 4)
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .spreadCard()
+    }
+
+    private func summaryTitle(assigned: Double) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(SpreadHours.text(assigned) + "h")
+                    .font(.system(.title2, weight: .bold)).monospacedDigit()
+                Text("assigned").font(.system(.subheadline, weight: .medium))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(SpreadHours.text(assigned) + "h")
+                    .font(.system(.title2, weight: .bold)).monospacedDigit()
+                Text("assigned").font(.system(.subheadline, weight: .medium))
+            }
+        }
+        .foregroundStyle(Spread.ink)
+    }
+
+    private func summaryRoleColors(_ snapshot: PlannerSnapshot, assigned: Double) -> some View {
+        GeometryReader { geometry in
+            let roles = snapshot.roles.filter { $0.hours > 0 }
+            let gap: CGFloat = 3
+            let usable = max(0, geometry.size.width - CGFloat(max(0, roles.count - 1)) * gap)
+            HStack(spacing: gap) {
+                ForEach(roles) { role in
+                    Capsule().fill(Color(hex: role.color))
+                        .frame(width: usable * CGFloat(role.hours / max(assigned, 0.5)), height: 6)
+                }
+            }
+        }
+        .frame(maxWidth: 116).frame(height: 6)
+        .accessibilityHidden(true)
     }
     @ViewBuilder private func capacitySummary(_ snapshot: PlannerSnapshot, assigned: Double) -> some View {
         if let capacity = snapshot.life?.capacityHours {
@@ -222,20 +274,29 @@ struct LifeRoot: View {
                         .font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
                 Spacer(minLength: 8)
-                Button("Place hours") { localSheet = .reserve(role.id) }.frame(minHeight: 44)
+                Button("Place hours") { localSheet = .reserve(role.id) }
+                    .padding(.horizontal, 12).frame(minHeight: 44)
+                    .spreadChip(selected: true).buttonStyle(.spreadPress)
             }
+            DayMarks(snapshot: snapshot, role: role)
             if editing {
                 HStack {
                     Button("Manage") { localSheet = .manage(role.id) }
                     Button("Delete", role: .destructive) { localSheet = .delete(role.id) }
                 }.frame(minHeight: 44)
             } else {
-                Button("Prioritize this week") { localSheet = .priority(role.id) }.frame(minHeight: 44)
+                Button("Prioritize this week") { localSheet = .priority(role.id) }
+                    .padding(.horizontal, 12).frame(minHeight: 44)
+                    .spreadChip(selected: false).buttonStyle(.spreadPress)
             }
-            LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
-            LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
+            VStack(alignment: .leading, spacing: 0) {
+                LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
+                LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+            }
+            .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        .padding(16).background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 23))
+        .padding(16).spreadCard(radius: Spread.radiusCard)
         .accessibilityIdentifier("life-task-details")
     }
     private var history: some View {
@@ -384,7 +445,7 @@ struct LifeRoot: View {
         case .delete(let id): LifeDeleteSheet(planner: planner, roleId: id)
         case .help: LifeGestureHelp()
         case .addTask:
-            NavigationStack {
+            SpreadSheetStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         ForEach(planner.snapshot?.roles ?? []) { role in
@@ -419,7 +480,7 @@ private struct LifeGestureHelp: View {
     @AppStorage("native.life.touchFeedback") private var touchFeedback = true
     @AppStorage("native.life.showTips") private var showTips = true
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             Form {
                 Section("Changing time") {
                     Text("Flick up or down by 1 hour. Hold and drag to change faster.")
@@ -430,7 +491,7 @@ private struct LifeGestureHelp: View {
                     Toggle("Touch feedback", isOn: $touchFeedback)
                     Button("Show tips again") { showTips = true }
                 }
-            }
+            }.spreadListSurface()
             .navigationTitle("Gesture help")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }.presentationDetents([.medium, .large])
