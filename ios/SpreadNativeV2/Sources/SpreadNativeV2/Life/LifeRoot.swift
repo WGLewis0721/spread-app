@@ -509,15 +509,12 @@ struct LifeRoot: View {
                 }
             }
             .onEnded { value in
-                let horizontal = value.translation.width
-                let projected = value.predictedEndTranslation.width
-                guard abs(horizontal) > abs(value.translation.height) * 1.5 else {
-                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) { navigationDrag = 0 }
-                    return
-                }
-                let travel = crownRight ? -horizontal : horizontal
-                let predictedTravel = crownRight ? -projected : projected
-                if travel > width * 0.32 || (travel > 16 && predictedTravel > width * 0.6) {
+                if TactilePrecisionMath.drawerShouldClose(
+                    horizontal: Double(value.translation.width),
+                    vertical: Double(value.translation.height),
+                    projected: Double(value.predictedEndTranslation.width),
+                    width: Double(width), onLeft: crownRight
+                ) {
                     closeNavigation()
                 } else {
                     withAnimation(reduceMotion ? nil : SpreadTactile.settle) { navigationDrag = 0 }
