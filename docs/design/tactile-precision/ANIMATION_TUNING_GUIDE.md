@@ -15,10 +15,10 @@
 
 | # | Technique from screenshot | Decision in Spread |
 | ---: | --- | --- |
-| 1 | Ease-out for entrances | **Adopted:** `SpreadTactile.enter` uses 220 ms ease-out, only for appropriate entering UI. |
-| 2 | Dropdowns at 150–250 ms | **Adopted for Life navigation:** 220 ms entry, 180 ms exit; native system menus retain platform defaults. |
-| 3 | Stagger list rows by 30 ms | **Adopted:** `SpreadEntrance` uses a capped 30 ms stagger, at most 210 ms delay. |
-| 4 | Scale to 0.97 on press | **Adopted:** shared `SpreadPressStyle` compresses to 0.97 immediately, settles on release. |
+| 1 | Ease-out for entrances | **Adopted:** `SpreadTactile.enter` started at 220 ms; the current 25% emphasis is 275 ms. See [motion contract](MOTION_CONTRACT.md). |
+| 2 | Dropdowns at 150–250 ms | **Adopted for Life navigation:** entry 275 ms, exit 225 ms after 25% emphasis; native system menus retain platform defaults. |
+| 3 | Stagger list rows by 30 ms | **Adopted:** `SpreadEntrance` now uses a capped 37.5 ms stagger, at most 262.5 ms delay. |
+| 4 | Scale to 0.97 on press | **Adopted:** shared `SpreadPressStyle` compresses to 0.9625 (3.75%) immediately, settles on release. |
 | 5 | Stretch moving knobs by 12% | **Conditional:** only if a specific draggable Hours control benefits, and without false hour/detent changes. Not globally applied. |
 | 6 | Stagger as details settle | **Limited:** field and card use shared settle motion; avoid delayed task hit targets or hidden controls. |
 | 7 | Arcs for object movement | **Existing by context:** Hours orbit uses real circular geometry. Do not curve ordinary list or sidebar movement. |
@@ -29,7 +29,7 @@
 | 12 | Exit to the trigger | **Adopted for sidebar:** matching side exit and fade; other modals retain native conventions. |
 | 13 | No bounce on everyday UI | **Policy:** routine entry/exit is critically damped/eased, not an exaggerated elastic animation. |
 | 14 | Do not tween while held | **Existing and reinforced:** direct finger tracking is unanimated; snap only on release. |
-| 15 | Make exits 20% shorter | **Adopted where controlled:** 180 ms exit versus 220 ms entry; preserve a11y and interrupted action. |
+| 15 | Make exits 20% shorter | **Adopted where controlled:** 225 ms exit versus 275 ms entry; preserve a11y and interrupted action. |
 | 16 | Overlap old and new states | **Adopted carefully:** role details get stable identity and asymmetric reveal so focus changes retain context. |
 | 17 | Masks for reveals and color | **Conditional:** clip where it protects card geometry; avoid expensive full-screen masking and contrast regressions. |
 | 18 | Crossfade icons and blur | **Selective:** crossfade details and icon state as needed. Avoid large-area live blur on older iPhones. |
@@ -40,7 +40,7 @@
 
 | File | Change | Protected behavior |
 | --- | --- | --- |
-| `ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift` | Add 220 ms enter / 180 ms exit semantic animations; press scale 0.97; 30 ms bounded entrance staggering | Other `SpreadMotion` tokens and stored state unchanged |
+| `ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift` | Current 275 ms enter / 225 ms exit animations; press scale 0.9625; 37.5 ms bounded entrance staggering | Other `SpreadMotion` tokens and stored state unchanged |
 | `ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift` | Selected Life detail field uses stable role identity and asymmetric fade/offset; navigation enters/exits from its rail side | Classic/More, planner authority and gestures unchanged |
 | `ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift` | Week role-detail field similarly transitions between real role identities | Scheduling and Hours unchanged |
 
@@ -52,3 +52,7 @@
 - **Responsiveness:** Touch response should begin on the next frame. Animate `transform`/opacity when practical; avoid repeating wide-area blurs, unnecessary stagger or large scale deltas.
 - **State safety:** No write from animation callbacks. A task success cue must follow accepted planner state. No animated gesture changes reserved hours without validation.
 - **Verification:** Run typecheck, app tests, docs check, native build and device journeys. For unrun tests, report that plainly; merge/release remains an explicit owner decision.
+
+## Current 25% perceptibility calibration
+
+The November 6 owner request increases the **perceptible motion amplitude and response times**, not touch latency or gesture thresholds. The original 20-item social-video ideas remain references, not mandatory effects. Use the [single authoritative before/after table](MOTION_CONTRACT.md#november-6-owner-calibration--25-more-perceptible-tactile-motion) for the current Snap/Glide/Settle, press, stagger, orbit and pulse values. Run the native acceptance and physical-device checks before treating this calibration as final.
