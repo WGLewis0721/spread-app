@@ -55,6 +55,7 @@ public struct SpreadLiveRoot: View {
                     onNewRole: { sheet = .newRole },
                     onDeleteRole: { sheet = .confirmDeleteRole($0) }
                 )
+                .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
                 // Reuse the exact existing More, profile, editor and confirmation sheets.
                 .sheet(item: $sheet) { current in sheetContent(current) }
                 .alert("Spread", isPresented: errorShown) {
@@ -738,7 +739,7 @@ public struct SpreadLiveRoot: View {
         case .role(let roleId):
             RoleSheet(planner: planner, roleId: roleId, onOpenTask: { sheet = .task(roleId, $0) })
         case .task(let roleId, let taskId):
-            TaskSheet(planner: planner, roleId: roleId, taskId: taskId)
+            TaskSheet(planner: planner, roleId: roleId, taskId: taskId, lifeMode: weekFocusEnabled)
         case .review:
             CarryOverSheet(planner: planner)
         case .more:
