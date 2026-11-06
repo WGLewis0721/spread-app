@@ -66,9 +66,7 @@ struct LifeWeekView: View {
                             .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }.padding(18).spreadCard()
                     .id(roleID)
-                    .transition(.asymmetric(
-                        insertion: .offset(y: 8).combined(with: .opacity),
-                        removal: .opacity))
+                    .transition(SpreadTactile.detailReveal)
                 }
             }
             unplaced
