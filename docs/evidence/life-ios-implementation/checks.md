@@ -1,27 +1,27 @@
 # Verification record — 2026-11-06
 
-Status: implementation checks run in Linux; **native parity and release readiness are not established**. The final integrated source freeze still requires a recorded final rerun. Current remote working files can include later edits than their checked-out git HEAD; the results below must not be misrepresented as a signed-candidate result.
+Status: implementation checks run in Linux; **native parity and release readiness are not established**. Final checks were rerun against frozen source commit `9557f85dcbf32c62dcf627b13ada4bf967687383`, tree `466d84792857323e7312dee711d5632747051816`, starting 2026-11-06T12:41:30Z. Every tracked non-evidence file matched that commit before and after checks, including after ios:sync. See [execution-record.txt](execution-record.txt) for observed output excerpts and full-log SHA256 values. This is not a signed-candidate result.
 
 ## Environment
 
-Ubuntu 26.04.1 x86_64, Node/npm from sandbox. Official Swift 6.4.2 Ubuntu26.04 archive: GPG good signature, Swift 6.x Release Signing Key fingerprint `52BB7E3DE28A71BE22EC05FFEF80A866B47A981F`. Swift target is Linux. Active iOS conditional branches were syntax parsed with `swiftc -frontend -parse -target arm64-apple-ios17.0`; this does **not** typecheck SwiftUI/UIKit or compile against Apple's SDK.
+Ubuntu 26.04.1 x86_64, Node 24.22.1 / npm 11.19.1 from sandbox (prepared Codemagic workflow uses Node 22 and has not run). Official Swift 6.4.2 Ubuntu26.04 archive: GPG good signature, Swift 6.x Release Signing Key fingerprint `52BB7E3DE28A71BE22EC05FFEF80A866B47A981F`. Swift target is Linux. Active iOS conditional branches were syntax parsed with `swiftc -frontend -parse -target arm64-apple-ios17.0`; this does **not** typecheck SwiftUI/UIKit or compile against Apple's SDK.
 
-## Completed checks before final integration freeze
+## Completed final checks at frozen source
 
 | Check | Observed result |
 | --- | --- |
 | root npm ci --ignore-scripts | succeeded, 456 packages installed |
 | root typecheck, lint | passed |
-| test:spread | 461 passed, no failures/skips |
-| test:scripts | 231 passed, 4 skipped, no failures |
+| test:spread | 474 passed, no failures/skips; minimum 474 |
+| test:scripts | 232 passed, 4 skipped, no failures; total/minimum 236 |
 | Python unittest discovery | 20 passed; Codemagic launch messages were mocked test output, no real build triggered |
 | docs:check | passed |
 | source App Store technical preflight | 14 passed |
 | npm run ios:sync | passed, offline web bundle created |
 | bundled technical preflight | 16 passed |
-| native pure Swift package, integrated calendar/orbit helpers | 43 passed |
+| native pure Swift package, integrated calendar/orbit/editor helpers | 50 passed |
 | cloud pure Swift package | 45 passed |
-| active iOS-target syntax parse | passed; no SDK typecheck |
+| active iOS-target syntax parse (including UI tests) | passed; no SDK typecheck |
 | simulator selectors | 8 passed, exact375/390/430 mappings |
 | artifact approval test | valid roundtrip; changed IPA, manifest and source rejected |
 | Life Codemagic YAML and embedded bash syntax | valid; no automatic trigger blocks |
