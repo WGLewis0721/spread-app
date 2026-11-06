@@ -1,6 +1,6 @@
 # Tactile Precision motion and haptics
 
-> [Index](README.md) | [Acceptance](ACCEPTANCE.md)
+> Part of the [Spread design brain](../README.md). [Local index](README.md) | [Acceptance](ACCEPTANCE.md)
 >
 > Summary: Spread should feel like a machined physical instrument: immediate finger tracking, meaningful detents, controlled release, and consistent, interruptible settling. Motion only serves an actual planning action.
 
