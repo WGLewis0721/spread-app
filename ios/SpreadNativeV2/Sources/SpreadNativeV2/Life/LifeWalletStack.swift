@@ -98,7 +98,6 @@ private struct LifeWalletFace: View {
     let onSelect: () -> Void
     let onManage: () -> Void
     let onDelete: () -> Void
-    let onBeginEdit: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
