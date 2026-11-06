@@ -417,7 +417,7 @@ struct LifeRoot: View {
         let trayWidth = min(CGFloat(300), max(CGFloat(0), width - CGFloat(32)))
         let dragProgress = min(1.0, Double(abs(navigationDrag) / max(CGFloat(1), trayWidth)))
         return ZStack(alignment: crownRight ? .leading : .trailing) {
-            Color.black.opacity(0.28 * (1 - dragProgress))
+            Color.black.opacity(0.35 * (1 - dragProgress))
                 .ignoresSafeArea()
                 .onTapGesture { closeNavigation() }.accessibilityHidden(true)
             VStack(spacing: 0) {
@@ -469,7 +469,7 @@ struct LifeRoot: View {
             }
             .frame(width: trayWidth).frame(maxHeight: .infinity)
             .background(LifePalette.surface)
-            .shadow(color: .black.opacity(0.25), radius: 16, x: crownRight ? 7 : -7)
+            .shadow(color: .black.opacity(0.3125), radius: 20, x: crownRight ? 8.75 : -8.75)
             .offset(x: navigationDrag)
             .simultaneousGesture(navigationPan(width: trayWidth))
             .transition(.move(edge: crownRight ? .leading : .trailing).combined(with: .opacity))
