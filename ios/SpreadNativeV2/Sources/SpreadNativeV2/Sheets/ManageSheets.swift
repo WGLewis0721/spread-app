@@ -479,6 +479,8 @@ struct MoreSheet: View {
     let showProfiles: () -> Void
     @Binding var appearance: SpreadAppearance
     @Binding var weekFocusEnabled: Bool
+    /// View-only preference. Does not touch the local-first planner store.
+    @AppStorage("native.duo.crownOnLeft") private var crownOnLeft = false
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -638,6 +640,29 @@ struct MoreSheet: View {
                             .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
                             .accessibilityElement(children: .contain)
                             .accessibilityIdentifier("appearance-picker")
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Open display Crown")
+                            Toggle(isOn: $crownOnLeft) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("Crown on the left")
+                                        .font(.system(.subheadline, weight: .semibold))
+                                        .foregroundStyle(Spread.ink)
+                                    Text("Off: right side. On: left side. The compact Crown stays horizontal.")
+                                        .font(Spread.footnote)
+                                        .foregroundStyle(Spread.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(Spread.accent)
+                            .frame(minHeight: 56)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                            .accessibilityLabel("Open display Crown side")
+                            .accessibilityValue(crownOnLeft ? "Left" : "Right")
+                            .accessibilityIdentifier("duo-crown-side-toggle")
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
