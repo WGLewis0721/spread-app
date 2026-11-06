@@ -69,17 +69,7 @@ struct LifeWeekView: View {
             }
             unplaced
             room
-            if planner.undoId != nil || planner.redoId != nil {
-                HStack(spacing: 16) {
-                    if let id = planner.undoId {
-                        Button("Undo") { Task { if await planner.send(["type": "undo", "editId": id]) { LifeFeedback.accepted() } } }
-                            .accessibilityIdentifier("life-week-undo")
-                    }
-                    if let id = planner.redoId {
-                        Button("Redo") { Task { if await planner.send(["type": "redo", "editId": id]) { LifeFeedback.accepted() } } }
-                    }
-                }.frame(minHeight: 44).disabled(planner.busy)
-            }
+
         }
         .foregroundStyle(LifePalette.ink)
         .accessibilityIdentifier("life-week-page")
