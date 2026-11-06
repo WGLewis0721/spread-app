@@ -1,5 +1,7 @@
 # Annotated iPhone precision work
 
+> Part of the [Spread design brain](../README.md).
+
 Status: awaiting the owner's complete photo annotations. No app changes yet.
 
 Baseline: main `d4afd9732e2d8b9e68ab62e9f84b67bee07305b2`.
@@ -111,3 +113,7 @@ Research references:
 - https://developer.apple.com/documentation/uikit/animation-and-haptics
 
 These sources establish Wallet context and interruptible animation APIs, not exact Wallet timing/geometry. The vertical movement contract above comes from the owner's explicit direction; native comparison is still required. Total annotation items: 25.
+
+## Implementation evidence
+
+First source pass changes LifeRoot, LifeWalletStack, LifeHoursView and LifeWeekView. Artifact integrity test passed. Native SDK compile, device render, gesture calibration and physical haptics remain unverified. Source changes do not establish all 25 acceptance items as complete. Rollback: revert this PR's presentation commits; no storage migration.
