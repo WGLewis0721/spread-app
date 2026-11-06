@@ -7,34 +7,6 @@ import QuickLook
 
 // MARK: Rich task content (wire shape of `TaskContent` in src/lib/spread/model.ts)
 
-struct NativeOutlineItem: Codable, Identifiable, Equatable {
-    var id: String
-    var text: String
-    var level: Double
-}
-
-struct NativeContentBlock: Codable, Identifiable, Equatable {
-    var id = UUID().uuidString
-    var type: String
-    var text: String?
-    var items: [NativeOutlineItem]?
-    var cells: [[String]]?
-    var src: String?
-    var richText: NativeRichText?
-    var file: NativeManagedFile?
-    var preserved: [String: NativeJSON] = [:]
-}
-
-struct NativeTaskContent: Codable, Equatable {
-    var blocks: [NativeContentBlock] = []
-    var preserved: [String: NativeJSON] = [:]
-}
-
-struct NativeTaskDetail: Decodable {
-    let taskId: String
-    let content: NativeTaskContent
-}
-
 /// The four content kinds the native editor can write. Any other kind is shown read-only and never re-sent,
 /// so a newer or unknown block is preserved in the store rather than downgraded here.
 private let editableKinds: Set<String> = ["notes", "outline", "table", "photo", "file"]
