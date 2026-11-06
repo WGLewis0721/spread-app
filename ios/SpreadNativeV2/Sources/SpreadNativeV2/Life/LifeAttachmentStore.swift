@@ -67,13 +67,18 @@ public enum LifeAttachmentStore {
         public let file: NativeManagedFile
         public let base64: String
     }
-    private static var transactions: [String: [URL]] = [:]
+    private final class Journal: @unchecked Sendable {
+        let lock = NSLock()
+        var transactions: [String: [URL]] = [:]
+    }
+    private static let journal = Journal()
     public static func read(profile: String, task: String, file: NativeManagedFile) throws -> String {
         try Data(contentsOf: url(profile: profile, task: task, file: file)).base64EncodedString()
     }
     /// Every byte is validated before touching final paths. Existing files are never overwritten.
     /// Only newly-created copies are journalled, so rollback cannot remove another profile's data.
     public static func install(_ entries: [ArchiveEntry]) throws -> String {
+        journal.lock.lock(); defer { journal.lock.unlock() }
         let token = UUID().uuidString
         var staged: [(URL, Data)] = []
         var seen = Set<String>()
@@ -102,7 +107,7 @@ public enum LifeAttachmentStore {
                 try bytes.write(to: target, options: .atomic)
                 installed.append(target)
             }
-            transactions[token] = installed
+            journal.transactions[token] = installed
             return token
         } catch {
             for target in installed { try? FileManager.default.removeItem(at: target) }
@@ -110,11 +115,15 @@ public enum LifeAttachmentStore {
         }
     }
     public static func rollback(_ token: String) throws {
-        guard let files = transactions[token] else { throw Failure.invalidReference }
+        journal.lock.lock(); defer { journal.lock.unlock() }
+        guard let files = journal.transactions[token] else { throw Failure.invalidReference }
         for file in files { try FileManager.default.removeItem(at: file) }
-        transactions.removeValue(forKey: token)
+        journal.transactions.removeValue(forKey: token)
     }
-    public static func finish(_ token: String) { transactions.removeValue(forKey: token) }
+    public static func finish(_ token: String) {
+        journal.lock.lock(); defer { journal.lock.unlock() }
+        journal.transactions.removeValue(forKey: token)
+    }
 
 }
 #endif
