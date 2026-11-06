@@ -10,7 +10,7 @@ All design guidance lives in one place: **[docs/design/README.md](docs/design/RE
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week keeps three kinds of thing: solid day cards, a dashed To place tray, tinted Free time chips.
-- Keep Crown, Spread/Week/Month, hour bank and original artwork. **Native Spread has ONE Wallet-style animated Stack**: full-width, overlapping closed cards, independent expansion, chevron, tasks, Edit/long-press, colour/icon/name edits and confirmed delete. Five-mode directions are historical for native only.
+- Keep Crown, Spread/Week/Month, hour bank and original artwork. **Native Spread has ONE Wallet-style animated Stack**: full-width, overlapping closed cards, independent expansion, chevron, tasks, explicit Edit-button mode, swipe-only Manage/Delete reveals, colour/icon/name edits and confirmed delete. Five-mode directions are historical for native only.
 - The landing page is separate (`docs/design/landing/DESIGN.md`): one focal object per section, both modes.
 
 **Behavior**
