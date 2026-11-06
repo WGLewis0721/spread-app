@@ -25,6 +25,8 @@ Resolve an open decision here and in its source document together, then move the
 
 ## Decision log
 
+| 2026-11-06 | **Explicit Edit-only Wallet actions supersede Nov 4 long-press behavior.** Life and Classic card taps and long presses must never enable Edit or reveal Manage/Delete; only an explicit Edit-button press enables swipe actions, revealed by a horizontal gesture. VoiceOver action alternatives may appear within Edit mode. Normal Life/Week cards paint no hidden action layer. | [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md), [tactile contract](tactile-precision/MOTION_CONTRACT.md) |
+
 | 2026-11-06 | Tune native animation using Apple motion guidance and public UI-animation principles. Use bounded 30ms list stagger, 0.97 immediate press scale, 220/180ms trigger-linked Life navigation, and identity-preserving role detail reveals. Preserve existing store, approved layout, haptics and Reduce Motion; reject blanket bounce, rubber-band capacity and gratuitous pulses. | [20-pattern audit](tactile-precision/ANIMATION_TUNING_GUIDE.md), [motion contract](tactile-precision/MOTION_CONTRACT.md) |
 
 
