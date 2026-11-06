@@ -33,6 +33,7 @@ struct LifeRoot: View {
     @State private var editing = false
     @State private var navigationOpen = false
     @State private var localSheet: LifeLocalSheet?
+    @State private var dockControlsHeight: CGFloat = 62
     @State private var weekTick = 0
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
@@ -252,25 +253,41 @@ struct LifeRoot: View {
                     dockActions
                     if crownRight { crown(snapshot).frame(maxWidth: 270) }
                 }
-                VStack(spacing: 8) { dockActions; crown(snapshot) }
+                VStack(spacing: 8) {
+                    HStack { if !crownRight { Spacer() }; dockActions; if crownRight { Spacer() } }
+                    crown(snapshot)
+                }
             }
+            .background {
+                GeometryReader { geometry in
+                    Color.clear.preference(key: LifeDockHeightKey.self, value: geometry.size.height)
+                }
+            }
+            .onPreferenceChange(LifeDockHeightKey.self) { dockControlsHeight = $0 }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
         .background(reduceTransparency ? LifePalette.surface : LifePalette.surface.opacity(0.94))
     }
     private var dockActions: some View {
         HStack(spacing: 8) {
-            Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { navigationOpen = true } } label: {
-                VStack(spacing: 2) {
-                    SpreadIcon(name: destination.icon, size: 22)
-                    Text(destination.rawValue).font(.caption)
-                }.frame(minWidth: 44, minHeight: 44)
-            }.accessibilityLabel("Open navigation").accessibilityIdentifier("life-navigation")
-            Button { localSheet = .addTask } label: {
-                Image(systemName: "plus").font(.title2).frame(width: 44, height: 44)
-                    .foregroundStyle(.white).background(LifePalette.accent, in: Circle())
-            }.accessibilityLabel("Add task")
+            if !crownRight { addTaskButton }
+            trayButton
+            if crownRight { addTaskButton }
         }.fixedSize(horizontal: true, vertical: false)
+    }
+    private var trayButton: some View {
+        Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { navigationOpen = true } } label: {
+            VStack(spacing: 2) {
+                SpreadIcon(name: destination.icon, size: 22)
+                Text(destination.rawValue).font(.caption)
+            }.frame(minWidth: 44, minHeight: 44)
+        }.accessibilityLabel("Open navigation").accessibilityIdentifier("life-navigation")
+    }
+    private var addTaskButton: some View {
+        Button { localSheet = .addTask } label: {
+            Image(systemName: "plus").font(.title2).frame(width: 44, height: 44)
+                .foregroundStyle(.white).background(LifePalette.accent, in: Circle())
+        }.accessibilityLabel("Add task")
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
         WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
@@ -284,14 +301,15 @@ struct LifeRoot: View {
             .accessibilityIdentifier("life-bottom-crown")
     }
     private func navigation(width: CGFloat) -> some View {
-        ZStack(alignment: .leading) {
+        ZStack(alignment: crownRight ? .leading : .trailing) {
             Color.black.opacity(0.28).ignoresSafeArea()
                 .onTapGesture { navigationOpen = false }.accessibilityHidden(true)
+            VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack {
                         SpreadBrandMark(size: 27); Text("Spread").font(.title2.bold()); Spacer()
-                        Button("Close") { navigationOpen = false }.frame(minHeight: 44)
+
                     }
                     ForEach(LifeDestination.allCases) { item in
                         Button { navigate(item) } label: {
@@ -308,8 +326,22 @@ struct LifeRoot: View {
                     Button("More") { navigationOpen = false; onMore() }.frame(minHeight: 44)
                 }.padding(20)
             }
+            HStack {
+                if !crownRight { Spacer(minLength: 0) }
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { navigationOpen = false }
+                } label: {
+                    Image(systemName: "xmark").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Close navigation")
+                .accessibilityIdentifier("life-navigation-close")
+                if crownRight { Spacer(minLength: 0) }
+            }
+            .frame(height: dockControlsHeight)
+            .padding(.horizontal, 16).padding(.vertical, 8)
+            }
             .frame(width: min(300, max(0, width - 32))).frame(maxHeight: .infinity)
-            .background(LifePalette.surface).transition(.move(edge: .leading))
+            .background(LifePalette.surface).transition(.move(edge: crownRight ? .leading : .trailing))
             .accessibilityAddTraits(.isModal)
         }
     }
@@ -349,6 +381,11 @@ struct LifeRoot: View {
             }.presentationDragIndicator(.visible)
         }
     }
+}
+
+private struct LifeDockHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 62
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 private struct LifeGestureHelp: View {
