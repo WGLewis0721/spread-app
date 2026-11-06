@@ -76,7 +76,6 @@ struct LifeRoot: View {
                     } else {
                         ProgressView("Opening your plan…").frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                }
                     }
                 }
                 .accessibilityHidden(navigationOpen && geometry.size.width < 820)
