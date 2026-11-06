@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { installBrowser } from "../../test-support/browser-env.ts";
-import { defaultData, shiftWeek, STORE_KEY, weekDays } from "./model.ts";
+import { cloneWeek, defaultData, normalizeData, shiftWeek, STORE_KEY, weekDays } from "./model.ts";
 import { noteSaved } from "./local-status.ts";
 const storage = installBrowser();
 const { useSpread } = await import("./store.ts");
@@ -670,5 +670,145 @@ test("queued native placement cannot overspend a bank or replay a refused comman
     assert.equal((await router.dispatch(command)).error, "bank-exceeded");
     assert.equal((await router.dispatch(request({ type: "moveSpreadToDay", roleId, day: openWeekDays()[2], hours: 6.5 }))).ok, true);
     assert.equal(router.read()!.envelope.snapshot.allocations.filter((a) => a.roleId === roleId).reduce((n, a) => n + a.hours, 0), 8.5);
+  } finally { router.dispose(); }
+});
+
+
+test("Life priority preview reads only, funds own bank before capacity, and apply is one reversible change", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    await router.dispatch(request({ type: "setLifeCapacity", hours: 20 }));
+    const before = JSON.stringify(useSpread.getState().data);
+    const preview = await router.dispatch(request({ type: "previewLifePriority", roleId, goalHours: 10, day: useSpread.getState().data.currentWeek }));
+    assert.equal(JSON.stringify(useSpread.getState().data), before);
+    assert.equal(preview.priorityPreview?.bankHours, 6);
+    assert.equal(preview.priorityPreview?.additionalBudgetHours, 2);
+    assert.equal(preview.priorityPreview?.shortageHours, 0);
+    assert.equal(preview.priorityPreview?.eligible, true);
+    const applied = await router.dispatch(request({ type: "applyLifePriority", roleId, goalHours: 10, day: useSpread.getState().data.currentWeek }));
+    assert.equal(applied.ok, true); assert.ok(applied.undoId);
+    assert.equal(applied.state?.envelope.snapshot.roles[0].hours, 10);
+    assert.equal(applied.state?.envelope.snapshot.life?.priorityGoalHours, 10);
+    assert.equal(useSpread.getState().data.hats[0].defaultHours, 8);
+    const after = JSON.stringify(useSpread.getState().data);
+    const undone = await router.dispatch(request({ type: "undo", editId: applied.undoId }));
+    assert.equal(undone.ok, true); assert.equal(JSON.stringify(useSpread.getState().data), before);
+    const redone = await router.dispatch(request({ type: "redo", editId: applied.undoId }));
+    assert.equal(redone.ok, true); assert.equal(JSON.stringify(useSpread.getState().data), after);
+  } finally { router.dispose(); }
+});
+
+test("Life priority shortage and ineligible day never borrow another role or mutate a plan", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    await router.dispatch(request({ type: "setLifeCapacity", hours: 15 }));
+    const before = JSON.stringify(useSpread.getState().data);
+    const preview = await router.dispatch(request({ type: "previewLifePriority", roleId, goalHours: 15, day: useSpread.getState().data.currentWeek }));
+    assert.equal(preview.priorityPreview?.shortageHours, 7);
+    assert.equal((await router.dispatch(request({ type: "applyLifePriority", roleId, goalHours: 15, day: useSpread.getState().data.currentWeek }))).error, "priority-shortage");
+    assert.equal((await router.dispatch(request({ type: "applyLifePriority", roleId, goalHours: 5, day: shiftWeek(useSpread.getState().data.currentWeek, 1) }))).error, "ineligible-day");
+    assert.equal(JSON.stringify(useSpread.getState().data), before);
+  } finally { router.dispose(); }
+});
+
+test("Life all-weeks responsibility deletion and global editing restore exact full planner through Undo/Redo", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const data = useSpread.getState().data;
+    const next = shiftWeek(data.currentWeek, 1);
+    useSpread.setState({ data: { ...data, weeks: { ...data.weeks, [next]: cloneWeek(data.weeks[data.currentWeek]) } } });
+    const before = JSON.stringify(useSpread.getState().data);
+    const edited = await router.dispatch(request({ type: "editLifeRole", roleId, name: "Renamed", color: "#123456", category: "custom" }));
+    assert.ok(edited.undoId); assert.equal(edited.ok, true);
+    assert.equal((await router.dispatch(request({ type: "undo", editId: edited.undoId }))).ok, true);
+    assert.equal(JSON.stringify(useSpread.getState().data), before);
+    const removed = await router.dispatch(request({ type: "removeLifeRole", roleId }));
+    assert.ok(removed.undoId);
+    assert.equal(useSpread.getState().data.hats.some((hat) => hat.id === roleId), false);
+    assert.equal((await router.dispatch(request({ type: "undo", editId: removed.undoId }))).ok, true);
+    assert.equal(JSON.stringify(useSpread.getState().data), before);
+    assert.equal((await router.dispatch(request({ type: "redo", editId: removed.undoId }))).ok, true);
+    assert.equal(Object.values(useSpread.getState().data.weeks).every((week) => !week.boxes.some((box) => box.hatId === roleId)), true);
+  } finally { router.dispose(); }
+});
+
+test("Life history refuses unrelated global edits, week navigation and a replacement bridge session", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const edited = await router.dispatch(request({ type: "editLifeRole", roleId, name: "Renamed", color: "#123456", category: "work" }));
+    useSpread.getState().renameHat(useSpread.getState().data.hats[1].id, "Other edit");
+    assert.equal((await router.dispatch(request({ type: "undo", editId: edited.undoId }))).ok, false);
+    const capacity = await router.dispatch(request({ type: "setLifeCapacity", hours: 20 }));
+    const replacement = createNativeV2Dispatcher("replacement");
+    const view = replacement.read()!;
+    const foreign = await replacement.dispatch({ protocolVersion: 1, sessionId: "replacement", requestId: "foreign",
+      expectedProfileId: view.envelope.profileId, expectedWeek: view.envelope.snapshot.weekKey,
+      expectedRevision: view.revision, action: { type: "undo", editId: capacity.undoId } });
+    assert.equal(foreign.ok, false); replacement.dispose();
+    useSpread.getState().moveWeek(1); useSpread.getState().moveWeek(-1);
+    assert.equal((await router.dispatch(request({ type: "undo", editId: capacity.undoId }))).ok, false);
+  } finally { router.dispose(); }
+});
+
+test("Life permits corrective reductions of a Classic over-capacity plan and legacy totals above 168", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    await router.dispatch(request({ type: "setLifeCapacity", hours: 15 }));
+    useSpread.getState().setHours(roleId, 20);
+    assert.equal((await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 19.5 }))).ok, true);
+    assert.equal((await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 20 }))).error, "life-capacity-exceeded");
+    const data = useSpread.getState().data;
+    const week = data.weeks[data.currentWeek];
+    useSpread.setState({ data: { ...data, weeks: { ...data.weeks, [data.currentWeek]: {
+      ...week, life: undefined, boxes: week.boxes.map((box) => ({ ...box, hours: 60 })) } } } });
+    assert.equal((await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 59.5 }))).ok, true);
+    assert.equal(useSpread.getState().data.weeks[data.currentWeek].boxes[0].hours, 59.5);
+  } finally { router.dispose(); }
+});
+
+test("Only new Life tasks receive the informational 30-minute default", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    await router.dispatch(request({ type: "addTask", roleId, text: "Classic task" }));
+    await router.dispatch(request({ type: "addTask", roleId, text: "Life task", life: true }));
+    const tasks = useSpread.getState().data.weeks[useSpread.getState().data.currentWeek].boxes[0].tasks;
+    assert.equal(tasks.find((task) => task.text === "Classic task")?.estimateMinutes, undefined);
+    assert.equal(tasks.find((task) => task.text === "Life task")?.estimateMinutes, 30);
+    assert.equal(router.read()?.envelope.snapshot.allocations.length, 2);
+  } finally { router.dispose(); }
+});
+
+test("Normalization, JSON recovery and week copy preserve Life budgets, metadata, rich text, file and future content", () => {
+  const data = defaultData(); const week = data.weeks[data.currentWeek];
+  week.life = { version: 1, capacityHours: 36, priorityRoleId: data.hats[0].id, priorityGoalHours: 6, priorityDay: data.currentWeek };
+  week.boxes[0].hours = 2;
+  week.allocations = [{ id: "a", hatId: data.hats[0].id, day: data.currentWeek, hours: 2, order: 0 }];
+  const content = { blocks: [
+    { id: "rich", type: "notes", text: "Styled", richText: { version: 1, rtf: "e1xydGYxfQ==" } },
+    { id: "file", type: "file", file: { id: "file-id", name: "Memo.pdf", mimeType: "application/pdf", byteCount: 12, checksum: "a".repeat(64) } },
+    { id: "future", type: "future-kind", value: { opaque: true } },
+  ] };
+  week.boxes[0].tasks = [{ id: "t", text: "Keep all", done: false, estimateMinutes: 90, content: content as never }];
+  const restored = normalizeData(JSON.parse(JSON.stringify(data)));
+  assert.equal(restored.weeks[data.currentWeek].boxes[0].hours, 2, "week-only budgets must never rebound to global defaults");
+  assert.deepEqual(restored.weeks[data.currentWeek].boxes[0].tasks[0].content, content);
+  const copied = cloneWeek(restored.weeks[data.currentWeek]);
+  assert.deepEqual(copied.life, week.life);
+  assert.deepEqual(copied.boxes[0].tasks[0].content, content);
+  assert.equal(copied.boxes[0].tasks[0].estimateMinutes, 90);
+});
+
+test("Unknown Life metadata remains recoverable and blocks older-build Life writes", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const data = useSpread.getState().data;
+    const future = { version: 2, capacityHours: 999, opaque: ["keep"] };
+    const raw = structuredClone(data) as typeof data;
+    raw.weeks[data.currentWeek].life = future as never;
+    const restored = normalizeData(raw);
+    assert.deepEqual(restored.weeks[data.currentWeek].life, future);
+    useSpread.setState({ data: restored });
+    assert.equal((await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 4 }))).error, "unsupported-life-version");
+    assert.deepEqual(useSpread.getState().data.weeks[data.currentWeek].life, future);
   } finally { router.dispose(); }
 });
