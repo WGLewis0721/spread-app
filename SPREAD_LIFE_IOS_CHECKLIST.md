@@ -60,7 +60,7 @@ Owner: native and planner engineers.
 
 - [ ] Build the overlapping Wallet stack and sole-card focus behavior. Move accessibility focus into the selected card/details, then restore it on return.
 - [ ] Connect real tasks below the card. Preserve task completion, eligible-day placement, unscheduled work and task Undo.
-- [ ] Connect pencil editing, role-colored glow, left-to-Manage and right-to-Delete. Move cards as rigid objects without changing their width or internal alignment.
+- [ ] Only the pencil/Edit button can enter editing; taps/long presses never enable it. Manage/Delete are not painted beneath resting cards. Left swipe reveals Manage and right swipe reveals Delete only within Edit mode. Move cards as rigid objects without changing their width or internal alignment.
 - [ ] Keep tap, keyboard and VoiceOver alternatives for each swipe.
 - [ ] Keep production management scope explicit. Use the current global delete only with a confirmation that says it affects all weeks. Create a separate guarded week-only operation if that behavior is later chosen; do not disguise global deletion.
 - [ ] Add grouped, guarded edit Undo/Redo to the authoritative store. Preserve tasks, budgets, allocations and relevant metadata together. Refuse stale history after unrelated edits/profile/week changes.
