@@ -73,7 +73,7 @@ private struct LifeWalletFace: View {
     @ScaledMetric(relativeTo: .body) private var cardHeight: CGFloat = 144
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
-    @State private var suppressTap = false
+    @State private var ignoreTapUntil = Date.distantPast
     @GestureState private var dragging = false
     @State private var glow = false
     private var reserved: Double {
@@ -100,7 +100,7 @@ private struct LifeWalletFace: View {
                 }.accessibilityHidden(reveal >= 0).allowsHitTesting(reveal < 0)
             }
             Button {
-                if suppressTap { suppressTap = false } else { onSelect() }
+                if Date() >= ignoreTapUntil { onSelect() }
             } label: {
                 face
                     .frame(maxWidth: .infinity, minHeight: cardHeight, alignment: .top)
@@ -172,11 +172,12 @@ private struct LifeWalletFace: View {
             .updating($dragging) { _, active, _ in active = editing }
             .onChanged { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
-                suppressTap = true
+                ignoreTapUntil = Date().addingTimeInterval(0.25)
                 translation = value.translation.width
             }
             .onEnded { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { translation = 0; return }
+                ignoreTapUntil = Date().addingTimeInterval(0.25)
                 let offset = reveal + value.translation.width
                 let next: CGFloat = offset < -42 ? -92 : offset > 42 ? 92 : 0
                 if next != reveal && next != 0 { LifeFeedback.reveal(delete: next > 0) }
