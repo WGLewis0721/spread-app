@@ -142,7 +142,7 @@ private struct LifeWalletFace: View {
         .task(id: "\(editing)-\(reduceMotion)-\(scenePhase)") {
             glow = false
             guard editing, !reduceMotion, scenePhase == .active else { return }
-            withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) { glow = true }
+            withAnimation(.easeInOut(duration: 1.35 * SpreadTactile.emphasis).repeatForever(autoreverses: true)) { glow = true }
         }
         .accessibilityIdentifier("life-card-\(role.id)")
     }
@@ -226,9 +226,11 @@ private struct LifeWalletFace: View {
     private var editingOutline: some View {
         if editing {
             RoundedRectangle(cornerRadius: 23)
-                .strokeBorder(roleColor.opacity(glow || reduceMotion ? 1 : 0.82), lineWidth: 2.5)
+                .strokeBorder(roleColor.opacity(glow || reduceMotion ? 1 : 0.82),
+                              lineWidth: 2.5 * SpreadTactile.emphasis)
                 // 50% stronger glow than the prior 0.65 / 0.20 values.
-                .shadow(color: roleColor.opacity(glow || reduceMotion ? 0.975 : 0.30), radius: 18)
+                .shadow(color: roleColor.opacity(glow || reduceMotion ? 0.975 : 0.30),
+                        radius: 18 * SpreadTactile.emphasis)
         }
     }
     private var face: some View {
