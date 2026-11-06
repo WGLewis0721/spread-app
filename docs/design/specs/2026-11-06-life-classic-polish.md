@@ -10,31 +10,16 @@ Verified source baseline: main `8def6743e926204bc50398164f3963cf018fc854`.
 Read the [native board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), shared SpreadTheme, Classic shell, Life root and existing More picker.
 
 The owner reports that Classic has stronger polish, vibrancy, simplicity and precision; Life has useful functionality but weaker cues and separation. These are owner observations, not observations made from videos by this implementation.
-**Neither requested video was attached to this conversation. Separate video analyses, timestamps, motion measurements and visual acceptance remain pending.**
+**Both recordings have now been reviewed.** See the [Classic video specification](2026-11-06-classic-video-spec.md) and [Life video specification](2026-11-06-life-video-spec.md) for separate observations, timestamped findings and implementation requirements. Native candidate comparison remains pending.
 
 This request supersedes Life's independent gray/black palette. Classic is the visual reference; Life retains its arrangement and capabilities. Do not repaint Classic or change planner/storage/release behavior.
 
-## Classic video spec — awaiting recording
+## Reviewed recordings
 
-| Review dimension | Existing documentary/source authority | Video evidence still needed |
-| --- | --- | --- |
-| Design | Shared semantic navy/cream surfaces, original category art/glyphs, metallic Crown, bounded role accents | Actual installed colors, material, hierarchy, spacing and density |
-| Motion | Existing SpreadMotion, interruptible transitions, deliberate detents, Reduce Motion | Timestamped entry/exit/focus/scroll/press sequences, easing and duration |
-| UI | Stable chrome, clear action hierarchy, solid content versus functional controls | Control frames, hit areas, active/focus states, text clipping |
-| UX | Responsibilities → Hours → Week → Tasks; real store and accessible alternatives | Tap counts, discoverability, feedback, recovery and interruptions |
+- [Classic: design, motion and UI/UX](2026-11-06-classic-video-spec.md) — 47.93 s; complete timeline plus a denser expansion sequence.
+- [Life: design, motion and UI/UX](2026-11-06-life-video-spec.md) — 15.00 s; complete timeline plus the noisy card-focus transition.
 
-Do not infer frame rate or haptic feel from a recording alone.
-
-## Life video spec — awaiting recording
-
-| Review dimension | Verified implementation / owner concern | Video evidence still needed |
-| --- | --- | --- |
-| Design | Separate Life palette was present; owner requests shared Classic identity | Screen-by-screen comparison of boundaries, contrast, saturation and card affordances |
-| Motion | Life has its own navigation/focus/orbit transitions | Timestamped comparison with Classic, awkward settling, layout shifts and interruption behavior |
-| UI | Tray opener was inside Add on the right; drawer Close was at the top | Both sides, rotation, drawer opening/closing alignment, content/chrome separation |
-| UX | Functional Life/Hours/Week arrangement retained; owner reports weak cues | Where intent, selection, editing, placement or confirmation is unclear |
-
-Record each finding as timestamp → observed behavior → impact → correction → acceptance result. Do not fabricate findings while the video is unavailable.
+The recordings establish observed behavior in the recorded builds. Their build/OS identifiers are unavailable; they do not validate the new PR candidate.
 
 ## Shared component requirements
 
@@ -52,9 +37,9 @@ Record each finding as timestamp → observed behavior → impact → correction
 
 ## Implemented slice and remaining work
 
-Implemented: picker says Life; accessible label/explanation match; palette shares Classic tokens; dock ordering mirrors by side; drawer edge mirrors; Close moved to measured bottom control row.
+Implemented: picker says Life; shared Classic tokens; mirrored tray controls and measured Close alignment; original card artwork, role gradient/edge/depth, stable full-width focus, clearer hours summary/history controls and shared motion tokens.
 
-Pending: both video reviews, complete motion/visual tuning, matched before/after captures and native/device acceptance.
+Completed: both video reviews and the recorded design/motion/UI/UX specifications. Pending: matched before/after candidate captures, remaining visual calibration and native/device acceptance.
 Do not claim that a Swift syntax pass proves appearance or interaction quality.
 
 ## Acceptance and rollback
