@@ -16,7 +16,7 @@ struct LifeNotesEditor: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeUIView(context: Context) -> UITextView {
-        let view = UITextView()
+        let view = LifeTextView()
         view.font = .preferredFont(forTextStyle: .body)
         view.adjustsFontForContentSizeCategory = true
         view.backgroundColor = .secondarySystemBackground
@@ -24,6 +24,7 @@ struct LifeNotesEditor: UIViewRepresentable {
         view.accessibilityIdentifier = "life-rich-notes"
         view.delegate = context.coordinator
         context.coordinator.view = view
+        view.outdentAction = { context.coordinator.outdent() }
         if let payload = richText, payload.version == 1,
            let data = Data(base64Encoded: payload.rtf),
            let attributed = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) {
@@ -36,6 +37,7 @@ struct LifeNotesEditor: UIViewRepresentable {
             context.coordinator.button("Underline", #selector(Coordinator.underline)),
             context.coordinator.button("Heading", #selector(Coordinator.heading)),
             context.coordinator.button("Body", #selector(Coordinator.body)),
+            context.coordinator.button("Link", #selector(Coordinator.link)),
             context.coordinator.button("List", #selector(Coordinator.list)),
             context.coordinator.button("Checklist", #selector(Coordinator.checklist)),
             context.coordinator.button("Indent", #selector(Coordinator.indent)),
@@ -75,13 +77,25 @@ struct LifeNotesEditor: UIViewRepresentable {
                 parent.richText = NativeRichText(version: 1, rtf: data.base64EncodedString())
             }
         }
+        private func replaceAttributes(_ value: NSAttributedString, selection: NSRange) {
+            guard let view else { return }
+            let previous = NSAttributedString(attributedString: view.attributedText)
+            let previousSelection = view.selectedRange
+            view.undoManager?.registerUndo(withTarget: self) { target in
+                target.replaceAttributes(previous, selection: previousSelection)
+            }
+            view.attributedText = value
+            view.selectedRange = selection
+            textViewDidChange(view)
+        }
         private func format(_ key: NSAttributedString.Key, _ value: Any) {
             guard let view else { return }
             if view.selectedRange.length == 0 {
                 view.typingAttributes[key] = value
             } else {
-                view.textStorage.addAttribute(key, value: value, range: view.selectedRange)
-                textViewDidChange(view)
+                let copy = NSMutableAttributedString(attributedString: view.attributedText)
+                copy.addAttribute(key, value: value, range: view.selectedRange)
+                replaceAttributes(copy, selection: view.selectedRange)
             }
         }
         private func trait(_ trait: UIFontDescriptor.SymbolicTraits) {
@@ -101,8 +115,36 @@ struct LifeNotesEditor: UIViewRepresentable {
         }
         @objc func heading() { format(.font, UIFont.preferredFont(forTextStyle: .title2)) }
         @objc func body() { format(.font, UIFont.preferredFont(forTextStyle: .body)) }
+        @objc func link() {
+            guard let view else { return }
+            let selection = view.selectedRange
+            guard selection.length > 0 else { return }
+            let alert = UIAlertController(title: "Add link", message: "Enter a web address for the selected text.", preferredStyle: .alert)
+            alert.addTextField { $0.placeholder = "https://"; $0.keyboardType = .URL; $0.autocapitalizationType = .none }
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Add", style: .default) { [weak self, weak alert] _ in
+                guard let self, let raw = alert?.textFields?.first?.text,
+                      let url = URL(string: raw), ["https", "http", "mailto"].contains(url.scheme?.lowercased() ?? "") else { return }
+                view.selectedRange = selection
+                self.format(.link, url)
+            })
+            var controller = view.window?.rootViewController
+            while let presented = controller?.presentedViewController { controller = presented }
+            controller?.present(alert, animated: true)
+        }
         @objc func list() { view?.insertText("• "); if let view { textViewDidChange(view) } }
-        @objc func checklist() { view?.insertText("☐ "); if let view { textViewDidChange(view) } }
+        @objc func checklist() {
+            guard let view else { return }
+            let text = view.text as NSString
+            let paragraph = text.paragraphRange(for: view.selectedRange)
+            let prefix = text.substring(with: paragraph)
+            if prefix.hasPrefix("☐ ") || prefix.hasPrefix("☑ ") {
+                let replacement = prefix.hasPrefix("☐ ") ? "☑" : "☐"
+                view.selectedRange = NSRange(location: paragraph.location, length: 1)
+                view.insertText(replacement)
+            } else { view.insertText("☐ ") }
+            textViewDidChange(view)
+        }
         @objc func indent() { changeIndent(24) }
         @objc func outdent() { changeIndent(-24) }
         private func changeIndent(_ delta: CGFloat) {
@@ -129,10 +171,16 @@ struct LifeNotesEditor: UIViewRepresentable {
                let number = numbers.firstMatch(in: prefix, range: NSRange(location: 0, length: (prefix as NSString).length)),
                let value = Int((prefix as NSString).substring(with: number.range(at: 2))) {
                 next = (prefix as NSString).substring(with: number.range(at: 1)) + "\(value + 1). "
-            } else if prefix.trimmingCharacters(in: .whitespaces).hasPrefix("I.") {
-                next = prefix.replacingOccurrences(of: "I.", with: "II.")
-            } else if prefix.trimmingCharacters(in: .whitespaces).hasPrefix("A.") {
-                next = prefix.replacingOccurrences(of: "A.", with: "B.")
+            } else {
+                let leading = String(prefix.prefix(while: { $0.isWhitespace }))
+                let marker = prefix.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ". ", with: "").replacingOccurrences(of: ".", with: "")
+                let roman = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"]
+                if let index = roman.firstIndex(of: marker), index + 1 < roman.count {
+                    next = leading + roman[index + 1] + ". "
+                } else if marker.count == 1, let scalar = marker.unicodeScalars.first, scalar.value >= 65, scalar.value < 90,
+                          let following = UnicodeScalar(scalar.value + 1) {
+                    next = leading + String(following) + ". "
+                } else if marker == "☑" { next = leading + "☐ " }
             }
             textView.insertText("\n" + next)
             textViewDidChange(textView)
@@ -140,6 +188,14 @@ struct LifeNotesEditor: UIViewRepresentable {
         }
     }
 }
+final class LifeTextView: UITextView {
+    var outdentAction: (() -> Void)?
+    override var keyCommands: [UIKeyCommand]? {
+        (super.keyCommands ?? []) + [UIKeyCommand(input: "\t", modifierFlags: .shift, action: #selector(outdent))]
+    }
+    @objc private func outdent() { outdentAction?() }
+}
+
 /// Unknown fields are retained byte-for-value across native edits.
 enum NativeJSON: Codable, Equatable {
     case string(String), number(Double), bool(Bool), array([NativeJSON]), object([String: NativeJSON]), null
@@ -179,6 +235,7 @@ extension NativeContentBlock {
         cells = value("cells", [[String]].self)
         src = value("src", String.self)
         richText = value("richText", NativeRichText.self)
+        file = value("file", NativeManagedFile.self)
     }
     func encode(to encoder: Encoder) throws {
         var values = preserved
@@ -188,7 +245,7 @@ extension NativeContentBlock {
         }
         try set("id", id); try set("type", type); try set("text", text)
         try set("items", items); try set("cells", cells); try set("src", src)
-        try set("richText", richText)
+        try set("richText", richText); try set("file", file)
         var c = encoder.singleValueContainer()
         try c.encode(values)
     }
