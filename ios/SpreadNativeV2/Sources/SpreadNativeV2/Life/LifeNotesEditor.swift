@@ -27,7 +27,7 @@ struct LifeNotesEditor: UIViewRepresentable {
         view.outdentAction = { context.coordinator.outdent() }
         if let payload = richText, payload.version == 1,
            let data = Data(base64Encoded: payload.rtf),
-           let attributed = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) {
+           let attributed = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil), attributed.string == text {
             view.attributedText = attributed
         } else { view.text = text }
         let toolbar = UIToolbar()
