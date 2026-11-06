@@ -27,3 +27,17 @@ Pending implementation. These are owner-reported defects and requested correctio
 | L7 | 77%, 91% | Bottom plus/add control is inconsistent with the established icon language. Align its icon and control styling with Spread's approved components. |
 
 Intake remains open. Wait for the owner's remaining photo annotations before changing app code.
+
+## Photo 2 — Hours (owner annotations)
+
+Pending implementation. Owner identifies the current interface as incoherent and unusable; usability correction is a launch-critical priority. Await remaining annotations before implementation.
+
+| ID | Position | Fix / acceptance |
+| --- | --- | --- |
+| H1 | 52%, 60% | Make the screen's purpose and interaction clear. The user must understand what hours represent and how to adjust them without hunting among disconnected controls. |
+| H2 | 35%, 67% | Replace the Life-area horizontal bars/rows with color-coordinated glowing radial controls, each showing its hour count in the center. Preserve role identity and stored hours. |
+| H3 | 41%, 49% | Move the instructional question/explanation above the centerpiece radial so the user knows what to do before interacting. |
+| H4 | 49%, 34% | Move the centerpiece radial upward and tighten the vertical layout. |
+| H5 | 87%, 59% | Consolidate weekly-hours entry, adjustment and setting into the centerpiece radial instead of the separate minus / text field / plus / Set row. Exact interaction details remain subject to the owner's upcoming fixes. |
+
+Intake remains open. No app code changes until the owner completes the annotations.
