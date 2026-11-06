@@ -148,6 +148,7 @@ function BlockView({ block }: { block: ContentBlock }) {
       </>
     );
   }
+  if (block.type === "file") return <p>Attachment: {block.file.name} (saved on this iPhone)</p>;
   return (
     <>
       <p>
