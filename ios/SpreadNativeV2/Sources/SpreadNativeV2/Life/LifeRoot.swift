@@ -321,7 +321,7 @@ struct LifeRoot: View {
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
         WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
-                      detail: "Week Crown", onDetail: today, onMove: goWeek)
+                      detail: "Week Crown", onDetail: today, onMove: goWeek, tactile: true)
             .contextMenu {
                 Button("Move Crown left") { crownRight = false }
                 Button("Move Crown right") { crownRight = true }

@@ -12,6 +12,8 @@ struct WeekCrownView: View {
     var onDetail: (() -> Void)? = nil
     /// Negative = previous week, positive = next week. The caller commits the change through the store.
     let onMove: (Int) -> Void
+    /// Use the tactile release only in Life; Classic retains its original easing.
+    var tactile: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -106,7 +108,9 @@ struct WeekCrownView: View {
             guard !active else { return }
             travel.release()
             live = false
-            withAnimation(reduceMotion ? nil : SpreadTactile.snap) { translation = 0 }
+            withAnimation(reduceMotion ? nil : (tactile ? SpreadTactile.snap : SpreadMotion.press)) {
+                translation = 0
+            }
         }
         .shadow(color: Spread.shadow, radius: 8, y: 4)
         // Key handlers run only on a focused view. Make the wheel reachable

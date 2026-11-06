@@ -83,7 +83,9 @@ struct LifeWalletStack: View {
             .accessibilityFocused($focusedRole, equals: role.id)
     }
     private func select(_ id: String) {
-        selectedRole = selectedRole == id ? nil : id
+        withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+            selectedRole = selectedRole == id ? nil : id
+        }
         LifeFeedback.selection()
     }
 }
