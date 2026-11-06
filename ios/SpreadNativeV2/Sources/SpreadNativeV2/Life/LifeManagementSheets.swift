@@ -10,12 +10,51 @@ struct LifeManageSheet: View {
     @State private var category = ""
     @State private var revision: Int?
     @State private var saving = false
+    @State private var savingHours = false
+    @State private var budgetHours = 0.0
+    @State private var hoursSaved = false
+
+    private var hourRange: ClosedRange<Double> {
+        guard let snapshot = planner.snapshot,
+              let role = snapshot.roles.first(where: { $0.id == roleId }),
+              let capacity = snapshot.life?.capacityHours else { return 0...168 }
+        let minimum = snapshot.placedHours(for: roleId)
+        let others = snapshot.roles.reduce(0) { $0 + ($1.id == roleId ? 0 : $1.hours) }
+        return minimum...max(minimum, role.hours, capacity - others)
+    }
+
     var body: some View {
         SpreadSheetStack {
             Form {
                 Section("Life area") {
                     TextField("Name", text: $name).accessibilityIdentifier("life-area-name")
                     Text("Names, colors and symbols apply to all weeks.").font(.subheadline)
+                }
+                if let snapshot = planner.snapshot,
+                   let role = snapshot.roles.first(where: { $0.id == roleId }) {
+                    Section("Weekly area hours") {
+                        if snapshot.life?.capacityHours != nil {
+                            Stepper(value: $budgetHours, in: hourRange, step: 0.5) {
+                                Text("\(SpreadHours.text(budgetHours)) h assigned to \(role.name)")
+                            }
+                            .accessibilityIdentifier("life-manage-hour-stepper")
+                            .disabled(saving || savingHours)
+                            Text("\(SpreadHours.text(snapshot.placedHours(for: roleId))) h already reserved on days")
+                                .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                            if hourRange.upperBound <= role.hours {
+                                Text("No unassigned hours. Return hours from another area or increase weekly hours to add more.")
+                                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                            }
+                            Button("Save area hours") { Task { await saveHours() } }
+                                .disabled(saving || savingHours || planner.busy || budgetHours == role.hours)
+                                .accessibilityIdentifier("life-manage-save-hours")
+                            if hoursSaved { Label("Area hours saved", systemImage: "checkmark.circle.fill")
+                                .font(.subheadline).foregroundStyle(LifePalette.accent) }
+                        } else {
+                            Text("Set weekly planning hours in Hours before allocating time to this area.")
+                                .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                        }
+                    }
                 }
                 Section("Symbol") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5)) {
@@ -42,26 +81,42 @@ struct LifeManageSheet: View {
                         }
                     }
                 }
+                if savingHours { ProgressView("Saving area hours…") }
                 if let error = planner.error { Text(error).foregroundStyle(Spread.danger) }
             }.spreadListSurface()
             .navigationTitle("Manage Life area").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(saving) }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(saving || savingHours) }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(saving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(saving || savingHours || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
         .task {
             guard let role = planner.snapshot?.roles.first(where: { $0.id == roleId }) else { return }
-            name = role.name; color = role.color; category = role.category; revision = planner.state?.revision
+            name = role.name; color = role.color; category = role.category
+            budgetHours = role.hours; revision = planner.state?.revision
         }
-        .interactiveDismissDisabled(saving)
+        .interactiveDismissDisabled(saving || savingHours)
         .presentationDragIndicator(.visible)
     }
+    private func saveHours() async {
+        guard !saving && !savingHours,
+              let current = planner.snapshot?.roles.first(where: { $0.id == roleId }),
+              hourRange.contains(budgetHours), budgetHours != current.hours else { return }
+        savingHours = true
+        defer { savingHours = false }
+        if await planner.send(["type": "setLifeBudget", "roleId": roleId, "hours": budgetHours],
+                              expectedRevision: revision) {
+            revision = planner.state?.revision
+            hoursSaved = true
+            LifeFeedback.accepted()
+        }
+    }
+
     private func save() async {
-        guard !saving else { return }
+        guard !saving && !savingHours else { return }
         saving = true
         defer { saving = false }
         if await planner.send(["type": "editLifeRole", "roleId": roleId,
