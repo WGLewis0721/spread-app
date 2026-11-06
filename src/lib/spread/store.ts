@@ -1,3 +1,4 @@
+import { nativeFiles, verifyNativeFiles } from "./native-life-files.ts";
 import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
 import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
@@ -165,7 +166,7 @@ type Store = {
   copyLastWeek: () => boolean;
   /** False if nothing was replaced: the open profile is synced, so a restore would delete on every device. */
   replaceData: (data: SpreadData) => boolean;
-  restoreAsNew: (payload: FullBackupPayload, select?: string[]) => RestoreResult;
+  restoreAsNew: (payload: FullBackupPayload, select?: string[]) => RestoreResult | Promise<RestoreResult>;
   /** Put the whole planner back from a safety copy's stored entries. Works with all ten slots in use. */
   rollbackToCopy: (entries: Record<string, string>) => RollbackResult;
   /** How many profiles a restore can add right now (free slots, plus an empty profile it may fill). */
@@ -1140,6 +1141,7 @@ export const useSpread = create<Store>((set, get) => ({
     const emptyId = emptyProfileId(get());
     const plan = planRestoreAsNew(payload, get().profiles, uid, { select, replaceEmpty: emptyId });
     if (!plan.ok) return plan;
+    const apply = (): RestoreResult => {
     // All or nothing: bodies, then the roster as the commit point, with every key journalled so a
     // failure (or a kill part-way) puts everything back.
     const committed = commitRestore(txStorage, { writes: plan.writes, rosterKey: PROFILES_KEY, rosterValue: JSON.stringify(plan.profiles) });
@@ -1156,6 +1158,25 @@ export const useSpread = create<Store>((set, get) => ({
     }
     set({ profiles: plan.profiles });
     return { ok: true, added: plan.writes.length, replacedEmpty: plan.replacedId !== null, skipped: plan.skipped };
+    };
+    const entries = payload.nativeFiles ?? [];
+    if (!entries.length) return apply();
+    return (async (): Promise<RestoreResult> => {
+      if (!await verifyNativeFiles(payload.stores, entries)) return { ok: false, reason: "write-failed" };
+      let transaction: string;
+      try {
+        const mapped = entries.filter(e => plan.profileMap[e.profileId]).map(e => ({ ...e, profileId: plan.profileMap[e.profileId] }));
+        transaction = (await nativeFiles.install({ entries: mapped })).transaction;
+      } catch { return { ok: false, reason: "write-failed" }; }
+      const result = apply();
+      if (!result.ok) {
+        try { await nativeFiles.rollback({ transaction }); } catch { return { ok: false, reason: "rollback-failed" }; }
+      } else {
+        // Files are already durable before the roster commit; finish only releases the cleanup journal.
+        try { await nativeFiles.finish({ transaction }); } catch { /* durable copies remain valid */ }
+      }
+      return result;
+    })();
   },
 }));
 
