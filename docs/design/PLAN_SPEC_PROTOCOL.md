@@ -25,7 +25,7 @@ Evidence tags: **[Apple]** read on a developer.apple.com page. **[ShapeUp]** rea
 | Goals and non-goals, alternatives considered, risks, testing and rollout, open questions | [Industry] Google, Uber, Monzo, HashiCorp and others | Spec sections 3, 5, 8, 9, 10 |
 | A mobile design doc adds UI and UX, architecture changes, library dependencies, security, testing and rollout, and accessibility | [Industry] Uber's mobile template | Spec sections 6 and 7 |
 | Sketch several distinct directions first (Apple's team narrowed to four: list, grid, map, gallery) instead of starting from one idea | [Apple] WWDC14 session 223 | Spec section 5: at least three options for size L |
-| Before prototyping ask: what needs to be more real, what can we fake, where will they use it | [Apple] WWDC14 session 223 | Spec section 9 prototype plan |
+| Before user testing ask: what needs real-device evidence, what is uncertain, and where people will use it | [Apple] WWDC14 session 223 | Spec section 9 integrated verification plan |
 | When showing people ask: do you know how to do this, is it easy, how can we make it better. Do not argue or defend | [Apple] WWDC14 session 223 | Spec section 9 test questions |
 | Prototypes are cheap and disposable; fidelity matches the question; test on the target device in the target environment | [Apple] WWDC14 session 223 | Spec section 9 |
 | Apple's design resources are organized as learn the principles, read the HIG, gather the toolbox (SF Symbols, templates), prototype, then draw on community examples. It is not a strict linear process | [Apple] Design Pathway | The map links the Apple pages to read |
@@ -46,7 +46,7 @@ Not read, so not relied on: WWDC25 "Design foundations from idea to interface" (
 8. **Describe the platform behavior:** widths, orientation, safe areas, Dark Mode, Dynamic Type or text zoom, Reduce Motion, Reduce Transparency, Increase Contrast, VoiceOver, haptics, tap and keyboard alternatives for any drag.
 9. **Describe the technical approach:** where the change lives, which store actions it uses, what it must not touch, whether it needs a flag, no data migration for UI work.
 10. **Write acceptance criteria** a person can observe, and the verification plan from the card's Verify list.
-11. **Plan the prototype and the test.** Say what must be real and what can be faked, where it will be used, and the three questions to ask a tester.
+11. **Plan full implementation and testing.** Build the complete scoped feature inside the real app on a development branch, then test and refine the integration there. State which behaviors need actual hardware, how to verify them, and the three questions to ask testers. Do not require isolated or throwaway prototypes.
 12. **List risks, rabbit holes and open questions,** each with a proposed default and who decides.
 13. **Run the self-check** in section 5 below, then deliver.
 
@@ -58,7 +58,7 @@ Not read, so not relied on: WWDC25 "Design foundations from idea to interface" (
 | --- | --- | --- |
 | **S** | A tweak inside an existing pattern: copy, spacing within a token, one state | Sections 1, 4, 7, 9 and the self-check. One page at most |
 | **M** | A new behavior or a new use of an existing component | Sections 1 to 10, two options |
-| **L** | A new screen or component, anything touching several surfaces or devices, anything that proposes an exception to a rule | Everything, at least three options, a prototype plan and a rollout and rollback plan |
+| **L** | A new screen or component, anything touching several surfaces or devices, anything that proposes an exception to a rule | Everything, at least three options, a full-feature integration/verification plan and a rollout and rollback plan |
 
 If unsure, choose the larger size.
 
@@ -89,6 +89,7 @@ If unsure, choose the larger size.
 - [ ] Widths 390, 820, 1024 (and 1366 for iPad, 1440 for the landing page), both modes, and the accessibility settings are in the verification plan.
 - [ ] Acceptance criteria are observable, not "code exists".
 - [ ] Device checks that cannot be done in a browser are listed as owed.
+- [ ] The plan delivers full features in the existing app without an isolated throwaway prototype.
 - [ ] Open questions each have a default and an owner.
 - [ ] Nothing in the do-not-touch list is modified, and the landing page and planner are not mixed.
 
@@ -98,5 +99,5 @@ If unsure, choose the larger size.
 
 - A spec is not approval to merge. Release authority stays with the owner ([RULES_CARD.md](RULES_CARD.md), Boundaries).
 - Implementation follows the repo flow: a branch, focused tests added to the explicit lists, the checks in the card's Verify list, and a pull request into `main`.
-- Prototype first when the open question is about feel (a gesture, a transition, how a sheet behaves). Throw the prototype away; write the real version afterward [Apple].
+- **Owner workflow (2026-11-06): no isolated prototyping.** Implement all scoped behavior in the actual app on a dedicated feature branch, then run automated tests and physical-device checks and refine in the same codebase. Use focused commits and intermediate validation without treating partial slices as finished features. An isolated demo is not a prerequisite for implementation.
 - When the work lands, update the governing documents and the map in the same change.

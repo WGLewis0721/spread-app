@@ -4,7 +4,9 @@ Start here for Spread's design rules and task-specific references.
 
 **Audience:** developers and coding agents. Keep design guidance in this folder.
 
-**Product model:** Responsibilities → Hours → Week → Tasks, local-first. **Native owner decision (Nov 4): only an animated full-width Wallet Stack on Spread**, with Week/Month and all planner actions preserved. React and landing retain separate rules.
+**Product:** Responsibilities → Hours → Week → Tasks, local-first. Native: one approved Wallet Stack; preserve Week/Month and planner actions. React and landing stay separate.
+
+**Delivery:** Build full features in the existing app on a development branch. Test and refine in place. No isolated prototypes. No merge or release without owner approval.
 
 ---
 
@@ -14,7 +16,7 @@ Stop at the first sufficient tier.
 
 | Tier | What | Size budget | When |
 | --- | --- | --- | --- |
-| 0 | The rules card, already copied into `AGENTS.project.md`, `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` ([source](RULES_CARD.md)) | 3 KB | Always loaded. Small tweaks stop here |
+| 0 | [Rules card](RULES_CARD.md) replicated into agent files | 3 KB | Always |
 | 1 | This map | 9 KB | To pick a pack |
 | 2 | Task pack in [packs/](packs/), with focused checklists and section pointers | 6.5 KB each | Almost every task |
 | 3 | Long reference docs, read only the relevant sections | n/a | Only when the pack says the detail matters |
@@ -33,7 +35,8 @@ Stop at the first sufficient tier.
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
 | iPhone, iPad, Duo and resize / hinge support | [packs/device-layout.md](packs/device-layout.md) | [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) and device guides |
-| Native controls, material, motion and accessibility | [packs/apple-native-feel.md](packs/apple-native-feel.md) | [Apple principles](platforms/APPLE_DESIGN_PRINCIPLES.md), [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) |
+| Apply iOS design language + UI/UX fundamentals | [packs/apple-native-feel.md](packs/apple-native-feel.md), [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md), [iOS audit](platforms/IOS27_BEHAVIOR_AUDIT.md), [tactile motion](tactile-precision/README.md) |
+| Tactile motion and haptic polish proposal | [tactile-precision/README.md](tactile-precision/README.md) | Life iOS spec has priority |
 | App icon, UI action icons, category badges | [brand/ICON_HANDOFF.md](brand/ICON_HANDOFF.md) | Files in `public/icons/` |
 | Why a planner behavior exists, or what was verified and deferred | [planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md](planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md) (historical record) | `ROADMAP.md` |
 | Wallpaper-driven personalization (Studio) | Section 5 below: it lives on a branch | |
@@ -61,6 +64,7 @@ All paths are under `docs/design/`.
 | [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Historical; five-mode direction superseded by Nov 4 owner choice |
 | planner/SPREAD_DESIGN_SYSTEM.md | React planner visuals, native behavior invariants | Governs legacy UI and behavior |
 | planner/SPREAD_NATIVE_BRAND_BOARD.md | Current SwiftUI: **single animated Wallet Stack**; [SVG](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Native-only PR #127; supersedes five-mode language |
+| [tactile-precision/](tactile-precision/README.md), [motion](tactile-precision/MOTION_CONTRACT.md), [QA](tactile-precision/VERIFICATION.md) | Proposed tactile motion | Draft; Life wins |
 | planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | Unified UX history | Historical only |
 | landing/DESIGN.md | Landing page | Highest for the landing page only, never for planner decisions. Frozen as `golden/2026-09-28-full-landing-modes` |
 | platforms/APPLE_DESIGN_PRINCIPLES.md | Native controls, sheets and contrast | Platform principles; native board preserves identity |
@@ -70,7 +74,7 @@ All paths are under `docs/design/`.
 | platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md | iPhone Duo | Same as above |
 | brand/ICON_HANDOFF.md | Icon files and placement (SVGs stay in `public/icons/`) | Highest for icon files |
 
-**Authority:** Verified planner behavior/data wins. Owner's Nov 4 single-Stack decision on the [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) controls SwiftUI presentation; [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) controls platform acceptance. Five-mode references are history. React and landing retain their rules.
+**Authority:** Verified store behavior wins. Native UI follows the [Wallet board](planner/SPREAD_NATIVE_BRAND_BOARD.md) and [iOS audit](platforms/IOS27_BEHAVIOR_AUDIT.md). Five-mode notes are historical. React and landing stay separate.
 
 ---
 
@@ -93,15 +97,15 @@ Studio lives on the `spread-studio` branch and is off by default. [Historical re
 ## 6. Design-adjacent material that stays where it is
 
 - Historical root handoffs: `SPREAD_NATIVE_UI_REMAINING_SPEC.md`, `CLAUDE_NATIVE_UI_HANDOFF.md`, `SPREAD_SWIFTUI_PARITY_SPEC.md`; defer to current native board.
-- `user-testing/`, `tools/launch-video/`, release/roadmap/audit docs are separate. Agent instruction files mirror [RULES_CARD.md](RULES_CARD.md).
+- Testing, videos and release records stay in their own areas. Agent files mirror [RULES_CARD.md](RULES_CARD.md).
 - Owner's concept images are in chat, not git; do not call them installed-build evidence.
 
 ---
 
 ## 7. Keeping the brain healthy
 
-- New design information goes in the document whose scope it matches. If none fits, add one in the right subfolder and a row to the router and the table. Each document links back to this file near the top. Specs go in `specs/`.
-- One home per fact: link instead of copying. The only deliberate copies are the generated card blocks. No design rules in `AGENTS.project.md`, `README.md` or `ROADMAP.md` outside that block.
+- Put new guidance in its scoped document; add map/router links. Every design doc links back here. Date specs in `specs/`.
+- One home per fact. Link, don't duplicate. Only generated rules-card blocks are copied.
 - After editing `src/styles.css` tokens run `npm run docs:tokens`. After editing the rules card run `npm run docs:sync`. `npm run docs:check` (also in `test:scripts` and CI) fails when either is stale, when a link or pack pointer breaks, or when a tier passes its budget.
 - A document over 6 KB opens with a `> Summary:` line under its breadcrumb. Keep section headings short and stable, because packs point at them; if you rename one, fix the pack the check names.
 - Record a decision in the document it changes and in [DECISIONS.md](DECISIONS.md), and remove it from the open list. When a document is superseded, say so at its top and name its replacement. Do not delete history.

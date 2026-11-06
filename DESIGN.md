@@ -5,6 +5,7 @@
 | Area | Read |
 | --- | --- |
 | Current SwiftUI identity and only Wallet-style Stack | [Native brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) |
+| Proposed tactile movement, Wallet/Hours/Crown feedback and QA | [Tactile Precision map](docs/design/tactile-precision/README.md) |
 | iOS 27 materials, adaptive behavior, accessibility and acceptance | [iOS 27 UX audit](docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md) |
 | Universal usability rules and UX laws | [UX fundamentals](docs/design/FOUNDATIONAL_UX_PRINCIPLES.md) |
 | React planner behavior and visuals | [Planner system](docs/design/planner/SPREAD_DESIGN_SYSTEM.md) |

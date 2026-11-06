@@ -77,7 +77,7 @@ Empty, first run, loading, error, overflow, offline, undo, refused action. One l
 | --- | --- | --- | --- |
 | | | | |
 
-## 9. Verification and prototype plan
+## 9. Verification and full-implementation plan
 
 ### Acceptance criteria
 Observable statements: "Given ..., when ..., then ...". No "code exists" criteria.
@@ -87,12 +87,12 @@ Observable statements: "Given ..., when ..., then ...". No "code exists" criteri
 - Browser: widths and modes, Reduce Motion, mouse and touch, no horizontal scroll.
 - Owed on a physical device (list them): drag feel, haptics, blur performance, VoiceOver, offline.
 
-### Prototype plan (when feel is the open question)
-- **What must be real:**
-- **What can be faked:**
-- **Where it will be used:**
+### Full-feature implementation and refinement plan
+- **Build location:** Existing app on a dedicated feature branch. No isolated or throwaway prototype or second planner store.
+- **Complete scope:** List all features that must work together before acceptance; focused internal commits are fine.
+- **Verification:** Test against the authoritative planner, approved references and target devices; record missing hardware evidence honestly.
+- **Refinement loop:** Run the integrated implementation, fix usability/motion/accessibility issues in place, then repeat tests.
 - **Questions for the tester:** Do you know how to do this? Is it easy? How can we make it better?
-- The prototype is disposable. The real version is written afterward.
 
 ## 10. Rollout, rollback and release
 
