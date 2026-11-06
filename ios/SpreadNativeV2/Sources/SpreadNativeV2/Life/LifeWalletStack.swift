@@ -122,21 +122,7 @@ private struct LifeWalletFace: View {
     var body: some View {
         ZStack {
             revealedActions
-            Button {
-                if Date() >= ignoreTapUntil { onSelect() }
-            } label: {
-                cardSurface
-            }
-            .buttonStyle(.spreadPress)
-            .accessibilityLabel("\(role.name), \(SpreadHours.spoken(hours))")
-            .accessibilityValue(selected ? "Focused" : "Closed")
-            .accessibilityHint("Show this area's tasks")
-            .accessibilityAddTraits(selected ? .isSelected : [])
-            .accessibilityAction(named: "Manage") { onManage() }
-            .accessibilityAction(named: "Delete") { onDelete() }
-            .accessibilityAction(named: "Edit Life areas") { onBeginEdit() }
-            .onLongPressGesture(minimumDuration: 0.55, perform: onBeginEdit)
-            .simultaneousGesture(swipe)
+            selectionButton
         }
         .clipShape(RoundedRectangle(cornerRadius: 23))
         .onChange(of: dragging) { _, active in if !active { translation = 0 } }
@@ -149,6 +135,30 @@ private struct LifeWalletFace: View {
         }
         .accessibilityIdentifier("life-card-\(role.id)")
     }
+    // Resolve formatting as String before entering SwiftUI's overloaded text builders.
+    private var spokenLabel: String {
+        let spokenHours: String = SpreadHours.spoken(hours)
+        return role.name + ", " + spokenHours
+    }
+
+    private var selectionButton: some View {
+        Button {
+            if Date() >= ignoreTapUntil { onSelect() }
+        } label: {
+            cardSurface
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityLabel(Text(spokenLabel))
+        .accessibilityValue(selected ? "Focused" : "Closed")
+        .accessibilityHint("Show this area's tasks")
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityAction(named: "Manage") { onManage() }
+        .accessibilityAction(named: "Delete") { onDelete() }
+        .accessibilityAction(named: "Edit Life areas") { onBeginEdit() }
+        .onLongPressGesture(minimumDuration: 0.55, perform: onBeginEdit)
+        .simultaneousGesture(swipe)
+    }
+
     private var roleColor: Color { Color(hex: role.color) }
 
     // Keep each SwiftUI builder small enough for the release compiler to solve.
