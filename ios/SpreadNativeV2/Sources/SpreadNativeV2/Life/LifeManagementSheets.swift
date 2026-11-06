@@ -11,7 +11,7 @@ struct LifeManageSheet: View {
     @State private var revision: Int?
     @State private var saving = false
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             Form {
                 Section("Life area") {
                     TextField("Name", text: $name).accessibilityIdentifier("life-area-name")
@@ -43,7 +43,7 @@ struct LifeManageSheet: View {
                     }
                 }
                 if let error = planner.error { Text(error).foregroundStyle(Spread.danger) }
-            }
+            }.spreadListSurface()
             .navigationTitle("Manage Life area").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(saving) }
@@ -97,7 +97,9 @@ struct LifeDeleteSheet: View {
                 }.frame(minHeight: 44).disabled(saving)
                 Button("Cancel") { dismiss() }.frame(minHeight: 44).disabled(saving)
             }.padding(24)
-        }.presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
+        }.background(Spread.canvas).tint(Spread.accent)
+            .presentationBackground(Spread.canvas)
+            .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
     }
 }
 
@@ -106,7 +108,7 @@ struct LifeReserveSheet: View {
     let roleId: String
     @Environment(\.dismiss) private var dismiss
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             ScrollView {
                 if let snapshot = planner.snapshot, let role = snapshot.roles.first(where: { $0.id == roleId }) {
                     VStack(alignment: .leading, spacing: 16) {
@@ -137,7 +139,7 @@ struct LifeReserveSheet: View {
                         if let error = planner.error { Text(error).font(.body).foregroundStyle(Spread.danger) }
                     }.padding(20)
                 }
-            }
+            }.spreadListSurface()
             .navigationTitle("Place hours").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }.presentationDragIndicator(.visible)
@@ -164,7 +166,7 @@ struct LifePrioritySheet: View {
     @State private var previewRevision: Int?
     @State private var working = false
     var body: some View {
-        NavigationStack {
+        SpreadSheetStack {
             Form {
                 Section("Prioritize this week") {
                     Text(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "Life area").font(.headline)
@@ -214,7 +216,7 @@ struct LifePrioritySheet: View {
                     }
                 }
                 if let error = planner.error { Text(error).foregroundStyle(Spread.danger) }
-            }
+            }.spreadListSurface()
             .navigationTitle("Weekly priority").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() }.disabled(working) } }
         }
