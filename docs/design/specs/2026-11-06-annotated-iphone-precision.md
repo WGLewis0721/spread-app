@@ -91,3 +91,23 @@ W4 supersedes W2's earlier “in line with” placement: the bubble row belongs 
 ## Intake complete
 
 The owner said “Done” after Photo 6. The instruction to wait for annotations is now satisfied. Proceed with implementation of the 24 recorded items on this development branch, preserving the stated application/data boundaries. No merge or deployment authorization has been given for PR #153.
+
+## Clarifications confirmed by owner
+
+- Center: normally show total weekly planning budget, with hours left to assign beneath. Selecting a Life arc temporarily shows that area's hours.
+- Dial: left adds hours to the selected area; right returns hours to the weekly pool, in half-hour detents.
+- Week bubbles: transfer exactly one hour from the selected area's unplaced budget to the focused day.
+- Implementation assumption for the unanswered remainder alternative: disable the one-hour action if less than one hour is available; never silently transfer a different amount.
+- Life cards: enlarge text and animated artwork rather than shrinking cards.
+- Undo/Redo: hide after five seconds without edits; retain history and accessible actions in the navigation tray.
+
+## L8 — Wallet-style continuity (additional owner requirement)
+
+Life cards must slide up/down through selection and return transitions rather than appearing/disappearing instantaneously. Keep stable card identities and rigid card faces; move neighboring cards continuously into their resting stack positions. Preserve separate task details. Interrupting or reversing a transition must continue from the current presentation without teleporting or resetting the stack. Respect Reduce Motion.
+
+Research references:
+- https://www.apple.com/wallet/
+- https://developer.apple.com/documentation/uikit/uiviewimplicitlyanimating
+- https://developer.apple.com/documentation/uikit/animation-and-haptics
+
+These sources establish Wallet context and interruptible animation APIs, not exact Wallet timing/geometry. The vertical movement contract above comes from the owner's explicit direction; native comparison is still required. Total annotation items: 25.
