@@ -64,9 +64,19 @@ final class LifeUITests: XCTestCase {
         XCTAssertTrue(manage.waitForExistence(timeout: 10), "Only an Edit-mode left swipe reveals Manage")
         XCTAssertFalse(delete.exists)
         capture("life-card-edit-swipe-manage")
+        card.swipeRight()
+        if !delete.exists { card.swipeRight() } // A first swipe may settle at neutral.
+        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Only an Edit-mode right swipe reveals Delete")
+        XCTAssertFalse(manage.exists)
+        capture("life-card-edit-swipe-delete")
         edit.tap()
         XCTAssertFalse(manage.exists, "Manage remains after leaving Edit")
         XCTAssertFalse(delete.exists, "Delete remains after leaving Edit")
+        navigate("week")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-week-page").firstMatch
+            .waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'life-reveal-'")).firstMatch.exists,
+                       "Week cards have no Edit mode and must never expose Manage/Delete")
     }
 
     func testLifeNavigationAndUnmodifiedMoreReachability() {
