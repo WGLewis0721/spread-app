@@ -181,13 +181,15 @@ private struct LifeWalletFace: View {
                 Label("Delete", systemImage: "trash").font(.subheadline)
                     .frame(width: 92, height: cardHeight).foregroundStyle(.white)
                     .background(Spread.danger, in: RoundedRectangle(cornerRadius: 24))
-            }.accessibilityHidden(!editing || reveal <= 0).allowsHitTesting(editing && reveal > 0)
+            }.accessibilityIdentifier("life-reveal-delete-\(role.id)")
+                .accessibilityHidden(!editing || reveal <= 0).allowsHitTesting(editing && reveal > 0)
             Spacer(minLength: 0)
             Button(action: onManage) {
                 Label("Manage", systemImage: "pencil").font(.subheadline)
                     .frame(width: 92, height: cardHeight).foregroundStyle(.white)
                     .background(LifePalette.accent, in: RoundedRectangle(cornerRadius: 24))
-            }.accessibilityHidden(!editing || reveal >= 0).allowsHitTesting(editing && reveal < 0)
+            }.accessibilityIdentifier("life-reveal-manage-\(role.id)")
+                .accessibilityHidden(!editing || reveal >= 0).allowsHitTesting(editing && reveal < 0)
         }
     }
 
