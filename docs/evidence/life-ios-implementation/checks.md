@@ -28,8 +28,10 @@ Ubuntu 26.04.1 x86_64, Node/npm from sandbox. Official Swift 6.4.2 Ubuntu26.04 a
 | reference npm ci --ignore-scripts | passed, no audit vulnerabilities |
 | reference pure model/math/planning tests | 16 passed |
 | reference production build | passed |
+| reference iPhone browser suite | 50 passed, official Chrome/WebKit, one worker |
+| reference desktop browser suite | 8 passed, official Chrome, one worker |
 
-Frozen reference started unmodified on port4183 using Vite's additional-host environment variable. Browser acceptance runs use official Google Chrome and Playwright WebKit with one worker; final totals are recorded below after completion. These are **reference demo** tests, not native app evidence.
+Frozen reference started unmodified on port4183 using Vite's additional-host environment variable. Browser acceptance runs used official Google Chrome and Playwright WebKit with one worker: iPhone50/50 passed (3.4m), desktop8/8 passed (32.4s). All frozen-reference tracked files remain unchanged. The matrix exercises375/390/430 in both appearances; persisted matrix screenshots are390 only, under tools/life-reference/screenshots/iphone. These are **reference demo** tests, not native app evidence.
 
 ## Dependency audit inherited from baseline
 
