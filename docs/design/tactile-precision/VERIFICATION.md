@@ -33,7 +33,7 @@ Treat all uncollected evidence as **not tested**. Reference-browser captures are
 
 ## 3. Motion and accessibility gates
 
-- Compare the same screen and action against the **current approved native/Life baseline** and an isolated candidate. Record finger-down response, reversal during animation, threshold crossing, settle position, and any delayed tap.
+- Compare the same screen and action between the **current approved native/Life baseline** and the full feature implementation branch. Record finger-down response, reversal during animation, threshold crossing, settle position, and any delayed tap.
 - Target next-render visual response; measure end-to-end input latency and long-frame counts on real hardware. Aim for stable 60 fps on 60 Hz devices and 120 fps only where device support allows. These are measurement goals, not pass claims.
 - Haptic event review: no duplicate events per detent, no event when setting is disabled, no success on a rejected command, no repeated boundary buzz. Capture event logs where possible; include qualitative physical-device feedback.
 - Repeat every core journey with Reduce Motion and enlarged Dynamic Type. Also test VoiceOver, Increase Contrast, Reduce Transparency, landscape, external keyboard and a switch-accessible alternative where applicable.
@@ -65,8 +65,8 @@ This documentation-only PR does not run the app or certify any of the above. CI/
 ## 6. Rollout and rollback
 
 - **Stage A, design only:** this folder and map links, with zero production-code changes.
-- **Stage B, isolated prototype:** side-by-side measured current vs candidate motion on a disposable profile. No changes to frozen reference. Capture acceptance videos and owner feedback.
-- **Stage C, gated implementation:** separate small PRs for shared motion, Wallet/details, Crown/Hours, and Week/tasks, each with source inspection, tests and rollback. Put new polish only in an existing opt-in Life preview unless the owner explicitly approves broader adoption.
+- **Stage B, full in-app implementation:** Build all scoped motion, Wallet/details, Crown/Hours, sidebar and Week/task changes in the actual native feature branch. Use existing planner commands and a disposable local test profile. No isolated demo or parallel store. Preserve the frozen reference.
+- **Stage C, iterative refinement and release gate:** Run automated tests and full native journeys, capture matched recordings, tune animations and haptics on physical hardware, fix discrepancies on the same feature branch, then seek owner acceptance. Keep Classic protected and Life behind its existing opt-in choice unless explicitly authorized otherwise.
 - **Rollback:** revert an individual motion PR or disable preview and use untouched Classic. Never migrate/delete planner data as part of animation rollback.
 - **Release authority:** no merge, Codemagic candidate, TestFlight upload or App Store release without explicit approval and the existing release-control checks.
 
