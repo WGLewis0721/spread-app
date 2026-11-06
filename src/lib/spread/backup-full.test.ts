@@ -1,3 +1,4 @@
+import { recoverNativeFiles, verifyNativeFiles } from "./native-life-files.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { backupFile, collectFullPayload, fullBackupText, parseAnyBackup, parseFullBackup, planRestoreAsNew } from "./backup.ts";
@@ -316,4 +317,38 @@ test("native archive carries bytes, rich content, estimates and Life priority in
   await assert.rejects(fullBackupText(payload), /incomplete or damaged/);
   delete payload.nativeFiles;
   await assert.rejects(fullBackupText(payload), /unavailable/);
+});
+
+test("native recovery orders durable bytes before commit and cleans only rejected transactions", async () => {
+  const calls: string[] = [];
+  const bridge = {
+    read: async () => ({ base64: "" }),
+    install: async () => { calls.push("install"); return { transaction: "token" }; },
+    rollback: async ({ transaction }: { transaction: string }) => { calls.push("rollback:" + transaction); },
+    finish: async ({ transaction }: { transaction: string }) => { calls.push("finish:" + transaction); },
+  };
+  assert.deepEqual(await recoverNativeFiles([], () => { calls.push("commit"); return { ok: true }; }, bridge), { ok: true });
+  assert.deepEqual(calls, ["install", "commit", "finish:token"]);
+  calls.length = 0;
+  await recoverNativeFiles([], () => { calls.push("commit"); return { ok: false }; }, bridge);
+  assert.deepEqual(calls, ["install", "commit", "rollback:token"]);
+  calls.length = 0;
+  await assert.rejects(recoverNativeFiles([], () => { throw new Error("storage"); }, bridge), /storage/);
+  assert.deepEqual(calls, ["install", "rollback:token"]);
+  calls.length = 0;
+  await assert.rejects(recoverNativeFiles([], () => { calls.push("commit"); return { ok: true }; }, {
+    ...bridge, install: async () => { throw new Error("copy failed"); },
+  }), /copy failed/);
+  assert.deepEqual(calls, [], "no planner commit after copy failure");
+});
+
+test("archive file validation rejects wrong profile, missing bytes and duplicate entries", async () => {
+  const file = { id: "12345678-1234-4234-8234-123456789abc", name: "hello.txt", mimeType: "text/plain", byteCount: 5, checksum: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824" };
+  const stores = { source: JSON.stringify({ tasks: [{ id: "task", content: { blocks: [{ type: "file", file }] } }] }) };
+  const entry = { profileId: "source", taskId: "task", file, base64: "aGVsbG8=" };
+  assert.equal(await verifyNativeFiles(stores, [entry]), true);
+  assert.equal(await verifyNativeFiles(stores, [{ ...entry, profileId: "other" }]), false);
+  assert.equal(await verifyNativeFiles(stores, []), false);
+  assert.equal(await verifyNativeFiles(stores, [entry, entry]), false);
+  assert.equal(await verifyNativeFiles(stores, [{ ...entry, file: { ...file, byteCount: 26 * 1024 * 1024 } }]), false);
 });
