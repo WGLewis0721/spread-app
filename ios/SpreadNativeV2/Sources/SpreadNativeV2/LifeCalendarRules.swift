@@ -40,6 +40,12 @@ enum LifeCalendarRules {
     }
     static func dailyTasks(_ snapshot: PlannerSnapshot, day: String, roleId: String) -> [PlannerTask] {
         let ids = Set(snapshot.allocations.filter { $0.day == day && $0.roleId == roleId && $0.hours > 0 }.map(\.id))
-        return snapshot.tasks.filter { $0.roleId == roleId && $0.allocationId.map(ids.contains) == true }
+        let tasks = snapshot.tasks.filter { $0.roleId == roleId && $0.allocationId.map(ids.contains) == true }
+        let order = snapshot.dayTaskOrder?[day + "|" + roleId] ?? []
+        return tasks.enumerated().sorted { left, right in
+            let a = order.firstIndex(of: left.element.id) ?? (order.count + left.offset)
+            let b = order.firstIndex(of: right.element.id) ?? (order.count + right.offset)
+            return a < b
+        }.map(\.element)
     }
 }
