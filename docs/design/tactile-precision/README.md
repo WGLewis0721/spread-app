@@ -11,7 +11,8 @@
 | Need | Read | Authority |
 | --- | --- | --- |
 | Why, options, approval and scope | [Dated spec](../specs/2026-11-06-tactile-precision.md) | Proposal and decision record |
-| Gesture physics, state transitions, motion/haptics | [Motion contract](MOTION_CONTRACT.md) | Proposed implementation targets, not an override |
+| Gesture physics, state transitions, motion/haptics | [Motion contract](MOTION_CONTRACT.md) | Native targets, not visual override |
+| 20 animation tuning suggestions and source links | [Animation tuning guide](ANIMATION_TUNING_GUIDE.md) | Applied vs conditional vs rejected, code map |
 | Measurable checks, ownership, rollback and evidence | [Verification and release gates](VERIFICATION.md) | Acceptance plan |
 | Approved Life behavior and unchanged demo | [Life iOS spec](../../../SPREAD_LIFE_IOS_SPEC.md), [handoff](../../../SPREAD_LIFE_IOS_HANDOFF.md), [reference](../../../tools/life-reference/README.md) | Higher authority for current Life acceptance |
 | Current native identity | [Native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md) | Higher authority for visual language |
