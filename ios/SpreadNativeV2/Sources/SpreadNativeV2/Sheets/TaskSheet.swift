@@ -54,6 +54,8 @@ struct TaskSheet: View {
     @State private var title = ""
     @State private var content = NativeTaskContent()
     @State private var loaded = false
+    @State private var originProfile: String?
+    @State private var originWeek: String?
     @State private var expandedNote: String?
     @State private var showFormats = false
     @State private var saveTask: Task<Void, Never>?
@@ -70,7 +72,11 @@ struct TaskSheet: View {
     /// Which rich-content field has the keyboard. Only set when the user adds a line, row or column.
     @FocusState private var focusedField: String?
 
-    private var task: PlannerTask? { planner.snapshot?.tasks.first { $0.id == taskId } }
+    private var task: PlannerTask? {
+        if let originProfile, planner.state?.envelope.profileId != originProfile { return nil }
+        if let originWeek, planner.snapshot?.weekKey != originWeek { return nil }
+        return planner.snapshot?.tasks.first { $0.id == taskId }
+    }
     private var supported: Bool { content.blocks.allSatisfy { editableKinds.contains($0.type) && ($0.richText == nil || $0.richText?.version == 1) && !($0.preserved["richText"] != nil && $0.richText == nil) } }
 
     var body: some View {
@@ -253,6 +259,8 @@ struct TaskSheet: View {
     // MARK: Loading and saving
 
     private func load() async {
+        originProfile = planner.state?.envelope.profileId
+        originWeek = planner.snapshot?.weekKey
         if await planner.send(["type": "readTaskContent", "roleId": roleId, "taskId": taskId]), let value = planner.details[taskId] {
             content = value
             loaded = true
@@ -261,6 +269,7 @@ struct TaskSheet: View {
 
     /// Store acknowledgements, not the debounce timer, determine whether content is saved.
     private func persistContent(_ draft: NativeTaskContent) async -> Bool {
+        guard task != nil, planner.state?.envelope.profileId == originProfile, planner.snapshot?.weekKey == originWeek else { return false }
         guard let encoded = try? JSONEncoder().encode(draft),
               let object = try? JSONSerialization.jsonObject(with: encoded) else { return false }
         return await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
@@ -470,6 +479,9 @@ struct TaskSheet: View {
                 Spacer()
                 Button { expandedNote = nil } label: { Text("Done").font(.system(.subheadline, weight: .semibold)).tapTarget() }
             }
+            if lifeMode {
+                lifeNotesEditor(block).frame(minHeight: 360)
+            } else {
             TextEditor(text: Binding(get: {
             content.blocks.first(where: { $0.id == block.id })?.text ?? ""
         }, set: { value in
@@ -480,6 +492,7 @@ struct TaskSheet: View {
                 .frame(minHeight: 360)
                 .scrollContentBackground(.hidden)
                 .accessibilityLabel("Notes, expanded")
+            }
         }
     }
 
