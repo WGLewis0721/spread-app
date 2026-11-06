@@ -812,3 +812,24 @@ test("Unknown Life metadata remains recoverable and blocks older-build Life writ
     assert.deepEqual(useSpread.getState().data.weeks[data.currentWeek].life, future);
   } finally { router.dispose(); }
 });
+
+
+test("Saving an unfunded weekly priority records the goal without reserving or borrowing, and clear removes it", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const data = useSpread.getState().data;
+    const before = structuredClone(data.weeks[data.currentWeek]);
+    const saved = await router.dispatch(request({ type: "setLifePriority", priorityRoleId: roleId, goalHours: 18, day: data.currentWeek }));
+    assert.equal(saved.ok, true);
+    const week = useSpread.getState().data.weeks[data.currentWeek];
+    assert.deepEqual(week.boxes, before.boxes);
+    assert.deepEqual(week.allocations, before.allocations);
+    assert.equal(week.life?.capacityHours, undefined);
+    assert.equal(week.life?.priorityGoalHours, 18);
+    assert.equal((await router.dispatch(request({ type: "setLifePriority", priorityRoleId: roleId, goalHours: 18 }))).error, "invalid-priority");
+    const cleared = await router.dispatch(request({ type: "setLifePriority", priorityRoleId: null }));
+    assert.equal(cleared.ok, true);
+    assert.equal(useSpread.getState().data.weeks[data.currentWeek].life?.priorityGoalHours, undefined);
+    assert.equal(useSpread.getState().data.weeks[data.currentWeek].life?.priorityDay, undefined);
+  } finally { router.dispose(); }
+});
