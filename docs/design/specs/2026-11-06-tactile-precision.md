@@ -33,7 +33,7 @@ Someone planning a busy week moves between their life-area cards, time allocatio
 
 **Non-goals:** A game-like fidget mode, compulsive reward loops, extra navigation destination, new visual palette or fonts, sweeping React redesign, a new scheduler, changes to approved Life reference, new data schema, or release authorization.
 
-**Appetite:** One isolated prototype and several focused implementation PRs, only after owner review. Do not accept broad platform rewrite or new dependencies as the cost of polish.
+**Appetite:** Build the full, integrated native feature set on a dedicated implementation branch, then run automated/device checks and refine in place until acceptance. Use focused commits and testable milestones inside that branch, not isolated or throwaway prototypes. No broad platform rewrite or new dependencies for cosmetic polish.
 
 ## 4. Rules that apply and exceptions needed
 
@@ -46,7 +46,7 @@ Someone planning a busy week moves between their life-area cards, time allocatio
 | [Apple-native pack](../packs/apple-native-feel.md), checklist | Reduce Motion, VoiceOver, Dynamic Type, haptics and device QA are required. |
 | [Rules card](../RULES_CARD.md), Boundaries | Native polish cannot mutate cloud, backup, schemas or planner data architecture. |
 
-**Exceptions needed:** If a prototype proposes always-visible sibling cards while Life is focused, or changes the approved curve/gesture behavior, record a before/after comparison and obtain owner approval first. No new visual or data exception is granted here.
+**Exceptions needed:** If the implementation changes approved sibling-card focus behavior, timing or gesture semantics, record a before/after comparison and get explicit owner approval for the deviation before merging. No new visual or data exception is granted here.
 
 ## 5. Options and the chosen concept
 
@@ -95,14 +95,14 @@ Read the one detailed source of truth for each: [Motion contract](../tactile-pre
 
 | Item | Impact | Proposed default | Decision owner |
 | --- | --- | --- | --- |
-| Current Life focus hides sibling cards | Proposed visible peeks may contradict approved reference | Preserve current focus until a comparative prototype is approved | Product owner |
+| Current Life focus hides sibling cards | Proposed visible peeks may contradict approved reference | Preserve current focus unless owner approves a matched in-app comparison | Product owner |
 | Shorter springs versus current 420 ms curve | Can reduce clarity or feel twitchy | Measure and retain current behavior if candidate is not better | Product/design + QA |
 | Swipe conflict in dense Week | Accidental navigation or destructive reveal | Distinct gesture zones with explicit tap alternatives | Native engineer + owner |
 | Reorder persistence | May require unsupported schema action | Prototype only; separate data change if necessary | Planner engineer + owner |
 | Duplicate haptic emitters | Annoying or deceptive feedback | Centralize cue policy and verify exact event counts | iOS engineer |
 | Duo hardware unavailable | Cannot claim physical parity | Mark NO-GO, record missing evidence | Release owner |
 
-## 9. Verification and prototype plan
+## 9. Verification and full-implementation plan
 
 ### Acceptance criteria
 
@@ -112,19 +112,20 @@ The 12 executable Given/When/Then cases are in [verification](../tactile-precisi
 
 Run documented typecheck, lint, planner/script/native tests, build and docs:check in the future code PR. Validate 390/393, 820, 1024 and 1366 pt, light/dark and Reduce Motion. Physical device needed for drag timing, haptic character, thermal/long-frame behavior and accessibility. This documents proposed work; it does not mark those checks as passing.
 
-### Prototype plan
+### Full-feature build and refinement plan
 
-- **Real:** finger tracking, threshold logic, animation interruption, semantic controls, and (in native prototype) actual haptics.
-- **May be faked:** sample responsibility/task content and nonpersistent demo planning, explicitly labeled.
-- **Where:** isolated prototype first; side-by-side with current frozen browser demo, then real iPhone with a disposable planner profile.
-- **Questions:** Can you tell what will happen before you lift your finger? Can you stop or reverse an action immediately? Does any animation make planning slower?
+- **No isolated prototyping:** Implement all scoped Wallet, Hours, Crown, Week, sidebar and task interactions in the existing native app architecture on a dedicated feature branch. Use genuine planner-store commands, not a second sample store.
+- **Incremental verification, complete delivery:** Use focused internal commits and automated checks while building, but deliver and evaluate the complete integrated feature set in its implementation PR. Refine motion, usability and accessibility in that same codebase after the behavior exists.
+- **Comparison:** Keep the approved browser reference unchanged; compare the built native experience with the approved reference using a disposable local profile and realistic tasks. Never call the reference an alternate shipping UI.
+- **Devices:** Test actual touch motion and haptics on physical iPhone, then the supported iPhone, Duo and iPad layout matrix; label unavailable hardware as an evidence gap.
+- **Questions for testers:** Can you predict what will happen before lifting your finger? Can you reverse an action immediately? Does any animation slow down a real planning task?
 
 ## 10. Rollout, rollback and release
 
-Documentation-only branch and review PR first. Later split implementation into shared motion; Wallet/details; Hours/Crown; Week/task gestures. Each requires code inspection, automated and device evidence, owner acceptance and a rollback path. Keep Classic unchanged and Life opt-in. Rollback by reverting the narrow PR or selecting Classic; do not migrate data for motion polish. No merge, deployment, Codemagic upload, TestFlight or App Store release is authorized here.
+Documentation-only branch and review PR first. Then build the complete tactile system in the existing application on a dedicated feature branch, using focused commits rather than separate isolated demos. Integrate Wallet/details, sidebar, Crown/Hours and Week/tasks, run automated tests and physical-device QA, and refine the finished feature until acceptance. Keep Classic unchanged and Life opt-in. Rollback by reverting the feature branch/PR or selecting Classic; never migrate data for motion polish. No merge, deployment, Codemagic upload, TestFlight or App Store release is authorized here.
 
 ## 11. Decision record
 
 | Date | Decision | By | Documents updated |
 | --- | --- | --- | --- |
-| 2026-11-06 | Document unified tactile feedback, fluid movement and predictable repeatability as a proposed design language; preserve all higher-authority approved baselines pending prototype review. | Owner request; specification | [Tactile Precision folder](../tactile-precision/README.md), [design decisions](../DECISIONS.md), [design map](../README.md) |
+| 2026-11-06 | Document unified tactile feedback, fluid movement and predictable repeatability as a proposed design language; preserve all higher-authority approved baselines during full in-app implementation and review. | Owner request; specification | [Tactile Precision folder](../tactile-precision/README.md), [design decisions](../DECISIONS.md), [design map](../README.md) |
