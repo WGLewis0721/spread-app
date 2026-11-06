@@ -737,7 +737,7 @@ export const useSpread = create<Store>((set, get) => ({
     for (const [key, week] of Object.entries(data.weeks)) {
       weeks[key] = {
         ...week,
-        ...(week.life?.priorityRoleId === hatId ? { life: { ...week.life, priorityRoleId: undefined } } : {}),
+        ...(week.life?.priorityRoleId === hatId ? { life: { ...week.life, priorityRoleId: undefined, priorityGoalHours: undefined, priorityDay: undefined } } : {}),
         boxes: week.boxes.filter((box) => box.hatId !== hatId),
         allocations: (week.allocations ?? []).filter((item) => item.hatId !== hatId),
       };
