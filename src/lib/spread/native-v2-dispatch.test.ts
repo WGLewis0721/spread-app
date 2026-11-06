@@ -81,6 +81,39 @@ for (const [field, value, error] of [
     }
   });
 }
+test("Life capacity and budgets are week-only, guarded, projected and undoable", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const initial = router.read()!;
+    assert.equal(initial.envelope.snapshot.life, undefined);
+    assert.equal((await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 3 }))).error, "capacity-not-set");
+    const setupCapacity = await router.dispatch(request({ type: "setLifeCapacity", hours: 18 }));
+    assert.equal(setupCapacity.ok, true);
+    const before = useSpread.getState().data;
+    const oldDefault = before.hats.find((hat) => hat.id === roleId)!.defaultHours;
+    const changed = await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 5.5 }));
+    assert.equal(changed.ok, true);
+    assert.equal(router.read()!.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 5.5);
+    assert.equal(useSpread.getState().data.hats.find((hat) => hat.id === roleId)?.defaultHours, oldDefault);
+    assert.equal((await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 1 }))).error, "budget-below-reserved");
+    assert.equal((await router.dispatch(request({ type: "setLifeCapacity", hours: 1 }))).error, "capacity-below-assigned");
+    assert.equal((await router.dispatch(request({ type: "undo", editId: changed.undoId }))).ok, true);
+    assert.equal(router.read()!.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 8);
+    assert.equal((await router.dispatch(request({ type: "redo", editId: changed.undoId }))).ok, true);
+    assert.equal(router.read()!.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 5.5);
+    assert.equal(useSpread.getState().data.weeks[before.currentWeek].life?.capacityHours, 18);
+  } finally { router.dispose(); }
+});
+test("Life estimate is optional and never reserves hours", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    assert.equal(router.read()!.envelope.snapshot.tasks[0].estimateMinutes, undefined);
+    assert.equal((await router.dispatch(request({ type: "setTaskEstimate", roleId, taskId: "task", minutes: 45 }))).ok, true);
+    assert.equal(router.read()!.envelope.snapshot.tasks[0].estimateMinutes, 45);
+    assert.equal(router.read()!.envelope.snapshot.allocations[0].hours, 2);
+    assert.equal((await router.dispatch(request({ type: "setTaskEstimate", roleId, taskId: "task", minutes: 20 }))).error, "invalid-command");
+  } finally { router.dispose(); }
+});
 test("serialized concurrent retries toggle once, conflicting identity is refused", async () => {
   const { router, request, roleId } = setup();
   try {

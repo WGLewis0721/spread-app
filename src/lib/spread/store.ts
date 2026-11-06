@@ -49,6 +49,7 @@ import {
   type SpreadData,
   type TaskContent,
   type WeekData,
+  TASK_ESTIMATE_CHOICES,
 } from "@/lib/spread/model";
 
 export type ThemeChoice = "system" | "light" | "dark";
@@ -92,6 +93,10 @@ type Store = {
   moveWeek: (direction: -1 | 1 | "today") => void;
   openWeek: (key: string) => void;
   setHours: (hatId: string, hours: number) => void;
+  /** Life-only week budget. Unlike setHours, never changes a role's global default. */
+  setLifeBudget: (hatId: string, hours: number) => boolean;
+  setLifeCapacity: (hours: number) => boolean;
+  setLifePriority: (hatId: string | null) => boolean;
   renameHat: (hatId: string, name: string) => void;
   removeHat: (hatId: string) => void;
   addHat: (name: string, hours: number, options?: { category?: SpreadCategory }) => void;
@@ -110,6 +115,7 @@ type Store = {
   reorderDayTask: (hatId: string, day: string, taskId: string, beforeId: string | null) => boolean;
   setTaskText: (hatId: string, taskId: string, text: string) => void;
   setTaskContent: (hatId: string, taskId: string, content: TaskContent) => void;
+  setTaskEstimate: (hatId: string, taskId: string, minutes: number | null) => boolean;
   setHatColor: (hatId: string, color: string) => void;
   setHatCategory: (hatId: string, category: SpreadCategory) => void;
   addAllocation: (hatId: string, day: string, hours?: number) => void;
@@ -125,6 +131,7 @@ type Store = {
   undoable: (run: () => void) => string | null;
   /** Reverse that change. False when the week has changed since, so newer work is never overwritten. */
   undoEdit: (editId: string) => boolean;
+  redoEdit: (editId: string) => boolean;
   /** Put a task on a day (an allocation of its own role), or take it off every day with null. */
   assignTask: (hatId: string, taskId: string, allocationId: string | null) => { ok: true; changed: boolean } | { ok: false; reason: AssignFailure };
   rollover: (force?: boolean) => "done" | "confirm" | "empty";
@@ -398,6 +405,7 @@ function persist(data: SpreadData) {
 }
 
 let editStack: WeekEdit[] = [];
+let redoStack: WeekEdit[] = [];
 
 let pending: SpreadData | null = null;
 let persistTimer: number | null = null;
@@ -618,6 +626,37 @@ export const useSpread = create<Store>((set, get) => ({
     data.hats = data.hats.map((hat) => (hat.id === hatId ? { ...hat, defaultHours: value } : hat));
     commit(set, data);
   },
+  setLifeCapacity: (hours) => {
+    if (!Number.isFinite(hours) || hours < 0 || hours > 168 || !Number.isInteger(hours * 2)) return false;
+    const data = ensureWeek(get().data);
+    const week = data.weeks[data.currentWeek];
+    const assigned = week.boxes.reduce((total, box) => total + box.hours, 0);
+    if (assigned > hours) return false; // Never repair an existing over-capacity plan.
+    commit(set, writeWeek(data, { ...week, life: { ...week.life, version: 1, capacityHours: hours } }));
+    return true;
+  },
+  setLifeBudget: (hatId, hours) => {
+    if (!Number.isFinite(hours) || hours < 0 || hours > 168 || !Number.isInteger(hours * 2)) return false;
+    const data = ensureWeek(get().data);
+    const week = data.weeks[data.currentWeek];
+    const existing = week.boxes.find((box) => box.hatId === hatId);
+    const capacity = week.life?.capacityHours;
+    if (!existing || capacity === undefined) return false;
+    const reserved = week.allocations.filter((item) => item.hatId === hatId).reduce((sum, item) => sum + item.hours, 0);
+    const assigned = week.boxes.reduce((sum, item) => sum + (item.hatId === hatId ? hours : item.hours), 0);
+    if (hours < reserved || assigned > capacity) return false;
+    const boxes = week.boxes.map((box) => box.hatId === hatId ? { ...box, hours } : box);
+    commit(set, writeWeek(data, { ...week, boxes }));
+    return true;
+  },
+  setLifePriority: (hatId) => {
+    const data = ensureWeek(get().data);
+    if (hatId !== null && !data.hats.some((role) => role.id === hatId)) return false;
+    const week = data.weeks[data.currentWeek];
+    commit(set, writeWeek(data, { ...week,
+      life: { ...week.life, version: 1, priorityRoleId: hatId ?? undefined } }));
+    return true;
+  },
   renameHat: (hatId, name) => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -630,6 +669,8 @@ export const useSpread = create<Store>((set, get) => ({
     const weeks: SpreadData["weeks"] = {};
     for (const [key, week] of Object.entries(data.weeks)) {
       weeks[key] = {
+        ...week,
+        ...(week.life?.priorityRoleId === hatId ? { life: { ...week.life, priorityRoleId: undefined } } : {}),
         boxes: week.boxes.filter((box) => box.hatId !== hatId),
         allocations: (week.allocations ?? []).filter((item) => item.hatId !== hatId),
       };
@@ -658,7 +699,7 @@ export const useSpread = create<Store>((set, get) => ({
     if (!trimmed) return;
     const next = mapBox(get().data, hatId, (box) => ({
       ...box,
-      tasks: [...box.tasks, { id: uid(), text: trimmed, done: false }],
+      tasks: [...box.tasks, { id: uid(), text: trimmed, done: false, estimateMinutes: 30 }],
     }));
     commit(set, next);
   },
@@ -674,7 +715,7 @@ export const useSpread = create<Store>((set, get) => ({
     const allocation = week.allocations.find((item) =>
       item.hatId === hatId && item.day === day && item.hours > 0);
     const boxes = week.boxes.map((box) => box.hatId === hatId
-      ? { ...box, tasks: [...box.tasks, { id: uid(), text: trimmed, done: false,
+      ? { ...box, tasks: [...box.tasks, { id: uid(), text: trimmed, done: false, estimateMinutes: 30,
           ...(allocation ? { allocationId: allocation.id } : {}) }] }
       : box);
     commit(set, { ...seeded, currentWeek: data.currentWeek,
@@ -733,6 +774,16 @@ export const useSpread = create<Store>((set, get) => ({
       tasks: box.tasks.map((task) => (task.id === taskId ? { ...task, content } : task)),
     }));
     stage(set, next);
+  },
+  setTaskEstimate: (hatId, taskId, minutes) => {
+    if (minutes !== null && !TASK_ESTIMATE_CHOICES.some((choice) => choice === minutes)) return false;
+    const week = get().data.weeks[get().data.currentWeek];
+    if (!week?.boxes.find((b) => b.hatId === hatId)?.tasks.some((t) => t.id === taskId)) return false;
+    const next = mapBox(get().data, hatId, (box) => ({ ...box,
+      tasks: box.tasks.map((task) => task.id === taskId
+        ? { ...task, estimateMinutes: minutes ?? undefined } : task) }));
+    stage(set, next);
+    return true;
   },
   setHatColor: (hatId, color) => {
     if (!ROLE_COLORS.includes(color as (typeof ROLE_COLORS)[number]) && !/^#[0-9A-Fa-f]{6}$/.test(color)) return;
@@ -848,6 +899,7 @@ export const useSpread = create<Store>((set, get) => ({
     const edit = makeEdit(uid(), get().activeId ?? "", before, get().data);
     if (!edit) return null;
     editStack = pushEdit(editStack, edit);
+    redoStack = [];
     return edit.id;
   },
   undoEdit: (editId) => {
@@ -857,6 +909,17 @@ export const useSpread = create<Store>((set, get) => ({
     if (!canUndo(edit, state.activeId ?? "", state.data)) return false;
     editStack = editStack.filter((item) => item.id !== editId);
     commit(set, dropRevivedDeletedTasks(applyUndo(edit, state.data)));
+    redoStack = pushEdit(redoStack, edit);
+    return true;
+  },
+  redoEdit: (editId) => {
+    const edit = redoStack.find((item) => item.id === editId);
+    const state = get();
+    if (!edit || edit.profileId !== (state.activeId ?? "") ||
+        JSON.stringify(state.data.weeks[edit.weekKey]) !== JSON.stringify(edit.before)) return false;
+    redoStack = redoStack.filter((item) => item.id !== editId);
+    commit(set, { ...state.data, weeks: { ...state.data.weeks, [edit.weekKey]: edit.after } });
+    editStack = pushEdit(editStack, edit);
     return true;
   },
   assignTask: (hatId, taskId, allocationId) => {

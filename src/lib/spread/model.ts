@@ -11,6 +11,8 @@ export type Task = {
   done: boolean;
   allocationId?: string;
   content?: TaskContent;
+  /** Optional and informational: estimating does not reserve hours. */
+  estimateMinutes?: number;
 };
 export type Hat = {
   id: string;
@@ -23,8 +25,11 @@ export type Hat = {
 export type DeletedTask = { id: string; hatId: string; weekKey: string; task: Task; deletedAt: number };
 export type Box = { hatId: string; hours: number; tasks: Task[] };
 export type Allocation = { id: string; hatId: string; day: string; hours: number; order: number };
+/** Life is optional and week-local. Old profiles must not acquire an invented capacity. */
+export type LifeWeekMetadata = { version: 1; capacityHours?: number; priorityRoleId?: string };
 /** dayTaskOrder affects only Week presentation, never the responsibility's canonical task order. */
-export type WeekData = { boxes: Box[]; allocations: Allocation[]; dayTaskOrder?: Record<string, string[]> };
+export type WeekData = { boxes: Box[]; allocations: Allocation[]; dayTaskOrder?: Record<string, string[]>; life?: LifeWeekMetadata };
+export const TASK_ESTIMATE_CHOICES = [15, 30, 45, 60, 90, 120, 180, 240, 480] as const;
 export type SpreadData = {
   hats: Hat[];
   weeks: Record<string, WeekData>;
@@ -179,6 +184,7 @@ export function cloneWeek(week: WeekData): WeekData {
   });
   return {
     allocations,
+    ...(week.life ? { life: { ...week.life } } : {}),
     // Fresh copies contain new task IDs and deliberately do not inherit old day display order.
     boxes: week.boxes.map((box) => ({
       hatId: box.hatId,
@@ -275,6 +281,7 @@ export function normalizeData(raw: unknown): SpreadData {
         allocations,
         ...(week.dayTaskOrder && typeof week.dayTaskOrder === "object"
           ? { dayTaskOrder: normalizeDayTaskOrder(week.dayTaskOrder) } : {}),
+        ...(normalizeLifeWeek(week.life) ? { life: normalizeLifeWeek(week.life) } : {}),
       };
     }
   }
@@ -386,6 +393,21 @@ function restoreBank(box: Box, allocations: { hatId: string; hours: number }[], 
   return box;
 }
 
+/** Invalid/unknown versions are ignored, without rewriting the source profile on view. */
+function normalizeLifeWeek(raw: unknown): LifeWeekMetadata | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const life = raw as Partial<LifeWeekMetadata>;
+  if (life.version !== 1) return undefined;
+  const capacity = life.capacityHours;
+  return {
+    version: 1,
+    ...(typeof capacity === "number" && Number.isFinite(capacity) && capacity >= 0 &&
+        capacity <= 168 && Number.isInteger(capacity * 2) ? { capacityHours: capacity } : {}),
+    ...(typeof life.priorityRoleId === "string" && life.priorityRoleId.length <= 200
+      ? { priorityRoleId: life.priorityRoleId } : {}),
+  };
+}
+
 function normalizeDayTaskOrder(value: Record<string, unknown>): Record<string, string[]> {
   const order: Record<string, string[]> = {};
   for (const [key, ids] of Object.entries(value)) {
@@ -414,6 +436,7 @@ function normalizeTask(task: Task): Task {
   const next: Task = { id: task.id, text: task.text, done: Boolean(task.done) };
   if (typeof task.allocationId === "string") next.allocationId = task.allocationId;
   if (task.content) next.content = normalizeContent(task.content);
+  if (TASK_ESTIMATE_CHOICES.some((v) => v === task.estimateMinutes)) next.estimateMinutes = task.estimateMinutes;
   return next;
 }
 

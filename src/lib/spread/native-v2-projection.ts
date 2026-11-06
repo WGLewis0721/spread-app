@@ -12,9 +12,11 @@ export type NativeV2Snapshot = {
   weekKey: string;
   roles: { id: string; name: string; category: string; color: string; hours: number }[];
   allocations: { id: string; roleId: string; day: string; hours: number; order: number }[];
-  tasks: { id: string; roleId: string; text: string; done: boolean; allocationId: string | null }[];
+  tasks: { id: string; roleId: string; text: string; done: boolean; allocationId: string | null; estimateMinutes?: number }[];
   /** Only present when the user has manually reordered tasks in Week. */
   dayTaskOrder?: Record<string, string[]>;
+  /** Absent until a person explicitly sets capacity in Life. */
+  life?: { version: 1; capacityHours?: number; priorityRoleId?: string };
 };
 
 export type NativeV2Envelope = {
@@ -56,12 +58,14 @@ export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): 
         order: allocation.order,
       })),
       ...(week?.dayTaskOrder ? { dayTaskOrder: week.dayTaskOrder } : {}),
+      ...(week?.life ? { life: week.life } : {}),
       tasks: data.hats.flatMap((hat) =>
         (boxes.get(hat.id)?.tasks ?? []).map((task) => ({
           id: task.id,
           roleId: hat.id,
           text: task.text,
           done: task.done,
+          ...(task.estimateMinutes !== undefined ? { estimateMinutes: task.estimateMinutes } : {}),
           // Match the current To place logic: a stale allocation link is not scheduled.
           allocationId:
             task.allocationId && allocationRoles.get(task.allocationId) === hat.id

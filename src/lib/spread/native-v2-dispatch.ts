@@ -56,6 +56,13 @@ const action = z.discriminatedUnion("type", [
     content: contentSchema,
   }),
   z.strictObject({ type: z.literal("retrySave") }),
+  z.strictObject({ type: z.literal("setLifeCapacity"), hours }),
+  z.strictObject({ type: z.literal("setLifeBudget"), roleId: id, hours }),
+  z.strictObject({ type: z.literal("setLifePriority"), priorityRoleId: id.nullable() }),
+  z.strictObject({ type: z.literal("setTaskEstimate"), roleId: id, taskId: id,
+    minutes: z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60),
+      z.literal(90), z.literal(120), z.literal(180), z.literal(240), z.literal(480), z.null()]) }),
+  z.strictObject({ type: z.literal("redo"), editId: id }),
   z.strictObject({ type: z.literal("deleteTask"), roleId: id, taskId: id }),
   z.strictObject({ type: z.literal("readDeletedTasks") }),
   z.strictObject({ type: z.literal("restoreDeletedTask"), taskId: id }),
@@ -154,6 +161,7 @@ export type NativeReply = {
   ok: boolean;
   error?: string;
   undoId?: string | null;
+  redoId?: string | null;
   rollover?: "done" | "confirm" | "empty";
   /** Read-only export of the open week; never persisted and never part of planner state. */
   exported?: { format: "text" | "html" | "docx"; content: string };
@@ -239,6 +247,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
         ok: result.ok,
         error: result.error,
         undoId: result.undoId,
+        redoId: result.redoId,
         state: null,
       },
     });
@@ -328,6 +337,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
       };
     }
     let undoId: string | null = null;
+    let redoId: string | null = null;
     let bulkMoved: number | undefined;
     let bulkPreview: NativeReply["bulkPreview"];
     let rolloverOutcome: "done" | "confirm" | "empty" | undefined;
@@ -336,6 +346,19 @@ export function createNativeV2Dispatcher(sessionId: string) {
         switch (a.type) {
           case "setTaskContent":
             state.setTaskContent(a.roleId, a.taskId, a.content);
+            flushSpread();
+            break;
+          case "setLifeCapacity":
+            if (!state.setLifeCapacity(a.hours)) throw new Error("life-capacity-refused");
+            break;
+          case "setLifeBudget":
+            if (!state.setLifeBudget(a.roleId, a.hours)) throw new Error("life-budget-refused");
+            break;
+          case "setLifePriority":
+            if (!state.setLifePriority(a.priorityRoleId)) throw new Error("life-priority-refused");
+            break;
+          case "setTaskEstimate":
+            if (!state.setTaskEstimate(a.roleId, a.taskId, a.minutes)) throw new Error("life-estimate-refused");
             flushSpread();
             break;
           case "retrySave":
@@ -434,6 +457,11 @@ export function createNativeV2Dispatcher(sessionId: string) {
             break;
           case "undo":
             if (!state.undoEdit(a.editId)) throw new Error("undo-expired");
+            redoId = a.editId;
+            break;
+          case "redo":
+            if (!state.redoEdit(a.editId)) throw new Error("redo-expired");
+            undoId = a.editId;
             break;
           case "changeWeek":
             state.changeWeek(a.direction);
@@ -449,6 +477,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
           "changeWeek",
           "openWeek",
           "undo",
+          "redo",
           "addRole",
           "switchProfile",
           "addProfile",
@@ -469,6 +498,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
         requestId: command.requestId,
         ok: true,
         undoId,
+        redoId,
         ...(rolloverOutcome ? { rollover: rolloverOutcome } : {}),
         ...(bulkMoved !== undefined ? { bulkMoved, bulkPreview } : {}),
         state: read(),
@@ -534,6 +564,17 @@ function validateTarget(a: NativeRequest["action"], data: SpreadData): string | 
     )
       return "invalid-week";
   }
+  if (a.type === "setLifeCapacity") {
+    if (week?.boxes.reduce((sum, b) => sum + b.hours, 0) > a.hours) return "capacity-below-assigned";
+  }
+  if (a.type === "setLifeBudget") {
+    const assigned = week?.boxes.reduce((sum, b) => sum + (b.hatId === a.roleId ? a.hours : b.hours), 0) ?? 0;
+    if (week?.life?.capacityHours === undefined) return "capacity-not-set";
+    if (assigned > week.life.capacityHours) return "life-capacity-exceeded";
+    if ((week.allocations.filter((item) => item.hatId === a.roleId).reduce((sum, item) => sum + item.hours, 0)) > a.hours) return "budget-below-reserved";
+  }
+  if (a.type === "setLifePriority" && a.priorityRoleId !== null &&
+      !data.hats.some((role) => role.id === a.priorityRoleId)) return "no-role";
   // Native writes must explain a bank refusal before calling the existing clamping action. Re-evaluate
   // against the current store inside the serialized dispatcher, never against a stale Swift projection.
   if (a.type === "allocate" || a.type === "moveSpreadToDay" || a.type === "allocationHours") {
