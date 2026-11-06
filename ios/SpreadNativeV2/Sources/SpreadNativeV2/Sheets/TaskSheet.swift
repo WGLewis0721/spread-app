@@ -79,6 +79,7 @@ struct TaskSheet: View {
                                 .onSubmit { commitTitle() }
                                 .accessibilityLabel("Task title")
                                 .accessibilityIdentifier("task-editor")
+                            taskEstimateControl(task)
                             if !loaded {
                                 ProgressView("Opening task content…")
                             } else if !supported {
@@ -150,6 +151,40 @@ struct TaskSheet: View {
                     if await planner.send(["type": "deleteTask", "roleId": roleId, "taskId": taskId]) { dismiss() }
                 }
             }
+        }
+    }
+
+    // MARK: Life estimates (week-local task data, not an hour reservation)
+
+    private func taskEstimateControl(_ task: PlannerTask) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Menu {
+                Button("No estimate") { setEstimate(nil) }
+                ForEach([15, 30, 45, 60, 90, 120, 180, 240, 480], id: \.self) { minutes in
+                    Button("\(minutes) minutes") { setEstimate(minutes) }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "clock")
+                    Text(task.estimateMinutes.map { "Estimated time: \($0) min" } ?? "Add time estimate")
+                    Spacer()
+                    Image(systemName: "chevron.up.chevron.down")
+                }
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.horizontal, 12)
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+            }
+            .accessibilityIdentifier("task-estimate")
+            Text("Estimates help you plan; they don't reserve hours on a day.")
+                .font(.caption).foregroundStyle(Spread.secondary)
+        }
+    }
+
+    private func setEstimate(_ minutes: Int?) {
+        Task {
+            _ = await planner.send(["type": "setTaskEstimate", "roleId": roleId,
+                                     "taskId": taskId, "minutes": minutes as Any? ?? NSNull()])
         }
     }
 
