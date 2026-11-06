@@ -72,11 +72,11 @@ struct LifeWeekView: View {
             if planner.undoId != nil || planner.redoId != nil {
                 HStack(spacing: 16) {
                     if let id = planner.undoId {
-                        Button("Undo") { Task { await planner.send(["type": "undo", "editId": id], completionHaptic: true) } }
+                        Button("Undo") { Task { if await planner.send(["type": "undo", "editId": id]) { LifeFeedback.accepted() } } }
                             .accessibilityIdentifier("life-week-undo")
                     }
                     if let id = planner.redoId {
-                        Button("Redo") { Task { await planner.send(["type": "redo", "editId": id], completionHaptic: true) } }
+                        Button("Redo") { Task { if await planner.send(["type": "redo", "editId": id]) { LifeFeedback.accepted() } } }
                     }
                 }.frame(minHeight: 44).disabled(planner.busy)
             }
@@ -235,7 +235,7 @@ struct LifeWeekView: View {
                         let day = date
                         Task {
                             if await planner.placeHours(roleId: role.id, day: day, hours: 0.5) {
-                                SpreadHaptics.completed()
+                                LifeFeedback.accepted()
                             }
                         }
                     } label: {
@@ -275,7 +275,10 @@ struct LifeWeekView: View {
     private func choose(_ iso: String) {
         guard !planner.busy else { return }
         let targetWeek = PlannerDates.weekKey(for: PlannerDates.date(iso))
-        if targetWeek == snapshot.weekKey { accept(iso); return }
+        if targetWeek == snapshot.weekKey {
+            if date != iso { accept(iso); LifeFeedback.selection() }
+            return
+        }
         let token = UUID(), originProfile = profile
         navigationID = token; pendingDate = iso
         Task { @MainActor in
@@ -284,6 +287,7 @@ struct LifeWeekView: View {
             pendingDate = nil
             guard accepted, planner.snapshot?.weekKey == targetWeek else { return }
             accept(iso)
+            LifeFeedback.selection()
         }
     }
 }
