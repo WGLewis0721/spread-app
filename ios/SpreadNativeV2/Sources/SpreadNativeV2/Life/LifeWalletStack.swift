@@ -74,6 +74,7 @@ private struct LifeWalletFace: View {
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
     @State private var ignoreTapUntil = Date.distantPast
+    @State private var revealCue = 0
     @GestureState private var dragging = false
     @State private var glow = false
     private var reserved: Double {
@@ -147,6 +148,10 @@ private struct LifeWalletFace: View {
                 RoleBadge(category: role.category, color: role.color, size: 30)
                 Text(role.name).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
                     .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                if snapshot.life?.priorityRoleId == role.id {
+                    Text("Priority").font(.caption).padding(.horizontal, 5)
+                        .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: 5))
+                }
                 Text("\(SpreadHours.text(hours))h").font(.subheadline).monospacedDigit()
                 Image(systemName: selected ? "chevron.up" : "chevron.down").font(.caption)
             }.foregroundStyle(LifePalette.ink).frame(minHeight: 28)
@@ -174,13 +179,19 @@ private struct LifeWalletFace: View {
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
                 ignoreTapUntil = Date().addingTimeInterval(0.25)
                 translation = value.translation.width
+                let offset = reveal + translation
+                let side = offset < -42 ? -1 : offset > 42 ? 1 : 0
+                if side != 0 && side != revealCue {
+                    revealCue = side
+                    LifeFeedback.reveal(delete: side > 0)
+                }
             }
             .onEnded { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { translation = 0; return }
                 ignoreTapUntil = Date().addingTimeInterval(0.25)
                 let offset = reveal + value.translation.width
                 let next: CGFloat = offset < -42 ? -92 : offset > 42 ? 92 : 0
-                if next != reveal && next != 0 { LifeFeedback.reveal(delete: next > 0) }
+                revealCue = 0
                 withAnimation(reduceMotion ? nil : .spring(duration: 0.28)) { reveal = next; translation = 0 }
             }
     }
@@ -267,12 +278,12 @@ struct LifeQuickAdd: View {
         let profile = planner.state?.envelope.profileId
         let week = planner.snapshot?.weekKey
         let before = Set(planner.snapshot?.tasks.map(\.id) ?? [])
-        guard await planner.send(["type": "addTask", "roleId": roleId, "text": name, "life": true]),
+        var action: [String: Any] = ["type": day == nil ? "addTask" : "addTaskForDay",
+                                     "roleId": roleId, "text": name, "life": true]
+        if let day { action["day"] = day }
+        guard await planner.send(action),
               planner.state?.envelope.profileId == profile, planner.snapshot?.weekKey == week,
               let task = planner.snapshot?.tasks.first(where: { $0.roleId == roleId && !before.contains($0.id) }) else { return }
-        if let day, let allocation = planner.snapshot?.allocations.first(where: { $0.roleId == roleId && $0.day == day && $0.hours > 0 }) {
-            _ = await planner.send(["type": "assignTask", "roleId": roleId, "taskId": task.id, "allocationId": allocation.id])
-        }
         title = ""; expanded = false
         onOpenTask(roleId, task.id)
     }
