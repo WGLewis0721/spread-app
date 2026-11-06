@@ -616,6 +616,14 @@ function validateTarget(a: NativeRequest["action"], data: SpreadData): string | 
     if (week?.life?.capacityHours !== undefined && assigned > week.life.capacityHours && a.hours >= current) return "life-capacity-exceeded";
     if ((week.allocations.filter((item) => item.hatId === a.roleId).reduce((sum, item) => sum + item.hours, 0)) > a.hours) return "budget-below-reserved";
   }
+  if (a.type === "setLifePriority") {
+    if ((a.goalHours === undefined) !== (a.day === undefined)) return "invalid-priority";
+    if (a.day !== undefined) {
+      const date = new Date(`${a.day}T12:00:00Z`);
+      if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== a.day ||
+          a.day < data.currentWeek || a.day >= shiftWeek(data.currentWeek, 1)) return "ineligible-day";
+    }
+  }
   if (a.type === "setLifePriority" && a.priorityRoleId !== null &&
       !data.hats.some((role) => role.id === a.priorityRoleId)) return "no-role";
   // Native writes must explain a bank refusal before calling the existing clamping action. Re-evaluate
