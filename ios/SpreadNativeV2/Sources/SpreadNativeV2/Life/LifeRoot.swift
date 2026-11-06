@@ -191,9 +191,7 @@ struct LifeRoot: View {
                 details(role, snapshot: snapshot)
                     .id(id)
                     // Keep old and new fields visually connected as focus changes.
-                    .transition(.asymmetric(
-                        insertion: .offset(y: 8).combined(with: .opacity),
-                        removal: .opacity))
+                    .transition(SpreadTactile.detailReveal)
             } else if !editing && !snapshot.roles.isEmpty {
                 Text("Tap a card to see its tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 12)
