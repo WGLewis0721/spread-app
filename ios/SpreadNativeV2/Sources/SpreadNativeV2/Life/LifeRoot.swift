@@ -28,6 +28,8 @@ struct LifeRoot: View {
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
     let onDeleteRole: (String) -> Void
+    @AccessibilityFocusState private var navigationFocused: Bool
+    @AccessibilityFocusState private var openerFocused: Bool
     @State private var destination: LifeDestination = .life
     @State private var focusedRole: String?
     @State private var editing = false
@@ -87,6 +89,10 @@ struct LifeRoot: View {
         }
         .onChange(of: planner.snapshot?.weekKey) { _, _ in focusedRole = nil; editing = false; localSheet = nil }
         .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
+        .onChange(of: navigationOpen) { _, open in
+            navigationFocused = open
+            if !open { openerFocused = true }
+        }
         .sensoryFeedback(.selection, trigger: weekTick) { _, _ in LifeFeedback.enabled }
         .sheet(item: $localSheet, onDismiss: {
             if let pending = pendingTask {
@@ -357,6 +363,7 @@ struct LifeRoot: View {
                 Text(destination.rawValue).font(.caption)
             }.frame(minWidth: 44, minHeight: 44)
         }.accessibilityLabel("Open navigation").accessibilityIdentifier("life-navigation")
+            .accessibilityFocused($openerFocused)
             .background {
                 GeometryReader { geometry in
                     Color.clear.preference(key: LifeDockOpenerCenterKey.self,
@@ -424,6 +431,7 @@ struct LifeRoot: View {
                 }
                 .accessibilityLabel("Close navigation")
                 .accessibilityIdentifier("life-navigation-close")
+                .accessibilityFocused($navigationFocused)
                 .offset(y: max(0, dockOpenerCenterY - 22))
                 if crownRight { Spacer(minLength: 0) }
             }
@@ -433,6 +441,7 @@ struct LifeRoot: View {
             .frame(width: min(300, max(0, width - 32))).frame(maxHeight: .infinity)
             .background(LifePalette.surface).transition(.move(edge: crownRight ? .leading : .trailing))
             .accessibilityAddTraits(.isModal)
+            .accessibilityAction(.escape) { navigationOpen = false }
         }
     }
     private func navigate(_ value: LifeDestination) {
