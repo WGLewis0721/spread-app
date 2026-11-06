@@ -35,3 +35,11 @@ test('Duo requires the actual Duo device and an iOS 27.1 runtime, never an iPad 
   assert.equal(chooseSimulator([supported], [modern, duo], 'duo').device.identifier, 'duo');
   assert.throws(() => chooseSimulator([supported], [modern], 'duo'), /compatible device/);
 });
+
+test('Life widths select exact 375 and 430 point devices and reject nearby sizes', () => {
+  const phone = (name) => ({ name, identifier: name });
+  assert.equal(chooseSimulator([runtime], [phone('iPhone SE (3rd generation)')], 375).device.name, 'iPhone SE (3rd generation)');
+  assert.equal(chooseSimulator([runtime], [phone('iPhone 15 Pro Max')], 430).device.name, 'iPhone 15 Pro Max');
+  assert.throws(() => chooseSimulator([runtime], [phone('iPhone 15 Pro')], 375), /compatible device/);
+  assert.throws(() => chooseSimulator([runtime], [phone('iPhone 16 Pro Max')], 430), /compatible device/);
+});
