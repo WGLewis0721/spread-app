@@ -211,7 +211,7 @@ struct LifeHoursView: View {
                     Text(capacity.map(SpreadHours.text) ?? "—")
                         .font(.system(size: numberSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .accessibilityIdentifier("life-capacity-number")
+
                     if capacityDraft != nil { Text("Draft").font(.subheadline.weight(.semibold)) }
                     Text("Weekly planning hours")
                         .font(.subheadline.weight(.medium))
@@ -231,6 +231,7 @@ struct LifeHoursView: View {
                     .onChanged { dragCapacity($0) }
                     .onEnded { _ in finishCapacity() })
                 .accessibilityElement(children: .ignore)
+                .accessibilityIdentifier("life-capacity-number")
                 .accessibilityLabel("Weekly planning hours")
                 .accessibilityValue(capacity.map(SpreadHours.spoken) ?? "Not set")
                 .accessibilityHint("Tap to separate areas. Adjust up or down by one hour.")
