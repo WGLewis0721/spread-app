@@ -394,9 +394,17 @@ struct LifeRoot: View {
                     }
                     ForEach(LifeDestination.allCases) { item in
                         Button { navigate(item) } label: {
-                            HStack { SpreadIcon(name: item.icon); Text(item.rawValue).font(.title3); Spacer(); Image(systemName: "chevron.right") }
-                                .frame(minHeight: 52)
-                        }.accessibilityAddTraits(destination == item ? .isSelected : [])
+                            HStack {
+                                SpreadIcon(name: item.icon)
+                                Text(item.rawValue).font(.headline)
+                                Spacer()
+                                Image(systemName: destination == item ? "checkmark.circle.fill" : "chevron.right")
+                                    .accessibilityHidden(true)
+                            }
+                            .padding(.horizontal, 12).frame(minHeight: 52)
+                            .spreadChip(selected: destination == item)
+                        }.buttonStyle(.spreadPress)
+                            .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
                     Menu("Crown position") {
