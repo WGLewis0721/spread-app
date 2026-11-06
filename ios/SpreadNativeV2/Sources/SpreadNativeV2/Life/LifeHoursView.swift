@@ -184,7 +184,7 @@ struct LifeHoursView: View {
             ZStack {
                 Circle()
                     .stroke(LifePalette.line, lineWidth: 17)
-                    .padding(diameter * 0.17)
+                    .padding(diameter * 0.185)
                 ForEach(segments, id: \.id) { segment in
                     Circle()
                         .trim(from: segment.start, to: segment.end)
@@ -192,7 +192,7 @@ struct LifeHoursView: View {
                                 style: StrokeStyle(lineWidth: selectedRole == segment.id && separated ? 24 : 18,
                                                    lineCap: .round))
                         .rotationEffect(.degrees(-90 + phase))
-                        .padding(diameter * 0.17)
+                        .padding(diameter * 0.185)
                         .offset(x: separated ? cos((segment.middle + phase) * .pi / 180) * 21 : 0,
                                 y: separated ? sin((segment.middle + phase) * .pi / 180) * 21 : 0)
                         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: separated)
@@ -307,7 +307,8 @@ struct LifeHoursView: View {
                 Spacer()
                 Text(SpreadHours.text(selectedHours) + " h").font(.title3.bold())
             }
-            HStack(spacing: 12) {
+            let controls = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 12))
+            controls {
                 Button { changeBudget(by: 0.5) } label: {
                     Label("Add ½h", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
@@ -332,7 +333,8 @@ struct LifeHoursView: View {
     }
 
     private var capacityField: some View {
-        HStack {
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
             Button {
                 if let capacity {
                     commitCapacity(LifeOrbitMath.limit(capacity - 1, minimum: storedAssigned, maximum: 168))
@@ -366,6 +368,7 @@ struct LifeHoursView: View {
             .frame(minHeight: 44)
             .buttonStyle(.borderedProminent)
         }
+        .disabled(saving || rejected)
     }
 
     private func selectionTick() {
