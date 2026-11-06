@@ -27,3 +27,5 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 
 - [Classic recording specification](2026-11-06-classic-video-spec.md) — timestamped design, motion and UI/UX reference.
 - [Life recording specification](2026-11-06-life-video-spec.md) — timestamped findings, corrections and candidate acceptance.
+
+- [Annotated iPhone precision](2026-11-06-annotated-iphone-precision.md): owner corrections for Life, Hours and Week; implementation and native evidence pending.

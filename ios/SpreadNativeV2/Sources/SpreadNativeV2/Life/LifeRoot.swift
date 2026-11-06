@@ -38,6 +38,7 @@ struct LifeRoot: View {
     @State private var dockControlsHeight: CGFloat = 62
     @State private var dockOpenerCenterY: CGFloat = 31
     @State private var weekTick = 0
+    @State private var historyVisible = false
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -100,6 +101,12 @@ struct LifeRoot: View {
                 onOpenTask(pending.role, pending.task)
             }
         }, content: sheetContent)
+        .task(id: planner.state?.revision) {
+            guard planner.undoId != nil || planner.redoId != nil else { historyVisible = false; return }
+            historyVisible = true
+            do { try await Task.sleep(for: .seconds(5)) } catch { return }
+            historyVisible = false
+        }
         .accessibilityIdentifier("life-root")
     }
     private var header: some View {
@@ -109,12 +116,6 @@ struct LifeRoot: View {
                     .frame(minHeight: 44)
             }.buttonStyle(.plain).accessibilityLabel("Spread, Life").accessibilityIdentifier("life-home")
             Spacer(minLength: 4)
-            if let snapshot = planner.snapshot {
-                Button(action: today) {
-                    Text(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0)).font(.subheadline)
-                        .foregroundStyle(LifePalette.secondary).frame(minHeight: 44)
-                }.accessibilityLabel("Back to this week")
-            }
             Button(action: onMore) {
                 Image(systemName: "ellipsis").frame(width: 44, height: 44)
                     .background(LifePalette.surface, in: Circle())
@@ -156,7 +157,7 @@ struct LifeRoot: View {
                 .accessibilityLabel("Adjust weekly planning hours")
             if editing {
                 Text("Swipe left to manage. Swipe right to delete.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                history
+                if historyVisible { history }
             }
             if focusedRole != nil && !editing {
                 Button { focusedRole = nil } label: {
@@ -284,6 +285,8 @@ struct LifeRoot: View {
                     .padding(.horizontal, 12).frame(minHeight: 44)
                     .spreadChip(selected: true).buttonStyle(.spreadPress)
             }
+            Button("Change area hours") { navigate(.hours) }
+                .frame(minHeight: 44).buttonStyle(.spreadPress)
             DayMarks(snapshot: snapshot, role: role)
             if editing {
                 HStack {
@@ -325,7 +328,7 @@ struct LifeRoot: View {
     }
     private func bottom(_ snapshot: PlannerSnapshot) -> some View {
         VStack(spacing: 4) {
-            if !editing && (planner.undoId != nil || planner.redoId != nil) { history }
+            if !editing && historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) {
                     if !crownRight { crown(snapshot).frame(maxWidth: 270) }
@@ -373,8 +376,9 @@ struct LifeRoot: View {
     }
     private var addTaskButton: some View {
         Button { localSheet = .addTask } label: {
-            Image(systemName: "plus").font(.title2).frame(width: 44, height: 44)
-                .foregroundStyle(.white).background(LifePalette.accent, in: Circle())
+            SpreadIcon(name: "icon-new-life", size: 28, original: true)
+                .frame(width: 44, height: 44)
+                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 14))
         }.accessibilityLabel("Add task")
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
@@ -414,6 +418,7 @@ struct LifeRoot: View {
                             .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
+                    history
                     Menu("Crown position") {
                         Button("Move Crown left") { crownRight = false }
                         Button("Move Crown right") { crownRight = true }
