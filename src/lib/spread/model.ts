@@ -439,6 +439,7 @@ function normalizeTask(task: Task): Task {
   if (typeof task.allocationId === "string") next.allocationId = task.allocationId;
   if (task.content) next.content = normalizeContent(task.content);
   if (TASK_ESTIMATE_CHOICES.some((v) => v === task.estimateMinutes)) next.estimateMinutes = task.estimateMinutes;
+  else delete next.estimateMinutes;
   return next;
 }
 
@@ -484,15 +485,15 @@ function normalizeBlock(value: unknown): ContentBlock | null {
     const items = block.items
       .filter((item) => item && typeof item.id === "string" && typeof item.text === "string")
       .map((item) => ({ id: item.id, text: item.text, level: Math.min(4, Math.max(0, Number(item.level) || 0)) }));
-    return { id: block.id, type: "outline", items };
+    return { ...structuredClone(block), id: block.id, type: "outline", items };
   }
   if (block.type === "table") {
     const cells = rectangular(block.cells);
     if (!cells) return null;
-    return { id: block.id, type: "table", cells };
+    return { ...structuredClone(block), id: block.id, type: "table", cells };
   }
   if (block.type === "photo" && typeof block.src === "string" && (block.src === "" || block.src.startsWith("data:image/"))) {
-    return { id: block.id, type: "photo", src: block.src };
+    return { ...structuredClone(block), id: block.id, type: "photo", src: block.src };
   }
   // Future block types stay intact and are rendered read-only by older editors.
   return structuredClone(value) as ContentBlock;
