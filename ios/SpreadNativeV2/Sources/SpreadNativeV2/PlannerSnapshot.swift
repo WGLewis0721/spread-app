@@ -51,6 +51,8 @@ public struct LifeWeekSnapshot: Codable, Equatable, Sendable {
     public let version: Int
     public let capacityHours: Double?
     public let priorityRoleId: String?
+    public let priorityGoalHours: Double?
+    public let priorityDay: String?
 }
 
 public struct Responsibility: Codable, Equatable, Identifiable, Sendable {
