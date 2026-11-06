@@ -189,7 +189,11 @@ struct LifeRoot: View {
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
                 details(role, snapshot: snapshot)
-                    .transition(.opacity)
+                    .id(id)
+                    // Keep old and new fields visually connected as focus changes.
+                    .transition(.asymmetric(
+                        insertion: .offset(y: 8).combined(with: .opacity),
+                        removal: .opacity))
             } else if !editing && !snapshot.roles.isEmpty {
                 Text("Tap a card to see its tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 12)
@@ -377,7 +381,7 @@ struct LifeRoot: View {
     private var trayButton: some View {
         Button {
             LifeFeedback.selection()
-            withAnimation(reduceMotion ? nil : SpreadTactile.glide) { navigationOpen = true }
+            withAnimation(reduceMotion ? nil : SpreadTactile.enter) { navigationOpen = true }
         } label: {
             VStack(spacing: 2) {
                 SpreadIcon(name: destination.icon, size: 22)
@@ -462,14 +466,15 @@ struct LifeRoot: View {
             .padding(.horizontal, 16).padding(.vertical, 8)
             }
             .frame(width: min(300, max(0, width - 32))).frame(maxHeight: .infinity)
-            .background(LifePalette.surface).transition(.move(edge: crownRight ? .leading : .trailing))
+            .background(LifePalette.surface)
+            .transition(.move(edge: crownRight ? .leading : .trailing).combined(with: .opacity))
             .accessibilityAddTraits(.isModal)
             .accessibilityAction(.escape) { navigationOpen = false }
         }
     }
     private func navigate(_ value: LifeDestination) {
         if destination != value { LifeFeedback.selection() }
-        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.exit) {
             destination = value
             navigationOpen = false
             editing = false
@@ -477,7 +482,7 @@ struct LifeRoot: View {
     }
 
     private func closeNavigation() {
-        withAnimation(reduceMotion ? nil : SpreadTactile.glide) { navigationOpen = false }
+        withAnimation(reduceMotion ? nil : SpreadTactile.exit) { navigationOpen = false }
     }
 
     /// Persistent compact navigation only when there is enough actual width.
