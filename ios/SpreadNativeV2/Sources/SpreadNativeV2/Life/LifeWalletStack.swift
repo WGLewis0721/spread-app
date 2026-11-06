@@ -118,14 +118,15 @@ private struct LifeWalletFace: View {
     }
     var body: some View {
         ZStack {
-            // Never paint swipe actions beneath a translucent Wallet face at rest.
-            // They exist only while editing and a horizontal reveal is underway.
-            if editing && abs(reveal + translation) > 1 {
-                revealedActions
-            }
+            // Keep the action layer structurally stable through the gesture.
+            // A conditional insertion here cancels the parent swipe recognizer.
+            revealedActions
+                .opacity(editing && abs(reveal + translation) > 1 ? 1 : 0)
+                .allowsHitTesting(editing && reveal != 0)
             selectionButton
         }
         .clipShape(RoundedRectangle(cornerRadius: 23))
+        .simultaneousGesture(swipe)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
         .onChange(of: dragging) { _, active in
@@ -141,7 +142,7 @@ private struct LifeWalletFace: View {
         .task(id: "\(editing)-\(reduceMotion)-\(scenePhase)") {
             glow = false
             guard editing, !reduceMotion, scenePhase == .active else { return }
-            withAnimation(.easeInOut(duration: 1.9).repeatForever(autoreverses: true)) { glow = true }
+            withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) { glow = true }
         }
         .accessibilityIdentifier("life-card-\(role.id)")
     }
@@ -153,7 +154,7 @@ private struct LifeWalletFace: View {
 
     private var selectionButton: some View {
         Button {
-            if !dragging { onSelect() }
+            if !editing && !dragging { onSelect() }
         } label: {
             cardSurface
         }
@@ -169,7 +170,6 @@ private struct LifeWalletFace: View {
                 Button("Delete", role: .destructive) { if editing { onDelete() } }
             }
         }
-        .simultaneousGesture(swipe)
     }
 
     private var roleColor: Color { Color(hex: role.color) }
@@ -226,8 +226,9 @@ private struct LifeWalletFace: View {
     private var editingOutline: some View {
         if editing {
             RoundedRectangle(cornerRadius: 23)
-                .strokeBorder(roleColor.opacity(glow || reduceMotion ? 1 : 0.55), lineWidth: 2.5)
-                .shadow(color: roleColor.opacity(glow || reduceMotion ? 0.65 : 0.2), radius: 12)
+                .strokeBorder(roleColor.opacity(glow || reduceMotion ? 1 : 0.82), lineWidth: 2.5)
+                // 50% stronger glow than the prior 0.65 / 0.20 values.
+                .shadow(color: roleColor.opacity(glow || reduceMotion ? 0.975 : 0.30), radius: 18)
         }
     }
     private var face: some View {
@@ -275,18 +276,18 @@ private struct LifeWalletFace: View {
         }.padding(.horizontal, 18).padding(.vertical, 12)
     }
     private var swipe: some Gesture {
-        DragGesture(minimumDistance: 12, coordinateSpace: .global)
+        DragGesture(minimumDistance: 14, coordinateSpace: .global)
             .updating($dragging) { _, active, _ in active = editing }
             .onChanged { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
                 var transaction = Transaction(); transaction.disablesAnimations = true
-                withTransaction(transaction) { translation = value.translation.width }
+                withTransaction(transaction) { translation = min(100, max(-100, value.translation.width)) }
             }
             .onEnded { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { translation = 0; return }
                 let target = TactilePrecisionMath.revealTarget(
                     current: Double(reveal), translation: Double(value.translation.width),
-                    projected: Double(value.predictedEndTranslation.width))
+                    projected: Double(value.predictedEndTranslation.width), threshold: 34, stop: 92)
                 if target != 0 && CGFloat(target) != reveal { LifeFeedback.reveal(delete: target > 0) }
                 withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
                     reveal = CGFloat(target)
