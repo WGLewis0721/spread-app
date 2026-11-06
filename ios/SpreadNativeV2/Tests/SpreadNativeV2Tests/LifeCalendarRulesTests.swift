@@ -51,4 +51,14 @@ final class LifeCalendarRulesTests: XCTestCase {
         XCTAssertEqual(snapshot.unplacedTasks.map(\.id), ["unplaced"])
         XCTAssertEqual(snapshot.eligibleAllocations(for: snapshot.tasks[2]).map(\.id), ["a", "c"])
     }
+    func testDailyTaskOrderKeepsPersistedOrderAndStableUnlistedTail() {
+        var snapshot = SpreadV2Fixture.week
+        snapshot.dayTaskOrder = ["2026-11-02|work": ["second", "t-1"]]
+        snapshot.tasks += [
+            PlannerTask(id: "second", roleId: "work", text: "Second", done: true, allocationId: "a-work"),
+            PlannerTask(id: "tail", roleId: "work", text: "Tail", done: false, allocationId: "a-work")
+        ]
+        XCTAssertEqual(LifeCalendarRules.dailyTasks(snapshot, day: "2026-11-02", roleId: "work").map(\.id), ["second", "t-1", "tail"])
+    }
+
 }
