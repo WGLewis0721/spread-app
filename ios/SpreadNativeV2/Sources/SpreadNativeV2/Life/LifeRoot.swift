@@ -310,12 +310,7 @@ struct LifeRoot: View {
                 .frame(minHeight: 44).buttonStyle(.spreadPress)
                 .accessibilityIdentifier("life-change-area-hours")
             DayMarks(snapshot: snapshot, role: role)
-            if editing {
-                HStack {
-                    Button("Manage") { localSheet = .manage(role.id) }
-                    Button("Delete", role: .destructive) { localSheet = .delete(role.id) }
-                }.frame(minHeight: 44)
-            } else {
+            if !editing {
                 Button("Prioritize this week") { localSheet = .priority(role.id) }
                     .padding(.horizontal, 12).frame(minHeight: 44)
                     .spreadChip(selected: false).buttonStyle(.spreadPress)
