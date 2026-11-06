@@ -65,6 +65,23 @@ final class TactilePrecisionTests: XCTestCase {
         XCTAssertEqual(TactilePrecisionMath.daySwipeDirection(horizontal: -24, vertical: 90, projected: -160), 0)
     }
 
+    func testDrawerGlideRespectsEdgeFlickAndVerticalScrolling() {
+        XCTAssertTrue(TactilePrecisionMath.drawerShouldClose(
+            horizontal: -120, vertical: 6, projected: -180, width: 300, onLeft: true))
+        XCTAssertTrue(TactilePrecisionMath.drawerShouldClose(
+            horizontal: 120, vertical: 6, projected: 180, width: 300, onLeft: false))
+        XCTAssertTrue(TactilePrecisionMath.drawerShouldClose(
+            horizontal: -28, vertical: 0, projected: -220, width: 300, onLeft: true))
+        XCTAssertFalse(TactilePrecisionMath.drawerShouldClose(
+            horizontal: -60, vertical: 100, projected: -400, width: 300, onLeft: true))
+        XCTAssertFalse(TactilePrecisionMath.drawerShouldClose(
+            horizontal: 120, vertical: 0, projected: 300, width: 300, onLeft: true))
+        XCTAssertFalse(TactilePrecisionMath.drawerShouldClose(
+            horizontal: -25, vertical: 0, projected: -55, width: 300, onLeft: true))
+        XCTAssertFalse(TactilePrecisionMath.drawerShouldClose(
+            horizontal: .nan, vertical: 0, projected: -200, width: 300, onLeft: true))
+    }
+
     func testMechanicalHoursReturnToTheirOriginAndRespectBounds() {
         XCTAssertEqual(TactilePrecisionMath.hours(origin: 8, translation: 23.9, step: 0.5), 8)
         XCTAssertEqual(TactilePrecisionMath.hours(origin: 8, translation: 48, step: 0.5), 9)
