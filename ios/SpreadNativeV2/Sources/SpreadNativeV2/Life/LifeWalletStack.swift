@@ -262,7 +262,6 @@ private struct LifeWalletFace: View {
             .onEnded { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { translation = 0; return }
                 ignoreTapUntil = Date().addingTimeInterval(0.25)
-                let offset = reveal + value.translation.width
                 let target = TactilePrecisionMath.revealTarget(
                     current: Double(reveal), translation: Double(value.translation.width),
                     projected: Double(value.predictedEndTranslation.width))
@@ -336,7 +335,7 @@ struct LifeTaskRows: View {
                             in: RoundedRectangle(cornerRadius: 12))
                 .animation(reduceMotion ? nil : SpreadTactile.snap, value: targetedTaskId)
                 .dropDestination(for: SpreadDragPayload.self) { items, _ in
-                    guard let day, let item = items.first, item.kind == .task,
+                    guard let day, !planner.busy, let item = items.first, item.kind == .task,
                           item.roleId == task.roleId, item.itemId != task.id else { return false }
                     Task {
                         let ok = await planner.send([

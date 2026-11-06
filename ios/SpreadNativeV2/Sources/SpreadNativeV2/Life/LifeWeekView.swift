@@ -106,7 +106,8 @@ struct LifeWeekView: View {
         }
     }
 
-    /// Horizontal schedule swipes change days; vertical scrolling and task controls remain independent.
+    /// Horizontal drags on the calendar and date header change days. Keep task-reorder
+    /// drop targets and vertical schedule scrolling outside this gesture region.
     private var daySwipe: some Gesture {
         DragGesture(minimumDistance: 65)
             .onEnded { value in

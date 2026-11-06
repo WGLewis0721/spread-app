@@ -21,6 +21,7 @@
 - [ ] Given a Crown drag, when crossing and reversing 64-point detents, the week changes exactly once per accepted intent and never double-buzzes.
 - [ ] Given a Week view, when swiped horizontally, the selected day changes. Vertical scrolling, date taps, expanded Month and task controls do not interfere.
 - [ ] Given a 390/393 pt viewport, a bottom sidebar opener is reachable; given >=820 pt, a persistent rail replaces it with the same three destinations.
+- [ ] Given a selected day's tasks, dragging a handle over a different task reorders through the existing store, uses one confirmed cue and visually snaps to the new order. VoiceOver Move up/down produces the same result; To Place rows do not claim reorder.
 - [ ] Given a successful task completion, haptic confirms once, and the stored task/Undo remains correct.
 - [ ] Given a profile/week change, app relaunch or rejected task edit, planner persistence and correct UI identity survive.
 - [ ] Given reduced motion/haptics disabled, all controls remain fully usable without animated travel or hardware feedback.

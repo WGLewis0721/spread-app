@@ -39,7 +39,8 @@ These are tunable defaults, not measured device results. A finger-controlled tra
 - Life Crown changes pass through `LivePlanner.send`. A selection haptic is associated with an acknowledged week change, not every repeated animation frame or a speculative write.
 - In Life Week, predominantly horizontal drags of at least 65 pt change the day (left = next). A diagonal/vertical scroll is not a day change. When Month is expanded the day-swipe handler yields to its explicit calendar navigation.
 - Day/date taps, arrows and swipes share the same selection method, persistence and meaningful feedback. Do not bind data to animation completion.
-- Completed tasks produce one confirmation after the existing `toggleTask` acknowledgment; existing Undo/task ordering flows remain authoritative.
+- Completed tasks produce one confirmation after the existing `toggleTask` acknowledgment.
+- The selected day's task rows expose a 44 pt drag handle and magnetic drop highlight. Drop uses the existing `reorderDayTask` command; VoiceOver Move up/Move down actions use the same command and only confirm after an acknowledged write. The To Place list remains a task-capture surface, not an implicit day-order editor. The Life day swipe is scoped to the calendar and date header so it cannot steal the task drag. Undo/task ordering persistence remains authoritative.
 
 ## Compact adaptive navigation
 
