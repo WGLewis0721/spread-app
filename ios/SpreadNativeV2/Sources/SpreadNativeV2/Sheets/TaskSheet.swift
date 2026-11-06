@@ -20,6 +20,7 @@ struct TaskSheet: View {
     let roleId: String
     let taskId: String
     var lifeMode = false
+    @AppStorage("native.life.touchFeedback") private var lifeTouchFeedback = true
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -219,7 +220,7 @@ struct TaskSheet: View {
                 }
                 Spacer(minLength: 8)
                 Button {
-                    Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": taskId], completionHaptic: !task.done) }
+                    Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": taskId], completionHaptic: !task.done && (!lifeMode || lifeTouchFeedback)) }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
