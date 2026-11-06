@@ -4,7 +4,7 @@ import Foundation
 /// reference's pointerAngle/angleDelta, including wrapping at -180/180.
 enum LifeOrbitMath {
     /// Twenty-second visible orbit around the weekly capacity. Pauses on selection/Reduce Motion.
-    static let orbitDegreesPerSecond = 18.0
+    static let orbitDegreesPerSecond = 18.0 * 1.25
 
     static func delta(from old: Double, to next: Double) -> Double {
         let value = (next - old + 540).truncatingRemainder(dividingBy: 360)
@@ -176,9 +176,9 @@ struct LifeHoursView: View {
                                                    lineCap: .round))
                         .rotationEffect(.degrees(-90 + phase))
                         .frame(width: radius * 2, height: radius * 2)
-                        .shadow(color: Color(hex: segment.color).opacity(0.70),
-                                radius: selectedRole == segment.id ? 14 : 10)
-                        .shadow(color: Color(hex: segment.color).opacity(0.28), radius: 4)
+                        .shadow(color: Color(hex: segment.color).opacity(0.875),
+                                radius: selectedRole == segment.id ? 17.5 : 12.5)
+                        .shadow(color: Color(hex: segment.color).opacity(0.35), radius: 5)
 
                         .animation(reduceMotion ? nil : SpreadTactile.settle, value: separated)
                         .animation(reduceMotion ? nil : SpreadTactile.snap, value: selectedRole)
@@ -288,7 +288,7 @@ struct LifeHoursView: View {
                             ZStack {
                                 Circle().fill(Color(hex: role.color).opacity(0.12))
                                 Circle().strokeBorder(Color(hex: role.color), lineWidth: selectedRole == role.id ? 4 : 2)
-                                    .shadow(color: Color(hex: role.color).opacity(0.5), radius: 6)
+                                    .shadow(color: Color(hex: role.color).opacity(0.625), radius: 7.5)
                                 Text(SpreadHours.text(selectedRole == role.id ? selectedHours : role.hours) + "h")
                                     .font(.headline).foregroundStyle(Spread.ink)
                             }.frame(width: 64, height: 64)
@@ -463,7 +463,7 @@ struct LifeHoursView: View {
         let elapsed = max(0, min(0.1, now.timeIntervalSince(phaseTime)))
         phaseTime = now
         if isVisible && scenePhase == .active && !reduceMotion && !separated && !holding && !saving {
-            // One complete orbit in 20 seconds, rather than a barely noticeable minute.
+            // A 25% faster orbit: one revolution in 16 seconds, paused during direct manipulation.
             phase = (phase + elapsed * LifeOrbitMath.orbitDegreesPerSecond).truncatingRemainder(dividingBy: 360)
         }
         guard holding, gestureContext == context else { return }
