@@ -1,7 +1,4 @@
-#if os(iOS)
-import SwiftUI
-import Combine
-import UIKit
+import Foundation
 
 /// Pure geometry and arithmetic: one 15° detent is a half hour. Direction follows the
 /// reference's pointerAngle/angleDelta, including wrapping at -180/180.
@@ -13,6 +10,10 @@ enum LifeOrbitMath {
     static func angle(x: Double, y: Double, center: Double) -> Double {
         atan2(y - center, x - center) * 180 / .pi
     }
+    static func holdCredit(distance: Double, interval: Double) -> Double {
+        guard abs(distance) > 12 else { return 0 }
+        return max(0, interval) * min(16, max(1, (abs(distance) - 8) / 14))
+    }
     static func capacityDelta(distance: Double, elapsed: Double) -> Int {
         guard abs(distance) > 17 else { return 0 }
         let speed = min(16, max(1, (abs(distance) - 8) / 14))
@@ -23,6 +24,11 @@ enum LifeOrbitMath {
         min(maximum, max(minimum, value))
     }
 }
+
+#if os(iOS)
+import SwiftUI
+import Combine
+import UIKit
 
 struct LifeHoursView: View {
     @ObservedObject var planner: LivePlanner
@@ -42,7 +48,7 @@ struct LifeHoursView: View {
     @State private var saving = false
     @State private var rejected = false
     @GestureState private var contactActive = false
-    @ScaledMetric(relativeTo: .largeTitle) private var numberSize = 48
+    @ScaledMetric(relativeTo: .largeTitle) private var numberSize: CGFloat = 48
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
     private let clock = Timer.publish(every: 1.0 / 60, on: .main, in: .common).autoconnect()
@@ -230,7 +236,7 @@ struct LifeHoursView: View {
                 .accessibilityAdjustableAction { direction in
                     if let capacity {
                         let change: Double = direction == .increment ? 1 : -1
-                        commitCapacity(LifeOrbitMath.limit(capacity + change, minimum: storedAssigned, maximum: 168))
+                        commitCapacity(LifeOrbitMath.limit(capacity + change, minimum: min(storedAssigned, capacity), maximum: max(168, capacity)))
                     }
                 }
             }
@@ -332,7 +338,9 @@ struct LifeHoursView: View {
                     commitCapacity(LifeOrbitMath.limit(capacity - 1, minimum: storedAssigned, maximum: 168))
                 }
             } label: { Image(systemName: "minus").frame(width: 44, height: 44) }
-                .disabled(capacity == nil || capacity! <= storedAssigned)
+                .accessibilityLabel("Decrease weekly planning hours")
+                .keyboardShortcut(.downArrow, modifiers: [.option])
+                .disabled(saving || rejected || capacity == nil || capacity! <= min(storedAssigned, capacity!))
             TextField("Weekly hours", text: $capacityText)
                 .keyboardType(.decimalPad)
                 .submitLabel(.done)
@@ -344,7 +352,9 @@ struct LifeHoursView: View {
                     commitCapacity(LifeOrbitMath.limit(capacity + 1, minimum: storedAssigned, maximum: 168))
                 }
             } label: { Image(systemName: "plus").frame(width: 44, height: 44) }
-                .disabled(capacity == nil || capacity! >= 168)
+                .accessibilityLabel("Increase weekly planning hours")
+                .keyboardShortcut(.upArrow, modifiers: [.option])
+                .disabled(saving || rejected || capacity == nil || capacity! >= max(168, capacity!))
             Button("Set") {
                 guard let entered = Double(capacityText.replacingOccurrences(of: ",", with: ".")),
                       entered >= storedAssigned, entered <= 168, (entered * 2).rounded() == entered * 2 else {
@@ -457,7 +467,7 @@ struct LifeHoursView: View {
         let interval = max(0, now.timeIntervalSince(holdLast))
         holdLast = now
         guard now.timeIntervalSince(gestureStarted ?? now) >= 0.35, abs(holdDistance) > 12 else { return }
-        holdCredit += interval * min(16, max(1, (abs(holdDistance) - 8) / 14))
+        holdCredit += LifeOrbitMath.holdCredit(distance: holdDistance, interval: min(interval, now.timeIntervalSince(gestureStarted ?? now) - 0.35))
         let steps = Int(holdCredit)
         if steps > 0 {
             holdCredit -= Double(steps)
