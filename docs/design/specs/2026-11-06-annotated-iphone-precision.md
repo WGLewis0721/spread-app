@@ -56,3 +56,14 @@ Pending implementation; these refine H1–H5. They describe owner-observed behav
 | H11 | 71%, 54% | Use true circular-arc geometry as allocated hours grow or shrink. Preserve circular curvature and radius; adjust angular sweep rather than deforming or stretching arcs. |
 
 Intake remains open. Continue waiting for the owner's remaining updates before implementation.
+
+## Photo 4 — Center value and contextual history (owner annotations)
+
+Pending implementation; intake remains open.
+
+| ID | Position | Fix / acceptance |
+| --- | --- | --- |
+| H12 | 49%, 48% | The central 168 value has no clear meaning to the user. Make the center value's meaning and unit immediately understandable, consistently distinguishing user-set weekly planning hours, selected Life-area hours and the 168-hour calendar-week limit. Do not rely on technical knowledge to interpret the display. Refines H1, H6 and H9. |
+| U1 | 47%, 83% | Undo/Redo must appear contextually after relevant edits and disappear after inactivity rather than permanently occupying the dock area. Preserve undo/redo history when controls hide. Exact inactivity timing will be calibrated during implementation; no duration has been specified by the owner. |
+
+No app code changes until the owner completes the annotations.
