@@ -22,4 +22,7 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 | 2026-11-04 | [Week/Month 61-decision verification status](2026-11-04-week-month-verification.md) | PR #139 status; release NO-GO until simulator evidence |
 | 2026-11-03 | [Working-build SwiftUI parity spec (root)](../../../SPREAD_SWIFTUI_PARITY_SPEC.md) and [implementation instructions](../../../SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) | Owner direction; reference capture required; no merge/release authorization |
 
-- [Life and Classic: shared polish and tray controls](2026-11-06-life-classic-polish.md) — implemented first slice; separate video reviews await both recordings.
+- [Life and Classic: shared polish and tray controls](2026-11-06-life-classic-polish.md) — shared polish contract, with both recording reviews completed.
+
+- [Classic recording specification](2026-11-06-classic-video-spec.md) — timestamped design, motion and UI/UX reference.
+- [Life recording specification](2026-11-06-life-video-spec.md) — timestamped findings, corrections and candidate acceptance.
