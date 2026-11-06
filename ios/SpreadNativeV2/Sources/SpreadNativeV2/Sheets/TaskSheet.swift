@@ -2,6 +2,8 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import UniformTypeIdentifiers
+import QuickLook
 
 // MARK: Rich task content (wire shape of `TaskContent` in src/lib/spread/model.ts)
 
@@ -19,6 +21,7 @@ struct NativeContentBlock: Codable, Identifiable, Equatable {
     var cells: [[String]]?
     var src: String?
     var richText: NativeRichText?
+    var file: NativeManagedFile?
     var preserved: [String: NativeJSON] = [:]
 }
 
@@ -33,7 +36,7 @@ struct NativeTaskDetail: Decodable {
 
 /// The four content kinds the native editor can write. Any other kind is shown read-only and never re-sent,
 /// so a newer or unknown block is preserved in the store rather than downgraded here.
-private let editableKinds: Set<String> = ["notes", "outline", "table", "photo"]
+private let editableKinds: Set<String> = ["notes", "outline", "table", "photo", "file"]
 
 /// The task sheet (`TaskSheet` in task-sheet.tsx): the title, the rich blocks (Notes, Outline, Table, Photo) with
 /// their remove controls, the Add menu of formats, and Delete. Content is read with `readTaskContent` and saved with
@@ -60,6 +63,9 @@ struct TaskSheet: View {
     @State private var finishing = false
     @State private var photoPick: PhotosPickerItem?
     @State private var confirmDelete = false
+    @State private var importingFile = false
+    @State private var previewURL: URL?
+    @State private var attachmentError: String?
     /// Which rich-content field has the keyboard. Only set when the user adds a line, row or column.
     @FocusState private var focusedField: String?
 
@@ -132,6 +138,15 @@ struct TaskSheet: View {
                 }
             }
         }
+        .fileImporter(isPresented: $importingFile, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first { importManagedFile(url) }
+            else if case .failure = result { attachmentError = "This file could not be added. Try again or choose another file." }
+        }
+        .quickLookPreview($previewURL)
+        .interactiveDismissDisabled(lifeMode && (contentRevision > savedContentRevision || title != task?.text))
+        .alert("File unavailable", isPresented: Binding(get: { attachmentError != nil }, set: { if !$0 { attachmentError = nil } })) {
+            Button("OK") { attachmentError = nil }
+        } message: { Text(attachmentError ?? "") }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .task { await load() }
@@ -347,11 +362,39 @@ struct TaskSheet: View {
         scheduleSave()
     }
 
+    private func importManagedFile(_ source: URL) {
+        guard let profile = planner.state?.envelope.profileId else { return }
+        do {
+            let file = try LifeAttachmentStore.importFile(source, profile: profile, task: taskId, existing: content.blocks.compactMap(\.file))
+            append(NativeContentBlock(type: "file", file: file))
+        } catch { attachmentError = error.localizedDescription }
+    }
+
+    private func managedFileView(_ block: NativeContentBlock) -> some View {
+        Button {
+            guard let file = block.file, let profile = planner.state?.envelope.profileId else { return }
+            do { previewURL = try LifeAttachmentStore.url(profile: profile, task: taskId, file: file) }
+            catch { attachmentError = "The saved file could not be opened. Its reference is preserved. Restore the file from a full local backup." }
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Label(block.file?.name ?? "File", systemImage: "doc")
+                Text("Saved on this iPhone").font(.caption)
+            }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }.accessibilityLabel("Open file, \(block.file?.name ?? "File")")
+    }
+
     private func addPhoto(_ item: PhotosPickerItem) async {
         defer { photoPick = nil }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data),
               let jpeg = image.jpegData(compressionQuality: 0.8) else { return }
+        if lifeMode {
+            let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".jpg")
+            defer { try? FileManager.default.removeItem(at: temporary) }
+            do { try jpeg.write(to: temporary, options: .atomic); importManagedFile(temporary) }
+            catch { attachmentError = error.localizedDescription }
+            return
+        }
         append(NativeContentBlock(type: "photo", src: "data:image/jpeg;base64," + jpeg.base64EncodedString()))
     }
 
@@ -379,6 +422,7 @@ struct TaskSheet: View {
             case "outline": outlineEditor(block)
             case "table": tableEditor(block)
             case "photo": photoView(block)
+            case "file": managedFileView(block)
             default: EmptyView()
             }
         }
@@ -565,6 +609,11 @@ struct TaskSheet: View {
                     }
                     formatRow(type: "table", label: "Table", detail: "Rows and columns.", icon: "icon-table") {
                         append(NativeContentBlock(type: "table", cells: [["", ""], ["", ""]]))
+                    }
+                    if lifeMode {
+                        Button { importingFile = true } label: {
+                            formatLabel(label: "Add files", detail: "Saved on this iPhone", icon: "icon-add")
+                        }.accessibilityIdentifier("life-add-files")
                     }
                     PhotosPicker(selection: $photoPick, matching: .images) {
                         formatLabel(label: "Photo", detail: "A picture from this device.", icon: "icon-photo")
