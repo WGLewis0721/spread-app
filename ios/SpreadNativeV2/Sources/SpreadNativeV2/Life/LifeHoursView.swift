@@ -102,13 +102,13 @@ struct LifeHoursView: View {
             Text("Time you want to plan this week.").font(.subheadline).foregroundStyle(LifePalette.secondary)
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(SpreadHours.text(assigned) + " assigned")
+                    Text(SpreadHours.text(assigned) + " h assigned")
                         .font(.headline).monospacedDigit()
                     Text("Hours in your Life areas").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text(available.map { SpreadHours.text($0) + " unassigned" } ?? "Set capacity")
+                    Text(available.map { SpreadHours.text($0) + " h unassigned" } ?? "Set capacity")
                         .font(.headline).monospacedDigit()
                     Text("Hours not assigned").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
@@ -212,6 +212,7 @@ struct LifeHoursView: View {
                         .font(.system(size: numberSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .accessibilityIdentifier("life-capacity-number")
+                    if capacityDraft != nil { Text("Draft").font(.subheadline.weight(.semibold)) }
                     Text("Weekly planning hours")
                         .font(.subheadline.weight(.medium))
                         .multilineTextAlignment(.center)
@@ -321,6 +322,7 @@ struct LifeHoursView: View {
             }
             .keyboardShortcut(.rightArrow, modifiers: [.option])
             .buttonStyle(.bordered)
+            if budgetDraft != nil { Text("Draft · release to save").font(.subheadline).foregroundStyle(LifePalette.secondary) }
             let reserved = snapshot.placedHours(for: role.id)
             Text("\(SpreadHours.text(reserved)) h placed on days · \(SpreadHours.text(max(0, selectedHours - reserved))) h available to place")
                 .font(.callout).foregroundStyle(LifePalette.secondary)
