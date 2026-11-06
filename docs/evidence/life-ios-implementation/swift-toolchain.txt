@@ -1,0 +1,18 @@
+Swift 6.4.2 toolchain verification — 2026-11-06
+Archive: https://download.swift.org/swift-6.4.2-release/ubuntu2604/swift-6.4.2-RELEASE/swift-6.4.2-RELEASE-ubuntu26.04.tar.gz
+Detached signature: same URL with .sig suffix
+Keys fetched from: https://swift.org/keys/all-keys.asc
+
+Observed gpg --verify output:
+gpg: Signature made Wed Oct 28 14:37:18 2026 UTC
+gpg:                using RSA key EF80A866B47A981F
+gpg: Good signature from "Swift 6.x Release Signing Key <swift-infrastructure@forums.swift.org>" [unknown]
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 52BB 7E3D E28A 71BE 22EC  05FF EF80 A866 B47A 981F
+
+Observed swift --version:
+Swift version 6.4.2 (swift-6.4.2-RELEASE)
+Target: x86_64-unknown-linux-gnu
+
+This validates detached signature with the fetched official key; no personal web-of-trust certification was established. This Linux toolchain has no Apple iOS SDK and cannot replace Xcode SwiftUI/UIKit typechecking or simulator/device execution.
