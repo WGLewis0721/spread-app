@@ -36,6 +36,7 @@ struct LifeRoot: View {
     @State private var weekSelectedRole: String?
     @State private var editing = false
     @State private var navigationOpen = false
+    @State private var navigationDrag: CGFloat = 0
     @State private var localSheet: LifeLocalSheet?
     @State private var dockControlsHeight: CGFloat = 62
     @State private var dockOpenerCenterY: CGFloat = 31
@@ -301,15 +302,15 @@ struct LifeRoot: View {
                     .padding(.horizontal, 12).frame(minHeight: 44)
                     .spreadChip(selected: true).buttonStyle(.spreadPress)
             }
-            Button("Change area hours") { navigate(.hours) }
+            Button("Change area hours") {
+                // Preserve the card context when moving into the Hours instrument.
+                hoursSelectedRole = role.id
+                navigate(.hours)
+            }
                 .frame(minHeight: 44).buttonStyle(.spreadPress)
+                .accessibilityIdentifier("life-change-area-hours")
             DayMarks(snapshot: snapshot, role: role)
-            if editing {
-                HStack {
-                    Button("Manage") { localSheet = .manage(role.id) }
-                    Button("Delete", role: .destructive) { localSheet = .delete(role.id) }
-                }.frame(minHeight: 44)
-            } else {
+            if !editing {
                 Button("Prioritize this week") { localSheet = .priority(role.id) }
                     .padding(.horizontal, 12).frame(minHeight: 44)
                     .spreadChip(selected: false).buttonStyle(.spreadPress)
@@ -378,7 +379,8 @@ struct LifeRoot: View {
     private var trayButton: some View {
         Button {
             LifeFeedback.selection()
-            withAnimation(reduceMotion ? nil : SpreadTactile.enter) { navigationOpen = true }
+            navigationDrag = 0
+            withAnimation(reduceMotion ? nil : SpreadTactile.glide) { navigationOpen = true }
         } label: {
             VStack(spacing: 2) {
                 SpreadIcon(name: destination.icon, size: 22)
@@ -412,8 +414,11 @@ struct LifeRoot: View {
             .accessibilityIdentifier("life-bottom-crown")
     }
     private func navigation(width: CGFloat) -> some View {
-        ZStack(alignment: crownRight ? .leading : .trailing) {
-            Color.black.opacity(0.28).ignoresSafeArea()
+        let trayWidth = min(CGFloat(300), max(CGFloat(0), width - CGFloat(32)))
+        let dragProgress = min(1.0, Double(abs(navigationDrag) / max(CGFloat(1), trayWidth)))
+        return ZStack(alignment: crownRight ? .leading : .trailing) {
+            Color.black.opacity(0.35 * (1 - dragProgress))
+                .ignoresSafeArea()
                 .onTapGesture { closeNavigation() }.accessibilityHidden(true)
             VStack(spacing: 0) {
             ScrollView {
@@ -462,11 +467,14 @@ struct LifeRoot: View {
             .frame(height: dockControlsHeight, alignment: .top)
             .padding(.horizontal, 16).padding(.vertical, 8)
             }
-            .frame(width: min(300, max(0, width - 32))).frame(maxHeight: .infinity)
+            .frame(width: trayWidth).frame(maxHeight: .infinity)
             .background(LifePalette.surface)
+            .shadow(color: .black.opacity(0.3125), radius: 20, x: crownRight ? 8.75 : -8.75)
+            .offset(x: navigationDrag)
+            .simultaneousGesture(navigationPan(width: trayWidth))
             .transition(.move(edge: crownRight ? .leading : .trailing).combined(with: .opacity))
             .accessibilityAddTraits(.isModal)
-            .accessibilityAction(.escape) { navigationOpen = false }
+            .accessibilityAction(.escape) { closeNavigation() }
         }
     }
     private func navigate(_ value: LifeDestination) {
@@ -475,13 +483,46 @@ struct LifeRoot: View {
             destination = value
             editing = false
         }
-        withAnimation(reduceMotion ? nil : SpreadTactile.exit) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
             navigationOpen = false
+            navigationDrag = 0
         }
     }
 
     private func closeNavigation() {
-        withAnimation(reduceMotion ? nil : SpreadTactile.exit) { navigationOpen = false }
+        // Keep the finger's last offset during dismissal, so the tray never
+        // jumps backward before leaving the screen. The opener resets it.
+        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+            navigationOpen = false
+        }
+    }
+
+    /// A physical drawer tracks the finger toward its owning edge; vertical menu
+    /// scrolling keeps precedence. Releasing snaps open or dismisses the tray.
+    private func navigationPan(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                let horizontal = value.translation.width
+                guard abs(horizontal) > abs(value.translation.height) * 1.5 else { return }
+                let towardExit = crownRight ? min(0, horizontal) : max(0, horizontal)
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    navigationDrag = min(width, max(-width, towardExit))
+                }
+            }
+            .onEnded { value in
+                if TactilePrecisionMath.drawerShouldClose(
+                    horizontal: Double(value.translation.width),
+                    vertical: Double(value.translation.height),
+                    projected: Double(value.predictedEndTranslation.width),
+                    width: Double(width), onLeft: crownRight
+                ) {
+                    closeNavigation()
+                } else {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) { navigationDrag = 0 }
+                }
+            }
     }
 
     /// Persistent compact navigation only when there is enough actual width.

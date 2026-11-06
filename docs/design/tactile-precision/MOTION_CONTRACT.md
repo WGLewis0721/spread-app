@@ -84,3 +84,33 @@ Rule: touching a moving control immediately redirects it. No transition blocks l
 - Stop active gesture cues when the scene becomes inactive. Never attach planner mutations to animation completion, animation frames or transient drag translations.
 - Do not change the planner schema, cloud features, profile storage, default hour semantics, task eligibility or scheduling rules for visual polish. Any new persisted ordering or capacity change requires a separate, approved data-engine spec.
 - No new fonts, gradients, palette, assets, dependencies, remote telemetry or compulsive reward mechanics. The app should feel enjoyable to use, not incentivize aimless interaction.
+
+### November 6 integrated Life repair calibration
+
+- **Hour editing after creation:** Life card -> Change area hours preserves that role selection in Hours, opens its controls, and explains capacity restrictions. Manage also presents a bounded half-hour control and explicit saved confirmation.
+- **Swipe reveal:** Action layer remains structurally stable during a gesture, but must be transparent and noninteractive at rest. The gesture attaches to the card container; an edit-mode horizontal swipe is the only visible Manage/Delete entry. No duplicate actions in the detail field.
+- **Glow:** Raise edit shadow opacity by 50% in Life and Classic with a pulsing visual outline. Reduce Motion keeps a static outline; never pulse haptics.
+- **Orbit:** With no area selected, rotate colored weekly capacity arcs at 22.5 degrees/sec (16-sec revolution) with bounded color glow. Selection/separation, Reduce Motion or inactive scene pauses movement.
+- **Tray:** Open/close with shared Glide from its actual edge. Finger-following horizontal dismissal uses a bounded threshold with vertical scroll priority and an interruptible Settle back to open.
+
+### November 6 owner calibration — 25% more perceptible tactile motion
+
+**Current integrated candidate on PR #156.** Scale the shared *animation response/duration, visual displacement and emphasis* by **1.25× relative to the previously implemented settings**. These are calibration values for native device testing, not a reason to delay touch feedback. Do **not** multiply gesture thresholds, detent increments, confirmed planner values, haptic event counts or store writes.
+
+| Mechanism | Previous | Current (1.25×) |
+| --- | ---: | ---: |
+| Contact animation duration | 100 ms | 125 ms; finger-down press state still immediate |
+| Magnetic Snap spring response | 220 ms | **275 ms** |
+| Wallet/task Settle response | 320 ms | **400 ms** |
+| Sidebar/week Glide response | 280 ms | **350 ms** |
+| Trigger-linked enter / exit | 220 / 180 ms | **275 / 225 ms** |
+| Press compression | 3% | **3.75%** (scale 0.9625) |
+| Press opacity reduction | 12% | **15%** (opacity 0.85) |
+| Detail entrance vertical distance | 8 pt | **10 pt** |
+| List entrance distance | 10 pt | **12.5 pt** |
+| List stagger / delay ceiling | 30 / 210 ms | **37.5 / 262.5 ms** |
+| Hours arc angular speed | 18°/s | **22.5°/s**, a full revolution in 16 seconds |
+| Classic edit pulse duration | 1.30 s | **1.625 s** |
+| Life edit pulse duration | 1.35 s | **1.6875 s** |
+
+Shadow spread, existing orbit glows and Classic edit highlights gain up to 25% visual emphasis, capped at valid opacity values. Do not exceed alpha 1.0 or enlarge card geometry or tap targets. Existing spring damping fractions are unchanged to prevent additional bounce. Animations remain interruptible and Reduce Motion keeps nonspatial, legible state feedback. Device performance, haptic synchronization and complete native journeys **must be verified** before release.

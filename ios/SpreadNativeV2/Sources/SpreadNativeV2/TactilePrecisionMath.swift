@@ -30,6 +30,19 @@ public enum TactilePrecisionMath {
         return horizontal < 0 ? 1 : -1
     }
 
+    /// The navigation tray dismisses only for a deliberate movement toward its edge,
+    /// or a projected flick that starts in that direction. Vertical scroll never closes it.
+    public static func drawerShouldClose(
+        horizontal: Double, vertical: Double, projected: Double,
+        width: Double, onLeft: Bool
+    ) -> Bool {
+        guard horizontal.isFinite, vertical.isFinite, projected.isFinite,
+              width.isFinite, width > 0, abs(horizontal) > abs(vertical) * 1.5 else { return false }
+        let travel = onLeft ? -horizontal : horizontal
+        let predicted = onLeft ? -projected : projected
+        return travel > width * 0.32 || (travel > 16 && predicted > width * 0.6)
+    }
+
     /// A draft detent is bounded and rounded before it can reach the planner.
     public static func hours(origin: Double, translation: Double, step: Double,
                              pointsPerStep: Double = 24) -> Double {

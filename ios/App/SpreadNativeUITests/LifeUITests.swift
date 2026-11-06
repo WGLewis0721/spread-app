@@ -64,6 +64,14 @@ final class LifeUITests: XCTestCase {
         XCTAssertTrue(manage.waitForExistence(timeout: 10), "Only an Edit-mode left swipe reveals Manage")
         XCTAssertFalse(delete.exists)
         capture("life-card-edit-swipe-manage")
+        manage.tap()
+        XCTAssertTrue(app.navigationBars["Manage Life area"].waitForExistence(timeout: 10),
+                      "Swiping Manage must open the actual management sheet")
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-manage-hour-stepper").firstMatch.exists ||
+            app.staticTexts["Set weekly planning hours in Hours before allocating time to this area."].exists,
+            "Existing areas must offer an hours editor or an explicit capacity prerequisite")
+        app.buttons["Cancel"].tap()
         card.swipeRight()
         if !delete.exists { card.swipeRight() } // A first swipe may settle at neutral.
         XCTAssertTrue(delete.waitForExistence(timeout: 10), "Only an Edit-mode right swipe reveals Delete")
@@ -77,6 +85,23 @@ final class LifeUITests: XCTestCase {
             .waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'life-reveal-'")).firstMatch.exists,
                        "Week cards have no Edit mode and must never expose Manage/Delete")
+    }
+
+    func testLifeNavigationDrawerCanBeDraggedClosed() {
+        startLife()
+        if app.descendants(matching: .any).matching(identifier: "life-compact-rail").firstMatch.exists { return }
+        let opener = app.buttons["life-navigation"]
+        XCTAssertTrue(opener.waitForExistence(timeout: 15))
+        opener.tap()
+        let destination = app.buttons["life-nav-life"]
+        XCTAssertTrue(destination.waitForExistence(timeout: 10))
+        let onLeft = destination.frame.midX < app.frame.midX
+        let start = destination.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let finish = start.withOffset(CGVector(dx: onLeft ? -180 : 180, dy: 0))
+        start.press(forDuration: 0.1, thenDragTo: finish)
+        XCTAssertTrue(opener.waitForExistence(timeout: 10),
+                      "A horizontal swipe toward the tray edge must dismiss it")
+        capture("life-drawer-glide-dismiss")
     }
 
     func testLifeNavigationAndUnmodifiedMoreReachability() {
@@ -208,6 +233,12 @@ final class TactileUITests: NativeUITestCase {
         XCTAssertTrue(el("life-task-details").waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts[tag + " task"].firstMatch.waitForExistence(timeout: 10))
         capture("tactile-life-same-task-after-relaunch")
+        tapID("life-change-area-hours")
+        XCTAssertTrue(el("life-hours-page").waitForExistence(timeout: 10))
+        XCTAssertTrue(el("life-selected-hours-controls").exists ||
+                      el("life-selected-hours-needs-capacity").exists,
+                      "Changing an existing Life area's hours must retain its selection or explain the capacity prerequisite")
+        capture("life-existing-area-hours-selected")
 
         app.terminate()
         launch(["-native.weekMonth.previewEnabled", "NO"])

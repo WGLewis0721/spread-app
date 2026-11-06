@@ -3,6 +3,9 @@ import Foundation
 /// Pure geometry and arithmetic: one 15° detent is a half hour. Direction follows the
 /// reference's pointerAngle/angleDelta, including wrapping at -180/180.
 enum LifeOrbitMath {
+    /// Twenty-second visible orbit around the weekly capacity. Pauses on selection/Reduce Motion.
+    static let orbitDegreesPerSecond = 18.0 * 1.25
+
     static func delta(from old: Double, to next: Double) -> Double {
         let value = (next - old + 540).truncatingRemainder(dividingBy: 360)
         return value - 180
@@ -101,8 +104,17 @@ struct LifeHoursView: View {
                 .font(.callout).foregroundStyle(LifePalette.secondary)
             orbit
             roleChoices
-            if let selected, separated, capacity != nil {
-                selectedControls(selected)
+            if let selected, separated {
+                if capacity != nil {
+                    selectedControls(selected)
+                } else {
+                    Button("Set weekly hours to adjust \(selected.name)") {
+                        capacityText = ""
+                        showCapacityField = true
+                    }
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("life-selected-hours-needs-capacity")
+                }
             }
             if saving { ProgressView("Saving hours…") }
             if rejected {
@@ -128,7 +140,11 @@ struct LifeHoursView: View {
         }
         .onChange(of: snapshot.weekKey) { _, _ in resetGestures() }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in resetGestures() }
-        .onChange(of: selectedRole) { _, _ in if !rejected { budgetDraft = nil }; lastAngle = nil; angleCredit = 0 }
+        .onChange(of: selectedRole) { _, role in
+            if !rejected { budgetDraft = nil }
+            lastAngle = nil; angleCredit = 0
+            if role != nil { separated = true }
+        }
         .onChange(of: planner.state?.revision) { _, value in
             if let originRevision, value != originRevision, !saving, !rejected { resetGestures() }
         }
@@ -137,7 +153,11 @@ struct LifeHoursView: View {
         .onChange(of: contactActive) { _, active in
             if !active { DispatchQueue.main.async { if gestureContext != nil && !saving && !rejected { resetGestures() } } }
         }
-        .onAppear { isVisible = true; phaseTime = Date() }
+        .onAppear {
+            isVisible = true; phaseTime = Date()
+            // A role chosen from its Life card opens Hours ready for adjustment.
+            if selectedRole != nil { separated = true }
+        }
         .onDisappear { isVisible = false; resetGestures() }
         .onReceive(clock) { now in advanceClock(now) }
         .accessibilityIdentifier("life-hours-page")
@@ -156,6 +176,9 @@ struct LifeHoursView: View {
                                                    lineCap: .round))
                         .rotationEffect(.degrees(-90 + phase))
                         .frame(width: radius * 2, height: radius * 2)
+                        .shadow(color: Color(hex: segment.color).opacity(0.875),
+                                radius: selectedRole == segment.id ? 17.5 : 12.5)
+                        .shadow(color: Color(hex: segment.color).opacity(0.35), radius: 5)
 
                         .animation(reduceMotion ? nil : SpreadTactile.settle, value: separated)
                         .animation(reduceMotion ? nil : SpreadTactile.snap, value: selectedRole)
@@ -265,7 +288,7 @@ struct LifeHoursView: View {
                             ZStack {
                                 Circle().fill(Color(hex: role.color).opacity(0.12))
                                 Circle().strokeBorder(Color(hex: role.color), lineWidth: selectedRole == role.id ? 4 : 2)
-                                    .shadow(color: Color(hex: role.color).opacity(0.5), radius: 6)
+                                    .shadow(color: Color(hex: role.color).opacity(0.625), radius: 7.5)
                                 Text(SpreadHours.text(selectedRole == role.id ? selectedHours : role.hours) + "h")
                                     .font(.headline).foregroundStyle(Spread.ink)
                             }.frame(width: 64, height: 64)
@@ -311,6 +334,7 @@ struct LifeHoursView: View {
         .accessibilityAdjustableAction { direction in changeBudget(by: direction == .increment ? 0.5 : -0.5) }
         .padding(16)
         .spreadCard(radius: 20)
+        .accessibilityIdentifier("life-selected-hours-controls")
     }
 
     private var capacityField: some View {
@@ -439,7 +463,8 @@ struct LifeHoursView: View {
         let elapsed = max(0, min(0.1, now.timeIntervalSince(phaseTime)))
         phaseTime = now
         if isVisible && scenePhase == .active && !reduceMotion && !separated && !holding && !saving {
-            phase = (phase + elapsed * 6).truncatingRemainder(dividingBy: 360)
+            // A 25% faster orbit: one revolution in 16 seconds, paused during direct manipulation.
+            phase = (phase + elapsed * LifeOrbitMath.orbitDegreesPerSecond).truncatingRemainder(dividingBy: 360)
         }
         guard holding, gestureContext == context else { return }
         let interval = max(0, now.timeIntervalSince(holdLast))

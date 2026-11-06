@@ -1195,14 +1195,14 @@ private struct RoleEditGlow: ViewModifier {
                     // its size or shifting a single glyph. Static when Reduce
                     // Motion is enabled; no jitter or constant vibration.
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(color.opacity(bright && !reduceMotion ? 0.72 : 0.20),
-                                      lineWidth: bright && !reduceMotion ? 2 : 1)
-                        .blur(radius: bright && !reduceMotion ? 2.5 : 0.5)
+                        .strokeBorder(color.opacity(bright || reduceMotion ? 1 : 0.375),
+                                      lineWidth: bright || reduceMotion ? 2.5 : 1.25)
+                        .blur(radius: bright || reduceMotion ? 3.125 : 0.625)
                         .allowsHitTesting(false)
                 }
             }
-            .shadow(color: enabled ? color.opacity(bright && !reduceMotion ? 0.44 : 0.16) : .clear,
-                    radius: enabled ? (bright && !reduceMotion ? 20 : 7) : 0)
+            .shadow(color: enabled ? color.opacity(bright || reduceMotion ? 0.825 : 0.30) : .clear,
+                    radius: enabled ? (bright || reduceMotion ? 25 : 8.75) : 0)
             .onAppear { animate() }
             .onChange(of: enabled) { _, _ in animate() }
             .onChange(of: reduceMotion) { _, _ in animate() }
@@ -1212,7 +1212,7 @@ private struct RoleEditGlow: ViewModifier {
     private func animate() {
         bright = false
         guard enabled && !reduceMotion && scenePhase == .active else { return }
-        withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true)) {
+        withAnimation(.easeInOut(duration: 1.3 * SpreadTactile.emphasis).repeatForever(autoreverses: true)) {
             bright = true
         }
     }

@@ -4,6 +4,8 @@ import XCTest
 final class NativeContractsTests: XCTestCase {
 #if os(iOS)
     func testLifeOrbitAngleWrapAndDetents() {
+        XCTAssertEqual(LifeOrbitMath.orbitDegreesPerSecond, 22.5, accuracy: 0.001)
+        XCTAssertEqual(LifeOrbitMath.orbitDegreesPerSecond * 16, 360, accuracy: 0.001)
         XCTAssertEqual(LifeOrbitMath.delta(from: 179, to: -179), 2, accuracy: 0.00001)
         XCTAssertEqual(LifeOrbitMath.delta(from: -179, to: 179), -2, accuracy: 0.00001)
         XCTAssertEqual(LifeOrbitMath.delta(from: 40, to: 40), 0, accuracy: 0.00001)

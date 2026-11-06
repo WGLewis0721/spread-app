@@ -185,19 +185,38 @@ public enum SpreadMotion {
 }
 
 /// One tactile vocabulary for Classic and Life, without changing their visual tokens.
-/// Finger tracking is unanimated; these animations govern stops and state changes.
+/// An owner-requested 25% emphasis applies to *settling time and visible displacement*,
+/// not to gesture thresholds, raw finger tracking, data writes, or haptic frequency.
 public enum SpreadTactile {
-    public static let contact = Animation.easeOut(duration: 0.10)
-    public static let snap = Animation.interactiveSpring(response: 0.22, dampingFraction: 0.91, blendDuration: 0.06)
-    public static let settle = Animation.interactiveSpring(response: 0.32, dampingFraction: 0.88, blendDuration: 0.09)
-    public static let glide = Animation.interactiveSpring(response: 0.28, dampingFraction: 0.96, blendDuration: 0.07)
-    /// Calm ease-out for elements entering from a known trigger. No bounce on routine UI.
-    public static let enter = Animation.timingCurve(0.16, 1, 0.3, 1, duration: 0.22)
-    /// Exits are deliberately ~20% shorter than entrances.
-    public static let exit = Animation.easeIn(duration: 0.18)
-    /// Shared identity-preserving reveal for a responsibility's separate detail field.
+    public static let emphasis: Double = 1.25
+    public static let contactDuration = 0.10 * emphasis
+    public static let snapResponse = 0.22 * emphasis
+    public static let settleResponse = 0.32 * emphasis
+    public static let glideResponse = 0.28 * emphasis
+    public static let enterDuration = 0.22 * emphasis
+    public static let exitDuration = 0.18 * emphasis
+    public static let pressScale = 1 - (1 - 0.97) * emphasis
+    public static let pressOpacity = 1 - (1 - 0.88) * emphasis
+    public static let entranceDistance: CGFloat = CGFloat(10 * emphasis)
+    public static let detailDistance: CGFloat = CGFloat(8 * emphasis)
+    public static let staggerStep = 0.03 * emphasis
+    public static let staggerCap = 0.21 * emphasis
+
+    public static let contact = Animation.easeOut(duration: contactDuration)
+    // Preserve damping: stronger observability must not add gratuitous bounce.
+    public static let snap = Animation.interactiveSpring(
+        response: snapResponse, dampingFraction: 0.91, blendDuration: 0.06 * emphasis)
+    public static let settle = Animation.interactiveSpring(
+        response: settleResponse, dampingFraction: 0.88, blendDuration: 0.09 * emphasis)
+    public static let glide = Animation.interactiveSpring(
+        response: glideResponse, dampingFraction: 0.96, blendDuration: 0.07 * emphasis)
+    /// Calm ease-out for elements entering from a known trigger; no routine bounce.
+    public static let enter = Animation.timingCurve(0.16, 1, 0.3, 1, duration: enterDuration)
+    /// Exits remain faster than entrances, with the same 25% duration scaling.
+    public static let exit = Animation.easeIn(duration: exitDuration)
+    /// Same responsibility appears to grow into a distinct details surface below the face.
     public static var detailReveal: AnyTransition {
-        .asymmetric(insertion: .offset(y: 8).combined(with: .opacity), removal: .opacity)
+        .asymmetric(insertion: .offset(y: detailDistance).combined(with: .opacity), removal: .opacity)
     }
 
     public static func resolved(_ animation: Animation, reduceMotion: Bool) -> Animation? {
@@ -215,11 +234,11 @@ struct SpreadEntrance: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(visible || reduceMotion ? 1 : 0)
-            .offset(y: visible || reduceMotion ? 0 : 10)
+            .offset(y: visible || reduceMotion ? 0 : SpreadTactile.entranceDistance)
             .task {
                 await Task.yield()
                 guard !Task.isCancelled else { return }
-                withAnimation(reduceMotion ? nil : SpreadTactile.enter.delay(min(0.21, SpreadMotion.stagger(index, step: 0.03)))) {
+                withAnimation(reduceMotion ? nil : SpreadTactile.enter.delay(min(SpreadTactile.staggerCap, SpreadMotion.stagger(index, step: SpreadTactile.staggerStep)))) {
                     visible = true
                 }
             }
@@ -336,8 +355,8 @@ struct SpreadPressStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
-                .opacity(configuration.isPressed ? 0.88 : 1)
+                .scaleEffect(configuration.isPressed && !reduceMotion ? CGFloat(SpreadTactile.pressScale) : 1)
+                .opacity(configuration.isPressed ? SpreadTactile.pressOpacity : 1)
                 // Contact appears at the next render; only the release settles.
                 .animation(reduceMotion || configuration.isPressed ? nil : SpreadTactile.snap,
                            value: configuration.isPressed)
