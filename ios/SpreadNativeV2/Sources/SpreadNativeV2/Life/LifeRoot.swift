@@ -474,10 +474,12 @@ struct LifeRoot: View {
     }
     private func navigate(_ value: LifeDestination) {
         if destination != value { LifeFeedback.selection() }
-        withAnimation(reduceMotion ? nil : SpreadTactile.exit) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
             destination = value
-            navigationOpen = false
             editing = false
+        }
+        withAnimation(reduceMotion ? nil : SpreadTactile.exit) {
+            navigationOpen = false
         }
     }
 
