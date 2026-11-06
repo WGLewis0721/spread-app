@@ -3,7 +3,8 @@ export type ContentBlock =
   | { id: string; type: "notes"; text: string; richText?: { version: 1; rtf: string } }
   | { id: string; type: "outline"; items: OutlineItem[] }
   | { id: string; type: "table"; cells: string[][] }
-  | { id: string; type: "photo"; src: string };
+  | { id: string; type: "photo"; src: string }
+  | { id: string; type: "file"; file: { id: string; name: string; mimeType: string; byteCount: number; checksum: string } };
 export type TaskContent = { blocks: ContentBlock[] };
 export type Task = {
   id: string;
