@@ -39,7 +39,19 @@ struct NativeBulkPreview: Decodable, Identifiable {
     var id: String { taskId }
     var eligible: Bool { targetAllocationId != nil && error == nil }
 }
+struct NativeLifePriorityPreview: Decodable {
+    let roleId: String
+    let day: String
+    let goalHours: Double
+    let reservedHours: Double
+    let ownUnusedHours: Double
+    let unassignedHours: Double
+    let additionalBudgetHours: Double
+    let reserveHours: Double
+    let shortageHours: Double
+}
 struct LiveReply: Decodable {
+    let priorityPreview: NativeLifePriorityPreview?
     let ok: Bool
     let taskDetail: NativeTaskDetail?
     let error: String?
@@ -197,6 +209,15 @@ struct HoursShortage: Equatable {
               state?.envelope.profileId == current.envelope.profileId else { return nil }
         return reply
     }
+    func previewLifePriority(roleId: String, goalHours: Double, day: String) async -> NativeLifePriorityPreview? {
+        let origin = state
+        let reply = await readWeekFeature(["type": "previewLifePriority", "roleId": roleId, "goalHours": goalHours, "day": day])
+        guard state?.sessionId == origin?.sessionId,
+              state?.revision == origin?.revision,
+              state?.envelope.profileId == origin?.envelope.profileId,
+              state?.envelope.snapshot.weekKey == origin?.envelope.snapshot.weekKey else { return nil }
+        return reply?.priorityPreview
+    }
     func recentlyDeletedTasks() async -> [NativeDeletedTask]? {
         await readWeekFeature(["type": "readDeletedTasks"])?.deletedTasks
     }
@@ -253,14 +274,19 @@ struct HoursShortage: Equatable {
         errorOffersBackup = false
     }
 
-    @discardableResult func send(_ action: [String: Any], completionHaptic: Bool = false) async -> Bool {
+    @discardableResult func send(_ action: [String: Any], completionHaptic: Bool = false, expectedRevision: Int? = nil) async -> Bool {
         let previous = tail
+        let originSession = state?.sessionId
         let originProfile = state?.envelope.profileId
         let originWeek = state?.envelope.snapshot.weekKey
         let task = Task { @MainActor in
             _ = await previous?.value
-            guard let current = self.state, current.envelope.profileId == originProfile else { return false }
+            guard let current = self.state, current.sessionId == originSession, current.envelope.profileId == originProfile else { return false }
             if action["type"] as? String != "changeWeek", current.envelope.snapshot.weekKey != originWeek { self.error = "The week changed. Please choose the task again."; return false }
+            if let expectedRevision, current.revision != expectedRevision {
+                self.error = "Your plan changed. Review the current plan and try again."
+                return false
+            }
             self.busy = true
             defer { self.busy = false }
             do {
