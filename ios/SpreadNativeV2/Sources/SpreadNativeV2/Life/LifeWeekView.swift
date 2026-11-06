@@ -7,6 +7,8 @@ struct LifeWeekView: View {
     let snapshot: PlannerSnapshot
     let onOpenTask: (String, String) -> Void
     let onReserve: (String) -> Void
+    let onManage: (String) -> Void
+    let onDelete: (String) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selectedDate = ""
@@ -54,7 +56,7 @@ struct LifeWeekView: View {
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: roles,
                     selectedRole: $selectedRole, editing: false, day: date,
-                    onManage: onReserve, onDelete: { _ in }, onBeginEdit: onReserve)
+                    onManage: onManage, onDelete: onDelete, onBeginEdit: onManage)
                 if let roleID = selectedRole, let role = roles.first(where: { $0.id == roleID }) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text(role.name).font(.title3.weight(.semibold))
