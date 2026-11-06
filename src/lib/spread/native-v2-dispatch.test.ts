@@ -722,11 +722,14 @@ test("Life all-weeks responsibility deletion and global editing restore exact fu
     assert.ok(edited.undoId); assert.equal(edited.ok, true);
     assert.equal((await router.dispatch(request({ type: "undo", editId: edited.undoId }))).ok, true);
     assert.equal(JSON.stringify(useSpread.getState().data), before);
+    await router.dispatch(request({ type: "setLifePriority", priorityRoleId: roleId, goalHours: 6, day: data.currentWeek }));
+    const beforeDeletion = JSON.stringify(useSpread.getState().data);
     const removed = await router.dispatch(request({ type: "removeLifeRole", roleId }));
+    assert.equal(useSpread.getState().data.weeks[data.currentWeek].life?.priorityGoalHours, undefined);
     assert.ok(removed.undoId);
     assert.equal(useSpread.getState().data.hats.some((hat) => hat.id === roleId), false);
     assert.equal((await router.dispatch(request({ type: "undo", editId: removed.undoId }))).ok, true);
-    assert.equal(JSON.stringify(useSpread.getState().data), before);
+    assert.equal(JSON.stringify(useSpread.getState().data), beforeDeletion);
     assert.equal((await router.dispatch(request({ type: "redo", editId: removed.undoId }))).ok, true);
     assert.equal(Object.values(useSpread.getState().data.weeks).every((week) => !week.boxes.some((box) => box.hatId === roleId)), true);
   } finally { router.dispose(); }
