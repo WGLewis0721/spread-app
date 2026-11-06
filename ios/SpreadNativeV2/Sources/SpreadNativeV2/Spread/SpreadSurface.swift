@@ -984,7 +984,7 @@ struct StackLayout: View {
         let open = expandedIds.contains(role.id)
         VStack(spacing: 10) {
         ZStack(alignment: .topLeading) {
-            if editing {
+            if editing && visibleSide(for: role.id) != .none {
                 actionTray(for: role)
             }
             cardContents(role, open: open)
@@ -996,19 +996,16 @@ struct StackLayout: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .simultaneousGesture(swipeGesture(for: role.id))
-        .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
-            guard !editing else { return }
-            withAnimation(reduceMotion ? nil : SpreadTactile.settle) { editing = true }
-        })
-        // Custom accessibility actions give VoiceOver/keyboard users a way to
-        // reach swipe-only actions, without another permanent button row.
-        .accessibilityAction(named: Text("Manage \(role.name)")) {
-            manage(role.id)
-        }
-        .accessibilityAction(named: Text("Delete \(role.name)")) {
-            if !editing { editing = true }
-            pendingDeleteId = role.id
-            SpreadHaptics.destructivePrompt()
+        // Assistive alternatives to a horizontal edit swipe. The Edit button
+        // remains the only way to enter edit mode.
+        .accessibilityActions {
+            if editing {
+                Button("Manage \(role.name)") { manage(role.id) }
+                Button("Delete \(role.name)", role: .destructive) {
+                    pendingDeleteId = role.id
+                    SpreadHaptics.destructivePrompt()
+                }
+            }
         }
         if open {
             RoleRow(planner: planner, snapshot: snapshot, role: role, editing: false,
@@ -1051,7 +1048,6 @@ struct StackLayout: View {
         .modifier(RoleEditGlow(color: Color(hex: role.color), enabled: editing))
         .shadow(color: Color(hex: role.color).opacity(open ? 0.18 : 0.09),
                 radius: open ? 16 : 8, y: 4)
-        .accessibilityAction(named: Text("Edit \(role.name)")) { editing = true }
     }
 
     @ViewBuilder
@@ -1151,9 +1147,9 @@ struct StackLayout: View {
             }
     }
 
-    /// Named accessibility actions and the revealed button must perform the
-    /// same operation immediately, including when Edit has not been entered.
+    /// Both the revealed button and accessibility action require explicit Edit.
     private func manage(_ id: String) {
+        guard editing else { return }
         closeReveal()
         editing = false
         SpreadHaptics.selection()
