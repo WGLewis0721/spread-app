@@ -1,4 +1,4 @@
-# Spread - UI/UX documentation map
+# Spread — UI/UX documentation map
 
 **Single source of design navigation:** [docs/design/README.md](docs/design/README.md). All current design rules, authority, UX fundamentals, device guidance, tokens, brand assets and decisions are organized below `docs/design/`. This root file is a pointer, not another specification.
 

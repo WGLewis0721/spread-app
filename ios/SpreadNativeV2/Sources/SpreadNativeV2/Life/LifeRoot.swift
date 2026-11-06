@@ -79,7 +79,7 @@ struct LifeRoot: View {
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
                     } else {
-                        ProgressView("Opening your plan.").frame(maxWidth: .infinity, maxHeight: .infinity)
+                        ProgressView("Opening your plan…").frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                     }
                 }

@@ -261,7 +261,7 @@ struct LifeWeekView: View {
                             Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
                             Text(role.name)
                             Spacer()
-                            Text("+ � h").fontWeight(.semibold)
+                            Text("+ ½ h").fontWeight(.semibold)
                         }.frame(minHeight: 44)
                     }.disabled(planner.busy)
                         .accessibilityLabel("Reserve half an hour for \(role.name) on \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE MMMM d"))")

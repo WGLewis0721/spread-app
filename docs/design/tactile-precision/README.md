@@ -6,7 +6,7 @@
 
 ## Start here
 
-[Integrated implementation and rollback](IMPLEMENTATION.md) � [Current evidence](../../evidence/tactile-precision/README.md)
+[Integrated implementation and rollback](IMPLEMENTATION.md) · [Current evidence](../../evidence/tactile-precision/README.md)
 
 | Need | Read | Authority |
 | --- | --- | --- |

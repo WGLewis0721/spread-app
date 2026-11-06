@@ -4,7 +4,7 @@ Start here for Spread's design rules and task-specific references.
 
 **Audience:** developers and coding agents. Keep design guidance in this folder.
 
-**Product:** Responsibilities  Hours  Week  Tasks, local-first. Native: one approved Wallet Stack; preserve Week/Month and planner actions. React and landing stay separate.
+**Product:** Responsibilities → Hours → Week → Tasks, local-first. Native: one approved Wallet Stack; preserve Week/Month and planner actions. React and landing stay separate.
 
 **Delivery:** Build full features in the existing app on a development branch. Test and refine in place. No isolated prototypes. No merge or release without owner approval.
 

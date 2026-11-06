@@ -277,7 +277,7 @@ struct MoveToSheet: View {
                 .padding(.bottom, 4)
 
                 if choices.isEmpty {
-                    Text("\(role.name) isn't on a day yet. Add it to a day on the Week first, then place this task there.")
+                    Text("\(role.name) isn’t on a day yet. Add it to a day on the Week first, then place this task there.")
                         .font(.system(.subheadline)).foregroundStyle(Spread.secondary)
                         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                         .spreadCard()

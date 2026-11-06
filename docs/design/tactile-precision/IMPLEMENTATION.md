@@ -1,6 +1,6 @@
 # Tactile Precision implementation
 
-> Part of the [Spread design brain](../README.md). [Contract](MOTION_CONTRACT.md) � [Verification](VERIFICATION.md)
+> Part of the [Spread design brain](../README.md). [Contract](MOTION_CONTRACT.md) · [Verification](VERIFICATION.md)
 >
 > Summary: Integrated Classic and Life candidate based on main `d4afd9732e2d8b9e68ab62e9f84b67bee07305b2`, continuing PR #150. Code completion is separate from native/device acceptance. No release is authorized.
 

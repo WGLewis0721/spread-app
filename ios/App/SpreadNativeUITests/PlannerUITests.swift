@@ -253,7 +253,7 @@ class NativeUITestCase: XCTestCase {
     func addDays(_ date: Date, _ days: Int) -> Date { utc.date(byAdding: .day, value: days, to: date)! }
     func rangeLabel(monday: Date) -> String {
         let f = DateFormatter(); f.calendar = utc; f.timeZone = utc.timeZone; f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "MMM d"
-        return "\(f.string(from: monday)) - \(f.string(from: addDays(monday, 6)))"
+        return "\(f.string(from: monday)) – \(f.string(from: addDays(monday, 6)))"
     }
     /// The planner derives "this week" from the device's local calendar day, so take today's
     /// year-month-day locally and treat it as a date-only UTC value like the planner's week keys.
@@ -386,15 +386,15 @@ final class JourneyUITests: NativeUITestCase {
     func testF02_BudgetAndDays() throws {
         try requireDataset(); launch(); selectRole(Dataset.role); try manageSelectedRole()
         XCTAssertTrue(el("bank-remaining").waitForExistence(timeout: 15))
-        XCTAssertEqual(el("bank-remaining").label, "2h left in this week's bank")
+        XCTAssertEqual(el("bank-remaining").label, "2h left in this week’s bank")
         tapButton("Increase \(Dataset.role) hours by half an hour")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2.5h left in this week's bank" })
+        XCTAssertTrue(eventually { self.el("bank-remaining").label == "2.5h left in this week’s bank" })
         tapButton("Increase \(Dataset.role) hours by half an hour")
-        XCTAssertTrue(eventually { self.el("bank-remaining").label == "3h left in this week's bank" })
+        XCTAssertTrue(eventually { self.el("bank-remaining").label == "3h left in this week’s bank" })
         chooseDay("Monday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.bankLabel == "2h left in this week's bank" }, "Bank reads \(bankLabel) after Monday")
+        XCTAssertTrue(eventually { self.bankLabel == "2h left in this week’s bank" }, "Bank reads \(bankLabel) after Monday")
         chooseDay("Wednesday"); tapID("place-hours-button")
-        XCTAssertTrue(eventually { self.bankLabel == "1h left in this week's bank" }, "Bank reads \(bankLabel) after Wednesday")
+        XCTAssertTrue(eventually { self.bankLabel == "1h left in this week’s bank" }, "Bank reads \(bankLabel) after Wednesday")
         tapButton("Done"); goWeek()
         let allocations = elements(prefix: "allocation-").filter { $0.label == "Move " + Dataset.role }
         XCTAssertEqual(allocations.count, 2)
@@ -427,7 +427,7 @@ final class JourneyUITests: NativeUITestCase {
         let monday = iso(thisMonday), wednesday = iso(addDays(thisMonday, 2))
         tapID("task-move-" + id)
         let days = waitElements(prefix: "eligible-day-", minimum: 2)
-        XCTAssertEqual(days.count, 2, "Only this responsibility's allocated days are eligible")
+        XCTAssertEqual(days.count, 2, "Only this responsibility’s allocated days are eligible")
         // Choices use allocation IDs, not ISO day strings. Resolve each by its
         // accessible weekday label, so reversed allocation order cannot silently
         // schedule on the wrong day while still satisfying a two-choice count.
@@ -549,7 +549,7 @@ final class JourneyUITests: NativeUITestCase {
         typeInto("new-profile-field", other); tapID("create-profile")
         closeNativeSheets(); goSpread()
         XCTAssertFalse(elements(prefix: "select-role-").contains(where: { $0.label == Dataset.role }),
-                       "The new profile contains another profile's responsibility")
+                       "The new profile contains another profile’s responsibility")
         tapID("open-more"); tapID("manage-profiles"); tapID(originalId)
         closeNativeSheets(); selectRole(Dataset.role)
         XCTAssertTrue(taskRow(Dataset.taskA).waitForExistence(timeout: 20))

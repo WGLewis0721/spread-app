@@ -637,7 +637,7 @@ struct HourStepper: View {
                 }
             }
             Button("Cancel", role: .cancel) {}
-        } message: { Text("Enter 0-168 hours in half-hour increments. Planner limits still apply.") }
+        } message: { Text("Enter 0–168 hours in half-hour increments. Planner limits still apply.") }
     }
 
     private func adjust(_ delta: Double) {

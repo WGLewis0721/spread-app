@@ -1,4 +1,4 @@
-# Classic  Life component handoff
+# Classic → Life component handoff
 
 > Part of the [Spread design brain](../README.md). Canonical correction to the first Life polish pass. Owner direction: November 6, 2026.
 
@@ -11,15 +11,15 @@
 
 ## Target
 
-One app, one component language, two arrangements. Classic supplies materials, iconography, typography, depth, spacing, cues and motion. Life keeps its Wallet  separate details, Hours orbit and Week/month arrangement.
+One app, one component language, two arrangements. Classic supplies materials, iconography, typography, depth, spacing, cues and motion. Life keeps its Wallet → separate details, Hours orbit and Week/month arrangement.
 
 Authority: [Classic recording spec](2026-11-06-classic-video-spec.md), [Life recording spec](2026-11-06-life-video-spec.md), [native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), and actual Classic source. Recordings use different plans; do not present them as matched before/after evidence.
 
 ## Component map
 
-"Prepared" means changed in this branch's source, **not** verified on iPhone.
+“Prepared” means changed in this branch's source, **not** verified on iPhone.
 
-| Component | Gap in shipped Life | Take from Classic  apply to Life | Branch status |
+| Component | Gap in shipped Life | Take from Classic → apply to Life | Branch status |
 | --- | --- | --- | --- |
 | Weekly summary | Flat value hierarchy; missing calendar tile | Calendar tile, bold hour value, quiet count, role segments, strong disclosure cue; keep Life capacity semantics and Hours destination | Prepared |
 | Wallet identity | Smaller badge; weaker hours/chevron; truncated names | 42pt category tile, semibold name, bold hours and rotating chevron; allow two-line names | Prepared |
@@ -36,7 +36,7 @@ Authority: [Classic recording spec](2026-11-06-classic-video-spec.md), [Life rec
 | Focus/edit/completion | No matched proof of full interaction consistency | Same rigid card settling, press response, edit/reveal cues and acknowledged completion feedback; retain separate task details | Source partly reused; finish/verify owed |
 | Accessibility/appearance | Source aliases exist; rendered parity unknown | Same light/dark hierarchy, large-text reflow, contrast, Reduce Motion/Transparency and focus behavior | Device verification owed |
 
-Card reference: 24pt continuous corners; role overlay 0.48  0.16  clear; edge 0.48 closed / 0.85 active; shadow alpha 0.09 / 0.18, radius 8 / 16, y 4. Use existing shared motion tokens; do not create another timing system.
+Card reference: 24pt continuous corners; role overlay 0.48 → 0.16 → clear; edge 0.48 closed / 0.85 active; shadow alpha 0.09 / 0.18, radius 8 / 16, y 4. Use existing shared motion tokens; do not create another timing system.
 
 ## Implementation order
 

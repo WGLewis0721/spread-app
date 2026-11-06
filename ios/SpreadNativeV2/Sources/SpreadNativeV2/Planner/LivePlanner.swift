@@ -129,21 +129,21 @@ struct HoursShortage: Equatable {
             error = "This plan was saved by a newer Spread version. Update Spread before editing."
             errorOffersRetry = false; errorOffersBackup = true
         } else if reply.saveError != nil {
-            error = "Couldn't save on this device. Retry saving or open Backup and restore before closing Spread."
+            error = "Couldn’t save on this device. Retry saving or open Backup and restore before closing Spread."
             errorOffersRetry = true; errorOffersBackup = true
         } else if !reply.ok {
             errorOffersRetry = false; errorOffersBackup = false
             switch reply.error {
             case "stale-profile", "stale-week", "stale-revision", "stale-session": error = "Your plan changed. Review the current plan and try again."
             case "bank-empty": error = "All hours for this responsibility are placed. Raise its weekly hours, or take hours off another day first."
-            case "bank-exceeded": error = "There aren't enough hours left in this responsibility's bank. Choose fewer hours, or raise its weekly hours."
+            case "bank-exceeded": error = "There aren’t enough hours left in this responsibility’s bank. Choose fewer hours, or raise its weekly hours."
             case "ineligible-day": error = "Place hours for this responsibility on that day first."
             case "capacity-not-set": error = "Set your weekly planning hours before changing a Life area's budget."
             case "capacity-below-assigned": error = "Capacity cannot be below the hours already assigned. Reduce a budget first."
             case "life-capacity-exceeded": error = "Your circle is full. Increase planning hours or return time from another Life area."
             case "budget-below-reserved": error = "That area already has more hours placed on days. Return those first."
             case "save-failed", "save-unavailable":
-                error = "Couldn't save on this device. Retry saving or back up before closing Spread."
+                error = "Couldn’t save on this device. Retry saving or back up before closing Spread."
                 errorOffersRetry = true; errorOffersBackup = true
             default: error = "The change could not be completed. Your current plan is shown."
             }

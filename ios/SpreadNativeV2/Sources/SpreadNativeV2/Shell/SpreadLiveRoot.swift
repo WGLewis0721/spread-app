@@ -225,7 +225,7 @@ public struct SpreadLiveRoot: View {
     private var opening: some View {
         VStack(spacing: 16) {
             SpreadBrandMark(size: 56)
-            ProgressView("Opening your plan.")
+            ProgressView("Opening your plan…")
             Button { Task { await planner.refresh() } } label: { Text("Try again").tapTarget() }
             Button { recovery() } label: { Text("Open existing planner").tapTarget() }
         }

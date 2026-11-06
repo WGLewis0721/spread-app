@@ -159,7 +159,7 @@ private struct LifeWalletFace: View {
         .buttonStyle(.spreadPress)
         .accessibilityLabel(Text(spokenLabel))
         .accessibilityValue(selected ? "Focused" : "Closed")
-        .accessibilityHint(selected ? "Close this area's tasks" : "Show this area's tasks")
+        .accessibilityHint(selected ? "Close this area’s tasks" : "Show this area’s tasks")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityAction(named: "Manage") { onManage() }
         .accessibilityAction(named: "Delete") { onDelete() }
@@ -383,7 +383,7 @@ struct LifeTaskRows: View {
     private func placement(_ task: PlannerTask) -> String {
         let day = snapshot.allocations.first { $0.id == task.allocationId }
             .map { PlannerDates.label(PlannerDates.date($0.day), pattern: "EEEE") } ?? "To place"
-        return day + (task.estimateMinutes.map { " � \($0) min" } ?? "")
+        return day + (task.estimateMinutes.map { " · \($0) min" } ?? "")
     }
 }
 

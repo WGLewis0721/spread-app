@@ -159,7 +159,7 @@ struct SpreadSurface: View {
                 Text("Across \(status.spreadCount) \(status.spreadCount == 1 ? "spread" : "spreads")")
                     .font(.system(.caption))
                     .foregroundStyle(Spread.secondary)
-                Text("\(SpreadHours.text(status.scheduled))h scheduled � \(SpreadHours.text(status.remaining))h remaining")
+                Text("\(SpreadHours.text(status.scheduled))h scheduled · \(SpreadHours.text(status.remaining))h remaining")
                     .font(.system(.caption))
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -249,7 +249,7 @@ struct SpreadSurface: View {
             if totalHours > 45 || status.overbooked > 0 {
                 Text(status.overbooked > 0
                      ? "Your week has more scheduled hours than its spread budgets."
-                     : "If the hours don't fit, something is lying.")
+                     : "If the hours don’t fit, something is lying.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.caution)
             }
@@ -542,12 +542,12 @@ struct RoleRow: View {
         .frame(maxWidth: .infinity, minHeight: 72)
     }
 
-    /// "2 tasks  3h placed" (the specimen's line), or the invitation to add the first task.
+    /// "2 tasks • 3h placed" (the specimen's line), or the invitation to add the first task.
     private var summaryLine: String {
         let placed = "\(SpreadHours.text(placedHours))h placed"
-        if tasks.isEmpty { return "No tasks yet  \(placed)" }
+        if tasks.isEmpty { return "No tasks yet • \(placed)" }
         let noun = tasks.count == 1 ? "task" : "tasks"
-        return "\(tasks.count) \(noun)  \(placed)"
+        return "\(tasks.count) \(noun) • \(placed)"
     }
 
     private var hoursEditor: some View {
@@ -596,7 +596,7 @@ struct RoleRow: View {
         let left = snapshot.remainingHours(for: role.id)
         return HStack(alignment: .center, spacing: 8) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("\(SpreadHours.text(placedHours)) placed � \(SpreadHours.text(left)) left")
+                Text("\(SpreadHours.text(placedHours)) placed · \(SpreadHours.text(left)) left")
                     .font(.system(.subheadline, weight: .medium)).foregroundStyle(Spread.ink).monospacedDigit()
                     .fixedSize(horizontal: false, vertical: true)
                 DayMarks(snapshot: snapshot, role: role)
@@ -714,7 +714,7 @@ struct PalettePanel: View {
                     .accessibilityAddTraits(role.color.lowercased() == color.lowercased() ? .isSelected : [])
                 }
             }
-            Text("Symbol" + (role.category == "custom" ? "" : " � \(Self.categories.first { $0.id == role.category }?.label ?? "")"))
+            Text("Symbol" + (role.category == "custom" ? "" : " · \(Self.categories.first { $0.id == role.category }?.label ?? "")"))
                 .font(Spread.footnote).foregroundStyle(Spread.secondary)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5), spacing: 6) {
                 ForEach(Self.categories, id: \.id) { item in

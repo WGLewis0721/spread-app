@@ -12,7 +12,7 @@ Candidate baseline: main `d4afd9732e2d8b9e68ab62e9f84b67bee07305b2`. Scope: Clas
 | Planner regression | Local Windows Node 25 run: 349 passed, 11 module-load failures; missing `@capacitor/core` dependencies prevented complete suite execution. This is not a green run. Node 22 CI required |
 | Documentation links/budgets | `node scripts/design-docs.mjs` passed before final documentation; rerun on candidate required |
 | Native compilation | No Xcode/Swift toolchain on local Windows host. macOS CI compile and iOS package XCTest required |
-| Native screenshots | Added real-app ClassicLifeClassic persistence, separate-details geometry, sidebar/Crown and existing Life journeys at 390/820/1024pt in native-journeys. Artifacts pending; no synthetic UI screenshots supplied |
+| Native screenshots | Added real-app Classic→Life→Classic persistence, separate-details geometry, sidebar/Crown and existing Life journeys at 390/820/1024pt in native-journeys. Artifacts pending; no synthetic UI screenshots supplied |
 | More / reference integrity | More implementation and frozen `tools/life-reference/` excluded from change set; final source diff/hash review required |
 | Physical iPhone | Unavailable: haptic feel, contact latency, 60/120Hz frame pacing, VoiceOver, interruption/reversal with real touch |
 | Physical Duo | Unavailable: actual supported postures, hinge-safe layout, continuity and frame pacing. An iPad width is not Duo evidence |

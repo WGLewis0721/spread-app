@@ -1,6 +1,6 @@
 import Foundation
 
-/// Pure geometry and arithmetic: one 15� detent is a half hour. Direction follows the
+/// Pure geometry and arithmetic: one 15° detent is a half hour. Direction follows the
 /// reference's pointerAngle/angleDelta, including wrapping at -180/180.
 enum LifeOrbitMath {
     static func delta(from old: Double, to next: Double) -> Double {
@@ -147,7 +147,7 @@ struct LifeHoursView: View {
             if let selected, separated, capacity != nil {
                 selectedControls(selected)
             }
-            if saving { ProgressView("Saving hours.") }
+            if saving { ProgressView("Saving hours…") }
             if rejected {
                 HStack {
                     Button("Retry save") { retryDraft() }
@@ -208,7 +208,7 @@ struct LifeHoursView: View {
                         .onEnded { _ in finishArc() })
                     .accessibilityHidden(true)
                 VStack(spacing: 4) {
-                    Text(capacity.map(SpreadHours.text) ?? "-")
+                    Text(capacity.map(SpreadHours.text) ?? "—")
                         .font(.system(size: numberSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
 
@@ -316,20 +316,20 @@ struct LifeHoursView: View {
             let controls = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 12))
             controls {
                 Button { changeBudget(by: 0.5) } label: {
-                    Label("Add �h", systemImage: "arrow.counterclockwise")
+                    Label("Add ½h", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .keyboardShortcut(.leftArrow, modifiers: [.option])
                 Button { changeBudget(by: -0.5) } label: {
-                    Label("Return �h", systemImage: "arrow.clockwise")
+                    Label("Return ½h", systemImage: "arrow.clockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .keyboardShortcut(.rightArrow, modifiers: [.option])
             }
             .buttonStyle(.bordered)
-            if budgetDraft != nil { Text("Draft � release to save").font(.subheadline).foregroundStyle(LifePalette.secondary) }
+            if budgetDraft != nil { Text("Draft · release to save").font(.subheadline).foregroundStyle(LifePalette.secondary) }
             let reserved = snapshot.placedHours(for: role.id)
-            Text("\(SpreadHours.text(reserved)) h placed on days � \(SpreadHours.text(max(0, selectedHours - reserved))) h available to place")
+            Text("\(SpreadHours.text(reserved)) h placed on days · \(SpreadHours.text(max(0, selectedHours - reserved))) h available to place")
                 .font(.callout).foregroundStyle(LifePalette.secondary)
         }
         .accessibilityElement(children: .contain)
