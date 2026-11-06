@@ -1,6 +1,8 @@
 # Open design decisions and decision log
 
 > Part of the Spread design brain. Start at [README.md](README.md) for the map and the router.
+>
+> Summary: The live decision log and unresolved design choices. Tactile Precision is a documentation proposal, not a replacement for approved Life, native identity or release gates.
 
 Resolve an open decision here and in its source document together, then move the row to the log. Not needed for ordinary tasks; read it when a task touches one of these topics or when you record a decision.
 
