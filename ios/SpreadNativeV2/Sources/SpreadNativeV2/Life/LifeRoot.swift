@@ -414,8 +414,10 @@ struct LifeRoot: View {
             .accessibilityIdentifier("life-bottom-crown")
     }
     private func navigation(width: CGFloat) -> some View {
-        ZStack(alignment: crownRight ? .leading : .trailing) {
-            Color.black.opacity(0.28 * max(0, 1 - abs(navigationDrag) / max(1, min(300, width - 32))))
+        let trayWidth = min(CGFloat(300), max(CGFloat(0), width - CGFloat(32)))
+        let dragProgress = min(1.0, Double(abs(navigationDrag) / max(CGFloat(1), trayWidth)))
+        return ZStack(alignment: crownRight ? .leading : .trailing) {
+            Color.black.opacity(0.28 * (1 - dragProgress))
                 .ignoresSafeArea()
                 .onTapGesture { closeNavigation() }.accessibilityHidden(true)
             VStack(spacing: 0) {
@@ -465,11 +467,11 @@ struct LifeRoot: View {
             .frame(height: dockControlsHeight, alignment: .top)
             .padding(.horizontal, 16).padding(.vertical, 8)
             }
-            .frame(width: min(300, max(0, width - 32))).frame(maxHeight: .infinity)
+            .frame(width: trayWidth).frame(maxHeight: .infinity)
             .background(LifePalette.surface)
             .shadow(color: .black.opacity(0.25), radius: 16, x: crownRight ? 7 : -7)
             .offset(x: navigationDrag)
-            .simultaneousGesture(navigationPan(width: min(300, max(0, width - 32))))
+            .simultaneousGesture(navigationPan(width: trayWidth))
             .transition(.move(edge: crownRight ? .leading : .trailing).combined(with: .opacity))
             .accessibilityAddTraits(.isModal)
             .accessibilityAction(.escape) { closeNavigation() }
