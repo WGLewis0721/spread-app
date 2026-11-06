@@ -67,3 +67,15 @@ Pending implementation; intake remains open.
 | U1 | 47%, 83% | Undo/Redo must appear contextually after relevant edits and disappear after inactivity rather than permanently occupying the dock area. Preserve undo/redo history when controls hide. Exact inactivity timing will be calibrated during implementation; no duration has been specified by the owner. |
 
 No app code changes until the owner completes the annotations.
+
+## Photo 5 — Week (owner annotations)
+
+Pending implementation; intake remains open.
+
+| ID | Position | Fix / acceptance |
+| --- | --- | --- |
+| W1 | 67%, 7% | Remove the redundant top week/date readout on Week, consistent with L6; preserve necessary calendar/day context and the bottom Crown. |
+| W2 | 13%, 78% | Replace the indicated To place presentation with a horizontal row of glowing bubbles, one per Life card, positioned in line with the focused weekday heading. Preserve Life-area identity and relevant placement access; do not interpret this as removing unscheduled tasks. |
+| W3 | 49%, 64% | Rewrite the empty-day panel as one coherent instruction with a clear next action, instead of three disjointed statements (“A day with room”, “Start by giving a Life area some time”, “Place some hours”). Final copy must match the actual interaction. |
+
+No app code changes until the owner completes the annotations.
