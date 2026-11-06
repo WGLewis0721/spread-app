@@ -44,7 +44,8 @@ struct NativeLifePriorityPreview: Decodable {
     let day: String
     let goalHours: Double
     let reservedHours: Double
-    let ownUnusedHours: Double
+    let bankHours: Double
+    let eligible: Bool
     let unassignedHours: Double
     let additionalBudgetHours: Double
     let reserveHours: Double
