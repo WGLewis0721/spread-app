@@ -353,16 +353,20 @@ workflows:
       - name: Native Life and Classic simulator screenshot journeys
         script: |
           set -eu
-          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/life/native-env"
-          node scripts/native-simulator.mjs 390
+          for WIDTH in 375 390 430; do
+          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/life/native-env-$WIDTH"
+          node scripts/native-simulator.mjs "$WIDTH"
           . "$GITHUB_ENV"
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
             -parallel-testing-enabled NO \
             -only-testing:SpreadNativeUITests/LifeUITests \
-            -resultBundlePath artifacts/life/Life.xcresult CODE_SIGNING_ALLOWED=NO
+            -resultBundlePath artifacts/life/Life-$WIDTH.xcresult CODE_SIGNING_ALLOWED=NO
           xcrun xcresulttool export attachments --path artifacts/life/Life.xcresult \
-            --output-path artifacts/life/screenshots
+            --output-path "artifacts/life/screenshots-$WIDTH"
+          xcrun simctl shutdown "$NATIVE_UDID"
+          xcrun simctl delete "$NATIVE_UDID"
+          done
       - name: Choose unused build, sign and archive; NO publishing
         script: |
           set -eu
