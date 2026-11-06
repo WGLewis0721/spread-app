@@ -12,7 +12,8 @@ struct LifeWeekView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selectedDate = ""
-    @State private var selectedRole: String?
+    @Binding var selectedRole: String?
+    @GestureState private var dayTranslation: CGSize = .zero
     @State private var expanded = false
     @State private var marks: [String: NativeDayMark] = [:]
     @State private var navigationID = UUID()
@@ -42,6 +43,7 @@ struct LifeWeekView: View {
                 arrow("Previous day", system: "chevron.left") { choose(LifeCalendarRules.shiftDay(date, by: -1)) }
                 arrow("Next day", system: "chevron.right") { choose(LifeCalendarRules.shiftDay(date, by: 1)) }
             }
+            .simultaneousGesture(daySwipe)
             room
             if roles.isEmpty {
                 Text("Tap a Life area above to plan 1 hour on this day.")
@@ -58,7 +60,7 @@ struct LifeWeekView: View {
                         VStack(alignment: .leading, spacing: 0) {
                         LifeTaskRows(planner: planner, snapshot: snapshot,
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),
-                            onOpenTask: onOpenTask)
+                            day: date, onOpenTask: onOpenTask)
                         LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
                         }.padding(.horizontal, 4)
                             .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -68,6 +70,7 @@ struct LifeWeekView: View {
             unplaced
 
         }
+        .offset(x: reduceMotion ? 0 : max(-28, min(28, dayTranslation.width * 0.35)))
         .foregroundStyle(LifePalette.ink)
         .accessibilityIdentifier("life-week-page")
         .onAppear { restoreProfile() }
@@ -100,6 +103,26 @@ struct LifeWeekView: View {
             guard !Task.isCancelled, marksKey == origin else { return }
             marks = combined
         }
+    }
+
+    /// Horizontal drags on the calendar and date header change days. Keep task-reorder
+    /// drop targets and vertical schedule scrolling outside this gesture region.
+    private var daySwipe: some Gesture {
+        DragGesture(minimumDistance: 12, coordinateSpace: .global)
+            .updating($dayTranslation) { value, state, transaction in
+                guard !expanded, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
+                transaction.disablesAnimations = true
+                state = value.translation
+            }
+            .onEnded { value in
+                guard !expanded, !planner.busy else { return }
+                let direction = TactilePrecisionMath.daySwipeDirection(
+                    horizontal: Double(value.translation.width),
+                    vertical: Double(value.translation.height), projected: Double(value.predictedEndTranslation.width))
+                if direction != 0 {
+                    choose(LifeCalendarRules.shiftDay(date, by: direction))
+                }
+            }
     }
 
     private var calendarSurface: some View {
@@ -147,6 +170,7 @@ struct LifeWeekView: View {
                 if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: 44) }
             }
         }.padding(12).spreadCard().accessibilityElement(children: .contain)
+            .simultaneousGesture(daySwipe)
     }
 
     private var monthControls: some View {
@@ -157,7 +181,7 @@ struct LifeWeekView: View {
     }
     private var monthToggle: some View {
         Button {
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) { expanded.toggle() }
+            withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded.toggle() }
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: "calendar")
@@ -258,8 +282,10 @@ struct LifeWeekView: View {
             in: snapshot.weekKey, today: PlannerDates.localISO()))
     }
     private func accept(_ iso: String) {
-        if selectedDate != iso { selectedRole = nil }
-        selectedDate = iso
+        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+            if selectedDate != iso { selectedRole = nil }
+            selectedDate = iso
+        }
         dateHeadingFocused = true
         UserDefaults.standard.set(iso, forKey: selectionKey)
     }

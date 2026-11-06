@@ -18,6 +18,8 @@ final class LifeUITests: XCTestCase {
     }
 
     private func navigate(_ page: String) {
+        let rail = app.buttons["planner-nav-" + page]
+        if rail.exists && rail.isHittable { rail.tap(); return }
         let navigation = app.buttons["life-navigation"]
         XCTAssertTrue(navigation.waitForExistence(timeout: 20))
         navigation.tap()
@@ -61,15 +63,22 @@ final class LifeUITests: XCTestCase {
         navigate("hours")
         let field = app.descendants(matching: .any).matching(identifier: "life-capacity-input").firstMatch
         if !field.waitForExistence(timeout: 5) {
-            app.buttons["Adjust capacity with controls"].tap()
+            let center = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
+            XCTAssertTrue(center.waitForExistence(timeout: 10))
+            center.tap()
+            // A selected area first returns to the weekly budget; a second tap opens its editor.
+            if !field.waitForExistence(timeout: 2) { center.tap() }
         }
         XCTAssertTrue(field.waitForExistence(timeout: 10), "The editable capacity must be reachable.")
         field.tap()
         let existing = (field.value as? String) ?? ""
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count) + "168")
         app.buttons["Set"].tap()
+        app.buttons["Done"].tap()
         let number = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
         XCTAssertTrue(number.waitForExistence(timeout: 20))
+        expectation(for: NSPredicate(format: "value CONTAINS %@", "168"), evaluatedWith: number)
+        waitForExpectations(timeout: 20)
         let expectedValue = number.value as? String
         XCTAssertTrue(expectedValue?.contains("168") == true, "Capacity must be acknowledged as 168, not merely render.")
         capture("life-capacity")
@@ -95,6 +104,8 @@ final class LifeUITests: XCTestCase {
     }
     func testTrayControlsMatchBothOuterEdges() {
         startLife()
+        // Wide layouts use a persistent rail; this journey checks the phone drawer.
+        if app.descendants(matching: .any).matching(identifier: "life-compact-rail").firstMatch.exists { return }
         for side in ["left", "right"] {
             app.buttons["life-navigation"].tap()
             app.buttons["Crown position"].tap()
@@ -117,4 +128,68 @@ final class LifeUITests: XCTestCase {
         }
     }
 
+}
+
+/// Regression journeys use one real planner across both presentations. Simulator
+/// attachments prove geometry/state only; they cannot certify physical haptics.
+final class TactileUITests: NativeUITestCase {
+    func testClassicDetailsTaskAcknowledgementAndLifePersistence() throws {
+        launch(["-native.weekMonth.previewEnabled", "NO", "-native.life.touchFeedback", "NO"])
+        let tag = "Tactile " + String(UUID().uuidString.prefix(6))
+        tapID("open-more"); tapID("more-new-spread")
+        typeInto("role-name-field", tag); tapID("save-spreads")
+        closeNativeSheets(); openWalletCard(tag)
+        let selector = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == tag })
+        let roleID = String(selector.identifier.dropFirst("select-role-".count))
+        let face = el("role-block-" + roleID), details = el("classic-task-details-" + roleID)
+        XCTAssertTrue(details.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(details.frame.minY, face.frame.maxY - 1)
+        let faceWidth = face.frame.width
+        typeInto("new-task-field", tag + " task\n")
+        let task = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'task-row-' AND label == %@", tag + " task")).firstMatch
+        XCTAssertTrue(task.waitForExistence(timeout: 20))
+        let taskID = String(task.identifier.dropFirst("task-row-".count))
+        tapID("task-check-" + taskID)
+        XCTAssertTrue(eventually { (self.el("task-check-" + taskID).value as? String) == "Completed" })
+        XCTAssertEqual(face.frame.width, faceWidth, accuracy: 1)
+        capture("tactile-classic-separate-details-completed")
+
+        // Relaunch the same installed binary and data, enabling the existing Life choice.
+        app.terminate()
+        app.launchArguments = ["-native.weekMonth.previewEnabled", "YES", "-native.life.touchFeedback", "NO"]
+        app.launch()
+        XCTAssertTrue(el("life-root").waitForExistence(timeout: 90))
+        let card = el("life-card-" + roleID)
+        scrollIntoView(card); card.tap()
+        XCTAssertTrue(el("life-task-details").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[tag + " task"].firstMatch.waitForExistence(timeout: 10))
+        capture("tactile-life-same-task-after-relaunch")
+
+        app.terminate()
+        launch(["-native.weekMonth.previewEnabled", "NO"])
+        openWalletCard(tag)
+        XCTAssertEqual(el("task-check-" + taskID).value as? String, "Completed")
+        capture("tactile-classic-restored-data")
+    }
+
+    func testAdaptiveNavigationPreservesSelectionAndCrown() throws {
+        launch(["-native.weekMonth.previewEnabled", "NO"])
+        let before = crownValue
+        tapID("classic-navigation")
+        tapID("planner-nav-hours")
+        XCTAssertTrue(el("weekly-hours-details").waitForExistence(timeout: 10))
+        XCTAssertEqual(crownValue, before)
+        capture("tactile-classic-hours-navigation")
+        tapID("classic-navigation")
+        tapID("planner-nav-week")
+        XCTAssertTrue(el("week-surface").waitForExistence(timeout: 20))
+        XCTAssertEqual(crownValue, before)
+        tapID("crown-next")
+        XCTAssertTrue(eventually { self.crownValue != before })
+        let advanced = crownValue
+        tapID("classic-navigation")
+        tapID("planner-nav-spread")
+        XCTAssertEqual(crownValue, advanced)
+        capture("tactile-classic-crown-and-navigation")
+    }
 }

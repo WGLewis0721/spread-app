@@ -16,6 +16,7 @@ struct WeekCrownView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.scenePhase) private var scenePhase
     @State private var travel = CrownTravel()
     @State private var translation: CGFloat = 0
     @State private var live = false
@@ -106,8 +107,14 @@ struct WeekCrownView: View {
             guard !active else { return }
             travel.release()
             live = false
-            withAnimation(reduceMotion ? nil : SpreadMotion.press) { translation = 0 }
+            withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                translation = 0
+            }
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { travel.release(); live = false; translation = 0 }
+        }
+        .onDisappear { travel.release(); live = false; translation = 0 }
         .shadow(color: Spread.shadow, radius: 8, y: 4)
         // Key handlers run only on a focused view. Make the wheel reachable
         // through Full Keyboard Access without adding a permanent focus glow.
@@ -209,6 +216,7 @@ struct WeekCrownView: View {
         DragGesture(minimumDistance: 8)
             .updating($gestureActive) { _, state, _ in state = true }
             .onChanged { value in
+                if !live { SpreadHaptics.prepare() }
                 live = true
                 translation = value.translation.width
                 // Dragging right (positive) is the previous week, exactly as the React Crown.

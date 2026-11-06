@@ -37,3 +37,17 @@ jobs:
             -sdk iphonesimulator \
             -destination "generic/platform=iOS Simulator" \
             CODE_SIGNING_ALLOWED=NO build
+      - name: Select an available iPhone simulator
+        run: node scripts/native-simulator.mjs 390
+      - name: Test iOS planner acknowledgements and tactile contracts
+        working-directory: ios/SpreadNativeV2
+        run: |
+          xcodebuild test -scheme SpreadNativeV2 \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
+            -resultBundlePath ../../artifacts/TactileContracts.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tactile-ios-contracts
+          path: artifacts

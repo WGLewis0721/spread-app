@@ -36,7 +36,7 @@ Stop at the first sufficient tier.
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
 | iPhone, iPad, Duo and resize / hinge support | [packs/device-layout.md](packs/device-layout.md) | [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) and device guides |
 | Apply iOS design language + UI/UX fundamentals | [packs/apple-native-feel.md](packs/apple-native-feel.md), [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md), [iOS audit](platforms/IOS27_BEHAVIOR_AUDIT.md), [tactile motion](tactile-precision/README.md) |
-| Tactile motion and haptic polish proposal | [tactile-precision/README.md](tactile-precision/README.md) | Life iOS spec has priority |
+| Classic/Life tactile motion and haptics | [Contract](tactile-precision/README.md) | [Implementation](tactile-precision/IMPLEMENTATION.md); Life spec wins |
 | App icon, UI action icons, category badges | [brand/ICON_HANDOFF.md](brand/ICON_HANDOFF.md) | Files in `public/icons/` |
 | Why a planner behavior exists, or what was verified and deferred | [planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md](planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md) (historical record) | `ROADMAP.md` |
 | Wallpaper-driven personalization (Studio) | Section 5 below: it lives on a branch | |
@@ -64,7 +64,7 @@ All paths are under `docs/design/`.
 | [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Historical; five-mode direction superseded by Nov 4 owner choice |
 | planner/SPREAD_DESIGN_SYSTEM.md | React planner visuals, native behavior invariants | Governs legacy UI and behavior |
 | planner/SPREAD_NATIVE_BRAND_BOARD.md | Current SwiftUI: **single animated Wallet Stack**; [SVG](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Native-only PR #127; supersedes five-mode language |
-| [tactile-precision/](tactile-precision/README.md), [motion](tactile-precision/MOTION_CONTRACT.md), [QA](tactile-precision/VERIFICATION.md) | Proposed tactile motion | Draft; Life wins |
+| [tactile-precision/](tactile-precision/README.md), [motion](tactile-precision/MOTION_CONTRACT.md), [QA](tactile-precision/VERIFICATION.md) | Classic/Life tactile motion | Candidate; device gates owed |
 | planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | Unified UX history | Historical only |
 | landing/DESIGN.md | Landing page | Highest for the landing page only, never for planner decisions. Frozen as `golden/2026-09-28-full-landing-modes` |
 | platforms/APPLE_DESIGN_PRINCIPLES.md | Native controls, sheets and contrast | Platform principles; native board preserves identity |
@@ -109,3 +109,4 @@ Studio lives on the `spread-studio` branch and is off by default. [Historical re
 - After editing `src/styles.css` tokens run `npm run docs:tokens`. After editing the rules card run `npm run docs:sync`. `npm run docs:check` (also in `test:scripts` and CI) fails when either is stale, when a link or pack pointer breaks, or when a tier passes its budget.
 - A document over 6 KB opens with a `> Summary:` line under its breadcrumb. Keep section headings short and stable, because packs point at them; if you rename one, fix the pack the check names.
 - Record a decision in the document it changes and in [DECISIONS.md](DECISIONS.md), and remove it from the open list. When a document is superseded, say so at its top and name its replacement. Do not delete history.
+

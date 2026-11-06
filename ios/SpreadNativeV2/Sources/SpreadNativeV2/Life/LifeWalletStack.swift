@@ -52,7 +52,7 @@ struct LifeWalletStack: View {
                             .allowsHitTesting(!hidden)
                             .accessibilityHidden(hidden)
                             .zIndex(selectedRole == role.id ? Double(ordered.count + 1) : Double(index))
-                            .animation(reduceMotion ? nil : SpreadMotion.curve,
+                            .animation(reduceMotion ? nil : SpreadTactile.settle,
                                        value: focusActive)
                     }
                 }
@@ -63,7 +63,7 @@ struct LifeWalletStack: View {
                 .clipped()
             }
         }
-        .animation(reduceMotion ? nil : SpreadMotion.curve, value: selectedRole)
+        .animation(reduceMotion ? nil : SpreadTactile.settle, value: selectedRole)
         .onChange(of: selectedRole) { old, new in
             if let new { lastSelected = new; focusedRole = new }
             else { focusedRole = old ?? lastSelected }
@@ -83,7 +83,9 @@ struct LifeWalletStack: View {
             .accessibilityFocused($focusedRole, equals: role.id)
     }
     private func select(_ id: String) {
-        selectedRole = selectedRole == id ? nil : id
+        withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+            selectedRole = selectedRole == id ? nil : id
+        }
         LifeFeedback.selection()
     }
 }
@@ -107,8 +109,6 @@ private struct LifeWalletFace: View {
     private var cardHeight: CGFloat { selected ? focusedHeight : closedHeight }
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
-    @State private var ignoreTapUntil = Date.distantPast
-    @State private var revealCue = 0
     @GestureState private var dragging = false
     @State private var glow = false
     private var reserved: Double {
@@ -127,9 +127,16 @@ private struct LifeWalletFace: View {
         .clipShape(RoundedRectangle(cornerRadius: 23))
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
-        .onChange(of: dragging) { _, active in if !active { translation = 0 } }
+        .onChange(of: dragging) { _, active in
+            if !active && translation != 0 {
+                withAnimation(reduceMotion ? nil : SpreadTactile.snap) { translation = 0 }
+            }
+        }
         .onChange(of: editing) { _, _ in reveal = 0 }
         .onChange(of: selected) { _, _ in reveal = 0 }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { reveal = 0; translation = 0 }
+        }
         .task(id: "\(editing)-\(reduceMotion)-\(scenePhase)") {
             glow = false
             guard editing, !reduceMotion, scenePhase == .active else { return }
@@ -145,7 +152,7 @@ private struct LifeWalletFace: View {
 
     private var selectionButton: some View {
         Button {
-            if Date() >= ignoreTapUntil { onSelect() }
+            if !dragging { onSelect() }
         } label: {
             cardSurface
         }
@@ -256,26 +263,23 @@ private struct LifeWalletFace: View {
         }.padding(.horizontal, 18).padding(.vertical, 12)
     }
     private var swipe: some Gesture {
-        DragGesture(minimumDistance: 12)
+        DragGesture(minimumDistance: 12, coordinateSpace: .global)
             .updating($dragging) { _, active, _ in active = editing }
             .onChanged { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
-                ignoreTapUntil = Date().addingTimeInterval(0.25)
-                translation = value.translation.width
-                let offset = reveal + translation
-                let side = offset < -42 ? -1 : offset > 42 ? 1 : 0
-                if side != 0 && side != revealCue {
-                    revealCue = side
-                    LifeFeedback.reveal(delete: side > 0)
-                }
+                var transaction = Transaction(); transaction.disablesAnimations = true
+                withTransaction(transaction) { translation = value.translation.width }
             }
             .onEnded { value in
                 guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { translation = 0; return }
-                ignoreTapUntil = Date().addingTimeInterval(0.25)
-                let offset = reveal + value.translation.width
-                let next: CGFloat = offset < -42 ? -92 : offset > 42 ? 92 : 0
-                revealCue = 0
-                withAnimation(reduceMotion ? nil : SpreadMotion.cascade) { reveal = next; translation = 0 }
+                let target = TactilePrecisionMath.revealTarget(
+                    current: Double(reveal), translation: Double(value.translation.width),
+                    projected: Double(value.predictedEndTranslation.width))
+                if target != 0 && CGFloat(target) != reveal { LifeFeedback.reveal(delete: target > 0) }
+                withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                    reveal = CGFloat(target)
+                    translation = 0
+                }
             }
     }
 }
@@ -284,7 +288,12 @@ struct LifeTaskRows: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
     let tasks: [PlannerTask]
+    /// Reordering is only available on a specific day's scheduled task list.
+    var day: String? = nil
     let onOpenTask: (String, String) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var targetedTaskId: String?
+    @State private var pendingTasks: Set<String> = []
     var body: some View {
         VStack(spacing: 0) {
             if tasks.isEmpty {
@@ -293,18 +302,20 @@ struct LifeTaskRows: View {
             ForEach(tasks) { task in
                 HStack(spacing: 0) {
                     Button {
+                        guard !pendingTasks.contains(task.id) else { return }
+                        pendingTasks.insert(task.id)
                         Task {
-                            if await planner.send(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id]),
-                               LifeFeedback.enabled {
-                                if task.done { LifeFeedback.selection() }
-                                else { SpreadHaptics.completed() }
-                            }
+                            _ = await planner.send(["type": "toggleTask", "roleId": task.roleId, "taskId": task.id],
+                                                   completionHaptic: !task.done)
+                            pendingTasks.remove(task.id)
                         }
                     } label: {
                         Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
                             .font(.title3).frame(width: 44, height: 44)
                     }.buttonStyle(.spreadPress).foregroundStyle(task.done ? LifePalette.accent : LifePalette.secondary)
-                        .disabled(planner.busy)
+                        .disabled(planner.busy || pendingTasks.contains(task.id))
+                        .opacity(pendingTasks.contains(task.id) ? 0.6 : 1)
+                        .accessibilityValue(pendingTasks.contains(task.id) ? "Saving" : task.done ? "Completed" : "Incomplete")
                         .accessibilityLabel("\(task.done ? "Reopen" : "Complete") \(task.text)")
                     Button { onOpenTask(task.roleId, task.id) } label: {
                         HStack {
@@ -316,11 +327,60 @@ struct LifeTaskRows: View {
                             Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
                         }.frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
                     }.buttonStyle(.spreadPress)
+                        .accessibilityActions {
+                            if day != nil, let index = tasks.firstIndex(where: { $0.id == task.id }) {
+                                if index > 0 {
+                                    Button("Move up") { reorder(task, before: tasks[index - 1].id) }
+                                }
+                                if index + 1 < tasks.count {
+                                    Button("Move down") {
+                                        reorder(task, before: index + 2 < tasks.count ? tasks[index + 2].id : nil)
+                                    }
+                                }
+                            }
+                        }
+                    if day != nil {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.footnote).foregroundStyle(LifePalette.secondary)
+                            .frame(width: 44, height: 44)
+                            .draggable(SpreadDragPayload.task(id: task.id, roleId: task.roleId, label: task.text))
+                            .accessibilityHidden(true)
+                    }
                 }
+                .background(targetedTaskId == task.id ? LifePalette.fill : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 12))
+                .animation(reduceMotion ? nil : SpreadTactile.snap, value: targetedTaskId)
+                .dropDestination(for: SpreadDragPayload.self) { items, _ in
+                    guard let day, !planner.busy, let item = items.first, item.kind == .task,
+                          item.roleId == task.roleId, item.itemId != task.id else { return false }
+                    Task {
+                        let ok = await planner.send([
+                            "type": "reorderDayTask", "roleId": task.roleId, "day": day,
+                            "taskId": item.itemId, "beforeId": task.id
+                        ])
+                        if ok { LifeFeedback.accepted() }
+                    }
+                    return true
+                } isTargeted: { targeted in targetedTaskId = targeted ? task.id : nil }
                 Divider().overlay(Spread.line)
             }
-        }.padding(.horizontal, 12)
+        }
+        .padding(.horizontal, 12)
+        .animation(reduceMotion ? nil : SpreadTactile.settle, value: tasks.map(\.id))
     }
+
+    private func reorder(_ task: PlannerTask, before id: String?) {
+        guard let day, !planner.busy else { return }
+        let target: Any = id.map { $0 as Any } ?? NSNull()
+        Task {
+            let ok = await planner.send([
+                "type": "reorderDayTask", "roleId": task.roleId, "day": day,
+                "taskId": task.id, "beforeId": target
+            ])
+            if ok { LifeFeedback.accepted() }
+        }
+    }
+
     private func placement(_ task: PlannerTask) -> String {
         let day = snapshot.allocations.first { $0.id == task.allocationId }
             .map { PlannerDates.label(PlannerDates.date($0.day), pattern: "EEEE") } ?? "To place"
@@ -330,6 +390,7 @@ struct LifeTaskRows: View {
 
 struct LifeQuickAdd: View {
     @ObservedObject var planner: LivePlanner
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let roleId: String
     var day: String? = nil
     let onOpenTask: (String, String) -> Void
@@ -346,10 +407,17 @@ struct LifeQuickAdd: View {
                 HStack {
                     Button("Add task") { Task { await save() } }
                         .disabled(saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    Button("Cancel") { expanded = false; title = "" }.disabled(saving)
+                    Button("Cancel") {
+                        withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
+                        title = ""
+                    }.disabled(saving)
                 }.frame(minHeight: 44)
             } else {
-                Button { expanded = true; focused = true } label: {
+                Button {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded = true }
+                    focused = true
+                    LifeFeedback.selection()
+                } label: {
                     Label("Add a task", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }
             }
@@ -371,7 +439,9 @@ struct LifeQuickAdd: View {
         guard await planner.send(action),
               planner.state?.envelope.profileId == profile, planner.snapshot?.weekKey == week,
               let task = planner.snapshot?.tasks.first(where: { $0.roleId == roleId && !before.contains($0.id) }) else { return }
-        title = ""; expanded = false
+        title = ""
+        withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
+        LifeFeedback.accepted()
         onOpenTask(roleId, task.id)
     }
 }

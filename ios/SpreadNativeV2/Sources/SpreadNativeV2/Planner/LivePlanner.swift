@@ -300,7 +300,7 @@ struct HoursShortage: Equatable {
                 let reply: LiveReply
                 do { reply = try await self.receive(json, expectedRequestId: requestId) }
                 catch { reply = try await self.receive(json, expectedRequestId: requestId) } // Same correlation ID: safe after a lost ACK.
-                guard reply.ok else { return false }
+                guard reply.ok, reply.saveError == nil else { return false }
                 let kind = action["type"] as? String
                 if kind == "undo" {
                     self.undoId = nil

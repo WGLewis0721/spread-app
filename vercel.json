@@ -2,6 +2,7 @@
   "installCommand": "npm install --omit=dev --no-audit --no-fund",
   "git": {
     "deploymentEnabled": {
+      "feature/life-tactile-precision-20261106": false,
       "fix/duo-optimization-repair-20261104": false,
       "fix/redesign-verify-followup": false,
       "fix/native-acceptance-followup-20261104": false,

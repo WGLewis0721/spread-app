@@ -1,10 +1,12 @@
 # Spread Tactile Precision
 
-> Part of the [Spread design brain](../README.md). **Status: proposed motion and interaction design. Not implemented or release-approved by this folder.**
+> Part of the [Spread design brain](../README.md). **Status: Classic and Life implementation candidate; native/device acceptance and release approval remain required.**
 >
 > Summary: A single tactile language for Life, Hours, Week, the Wallet stack, Crown, compact navigation and task actions. Inspired by fidget mechanisms, not designed for compulsive use.
 
 ## Start here
+
+[Integrated implementation and rollback](IMPLEMENTATION.md) · [Current evidence](../../evidence/tactile-precision/README.md)
 
 | Need | Read | Authority |
 | --- | --- | --- |

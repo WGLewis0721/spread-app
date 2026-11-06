@@ -52,7 +52,7 @@ struct LifeHoursView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
     private let clock = Timer.publish(every: 1.0 / 60, on: .main, in: .common).autoconnect()
-    @State private var selectedRole: String?
+    @Binding var selectedRole: String?
     @State private var capacityDraft: Double?
     @State private var budgetDraft: Double?
     @State private var capacityText = ""
@@ -62,8 +62,7 @@ struct LifeHoursView: View {
     @State private var lastAngle: Double?
     @State private var angleCredit: Double = 0
     @State private var gestureContext: String?
-    @State private var lastTick = Date.distantPast
-    @State private var boundaryWarned = false
+    @State private var cueGate = TactileCueGate()
     @State private var message: String?
     @AppStorage("native.life.touchFeedback") private var touchFeedback = true
     @AppStorage("native.life.showTips") private var showTips = true
@@ -158,7 +157,8 @@ struct LifeHoursView: View {
                         .rotationEffect(.degrees(-90 + phase))
                         .frame(width: radius * 2, height: radius * 2)
 
-                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: separated)
+                        .animation(reduceMotion ? nil : SpreadTactile.settle, value: separated)
+                        .animation(reduceMotion ? nil : SpreadTactile.snap, value: selectedRole)
                         .contentShape(Circle().trim(from: segment.start, to: segment.end).stroke(lineWidth: 44))
                         .onTapGesture {
                             separated = true; selectedRole = segment.id; selectionTick()
@@ -256,7 +256,10 @@ struct LifeHoursView: View {
             HStack(alignment: .top, spacing: 16) {
                 ForEach(snapshot.roles) { role in
                     Button {
-                        separated = true; selectedRole = role.id; selectionTick()
+                        withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                            separated = true; selectedRole = role.id
+                        }
+                        selectionTick()
                     } label: {
                         VStack(spacing: 8) {
                             ZStack {
@@ -350,18 +353,12 @@ struct LifeHoursView: View {
     }
 
     private func selectionTick() {
-        guard touchFeedback, Date().timeIntervalSince(lastTick) >= 0.125 else { return }
-        lastTick = Date()
+        guard cueGate.tick(at: ProcessInfo.processInfo.systemUptime, enabled: touchFeedback) else { return }
         SpreadHaptics.selection()
     }
     private func warn(_ text: String) {
         message = text
-        if !boundaryWarned {
-            boundaryWarned = true
-            if touchFeedback, Date().timeIntervalSince(lastTick) >= 0.125 {
-                lastTick = Date(); UINotificationFeedbackGenerator().notificationOccurred(.warning)
-            }
-        }
+        if cueGate.boundary(enabled: touchFeedback) { LifeFeedback.boundary() }
     }
     private func dragCapacity(_ value: DragGesture.Value) {
         guard !saving, !rejected, let capacity = snapshot.life?.capacityHours else { return }
@@ -436,7 +433,7 @@ struct LifeHoursView: View {
     private func beginContext() {
         gestureContext = context
         originRevision = planner.state?.revision
-        boundaryWarned = false
+        cueGate.reset(); SpreadHaptics.prepare()
     }
     private func advanceClock(_ now: Date) {
         let elapsed = max(0, min(0.1, now.timeIntervalSince(phaseTime)))
@@ -494,7 +491,7 @@ struct LifeHoursView: View {
                 showTips = false
                 capacityText = capacityDraft.map(SpreadHours.text) ?? capacityText
                 resetGestures()
-                if touchFeedback { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+                if touchFeedback { LifeFeedback.accepted() }
             } else {
                 rejected = true; holding = false
                 message = "Hours were not saved. Your draft is kept. Review the current plan, then retry or discard."
@@ -504,7 +501,7 @@ struct LifeHoursView: View {
     private func resetGestures(keepMessage: Bool = false) {
         capacityDraft = nil; budgetDraft = nil; capacityOrigin = nil
         lastAngle = nil; angleCredit = 0; gestureContext = nil; originRevision = nil
-        gestureStarted = nil; boundaryWarned = false; holding = false
+        gestureStarted = nil; cueGate.reset(); holding = false
         holdCredit = 0; holdDistance = 0; rejected = false; saving = false
         if !keepMessage { message = nil }
     }

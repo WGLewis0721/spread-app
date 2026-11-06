@@ -31,6 +31,10 @@ public struct SpreadLiveRoot: View {
     @State private var loadedProfile: String?
     /// Counts week moves the store has acknowledged. The selection haptic listens to it, so it never fires at launch.
     @State private var weekTick = 0
+    @State private var classicNavigationOpen = false
+    @State private var classicHoursExpanded = false
+    @State private var usableWidth: CGFloat = 0
+    @AppStorage("native.classic.navigationExpanded") private var navigationExpanded = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -62,15 +66,18 @@ public struct SpreadLiveRoot: View {
                     errorActions
                 } message: { Text(planner.error ?? "") }
             } else {
-                presented // Classic is untouched.
+                presented // Classic keeps its original destination and planner semantics.
             }
         }
     }
 
     /// The planner layers and the standing accessibility identity.
     private var layers: some View {
-        ZStack {
+        GeometryReader { geometry in
+        ZStack(alignment: .leading) {
             Spread.canvas.ignoresSafeArea()
+            HStack(spacing: 0) {
+            if geometry.size.width >= 820 { classicNavigation }
             VStack(spacing: 0) {
                 if let snapshot = planner.snapshot {
                     content(snapshot)
@@ -79,6 +86,32 @@ public struct SpreadLiveRoot: View {
                 }
                 dock
             }
+            }
+            .accessibilityHidden(classicNavigationOpen && geometry.size.width < 820)
+            if classicNavigationOpen && geometry.size.width < 820 {
+                ZStack(alignment: .leading) {
+                    Spread.scrim.ignoresSafeArea().onTapGesture { closeClassicNavigation() }.accessibilityHidden(true)
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("Spread").font(.headline); Spacer()
+                            Button(action: closeClassicNavigation) {
+                                Image(systemName: "xmark").frame(width: 44, height: 44)
+                            }.accessibilityLabel("Close navigation")
+                        }.padding(.horizontal, 12)
+                        classicNavigation
+                    }
+                    .frame(width: min(300, max(0, geometry.size.width - 32)))
+                    .background(Spread.elevated)
+                    .transition(reduceMotion ? .opacity : .move(edge: .leading))
+                    .accessibilityAddTraits(.isModal)
+                }
+                .accessibilityAction(.escape) { closeClassicNavigation() }
+            }
+        }
+        .onAppear { usableWidth = geometry.size.width }
+        .onChange(of: geometry.size.width) { _, width in
+            usableWidth = width; classicNavigationOpen = false
+        }
         }
         .foregroundStyle(Spread.ink)
         .tint(Spread.accent)
@@ -126,7 +159,7 @@ public struct SpreadLiveRoot: View {
             .sheet(item: $sheet) { current in sheetContent(current) }
             .alert("Spread", isPresented: errorShown) { errorActions } message: { Text(planner.error ?? "") }
             // A light tick for an accepted week change only: not at launch, and not when a profile opens on its own week.
-            .sensoryFeedback(.selection, trigger: weekTick)
+            .onChange(of: weekTick) { _, _ in SpreadHaptics.selection() }
             .onKeyPress(.leftArrow) { keyWeek(-1) }
             .onKeyPress(.rightArrow) { keyWeek(1) }
     }
@@ -169,6 +202,7 @@ public struct SpreadLiveRoot: View {
 
     private func refreshWhenActive(_ phase: ScenePhase) {
         if phase == .active { Task { await planner.refresh() } }
+        else { classicNavigationOpen = false }
     }
 
     /// Each profile opens where its own person left off, and nothing from the last profile carries over.
@@ -181,6 +215,8 @@ public struct SpreadLiveRoot: View {
         focusSelectedDay = nil
         editing = false
         sheet = nil
+        classicNavigationOpen = false
+        classicHoursExpanded = false
         loadedProfile = profile
     }
 
@@ -248,7 +284,8 @@ public struct SpreadLiveRoot: View {
                                 onOpenTask: { sheet = .task($0, $1) },
                                 onNewRole: { sheet = .newRole },
                                 onRollover: { Task { await rollover() } },
-                                onReview: { sheet = .review }
+                                onReview: { sheet = .review },
+                                summaryExpanded: $classicHoursExpanded
                             )
                             .id(planner.state?.envelope.profileId)
                         }
@@ -297,7 +334,8 @@ public struct SpreadLiveRoot: View {
                         onOpenTask: { sheet = .task($0, $1) },
                         onNewRole: { sheet = .newRole },
                         onRollover: { Task { await rollover() } },
-                        onReview: { sheet = .review }
+                        onReview: { sheet = .review },
+                        summaryExpanded: $classicHoursExpanded
                     )
                     .id(planner.state?.envelope.profileId)
                     .transition(.opacity)
@@ -310,7 +348,7 @@ public struct SpreadLiveRoot: View {
             .frame(maxWidth: destination == .spread ? .infinity : 1120)
             .frame(maxWidth: .infinity)
             // Without this the week's slide transition never plays: a changed week would just swap in place.
-            .animation(reduceMotion ? nil : SpreadMotion.weekSlide, value: snapshot.weekKey)
+            .animation(reduceMotion ? nil : SpreadTactile.glide, value: snapshot.weekKey)
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
@@ -388,12 +426,13 @@ public struct SpreadLiveRoot: View {
         return VStack(spacing: 10) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
+                    navigationButton
                     brandButton
                     Spacer(minLength: 8)
                     destinationRail
                 }
                 VStack(spacing: 8) {
-                    HStack { brandButton; Spacer(minLength: 0) }
+                    HStack { navigationButton; brandButton; Spacer(minLength: 0) }
                     destinationRail
                 }
             }
@@ -410,6 +449,36 @@ public struct SpreadLiveRoot: View {
 
     private var activeProfileName: String? {
         planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId })?.name
+    }
+
+    private var navigationButton: some View {
+        Button {
+            SpreadHaptics.selection()
+            withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+                if usableWidth >= 820 { navigationExpanded.toggle() }
+                else { classicNavigationOpen.toggle() }
+            }
+        } label: { Image(systemName: "sidebar.left").frame(width: 44, height: 44) }
+        .buttonStyle(.spreadPress)
+        .accessibilityLabel("Open navigation")
+        .accessibilityIdentifier("classic-navigation")
+    }
+    private var classicNavigation: some View {
+        PlannerNavigationRail(items: [
+            PlannerNavigationItem(id: "spread", title: "Spread", icon: "icon-spread-list"),
+            PlannerNavigationItem(id: "hours", title: "Hours", icon: "icon-rollover"),
+            PlannerNavigationItem(id: "week", title: "Week", icon: "icon-week")
+        ], selected: destination == .week ? "week" : classicHoursExpanded ? "hours" : "spread",
+           expanded: $navigationExpanded) { item in
+            withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+                classicNavigationOpen = false
+                classicHoursExpanded = item == "hours"
+                destination = item == "week" ? .week : .spread
+            }
+        }
+    }
+    private func closeClassicNavigation() {
+        withAnimation(reduceMotion ? nil : SpreadTactile.glide) { classicNavigationOpen = false }
     }
 
     /// The brand: the folded-card blue icon and "Spread" in the system face. With more than one profile the open

@@ -339,12 +339,13 @@ private struct WeekHorizontalSwipe: UIViewRepresentable {
             case .began, .changed:
                 onShift(WeekSwipeRules.shift(start: start, current: end))
             case .ended:
-                let direction = WeekSwipeRules.direction(start: start, end: end, width: scroller?.bounds.width ?? 0)
+                let direction = WeekSwipeRules.direction(start: start, end: end, width: scroller?.bounds.width ?? 0,
+                                                        velocity: gesture.velocity(in: scroller))
                 trace("ended: start \(describe(start)) end \(describe(end)) direction \(direction.map { String($0) } ?? "none")")
-                withAnimation(SpreadMotion.press) { onShift(0) }
+                withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : SpreadTactile.glide) { onShift(0) }
                 if let direction { onMove(direction) }
             case .cancelled, .failed:
-                withAnimation(SpreadMotion.press) { onShift(0) }
+                withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : SpreadTactile.glide) { onShift(0) }
             default: break
             }
         }
@@ -509,15 +510,20 @@ struct AllocationRow: View {
                     HourStepper(
                         value: allocation.hours,
                         label: "\(role.name) on \(dayLabel)",
+                        revision: planner.state?.revision,
+                        context: "\(planner.state?.envelope.profileId ?? "")/\(snapshot.weekKey)/\(allocation.id)",
+                        onScrub: { hours, revision in
+                            await planner.send(["type": "allocationHours", "allocationId": allocation.id, "hours": hours],
+                                               completionHaptic: true, expectedRevision: revision)
+                        },
                         onChange: { hours in
-                            Task { await planner.setAllocationHours(allocation, to: hours) }
+                            Task { if await planner.setAllocationHours(allocation, to: hours) { SpreadHaptics.completed() } }
                         }
                     )
 
                     Button {
                         leaving = true
                         Task {
-                            if !reduceMotion { try? await Task.sleep(nanoseconds: 340_000_000) }
                             await planner.send(["type": "removeAllocation", "allocationId": allocation.id])
                             leaving = false
                         }
@@ -568,25 +574,109 @@ struct HourStepper: View {
     let value: Double
     let label: String
     var step: Double = 1
+    var revision: Int? = nil
+    var context: String = ""
+    var onScrub: ((Double, Int?) async -> Bool)? = nil
     let onChange: (Double) -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @GestureState private var contact = false
+    @State private var origin: Double?
+    @State private var originRevision: Int?
+    @State private var originContext = ""
+    @State private var draft: Double?
+    @State private var saving = false
+    @State private var gate = TactileCueGate()
+    @State private var numericOpen = false
+    @State private var numericText = ""
+
+    private var displayed: Double { draft ?? value }
 
     var body: some View {
         HStack(spacing: 0) {
-            Button { onChange(SpreadHours.clamp(value - step)) } label: {
+            Button { adjust(-step) } label: {
                 Image(systemName: "minus").font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.spreadPress)
             .accessibilityLabel("Decrease \(label)\(step < 1 ? " by half an hour" : "")")
-            Text("\(SpreadHours.text(value))h")
-                .font(.system(.subheadline, weight: .semibold)).monospacedDigit()
-                .frame(minWidth: 32)
-                .accessibilityLabel("\(label), \(SpreadHours.spoken(value))")
-            Button { onChange(SpreadHours.clamp(value + step)) } label: {
+            Button {
+                guard origin == nil else { return }
+                numericText = SpreadHours.text(value); numericOpen = true
+            } label: {
+                Text("\(SpreadHours.text(displayed))h")
+                    .font(.system(.subheadline, weight: .semibold)).monospacedDigit()
+                    .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                    .opacity(saving ? 0.6 : 1)
+            }
+            .buttonStyle(.spreadPress)
+            .accessibilityLabel("\(label), \(SpreadHours.spoken(displayed))")
+            .accessibilityValue(draft == nil ? "Saved" : saving ? "Saving" : "Draft")
+            .accessibilityHint("Enter hours, or drag horizontally to adjust")
+            .accessibilityAdjustableAction { adjust($0 == .increment ? step : -step) }
+            .simultaneousGesture(scrub, including: onScrub == nil ? .none : .all)
+            Button { adjust(step) } label: {
                 Image(systemName: "plus").font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.spreadPress)
             .accessibilityLabel("Increase \(label)\(step < 1 ? " by half an hour" : "")")
         }
+        .disabled(saving)
+        .onChange(of: contact) { _, active in
+            if !active { DispatchQueue.main.async { if !saving { cancel() } } }
+        }
+        .onChange(of: context) { _, _ in cancel() }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { cancel() } }
+        .onDisappear { cancel() }
+        .alert("Set \(label)", isPresented: $numericOpen) {
+            TextField("Hours", text: $numericText).keyboardType(.decimalPad)
+            Button("Set") {
+                if let hours = Double(numericText.replacingOccurrences(of: ",", with: ".")),
+                   hours.isFinite, hours >= 0, hours <= 168, hours * 2 == (hours * 2).rounded() {
+                    if hours != value { onChange(hours) }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("Enter 0–168 hours in half-hour increments. Planner limits still apply.") }
+    }
+
+    private func adjust(_ delta: Double) {
+        guard !saving else { return }
+        let next = SpreadHours.clamp(value + delta)
+        guard next != value else { SpreadHaptics.destructivePrompt(); return }
+        onChange(next)
+    }
+    private var scrub: some Gesture {
+        DragGesture(minimumDistance: 12, coordinateSpace: .global)
+            .updating($contact) { _, active, _ in active = true }
+            .onChanged { change in
+                guard !saving, abs(change.translation.width) > abs(change.translation.height) * 1.5 else { return }
+                if origin == nil {
+                    origin = value; originRevision = revision; originContext = context
+                    gate.reset(); SpreadHaptics.prepare()
+                }
+                guard let origin, originContext == context else { cancel(); return }
+                let next = TactilePrecisionMath.hours(origin: origin, translation: Double(change.translation.width), step: step)
+                if next != displayed, gate.tick(at: ProcessInfo.processInfo.systemUptime) { SpreadHaptics.selection() }
+                if next == displayed, (next == 0 || next == 168), gate.boundary() { SpreadHaptics.destructivePrompt() }
+                // No implicit animation while tracking the finger.
+                var transaction = Transaction(); transaction.disablesAnimations = true
+                withTransaction(transaction) { draft = next }
+            }
+            .onEnded { _ in
+                guard let draft, let origin, draft != origin, let onScrub, originContext == context else { cancel(); return }
+                let expected = originRevision, expectedContext = context
+                saving = true
+                Task {
+                    _ = await onScrub(draft, expected)
+                    guard context == expectedContext else { return }
+                    // The snapshot or the existing planner error explains the outcome.
+                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) { cancel() }
+                }
+            }
+    }
+    private func cancel() {
+        origin = nil; draft = nil; originRevision = nil; saving = false; gate.reset()
     }
 }
 
