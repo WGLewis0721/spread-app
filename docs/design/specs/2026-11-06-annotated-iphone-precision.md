@@ -41,3 +41,18 @@ Pending implementation. Owner identifies the current interface as incoherent and
 | H5 | 87%, 59% | Consolidate weekly-hours entry, adjustment and setting into the centerpiece radial instead of the separate minus / text field / plus / Set row. Exact interaction details remain subject to the owner's upcoming fixes. |
 
 Intake remains open. No app code changes until the owner completes the annotations.
+
+## Photo 3 — Hours radial and allocation (owner annotations)
+
+Pending implementation; these refine H1–H5. They describe owner-observed behavior, not verified source causes.
+
+| ID | Position | Fix / acceptance |
+| --- | --- | --- |
+| H6 | 53%, 45% | Tap the central hour value to type and set weekly planning hours directly. Applies to both the unset state and an existing value. |
+| H7 | 63%, 74% | Simplify the assigned/unassigned summary. Clearly communicate the deposit/withdrawal relationship between available weekly hours and each Life area's hours, with immediately understandable labels and feedback. |
+| H8 | 75%, 43% | Make the colored arcs orbit. Tapping an arc selects its Life area; dialing left/right modifies that area's weekly allocated hours. Keep selected identity, value and direction discoverable. |
+| H9 | 15%, 56% | Correct the unexplained flick between user-set hours and 168 hours. Do not silently switch the user's planning capacity to the full calendar week; make any necessary distinction explicit. Verify the source cause before choosing the correction. |
+| H10 | 41%, 35% | Remove the visible background circle/track behind the orbiting arcs. |
+| H11 | 71%, 54% | Use true circular-arc geometry as allocated hours grow or shrink. Preserve circular curvature and radius; adjust angular sweep rather than deforming or stretching arcs. |
+
+Intake remains open. Continue waiting for the owner's remaining updates before implementation.
