@@ -61,3 +61,16 @@ export async function verifyNativeFiles(stores: Record<string, string>, entries:
   }
   return true;
 }
+
+/** Bytes become durable first; planner commit is the only success point. */
+export async function recoverNativeFiles<T extends { ok: boolean }>(
+  entries: NativeFileEntry[], commit: () => T, bridge: FilesPlugin = nativeFiles,
+): Promise<T> {
+  const { transaction } = await bridge.install({ entries });
+  let result: T;
+  try { result = commit(); }
+  catch (error) { await bridge.rollback({ transaction }); throw error; }
+  if (!result.ok) await bridge.rollback({ transaction });
+  else { try { await bridge.finish({ transaction }); } catch { /* durable bytes already committed */ } }
+  return result;
+}
