@@ -616,6 +616,7 @@ export const useSpread = create<Store>((set, get) => ({
     if (!profile) return;
     flushSpread();
     put(ACTIVE_PROFILE_KEY, profile.id);
+    lifeEdits = [];
     const loaded = adopt(profile);
     set({ activeId: profile.id, ...loaded });
   },
@@ -642,11 +643,13 @@ export const useSpread = create<Store>((set, get) => ({
     const data = get().data;
     const currentWeek = direction === "today" ? weekKey() : shiftWeek(data.currentWeek, direction);
     const next = ensureWeek({ ...data, currentWeek });
+    if (currentWeek !== data.currentWeek) lifeEdits = [];
     commit(set, next);
   },
   openWeek: (key) => {
     const data = get().data;
     if (data.currentWeek === key) return;
+    lifeEdits = [];
     commit(set, ensureWeek({ ...data, currentWeek: key }));
   },
   setHours: (hatId, hours) => {
@@ -958,7 +961,7 @@ export const useSpread = create<Store>((set, get) => ({
     flushSpread();
     const after = structuredClone(get().data);
     if (JSON.stringify(before) === JSON.stringify(after)) return null;
-    const id = uid();
+    const id = `life-${uid()}`;
     lifeEdits = [...lifeEdits.filter((item) => !item.undone), {
       id, profileId: state.activeId ?? "", weekKey: before.currentWeek, before, after, undone: false,
     }].slice(-10);
