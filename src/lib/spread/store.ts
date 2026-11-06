@@ -123,6 +123,7 @@ type Store = {
   setLifePriority: (hatId: string | null) => boolean;
   applyLifePriority: (hatId: string, goalHours: number, day: string) => boolean;
   lifeUndoable: (run: () => void) => string | null;
+  editLifeRole: (hatId: string, name: string, color: string, category: SpreadCategory | undefined) => boolean;
   renameHat: (hatId: string, name: string) => void;
   removeHat: (hatId: string) => void;
   addHat: (name: string, hours: number, options?: { category?: SpreadCategory }) => void;
@@ -705,6 +706,13 @@ export const useSpread = create<Store>((set, get) => ({
     }
     commit(set, writeWeek(data, { ...week, boxes, allocations,
       life: { ...week.life, version: 1, priorityRoleId: hatId, priorityGoalHours: goalHours, priorityDay: day } }));
+    return true;
+  },
+  editLifeRole: (hatId, name, color, category) => {
+    const trimmed = name.trim();
+    const data = get().data;
+    if (!trimmed || !/^#[0-9A-Fa-f]{6}$/.test(color) || !data.hats.some((hat) => hat.id === hatId)) return false;
+    commit(set, { ...data, hats: data.hats.map((hat) => hat.id === hatId ? { ...hat, name: trimmed, color, category } : hat) });
     return true;
   },
   renameHat: (hatId, name) => {
