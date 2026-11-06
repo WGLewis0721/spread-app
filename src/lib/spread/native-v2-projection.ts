@@ -16,7 +16,7 @@ export type NativeV2Snapshot = {
   /** Only present when the user has manually reordered tasks in Week. */
   dayTaskOrder?: Record<string, string[]>;
   /** Absent until a person explicitly sets capacity in Life. */
-  life?: { version: 1; capacityHours?: number; priorityRoleId?: string };
+  life?: { version: 1; capacityHours?: number; priorityRoleId?: string; priorityGoalHours?: number; priorityDay?: string };
 };
 
 export type NativeV2Envelope = {
@@ -58,7 +58,7 @@ export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): 
         order: allocation.order,
       })),
       ...(week?.dayTaskOrder ? { dayTaskOrder: week.dayTaskOrder } : {}),
-      ...(week?.life ? { life: week.life } : {}),
+      ...(week?.life?.version === 1 ? { life: week.life } : {}),
       tasks: data.hats.flatMap((hat) =>
         (boxes.get(hat.id)?.tasks ?? []).map((task) => ({
           id: task.id,
