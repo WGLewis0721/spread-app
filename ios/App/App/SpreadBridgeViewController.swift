@@ -16,6 +16,7 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(SpreadCloudPlugin())
+        bridge?.registerPluginInstance(SpreadLifeFilesPlugin())
         let handler = PlannerReadyHandler(owner: self)
         readyHandler = handler
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "spreadPlannerReady")
@@ -170,5 +171,42 @@ final class SpreadContainerViewController: UIViewController {
             engine.view.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
         engine.didMove(toParent: self)
+    }
+}
+
+@objc(SpreadLifeFilesPlugin)
+final class SpreadLifeFilesPlugin: CAPPlugin, CAPBridgedPlugin {
+    let identifier = "SpreadLifeFilesPlugin"
+    let jsName = "SpreadLifeFiles"
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "read", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "install", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "rollback", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise)
+    ]
+    @objc func read(_ call: CAPPluginCall) {
+        do {
+            guard let profile = call.getString("profileId"), let task = call.getString("taskId"),
+                  let object = call.getObject("file") else { throw NSError(domain: "SpreadFiles", code: 1) }
+            let file = try JSONDecoder().decode(NativeManagedFile.self, from: JSONSerialization.data(withJSONObject: object))
+            call.resolve(["base64": try LifeAttachmentStore.read(profile: profile, task: task, file: file)])
+        } catch { call.reject("The file is unavailable or damaged.", nil, error) }
+    }
+    @objc func install(_ call: CAPPluginCall) {
+        do {
+            guard let entries = call.getArray("entries") else { throw NSError(domain: "SpreadFiles", code: 2) }
+            let decoded = try JSONDecoder().decode([LifeAttachmentStore.ArchiveEntry].self, from: JSONSerialization.data(withJSONObject: entries))
+            call.resolve(["transaction": try LifeAttachmentStore.install(decoded)])
+        } catch { call.reject("File recovery failed. No planner changes were applied.", nil, error) }
+    }
+    @objc func rollback(_ call: CAPPluginCall) {
+        do {
+            guard let token = call.getString("transaction") else { throw NSError(domain: "SpreadFiles", code: 3) }
+            try LifeAttachmentStore.rollback(token); call.resolve()
+        } catch { call.reject("File recovery cleanup failed.", nil, error) }
+    }
+    @objc func finish(_ call: CAPPluginCall) {
+        guard let token = call.getString("transaction") else { call.reject("Missing recovery transaction."); return }
+        LifeAttachmentStore.finish(token); call.resolve()
     }
 }
