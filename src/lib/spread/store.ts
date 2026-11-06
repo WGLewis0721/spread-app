@@ -1,4 +1,4 @@
-import { nativeFiles, verifyNativeFiles } from "./native-life-files.ts";
+import { nativeFiles, verifyNativeFiles, fileReferences } from "./native-life-files.ts";
 import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
 import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
@@ -1160,7 +1160,7 @@ export const useSpread = create<Store>((set, get) => ({
     return { ok: true, added: plan.writes.length, replacedEmpty: plan.replacedId !== null, skipped: plan.skipped };
     };
     const entries = payload.nativeFiles ?? [];
-    if (!entries.length) return apply();
+    if (!entries.length && !fileReferences(payload.stores).length) return apply();
     return (async (): Promise<RestoreResult> => {
       if (!await verifyNativeFiles(payload.stores, entries)) return { ok: false, reason: "write-failed" };
       let transaction: string;
