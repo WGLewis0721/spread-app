@@ -119,7 +119,7 @@ test("v2 planner migrates to v3 without rewriting stored tasks or allocations", 
   const store = planner();
   const original = store.getItem(STORE_KEY);
   store.setItem(SCHEMA_KEY, "2");
-  const result = runMigrations(store);
+  const result = runMigrations(store, { current: 3 });
   assert.deepEqual(result, { status: "migrated", from: 2, to: 3 });
   assert.equal(store.getItem(STORE_KEY), original);
   assert.equal(readSchemaVersion(store), 3);
