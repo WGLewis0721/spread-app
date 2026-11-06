@@ -1002,6 +1002,7 @@ struct StackLayout: View {
             if editing {
                 Button("Manage \(role.name)") { manage(role.id) }
                 Button("Delete \(role.name)", role: .destructive) {
+                    guard editing else { return }
                     pendingDeleteId = role.id
                     SpreadHaptics.destructivePrompt()
                 }
@@ -1055,6 +1056,7 @@ struct StackLayout: View {
         HStack {
             if visibleSide(for: role.id) == .delete {
                 swipeAction("Delete", symbol: "trash.fill", id: "remove-role-\(role.id)", roleName: role.name, destructive: true) {
+                    guard editing else { return }
                     pendingDeleteId = role.id
                     SpreadHaptics.destructivePrompt()
                 }
