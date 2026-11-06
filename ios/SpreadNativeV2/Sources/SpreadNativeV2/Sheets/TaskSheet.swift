@@ -4,6 +4,7 @@ import PhotosUI
 import UIKit
 import UniformTypeIdentifiers
 import QuickLook
+import CryptoKit
 
 // MARK: Rich task content (wire shape of `TaskContent` in src/lib/spread/model.ts)
 
@@ -28,6 +29,9 @@ struct TaskSheet: View {
     @State private var loaded = false
     @State private var originProfile: String?
     @State private var originWeek: String?
+    @State private var baseContent = NativeTaskContent()
+    @State private var baseTitle = ""
+    @State private var conflictingDraft: PendingDraft?
     @State private var expandedNote: String?
     @State private var showFormats = false
     @State private var saveTask: Task<Void, Never>?
@@ -68,6 +72,21 @@ struct TaskSheet: View {
                                 .accessibilityLabel("Task title")
                                 .accessibilityIdentifier("task-editor")
                             if lifeMode { taskEstimateControl(task) }
+                            if lifeMode, let draft = conflictingDraft {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("This task changed after an earlier draft was saved on this iPhone.")
+                                    Button("Restore saved draft") {
+                                        title = draft.title
+                                        content = draft.content
+                                        conflictingDraft = nil
+                                        scheduleSave()
+                                    }
+                                    Button("Keep current task") {
+                                        conflictingDraft = nil
+                                        if let key = draftKey { UserDefaults.standard.removeObject(forKey: key) }
+                                    }
+                                }.font(.subheadline)
+                            }
                             if !loaded {
                                 ProgressView("Opening task content…")
                             } else if !supported {
@@ -130,13 +149,14 @@ struct TaskSheet: View {
         .presentationDragIndicator(.visible)
         .task { await load() }
         .onDisappear { saveOnDismiss() }
+        .onChange(of: title) { _, _ in cacheDraft() }
         // A sheet remains presented when the app leaves the foreground; onDisappear
         // does not run. Flush before suspension, while the local bridge is active.
         .onChange(of: scenePhase) { _, phase in
             if phase == .inactive { saveOnDismiss() }
         }
         .onChange(of: planner.details[taskId]) { _, value in
-            if let value, !loaded { content = value; loaded = true }
+            if let value, !loaded { finishLoading(value) }
         }
         .onChange(of: photoPick) { _, item in
             guard let item else { return }
@@ -234,9 +254,40 @@ struct TaskSheet: View {
         originProfile = planner.state?.envelope.profileId
         originWeek = planner.snapshot?.weekKey
         if await planner.send(["type": "readTaskContent", "roleId": roleId, "taskId": taskId]), let value = planner.details[taskId] {
-            content = value
-            loaded = true
+            if !loaded { finishLoading(value) }
         }
+    }
+
+    private struct PendingDraft: Codable {
+        let title: String
+        let content: NativeTaskContent
+        let baseTitle: String
+        let baseContent: NativeTaskContent
+    }
+    private var draftKey: String? {
+        guard let originProfile, let originWeek else { return nil }
+        let identity = [originProfile, originWeek, taskId].joined(separator: "\u{0}")
+        return "native.life.taskDraft." + SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+    private func cacheDraft() {
+        guard lifeMode, loaded, supported, conflictingDraft == nil, let key = draftKey else { return }
+        let draft = PendingDraft(title: title, content: content, baseTitle: baseTitle, baseContent: baseContent)
+        if let data = try? JSONEncoder().encode(draft) { UserDefaults.standard.set(data, forKey: key) }
+    }
+    private func finishLoading(_ value: NativeTaskContent) {
+        baseContent = value
+        baseTitle = task?.text ?? title
+        content = value
+        loaded = true
+        guard lifeMode, let key = draftKey, let data = UserDefaults.standard.data(forKey: key),
+              let draft = try? JSONDecoder().decode(PendingDraft.self, from: data) else { return }
+        guard draft.baseContent == value, draft.baseTitle == baseTitle else {
+            conflictingDraft = draft
+            return
+        }
+        title = draft.title
+        content = draft.content
+        if content != value { scheduleSave() }
     }
 
     /// Store acknowledgements, not the debounce timer, determine whether content is saved.
@@ -244,13 +295,16 @@ struct TaskSheet: View {
         guard task != nil, planner.state?.envelope.profileId == originProfile, planner.snapshot?.weekKey == originWeek else { return false }
         guard let encoded = try? JSONEncoder().encode(draft),
               let object = try? JSONSerialization.jsonObject(with: encoded) else { return false }
-        return await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+        let accepted = await planner.send(["type": "setTaskContent", "roleId": roleId, "taskId": taskId, "content": object])
+        if accepted { baseContent = draft; cacheDraft() }
+        return accepted
     }
 
     /// Serialize debounced edits, so an older send cannot finish after a newer one and
     /// replace the latest notes, outline or table cells with stale content.
     private func scheduleSave() {
         guard loaded, supported else { return }
+        cacheDraft()
         contentRevision += 1
         let revision = contentRevision
         let snapshot = content
@@ -287,6 +341,7 @@ struct TaskSheet: View {
                     return
                 }
             }
+            if lifeMode, conflictingDraft == nil, let key = draftKey { UserDefaults.standard.removeObject(forKey: key) }
             dismiss()
         }
     }
@@ -295,6 +350,7 @@ struct TaskSheet: View {
     /// debouncer, then save the newest dirty revision and title in store order.
     /// Deleting a task must never recreate it from an outgoing sheet.
     private func saveOnDismiss() {
+        cacheDraft()
         guard !finishing, task != nil else { return }
         let preceding = saveTask
         preceding?.cancel()
@@ -318,7 +374,9 @@ struct TaskSheet: View {
     private func commitTitle() {
         let value = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard task != nil, !value.isEmpty, value != task?.text else { return }
-        Task { _ = await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) }
+        Task {
+            if await planner.send(["type": "editTask", "roleId": roleId, "taskId": taskId, "text": value]) { baseTitle = value; cacheDraft() }
+        }
     }
 
     /// Moves the keyboard to a field the user just added, so they can keep typing. The field exists only once this
