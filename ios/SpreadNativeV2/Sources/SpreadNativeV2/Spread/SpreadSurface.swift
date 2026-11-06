@@ -1195,14 +1195,14 @@ private struct RoleEditGlow: ViewModifier {
                     // its size or shifting a single glyph. Static when Reduce
                     // Motion is enabled; no jitter or constant vibration.
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(color.opacity(bright && !reduceMotion ? 1 : 0.30),
-                                      lineWidth: bright && !reduceMotion ? 2 : 1)
-                        .blur(radius: bright && !reduceMotion ? 2.5 : 0.5)
+                        .strokeBorder(color.opacity(bright || reduceMotion ? 1 : 0.30),
+                                      lineWidth: bright || reduceMotion ? 2 : 1)
+                        .blur(radius: bright || reduceMotion ? 2.5 : 0.5)
                         .allowsHitTesting(false)
                 }
             }
-            .shadow(color: enabled ? color.opacity(bright && !reduceMotion ? 0.66 : 0.24) : .clear,
-                    radius: enabled ? (bright && !reduceMotion ? 20 : 7) : 0)
+            .shadow(color: enabled ? color.opacity(bright || reduceMotion ? 0.66 : 0.24) : .clear,
+                    radius: enabled ? (bright || reduceMotion ? 20 : 7) : 0)
             .onAppear { animate() }
             .onChange(of: enabled) { _, _ in animate() }
             .onChange(of: reduceMotion) { _, _ in animate() }
