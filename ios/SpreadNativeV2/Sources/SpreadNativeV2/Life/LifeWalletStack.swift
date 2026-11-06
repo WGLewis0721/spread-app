@@ -165,8 +165,8 @@ private struct LifeWalletFace: View {
         .accessibilityActions {
             // VoiceOver can reach swipe-only actions, but only after Edit is pressed.
             if editing {
-                Button("Manage") { onManage() }
-                Button("Delete", role: .destructive) { onDelete() }
+                Button("Manage") { if editing { onManage() } }
+                Button("Delete", role: .destructive) { if editing { onDelete() } }
             }
         }
         .simultaneousGesture(swipe)
@@ -177,14 +177,20 @@ private struct LifeWalletFace: View {
     // Keep each SwiftUI builder small enough for the release compiler to solve.
     private var revealedActions: some View {
         HStack(spacing: 0) {
-            Button(role: .destructive, action: onDelete) {
+            Button(role: .destructive) {
+                guard editing, reveal > 0 else { return }
+                onDelete()
+            } label: {
                 Label("Delete", systemImage: "trash").font(.subheadline)
                     .frame(width: 92, height: cardHeight).foregroundStyle(.white)
                     .background(Spread.danger, in: RoundedRectangle(cornerRadius: 24))
             }.accessibilityIdentifier("life-reveal-delete-\(role.id)")
                 .accessibilityHidden(!editing || reveal <= 0).allowsHitTesting(editing && reveal > 0)
             Spacer(minLength: 0)
-            Button(action: onManage) {
+            Button {
+                guard editing, reveal < 0 else { return }
+                onManage()
+            } label: {
                 Label("Manage", systemImage: "pencil").font(.subheadline)
                     .frame(width: 92, height: cardHeight).foregroundStyle(.white)
                     .background(LifePalette.accent, in: RoundedRectangle(cornerRadius: 24))
