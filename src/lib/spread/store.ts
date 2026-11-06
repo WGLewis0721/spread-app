@@ -120,7 +120,7 @@ type Store = {
   /** Life-only week budget. Unlike setHours, never changes a role's global default. */
   setLifeBudget: (hatId: string, hours: number) => boolean;
   setLifeCapacity: (hours: number) => boolean;
-  setLifePriority: (hatId: string | null) => boolean;
+  setLifePriority: (hatId: string | null, goalHours?: number, day?: string) => boolean;
   applyLifePriority: (hatId: string, goalHours: number, day: string) => boolean;
   lifeUndoable: (run: () => void) => string | null;
   editLifeRole: (hatId: string, name: string, color: string, category: SpreadCategory | undefined) => boolean;
@@ -685,12 +685,17 @@ export const useSpread = create<Store>((set, get) => ({
     commit(set, writeWeek(data, { ...week, boxes }));
     return true;
   },
-  setLifePriority: (hatId) => {
+  setLifePriority: (hatId, goalHours, day) => {
     const data = ensureWeek(get().data);
     if (hatId !== null && !data.hats.some((role) => role.id === hatId)) return false;
     const week = data.weeks[data.currentWeek];
+    if (week.life && week.life.version !== 1) return false;
+    if ((goalHours === undefined) !== (day === undefined)) return false;
+    if (goalHours !== undefined && (!Number.isFinite(goalHours) || goalHours < 0 || goalHours > 168 || !Number.isInteger(goalHours * 2))) return false;
+    if (day !== undefined && (day < data.currentWeek || day >= shiftWeek(data.currentWeek, 1) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(day))) return false;
     commit(set, writeWeek(data, { ...week,
-      life: { ...week.life, version: 1, priorityRoleId: hatId ?? undefined } }));
+      life: { ...week.life, version: 1, priorityRoleId: hatId ?? undefined,
+        priorityGoalHours: hatId === null ? undefined : goalHours, priorityDay: hatId === null ? undefined : day } }));
     return true;
   },
   applyLifePriority: (hatId, goalHours, day) => {
