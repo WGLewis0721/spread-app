@@ -40,3 +40,8 @@ Root install/audit reported 14 vulnerabilities: 2 low, 8 moderate, 3 high, 1 cri
 ## Missing checks
 
 No Xcode/iOS SDK compile, simulator native execution, native matched screenshots, VoiceOver session, physical iPhone haptic/gesture checks, signed IPA, App Store Connect build-number query or upload was performed. Signing credentials were not validated. All remain acceptance/release blockers. Do not interpret browser behavior or Linux tests as physical iPhone evidence.
+
+
+## Pinned Node 22 follow-up
+
+The required Node 22 rerun completed successfully on the same frozen implementation source. See [Node 22 results and complete archived logs](node22-checks.md). The earlier Node 24 execution record remains historical evidence; the runtime gap is resolved for the portable checks. Native SDK compilation and device checks remain owed.
