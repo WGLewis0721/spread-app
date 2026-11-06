@@ -34,6 +34,7 @@ struct LifeRoot: View {
     @State private var navigationOpen = false
     @State private var localSheet: LifeLocalSheet?
     @State private var weekTick = 0
+    @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -80,12 +81,17 @@ struct LifeRoot: View {
         .task { await planner.refresh() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await planner.refresh() } } }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in
-            focusedRole = nil; editing = false; localSheet = nil
+            focusedRole = nil; editing = false; localSheet = nil; pendingTask = nil
         }
         .onChange(of: planner.snapshot?.weekKey) { _, _ in focusedRole = nil; editing = false; localSheet = nil }
         .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
         .sensoryFeedback(.selection, trigger: weekTick) { _, _ in LifeFeedback.enabled }
-        .sheet(item: $localSheet, content: sheetContent)
+        .sheet(item: $localSheet, onDismiss: {
+            if let pending = pendingTask {
+                pendingTask = nil
+                onOpenTask(pending.role, pending.task)
+            }
+        }, content: sheetContent)
         .accessibilityIdentifier("life-root")
     }
     private var header: some View {
@@ -331,8 +337,8 @@ struct LifeRoot: View {
                         ForEach(planner.snapshot?.roles ?? []) { role in
                             Text(role.name).font(.headline)
                             LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: { role, task in
+                                pendingTask = (role, task)
                                 localSheet = nil
-                                Task { @MainActor in await Task.yield(); onOpenTask(role, task) }
                             })
                         }
                         if planner.snapshot?.roles.isEmpty == true {
