@@ -378,8 +378,9 @@ workflows:
           /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
           xcode-project use-profiles --custom-export-options='{"testFlightInternalTestingOnly": true}'
           xcode-project build-ipa --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" --scheme App
-          for ipa in build/ios/ipa/*.ipa; do
-            test -f "$ipa" || exit 1
+          set -- build/ios/ipa/*.ipa
+          test "$#" -eq 1 && test -f "$1" || { echo "Expected exactly one signed Life IPA" >&2; exit 1; }
+          for ipa in "$@"; do
             python3 scripts/app-store-preflight.py --ipa "$ipa"
             shasum -a 256 "$ipa" | tee -a artifacts/life/ipa-sha256.txt
             python3 scripts/life_artifact.py create --ipa "$ipa" --source "$CM_COMMIT" --record artifacts/life/build-version.json --manifest artifacts/life/reviewed-artifact.json
