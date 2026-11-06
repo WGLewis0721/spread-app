@@ -51,7 +51,7 @@ struct LifeWeekView: View {
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: roles,
                     selectedRole: $selectedRole, editing: false, day: date,
-                    onManage: onManage, onDelete: onDelete, onBeginEdit: onManage)
+                    onManage: onManage, onDelete: onDelete)
                 if let roleID = selectedRole, let role = roles.first(where: { $0.id == roleID }) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text(role.name).font(.title3.weight(.semibold))
