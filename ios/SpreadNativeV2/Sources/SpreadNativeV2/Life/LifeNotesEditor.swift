@@ -152,7 +152,16 @@ struct LifeNotesEditor: UIViewRepresentable {
             let style = current.mutableCopy() as! NSMutableParagraphStyle
             style.headIndent = max(0, min(120, style.headIndent + delta))
             style.firstLineHeadIndent = style.headIndent
-            format(.paragraphStyle, style)
+            if let view {
+                let selection = view.selectedRange
+                let copy = NSMutableAttributedString(attributedString: view.attributedText)
+                let range = (view.text as NSString).paragraphRange(for: selection)
+                if range.length > 0 {
+                    copy.addAttribute(.paragraphStyle, value: style, range: range)
+                    replaceAttributes(copy, selection: selection)
+                }
+                view.typingAttributes[.paragraphStyle] = style
+            }
         }
         @objc func undo() { view?.undoManager?.undo() }
         @objc func redo() { view?.undoManager?.redo() }
@@ -165,6 +174,12 @@ struct LifeNotesEditor: UIViewRepresentable {
             guard let regex = try? NSRegularExpression(pattern: pattern),
                   let match = regex.firstMatch(in: paragraph, range: NSRange(location: 0, length: (paragraph as NSString).length)) else { return true }
             let prefix = (paragraph as NSString).substring(with: match.range)
+            if paragraph.trimmingCharacters(in: .whitespacesAndNewlines) == prefix.trimmingCharacters(in: .whitespacesAndNewlines) {
+                textView.selectedRange = NSRange(location: range.location - (prefix as NSString).length, length: (prefix as NSString).length)
+                textView.insertText("\n")
+                textViewDidChange(textView)
+                return false
+            }
             var next = prefix
             let numberPattern = #"^(\s*)([0-9]+)\. "#
             if let numbers = try? NSRegularExpression(pattern: numberPattern),
@@ -246,9 +261,37 @@ extension NativeContentBlock {
         try set("id", id); try set("type", type); try set("text", text)
         try set("items", items); try set("cells", cells); try set("src", src)
         try set("richText", richText); try set("file", file)
+        for key in ["richText", "file"] {
+            if case .object(let original)? = preserved[key], case .object(let edited)? = values[key] {
+                values[key] = .object(original.merging(edited) { _, new in new })
+            }
+        }
+        if case .array(let original)? = preserved["items"], case .array(let edited)? = values["items"] {
+            values["items"] = .array(edited.map { item in
+                guard case .object(let current) = item, let id = current["id"],
+                      let previous = original.first(where: {
+                          if case .object(let value) = $0 { return value["id"] == id }; return false
+                      }), case .object(let fields) = previous else { return item }
+                return .object(fields.merging(current) { _, new in new })
+            })
+        }
         var c = encoder.singleValueContainer()
         try c.encode(values)
     }
 }
 
+extension NativeTaskContent {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        preserved = try c.decode([String: NativeJSON].self)
+        guard let value = preserved["blocks"] else { blocks = []; return }
+        blocks = try JSONDecoder().decode([NativeContentBlock].self, from: JSONEncoder().encode(value))
+    }
+    func encode(to encoder: Encoder) throws {
+        var values = preserved
+        values["blocks"] = try JSONDecoder().decode(NativeJSON.self, from: JSONEncoder().encode(blocks))
+        var c = encoder.singleValueContainer()
+        try c.encode(values)
+    }
+}
 #endif
