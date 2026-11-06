@@ -1,4 +1,4 @@
-import { nativeFiles, verifyNativeFiles, fileReferences } from "./native-life-files.ts";
+import { recoverNativeFiles, verifyNativeFiles, fileReferences } from "./native-life-files.ts";
 import { collectFullPayload, fullBackupText, planRestoreAsNew, restoreCapacity, type FullBackupPayload } from "@/lib/spread/backup";
 import { isNativeApp, syncStatusBar } from "@/lib/spread/native";
 import { flushMirror, notifyStorageChanged, pinSnapshot } from "@/lib/spread/native-mirror";
@@ -1164,20 +1164,13 @@ export const useSpread = create<Store>((set, get) => ({
     if (!entries.length && !fileReferences(payload.stores).length) return apply();
     return (async (): Promise<RestoreResult> => {
       if (!await verifyNativeFiles(payload.stores, entries)) return { ok: false, reason: "write-failed" };
-      let transaction: string;
+      const mapped = entries.filter(e => plan.profileMap[e.profileId]).map(e => ({ ...e, profileId: plan.profileMap[e.profileId] }));
       try {
-        const mapped = entries.filter(e => plan.profileMap[e.profileId]).map(e => ({ ...e, profileId: plan.profileMap[e.profileId] }));
-        transaction = (await nativeFiles.install({ entries: mapped })).transaction;
+        return await recoverNativeFiles(mapped, (): RestoreResult => {
+          const unchanged = restoreBaseline === JSON.stringify({ profiles: get().profiles, activeId: get().activeId, data: get().data });
+          return unchanged ? apply() : { ok: false, reason: "write-failed" };
+        });
       } catch { return { ok: false, reason: "write-failed" }; }
-      const unchanged = restoreBaseline === JSON.stringify({ profiles: get().profiles, activeId: get().activeId, data: get().data });
-      const result: RestoreResult = unchanged ? apply() : { ok: false, reason: "write-failed" };
-      if (!result.ok) {
-        try { await nativeFiles.rollback({ transaction }); } catch { return { ok: false, reason: "rollback-failed" }; }
-      } else {
-        // Files are already durable before the roster commit; finish only releases the cleanup journal.
-        try { await nativeFiles.finish({ transaction }); } catch { /* durable copies remain valid */ }
-      }
-      return result;
     })();
   },
 }));
