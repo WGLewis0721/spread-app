@@ -233,6 +233,12 @@ final class TactileUITests: NativeUITestCase {
         XCTAssertTrue(el("life-task-details").waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts[tag + " task"].firstMatch.waitForExistence(timeout: 10))
         capture("tactile-life-same-task-after-relaunch")
+        tapID("life-change-area-hours")
+        XCTAssertTrue(el("life-hours-page").waitForExistence(timeout: 10))
+        XCTAssertTrue(el("life-selected-hours-controls").exists ||
+                      el("life-selected-hours-needs-capacity").exists,
+                      "Changing an existing Life area's hours must retain its selection or explain the capacity prerequisite")
+        capture("life-existing-area-hours-selected")
 
         app.terminate()
         launch(["-native.weekMonth.previewEnabled", "NO"])
