@@ -20,6 +20,8 @@
 
 The proposal refines the feel of existing interactions, with a magnetic Wallet-style selection, separate details field, adaptive compact navigation, precise Crown, mechanical Hours, fluid Week gestures, task completion and reordering. Reuse the current planner state and native SwiftUI components. Do not create another card mode, separate scheduler, game loop, artificial streak, notification pressure, or new top-level Tasks destination.
 
+**Implementation workflow:** Build the complete feature set directly in the existing native app on a development branch, then test and refine the integrated experience. **Do not create isolated prototypes, throwaway demo applications or substitute stores.** Focused commits and internal QA checkpoints are welcome; they are not separate products.
+
 **No silent override:** Current Life reference, More/Settings, Classic, stored data, the native brand board and the release gates stay authoritative. Any conflict between an experimental motion target here and existing approved reference behavior needs an owner-approved amendment before implementation. Nothing in this folder authorizes a PR merge, build upload, or production release.
 
 ## Provenance and evidence
