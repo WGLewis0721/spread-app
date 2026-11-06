@@ -19,7 +19,7 @@ export function fileReferences(stores: Record<string, string>): Omit<NativeFileE
       if (typeof item.id === "string" && item.content && typeof item.content === "object") {
         const blocks = (item.content as { blocks?: unknown }).blocks;
         if (Array.isArray(blocks)) for (const block of blocks) {
-          if (block?.type === "file") refs.push({ profileId, taskId: item.id, file: block.file });
+          if (block?.type === "file") refs.push({ profileId, taskId: item.id, file: block.file ?? {} });
         }
       }
       Object.values(item).forEach(visit);
