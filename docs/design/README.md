@@ -55,6 +55,7 @@ All paths are under `docs/design/`.
 | PLAN_SPEC_PROTOCOL.md, specs/TEMPLATE.md | How every plan and spec is made and shaped | New 2026-10-28. Process authority; never overrides a design rule |
 | AI_TOOL_SETUP.md | How AI tools reach these documents | Advisory. Vendor file conventions not re-verified |
 | specs/ (README.md is the index) | One spec per request | Plans, not approval |
+| review-visuals/ ([index](review-visuals/README.md)) | Duo compact/regular/folded concept SVGs | Historical concepts, not simulator evidence |
 | packs/ | One digest per kind of task | Derived. The long documents win if they differ |
 | tokens.json | Planner tokens, light and dark | Generated from `src/styles.css` |
 | [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Historical; five-mode direction superseded by Nov 4 owner choice |

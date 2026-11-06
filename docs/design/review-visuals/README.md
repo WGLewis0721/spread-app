@@ -1,5 +1,7 @@
 # Spread iPhone Duo — design review visuals
 
+> Part of the [Spread design map](../README.md).
+
 **Owner review packet, not implementation evidence.** These are editable SVG *concept drawings*. They are not Xcode Device Hub screenshots and do not prove the layouts run. Sample Work/Home/Health responsibilities and tasks are illustrative only.
 
 The authoritative specification, native-source audit, screen-by-screen delta, component contracts and acceptance criteria live in [the iPhone Duo adaptive design review](../specs/2026-11-05-iphone-duo-adaptive-design-review.md).
@@ -20,8 +22,8 @@ The authoritative specification, native-source audit, screen-by-screen delta, co
 - Resized/laptop: there is no new feature or navigation mode. The regular two-pane composition yields to compact when available space cannot fit both panes.
 - In production, include actual Chalkboard assets, original task editor details, system adaptive bars and safe-area handling; they are not exhaustively illustrated here.
 
-## Next gate
+## Current gate
 
-Owner approves or requests design amendments **before** any SwiftUI/layout/test implementation. After approval, Xcode 27.1 Device Hub screenshots and full native tests are required; conceptual SVGs can never satisfy those release gates.
+Owner approved SwiftUI implementation in PR #145; native validation is pending. These concepts predate the subsequent **thumb-side Crown amendment**: the real expanded SwiftUI layout uses a **vertical Crown at the lower outer edge**, movable left/right in Settings. Compact retains the horizontal Crown. Xcode 27.1 Device Hub screenshots and native tests are still required; conceptual SVGs are never release evidence.
 
 Source authority: [Spread native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), [existing SwiftUI tokens](../../../ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift), [Apple's iPhone Duo HIG](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo), [Apple's adaptive layout session](https://developer.apple.com/videos/play/tech-talks/111463/).

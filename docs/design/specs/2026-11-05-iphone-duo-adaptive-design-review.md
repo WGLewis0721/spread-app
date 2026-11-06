@@ -1,12 +1,13 @@
 # Spread — iPhone Duo adaptive design review
-**Status:** DESIGN COMPLETE FOR OWNER REVIEW · **NOT APPROVED** · **NO IMPLEMENTATION AUTHORIZED**  
-**Scope:** PR #145 documentation and conceptual visuals only. No change to Spread application code, planner storage, shipping UI, tests, workflows, main, or production.  
+> Part of the [Spread design map](../README.md).
+**Status:** OWNER APPROVED IMPLEMENTATION · NATIVE VERIFICATION PENDING · RELEASE NO-GO  
+**Scope:** Original PR #145 design packet; subsequent owner-approved SwiftUI changes are on the same draft PR. Planner data, main and production remain unchanged.  
 **Baseline inspected:** `main` at `b074b881ff6b1134d745ce1697f841069d92cf4b`; pre-review PR #145 head `ff16913ca1d010317c8af038b50b60dcf5f619aa`.  
 **Single product model:** Responsibilities → Hours → Week → Tasks. **Two adaptive presentations**, not a separate design for each Duo pose.
 
 > **Evidence labels:** VERIFIED = observed in repository source/tests; APPLE = official published platform guidance; PROPOSED = review-stage design contract; UNVERIFIED = native behavior requiring Xcode evidence. The SVGs below are **conceptual review visuals, not screenshots or proof of a working native implementation**.
 
-## 0. Review package / what requires approval
+## 0. Design packet and owner-approved amendment
 
 | View | Visual | Decision this visual makes |
 | --- | --- | --- |
@@ -15,7 +16,7 @@
 | Partially folded like a book | [03 · Hinge-aware split](../review-visuals/duo-03-book-fold.svg) | Existing two panes avoid the active division region; no control or actionable card crosses hinge |
 | Partially folded like a laptop / Split View | [04 · Resized and reflowed](../review-visuals/duo-04-resized.svg) | Reflow or collapse to compact when useful pane widths cannot fit; controls remain reachable |
 
-**Approval request:** Approve these two presentations, regular-pane hierarchy, unchanged destination semantics, hinge avoidance policy, and no new features/navigation. No implementation or merger until owner explicitly approves. Images show illustrative sample data, not the user's content, and do not assert a simulator capture.
+**Approval record:** Owner approved implementation of the adaptive SwiftUI design in PR #145, then requested a **vertical Crown placed near the thumb on the outer edge** of the expanded layout and a **Settings toggle between left and right** (default right). Compact keeps its horizontal Crown. The new Crown is in `VerticalWeekCrownView.swift`, `SpreadLiveRoot.swift` and `ManageSheets.swift` on PR #145, awaiting native acceptance. The expanded SVG concepts predate this Crown-specific amendment. They are not simulator screenshots.
 
 ## 1. Apple guidance: directly applicable, not nine UI designs
 
@@ -163,7 +164,7 @@ All criteria are required **after design approval and implementation**; none can
 **Minimum review fixtures:** empty and populated planner; 1/3/10 responsibilities; one very long role name; 0/10/100 tasks; planned/unplanned/overbooked and overdue work; long notes/tables; multiple profiles; light/dark; large text, RTL, Reduce Motion. Check no focus trap, text clipping, horizontal viewport overflow, unreachable last day or duplicated store updates. Simulators must report the actual runtime and SDK; do not claim Xcode 27.1 verification from an Xcode 26.6 job.
 
 **Release gates, ordered:**
-1. **Design approval** (this PR package); no application implementation before explicit approval.
+1. **Design approval granted** for the compact/regular design and later side-Crown amendment; release approval is separate.
 2. Focused implementation on existing PR #145 only; baseline main untouched pending merge approval.
 3. Deterministic unit and native tests; correct any failed assertion **only with identified cause and reproduction**; preserve artifacts.
 4. Xcode 27.1 Device Hub compact/regular/part-folded plus standard iPhone/iPad matrix evidence.
