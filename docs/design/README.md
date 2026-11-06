@@ -2,7 +2,7 @@
 
 Start here for Spread's design rules and task-specific references.
 
-**Audience:** developers and coding agents. Keep design guidance in this folder.
+**Audience:** developers and coding agents.
 
 **Product:** Responsibilities → Hours → Week → Tasks, local-first. Native: one approved Wallet Stack; preserve Week/Month and planner actions. React and landing stay separate.
 
@@ -12,7 +12,7 @@ Start here for Spread's design rules and task-specific references.
 
 ## 1. Load only what you need
 
-Stop at the first sufficient tier.
+Stop at the first useful tier.
 
 | Tier | What | Size budget | When |
 | --- | --- | --- | --- |
@@ -64,7 +64,7 @@ All paths are under `docs/design/`.
 | [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Historical; five-mode direction superseded by Nov 4 owner choice |
 | planner/SPREAD_DESIGN_SYSTEM.md | React planner visuals, native behavior invariants | Governs legacy UI and behavior |
 | planner/SPREAD_NATIVE_BRAND_BOARD.md | Current SwiftUI: **single animated Wallet Stack**; [SVG](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Native-only PR #127; supersedes five-mode language |
-| [tactile-precision/](tactile-precision/README.md), [motion](tactile-precision/MOTION_CONTRACT.md), [QA](tactile-precision/VERIFICATION.md) | Classic/Life tactile motion | Candidate; device gates owed |
+| tactile-precision/: [map](tactile-precision/README.md), [motion](tactile-precision/MOTION_CONTRACT.md), [tuning](tactile-precision/ANIMATION_TUNING_GUIDE.md), [QA](tactile-precision/VERIFICATION.md) | Native tactile system | Devices owed |
 | planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | Unified UX history | Historical only |
 | landing/DESIGN.md | Landing page | Highest for the landing page only, never for planner decisions. Frozen as `golden/2026-09-28-full-landing-modes` |
 | platforms/APPLE_DESIGN_PRINCIPLES.md | Native controls, sheets and contrast | Platform principles; native board preserves identity |

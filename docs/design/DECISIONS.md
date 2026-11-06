@@ -25,6 +25,9 @@ Resolve an open decision here and in its source document together, then move the
 
 ## Decision log
 
+| 2026-11-06 | Tune native animation using Apple motion guidance and public UI-animation principles. Use bounded 30ms list stagger, 0.97 immediate press scale, 220/180ms trigger-linked Life navigation, and identity-preserving role detail reveals. Preserve existing store, approved layout, haptics and Reduce Motion; reject blanket bounce, rubber-band capacity and gratuitous pulses. | [20-pattern audit](tactile-precision/ANIMATION_TUNING_GUIDE.md), [motion contract](tactile-precision/MOTION_CONTRACT.md) |
+
+
 | Date | Decision | Where |
 | --- | --- | --- |
 | 2026-11-06 | Owner explicitly requested full Tactile Precision in both Classic and Life. This scoped amendment permits shared motion, separate Classic details and adaptive navigation while preserving More, the frozen Life reference and authoritative planner data. No merge/release. | [Implementation](tactile-precision/IMPLEMENTATION.md) |
