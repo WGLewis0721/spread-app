@@ -1,0 +1,19 @@
+Life reference verification, 2026-11-06 UTC
+Repository: WGLewis0721/spread-app, PR146 branch docs/life-ios-handoff-2026-11-06
+Frozen reference tracked source: unchanged from implementation base aee61727ca40b47f32c05b01d27b8e1c4cb596e3 (git diff -- tools/life-reference: 0 bytes).
+Command: npm --prefix tools/life-reference ci --ignore-scripts
+Result: succeeded; 0 audit vulnerabilities.
+Command: npm --prefix tools/life-reference test
+Result:16passed0failed0skipped.
+Command: npm --prefix tools/life-reference run build
+Result: exit0.
+Demo: npm --prefix tools/life-reference run dev -- --host 0.0.0.0 --port4183
+Environment: __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=sb-1zzy2ugl1mol.vercel.run
+Browser install: official GoogleChrome and PlaywrightWebKit; required Linux host dependencies installed.
+Command in tools/life-reference: PROTOTYPE_URL=http://127.0.0.1:4183 npm run test:iphone -- --workers=1
+Result:50passed(3.4m),25ChromeiPhone+25WebKitiPhone.
+Command in tools/life-reference: PROTOTYPE_URL=http://127.0.0.1:4183 npm run test:browser -- --workers=1
+Result:8passed(32.4s).
+Coverage: reference task required-name/dirty-dismiss, hour bank conservation, week/day/Crown input/persistence, sheet keyboard and drag dismissal, width375/390/430 light/dark enlarged text touch-target/console matrix, wallet/calendar/orbit/capacity, rich notes/outlines/lists/undo, real file/audio storage/reload, priority/manage/delete/undo/redo.
+Recorded reference screenshot matrix is390only per frozen test source; other widths exercised without persisted captures.
+No result above is evidence of native SwiftUI rendering, native gestures, physical haptics or signed iPhone execution.
