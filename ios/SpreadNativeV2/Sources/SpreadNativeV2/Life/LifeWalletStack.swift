@@ -279,7 +279,11 @@ struct LifeTaskRows: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
     let tasks: [PlannerTask]
+    /// Reordering is only available on a specific day's scheduled task list.
+    var day: String? = nil
     let onOpenTask: (String, String) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var targetedTaskId: String?
     var body: some View {
         VStack(spacing: 0) {
             if tasks.isEmpty {
@@ -308,11 +312,58 @@ struct LifeTaskRows: View {
                             Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
                         }.frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
                     }.buttonStyle(.plain)
+                        .accessibilityActions {
+                            if day != nil, let index = tasks.firstIndex(where: { $0.id == task.id }) {
+                                if index > 0 {
+                                    Button("Move up") { reorder(task, before: tasks[index - 1].id) }
+                                }
+                                if index + 1 < tasks.count {
+                                    Button("Move down") {
+                                        reorder(task, before: index + 2 < tasks.count ? tasks[index + 2].id : nil)
+                                    }
+                                }
+                            }
+                        }
+                    if day != nil {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.footnote).foregroundStyle(LifePalette.secondary)
+                            .frame(width: 44, height: 44)
+                            .draggable(SpreadDragPayload.task(id: task.id, roleId: task.roleId, label: task.text))
+                            .accessibilityHidden(true)
+                    }
                 }
+                .background(targetedTaskId == task.id ? LifePalette.fill : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 12))
+                .animation(reduceMotion ? nil : SpreadTactile.snap, value: targetedTaskId)
+                .dropDestination(for: SpreadDragPayload.self) { items, _ in
+                    guard let day, let item = items.first, item.kind == .task,
+                          item.roleId == task.roleId, item.itemId != task.id else { return false }
+                    Task {
+                        let ok = await planner.send([
+                            "type": "reorderDayTask", "roleId": task.roleId, "day": day,
+                            "taskId": item.itemId, "beforeId": task.id
+                        ])
+                        if ok { LifeFeedback.accepted() }
+                    }
+                    return true
+                } isTargeted: { targeted in targetedTaskId = targeted ? task.id : nil }
                 Divider()
             }
         }
     }
+
+    private func reorder(_ task: PlannerTask, before id: String?) {
+        guard let day, !planner.busy else { return }
+        let target: Any = id.map { $0 as Any } ?? NSNull()
+        Task {
+            let ok = await planner.send([
+                "type": "reorderDayTask", "roleId": task.roleId, "day": day,
+                "taskId": task.id, "beforeId": target
+            ])
+            if ok { LifeFeedback.accepted() }
+        }
+    }
+
     private func placement(_ task: PlannerTask) -> String {
         let day = snapshot.allocations.first { $0.id == task.allocationId }
             .map { PlannerDates.label(PlannerDates.date($0.day), pattern: "EEEE") } ?? "To place"

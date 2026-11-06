@@ -42,6 +42,7 @@ struct LifeWeekView: View {
                 arrow("Previous day", system: "chevron.left") { choose(LifeCalendarRules.shiftDay(date, by: -1)) }
                 arrow("Next day", system: "chevron.right") { choose(LifeCalendarRules.shiftDay(date, by: 1)) }
             }
+            .simultaneousGesture(daySwipe)
             if roles.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("A day with room.").font(.title3.weight(.semibold))
@@ -62,7 +63,7 @@ struct LifeWeekView: View {
                             .font(.subheadline).foregroundStyle(LifePalette.secondary)
                         LifeTaskRows(planner: planner, snapshot: snapshot,
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),
-                            onOpenTask: onOpenTask)
+                            day: date, onOpenTask: onOpenTask)
                         LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
                     }.padding(18).background(LifePalette.surface, in: RoundedRectangle(cornerRadius: 22))
                 }
@@ -73,7 +74,6 @@ struct LifeWeekView: View {
         }
         .foregroundStyle(LifePalette.ink)
         .accessibilityIdentifier("life-week-page")
-        .simultaneousGesture(daySwipe)
         .onAppear { restoreProfile() }
         .onChange(of: profile) { _ in restoreProfile() }
         .onChange(of: snapshot.weekKey) { week in
@@ -165,6 +165,7 @@ struct LifeWeekView: View {
                 if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: 44) }
             }
         }.padding(.vertical, 8).accessibilityElement(children: .contain)
+            .simultaneousGesture(daySwipe)
     }
 
     private var monthControls: some View {
