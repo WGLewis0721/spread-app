@@ -361,8 +361,10 @@ private struct LifeWalletFace: View {
                     // Require a decisive gesture. The release spring completes
                     // the visible offscreen travel, then the existing undoable
                     // planner command deletes the Life area without a prompt.
-                    if traveled >= exitDistance * 0.55 ||
-                        (traveled >= exitDistance * 0.20 && projected >= exitDistance * 0.95) {
+                    if TactilePrecisionMath.cardShouldDismissRight(
+                        traveled: Double(traveled), projected: Double(projected),
+                        exitDistance: Double(exitDistance)
+                    ) {
                         performDismissal()
                     } else {
                         withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
