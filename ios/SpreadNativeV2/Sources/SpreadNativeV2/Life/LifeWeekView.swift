@@ -9,6 +9,7 @@ struct LifeWeekView: View {
     let onReserve: (String) -> Void
     let onManage: (String) -> Void
     let onDelete: (String) -> Void
+    let onNewRole: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selectedDate = ""
@@ -22,6 +23,8 @@ struct LifeWeekView: View {
     @State private var overdueLoaded = false
     @State private var overdueReadFailed = false
     @State private var monthAddTarget: MonthAddTarget?
+    @State private var invalidDropRoleId: String?
+    @State private var showInvalidDrop = false
     @State private var monthLongPress: (iso: String, when: Date)?
     @State private var marks: [String: NativeDayMark] = [:]
     @State private var navigationID = UUID()
@@ -85,6 +88,16 @@ struct LifeWeekView: View {
         .sheet(item: $monthAddTarget) { item in
             MonthQuickAddSheet(planner: planner, roleId: visibleRole ?? "", day: item.iso)
         }
+        .confirmationDialog("Reserve time first", isPresented: $showInvalidDrop,
+                            titleVisibility: .visible) {
+            if let invalidDropRoleId {
+                Button("Reserve day hours") { onReserve(invalidDropRoleId) }
+                Button("Adjust weekly hours") { onManage(invalidDropRoleId) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This Life area has no time reserved on that day. The task has not moved.")
+        }
         .task(id: marksKey) {
             marks = [:]
             let origin = marksKey
@@ -126,7 +139,7 @@ struct LifeWeekView: View {
             dayHoursSummary
             room
             if roles.isEmpty {
-                Text("Tap a Life area above to plan 1 hour on this day.")
+                Text("Nothing planned. Tap a glowing Life area to reserve 1 hour on this day.")
                     .font(.callout).foregroundStyle(LifePalette.secondary)
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: roles,
@@ -135,13 +148,21 @@ struct LifeWeekView: View {
                 if let roleID = selectedRole, let role = roles.first(where: { $0.id == roleID }) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text(role.name).font(.title3.weight(.semibold))
-                        Text("\(SpreadHours.text(snapshot.allocations.filter { $0.day == date && $0.roleId == roleID }.reduce(0) { $0 + $1.hours })) h reserved for \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))")
-                            .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                        HStack(spacing: 8) {
+                            Text("\(SpreadHours.text(snapshot.allocations.filter { $0.day == date && $0.roleId == roleID }.reduce(0) { $0 + $1.hours })) h reserved for \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))")
+                                .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                            Spacer(minLength: 4)
+                            Button("Adjust day hours") { onReserve(roleID) }
+                                .font(.subheadline.weight(.medium))
+                                .frame(minHeight: 44)
+                                .accessibilityIdentifier("life-week-adjust-day-hours")
+                        }
                         VStack(alignment: .leading, spacing: 0) {
                         LifeTaskRows(planner: planner, snapshot: snapshot,
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),
                             day: date, onOpenTask: onOpenTask)
-                        LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
+                        LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask,
+                                     onNeedsHours: onReserve)
                         }.padding(.horizontal, 4)
                             .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }.padding(18).spreadCard()
@@ -219,6 +240,12 @@ struct LifeWeekView: View {
             }
             .navigationTitle("To Place")
             .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("New Life area") {
+                        toPlaceOpen = false
+                        onNewRole()
+                    }
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { toPlaceOpen = false }
                 }
@@ -377,6 +404,7 @@ struct LifeWeekView: View {
         let selected = iso == date
         let today = iso == PlannerDates.localISO()
         let mark = mark(for: iso)
+        let completed = selectedRole.map { LifeCalendarRules.dayCompleted(snapshot, day: iso, roleId: $0) } ?? false
         return Button {
             if let previous = monthLongPress, previous.iso == iso,
                Date().timeIntervalSince(previous.when) < 1.5 {
@@ -402,15 +430,36 @@ struct LifeWeekView: View {
                     if LifeCalendarRules.overflow(mark.count) > 0 {
                         Text("+\(LifeCalendarRules.overflow(mark.count))").font(.caption2)
                     }
+                    if completed {
+                        Image(systemName: "checkmark").font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(LifePalette.accent)
+                    }
                 }.frame(height: 5)
             }.frame(maxWidth: .infinity, minHeight: 48)
                 .opacity(iso.prefix(7) == date.prefix(7) ? 1 : 0.4)
                 .contentShape(Rectangle())
         }.buttonStyle(.spreadPress).disabled(planner.busy)
             .accessibilityLabel("\(today ? "Today, " : "")\(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d yyyy"))")
-            .accessibilityValue("\(mark.count) Life areas planned")
+            .accessibilityValue("\(mark.count) Life areas planned\(completed ? ", selected Life area complete" : "")")
             .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityIdentifier("life-calendar-day-\(iso)")
+            .dropDestination(for: SpreadDragPayload.self) { items, _ in
+                guard let item = items.first, item.kind == .task else { return false }
+                if let allocation = snapshot.allocations.first(where: {
+                    $0.day == iso && $0.roleId == item.roleId && $0.hours > 0
+                }) {
+                    Task {
+                        if await planner.send(["type": "assignTask", "roleId": item.roleId,
+                                               "taskId": item.itemId, "allocationId": allocation.id]) {
+                            LifeFeedback.accepted()
+                        }
+                    }
+                } else {
+                    invalidDropRoleId = item.roleId
+                    showInvalidDrop = true
+                }
+                return true
+            } isTargeted: { _ in }
             .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in
                 guard expanded, visibleRole != nil else { return }
                 monthLongPress = (iso, Date())

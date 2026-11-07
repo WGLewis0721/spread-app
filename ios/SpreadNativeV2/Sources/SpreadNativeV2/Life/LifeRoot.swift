@@ -162,7 +162,7 @@ struct LifeRoot: View {
                 LifeWeekView(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask,
                              onReserve: { localSheet = .reserve($0) },
                              onManage: { localSheet = .manage($0) }, onDelete: { _ in },
-
+                             onNewRole: onNewRole,
                              selectedRole: $focusedRole)
             }.accessibilityIdentifier("life-week-page")
         }

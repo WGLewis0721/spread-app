@@ -441,6 +441,10 @@ struct LifeTaskRows: View {
     @State private var targetedTaskId: String?
     @State private var pendingTasks: Set<String> = []
     @State private var showCompleted = false
+    @State private var moveTarget: MoveTarget?
+    private struct MoveTarget: Identifiable {
+        let id: String
+    }
     private var visibleTasks: [PlannerTask] {
         day == nil || showCompleted ? tasks : tasks.filter { !$0.done }
     }
@@ -478,7 +482,15 @@ struct LifeTaskRows: View {
                             Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
                         }.frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
                     }.buttonStyle(.spreadPress)
+                        .contextMenu {
+                            if day != nil {
+                                Button("Reschedule") { moveTarget = MoveTarget(id: task.id) }
+                            }
+                        }
                         .accessibilityActions {
+                            if day != nil {
+                                Button("Reschedule") { moveTarget = MoveTarget(id: task.id) }
+                            }
                             if day != nil, let index = visibleTasks.firstIndex(where: { $0.id == task.id }) {
                                 if index > 0 {
                                     Button("Move up") { reorder(task, before: visibleTasks[index - 1].id) }
@@ -530,6 +542,9 @@ struct LifeTaskRows: View {
         }
         .padding(.horizontal, 12)
         .animation(reduceMotion ? nil : SpreadTactile.settle, value: tasks.map(\.id))
+        .sheet(item: $moveTarget) { target in
+            MoveToSheet(planner: planner, taskId: target.id)
+        }
     }
 
     private func reorder(_ task: PlannerTask, before id: String?) {
@@ -560,7 +575,10 @@ struct LifeQuickAdd: View {
     @State private var expanded = false
     @State private var title = ""
     @State private var saving = false
+    @State private var needsHoursPrompt = false
+    @State private var savedTaskId: String?
     @FocusState private var focused: Bool
+    var onNeedsHours: ((String) -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if expanded {
@@ -586,6 +604,18 @@ struct LifeQuickAdd: View {
             }
         }.font(.body).tint(LifePalette.accent)
             .buttonStyle(.spreadPress)
+            .confirmationDialog("Task saved to To Place", isPresented: $needsHoursPrompt,
+                                titleVisibility: .visible) {
+                if let onNeedsHours {
+                    Button("Reserve time") { onNeedsHours(roleId); savedTaskId = nil }
+                }
+                if let savedTaskId {
+                    Button("View task") { onOpenTask(roleId, savedTaskId); self.savedTaskId = nil }
+                }
+                Button("Keep in To Place", role: .cancel) { savedTaskId = nil }
+            } message: {
+                Text("No hours are reserved for this Life area on that day yet.")
+            }
     }
     private func save() async {
         guard !saving else { return }
@@ -605,7 +635,12 @@ struct LifeQuickAdd: View {
         title = ""
         withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
         LifeFeedback.accepted()
-        onOpenTask(roleId, task.id)
+        if day != nil && task.allocationId == nil && onNeedsHours != nil {
+            savedTaskId = task.id
+            needsHoursPrompt = true
+        } else {
+            onOpenTask(roleId, task.id)
+        }
     }
 }
 #endif
