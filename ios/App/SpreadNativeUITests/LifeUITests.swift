@@ -35,6 +35,29 @@ final class LifeUITests: XCTestCase {
         add(attachment)
     }
 
+    func testLifeEditPulseIsVisibleOnlyInEditMode() {
+        startLife()
+        let card = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'life-card-'")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 20))
+        let edit = app.buttons["life-edit"]
+        XCTAssertEqual(edit.label, "Edit Life areas")
+        capture("life-glow-off")
+
+        edit.tap()
+        XCTAssertEqual(edit.label, "Done editing Life areas")
+        XCTAssertTrue(card.exists, "Edit cannot remove or resize the Wallet card")
+        capture("life-glow-on-low")
+        // Capture two animation phases for visual comparison. UIKit snapshots
+        // alone do not certify pulse intensity; device/video review is required.
+        Thread.sleep(forTimeInterval: 1.0)
+        capture("life-glow-on-pulse")
+        edit.tap()
+        XCTAssertEqual(edit.label, "Edit Life areas")
+        XCTAssertTrue(card.exists)
+        capture("life-glow-restored")
+    }
+
     func testLifeCardActionsRequireExplicitEditAndSwipe() throws {
         startLife()
         let card = app.descendants(matching: .any)
