@@ -17,14 +17,31 @@ final class LifeUITests: XCTestCase {
             .waitForExistence(timeout: 90), "The opted-in native Life root did not load.")
     }
 
+    /// Inspect the actual accessible element, not only XCTest's Button classification.
+    /// SwiftUI ViewThatFits on hosted iOS simulators can expose controls as Other.
+    private func lifeNavigationOpener() -> XCUIElement {
+        let opener = app.descendants(matching: .any)
+            .matching(identifier: "life-navigation").firstMatch
+        if opener.waitForExistence(timeout: 8) { return opener }
+        let labeled = app.buttons["Open navigation"]
+        if labeled.waitForExistence(timeout: 3) { return labeled }
+        capture("life-navigation-unavailable")
+        print("Life navigation accessibility tree:\n\(app.debugDescription)")
+        XCTFail("Life navigation opener absent from accessible tree after Life root loaded")
+        return opener
+    }
+
     private func navigate(_ page: String) {
-        let rail = app.buttons["planner-nav-" + page]
+        let rail = app.descendants(matching: .any)
+            .matching(identifier: "planner-nav-" + page).firstMatch
         if rail.exists && rail.isHittable { rail.tap(); return }
-        let navigation = app.buttons["life-navigation"]
-        XCTAssertTrue(navigation.waitForExistence(timeout: 20))
+        let navigation = lifeNavigationOpener()
+        XCTAssertTrue(navigation.isHittable, "Navigation opener exists but is not reachable")
         navigation.tap()
-        let destination = app.buttons["life-nav-" + page]
+        let destination = app.descendants(matching: .any)
+            .matching(identifier: "life-nav-" + page).firstMatch
         XCTAssertTrue(destination.waitForExistence(timeout: 10))
+        XCTAssertTrue(destination.isHittable)
         destination.tap()
     }
 

@@ -398,6 +398,7 @@ struct LifeRoot: View {
                 }
             }
             .coordinateSpace(name: "life-dock-controls")
+            .accessibilityElement(children: .contain)
             .background {
                 GeometryReader { geometry in
                     Color.clear.preference(key: LifeDockHeightKey.self, value: geometry.size.height)
@@ -556,7 +557,8 @@ struct LifeRoot: View {
             .offset(x: navigationDrag + (navigationOpen ? 0 : (crownRight ? -trayWidth : trayWidth)))
             .simultaneousGesture(navigationPan(width: trayWidth))
             .animation(reduceMotion ? nil : SpreadTactile.traySlide, value: navigationOpen)
-            .accessibilityAddTraits(.isModal)
+            // A permanently mounted, offscreen drawer must not claim modal focus.
+            .accessibilityAddTraits(navigationOpen ? .isModal : [])
             .accessibilityAction(.escape) { closeNavigation() }
         }
     }
