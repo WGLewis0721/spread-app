@@ -152,6 +152,33 @@ final class NativeContractsTests: XCTestCase {
     }
     #endif
 
+    func testLifeWeekUsesAuthoritativeAllocationsAndRoleFilteredInbox() {
+        let source = SpreadV2Fixture.week
+        XCTAssertEqual(LifeCalendarRules.dailyHours(source, day: "2026-11-02"), 2)
+        XCTAssertEqual(LifeCalendarRules.dailyHours(source, day: "2026-11-04"), 1)
+        XCTAssertEqual(LifeCalendarRules.dailyHours(source, day: "2026-11-05"), 0)
+        XCTAssertEqual(LifeCalendarRules.toPlaceTasks(source, selectedRoleId: "work").map(\.id), ["t-2"])
+        XCTAssertTrue(LifeCalendarRules.toPlaceTasks(source, selectedRoleId: "home").isEmpty)
+        XCTAssertEqual(LifeCalendarRules.toPlaceTasks(source, selectedRoleId: nil).map(\.id), ["t-2"])
+        XCTAssertFalse(LifeCalendarRules.dayCompleted(source, day: "2026-11-02"))
+        XCTAssertTrue(LifeCalendarRules.dayCompleted(source, day: "2026-11-06", roleId: "health"))
+        XCTAssertFalse(LifeCalendarRules.dayCompleted(source, day: "2026-11-05"))
+    }
+
+    func testLifeWeekMarksAndMondayWeekNavigation() {
+        let source = SpreadV2Fixture.week
+        XCTAssertEqual(LifeCalendarRules.orderedDayColors(source, day: "2026-11-02",
+                       selectedRoleId: "work"), ["#A86975"])
+        XCTAssertEqual(LifeCalendarRules.overflow(4), 1)
+        XCTAssertEqual(LifeCalendarRules.overflow(3), 0)
+        XCTAssertEqual(LifeCalendarRules.overflow(7), 4)
+        XCTAssertEqual(LifeCalendarRules.selection("2026-11-04", in: "2026-11-09",
+                       today: "2026-11-07"), "2026-11-09",
+                       "Changing weeks by Crown starts on Monday")
+        XCTAssertEqual(LifeCalendarRules.selection("2026-11-04", in: "2026-11-02",
+                       today: "2026-11-07"), "2026-11-04")
+    }
+
     func testTaskCanOnlyTargetItsOwnResponsibilityAllocation() {
         let source = SpreadV2Fixture.week
         let task = source.tasks.first(where: { $0.id == "t-2" })!

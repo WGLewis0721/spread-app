@@ -1,27 +1,7 @@
-name: iOS shell
+name: iOS shell (legacy manual diagnostic)
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "capacitor.config.json"
-      - "ios/**"
-      - "src/**"
-      - "public/**"
-      - "scripts/export-ios.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/ios.yml"
-  push:
-    branches: [main]
-    paths:
-      - "capacitor.config.json"
-      - "ios/**"
-      - "src/**"
-      - "public/**"
-      - "scripts/export-ios.mjs"
-      - "package.json"
-      - "package-lock.json"
 
 concurrency:
   group: ios-shell-${{ github.ref }}

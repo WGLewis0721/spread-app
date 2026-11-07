@@ -23,12 +23,12 @@ final class LifeCalendarRulesTests: XCTestCase {
         XCTAssertEqual(LifeCalendarRules.shiftDay("2026-12-31", by: 1), "2027-01-01")
     }
 
-    func testCrownRetainsWeekdayAndFirstSelectionUsesTodayOnlyInOpenWeek() {
-        XCTAssertEqual(LifeCalendarRules.selection("2024-02-29", in: "2024-03-04", today: "2026-11-06"), "2024-03-07")
+    func testCrownOpensMondayButExplicitSelectedDayAndFirstVisitStayStable() {
+        XCTAssertEqual(LifeCalendarRules.selection("2024-02-29", in: "2024-03-04", today: "2026-11-06"), "2024-03-04")
         XCTAssertEqual(LifeCalendarRules.selection("2024-02-29", in: "2024-02-26", today: "2026-11-06"), "2024-02-29")
         XCTAssertEqual(LifeCalendarRules.selection(nil, in: "2026-11-02", today: "2026-11-06"), "2026-11-06")
         XCTAssertEqual(LifeCalendarRules.selection(nil, in: "2024-02-26", today: "2026-11-06"), "2024-02-26")
-        XCTAssertEqual(LifeCalendarRules.selection("2026-12-31", in: "2027-01-04", today: "2026-11-06"), "2027-01-07")
+        XCTAssertEqual(LifeCalendarRules.selection("2026-12-31", in: "2027-01-04", today: "2026-11-06"), "2027-01-04")
     }
 
     func testDailyCardsAndDetailsUseOnlyPositiveOwnDayAllocations() {

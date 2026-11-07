@@ -13,18 +13,35 @@ final class LifeUITests: XCTestCase {
         if app.state != .notRunning { app.terminate() }
         app.launchArguments = ["-native.weekMonth.previewEnabled", "YES"]
         app.launch()
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch
-            .waitForExistence(timeout: 90), "The opted-in native Life root did not load.")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-home").firstMatch
+            .waitForExistence(timeout: 90), "The opted-in native Life header did not load.")
+    }
+
+    /// Inspect the actual accessible element, not only XCTest's Button classification.
+    /// SwiftUI ViewThatFits on hosted iOS simulators can expose controls as Other.
+    private func lifeNavigationOpener() -> XCUIElement {
+        let opener = app.descendants(matching: .any)
+            .matching(identifier: "life-navigation").firstMatch
+        if opener.waitForExistence(timeout: 8) { return opener }
+        let labeled = app.buttons["Open navigation"]
+        if labeled.waitForExistence(timeout: 3) { return labeled }
+        capture("life-navigation-unavailable")
+        print("Life navigation accessibility tree:\n\(app.debugDescription)")
+        XCTFail("Life navigation opener absent from accessible tree after Life root loaded")
+        return opener
     }
 
     private func navigate(_ page: String) {
-        let rail = app.buttons["planner-nav-" + page]
+        let rail = app.descendants(matching: .any)
+            .matching(identifier: "planner-nav-" + page).firstMatch
         if rail.exists && rail.isHittable { rail.tap(); return }
-        let navigation = app.buttons["life-navigation"]
-        XCTAssertTrue(navigation.waitForExistence(timeout: 20))
+        let navigation = lifeNavigationOpener()
+        XCTAssertTrue(navigation.isHittable, "Navigation opener exists but is not reachable")
         navigation.tap()
-        let destination = app.buttons["life-nav-" + page]
+        let destination = app.descendants(matching: .any)
+            .matching(identifier: "life-nav-" + page).firstMatch
         XCTAssertTrue(destination.waitForExistence(timeout: 10))
+        XCTAssertTrue(destination.isHittable)
         destination.tap()
     }
 
@@ -163,6 +180,56 @@ final class LifeUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "more-overview").firstMatch
             .waitForExistence(timeout: 20), "The existing More sheet is not available from Life.")
         capture("life-more")
+    }
+
+    func testLifeWeekInboxesAndMonthBrowsingStayInTheActiveLifeExperience() {
+        startLife()
+        navigate("week")
+        let workspace = app.descendants(matching: .any)
+            .matching(identifier: "life-week-day-workspace").firstMatch
+        XCTAssertTrue(workspace.waitForExistence(timeout: 20))
+        let pinned = app.descendants(matching: .any)
+            .matching(identifier: "life-calendar-strip").firstMatch
+        let dayScroll = app.descendants(matching: .any)
+            .matching(identifier: "life-week-day-scroll").firstMatch
+        XCTAssertTrue(pinned.waitForExistence(timeout: 10))
+        XCTAssertTrue(dayScroll.waitForExistence(timeout: 10))
+        let beforeY = pinned.frame.minY
+        dayScroll.swipeUp()
+        XCTAssertEqual(pinned.frame.minY, beforeY, accuracy: 3,
+                       "Day scrolling must not push the seven-day calendar out of view")
+        let toPlace = app.buttons["life-to-place"]
+        let overdue = app.buttons["life-overdue"]
+        XCTAssertTrue(toPlace.waitForExistence(timeout: 10))
+        XCTAssertTrue(overdue.exists, "Overdue must be reachable from Life Week")
+        capture("life-week-compact-inboxes")
+        toPlace.tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-to-place-sheet").firstMatch.waitForExistence(timeout: 10))
+        capture("life-week-role-filtered-to-place")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(workspace.waitForExistence(timeout: 10))
+        overdue.tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-overdue-sheet").firstMatch.waitForExistence(timeout: 10))
+        capture("life-week-overdue")
+        app.buttons["Done"].tap()
+
+        let toggle = app.buttons["life-week-month-toggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        toggle.tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-month-help").firstMatch.waitForExistence(timeout: 10),
+            "Month must replace the daily workspace")
+        XCTAssertFalse(workspace.exists, "Daily tasks cannot remain behind the expanded Month")
+        capture("life-month-without-day-schedule")
+        let beforeWeek = pinned.value as? String
+        app.buttons["Next month"].tap()
+        XCTAssertEqual(pinned.value as? String, beforeWeek,
+                       "Browsing Month must not change the planner's active week")
+        toggle.tap()
+        XCTAssertTrue(workspace.waitForExistence(timeout: 10),
+                      "Closing Month must restore the selected Week day")
     }
 
     func testCapacityUsesRealStoreAndSurvivesRelaunch() {

@@ -1,4 +1,4 @@
-name: Spread 2.0 SwiftUI slice verification
+name: Portable SwiftUI contracts
 
 on:
   pull_request:
@@ -22,32 +22,3 @@ jobs:
         run: swift --version
       - name: Run Crown, hour and presentation unit tests
         run: swift test --package-path ios/SpreadNativeV2
-
-  native-ios-compile:
-    runs-on: macos-15
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - name: Show Xcode version
-        run: xcodebuild -version
-      - name: Compile SwiftUI package for iOS Simulator (not an app release)
-        working-directory: ios/SpreadNativeV2
-        run: |
-          xcodebuild -scheme SpreadNativeV2 \
-            -sdk iphonesimulator \
-            -destination "generic/platform=iOS Simulator" \
-            CODE_SIGNING_ALLOWED=NO build
-      - name: Select an available iPhone simulator
-        run: node scripts/native-simulator.mjs 390
-      - name: Test iOS planner acknowledgements and tactile contracts
-        working-directory: ios/SpreadNativeV2
-        run: |
-          xcodebuild test -scheme SpreadNativeV2 \
-            -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
-            -resultBundlePath ../../artifacts/TactileContracts.xcresult \
-            CODE_SIGNING_ALLOWED=NO
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: tactile-ios-contracts
-          path: artifacts

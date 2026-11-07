@@ -32,7 +32,6 @@ struct LifeRoot: View {
     @State private var destination: LifeDestination = .life
     @State private var focusedRole: String?
     @State private var hoursSelectedRole: String?
-    @State private var weekSelectedRole: String?
     @State private var editing = false
     @State private var navigationOpen = false
     @State private var navigationDrag: CGFloat = 0
@@ -40,6 +39,9 @@ struct LifeRoot: View {
     @State private var dockControlsHeight: CGFloat = 62
     @State private var dockOpenerCenterY: CGFloat = 31
     @State private var weekTick = 0
+    @State private var weekMonthExpanded = false
+    @State private var lifeTodayTick = 0
+    @State private var weekMonthAnchor: String?
     @State private var historyVisible = false
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
@@ -62,6 +64,27 @@ struct LifeRoot: View {
                     VStack(spacing: 0) {
                     header
                     if let snapshot = planner.snapshot {
+                        if destination == .week {
+                            // Life Week owns its task scroll so the calendar remains pinned.
+                            // Other destinations retain the full-viewport Wallet scroll and exits.
+                            VStack(alignment: .leading, spacing: 12) {
+                                if let notice = planner.recoveryNotice {
+                                    Text(notice).font(.body)
+                                    Button("Backup and restore", action: onMore).frame(minHeight: 44)
+                                }
+                                if planner.saveFailure != nil {
+                                    Label("Changes are not saved. Open More to back up your plan.",
+                                          systemImage: "exclamationmark.triangle")
+                                        .font(.body).foregroundStyle(Spread.danger)
+                                    Button("More", action: onMore).frame(minHeight: 44)
+                                }
+                                surface(snapshot, viewportHeight: geometry.size.height,
+                                        viewportWidth: geometry.size.width)
+                            }
+                            .frame(maxWidth: 700, maxHeight: .infinity, alignment: .top)
+                            .frame(maxWidth: .infinity, alignment: .top)
+                            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+                        } else {
                         ScrollViewReader { proxy in
                             ScrollView {
                                 VStack(alignment: .leading, spacing: 20) {
@@ -87,6 +110,7 @@ struct LifeRoot: View {
                             // this the dock boundary prematurely crops full cards.
                             .scrollClipDisabled()
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
+                        }
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
                     } else {
@@ -115,9 +139,9 @@ struct LifeRoot: View {
         }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in
             focusedRole = nil; editing = false; localSheet = nil; pendingTask = nil
-            hoursSelectedRole = nil; weekSelectedRole = nil
+            hoursSelectedRole = nil; weekMonthExpanded = false; weekMonthAnchor = nil
         }
-        .onChange(of: planner.snapshot?.weekKey) { _, _ in focusedRole = nil; editing = false; localSheet = nil }
+        .onChange(of: planner.snapshot?.weekKey) { _, _ in editing = false; localSheet = nil }
         .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
         .onChange(of: navigationOpen) { _, open in
             navigationFocused = open
@@ -136,7 +160,6 @@ struct LifeRoot: View {
             do { try await Task.sleep(for: .seconds(5)) } catch { return }
             historyVisible = false
         }
-        .accessibilityIdentifier("life-root")
     }
     private var header: some View {
         HStack(spacing: 8) {
@@ -159,19 +182,22 @@ struct LifeRoot: View {
         case .week:
             VStack(alignment: .leading, spacing: 16) {
                 Text("Your week").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("life-week-page")
                 Text("One day at a time.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 LifeWeekView(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask,
                              onReserve: { localSheet = .reserve($0) },
                              onManage: { localSheet = .manage($0) }, onDelete: { _ in },
-
-                             selectedRole: $weekSelectedRole)
-            }.accessibilityIdentifier("life-week-page")
+                             onNewRole: onNewRole,
+                             selectedRole: $focusedRole, expanded: $weekMonthExpanded,
+                             monthAnchor: $weekMonthAnchor, todaySelectionTick: lifeTodayTick)
+            }.frame(maxHeight: .infinity, alignment: .top)
         }
     }
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("life-page")
                 Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
             Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
@@ -211,7 +237,7 @@ struct LifeRoot: View {
                     .frame(maxWidth: .infinity).padding(.top, 12)
             }
             if !snapshot.roles.isEmpty { newLifeArea }
-        }.accessibilityIdentifier("life-page")
+        }
     }
     private var newLifeArea: some View {
         Button(action: onNewRole) {
@@ -372,6 +398,7 @@ struct LifeRoot: View {
                 }
             }
             .coordinateSpace(name: "life-dock-controls")
+            .accessibilityElement(children: .contain)
             .background {
                 GeometryReader { geometry in
                     Color.clear.preference(key: LifeDockHeightKey.self, value: geometry.size.height)
@@ -446,8 +473,21 @@ struct LifeRoot: View {
         }.accessibilityLabel("Add task")
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
-        WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
-                      detail: "Week Crown", onDetail: today, onMove: goWeek)
+        let showingMonth = destination == .week && weekMonthExpanded
+        let title = showingMonth
+            ? PlannerDates.label(PlannerDates.date(weekMonthAnchor ?? snapshot.weekKey), pattern: "MMMM yyyy")
+            : PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d")
+        return WeekCrownView(title: title,
+                             detail: showingMonth ? "Month Crown" : "Week Crown", onDetail: today,
+                             onMove: { delta in
+                                 if showingMonth {
+                                     withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+                                         weekMonthAnchor = LifeCalendarRules.shiftMonth(
+                                             weekMonthAnchor ?? snapshot.weekKey, by: delta)
+                                     }
+                                     LifeFeedback.selection()
+                                 } else { goWeek(delta) }
+                             })
             .contextMenu {
                 Button("Move Crown left") { crownRight = false }
                 Button("Move Crown right") { crownRight = true }
@@ -517,12 +557,14 @@ struct LifeRoot: View {
             .offset(x: navigationDrag + (navigationOpen ? 0 : (crownRight ? -trayWidth : trayWidth)))
             .simultaneousGesture(navigationPan(width: trayWidth))
             .animation(reduceMotion ? nil : SpreadTactile.traySlide, value: navigationOpen)
-            .accessibilityAddTraits(.isModal)
+            // A permanently mounted, offscreen drawer must not claim modal focus.
+            .accessibilityAddTraits(navigationOpen ? .isModal : [])
             .accessibilityAction(.escape) { closeNavigation() }
         }
     }
     private func navigate(_ value: LifeDestination) {
         if destination != value { LifeFeedback.selection() }
+        if value != .week { weekMonthExpanded = false; weekMonthAnchor = nil }
         withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
             destination = value
             editing = false
@@ -582,7 +624,11 @@ struct LifeRoot: View {
         Task { if await planner.send(["type": "changeWeek", "direction": delta]) { weekTick += 1 } }
     }
     private func today() {
-        Task { if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 } }
+        if destination == .week {
+            lifeTodayTick += 1  // select Today even if the store is already displaying this week
+        } else {
+            Task { if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 } }
+        }
     }
     @ViewBuilder private func sheetContent(_ item: LifeLocalSheet) -> some View {
         switch item {
