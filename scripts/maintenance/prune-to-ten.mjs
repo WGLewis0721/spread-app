@@ -16,7 +16,7 @@ const KEEP = new Set([
   'golden/2026-09-28-full-landing-modes',
   'golden/2026-09-26-production',
 ]);
-const MODE = 'dry-run';
+const MODE = 'execute';
 const token = process.env.GITHUB_TOKEN;
 if (!token || process.env.GITHUB_REPOSITORY !== REPO ||
     process.env.GITHUB_REF !== 'refs/heads/' + TEMP_BRANCH)
