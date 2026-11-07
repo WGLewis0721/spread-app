@@ -326,23 +326,86 @@ private struct LifeWalletFace: View {
     }
     private var swipe: some Gesture {
         DragGesture(minimumDistance: 14, coordinateSpace: .global)
-            .updating($dragging) { _, active, _ in active = editing }
+            .updating($dragging) { _, active, _ in active = editing && !dismissing }
             .onChanged { value in
-                guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
-                var transaction = Transaction(); transaction.disablesAnimations = true
-                withTransaction(transaction) { translation = min(100, max(-100, value.translation.width)) }
+                guard editing, !dismissing else { return }
+                let horizontal = value.translation.width
+                let vertical = value.translation.height
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                if vertical < 0 && abs(vertical) > abs(horizontal) * 1.35 {
+                    // Match App Switcher's direct upward card manipulation.
+                    withTransaction(transaction) {
+                        upwardTranslation = max(-exitDistance, vertical)
+                        translation = 0
+                        reveal = 0
+                    }
+                } else if abs(horizontal) > abs(vertical) * 1.5 {
+                    // Left swipe reveals Manage; Delete requires an upward fling.
+                    withTransaction(transaction) {
+                        translation = min(0, max(-100, horizontal))
+                        upwardTranslation = 0
+                    }
+                }
             }
             .onEnded { value in
-                guard editing, abs(value.translation.width) > abs(value.translation.height) * 1.5 else { translation = 0; return }
+                guard editing, !dismissing else { return }
+                let horizontal = value.translation.width
+                let vertical = value.translation.height
+                if vertical < 0 && abs(vertical) > abs(horizontal) * 1.35 {
+                    if -vertical > cardHeight * 0.45 ||
+                        -value.predictedEndTranslation.height > cardHeight * 1.05 {
+                        performDismissal()
+                    } else {
+                        withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                            upwardTranslation = 0
+                        }
+                    }
+                    return
+                }
+                guard abs(horizontal) > abs(vertical) * 1.5 else {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                        translation = 0; upwardTranslation = 0
+                    }
+                    return
+                }
                 let target = TactilePrecisionMath.revealTarget(
-                    current: Double(reveal), translation: Double(value.translation.width),
-                    projected: Double(value.predictedEndTranslation.width), threshold: 34, stop: 92)
-                if target != 0 && CGFloat(target) != reveal { LifeFeedback.reveal(delete: target > 0) }
+                    current: Double(reveal), translation: Double(min(0, horizontal)),
+                    projected: Double(min(0, value.predictedEndTranslation.width)),
+                    threshold: 34, stop: 92)
+                let manageTarget = min(0, target)
+                if manageTarget < 0 && CGFloat(manageTarget) != reveal {
+                    LifeFeedback.reveal(delete: false)
+                }
                 withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
-                    reveal = CGFloat(target)
+                    reveal = CGFloat(manageTarget)
                     translation = 0
                 }
             }
+    }
+
+    private func performDismissal() {
+        guard editing, !dismissing else { return }
+        dismissing = true
+        reveal = 0
+        LifeFeedback.reveal(delete: true)
+        withAnimation(reduceMotion ? nil : SpreadTactile.cardDismiss) {
+            upwardTranslation = 0
+            dismissOffset = -max(exitDistance, cardHeight * 3)
+        }
+        Task { @MainActor in
+            if !reduceMotion {
+                try? await Task.sleep(for: .seconds(SpreadTactile.cardDismissDuration))
+            }
+            let saved = await onDelete()
+            if !saved {
+                // Failed persistence restores the visible card, not a ghost slot.
+                withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+                    dismissOffset = 0
+                }
+                dismissing = false
+            }
+        }
     }
 }
 
