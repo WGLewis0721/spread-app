@@ -434,6 +434,7 @@ struct LifeWeekView: View {
             }
         }.padding(12).spreadCard().accessibilityElement(children: .contain)
             .accessibilityIdentifier("life-calendar-strip")
+            .accessibilityValue("Planner week \(snapshot.weekKey)")
             .simultaneousGesture(stripSwipe)
     }
 

@@ -171,6 +171,16 @@ final class LifeUITests: XCTestCase {
         let workspace = app.descendants(matching: .any)
             .matching(identifier: "life-week-day-workspace").firstMatch
         XCTAssertTrue(workspace.waitForExistence(timeout: 20))
+        let pinned = app.descendants(matching: .any)
+            .matching(identifier: "life-calendar-strip").firstMatch
+        let dayScroll = app.descendants(matching: .any)
+            .matching(identifier: "life-week-day-scroll").firstMatch
+        XCTAssertTrue(pinned.waitForExistence(timeout: 10))
+        XCTAssertTrue(dayScroll.waitForExistence(timeout: 10))
+        let beforeY = pinned.frame.minY
+        dayScroll.swipeUp()
+        XCTAssertEqual(pinned.frame.minY, beforeY, accuracy: 3,
+                       "Day scrolling must not push the seven-day calendar out of view")
         let toPlace = app.buttons["life-to-place"]
         let overdue = app.buttons["life-overdue"]
         XCTAssertTrue(toPlace.waitForExistence(timeout: 10))
@@ -196,6 +206,10 @@ final class LifeUITests: XCTestCase {
             "Month must replace the daily workspace")
         XCTAssertFalse(workspace.exists, "Daily tasks cannot remain behind the expanded Month")
         capture("life-month-without-day-schedule")
+        let beforeWeek = pinned.value as? String
+        app.buttons["Next month"].tap()
+        XCTAssertEqual(pinned.value as? String, beforeWeek,
+                       "Browsing Month must not change the planner's active week")
         toggle.tap()
         XCTAssertTrue(workspace.waitForExistence(timeout: 10),
                       "Closing Month must restore the selected Week day")

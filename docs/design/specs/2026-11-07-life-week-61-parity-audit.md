@@ -9,9 +9,9 @@
 | Implementation | Draft PR #160, branch `feat/life-week-61-parity-20261107` |
 | Existing Life UI | 12 decisions |
 | Existing planner/More functionality | 7 decisions |
-| Focused Life parity patches | 31 decisions, **code only until checks pass** |
+| Focused Life parity patches | 32 decisions, **code only until checks pass** |
 | Superseded by newer owner-approved Life/Wallet interaction | 10 decisions |
-| Confirmed remaining gap | 1: decision #28 (pinned Week overview during vertical task scroll) |
+| Remaining confirmed source gaps | 0 after #28 pinned-overview patch; device QA still pending |
 | Native QA | Pending head-specific simulator, screenshots and physical-device evidence |
 | Release | NO-GO; Classic preserved; no merge/deploy authorized |
 
@@ -48,7 +48,7 @@ Status denotes **which code path owns the behavior**, not a claim that UI/device
 | 25 | Tap day, swipe schedule for day; strip/Crown for week | Implemented on #160 | Day header swipe distinct from week strip |
 | 26 | Changing weeks selects Monday | Implemented on #160 | Week shifts select Monday; exact date taps preserved |
 | 27 | Selected responsibility day dots emphasized | Implemented on #160 | Selected color/dot emphasized |
-| 28 | Day overview stays pinned while task list scrolls | Open gap | Calendar is inside outer LifeRoot ScrollView; not sticky |
+| 28 | Day overview stays pinned while task list scrolls | Implemented on #160 | LifeRoot routes Week to LifeWeekView's pinned calendar and separate day ScrollView; simulator proof pending |
 | 29 | Over-cap allocation rejected with shortage and fix | Existing Life UI | Main already rejects shortage without silent partial placement |
 | 30 | Day indicator check when selected role tasks complete | Implemented on #160 | Selected role day-complete check |
 | 31 | Sidebar responsibility icons have subtle weekly completion rings | Adapted in newer Life design | Life Wallet, not a role-icon sidebar, owns progress presentation |
@@ -85,7 +85,7 @@ Status denotes **which code path owns the behavior**, not a claim that UI/device
 
 ## Changed code (PR #160)
 
-- `LifeWeekView.swift`: real daily hour summary, role-focused To Place sheet, role-grouped overdue entry and eligibility flow, Month-only calendar surface, one-line date controls, independent strip/day gestures, selected-role marks, numeric +N overflow, long-press Add, same-week and cross-week date selection, exact hours remediation, transient day-complete feedback.
+- `LifeWeekView.swift`: pinned seven-day calendar above separately scrolling tasks, real daily hour summary, role-focused To Place sheet, role-grouped overdue entry and eligibility flow, Month-only calendar surface, one-line date controls, independent strip/day gestures, selected-role marks, numeric +N overflow, long-press Add, same-week and cross-week date selection, exact hours remediation, transient day-complete feedback.
 - `LifeWalletStack.swift`: day-only completed folding and contextual Reschedule while preserving Life's approved card motion; zero-hours Quick Add saved to To Place then offers reserve time.
 - `LifeCalendarRules.swift`: pure helpers for filtered To Place tasks, planned hours, completion, marker ordering and Monday week selection. No new storage or network.
 - `LifeRoot.swift`: shared Life area selection, real Month Crown navigation via display-only month anchor, Today intent to focused Week, existing Life reserve/manage sheets.
@@ -93,7 +93,7 @@ Status denotes **which code path owns the behavior**, not a claim that UI/device
 
 ## Open and conditional
 
-1. **Decision #28 remains incomplete:** Life's entire content sits inside one parent vertical `ScrollView`. The seven-day/month overview can scroll offscreen. Making it pinned requires a specific nested scroll and safe-area layout change, separately verified on small iPhones, Duo, landscape and large Dynamic Type. Do not rush it into this patch without evidence.
+1. **Decision #28 source patch is implemented:** Life Week now bypasses the parent page scroll, pins the week calendar, and scrolls only daily content. The new nesting still requires iPhone, Duo, landscape and Dynamic Type simulator/physical verification before acceptance.
 2. **Adapted decisions #3, #4, #9, #17, #18, #24, #31, #33, #50, #53:** the owner's later Life/Wallet direction superseded the old responsibility-rail/multi-expanded-row UI. Reintroducing the old rail would create overlapping controls and break current Life simplicity. Confirm only if owner explicitly reverses that direction.
 3. `OverdueSelectionTray` and Recently Deleted are implemented against the existing engine, **not reimplemented** in Life. Verify profile isolation, recoverability, stale revision rejection, bulk eligibility and offline persistence through actual bridge/device tests.
 4. PR #144's code targets the older `WeekFocusSurface`, is hundreds of commits behind and conflicts with current main. Do not merge it to force parity. Preserve its old tip in Git history.
@@ -106,4 +106,4 @@ Status denotes **which code path owns the behavior**, not a claim that UI/device
 - Verify existing `CI`, `iOS shell`, `Spread 2.0 SwiftUI slice verification` and App Store preflight on the **latest commit**; run the five manual native visual/layout/gesture suites for the candidate before approval.
 - Rollback: discard/revert #160. No schema, migration, mandatory account, production deploy or irreversible update was added.
 
-**Acceptance:** No release and no full 61/61 parity claim until #28 is resolved or consciously waived, adapted decisions are acknowledged, and recorded device evidence supports the final head.
+**Acceptance:** No release and no full 61/61 parity claim until the pinned calendar is device-verified, adapted Wallet decisions are acknowledged, and recorded native evidence supports the final head.
