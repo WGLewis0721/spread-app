@@ -71,12 +71,15 @@ struct LifeRoot: View {
                                             .font(.body).foregroundStyle(Spread.danger)
                                         Button("More", action: onMore).frame(minHeight: 44)
                                     }
-                                    surface(snapshot)
+                                    surface(snapshot, viewportHeight: geometry.size.height)
                                 }
                                 .frame(maxWidth: 700).frame(maxWidth: .infinity)
                                 .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 28)
                             }
                             .scrollDismissesKeyboard(.interactively).scrollIndicators(.hidden)
+                            // Allow full Wallet cards to pass below the stack into the
+                            // viewport rather than vanishing at its collapsed boundary.
+                            .scrollClipDisabled()
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
@@ -136,9 +139,9 @@ struct LifeRoot: View {
             }.accessibilityLabel("More").accessibilityIdentifier("life-more")
         }.padding(.horizontal, 16).padding(.vertical, 4)
     }
-    @ViewBuilder private func surface(_ snapshot: PlannerSnapshot) -> some View {
+    @ViewBuilder private func surface(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat) -> some View {
         switch destination {
-        case .life: life(snapshot)
+        case .life: life(snapshot, viewportHeight: viewportHeight)
         case .hours:
             LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { localSheet = .help }, selectedRole: $hoursSelectedRole)
         case .week:
@@ -152,32 +155,17 @@ struct LifeRoot: View {
             }.accessibilityIdentifier("life-week-page")
         }
     }
-    private func life(_ snapshot: PlannerSnapshot) -> some View {
+    private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                    Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                }
-                Spacer(minLength: 8)
-                Button { focusedRole = nil; editing.toggle() } label: {
-                    Group {
-                        if editing { Text("Done").font(.subheadline) }
-                        else { SpreadIcon(name: "icon-edit", size: 22) }
-                    }.frame(minWidth: 44, minHeight: 44).background(LifePalette.surface, in: Capsule())
-                }.accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
-                    .accessibilityIdentifier("life-edit")
-            }.padding(.horizontal, 4)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
             Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
                 .accessibilityLabel("Adjust weekly planning hours")
             if editing {
                 Text("Swipe left to manage. Swipe right to delete.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 if historyVisible { history }
-            }
-            if focusedRole != nil && !editing {
-                Button { focusedRole = nil } label: {
-                    Label("All Life areas", systemImage: "chevron.left").frame(minHeight: 44)
-                }
             }
             if snapshot.roles.isEmpty {
                 Text("Name the responsibilities you want to plan for.").font(.body)
@@ -185,7 +173,18 @@ struct LifeRoot: View {
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole, editing: editing,
-                                onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) })
+                                viewportHeight: viewportHeight,
+                                onManage: { localSheet = .manage($0) },
+                                onDelete: { id in
+                                    let ok = await planner.send(["type": "removeLifeRole", "roleId": id])
+                                    if ok {
+                                        LifeFeedback.accepted()
+                                        if focusedRole == id { focusedRole = nil }
+                                        historyVisible = true
+                                    }
+                                    return ok
+                                })
+                    .zIndex(2)
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
                 details(role, snapshot: snapshot)
