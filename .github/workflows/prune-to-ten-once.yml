@@ -1,0 +1,29 @@
+name: One-time archive and prune to 10 branches
+on:
+  push:
+    branches: [chore/prune-to-ten-20261107]
+    paths:
+      - 'scripts/maintenance/prune-to-ten.mjs'
+      - '.github/workflows/prune-to-ten-once.yml'
+permissions:
+  contents: write
+concurrency:
+  group: spread-prune-to-ten-once
+  cancel-in-progress: false
+jobs:
+  prune:
+    if: github.repository == 'WGLewis0721/spread-app' && github.ref == 'refs/heads/chore/prune-to-ten-20261107'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check scripts/maintenance/prune-to-ten.mjs
+      - name: Archive historical refs before branch removal
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/maintenance/prune-to-ten.mjs
