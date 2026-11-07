@@ -89,7 +89,7 @@ Rule: touching a moving control immediately redirects it. No transition blocks l
 
 - **Hour editing after creation:** Life card -> Change area hours preserves that role selection in Hours, opens its controls, and explains capacity restrictions. Manage also presents a bounded half-hour control and explicit saved confirmation.
 - **Swipe reveal:** Action layer remains structurally stable during a gesture, but must be transparent and noninteractive at rest. The gesture attaches to the card container; an edit-mode horizontal swipe is the only visible Manage/Delete entry. No duplicate actions in the detail field.
-- **Glow:** Raise edit shadow opacity by 50% in Life and Classic with a pulsing visual outline. Reduce Motion keeps a static outline; never pulse haptics.
+- **Glow:** Historical Nov 6 calibration was +50% for Life and Classic. **Superseded for Life only:** increase the merged Life Edit halo's peak stroke width and glow radius by a further **75%** with a clearly differentiated dim/bright phase. Opacity already near 1.0 must be capped, not multiplied beyond 1; keep the pulse outside the card-face clip and stationary geometry. Reduce Motion uses a static bright outline; never pulse haptics.
 - **Orbit:** With no area selected, rotate colored weekly capacity arcs at 22.5 degrees/sec (16-sec revolution) with bounded color glow. Selection/separation, Reduce Motion or inactive scene pauses movement.
 - **Tray:** Open/close with shared Glide from its actual edge. Finger-following horizontal dismissal uses a bounded threshold with vertical scroll priority and an interruptible Settle back to open.
 
@@ -114,3 +114,17 @@ Rule: touching a moving control immediately redirects it. No transition blocks l
 | Life edit pulse duration | 1.35 s | **1.6875 s** |
 
 Shadow spread, existing orbit glows and Classic edit highlights gain up to 25% visual emphasis, capped at valid opacity values. Do not exceed alpha 1.0 or enlarge card geometry or tap targets. Existing spring damping fractions are unchanged to prevent additional bounce. Animations remain interruptible and Reduce Motion keeps nonspatial, legible state feedback. Device performance, haptic synchronization and complete native journeys **must be verified** before release.
+
+### November 6 Life-only Edit pulse visibility repair — 75% above merged baseline
+
+The earlier Life glow was drawn **inside** the card face, then covered by the stable Wallet card clip. Increasing an already near-opaque shadow did not make its external halo visible. The updated Life implementation attaches an outward-visible stroke and two bounded role-color shadows **after** the card's clip, and enlarges the Edit-mode stack clip just enough to admit the bloom while keeping non-Edit focus clipping unchanged.
+
+| Visual token | Previous merged Life | Revised peak |
+| --- | ---: | ---: |
+| Edit outline width | 3.125 pt | **5.46875 pt (+75%)** |
+| Outer halo radius | 22.5 pt | **39.375 pt (+75%)** |
+| Outer halo alpha | 0.975 | **1.0 (saturated)** |
+| Resting halo alpha | 0.30 | **0.525 (+75%)** |
+| Breathing duration | 1.6875 s per half-cycle | **unchanged** |
+
+The low phase has a narrow outline and compact shadow. The peak has a wider rim and larger halo; both are positioned with the swiping card rather than an empty slot. No new panel, overlay control, vibration loop, scale change, task mutation, or extra animation is introduced. The only trigger remains the **Edit** button. Leaving Edit removes the effect. Physical-device video is required to confirm that all role colors visibly breathe and that layered cards and long names remain legible.

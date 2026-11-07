@@ -57,3 +57,11 @@ Source: the owner's iPhone screenshot and two 12–13-second screen recordings o
 The owner requested a further **25% increase in perceptibility** across the fidget-inspired native system. It is implemented on this same feature branch, not in a throwaway prototype. The shared `SpreadTactile.emphasis = 1.25` scales existing Snap/Settle/Glide/Enter/Exit spring responses, entrance distances and stagger cadence, and press compression. Life and Classic edit pulses, Hours orbit and bounded glow spread follow the same visual amplification. `SpreadMotion` legacy curves, hit zones, hour detents, planner writes, haptic counts and gesture thresholds remain unchanged. See the [numeric calibration table](MOTION_CONTRACT.md#november-6-owner-calibration--25-more-perceptible-tactile-motion) and native contract tests.
 
 **Acceptance still owed:** animation before/after videos, interrupted swipe/drag tests, physical iPhone frame-pacing, Reduce Motion, Dynamic Type, task-edit preservation, and explicit release approval. Longer spring responses are intentional but must not make fast planning feel delayed.
+
+## Life Edit pulse visibility follow-up — additional 75%
+
+**Reported:** owner still cannot perceive the edit-mode glow on actual iPhone Life cards after the +25% tactile tuning. **Source diagnosis:** the pulsing halo was nested inside the Life card face before its `clipShape`, so much of its outer shadow was discarded. Opacity at 0.975 also had no meaningful +75% headroom.
+
+**Native fix:** move the visual halo outside the stable card's clipping layer, expand Edit-only stack clipping for the extra halo, retain the role color, and preserve the selected card/Manage/Delete geometry. Increase the existing peak border **3.125 → 5.46875 pt** and outer shadow radius **22.5 → 39.375 pt** (+75%); clamp peak alpha to 1 and add a short-range halo. Restore a more visible narrow-to-wide breathing contrast, with the same 1.6875-second half-cycle. Explicit Edit state and scene activation start/stop the pulse; Reduced Motion displays the peak as a static indicator.
+
+**Verification:** added pure token regression tests and native UI screenshots for Edit off/on/pulse/Done; native compilation and physical iPhone review are still owed. Classic is not changed in this follow-up. No merge, build upload, or release authorization.

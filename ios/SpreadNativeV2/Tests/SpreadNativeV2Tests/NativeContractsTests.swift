@@ -3,6 +3,16 @@ import XCTest
 
 final class NativeContractsTests: XCTestCase {
 #if os(iOS)
+    func testLifeEditPulseIsSeventyFivePercentStrongerThanPreviousTuning() {
+        XCTAssertEqual(Double(LifeEditPulseTokens.emphasis), 1.75, accuracy: 0.00001)
+        XCTAssertEqual(Double(LifeEditPulseTokens.peakStroke), 3.125 * 1.75, accuracy: 0.00001)
+        XCTAssertEqual(Double(LifeEditPulseTokens.peakHaloRadius), 22.5 * 1.75, accuracy: 0.00001)
+        XCTAssertEqual(LifeEditPulseTokens.peakHaloOpacity, 1.0, accuracy: 0.00001)
+        XCTAssertEqual(LifeEditPulseTokens.restingHaloOpacity, 0.30 * 1.75, accuracy: 0.00001)
+        XCTAssertGreaterThan(LifeEditPulseTokens.peakHaloRadius, 35)
+        XCTAssertGreaterThan(LifeEditPulseTokens.peakStroke, 5)
+    }
+
     func testLifeOrbitAngleWrapAndDetents() {
         XCTAssertEqual(LifeOrbitMath.orbitDegreesPerSecond, 22.5, accuracy: 0.001)
         XCTAssertEqual(LifeOrbitMath.orbitDegreesPerSecond * 16, 360, accuracy: 0.001)
