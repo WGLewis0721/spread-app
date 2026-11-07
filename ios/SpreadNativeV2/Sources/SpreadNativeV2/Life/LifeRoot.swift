@@ -54,7 +54,12 @@ struct LifeRoot: View {
             ZStack(alignment: .leading) {
                 LifePalette.canvas.ignoresSafeArea()
                 HStack(spacing: 0) {
-                    if geometry.size.width >= 820 { compactRail }
+                    if geometry.size.width >= 820 {
+                        VStack(spacing: 8) {
+                            compactRail
+                            if destination == .life { editControl }
+                        }
+                    }
                     VStack(spacing: 0) {
                     header
                     if let snapshot = planner.snapshot {
@@ -71,15 +76,15 @@ struct LifeRoot: View {
                                             .font(.body).foregroundStyle(Spread.danger)
                                         Button("More", action: onMore).frame(minHeight: 44)
                                     }
-                                    surface(snapshot, viewportHeight: geometry.size.height)
+                                    surface(snapshot, viewportHeight: geometry.size.height,
+                                            viewportWidth: geometry.size.width)
                                 }
                                 .frame(maxWidth: 700).frame(maxWidth: .infinity)
                                 .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 28)
                             }
                             .scrollDismissesKeyboard(.interactively).scrollIndicators(.hidden)
-                            // Allow full Wallet cards to pass below the stack into the
-                            // viewport rather than vanishing at its collapsed boundary.
-                            .scrollClipDisabled()
+                            // The stack itself does not clip its exiting cards; the
+                            // viewport supplies the final bottom-of-device boundary.
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
@@ -145,9 +150,9 @@ struct LifeRoot: View {
             }.accessibilityLabel("More").accessibilityIdentifier("life-more")
         }.padding(.horizontal, 16).padding(.vertical, 4)
     }
-    @ViewBuilder private func surface(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat) -> some View {
+    @ViewBuilder private func surface(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         switch destination {
-        case .life: life(snapshot, viewportHeight: viewportHeight)
+        case .life: life(snapshot, viewportHeight: viewportHeight, viewportWidth: viewportWidth)
         case .hours:
             LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { localSheet = .help }, selectedRole: $hoursSelectedRole)
         case .week:
@@ -161,7 +166,7 @@ struct LifeRoot: View {
             }.accessibilityIdentifier("life-week-page")
         }
     }
-    private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat) -> some View {
+    private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
@@ -170,8 +175,9 @@ struct LifeRoot: View {
             Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
                 .accessibilityLabel("Adjust weekly planning hours")
             if editing {
-                Text("Swipe left to manage. Swipe right to delete.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                if historyVisible { history }
+                Text("Swipe left to manage. Slide right offscreen to delete. Undo restores.")
+                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                if planner.undoId != nil || planner.redoId != nil { history }
             }
             if snapshot.roles.isEmpty {
                 Text("Name the responsibilities you want to plan for.").font(.body)
@@ -180,6 +186,7 @@ struct LifeRoot: View {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole, editing: editing,
                                 viewportHeight: viewportHeight,
+                                viewportWidth: viewportWidth,
                                 onManage: { localSheet = .manage($0) },
                                 onDelete: { id in
                                     let ok = await planner.send(["type": "removeLifeRole", "roleId": id])
@@ -381,6 +388,26 @@ struct LifeRoot: View {
             if crownRight { addTaskButton }
         }.fixedSize(horizontal: true, vertical: false)
     }
+    /// Edit lives in the navigation tray/rail, never above the Life cards.
+    /// It is the only way to enter Edit mode.
+    private var editControl: some View {
+        Button {
+            guard destination == .life else { return }
+            focusedRole = nil
+            editing.toggle()
+            closeNavigation()
+        } label: {
+            Label(editing ? "Done editing Life areas" : "Edit Life areas",
+                  systemImage: editing ? "checkmark.circle" : "pencil")
+                .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.spreadPress)
+        .padding(.horizontal, 12)
+        .accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
+        .accessibilityIdentifier("life-edit")
+    }
+
     private var trayButton: some View {
         Button {
             LifeFeedback.selection()
@@ -447,6 +474,7 @@ struct LifeRoot: View {
                             .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
+                    if destination == .life { editControl }
                     history
                     Menu("Crown position") {
                         Button("Move Crown left") { crownRight = false }
