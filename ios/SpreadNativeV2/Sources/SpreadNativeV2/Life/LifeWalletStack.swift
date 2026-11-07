@@ -1,6 +1,17 @@
 #if os(iOS)
 import SwiftUI
 
+/// Relative to the existing, already-enhanced Life Edit glow. Its alpha was
+/// almost 1.0 and could not be made 75% brighter by opacity alone.
+enum LifeEditPulseTokens {
+    static let emphasis: CGFloat = 1.75
+    static let peakStroke: CGFloat = (2.5 * 1.25) * emphasis
+    static let peakHaloRadius: CGFloat = (18 * 1.25) * emphasis
+    static let peakHaloOpacity: Double = min(1, 0.975 * Double(emphasis))
+    static let restingHaloOpacity: Double = min(1, 0.30 * Double(emphasis))
+    static let pulseDuration: Double = 1.35 * SpreadTactile.emphasis
+}
+
 /// One full-width overlapping stack. Selection reveals a separate task field in the caller.
 struct LifeWalletStack: View {
     @ObservedObject var planner: LivePlanner
@@ -59,7 +70,9 @@ struct LifeWalletStack: View {
                 .frame(height: focusActive ? focusedHeight :
                     CGFloat(max(0, ordered.count - 1)) * stackStep + (selectedRole == nil ? closedHeight : focusedHeight),
                     alignment: .top)
-                .clipped()
+                // In Edit, let the halo breathe beyond the stack's frame.
+                // Normal focus still clips displaced, hidden sibling cards.
+                .clipShape(Rectangle().inset(by: editing ? -LifeEditPulseTokens.peakHaloRadius : 0))
             }
         }
         .animation(reduceMotion ? nil : SpreadTactile.settle, value: selectedRole)
@@ -126,6 +139,9 @@ private struct LifeWalletFace: View {
             selectionButton
         }
         .clipShape(RoundedRectangle(cornerRadius: 23))
+        // The glow MUST sit after the clip. Previously it lived inside the
+        // card face and its bright outer shadow was clipped away.
+        .overlay(editingOutline)
         .simultaneousGesture(swipe)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
@@ -139,11 +155,10 @@ private struct LifeWalletFace: View {
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { reveal = 0; translation = 0 }
         }
-        .task(id: "\(editing)-\(reduceMotion)-\(scenePhase)") {
-            glow = false
-            guard editing, !reduceMotion, scenePhase == .active else { return }
-            withAnimation(.easeInOut(duration: 1.35 * SpreadTactile.emphasis).repeatForever(autoreverses: true)) { glow = true }
-        }
+        .onAppear { synchronizeGlow() }
+        .onChange(of: editing) { _, _ in synchronizeGlow() }
+        .onChange(of: reduceMotion) { _, _ in synchronizeGlow() }
+        .onChange(of: scenePhase) { _, _ in synchronizeGlow() }
         .accessibilityIdentifier("life-card-\(role.id)")
     }
     // Resolve formatting as String before entering SwiftUI's overloaded text builders.
@@ -206,7 +221,6 @@ private struct LifeWalletFace: View {
             .background(cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected || editing ? 0.85 : 0.48), lineWidth: 1))
-            .overlay(editingOutline)
             .offset(x: max(-110, min(110, reveal + translation)))
     }
 
@@ -225,12 +239,34 @@ private struct LifeWalletFace: View {
     @ViewBuilder
     private var editingOutline: some View {
         if editing {
-            RoundedRectangle(cornerRadius: 23)
-                .strokeBorder(roleColor.opacity(glow || reduceMotion ? 1 : 0.82),
-                              lineWidth: CGFloat(2.5 * SpreadTactile.emphasis))
-                // 50% stronger glow than the prior 0.65 / 0.20 values.
-                .shadow(color: roleColor.opacity(glow || reduceMotion ? 0.975 : 0.30),
-                        radius: CGFloat(18 * SpreadTactile.emphasis))
+            let atPeak = glow || reduceMotion
+            RoundedRectangle(cornerRadius: 23, style: .continuous)
+                // A real breathing outline, not merely two near-opaque states.
+                .strokeBorder(roleColor.opacity(atPeak ? 1 : 0.46),
+                              lineWidth: atPeak ? LifeEditPulseTokens.peakStroke : 1.5)
+                .shadow(color: roleColor.opacity(
+                            atPeak ? LifeEditPulseTokens.peakHaloOpacity
+                                   : LifeEditPulseTokens.restingHaloOpacity),
+                        radius: atPeak ? LifeEditPulseTokens.peakHaloRadius : 8)
+                // A second short-range halo keeps the pulse visible on dark,
+                // saturated Wallet cards even when the outer light is clipped.
+                .shadow(color: roleColor.opacity(atPeak ? 0.72 : 0.08),
+                        radius: atPeak ? 14 : 3)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func synchronizeGlow() {
+        // Reset instantly, then animate to the bright state. Only the visual
+        // pulse repeats; haptics never loop. Reduced Motion gets a static peak.
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { glow = false }
+        guard editing, !reduceMotion, scenePhase == .active else { return }
+        withAnimation(.easeInOut(duration: LifeEditPulseTokens.pulseDuration)
+            .repeatForever(autoreverses: true)) {
+            glow = true
         }
     }
     private var face: some View {
