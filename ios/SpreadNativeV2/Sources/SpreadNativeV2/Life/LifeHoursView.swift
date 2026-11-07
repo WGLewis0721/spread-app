@@ -90,6 +90,7 @@ struct LifeHoursView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Hours").font(.system(.largeTitle, weight: .bold))
+                         .accessibilityIdentifier("life-hours-page")
                     Text("Make the hours count.")
                         .font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
@@ -160,7 +161,6 @@ struct LifeHoursView: View {
         }
         .onDisappear { isVisible = false; resetGestures() }
         .onReceive(clock) { now in advanceClock(now) }
-        .accessibilityIdentifier("life-hours-page")
     }
 
     private var orbit: some View {
@@ -247,7 +247,6 @@ struct LifeHoursView: View {
             .frame(maxWidth: .infinity)
         }
         .frame(height: typeSize.isAccessibilitySize ? max(390, numberSize * 5.5) : 280)
-        .accessibilityIdentifier("life-orbit")
     }
 
     private struct Segment {

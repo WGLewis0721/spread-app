@@ -77,7 +77,6 @@ struct LifeWeekView: View {
                     .padding(.bottom, 16)
                 }
                 .scrollIndicators(.hidden)
-                .accessibilityIdentifier("life-month-scroll")
             } else {
                 // Pinned overview: only the day workspace scrolls. Never let a long
                 // task list push the week's seven dates offscreen.
@@ -96,7 +95,6 @@ struct LifeWeekView: View {
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .foregroundStyle(LifePalette.ink)
-        .accessibilityIdentifier("life-week-page")
         .onAppear { restoreProfile() }
         .onChange(of: profile) { _ in restoreProfile() }
         .onChange(of: expanded) { _, active in if !active { monthAnchor = nil } }
@@ -188,6 +186,7 @@ struct LifeWeekView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
                     .accessibilityFocused($dateHeadingFocused)
+                    .accessibilityIdentifier("life-week-day-workspace")
                 arrow("Previous day", system: "chevron.left") { choose(LifeCalendarRules.shiftDay(date, by: -1)) }
                 arrow("Next day", system: "chevron.right") { choose(LifeCalendarRules.shiftDay(date, by: 1)) }
             }
@@ -229,7 +228,6 @@ struct LifeWeekView: View {
             weekInboxes
         }
         .offset(x: reduceMotion ? 0 : max(-28, min(28, dayTranslation.width * 0.35)))
-        .accessibilityIdentifier("life-week-day-workspace")
     }
 
     private var dayHoursSummary: some View {
@@ -261,7 +259,6 @@ struct LifeWeekView: View {
         .font(.subheadline.weight(.medium))
         .buttonStyle(.spreadPress)
         .spreadCard()
-        .accessibilityIdentifier("life-week-inboxes")
     }
 
     private var toPlaceSheet: some View {

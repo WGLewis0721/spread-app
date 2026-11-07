@@ -13,8 +13,8 @@ final class LifeUITests: XCTestCase {
         if app.state != .notRunning { app.terminate() }
         app.launchArguments = ["-native.weekMonth.previewEnabled", "YES"]
         app.launch()
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch
-            .waitForExistence(timeout: 90), "The opted-in native Life root did not load.")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-home").firstMatch
+            .waitForExistence(timeout: 90), "The opted-in native Life header did not load.")
     }
 
     /// Inspect the actual accessible element, not only XCTest's Button classification.

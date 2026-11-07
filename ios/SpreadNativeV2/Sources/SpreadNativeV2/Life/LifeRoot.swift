@@ -160,7 +160,6 @@ struct LifeRoot: View {
             do { try await Task.sleep(for: .seconds(5)) } catch { return }
             historyVisible = false
         }
-        .accessibilityIdentifier("life-root")
     }
     private var header: some View {
         HStack(spacing: 8) {
@@ -183,6 +182,7 @@ struct LifeRoot: View {
         case .week:
             VStack(alignment: .leading, spacing: 16) {
                 Text("Your week").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("life-week-page")
                 Text("One day at a time.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 LifeWeekView(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask,
                              onReserve: { localSheet = .reserve($0) },
@@ -191,13 +191,13 @@ struct LifeRoot: View {
                              selectedRole: $focusedRole, expanded: $weekMonthExpanded,
                              monthAnchor: $weekMonthAnchor, todaySelectionTick: lifeTodayTick)
             }.frame(maxHeight: .infinity, alignment: .top)
-                .accessibilityIdentifier("life-week-page")
         }
     }
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("life-page")
                 Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
             Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
@@ -237,7 +237,7 @@ struct LifeRoot: View {
                     .frame(maxWidth: .infinity).padding(.top, 12)
             }
             if !snapshot.roles.isEmpty { newLifeArea }
-        }.accessibilityIdentifier("life-page")
+        }
     }
     private var newLifeArea: some View {
         Button(action: onNewRole) {
