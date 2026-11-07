@@ -32,7 +32,6 @@ struct LifeRoot: View {
     @State private var destination: LifeDestination = .life
     @State private var focusedRole: String?
     @State private var hoursSelectedRole: String?
-    @State private var weekSelectedRole: String?
     @State private var editing = false
     @State private var navigationOpen = false
     @State private var navigationDrag: CGFloat = 0
@@ -164,7 +163,7 @@ struct LifeRoot: View {
                              onReserve: { localSheet = .reserve($0) },
                              onManage: { localSheet = .manage($0) }, onDelete: { _ in },
 
-                             selectedRole: $weekSelectedRole)
+                             selectedRole: $focusedRole)
             }.accessibilityIdentifier("life-week-page")
         }
     }

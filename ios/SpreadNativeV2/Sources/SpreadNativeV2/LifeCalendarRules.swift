@@ -26,15 +26,41 @@ enum LifeCalendarRules {
         let day = min(calendar.component(.day, from: source), last)
         return PlannerDates.formatter.string(from: calendar.date(byAdding: .day, value: day - 1, to: target) ?? target)
     }
-    /// Crown navigation keeps the selected weekday; profile changes never reuse another profile's date.
+    /// A Crown week change opens Monday; explicit date taps retain their chosen date.
+    /// Profile changes never reuse another profile's date.
     static func selection(_ selected: String?, in weekKey: String, today: String) -> String {
         if let selected {
             if PlannerDates.weekKey(for: PlannerDates.date(selected)) == weekKey { return selected }
-            let weekday = (PlannerDates.calendar.component(.weekday, from: PlannerDates.date(selected)) + 5) % 7
-            return PlannerDates.dayISO(weekKey: weekKey, index: weekday)
+            return weekKey // owner decision 26: new weeks start on Monday
         }
         return PlannerDates.weekKey(for: PlannerDates.date(today)) == weekKey ? today : weekKey
     }
+    /// The selected Life area owns the Week To Place tray; nil means no filter yet.
+    static func toPlaceTasks(_ snapshot: PlannerSnapshot, selectedRoleId: String?) -> [PlannerTask] {
+        snapshot.unplacedTasks.filter { selectedRoleId == nil || $0.roleId == selectedRoleId }
+    }
+    /// Sum actual allocations; task completion does not change planned hours.
+    static func dailyHours(_ snapshot: PlannerSnapshot, day: String) -> Double {
+        snapshot.allocations.filter { $0.day == day && $0.hours > 0 }.reduce(0) { $0 + $1.hours }
+    }
+    static func dayCompleted(_ snapshot: PlannerSnapshot, day: String, roleId: String? = nil) -> Bool {
+        let ids = Set(snapshot.allocations.filter {
+            $0.day == day && $0.hours > 0 && (roleId == nil || $0.roleId == roleId)
+        }.map(\.id))
+        let scheduled = snapshot.tasks.filter { ids.contains($0.allocationId ?? "") }
+        return !scheduled.isEmpty && scheduled.allSatisfy(\.done)
+    }
+    /// Put the selected role's dot first; never invent colors beyond snapshot allocations.
+    static func orderedDayColors(_ snapshot: PlannerSnapshot, day: String, selectedRoleId: String?) -> [String] {
+        var roles = dailyRoles(snapshot, day: day)
+        if let selectedRoleId, let index = roles.firstIndex(where: { $0.id == selectedRoleId }) {
+            let selected = roles.remove(at: index)
+            roles.insert(selected, at: 0)
+        }
+        return roles.map(\.color)
+    }
+    static func overflow(_ count: Int, showing: Int = 3) -> Int { max(0, count - showing) }
+
     static func dailyRoles(_ snapshot: PlannerSnapshot, day: String) -> [Responsibility] {
         snapshot.roles.filter { role in snapshot.allocations.contains { $0.day == day && $0.roleId == role.id && $0.hours > 0 } }
     }

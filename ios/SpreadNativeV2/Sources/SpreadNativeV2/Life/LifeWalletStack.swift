@@ -440,12 +440,17 @@ struct LifeTaskRows: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var targetedTaskId: String?
     @State private var pendingTasks: Set<String> = []
+    @State private var showCompleted = false
+    private var visibleTasks: [PlannerTask] {
+        day == nil || showCompleted ? tasks : tasks.filter { !$0.done }
+    }
+    private var completedCount: Int { tasks.filter(\.done).count }
     var body: some View {
         VStack(spacing: 0) {
             if tasks.isEmpty {
                 Text("Nothing to do here yet.").font(.subheadline).foregroundStyle(LifePalette.secondary).padding(.vertical, 16)
             }
-            ForEach(tasks) { task in
+            ForEach(visibleTasks) { task in
                 HStack(spacing: 0) {
                     Button {
                         guard !pendingTasks.contains(task.id) else { return }
@@ -474,13 +479,13 @@ struct LifeTaskRows: View {
                         }.frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
                     }.buttonStyle(.spreadPress)
                         .accessibilityActions {
-                            if day != nil, let index = tasks.firstIndex(where: { $0.id == task.id }) {
+                            if day != nil, let index = visibleTasks.firstIndex(where: { $0.id == task.id }) {
                                 if index > 0 {
-                                    Button("Move up") { reorder(task, before: tasks[index - 1].id) }
+                                    Button("Move up") { reorder(task, before: visibleTasks[index - 1].id) }
                                 }
-                                if index + 1 < tasks.count {
+                                if index + 1 < visibleTasks.count {
                                     Button("Move down") {
-                                        reorder(task, before: index + 2 < tasks.count ? tasks[index + 2].id : nil)
+                                        reorder(task, before: index + 2 < visibleTasks.count ? visibleTasks[index + 2].id : nil)
                                     }
                                 }
                             }
@@ -509,6 +514,18 @@ struct LifeTaskRows: View {
                     return true
                 } isTargeted: { targeted in targetedTaskId = targeted ? task.id : nil }
                 Divider().overlay(Spread.line)
+            }
+            if day != nil && completedCount > 0 {
+                Button {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) { showCompleted.toggle() }
+                } label: {
+                    Label("\(completedCount) completed", systemImage: "checkmark.circle")
+                        .foregroundStyle(LifePalette.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityValue(showCompleted ? "Expanded" : "Collapsed")
+                .accessibilityIdentifier("life-week-completed")
             }
         }
         .padding(.horizontal, 12)

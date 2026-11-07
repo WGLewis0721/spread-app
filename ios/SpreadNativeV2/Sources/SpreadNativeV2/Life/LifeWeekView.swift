@@ -15,6 +15,14 @@ struct LifeWeekView: View {
     @Binding var selectedRole: String?
     @GestureState private var dayTranslation: CGSize = .zero
     @State private var expanded = false
+    @State private var dayTravelDirection = 1
+    @State private var toPlaceOpen = false
+    @State private var overdueOpen = false
+    @State private var overdueRows: [NativeOverdueTask] = []
+    @State private var overdueLoaded = false
+    @State private var overdueReadFailed = false
+    @State private var monthAddTarget: MonthAddTarget?
+    @State private var monthLongPress: (iso: String, when: Date)?
     @State private var marks: [String: NativeDayMark] = [:]
     @State private var navigationID = UUID()
     @State private var pendingDate: String?
@@ -25,12 +33,83 @@ struct LifeWeekView: View {
     private var date: String { selectedDate.isEmpty ? snapshot.weekKey : selectedDate }
     private var calendar: Calendar { PlannerDates.calendar }
     private var roles: [Responsibility] { LifeCalendarRules.dailyRoles(snapshot, day: date) }
-    private var marksKey: String { "\(profile)|\(date.prefix(7))|\(planner.state?.sessionId ?? "")|\(planner.state?.revision ?? 0)" }
+    private var marksKey: String { "\(profile)|\(date.prefix(7))|\(planner.state?.sessionId ?? "")|\(planner.state?.revision ?? 0)|\(selectedRole ?? "")" }
     private var selectionKey: String { "native.life.selectedDate.\(profile)" }
+    private var visibleRole: String? { selectedRole ?? snapshot.roles.first?.id }
+    private var toPlaceTasks: [PlannerTask] {
+        LifeCalendarRules.toPlaceTasks(snapshot, selectedRoleId: visibleRole)
+    }
+    private var overdueRefreshKey: String {
+        "\(profile)|\(planner.state?.sessionId ?? "")|\(snapshot.weekKey)|\(planner.state?.revision ?? 0)"
+    }
+    private struct MonthAddTarget: Identifiable {
+        let iso: String
+        var id: String { iso }
+    }
+    private var dayTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .offset(x: CGFloat(dayTravelDirection) * 28).combined(with: .opacity),
+            removal: .offset(x: CGFloat(-dayTravelDirection) * 28).combined(with: .opacity)
+        )
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
             calendarSurface
+            if expanded {
+                Text("Choose a date to return to your week.")
+                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                    .accessibilityIdentifier("life-month-help")
+            } else {
+                dayWorkspace
+                    .id(date)
+                    .transition(dayTransition)
+            }
+        }
+        .foregroundStyle(LifePalette.ink)
+        .accessibilityIdentifier("life-week-page")
+        .onAppear { restoreProfile() }
+        .onChange(of: profile) { _ in restoreProfile() }
+        .onChange(of: snapshot.weekKey) { week in
+            guard activeProfile == profile else { restoreProfile(); return }
+            let candidate = pendingDate.flatMap { PlannerDates.weekKey(for: PlannerDates.date($0)) == week ? $0 : nil }
+            accept(candidate ?? LifeCalendarRules.selection(selectedDate.isEmpty ? nil : selectedDate, in: week, today: PlannerDates.localISO()))
+        }
+        .onChange(of: snapshot.roles.map(\.id)) { ids in
+            if let selectedRole, !ids.contains(selectedRole) { self.selectedRole = nil }
+        }
+        .task(id: overdueRefreshKey) { await loadOverdue() }
+        .sheet(isPresented: $toPlaceOpen) { toPlaceSheet }
+        .sheet(isPresented: $overdueOpen) { overdueSheet }
+        .sheet(item: $monthAddTarget) { item in
+            MonthQuickAddSheet(planner: planner, roleId: visibleRole ?? "", day: item.iso)
+        }
+        .task(id: marksKey) {
+            marks = [:]
+            let origin = marksKey
+            let anchor = PlannerDates.date(date)
+            let previous = calendar.date(byAdding: .month, value: -1, to: anchor) ?? anchor
+            let next = calendar.date(byAdding: .month, value: 1, to: anchor) ?? anchor
+            // The Classic service grid may have five Sunday-first rows. Read adjacent
+            // months too so Life's fixed six Monday-first rows never invent empty dots.
+            var combined: [String: NativeDayMark] = [:]
+            for monthDate in [previous, anchor, next] {
+                guard !Task.isCancelled, marksKey == origin else { return }
+                let parts = calendar.dateComponents([.year, .month], from: monthDate)
+                guard let year = parts.year, let month = parts.month else { continue }
+                if let fresh = await planner.monthMarks(year: year, month: month - 1, selectedRoleId: selectedRole) {
+                    combined.merge(fresh) { _, new in new }
+                }
+            }
+            guard !Task.isCancelled, marksKey == origin else { return }
+            marks = combined
+        }
+    }
+
+
+    private var dayWorkspace: some View {
+        VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(PlannerDates.label(PlannerDates.date(date), pattern: "MMMM d"))
@@ -44,6 +123,7 @@ struct LifeWeekView: View {
                 arrow("Next day", system: "chevron.right") { choose(LifeCalendarRules.shiftDay(date, by: 1)) }
             }
             .simultaneousGesture(daySwipe)
+            dayHoursSummary
             room
             if roles.isEmpty {
                 Text("Tap a Life area above to plan 1 hour on this day.")
@@ -69,42 +149,126 @@ struct LifeWeekView: View {
                     .transition(SpreadTactile.detailReveal)
                 }
             }
-            unplaced
-
+            weekInboxes
         }
         .offset(x: reduceMotion ? 0 : max(-28, min(28, dayTranslation.width * 0.35)))
-        .foregroundStyle(LifePalette.ink)
-        .accessibilityIdentifier("life-week-page")
-        .onAppear { restoreProfile() }
-        .onChange(of: profile) { _ in restoreProfile() }
-        .onChange(of: snapshot.weekKey) { week in
-            guard activeProfile == profile else { restoreProfile(); return }
-            let candidate = pendingDate.flatMap { PlannerDates.weekKey(for: PlannerDates.date($0)) == week ? $0 : nil }
-            accept(candidate ?? LifeCalendarRules.selection(selectedDate.isEmpty ? nil : selectedDate, in: week, today: PlannerDates.localISO()))
+        .accessibilityIdentifier("life-week-day-workspace")
+    }
+
+    private var dayHoursSummary: some View {
+        HStack(spacing: 8) {
+            Text("\(SpreadHours.text(LifeCalendarRules.dailyHours(snapshot, day: date)))h planned today")
+                .font(.subheadline.weight(.semibold))
+            Spacer(minLength: 4)
+            Text("\(roles.count) Life areas")
+                .font(.caption).foregroundStyle(LifePalette.secondary)
         }
-        .onChange(of: roles.map(\.id)) { ids in
-            if let selectedRole, !ids.contains(selectedRole) { self.selectedRole = nil }
+        .accessibilityIdentifier("life-day-hour-summary")
+    }
+
+    private var weekInboxes: some View {
+        HStack(spacing: 10) {
+            Button { toPlaceOpen = true } label: {
+                Label("To Place \(toPlaceTasks.count)", systemImage: "tray")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .accessibilityIdentifier("life-to-place")
+            Button { overdueOpen = true } label: {
+                Label(overdueLoaded
+                      ? (overdueReadFailed ? "Overdue unavailable" : "Overdue \(overdueRows.count)")
+                      : "Overdue loading", systemImage: "calendar.badge.exclamationmark")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .accessibilityIdentifier("life-overdue")
         }
-        .task(id: marksKey) {
-            marks = [:]
-            let origin = marksKey
-            let anchor = PlannerDates.date(date)
-            let previous = calendar.date(byAdding: .month, value: -1, to: anchor) ?? anchor
-            let next = calendar.date(byAdding: .month, value: 1, to: anchor) ?? anchor
-            // The Classic service grid may have five Sunday-first rows. Read adjacent
-            // months too so Life's fixed six Monday-first rows never invent empty dots.
-            var combined: [String: NativeDayMark] = [:]
-            for monthDate in [previous, anchor, next] {
-                guard !Task.isCancelled, marksKey == origin else { return }
-                let parts = calendar.dateComponents([.year, .month], from: monthDate)
-                guard let year = parts.year, let month = parts.month else { continue }
-                if let fresh = await planner.monthMarks(year: year, month: month - 1) {
-                    combined.merge(fresh) { _, new in new }
+        .font(.subheadline.weight(.medium))
+        .buttonStyle(.spreadPress)
+        .spreadCard()
+        .accessibilityIdentifier("life-week-inboxes")
+    }
+
+    private var toPlaceSheet: some View {
+        SpreadSheetStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Tasks waiting for a day")
+                        .font(.headline)
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
+                            ForEach(snapshot.roles) { role in
+                                Button(role.name) { selectedRole = role.id }
+                                    .padding(.horizontal, 12)
+                                    .frame(minHeight: 44)
+                                    .spreadChip(selected: visibleRole == role.id)
+                                    .accessibilityIdentifier("life-to-place-role-\(role.id)")
+                            }
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+                    if toPlaceTasks.isEmpty {
+                        ContentUnavailableView("Nothing to place", systemImage: "tray",
+                                               description: Text("Add a task or choose another Life area."))
+                    } else {
+                        ForEach(toPlaceTasks) { task in
+                            TaskLine(planner: planner, snapshot: snapshot, task: task,
+                                     currentAllocation: nil, onOpenTask: onOpenTask)
+                        }
+                    }
+                }
+                .padding(16)
+            }
+            .navigationTitle("To Place")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { toPlaceOpen = false }
                 }
             }
-            guard !Task.isCancelled, marksKey == origin else { return }
-            marks = combined
         }
+        .presentationDetents([.medium, .large])
+        .accessibilityIdentifier("life-to-place-sheet")
+    }
+
+    private var overdueSheet: some View {
+        SpreadSheetStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if !overdueLoaded {
+                        ProgressView("Checking overdue tasks")
+                    } else if overdueReadFailed {
+                        Text("Overdue tasks could not be read. Nothing was changed.")
+                        Button("Try again") { Task { await loadOverdue() } }
+                            .frame(minHeight: 44)
+                    } else if overdueRows.isEmpty {
+                        ContentUnavailableView("Nothing overdue", systemImage: "checkmark.circle",
+                                               description: Text("You're caught up."))
+                    } else {
+                        OverdueSelectionTray(planner: planner, snapshot: snapshot,
+                                             rows: overdueRows, currentDay: date,
+                                             weekDays: LifeCalendarRules.week(date))
+                    }
+                }
+                .padding(16)
+            }
+            .navigationTitle("Overdue")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { overdueOpen = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .accessibilityIdentifier("life-overdue-sheet")
+    }
+
+    private func loadOverdue() async {
+        let origin = overdueRefreshKey
+        overdueLoaded = false
+        overdueReadFailed = false
+        let response = await planner.allOverdueTasks(today: PlannerDates.localISO())
+        guard !Task.isCancelled, overdueRefreshKey == origin else { return }
+        overdueRows = response ?? []
+        overdueReadFailed = response == nil
+        overdueLoaded = true
     }
 
     /// Horizontal drags on the calendar and date header change days. Keep task-reorder
@@ -125,6 +289,20 @@ struct LifeWeekView: View {
                     choose(LifeCalendarRules.shiftDay(date, by: direction))
                 }
             }
+    }
+
+    /// The week strip owns week swipes. Day swipes belong only to the focused day header.
+    private var stripSwipe: some Gesture {
+        DragGesture(minimumDistance: 65, coordinateSpace: .global).onEnded { value in
+            guard !planner.busy,
+                  abs(value.translation.width) > abs(value.translation.height) * 1.8 else { return }
+            let direction = value.translation.width < 0 ? 1 : -1
+            if expanded {
+                choose(LifeCalendarRules.shiftMonth(date, by: direction))
+            } else {
+                choose(LifeCalendarRules.shiftDay(snapshot.weekKey, by: direction * 7))
+            }
+        }
     }
 
     private var calendarSurface: some View {
@@ -172,7 +350,8 @@ struct LifeWeekView: View {
                 if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: 44) }
             }
         }.padding(12).spreadCard().accessibilityElement(children: .contain)
-            .simultaneousGesture(daySwipe)
+            .accessibilityIdentifier("life-calendar-strip")
+            .simultaneousGesture(stripSwipe)
     }
 
     private var monthControls: some View {
@@ -198,7 +377,15 @@ struct LifeWeekView: View {
         let selected = iso == date
         let today = iso == PlannerDates.localISO()
         let mark = mark(for: iso)
-        return Button { choose(iso) } label: {
+        return Button {
+            if let previous = monthLongPress, previous.iso == iso,
+               Date().timeIntervalSince(previous.when) < 1.5 {
+                monthLongPress = nil
+                return
+            }
+            if expanded { withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded = false } }
+            choose(iso)
+        } label: {
             VStack(spacing: 6) {
                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "d"))
                     .font(.subheadline.weight(.semibold)).monospacedDigit()
@@ -207,10 +394,14 @@ struct LifeWeekView: View {
                     .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
                     .overlay(Circle().strokeBorder(today ? Spread.accent : .clear, lineWidth: 1.5))
                 HStack(spacing: 2) {
-                    ForEach(Array(mark.colors.prefix(4).enumerated()), id: \.offset) { _, color in
-                        Circle().fill(Color(hex: color)).frame(width: 4, height: 4)
+                    ForEach(Array(mark.colors.prefix(3).enumerated()), id: \.offset) { _, color in
+                        Circle().fill(Color(hex: color))
+                            .frame(width: color == snapshot.roles.first(where: { $0.id == selectedRole })?.color ? 6 : 4,
+                                   height: color == snapshot.roles.first(where: { $0.id == selectedRole })?.color ? 6 : 4)
                     }
-                    if mark.extra > 0 { Text("+").font(.caption2) }
+                    if LifeCalendarRules.overflow(mark.count) > 0 {
+                        Text("+\(LifeCalendarRules.overflow(mark.count))").font(.caption2)
+                    }
                 }.frame(height: 5)
             }.frame(maxWidth: .infinity, minHeight: 48)
                 .opacity(iso.prefix(7) == date.prefix(7) ? 1 : 0.4)
@@ -220,22 +411,14 @@ struct LifeWeekView: View {
             .accessibilityValue("\(mark.count) Life areas planned")
             .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityIdentifier("life-calendar-day-\(iso)")
-    }
-
-    private var unplaced: some View {
-        let tasks = snapshot.tasks.filter { $0.allocationId == nil }
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("To place").font(.title3.weight(.semibold))
-                Spacer()
-                Text("\(tasks.count) tasks").font(.subheadline).foregroundStyle(LifePalette.secondary)
+            .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                guard expanded, visibleRole != nil else { return }
+                monthLongPress = (iso, Date())
+                monthAddTarget = MonthAddTarget(iso: iso)
+            })
+            .accessibilityAction(named: "Add task to this day") {
+                if expanded, visibleRole != nil { monthAddTarget = MonthAddTarget(iso: iso) }
             }
-            if tasks.isEmpty {
-                Text("Everything has a place.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-            } else {
-                LifeTaskRows(planner: planner, snapshot: snapshot, tasks: tasks, onOpenTask: onOpenTask)
-            }
-        }
     }
 
     private var room: some View {
@@ -247,6 +430,7 @@ struct LifeWeekView: View {
                             let targetDay = date
                             Task {
                                 if await planner.placeHours(roleId: role.id, day: targetDay, hours: 1) {
+                                    selectedRole = role.id
                                     LifeFeedback.accepted()
                                 }
                             }
@@ -275,8 +459,8 @@ struct LifeWeekView: View {
     }
     private func mark(for iso: String) -> NativeDayMark {
         if let known = marks[iso] { return known }
-        let colors = LifeCalendarRules.dailyRoles(snapshot, day: iso).map(\.color)
-        return NativeDayMark(colors: Array(colors.prefix(4)), extra: max(0, colors.count - 4))
+        let colors = LifeCalendarRules.orderedDayColors(snapshot, day: iso, selectedRoleId: selectedRole)
+        return NativeDayMark(colors: Array(colors.prefix(3)), extra: LifeCalendarRules.overflow(colors.count))
     }
     private func restoreProfile() {
         navigationID = UUID(); pendingDate = nil; activeProfile = profile; selectedRole = nil; marks = [:]
@@ -284,8 +468,8 @@ struct LifeWeekView: View {
             in: snapshot.weekKey, today: PlannerDates.localISO()))
     }
     private func accept(_ iso: String) {
+        if date != iso { dayTravelDirection = iso > date ? 1 : -1 }
         withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
-            if selectedDate != iso { selectedRole = nil }
             selectedDate = iso
         }
         dateHeadingFocused = true
