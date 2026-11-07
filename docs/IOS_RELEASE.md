@@ -2,6 +2,8 @@
 
 > **Current-source warning (November 7, 2026):** `main` has moved substantially beyond the November 3 SwiftUI candidate. The older build facts, simulator outcomes, identity values and procedure below are a **historical baseline**, not the status of the current IPA or App Store Connect record. Do not claim a build failed, passed, uploaded, was approved, or was released based solely on this record. Check the exact source SHA, resolved version/build, signed artifact, Codemagic result, Apple processing status and physical-device evidence.
 
+> **Current build ownership:** Codemagic handles native builds, simulator QA, signing and approved upload. See [iOS automation](IOS_AUTOMATION.md). The GitHub iOS shell remains manual-only legacy diagnostics.
+
 **Release authority:** [App Store release plan](../APP_STORE_RELEASE_PLAN.md) · [App Review checklist](APP_STORE_REVIEW_CHECKLIST.md) · [Life acceptance evidence (recorded candidate)](evidence/life-ios-implementation/acceptance.md) · [tactile QA evidence](evidence/tactile-precision/README.md) · [iCloud gates](ICLOUD_PLAN.md). The existing manual controls must remain approval-gated. This documentation change does not perform signing, upload or release.
 
 **Historical scope of the instructions below:** Original Capacitor/local-first iOS packaging and pre-Life smoke tests. Re-verify every command and native target against today's repository before running; use the actual compiled IPA for device family, iOS minimum, entitlements, permissions and cloud flags.

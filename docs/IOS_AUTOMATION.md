@@ -1,70 +1,29 @@
-# Spread — GitHub Actions + Fastlane internal TestFlight
+# Spread — iOS automation (no Mac required)
 
-**Status: prepared, not signed or uploaded.** Apple credentials, private signing storage, and an App Store Connect app record must be configured by the account owner. Only a verified run and real-device TestFlight install establish success.
+**Native verification and release authority: Codemagic.** Keep GitHub Actions on fast Linux/Ubuntu source checks. All native Codemagic workflows are manual; none runs on each commit. `main` stays untouched until the owner approves a merge.
 
-**Scope:** Existing React/Capacitor target, bundle ID **com.graymatter.spread**, an approved main commit, internal TestFlight only. No redesign, external beta, App Review submission, OTA updates, production deploy, or changes to the existing simulator workflow.
+| Job | Tool | Trigger / permissions |
+| --- | --- | --- |
+| Planner, browser bridge, TypeScript, portable Swift tests, source preflight | GitHub Actions | PR and `main` push; Ubuntu/Linux, no routine macOS |
+| iOS SwiftUI contracts, Life + Classic installed-app tests and screenshots | `spread-ios-verify` in `codemagic.yaml` | Manual on any reviewed branch; unsigned, no Apple integration or publishing |
+| Full signed iPhone/iPad/Duo release candidate | `spread-release-candidate` | Manual on `main` only; no publishing |
+| App Store Connect upload | `spread-ios-upload` | Manual on `main` only; requires `SPREAD_APPROVED_UPLOAD_SHA` equal to the full approved commit SHA |
+| Read-only store version/build check | `spread-store-status` | Manual |
 
-## Why this approach
+## Verify draft PR #160
 
-- The Spread repository is **public**. Standard GitHub-hosted runners (including standard macOS) are free on public repositories. Fastlane is open-source. No new CI subscription is required at present.
-- Codemagic is the fallback: individuals get 500 free Mac M2 build minutes/month, with subsequent M2 minutes at $0.095/minute. It simplifies signing but introduces another vendor/account.
-- Trade-off: Fastlane Match requires a private encrypted-signing repository and one-time Apple authorization. An AI cannot bypass the Apple account/legal/identity tasks.
+In [Codemagic](https://codemagic.io/apps), select the Spread app → **Start new build** → branch `feat/life-week-61-parity-20261107` → **Spread - unsigned native verification (manual)**.
 
-Sources: https://docs.github.com/en/billing/concepts/product-billing/github-actions ; https://docs.fastlane.tools/best-practices/continuous-integration/github/ ; https://docs.fastlane.tools/actions/match/ ; https://codemagic.io/pricing/
+The workflow checks the checked-out SHA against the current branch tip, with both cloud flags off. It compiles/runs the native SwiftUI contracts and a focused installed-app Life/Classic suite on an iPhone simulator. Inspect `artifacts/native-verify/source-sha.txt`, the two `.xcresult` files and exported screenshots. A GitHub green check does **not** prove native acceptance. A cancelled or queued native job is **not** a pass.
 
-## Ownership and prerequisites
+A broader candidate run on `main` uses the existing Duo suite plus an iPad Life/Classic smoke. Before any store upload, explicitly set `SPREAD_APPROVED_UPLOAD_SHA` to the exact reviewed `main` SHA in the Codemagic manual build variables. Uploading to App Store Connect is **not** authorization to submit to App Review or publish a store release.
 
-**Account owner:** Confirm Apple seller identity; accept Paid Apps Agreement and complete banking/tax before paid release; register identifier **com.graymatter.spread** with iCloud CloudKit/Cloud Documents and Push Notifications; verify container **iCloud.com.graymatter.spread**; create the Spread App Store Connect iOS app record; generate an App Store Connect **TEAM API key** (not an Individual API key; the latter cannot provision certificates). Do not share its .p8 file in a chat or repo.
+**Physical device:** TestFlight on an actual iPhone is still needed for Taptic feedback and real-world gesture perception. Use a Mac only if remote debugging cannot reproduce a hardware-only issue.
 
-**AI / engineering:** Maintain the workflow, inspect CI failures, submit fixes by PR. Do not enable cloud flags, merge, deploy, or issue Apple credentials.
+## Preserved regression controls
 
-**Human release reviewer:** Approve/deny the GitHub environment job and verify existing native/security release gates before expanding TestFlight distribution.
+`.github/workflows/ios.yml` is **manual-only legacy diagnostics** while its installed-app storage-loss and mirror-writer negative controls are migrated. Other older GitHub-native visual workflows remain manual diagnostics, not a second routine CI/release authority. Avoid running duplicate macOS matrices for each PR.
 
-## Setup — no personally owned Mac needed
+No new user accounts, schema changes, cloud flags, merging, TestFlight distribution, App Review submission or production deployment are part of this pipeline change.
 
-1. Create a separate **PRIVATE** GitHub repository for encrypted Fastlane Match signing material, for example **WGLewis0721/spread-ios-signing**, with an initial README commit. Never store signing files in the public Spread repository.
-2. In Spread → Settings → Environments, create **ios-internal-testflight**. Restrict to main and configure a required human reviewer. If you are the only reviewer, allow self-review or nominate a second reviewer. Environment protections must be configured in GitHub; declaring the name in the workflow alone does not enforce them.
-3. Add these GitHub environment **variables**:
-   - **APPLE_TEAM_ID** — your Apple Developer Team ID.
-   - **MATCH_GIT_URL** — HTTPS URL of the private signing repo, e.g. https://github.com/WGLewis0721/spread-ios-signing.git
-4. Add these GitHub environment **secrets**:
-   - **ASC_KEY_ID** and **ASC_ISSUER_ID** — App Store Connect *Team* API key identifiers.
-   - **ASC_KEY_P8_BASE64** — single-line Base64 encoding of the complete .p8 key file. Generate and store locally, never paste it into a chat or commit.
-   - **MATCH_PASSWORD** — strong unique encryption passphrase; save it in a password manager.
-   - **MATCH_GIT_BASIC_AUTHORIZATION** — Base64 of username:fine-grained-GitHub-PAT, for the *private signing repository only*. Allow **Contents read/write for initial bootstrap**; rotate to **Contents read-only** after bootstrap. Match reads this secret directly.
-5. After this PR is reviewed and explicitly approved for merge, Actions → **iOS internal TestFlight (manual)** becomes available on main. Choose **bootstrap_signing**, paste the exact current main SHA as **approved_commit**, check **confirm_internal_only**, and approve the environment request. Bootstrap creates certificates and profiles in the private signing repository. It **does not upload** an app.
-6. Confirm the generated provisioning profile matches Spread's bundle ID and actual iCloud/Push capabilities. Rotate the signing-repository PAT to **read-only** and replace the matching environment secret.
-7. Choose **upload_internal_testflight**, again with the exact main SHA and explicit reviewer approval. The workflow runs focused checks, creates self-contained iOS assets with the iCloud feature flags off, syncs Capacitor, temporarily changes the APNs entitlement to production for distribution, signs with the stored Match profile, then uploads the IPA to **App Store Connect for internal TestFlight**. Once processing finishes, assign the build to internal testers and install it.
-
-A failed bootstrap can be retried only deliberately. Never use **match nuke** to troubleshoot routine signing.
-
-## Security and release boundaries
-
-- Workflow requires main + matching full commit SHA + explicit manual authorization; the signing job uses protected environment secrets only after approval.
-- The two flags **VITE_SPREAD_CLOUD_BACKUP=0** and **VITE_SPREAD_CLOUD_SYNC=0** are fixed in this workflow. Current unresolved security/audit and device testing block external TestFlight and store submission.
-- CloudKit Production schema deployment is required before separately approved TestFlight QA builds that enable sync. Cloud features must not be enabled just by changing this CI input.
-- Routine signing imports Match assets **read-only**. Initial bootstrap uses write privileges, followed by PAT rotation to read-only.
-- The runner temporarily sets manual signing and production APNs entitlements. Committed project settings and golden branches remain unchanged.
-- The IPA is **not uploaded as a public GitHub Actions artifact**. It is uploaded to Apple's TestFlight service.
-- Build numbers derive from GitHub run number and attempt; they increase for later runs. Avoid rerunning old uploads after a newer build has been accepted.
-- No automatic submission to App Review or external testers; no web production release; no OTA update.
-
-## Acceptance criteria
-
-1. Existing simulator CI stays unchanged, and the PR passes existing relevant tests.
-2. A wrong main SHA / missing approval / non-main run fails before reaching credentials.
-3. Bootstrap creates encrypted signing assets in the separate private Match repository; subsequent signing uses read-only access.
-4. A signed, offline-complete Spread IPA with cloud feature flags off reaches **internal** TestFlight.
-5. The processed build installs on a physical iPhone. The owner verifies reopen persistence, offline planner, share/restore and records evidence in **docs/IOS_RELEASE.md**.
-6. Unresolved audit and physical-device gates continue to block **external** TestFlight and public submission.
-
-## Rollback and recovery
-
-Disable this manual workflow or revert this PR (after a separate review). The web app and existing CI remain unchanged. In a credential incident revoke the API key/PAT and rotate Match encryption as needed; do not revoke Apple Distribution certificates as routine rollback. For a faulty TestFlight build, stop its distribution in App Store Connect and prepare a higher-build-number fix. Installed beta copies do not automatically disappear.
-
-## Sources of truth
-
-- Product gate: **APP_STORE_RELEASE_PLAN.md**
-- Cloud safety and flags: **docs/ICLOUD_PLAN.md**
-- Native signing and physical QA log: **docs/IOS_RELEASE.md**
-- Native bundle: **ios/App/App.xcodeproj** and **capacitor.config.json**
+**Rollback:** Revert the PR/commit, restoring the prior `codemagic.yaml` and GitHub workflows; separately fix any GitHub required-check settings that still reference retired native job names. See [iOS release record](IOS_RELEASE.md) and [App Store release plan](../APP_STORE_RELEASE_PLAN.md).

@@ -26,6 +26,24 @@ jobs:
       - run: npm run test:scripts
       - name: Check Studio Codemagic dispatcher before activation
         run: python3 -m unittest discover -s scripts -p test_studio_codemagic.py -v
+      - name: Verify native CI ownership and Codemagic YAML
+        run: |
+          ruby -e '
+            require "yaml"
+            config = YAML.safe_load(File.read("codemagic.yaml"), aliases: true)
+            flows = config.fetch("workflows")
+            expected = %w[spread-ios-verify spread-release-candidate spread-ios-upload spread-store-status]
+            abort "Unexpected Codemagic workflows" unless flows.keys.sort == expected.sort
+            abort "Native workflow is not manual" if flows.values.any? { |flow| flow.key?("triggering") }
+            verify = flows.fetch("spread-ios-verify")
+            abort "Unsafe verifier" if verify.key?("publishing") || verify.key?("integrations") || verify.fetch("environment").key?("ios_signing")
+            commands = verify.fetch("scripts").map { |s| s.fetch("script") }.join("\n")
+            abort "No immutable source guard" unless commands.include?("git rev-parse HEAD") && commands.include?("git ls-remote")
+            abort "No iOS tests" unless commands.include?("xcodebuild test") && commands.include?("LifeUITests")
+            upload = flows.fetch("spread-ios-upload").fetch("scripts").map { |s| s.fetch("script") }.join("\n")
+            abort "Missing explicit upload approval" unless upload.include?("SPREAD_APPROVED_UPLOAD_SHA")
+            puts "Codemagic native ownership verified"
+          '
 
   bridge-sims:
     # The installed-app logic against a fake native plugin, in Chromium: backup, restore, sync and
@@ -57,19 +75,3 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test SpreadCloudCore (naming, path safety, retention, payload check, sync storage)
         run: swift test --package-path ios/App/SpreadCloudCore
-
-  swift-cloudkit-typecheck:
-    # Type-checks the CloudKit code on its own in about a minute, with a hard time limit, so a
-    # compiler problem is reported here instead of hanging the long simulator build.
-    runs-on: macos-26
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - name: Type-check the sync engine
-        working-directory: ios/App/App/Cloud
-        run: >
-          xcrun --sdk iphonesimulator swiftc -typecheck
-          -target arm64-apple-ios17.0-simulator -swift-version 5
-          -Xfrontend -warn-long-expression-type-checking=300
-          -Xfrontend -warn-long-function-bodies=600
-          SpreadCloudConfig.swift SpreadSyncEngine.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/PayloadCheck.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/SyncStorage.swift ../../SpreadCloudCore/Sources/SpreadCloudCore/OutboxGate.swift
