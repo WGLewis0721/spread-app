@@ -8,6 +8,9 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 
 ## Index
 
+- [Life Week/Month 61-decision source parity audit](2026-11-07-life-week-61-parity-audit.md) — current Life code paths, focused PR #160 changes, intentional Wallet adaptations, and remaining pinned-overview/device gates.
+
+
 | Date | Spec | Status |
 | --- | --- | --- |
 | 2026-11-06 | [Life on iPhone](../../../SPREAD_LIFE_IOS_SPEC.md), [implementation checklist](../../../SPREAD_LIFE_IOS_CHECKLIST.md) and [engineer handoff](../../../SPREAD_LIFE_IOS_HANDOFF.md) | Implementation merged in #146 and refinements through #158; recorded device/release acceptance still separate. Historical handoff, not a new implementation request. |

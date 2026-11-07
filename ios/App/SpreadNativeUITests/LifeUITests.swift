@@ -165,6 +165,42 @@ final class LifeUITests: XCTestCase {
         capture("life-more")
     }
 
+    func testLifeWeekInboxesAndMonthBrowsingStayInTheActiveLifeExperience() {
+        startLife()
+        navigate("week")
+        let workspace = app.descendants(matching: .any)
+            .matching(identifier: "life-week-day-workspace").firstMatch
+        XCTAssertTrue(workspace.waitForExistence(timeout: 20))
+        let toPlace = app.buttons["life-to-place"]
+        let overdue = app.buttons["life-overdue"]
+        XCTAssertTrue(toPlace.waitForExistence(timeout: 10))
+        XCTAssertTrue(overdue.exists, "Overdue must be reachable from Life Week")
+        capture("life-week-compact-inboxes")
+        toPlace.tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-to-place-sheet").firstMatch.waitForExistence(timeout: 10))
+        capture("life-week-role-filtered-to-place")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(workspace.waitForExistence(timeout: 10))
+        overdue.tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-overdue-sheet").firstMatch.waitForExistence(timeout: 10))
+        capture("life-week-overdue")
+        app.buttons["Done"].tap()
+
+        let toggle = app.buttons["life-week-month-toggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        toggle.tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-month-help").firstMatch.waitForExistence(timeout: 10),
+            "Month must replace the daily workspace")
+        XCTAssertFalse(workspace.exists, "Daily tasks cannot remain behind the expanded Month")
+        capture("life-month-without-day-schedule")
+        toggle.tap()
+        XCTAssertTrue(workspace.waitForExistence(timeout: 10),
+                      "Closing Month must restore the selected Week day")
+    }
+
     func testCapacityUsesRealStoreAndSurvivesRelaunch() {
         startLife()
         navigate("hours")
