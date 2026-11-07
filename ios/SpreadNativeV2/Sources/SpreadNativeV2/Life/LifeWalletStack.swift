@@ -20,8 +20,9 @@ struct LifeWalletStack: View {
     @Binding var selectedRole: String?
     let editing: Bool
     var day: String? = nil
+    var viewportHeight: CGFloat = 800
     let onManage: (String) -> Void
-    let onDelete: (String) -> Void
+    let onDelete: (String) async -> Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @AccessibilityFocusState private var focusedRole: String?
@@ -58,11 +59,15 @@ struct LifeWalletStack: View {
                     ForEach(Array(ordered.enumerated()), id: \.element.id) { index, role in
                         let hidden = focusActive && selectedRole != role.id
                         card(role, faceVisible: focusActive || index == ordered.count - 1 || selectedRole == role.id)
-                            .offset(y: focusActive ? (selectedRole == role.id ? 0 : focusedHeight + 18 + CGFloat(index) * stackStep) : CGFloat(index) * stackStep)
+                            .offset(y: focusActive
+                                ? (selectedRole == role.id ? 0 :
+                                   max(viewportHeight + focusedHeight + CGFloat(index) * 24,
+                                       CGFloat(index) * stackStep + viewportHeight))
+                                : CGFloat(index) * stackStep)
                             .allowsHitTesting(!hidden)
                             .accessibilityHidden(hidden)
                             .zIndex(selectedRole == role.id ? Double(ordered.count + 1) : Double(index))
-                            .animation(reduceMotion ? nil : SpreadTactile.settle,
+                            .animation(reduceMotion ? nil : SpreadTactile.walletFocus,
                                        value: focusActive)
                     }
                 }
@@ -70,12 +75,13 @@ struct LifeWalletStack: View {
                 .frame(height: focusActive ? focusedHeight :
                     CGFloat(max(0, ordered.count - 1)) * stackStep + (selectedRole == nil ? closedHeight : focusedHeight),
                     alignment: .top)
-                // In Edit, let the halo breathe beyond the stack's frame.
-                // Normal focus still clips displaced, hidden sibling cards.
-                .clipShape(Rectangle().inset(by: editing ? -LifeEditPulseTokens.peakHaloRadius : 0))
+                // No clipping at the shrinking stack boundary: cards remain
+                // whole while traveling through the bottom of the device.
+                .clipShape(Rectangle().inset(by:
+                    -max(viewportHeight + focusedHeight, LifeEditPulseTokens.peakHaloRadius)))
             }
         }
-        .animation(reduceMotion ? nil : SpreadTactile.settle, value: selectedRole)
+        .animation(reduceMotion ? nil : SpreadTactile.walletFocus, value: selectedRole)
         .onChange(of: selectedRole) { old, new in
             if let new { lastSelected = new; focusedRole = new }
             else { focusedRole = old ?? lastSelected }
@@ -89,12 +95,14 @@ struct LifeWalletStack: View {
                        selected: selectedRole == role.id, editing: editing,
                        faceVisible: faceVisible,
                        onSelect: { select(role.id) },
-                       onManage: { onManage(role.id) }, onDelete: { onDelete(role.id) })
+                       onManage: { onManage(role.id) },
+                       onDelete: { await onDelete(role.id) },
+                       exitDistance: max(viewportHeight + focusedHeight, 720))
             .frame(maxWidth: .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
     }
     private func select(_ id: String) {
-        withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
             selectedRole = selectedRole == id ? nil : id
         }
         LifeFeedback.selection()
