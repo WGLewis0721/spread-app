@@ -30,6 +30,18 @@ public enum TactilePrecisionMath {
         return horizontal < 0 ? 1 : -1
     }
 
+    /// Switcher-like Life deletion requires an intentional *right* drag in Edit.
+    /// The card visually completes its trip beyond the viewport before the
+    /// existing undoable removal command is sent.
+    public static func cardShouldDismissRight(
+        traveled: Double, projected: Double, exitDistance: Double
+    ) -> Bool {
+        guard traveled.isFinite, projected.isFinite, exitDistance.isFinite,
+              exitDistance > 0, traveled > 0 else { return false }
+        return traveled >= exitDistance * 0.55 ||
+            (traveled >= exitDistance * 0.20 && projected >= exitDistance * 0.95)
+    }
+
     /// The navigation tray dismisses only for a deliberate movement toward its edge,
     /// or a projected flick that starts in that direction. Vertical scroll never closes it.
     public static func drawerShouldClose(
