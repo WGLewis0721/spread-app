@@ -83,8 +83,10 @@ struct LifeRoot: View {
                                 .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 28)
                             }
                             .scrollDismissesKeyboard(.interactively).scrollIndicators(.hidden)
-                            // The stack itself does not clip its exiting cards; the
-                            // viewport supplies the final bottom-of-device boundary.
+                            // Cards pass through the shorter scroll area and only
+                            // disappear at the actual device/window edge. Without
+                            // this the dock boundary prematurely crops full cards.
+                            .scrollClipDisabled()
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
