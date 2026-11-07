@@ -141,7 +141,9 @@ private struct LifeWalletFace: View {
         .clipShape(RoundedRectangle(cornerRadius: 23))
         // The glow MUST sit after the clip. Previously it lived inside the
         // card face and its bright outer shadow was clipped away.
-        .overlay(editingOutline)
+        // Track the face when it reveals actions rather than lighting the
+        // stationary slot left behind.
+        .overlay(editingOutline.offset(x: max(-110, min(110, reveal + translation))))
         .simultaneousGesture(swipe)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
