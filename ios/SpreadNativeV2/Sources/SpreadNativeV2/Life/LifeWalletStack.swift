@@ -118,7 +118,8 @@ private struct LifeWalletFace: View {
     let faceVisible: Bool
     let onSelect: () -> Void
     let onManage: () -> Void
-    let onDelete: () -> Void
+    let onDelete: () async -> Bool
+    let exitDistance: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
@@ -127,6 +128,9 @@ private struct LifeWalletFace: View {
     private var cardHeight: CGFloat { selected ? focusedHeight : closedHeight }
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
+    @State private var upwardTranslation: CGFloat = 0
+    @State private var dismissOffset: CGFloat = 0
+    @State private var dismissing = false
     @GestureState private var dragging = false
     @State private var glow = false
     private var reserved: Double {
@@ -152,6 +156,7 @@ private struct LifeWalletFace: View {
         // Track the face when it reveals actions rather than lighting the
         // stationary slot left behind.
         .overlay(editingOutline.offset(x: max(-110, min(110, reveal + translation))))
+        .offset(y: dismissOffset + upwardTranslation)
         .simultaneousGesture(swipe)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
@@ -160,8 +165,11 @@ private struct LifeWalletFace: View {
                 withAnimation(reduceMotion ? nil : SpreadTactile.snap) { translation = 0 }
             }
         }
-        .onChange(of: editing) { _, _ in reveal = 0; translation = 0 }
-        .onChange(of: selected) { _, _ in reveal = 0; translation = 0 }
+        .onChange(of: editing) { _, active in
+            reveal = 0; translation = 0; upwardTranslation = 0
+            if !active && !dismissing { dismissOffset = 0 }
+        }
+        .onChange(of: selected) { _, _ in reveal = 0; translation = 0; upwardTranslation = 0 }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { reveal = 0; translation = 0 }
         }
@@ -192,7 +200,9 @@ private struct LifeWalletFace: View {
             // VoiceOver can reach swipe-only actions, but only after Edit is pressed.
             if editing {
                 Button("Manage") { if editing { onManage() } }
-                Button("Delete", role: .destructive) { if editing { onDelete() } }
+                Button("Remove Life area", role: .destructive) {
+                    if editing { performDismissal() }
+                }
             }
         }
     }
@@ -202,15 +212,6 @@ private struct LifeWalletFace: View {
     // Keep each SwiftUI builder small enough for the release compiler to solve.
     private var revealedActions: some View {
         HStack(spacing: 0) {
-            Button(role: .destructive) {
-                guard editing, reveal > 0 else { return }
-                onDelete()
-            } label: {
-                Label("Delete", systemImage: "trash").font(.subheadline)
-                    .frame(width: 92, height: cardHeight).foregroundStyle(.white)
-                    .background(Spread.danger, in: RoundedRectangle(cornerRadius: 24))
-            }.accessibilityIdentifier("life-reveal-delete-\(role.id)")
-                .accessibilityHidden(!editing || reveal <= 0).allowsHitTesting(editing && reveal > 0)
             Spacer(minLength: 0)
             Button {
                 guard editing, reveal < 0 else { return }
