@@ -114,6 +114,10 @@ workflows:
 
   spread-ios-upload:
     name: Spread - signed iOS upload
+    inputs:
+      approved_sha:
+        description: Full approved 40-character main commit SHA (required for App Store Connect upload)
+        type: string
     max_build_duration: 120
     instance_type: mac_mini_m2
     integrations:
@@ -125,6 +129,7 @@ workflows:
       vars:
         # App Store Connect numeric Apple ID (not the bundle identifier).
         APP_STORE_APPLE_ID: "6821191009"
+        SPREAD_APPROVED_UPLOAD_SHA: ${{ inputs.approved_sha }}
         VITE_SPREAD_CLOUD_BACKUP: "0"
         VITE_SPREAD_CLOUD_SYNC: "0"
       node: 22

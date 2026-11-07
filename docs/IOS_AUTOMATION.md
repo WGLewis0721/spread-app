@@ -18,7 +18,7 @@
 
 ## Release authorization
 
-Run the **same unsigned verifier on the final reviewed `main` SHA**, then separately authorize `spread-ios-upload` by supplying `SPREAD_APPROVED_UPLOAD_SHA` in the manual Codemagic build variables. Only that upload workflow uses Apple signing credentials; it verifies source SHA and the latest remote `main` before signing/uploading. No workflow automatically submits to App Review or publishes a store release.
+Run the **same unsigned verifier on the final reviewed `main` SHA**, then separately authorize `spread-ios-upload` by entering the required **approved_sha** build input (automatically passed to the `SPREAD_APPROVED_UPLOAD_SHA` guard). Only that upload workflow uses Apple signing credentials; it verifies source SHA and the latest remote `main` before signing/uploading. No workflow automatically submits to App Review or publishes a store release.
 
 The verifier never signs, uploads, changes planner state or enables iCloud. The two cloud flags stay off. The approved upload builds the IPA **once**, avoiding the previous duplicate signed release-candidate build. App Store submission, TestFlight tester assignment and production remain separately controlled.
 

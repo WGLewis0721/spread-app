@@ -40,6 +40,8 @@ jobs:
             commands = verify.fetch("scripts").map { |s| s.fetch("script") }.join("\n")
             abort "No immutable source guard" unless commands.include?("git rev-parse HEAD") && commands.include?("git ls-remote")
             abort "No iOS tests" unless commands.include?("xcodebuild test") && commands.include?("LifeUITests")
+            approved = flows.fetch("spread-ios-upload").fetch("inputs").fetch("approved_sha")
+            abort "No required Codemagic upload SHA input" unless approved.fetch("type") == "string" && !approved.key?("default")
             upload = flows.fetch("spread-ios-upload").fetch("scripts").map { |s| s.fetch("script") }.join("\n")
             abort "Missing explicit upload approval" unless upload.include?("SPREAD_APPROVED_UPLOAD_SHA")
             puts "Codemagic native ownership verified"
