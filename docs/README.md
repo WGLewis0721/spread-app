@@ -13,7 +13,8 @@ Use this as the single index for cross-product documentation. The verified `main
 | Build and candidate verification | [iOS runbook](IOS_RELEASE.md) (older sections explicitly marked historical) |
 | Local-first/iCloud architecture and rollout gates | [iCloud plan](ICLOUD_PLAN.md) |
 | Current native source verification | [Life acceptance record](evidence/life-ios-implementation/acceptance.md), [tactile evidence](evidence/tactile-precision/README.md) (each tied to a specific source SHA) |
-| Repo maintenance and branch housekeeping | [November 7 branch audit](maintenance/2026-11-07-repository-audit.md) |
+| Repo maintenance and branch housekeeping | [November 7 branch audit](maintenance/2026-11-07-repository-audit.md) | 
+| Automated vs manual iOS acceptance | [Workflow execution policy](maintenance/WORKFLOW_RUN_POLICY.md) |
 
 ## Historical material
 

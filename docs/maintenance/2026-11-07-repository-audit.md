@@ -27,3 +27,7 @@ Open examples: PR #145 (Duo), #144 (Week/Month), #130 (Duo acceptance), #118 (wo
 4. Rollback for an erroneously deleted branch is to recreate its ref from the recorded PR head SHA; keep the GitHub PR/commit records.
 
 **Status:** Audit and tooling prepared on a cleanup PR. **No remote branches have been deleted** by this audit. GitHub integration in this session exposes no delete-ref action.
+
+## CI execution reduction
+
+This cleanup PR also keeps CI/unit checks and one source-level iOS build preflight on PRs but changes five costly native UI/visual/Duo matrix workflows to manual `workflow_dispatch`. The [execution policy](WORKFLOW_RUN_POLICY.md) requires reviewed-source acceptance runs before a release decision. This intentionally removes duplicate automatic macOS jobs; the suite bodies/tests are unchanged. Branch protection requirements are not readable through the integration (403) and must be reviewed before merge.

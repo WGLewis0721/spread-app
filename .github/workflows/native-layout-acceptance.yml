@@ -1,12 +1,9 @@
 name: Native layout acceptance
 on:
-  pull_request:
-    paths:
-      - 'ios/**'
-      - 'src/lib/spread/native-v2-*'
-      - '.github/workflows/native-layout-acceptance.yml'
-      - 'scripts/native-simulator*'
+  # Deliberate full-device acceptance only. Select the reviewed source ref from Actions.
+  # Expensive macOS UI matrices are not a per-commit PR preflight.
   workflow_dispatch:
+
 permissions:
   contents: read
 concurrency:

@@ -2,6 +2,8 @@
 
 # Spread — Native iOS Brand Board (owner-approved 2026-11-03)
 
+> Summary: Current single-Wallet/Life visual and interaction authority. Life's November 6 card focus, Edit reveal, swipe dismissal and 1.75× presentation motion supersede the older directions retained below. Classic and the authoritative planner model are preserved.
+
 > Part of the [Spread design brain](../README.md).
 
 > November 6 recording-review amendment: Life and Classic share one visual language, original artwork, semantic tokens and motion vocabulary while retaining their different arrangements. The [shared polish contract](../specs/2026-11-06-life-classic-polish.md) and separate Classic/Life video specifications document this newer owner direction. It supersedes Life's independent gray/black treatment; it does not authorize changes to Classic's layout or planner behavior.
