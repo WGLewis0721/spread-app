@@ -89,7 +89,13 @@ struct LifeRoot: View {
                     }
                 }
                 .accessibilityHidden(navigationOpen && geometry.size.width < 820)
-                if navigationOpen && geometry.size.width < 820 { navigation(width: geometry.size.width) }
+                if geometry.size.width < 820 {
+                    // Always mounted. Changing the offset moves the tray both
+                    // IN and OUT; removing the view early used to cut exit short.
+                    navigation(width: geometry.size.width)
+                        .allowsHitTesting(navigationOpen)
+                        .accessibilityHidden(!navigationOpen)
+                }
             }
             .onChange(of: geometry.size.width) { _, newWidth in
                 if newWidth >= 820 { navigationOpen = false }
@@ -379,7 +385,7 @@ struct LifeRoot: View {
         Button {
             LifeFeedback.selection()
             navigationDrag = 0
-            withAnimation(reduceMotion ? nil : SpreadTactile.glide) { navigationOpen = true }
+            withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) { navigationOpen = true }
         } label: {
             VStack(spacing: 2) {
                 SpreadIcon(name: destination.icon, size: 22)
@@ -416,7 +422,7 @@ struct LifeRoot: View {
         let trayWidth = min(CGFloat(300), max(CGFloat(0), width - CGFloat(32)))
         let dragProgress = min(1.0, Double(abs(navigationDrag) / max(CGFloat(1), trayWidth)))
         return ZStack(alignment: crownRight ? .leading : .trailing) {
-            Color.black.opacity(0.35 * (1 - dragProgress))
+            Color.black.opacity(navigationOpen ? 0.35 * (1 - dragProgress) : 0)
                 .ignoresSafeArea()
                 .onTapGesture { closeNavigation() }.accessibilityHidden(true)
             VStack(spacing: 0) {
@@ -469,9 +475,9 @@ struct LifeRoot: View {
             .frame(width: trayWidth).frame(maxHeight: .infinity)
             .background(LifePalette.surface)
             .shadow(color: .black.opacity(0.3125), radius: 20, x: crownRight ? 8.75 : -8.75)
-            .offset(x: navigationDrag)
+            .offset(x: navigationDrag + (navigationOpen ? 0 : (crownRight ? -trayWidth : trayWidth)))
             .simultaneousGesture(navigationPan(width: trayWidth))
-            .transition(.move(edge: crownRight ? .leading : .trailing).combined(with: .opacity))
+            .animation(reduceMotion ? nil : SpreadTactile.traySlide, value: navigationOpen)
             .accessibilityAddTraits(.isModal)
             .accessibilityAction(.escape) { closeNavigation() }
         }
@@ -482,16 +488,15 @@ struct LifeRoot: View {
             destination = value
             editing = false
         }
-        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) {
             navigationOpen = false
-            navigationDrag = 0
         }
     }
 
     private func closeNavigation() {
         // Keep the finger's last offset during dismissal, so the tray never
         // jumps backward before leaving the screen. The opener resets it.
-        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) {
             navigationOpen = false
         }
     }
