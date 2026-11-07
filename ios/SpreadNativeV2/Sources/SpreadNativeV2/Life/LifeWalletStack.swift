@@ -334,47 +334,47 @@ private struct LifeWalletFace: View {
                 guard editing, !dismissing else { return }
                 let horizontal = value.translation.width
                 let vertical = value.translation.height
+                guard abs(horizontal) > abs(vertical) * 1.5 else { return }
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
-                if vertical < 0 && abs(vertical) > abs(horizontal) * 1.35 {
-                    // Match App Switcher's direct upward card manipulation.
-                    withTransaction(transaction) {
-                        upwardTranslation = max(-exitDistance, vertical)
-                        translation = 0
-                        reveal = 0
-                    }
-                } else if abs(horizontal) > abs(vertical) * 1.5 {
-                    // Left swipe reveals Manage; Delete requires an upward fling.
-                    withTransaction(transaction) {
-                        translation = min(0, max(-100, horizontal))
-                        upwardTranslation = 0
-                    }
+                withTransaction(transaction) {
+                    // Preserve the original directions: left = Manage, right =
+                    // slide the entire card off screen to remove it.
+                    translation = horizontal > 0
+                        ? min(exitDistance, horizontal)
+                        : max(-110, horizontal)
                 }
             }
             .onEnded { value in
                 guard editing, !dismissing else { return }
                 let horizontal = value.translation.width
                 let vertical = value.translation.height
-                if vertical < 0 && abs(vertical) > abs(horizontal) * 1.35 {
-                    if -vertical > cardHeight * 0.45 ||
-                        -value.predictedEndTranslation.height > cardHeight * 1.05 {
+                guard abs(horizontal) > abs(vertical) * 1.5 else {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                        translation = 0
+                    }
+                    return
+                }
+                if horizontal > 0 {
+                    let traveled = max(0, reveal + horizontal)
+                    let projected = max(0, reveal + value.predictedEndTranslation.width)
+                    // Require a decisive gesture. The release spring completes
+                    // the visible offscreen travel, then the existing undoable
+                    // planner command deletes the Life area without a prompt.
+                    if traveled >= exitDistance * 0.55 ||
+                        (traveled >= exitDistance * 0.20 && projected >= exitDistance * 0.95) {
                         performDismissal()
                     } else {
                         withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
-                            upwardTranslation = 0
+                            reveal = 0
+                            translation = 0
                         }
                     }
                     return
                 }
-                guard abs(horizontal) > abs(vertical) * 1.5 else {
-                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
-                        translation = 0; upwardTranslation = 0
-                    }
-                    return
-                }
                 let target = TactilePrecisionMath.revealTarget(
-                    current: Double(reveal), translation: Double(min(0, horizontal)),
-                    projected: Double(min(0, value.predictedEndTranslation.width)),
+                    current: Double(reveal), translation: Double(horizontal),
+                    projected: Double(value.predictedEndTranslation.width),
                     threshold: 34, stop: 92)
                 let manageTarget = min(0, target)
                 if manageTarget < 0 && CGFloat(manageTarget) != reveal {
@@ -390,11 +390,11 @@ private struct LifeWalletFace: View {
     private func performDismissal() {
         guard editing, !dismissing else { return }
         dismissing = true
-        reveal = 0
         LifeFeedback.reveal(delete: true)
         withAnimation(reduceMotion ? nil : SpreadTactile.cardDismiss) {
-            upwardTranslation = 0
-            dismissOffset = -max(exitDistance, cardHeight * 3)
+            reveal = 0
+            translation = 0
+            dismissOffset = exitDistance
         }
         Task { @MainActor in
             if !reduceMotion {
@@ -402,7 +402,7 @@ private struct LifeWalletFace: View {
             }
             let saved = await onDelete()
             if !saved {
-                // Failed persistence restores the visible card, not a ghost slot.
+                // Rejection or storage failure restores the real card.
                 withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
                     dismissOffset = 0
                 }
