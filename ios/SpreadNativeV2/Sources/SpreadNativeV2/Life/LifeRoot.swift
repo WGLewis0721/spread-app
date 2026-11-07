@@ -64,6 +64,27 @@ struct LifeRoot: View {
                     VStack(spacing: 0) {
                     header
                     if let snapshot = planner.snapshot {
+                        if destination == .week {
+                            // Life Week owns its task scroll so the calendar remains pinned.
+                            // Other destinations retain the full-viewport Wallet scroll and exits.
+                            VStack(alignment: .leading, spacing: 12) {
+                                if let notice = planner.recoveryNotice {
+                                    Text(notice).font(.body)
+                                    Button("Backup and restore", action: onMore).frame(minHeight: 44)
+                                }
+                                if planner.saveFailure != nil {
+                                    Label("Changes are not saved. Open More to back up your plan.",
+                                          systemImage: "exclamationmark.triangle")
+                                        .font(.body).foregroundStyle(Spread.danger)
+                                    Button("More", action: onMore).frame(minHeight: 44)
+                                }
+                                surface(snapshot, viewportHeight: geometry.size.height,
+                                        viewportWidth: geometry.size.width)
+                            }
+                            .frame(maxWidth: 700, maxHeight: .infinity, alignment: .top)
+                            .frame(maxWidth: .infinity, alignment: .top)
+                            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+                        } else {
                         ScrollViewReader { proxy in
                             ScrollView {
                                 VStack(alignment: .leading, spacing: 20) {
@@ -89,6 +110,7 @@ struct LifeRoot: View {
                             // this the dock boundary prematurely crops full cards.
                             .scrollClipDisabled()
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
+                        }
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
                     } else {
@@ -117,9 +139,9 @@ struct LifeRoot: View {
         }
         .onChange(of: planner.state?.envelope.profileId) { _, _ in
             focusedRole = nil; editing = false; localSheet = nil; pendingTask = nil
-            hoursSelectedRole = nil; weekSelectedRole = nil
+            hoursSelectedRole = nil; weekMonthExpanded = false; weekMonthAnchor = nil
         }
-        .onChange(of: planner.snapshot?.weekKey) { _, _ in focusedRole = nil; editing = false; localSheet = nil }
+        .onChange(of: planner.snapshot?.weekKey) { _, _ in editing = false; localSheet = nil }
         .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
         .onChange(of: navigationOpen) { _, open in
             navigationFocused = open
@@ -168,7 +190,8 @@ struct LifeRoot: View {
                              onNewRole: onNewRole,
                              selectedRole: $focusedRole, expanded: $weekMonthExpanded,
                              monthAnchor: $weekMonthAnchor, todaySelectionTick: lifeTodayTick)
-            }.accessibilityIdentifier("life-week-page")
+            }.frame(maxHeight: .infinity, alignment: .top)
+                .accessibilityIdentifier("life-week-page")
         }
     }
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {

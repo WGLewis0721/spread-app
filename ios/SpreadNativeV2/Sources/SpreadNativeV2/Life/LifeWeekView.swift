@@ -65,18 +65,36 @@ struct LifeWeekView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            calendarSurface
+        VStack(alignment: .leading, spacing: 12) {
             if expanded {
-                Text("Choose a date to return to your week.")
-                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                    .accessibilityIdentifier("life-month-help")
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        calendarSurface
+                        Text("Choose a date to return to your week.")
+                            .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                            .accessibilityIdentifier("life-month-help")
+                    }
+                    .padding(.bottom, 16)
+                }
+                .scrollIndicators(.hidden)
+                .accessibilityIdentifier("life-month-scroll")
             } else {
-                dayWorkspace
-                    .id(date)
-                    .transition(dayTransition)
+                // Pinned overview: only the day workspace scrolls. Never let a long
+                // task list push the week's seven dates offscreen.
+                calendarSurface
+                ScrollView {
+                    dayWorkspace
+                        .id(date)
+                        .transition(dayTransition)
+                        .padding(.bottom, 24)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
+                .accessibilityIdentifier("life-week-day-scroll")
             }
         }
+        .frame(maxHeight: .infinity, alignment: .top)
         .foregroundStyle(LifePalette.ink)
         .accessibilityIdentifier("life-week-page")
         .onAppear { restoreProfile() }
