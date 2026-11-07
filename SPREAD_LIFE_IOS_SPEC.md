@@ -76,9 +76,9 @@ The existing More picker stays unchanged. Selecting `Week + Month (preview)` ope
 
 Life mode contains Life, Hours and Week. A compact overlay supplies these destinations. The bottom Crown retains previous/next week and left/right placement. Store that placement as a native presentation preference. Do not add its preference to More; use a Life-local Crown action menu with explicit `Move Crown left` / `Move Crown right` actions.
 
-Life shows the real responsibility stack. Tapping a card leaves that card in focus while the rest drop away. Put tasks and their details below the card, outside its face. Tapping it again or `All Life areas` restores the stack. Keep focus and selection understandable to VoiceOver when cards disappear.
+Life shows the real responsibility stack. Tapping a card leaves that card in focus while the rest drop away. Put tasks and their details below the card, outside its face. Tapping the focused card's chevron again restores the stack; there is no redundant `All Life areas` button. Nonselected cards stay fully rendered and visibly travel through the bottom of the device viewport rather than clipping at the stack boundary. Keep focus and selection understandable to VoiceOver when cards disappear.
 
-Only the explicit pencil/Edit button enters editing. Normal card tap opens/closes details; long press must never enter editing or show destructive actions. Keep the restrained role-colored glow and rigid card geometry. While editing, swipe left to reveal Manage and right to reveal Delete. At rest or outside Edit, neither action is rendered. Offer the same actions as named buttons. Show Undo/Redo after edits, disable unavailable actions, and group one gesture or accepted edit into one history step. Retain current production-wide name, symbol, color and deletion scope unless the owner separately chooses week-only management. A delete confirmation must explicitly say `from all weeks`; never send the global delete command for an action labeled `this week`.
+**November 6 owner amendment (supersedes earlier horizontal Delete reveal and confirmation):** The only Edit button lives in the adaptive side navigation tray/rail. Tap/long-press on cards cannot enter Edit. While editing, a **left swipe reveals Manage**; a deliberate **rightward swipe slides the whole card completely off the device edge** and executes the existing all-weeks responsibility removal with **no confirmation**, followed by accessible Undo. A failed commit restores the card. No checkboxes, bulk delete, red Delete reveal or alternate vertical delete gesture. Show Undo/Redo after edits; one accepted deletion is one undoable history step. Preserve stored data and task content during Undo.
 
 Hours uses the approved central orbit. The center is the week's planning capacity. Arcs show assigned Life budgets; the remaining gap shows unassigned time. Tap the number to pause at its current angle and separate arcs. Tap again to regroup. Flick up/down changes the capacity draft by one hour. Hold and drag farther away to change it faster. Select a Life area, then circle counterclockwise to add and clockwise to subtract, in half-hour steps. Preserve the prototype's 15-degree detent and accelerated-drag curve as the initial native calibration. Keep explicit add/return buttons and an editable capacity field.
 
@@ -141,7 +141,7 @@ Keep these definitions consistent: weekly planning hours is total capacity; assi
 | --- | --- |
 | Card takes focus; date/area changes | One selection tick when the selection actually changes. |
 | Edit begins/ends | Existing rigid/soft edit cue, once per transition. Show swipe instructions. |
-| Swipe reaches Manage/Delete reveal | One light/medium snap cue at the threshold; none while holding it there. |
+| Edit swipe reaches Manage or a completed rightward card dismissal | One bounded cue for Manage, one on committed dismissal; never on every frame. |
 | Capacity/arc crosses a valid draft detent | One quiet selection tick. Rate-limit accelerated changes to at most 8 ticks/second. The changing value labels this as a draft. |
 | Finger reaches a limit | One warning for that continuous contact, plus the specific limit message. No repeated buzzing. |
 | Gesture commits | One light confirmation after the store accepts the final value. A failed write keeps the draft and error visible. |
@@ -157,7 +157,7 @@ Use the available safe-area width, not a device-name check. Calibrate against th
 
 Animate focus, separation and calendar expansion with interruptible native transitions. Start with the prototype's short transition timings and slow orbit. Stop idle animation offscreen, in the background, during interaction and with Reduce Motion. Respect Reduce Transparency, Increase Contrast, Bold Text and dark appearance. Scale the radius and control placement for large text instead of clipping the number or instructions. Keep original artwork resources; do not add competing motion to the orbit.
 
-Provide 44-point targets, named VoiceOver actions for Manage/Delete, adjustable accessibility values for capacity and budgets, focus restoration when returning to the stack, and labels for attachments. Offer buttons, keyboard arrows and accessible increment/decrement actions for every gesture. Do not hijack system back gestures or vertical scrolling. Haptics never carry information by themselves.
+Provide 44-point targets, Edit-only named VoiceOver actions for Manage/Remove Life area with Undo, adjustable accessibility values for capacity and budgets, focus restoration when returning to the stack, and labels for attachments. Offer buttons, keyboard arrows and accessible increment/decrement actions for every gesture. Do not hijack system back gestures or vertical scrolling. Haptics never carry information by themselves.
 
 ## 7. Technical approach
 
@@ -208,7 +208,7 @@ Files and notes stay on this device unless the user explicitly exports through a
 7. Given a weekly priority, Find time previews only eligible allocations, explains a shortage and never takes another area's hours. Applying it is atomic and undoable.
 8. Given any task entry point, typing an outline prefix creates an editable outline. Formatting, nesting, checklists, links, old tables/photos and text history survive close/reopen and relaunch without content loss.
 9. Given an imported file, its actual bytes survive relaunch and an app update, and export/import restores it. Cancel, low storage, unavailable provider and unsupported playback leave a clear recovery path. Profile files never appear in another profile accidentally.
-10. Given pencil editing, left/right reveals keep card geometry stable. Accepted edits have contextual Undo/Redo. Deletion confirmation states its actual scope, and history restores the correct tasks/hours.
+10. Given Edit from the side tray, a left swipe reveals Manage and a decisive right swipe moves the entire card offscreen and deletes once without confirmation; Undo restores the card, its tasks and hours. Normal tap/press and a cancelled swipe do not delete.
 11. Given large type, VoiceOver or reduced-motion settings, every control remains readable and operable without requiring a drag, animation or haptic. Crown placement persists on either side.
 12. Given the exact signed candidate, offline planning, force-quit/relaunch and in-place upgrade preserve the existing profile and new content. Internal TestFlight installation on iPhone 15 is verified separately from upload success.
 
