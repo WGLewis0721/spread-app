@@ -21,6 +21,7 @@ struct LifeWalletStack: View {
     let editing: Bool
     var day: String? = nil
     var viewportHeight: CGFloat = 800
+    var viewportWidth: CGFloat = 393
     let onManage: (String) -> Void
     let onDelete: (String) async -> Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -97,7 +98,7 @@ struct LifeWalletStack: View {
                        onSelect: { select(role.id) },
                        onManage: { onManage(role.id) },
                        onDelete: { await onDelete(role.id) },
-                       exitDistance: max(viewportHeight + focusedHeight, 720))
+                       exitDistance: max(viewportWidth + 32, 480))
             .frame(maxWidth: .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
     }
@@ -128,7 +129,6 @@ private struct LifeWalletFace: View {
     private var cardHeight: CGFloat { selected ? focusedHeight : closedHeight }
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
-    @State private var upwardTranslation: CGFloat = 0
     @State private var dismissOffset: CGFloat = 0
     @State private var dismissing = false
     @GestureState private var dragging = false
@@ -146,7 +146,7 @@ private struct LifeWalletFace: View {
             // Keep the action layer structurally stable through the gesture.
             // A conditional insertion here cancels the parent swipe recognizer.
             revealedActions
-                .opacity(editing && abs(reveal + translation) > 1 ? 1 : 0)
+                .opacity(editing && reveal + translation < -1 ? 1 : 0)
                 .allowsHitTesting(editing && reveal != 0)
             selectionButton
         }
@@ -155,8 +155,7 @@ private struct LifeWalletFace: View {
         // card face and its bright outer shadow was clipped away.
         // Track the face when it reveals actions rather than lighting the
         // stationary slot left behind.
-        .overlay(editingOutline.offset(x: max(-110, min(110, reveal + translation))))
-        .offset(y: dismissOffset + upwardTranslation)
+        .overlay(editingOutline.offset(x: cardOffset))
         .simultaneousGesture(swipe)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
@@ -166,10 +165,10 @@ private struct LifeWalletFace: View {
             }
         }
         .onChange(of: editing) { _, active in
-            reveal = 0; translation = 0; upwardTranslation = 0
+            reveal = 0; translation = 0
             if !active && !dismissing { dismissOffset = 0 }
         }
-        .onChange(of: selected) { _, _ in reveal = 0; translation = 0; upwardTranslation = 0 }
+        .onChange(of: selected) { _, _ in reveal = 0; translation = 0 }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { reveal = 0; translation = 0 }
         }
@@ -208,6 +207,10 @@ private struct LifeWalletFace: View {
     }
 
     private var roleColor: Color { Color(hex: role.color) }
+    // Left reveals Manage. Right follows the finger toward full-width dismissal.
+    private var cardOffset: CGFloat {
+        max(-110, min(exitDistance, reveal + translation + dismissOffset))
+    }
 
     // Keep each SwiftUI builder small enough for the release compiler to solve.
     private var revealedActions: some View {
@@ -232,7 +235,7 @@ private struct LifeWalletFace: View {
             .background(cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected || editing ? 0.85 : 0.48), lineWidth: 1))
-            .offset(x: max(-110, min(110, reveal + translation)))
+            .offset(x: cardOffset)
     }
 
     private var cardBackground: some View {
