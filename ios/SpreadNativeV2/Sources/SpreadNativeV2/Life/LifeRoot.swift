@@ -7,13 +7,12 @@ enum LifeDestination: String, CaseIterable, Identifiable {
     var icon: String { self == .life ? "icon-spread-list" : self == .hours ? "icon-rollover" : "icon-week" }
 }
 private enum LifeLocalSheet: Identifiable {
-    case manage(String), reserve(String), priority(String), delete(String), addTask, help
+    case manage(String), reserve(String), priority(String), addTask, help
     var id: String {
         switch self {
         case .manage(let id): return "manage-" + id
         case .reserve(let id): return "reserve-" + id
         case .priority(let id): return "priority-" + id
-        case .delete(let id): return "delete-" + id
         case .addTask: return "add-task"
         case .help: return "help"
         }
@@ -54,7 +53,12 @@ struct LifeRoot: View {
             ZStack(alignment: .leading) {
                 LifePalette.canvas.ignoresSafeArea()
                 HStack(spacing: 0) {
-                    if geometry.size.width >= 820 { compactRail }
+                    if geometry.size.width >= 820 {
+                        VStack(spacing: 8) {
+                            compactRail
+                            if destination == .life { editControl }
+                        }
+                    }
                     VStack(spacing: 0) {
                     header
                     if let snapshot = planner.snapshot {
@@ -71,12 +75,17 @@ struct LifeRoot: View {
                                             .font(.body).foregroundStyle(Spread.danger)
                                         Button("More", action: onMore).frame(minHeight: 44)
                                     }
-                                    surface(snapshot)
+                                    surface(snapshot, viewportHeight: geometry.size.height,
+                                            viewportWidth: geometry.size.width)
                                 }
                                 .frame(maxWidth: 700).frame(maxWidth: .infinity)
                                 .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 28)
                             }
                             .scrollDismissesKeyboard(.interactively).scrollIndicators(.hidden)
+                            // Cards pass through the shorter scroll area and only
+                            // disappear at the actual device/window edge. Without
+                            // this the dock boundary prematurely crops full cards.
+                            .scrollClipDisabled()
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
@@ -86,7 +95,13 @@ struct LifeRoot: View {
                     }
                 }
                 .accessibilityHidden(navigationOpen && geometry.size.width < 820)
-                if navigationOpen && geometry.size.width < 820 { navigation(width: geometry.size.width) }
+                if geometry.size.width < 820 {
+                    // Always mounted. Changing the offset moves the tray both
+                    // IN and OUT; removing the view early used to cut exit short.
+                    navigation(width: geometry.size.width)
+                        .allowsHitTesting(navigationOpen)
+                        .accessibilityHidden(!navigationOpen)
+                }
             }
             .onChange(of: geometry.size.width) { _, newWidth in
                 if newWidth >= 820 { navigationOpen = false }
@@ -136,9 +151,9 @@ struct LifeRoot: View {
             }.accessibilityLabel("More").accessibilityIdentifier("life-more")
         }.padding(.horizontal, 16).padding(.vertical, 4)
     }
-    @ViewBuilder private func surface(_ snapshot: PlannerSnapshot) -> some View {
+    @ViewBuilder private func surface(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         switch destination {
-        case .life: life(snapshot)
+        case .life: life(snapshot, viewportHeight: viewportHeight, viewportWidth: viewportWidth)
         case .hours:
             LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { localSheet = .help }, selectedRole: $hoursSelectedRole)
         case .week:
@@ -147,37 +162,24 @@ struct LifeRoot: View {
                 Text("One day at a time.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 LifeWeekView(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask,
                              onReserve: { localSheet = .reserve($0) },
-                             onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) },
+                             onManage: { localSheet = .manage($0) }, onDelete: { _ in },
+
                              selectedRole: $weekSelectedRole)
             }.accessibilityIdentifier("life-week-page")
         }
     }
-    private func life(_ snapshot: PlannerSnapshot) -> some View {
+    private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                    Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                }
-                Spacer(minLength: 8)
-                Button { focusedRole = nil; editing.toggle() } label: {
-                    Group {
-                        if editing { Text("Done").font(.subheadline) }
-                        else { SpreadIcon(name: "icon-edit", size: 22) }
-                    }.frame(minWidth: 44, minHeight: 44).background(LifePalette.surface, in: Capsule())
-                }.accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
-                    .accessibilityIdentifier("life-edit")
-            }.padding(.horizontal, 4)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
             Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
                 .accessibilityLabel("Adjust weekly planning hours")
             if editing {
-                Text("Swipe left to manage. Swipe right to delete.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                if historyVisible { history }
-            }
-            if focusedRole != nil && !editing {
-                Button { focusedRole = nil } label: {
-                    Label("All Life areas", systemImage: "chevron.left").frame(minHeight: 44)
-                }
+                Text("Swipe left to manage. Slide right offscreen to delete. Undo restores.")
+                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                if planner.undoId != nil || planner.redoId != nil { history }
             }
             if snapshot.roles.isEmpty {
                 Text("Name the responsibilities you want to plan for.").font(.body)
@@ -185,7 +187,19 @@ struct LifeRoot: View {
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole, editing: editing,
-                                onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) })
+                                viewportHeight: viewportHeight,
+                                viewportWidth: viewportWidth,
+                                onManage: { localSheet = .manage($0) },
+                                onDelete: { id in
+                                    let ok = await planner.send(["type": "removeLifeRole", "roleId": id])
+                                    if ok {
+                                        LifeFeedback.accepted()
+                                        if focusedRole == id { focusedRole = nil }
+                                        historyVisible = true
+                                    }
+                                    return ok
+                                })
+                    .zIndex(2)
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
                 details(role, snapshot: snapshot)
@@ -376,11 +390,40 @@ struct LifeRoot: View {
             if crownRight { addTaskButton }
         }.fixedSize(horizontal: true, vertical: false)
     }
+    /// Edit lives in the navigation tray/rail, never above the Life cards.
+    /// It is the only way to enter Edit mode.
+    private var editControl: some View {
+        Button {
+            guard destination == .life else { return }
+            focusedRole = nil
+            editing.toggle()
+            closeNavigation()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: editing ? "checkmark.circle" : "pencil")
+                    .font(.system(size: 21, weight: .medium))
+                if navigationOpen {
+                    Text(editing ? "Done editing" : "Edit Life areas")
+                        .font(.subheadline.weight(.medium))
+                } else if navigationExpanded {
+                    Text(editing ? "Done" : "Edit").font(.caption)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 52,
+                   alignment: navigationOpen ? .leading : .center)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.spreadPress)
+        .padding(.horizontal, 10)
+        .accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
+        .accessibilityIdentifier("life-edit")
+    }
+
     private var trayButton: some View {
         Button {
             LifeFeedback.selection()
             navigationDrag = 0
-            withAnimation(reduceMotion ? nil : SpreadTactile.glide) { navigationOpen = true }
+            withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) { navigationOpen = true }
         } label: {
             VStack(spacing: 2) {
                 SpreadIcon(name: destination.icon, size: 22)
@@ -417,7 +460,7 @@ struct LifeRoot: View {
         let trayWidth = min(CGFloat(300), max(CGFloat(0), width - CGFloat(32)))
         let dragProgress = min(1.0, Double(abs(navigationDrag) / max(CGFloat(1), trayWidth)))
         return ZStack(alignment: crownRight ? .leading : .trailing) {
-            Color.black.opacity(0.35 * (1 - dragProgress))
+            Color.black.opacity(navigationOpen ? 0.35 * (1 - dragProgress) : 0)
                 .ignoresSafeArea()
                 .onTapGesture { closeNavigation() }.accessibilityHidden(true)
             VStack(spacing: 0) {
@@ -442,6 +485,7 @@ struct LifeRoot: View {
                             .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
+                    if destination == .life { editControl }
                     history
                     Menu("Crown position") {
                         Button("Move Crown left") { crownRight = false }
@@ -470,9 +514,9 @@ struct LifeRoot: View {
             .frame(width: trayWidth).frame(maxHeight: .infinity)
             .background(LifePalette.surface)
             .shadow(color: .black.opacity(0.3125), radius: 20, x: crownRight ? 8.75 : -8.75)
-            .offset(x: navigationDrag)
+            .offset(x: navigationDrag + (navigationOpen ? 0 : (crownRight ? -trayWidth : trayWidth)))
             .simultaneousGesture(navigationPan(width: trayWidth))
-            .transition(.move(edge: crownRight ? .leading : .trailing).combined(with: .opacity))
+            .animation(reduceMotion ? nil : SpreadTactile.traySlide, value: navigationOpen)
             .accessibilityAddTraits(.isModal)
             .accessibilityAction(.escape) { closeNavigation() }
         }
@@ -483,16 +527,15 @@ struct LifeRoot: View {
             destination = value
             editing = false
         }
-        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) {
             navigationOpen = false
-            navigationDrag = 0
         }
     }
 
     private func closeNavigation() {
         // Keep the finger's last offset during dismissal, so the tray never
         // jumps backward before leaving the screen. The opener resets it.
-        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+        withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) {
             navigationOpen = false
         }
     }
@@ -546,7 +589,6 @@ struct LifeRoot: View {
         case .manage(let id): LifeManageSheet(planner: planner, roleId: id)
         case .reserve(let id): LifeReserveSheet(planner: planner, roleId: id)
         case .priority(let id): LifePrioritySheet(planner: planner, roleId: id)
-        case .delete(let id): LifeDeleteSheet(planner: planner, roleId: id)
         case .help: LifeGestureHelp()
         case .addTask:
             SpreadSheetStack {
