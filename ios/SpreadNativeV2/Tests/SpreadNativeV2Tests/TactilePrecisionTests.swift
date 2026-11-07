@@ -82,6 +82,32 @@ final class TactilePrecisionTests: XCTestCase {
         XCTAssertEqual(TactilePrecisionMath.daySwipeDirection(horizontal: -24, vertical: 90, projected: -160), 0)
     }
 
+    func testLifeRightSwipeRequiresDeliberateOffscreenIntent() {
+        XCTAssertFalse(TactilePrecisionMath.cardShouldDismissRight(
+            traveled: 0, projected: 900, exitDistance: 480))
+        XCTAssertFalse(TactilePrecisionMath.cardShouldDismissRight(
+            traveled: 90, projected: 450, exitDistance: 480))
+        XCTAssertFalse(TactilePrecisionMath.cardShouldDismissRight(
+            traveled: -270, projected: -900, exitDistance: 480))
+        XCTAssertFalse(TactilePrecisionMath.cardShouldDismissRight(
+            traveled: 110, projected: 400, exitDistance: 480))
+        XCTAssertTrue(TactilePrecisionMath.cardShouldDismissRight(
+            traveled: 265, projected: 265, exitDistance: 480))
+        XCTAssertTrue(TactilePrecisionMath.cardShouldDismissRight(
+            traveled: 120, projected: 470, exitDistance: 480))
+        XCTAssertFalse(TactilePrecisionMath.cardShouldDismissRight(
+            traveled: .nan, projected: 900, exitDistance: 480))
+        XCTAssertFalse(TactilePrecisionMath.cardShouldDismissRight(
+            traveled: 400, projected: 900, exitDistance: 0))
+    }
+
+    func testEmphasizedWalletTrayAndCardExitDurations() {
+        XCTAssertEqual(SpreadTactile.showTravel, 1.75, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.walletFocusDuration, 0.735, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.trayDuration, 0.595, accuracy: 0.00001)
+        XCTAssertEqual(SpreadTactile.cardDismissDuration, 0.700, accuracy: 0.00001)
+    }
+
     func testDrawerGlideRespectsEdgeFlickAndVerticalScrolling() {
         XCTAssertTrue(TactilePrecisionMath.drawerShouldClose(
             horizontal: -120, vertical: 6, projected: -180, width: 300, onLeft: true))
