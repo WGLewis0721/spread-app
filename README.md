@@ -1,10 +1,12 @@
-[Live site](https://thespreadapp.com/) · [GitHub Pages mirror](https://wglewis0721.github.io/spread-app/) · [Design docs](docs/design/README.md) · [App Store release plan](APP_STORE_RELEASE_PLAN.md)
-
-**Life iOS implementation:** start with the root [engineer handoff](SPREAD_LIFE_IOS_HANDOFF.md), [spec](SPREAD_LIFE_IOS_SPEC.md) and [step-by-step checklist](SPREAD_LIFE_IOS_CHECKLIST.md). The [approved runnable reference](tools/life-reference/README.md) is included for implementation and comparison. This is an opt-in native implementation plan; More/Settings and Classic remain unchanged.
+[Live site](https://thespreadapp.com/) · [Documentation](docs/README.md) · [Design system](docs/design/README.md) · [Release plan](APP_STORE_RELEASE_PLAN.md)
 
 # Spread
 
-**Current design entrypoint:** [central UI/UX map](docs/design/README.md). **Native SwiftUI:** [owner-approved Wallet-style Stack brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and [iOS 27 behavior audit](docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md), implemented in draft [PR #127](https://github.com/WGLewis0721/spread-app/pull/127) stacked on Duo fixes in [PR #126](https://github.com/WGLewis0721/spread-app/pull/126). Older five-mode migration specifications are historical. No release is authorized by these docs.
+Spread is a local-first weekly planner: **Responsibilities → Hours → Week → Tasks**. The existing planner store remains authoritative across the React web UI and native iOS presentation.
+
+**Current source baseline (November 7, 2026):** `main` includes the native SwiftUI/WebKit foundation (#114), Wallet-style card work (#127), Life implementation (#146), tactile precision (#150), and subsequent Life polish through #158. These are merged *source changes*, not proof that a particular signed iOS binary or physical-device acceptance has passed. Verify candidate-specific evidence before any release claim.
+
+**Start here:** [documentation map](docs/README.md) · [current design](docs/design/README.md) · [native acceptance evidence](docs/evidence/life-ios-implementation/acceptance.md) · [iOS runbook](docs/IOS_RELEASE.md). The older [Life handoff](SPREAD_LIFE_IOS_HANDOFF.md), [spec](SPREAD_LIFE_IOS_SPEC.md), and [checklist](SPREAD_LIFE_IOS_CHECKLIST.md) are implementation provenance, **not instructions to re-run an already merged PR**.
 
 The weekly role spread. Roles first. Hours second. Tasks last.
 
@@ -14,17 +16,15 @@ Spread is a local-first weekly planner. You name the responsibilities in your li
 
 - **Vercel** builds every push to `main` and serves production at [thespreadapp.com](https://thespreadapp.com/). The previous `spread-app-teal.vercel.app` address remains an alternate production hostname. Branches get preview deployments.
 - **GitHub Pages** builds `dist-pages` from `main` with `scripts/export-pages.mjs` and serves [wglewis0721.github.io/spread-app](https://wglewis0721.github.io/spread-app/). Do not edit the compiled files by hand.
-- **iPhone/App Store (planned):** package the same proven Vite/React planner with Capacitor. Spread 1.0 stays local-first, requires no account, and is sold as a complete paid App Store app. See [APP_STORE_RELEASE_PLAN.md](APP_STORE_RELEASE_PLAN.md).
+- **iPhone/iPad:** Capacitor with native SwiftUI/Classic/Life work committed to `main`. Build, signing, App Store status, supported-device claims, and hardware acceptance must be checked against the exact candidate; consult the [release plan](APP_STORE_RELEASE_PLAN.md) and [runbook](docs/IOS_RELEASE.md).
 
 Work goes on a branch, through a pull request, into `main`.
 
-## Spread 2.0 native checkpoint — November 3, 2026
+## Native implementation and verification
 
-[PR #114](https://github.com/WGLewis0721/spread-app/pull/114) is merged at `6aa2355` and deployed to web production. It adds the live SwiftUI/WebKit planner, guarded commands against the existing TypeScript engine, native task/content/hour workflows, five Chalkboard layouts, the metallic week Crown and persistence/recovery protections. It introduces no second writable planner database.
+Earlier November 3 native acceptance notes describe an **older candidate**, not today's repository head. PRs [#114](https://github.com/WGLewis0721/spread-app/pull/114), [#127](https://github.com/WGLewis0721/spread-app/pull/127), [#146](https://github.com/WGLewis0721/spread-app/pull/146), [#150](https://github.com/WGLewis0721/spread-app/pull/150) and [#158](https://github.com/WGLewis0721/spread-app/pull/158) are merged. The [Life evidence ledger](docs/evidence/life-ios-implementation/acceptance.md) and [tactile evidence](docs/evidence/tactile-precision/README.md) record what was demonstrated **on their recorded SHAs**, including unverified physical-device gates. Do not carry historical NO-GO or success statements forward as a current App Store Connect status.
 
-**Native release remains NO-GO:** main CI passes and the 820/1024-point native layout jobs pass, but the 390-point accessibility audit reports clipped text and the latest main installed-app persistence step fails. The actual 100-drag Crown test and unsigned Release archive pass; full journeys, Stack/Fan gestures, hardware and usability acceptance remain open. There has been no TestFlight/App Store upload. Continue on `fix/spread-native-acceptance-followup`; open the next implementation PR when its remaining fixes are ready.
-
-Use the [current engineering handoff and continuation prompt](docs/SPREAD_2_NATIVE_HANDOFF.md), [verification ledger](docs/evidence/issue-113/README.md), and [actual simulator screenshots](docs/evidence/issue-113/screenshots/b5a3eaf/README.md). Earlier fixture-only notes describe the pre-#114 foundation, not the current live implementation.
+Classic, More/Settings, the existing planner data model, and saved profiles must remain intact. Treat the frozen `golden/*` branches as rollback checkpoints.
 
 ## Launch videos
 
@@ -86,14 +86,7 @@ The web planner is a private beta: only emails approved in the beta Sheet can cr
 
 ## iOS release direction
 
-The App Store work is a packaging/reliability pass, not a redesign. The selected 1.0 path is **Capacitor + the existing React app**, with device-local data and no required account or SaaS backend. As of 2026-10-08 the 1.0 promise is a $2.99 one-time universal (iPhone + iPad) app with automatic iCloud Backup and optional, off-by-default iCloud Sync, still with no required account. The plan, phases and release gates are in [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md).
-The current web app is the shipped functional baseline. Immutable
-`golden/*` branches below remain rollback checkpoints. The iOS shell and
-physical-device/TestFlight acceptance are still in progress; see
-[`ROADMAP.md`](ROADMAP.md) for milestone status and
-[`APP_STORE_RELEASE_PLAN.md`](APP_STORE_RELEASE_PLAN.md) for release gates.
-
-The iPhone shell is in `ios/`. [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md) has the exact build and TestFlight upload steps, what has and has not been verified, and the remaining Apple-account and physical-device checklist.
+The selected architecture is Capacitor around the existing React data model, with native presentation where implemented, local-first behavior, and no mandatory account. The original [release plan](APP_STORE_RELEASE_PLAN.md) and [iCloud plan](docs/ICLOUD_PLAN.md) describe approved goals and safety gates; they do **not** establish which features are in a currently distributed IPA. Verify cloud flags, signed build, device support, App Store Connect state, and hardware QA against the exact candidate using [the iOS runbook](docs/IOS_RELEASE.md) and [App Review checklist](docs/APP_STORE_REVIEW_CHECKLIST.md).
 
 ## Checks
 

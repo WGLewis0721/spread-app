@@ -3,14 +3,10 @@ name: Native visual tour
 # evidence. It builds a simulator app only (never a distributable, never signed, never uploaded). Artifacts are the
 # exported attachments from the XCUITest result bundle.
 on:
-  # Runs from the PR's own copy of this file (a dispatch-only workflow must already be on the default branch).
-  pull_request:
-    paths:
-      - ".github/workflows/native-visual-tour.yml"
-      - "ios/SpreadNativeV2/**"
-      - "ios/App/SpreadNativeUITests/**"
-      - "scripts/native-simulator.mjs"
+  # Deliberate full-device acceptance only. Select the reviewed source ref from Actions.
+  # Expensive macOS UI matrices are not a per-commit PR preflight.
   workflow_dispatch:
+
 concurrency:
   group: native-visual-tour-${{ github.ref }}
   # Retain long simulator evidence; the newest revision queues behind the current acceptance run.

@@ -1,28 +1,17 @@
 # Spread Roadmap
 
-The chosen iPhone/App Store implementation is documented in [APP_STORE_RELEASE_PLAN.md](APP_STORE_RELEASE_PLAN.md): Capacitor around the existing Vite/React planner, local-first 1.0, no required account/backend, and paid-app commerce.
+**Current source baseline: `main` as of November 7, 2026.** This roadmap tracks direction, not live App Store Connect status. The original October release plan is [APP_STORE_RELEASE_PLAN.md](APP_STORE_RELEASE_PLAN.md); precise release checks live in [docs/APP_STORE_REVIEW_CHECKLIST.md](docs/APP_STORE_REVIEW_CHECKLIST.md). Immutable `golden/*` branches remain recovery checkpoints.
 
-Spread's current release path is organized as concrete achievements. The frozen friends-test build is the rollback point; future work should not modify that golden branch.
-The current web planner on `main` is the shipped functional baseline.
-Frozen `golden/*` branches remain the immutable rollback checkpoints. The iOS
-shell is work in progress; an installed/TestFlight/App Store build is not yet
-accepted. This roadmap owns milestone order and status; the App Store release
-plan owns the detailed acceptance checklist.
+## Native source milestone — November 7, 2026
 
-## Spread 2.0 native checkpoint — November 3, 2026
+- Merged: SwiftUI/WebKit planner integration (#114), Wallet stack (#127), Life native implementation (#146), Classic/Life tactile precision (#150), and Life motion/tray refinements (#151–#158).
+- Planner and UI source in `main` is the only current integration baseline; old PR-specific handoffs describe their historical candidate.
+- Candidate-specific **iOS SDK compilation, signed IPA verification, physical iPhone/iPad accessibility, haptic/performance tests, iCloud behavior, and App Store processing/release** require separate proof. The [Life acceptance record](docs/evidence/life-ios-implementation/acceptance.md) and [tactile verification record](docs/evidence/tactile-precision/README.md) reflect their original commits and are not blanket release approvals.
+- No build, merge, production deployment or App Store action is authorized by a roadmap checkbox. Track unresolved work in a current PR or issue and use the exact-source release gate.
 
-- [x] Merge the live SwiftUI/WebKit implementation in [#114](https://github.com/WGLewis0721/spread-app/pull/114), main `6aa2355`, with the existing TypeScript planner/storage authoritative.
-- [x] Preserve eleven original illustrations, all five responsibility layouts and the horizontal metallic Crown; implement native responsibility/hour/task/content/Week/Month/profile/review controls.
-- [x] Fix delayed mirror-writer startup and protect recovered earlier plans before replacement; retain truthful save/recovery handling.
-- [x] Resume the inactive production Supabase project, retain migrations and deploy verified web main.
-- [x] Run final-head Swift package tests/compilation and capture actual 820-point Week/five-layout/Month screenshots; 820/1024 layout jobs pass.
-- [ ] Resolve 390-point clipped date text and the latest main installed-app persistence failure; prove two clean persistence cycles and negative controls on the final candidate.
-- [x] Build the unsigned native Release archive and pass the actual 100-drag Crown/30-reversal test on merged main.
-- [ ] Complete F1–F10 installed-app acceptance, fix the first Stack swipe failure, finish Stack/Fan/restore/profile/rich-content regressions and preserve final Release archive evidence.
-- [ ] Complete physical-device accessibility/performance and comparative usability gates; obtain native release acceptance.
-- [ ] Open the follow-up implementation PR when its fixes and evidence are ready. No native binary has been uploaded.
+## Original milestone checklist (historical planning record)
 
-Current native verdict: **NO-GO**. Exact runs, completed code, remaining work and a copy/paste continuation prompt are in [the engineering handoff](docs/SPREAD_2_NATIVE_HANDOFF.md). Web deployment is not native release acceptance.
+The achievement checklist below preserves the original phased goals. **Its checked/unchecked boxes are not a live release-status dashboard**: several implementation steps have since merged, while distribution and hardware evidence must be verified afresh.
 
 ## Achievement 0 — Friends-Test Golden ✅
 

@@ -2,11 +2,7 @@
 
 **Decision date:** October 1, 2026
 
-This document is the canonical iPhone/App Store delivery plan for Spread 1.0.
-The current web planner on `main` is the shipped functional baseline;
-frozen `golden/*` branches are immutable rollback checkpoints. The
-Capacitor iOS shell is under development; physical-device, TestFlight, and
-store acceptance remain open. [ROADMAP.md](ROADMAP.md) owns milestone status.
+This is the **approved architectural and acceptance plan**, first adopted October 1, 2026. It is not a current release-status report. The Capacitor/SwiftUI iOS implementation has advanced since the plan was written; compare the candidate against `main` and the [release runbook](docs/IOS_RELEASE.md), [App Review gate](docs/APP_STORE_REVIEW_CHECKLIST.md), and [native evidence](docs/evidence/life-ios-implementation/acceptance.md). Evidence tied to an older SHA cannot certify the latest signed build. Preserve frozen `golden/*` rollback branches. [ROADMAP.md](ROADMAP.md) owns milestone intent.
 
 ## Chosen architecture
 

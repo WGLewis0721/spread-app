@@ -1,8 +1,6 @@
 # Spread design brain
 
-Start here for Spread's design rules and task-specific references.
-
-**Audience:** developers and coding agents.
+Start here for Spread's design rules and task-specific references. For cross-product documentation and release records, use the [documentation map](../README.md).
 
 **Product:** Responsibilities → Hours → Week → Tasks, local-first. Native: one approved Wallet Stack; preserve Week/Month and planner actions. React and landing stay separate.
 
@@ -11,8 +9,6 @@ Start here for Spread's design rules and task-specific references.
 ---
 
 ## 1. Load only what you need
-
-Stop at the first useful tier.
 
 | Tier | What | Size budget | When |
 | --- | --- | --- | --- |
@@ -30,8 +26,8 @@ Stop at the first useful tier.
 | --- | --- | --- |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
-| Implementing the approved Life iOS demo | Root [handoff](../../SPREAD_LIFE_IOS_HANDOFF.md), [spec](../../SPREAD_LIFE_IOS_SPEC.md) and [checklist](../../SPREAD_LIFE_IOS_CHECKLIST.md) | [Runnable reference](../../tools/life-reference/README.md); root placement requested by owner |
-| Native SwiftUI / Wallet Stack (PR #127) | [current native brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [iOS 27 behavior audit](platforms/IOS27_BEHAVIOR_AUDIT.md); owner's screenshots; historical [handoff](../../CLAUDE_NATIVE_UI_HANDOFF.md) |
+| Reviewing the implemented Life experience | [Native board](planner/SPREAD_NATIVE_BRAND_BOARD.md), [tactile contract](tactile-precision/README.md) | Historical [Life handoff](../../SPREAD_LIFE_IOS_HANDOFF.md), [spec](../../SPREAD_LIFE_IOS_SPEC.md) and [reference](../../tools/life-reference/README.md); do not reapply merged implementation |
+| Native SwiftUI / Wallet Stack (merged source) | [current native brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [iOS 27 behavior audit](platforms/IOS27_BEHAVIOR_AUDIT.md); owner's screenshots; historical [handoff](../../CLAUDE_NATIVE_UI_HANDOFF.md) |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
 | iPhone, iPad, Duo and resize / hinge support | [packs/device-layout.md](packs/device-layout.md) | [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) and device guides |
@@ -43,7 +39,7 @@ Stop at the first useful tier.
 | Recording a decision or checking what is undecided | [DECISIONS.md](DECISIONS.md) | |
 | Pointing an AI tool at these docs | [AI_TOOL_SETUP.md](AI_TOOL_SETUP.md) | |
 
-A change touching both planner and landing page needs both packs, kept separate. If no row fits, add one.
+For cross-surface changes, read both packs.
 
 ---
 
@@ -63,7 +59,7 @@ All paths are under `docs/design/`.
 | tokens.json | Planner tokens, light and dark | Generated from `src/styles.css` |
 | [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Historical; five-mode direction superseded by Nov 4 owner choice |
 | planner/SPREAD_DESIGN_SYSTEM.md | React planner visuals, native behavior invariants | Governs legacy UI and behavior |
-| planner/SPREAD_NATIVE_BRAND_BOARD.md | Current SwiftUI: **single animated Wallet Stack**; [SVG](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Native-only PR #127; supersedes five-mode language |
+| planner/SPREAD_NATIVE_BRAND_BOARD.md | Current SwiftUI: **single animated Wallet Stack**; [SVG](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Implemented on `main`; supersedes five-mode language |
 | tactile-precision/: [map](tactile-precision/README.md), [motion](tactile-precision/MOTION_CONTRACT.md), [tuning](tactile-precision/ANIMATION_TUNING_GUIDE.md), [QA](tactile-precision/VERIFICATION.md) | Native tactile system | Devices owed |
 | planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md | Unified UX history | Historical only |
 | landing/DESIGN.md | Landing page | Highest for the landing page only, never for planner decisions. Frozen as `golden/2026-09-28-full-landing-modes` |
@@ -90,15 +86,13 @@ All paths are under `docs/design/`.
 
 ## 5. Studio (wallpaper-driven personalization)
 
-Studio lives on the `spread-studio` branch and is off by default. [Historical rebuild spec](specs/2026-10-28-studio-rebuild.md). Do not import Studio's appearance changes into current SwiftUI.
+Studio's original rebuild proposal is [historical](specs/2026-10-28-studio-rebuild.md). Studio-related work has since merged into `main`; inspect source and actual flags before claiming a particular native appearance is enabled. Studio does not override the current Wallet/Life design authority.
 
 ---
 
-## 6. Design-adjacent material that stays where it is
+## 6. Historical supporting material
 
-- Historical root handoffs: `SPREAD_NATIVE_UI_REMAINING_SPEC.md`, `CLAUDE_NATIVE_UI_HANDOFF.md`, `SPREAD_SWIFTUI_PARITY_SPEC.md`; defer to current native board.
-- Testing, videos and release records stay in their own areas. Agent files mirror [RULES_CARD.md](RULES_CARD.md).
-- Owner's concept images are in chat, not git; do not call them installed-build evidence.
+Root native handoffs (`CLAUDE_NATIVE_UI_HANDOFF.md`, `SPREAD_NATIVE_UI_REMAINING_SPEC.md`, `SPREAD_SWIFTUI_PARITY_SPEC.md`) do not override the Wallet board. Evidence and release records stay separate; concept art is not native test evidence.
 
 ---
 
