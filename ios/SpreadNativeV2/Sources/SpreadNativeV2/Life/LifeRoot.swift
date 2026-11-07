@@ -39,6 +39,8 @@ struct LifeRoot: View {
     @State private var dockControlsHeight: CGFloat = 62
     @State private var dockOpenerCenterY: CGFloat = 31
     @State private var weekTick = 0
+    @State private var weekMonthExpanded = false
+    @State private var weekMonthAnchor: String?
     @State private var historyVisible = false
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
@@ -163,7 +165,8 @@ struct LifeRoot: View {
                              onReserve: { localSheet = .reserve($0) },
                              onManage: { localSheet = .manage($0) }, onDelete: { _ in },
                              onNewRole: onNewRole,
-                             selectedRole: $focusedRole)
+                             selectedRole: $focusedRole, expanded: $weekMonthExpanded,
+                             monthAnchor: $weekMonthAnchor)
             }.accessibilityIdentifier("life-week-page")
         }
     }
@@ -445,8 +448,21 @@ struct LifeRoot: View {
         }.accessibilityLabel("Add task")
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
-        WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
-                      detail: "Week Crown", onDetail: today, onMove: goWeek)
+        let showingMonth = destination == .week && weekMonthExpanded
+        let title = showingMonth
+            ? PlannerDates.label(PlannerDates.date(weekMonthAnchor ?? snapshot.weekKey), pattern: "MMMM yyyy")
+            : PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d")
+        return WeekCrownView(title: title,
+                             detail: showingMonth ? "Month Crown" : "Week Crown", onDetail: today,
+                             onMove: { delta in
+                                 if showingMonth {
+                                     withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+                                         weekMonthAnchor = LifeCalendarRules.shiftMonth(
+                                             weekMonthAnchor ?? snapshot.weekKey, by: delta)
+                                     }
+                                     LifeFeedback.selection()
+                                 } else { goWeek(delta) }
+                             })
             .contextMenu {
                 Button("Move Crown left") { crownRight = false }
                 Button("Move Crown right") { crownRight = true }
@@ -522,6 +538,7 @@ struct LifeRoot: View {
     }
     private func navigate(_ value: LifeDestination) {
         if destination != value { LifeFeedback.selection() }
+        if value != .week { weekMonthExpanded = false; weekMonthAnchor = nil }
         withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
             destination = value
             editing = false

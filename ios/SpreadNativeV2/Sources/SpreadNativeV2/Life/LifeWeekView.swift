@@ -14,8 +14,9 @@ struct LifeWeekView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selectedDate = ""
     @Binding var selectedRole: String?
+    @Binding var expanded: Bool
+    @Binding var monthAnchor: String?
     @GestureState private var dayTranslation: CGSize = .zero
-    @State private var expanded = false
     @State private var dayTravelDirection = 1
     @State private var toPlaceOpen = false
     @State private var overdueOpen = false
@@ -34,9 +35,10 @@ struct LifeWeekView: View {
 
     private var profile: String { planner.state?.envelope.profileId ?? "" }
     private var date: String { selectedDate.isEmpty ? snapshot.weekKey : selectedDate }
+    private var calendarAnchor: String { expanded ? (monthAnchor ?? date) : date }
     private var calendar: Calendar { PlannerDates.calendar }
     private var roles: [Responsibility] { LifeCalendarRules.dailyRoles(snapshot, day: date) }
-    private var marksKey: String { "\(profile)|\(date.prefix(7))|\(planner.state?.sessionId ?? "")|\(planner.state?.revision ?? 0)|\(selectedRole ?? "")" }
+    private var marksKey: String { "\(profile)|\(calendarAnchor.prefix(7))|\(planner.state?.sessionId ?? "")|\(planner.state?.revision ?? 0)|\(selectedRole ?? "")" }
     private var selectionKey: String { "native.life.selectedDate.\(profile)" }
     private var visibleRole: String? { selectedRole ?? snapshot.roles.first?.id }
     private var toPlaceTasks: [PlannerTask] {
@@ -74,6 +76,7 @@ struct LifeWeekView: View {
         .accessibilityIdentifier("life-week-page")
         .onAppear { restoreProfile() }
         .onChange(of: profile) { _ in restoreProfile() }
+        .onChange(of: expanded) { _, active in if !active { monthAnchor = nil } }
         .onChange(of: snapshot.weekKey) { week in
             guard activeProfile == profile else { restoreProfile(); return }
             let candidate = pendingDate.flatMap { PlannerDates.weekKey(for: PlannerDates.date($0)) == week ? $0 : nil }
@@ -101,7 +104,7 @@ struct LifeWeekView: View {
         .task(id: marksKey) {
             marks = [:]
             let origin = marksKey
-            let anchor = PlannerDates.date(date)
+            let anchor = PlannerDates.date(calendarAnchor)
             let previous = calendar.date(byAdding: .month, value: -1, to: anchor) ?? anchor
             let next = calendar.date(byAdding: .month, value: 1, to: anchor) ?? anchor
             // The Classic service grid may have five Sunday-first rows. Read adjacent
@@ -325,7 +328,7 @@ struct LifeWeekView: View {
                   abs(value.translation.width) > abs(value.translation.height) * 1.8 else { return }
             let direction = value.translation.width < 0 ? 1 : -1
             if expanded {
-                choose(LifeCalendarRules.shiftMonth(date, by: direction))
+                shiftShownMonth(direction)
             } else {
                 choose(LifeCalendarRules.shiftDay(snapshot.weekKey, by: direction * 7))
             }
@@ -333,21 +336,21 @@ struct LifeWeekView: View {
     }
 
     private var calendarSurface: some View {
-        let cells = LifeCalendarRules.month(date)
+        let cells = LifeCalendarRules.month(calendarAnchor)
         let monday = LifeCalendarRules.week(date).first
         let selectedRow = (cells.firstIndex(of: monday ?? date) ?? 0) / 7
         return VStack(spacing: 10) {
             if typeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(PlannerDates.label(PlannerDates.date(date), pattern: "MMMM yyyy")).font(.headline)
+                    Text(PlannerDates.label(PlannerDates.date(calendarAnchor), pattern: "MMMM yyyy")).font(.headline)
                     HStack { monthControls; Spacer(minLength: 0); monthToggle }
                 }
             } else {
                 HStack(spacing: 2) {
-                    arrow("Previous month", system: "chevron.left") { choose(LifeCalendarRules.shiftMonth(date, by: -1)) }
-                    Text(PlannerDates.label(PlannerDates.date(date), pattern: "MMMM yyyy"))
+                    arrow("Previous month", system: "chevron.left") { shiftShownMonth(-1) }
+                    Text(PlannerDates.label(PlannerDates.date(calendarAnchor), pattern: "MMMM yyyy"))
                         .font(.headline).frame(maxWidth: .infinity, alignment: .leading)
-                    arrow("Next month", system: "chevron.right") { choose(LifeCalendarRules.shiftMonth(date, by: 1)) }
+                    arrow("Next month", system: "chevron.right") { shiftShownMonth(1) }
                     monthToggle
                 }
             }
@@ -381,15 +384,30 @@ struct LifeWeekView: View {
             .simultaneousGesture(stripSwipe)
     }
 
+    /// Calendar browsing is presentation-only until someone taps an actual date.
+    private func shiftShownMonth(_ delta: Int) {
+        if expanded {
+            withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+                monthAnchor = LifeCalendarRules.shiftMonth(calendarAnchor, by: delta)
+            }
+            LifeFeedback.selection()
+        } else {
+            choose(LifeCalendarRules.shiftMonth(date, by: delta))
+        }
+    }
+
     private var monthControls: some View {
         HStack {
-            arrow("Previous month", system: "chevron.left") { choose(LifeCalendarRules.shiftMonth(date, by: -1)) }
-            arrow("Next month", system: "chevron.right") { choose(LifeCalendarRules.shiftMonth(date, by: 1)) }
+            arrow("Previous month", system: "chevron.left") { shiftShownMonth(-1) }
+            arrow("Next month", system: "chevron.right") { shiftShownMonth(1) }
         }
     }
     private var monthToggle: some View {
         Button {
-            withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded.toggle() }
+            withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
+                monthAnchor = expanded ? nil : date
+                expanded.toggle()
+            }
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: "calendar")
@@ -512,7 +530,10 @@ struct LifeWeekView: View {
         return NativeDayMark(colors: Array(colors.prefix(3)), extra: LifeCalendarRules.overflow(colors.count))
     }
     private func restoreProfile() {
-        navigationID = UUID(); pendingDate = nil; activeProfile = profile; selectedRole = nil; marks = [:]
+        if !activeProfile.isEmpty && activeProfile != profile { selectedRole = nil }
+        navigationID = UUID(); pendingDate = nil; activeProfile = profile; marks = [:]
+        expanded = false
+        monthAnchor = nil
         accept(LifeCalendarRules.selection(UserDefaults.standard.string(forKey: selectionKey),
             in: snapshot.weekKey, today: PlannerDates.localISO()))
     }
