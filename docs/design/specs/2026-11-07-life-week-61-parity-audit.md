@@ -103,7 +103,7 @@ Status denotes **which code path owns the behavior**, not a claim that UI/device
 
 - Native: compile Swift package and app; run `LifeUITests` Week/Month/To Place/Overdue, `NativeContractsTests` pure helper vectors, Classic unaffected; candidate simulator screenshots.
 - Planner: verify one-day task invariant, explicit shortage without mutation, bulk overdue preflight and eligible-only commit, Recently Deleted restoration/30-day expiry, independent ordering, profile and backup/sync roundtrips.
-- Verify fast Ubuntu GitHub checks and App Store preflight on the latest commit. **Codemagic `spread-ios-verify` is the native compilation/Life+Classic QA authority**, with source SHA, xcresults and screenshots. The manually approved `spread-release-candidate` owns iPad/Duo acceptance and archive checks before release.
+- Verify fast Ubuntu GitHub checks and App Store preflight on the latest commit. **One manual Codemagic `spread-ios-verify` run is the native authority** for iPhone/iPad/Duo SwiftUI compilation, installed Life/Classic UI journeys, source SHA, xcresults and screenshots. Re-run it on the approved main SHA before separately authorized signed upload.
 - Rollback: discard/revert #160. No schema, migration, mandatory account, production deploy or irreversible update was added.
 
 **Acceptance:** No release and no full 61/61 parity claim until the pinned calendar is device-verified, adapted Wallet decisions are acknowledged, and recorded native evidence supports the final head.

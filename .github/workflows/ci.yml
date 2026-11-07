@@ -32,7 +32,7 @@ jobs:
             require "yaml"
             config = YAML.safe_load(File.read("codemagic.yaml"), aliases: true)
             flows = config.fetch("workflows")
-            expected = %w[spread-ios-verify spread-release-candidate spread-ios-upload spread-store-status]
+            expected = %w[spread-ios-verify spread-ios-upload spread-store-status]
             abort "Unexpected Codemagic workflows" unless flows.keys.sort == expected.sort
             abort "Native workflow is not manual" if flows.values.any? { |flow| flow.key?("triggering") }
             verify = flows.fetch("spread-ios-verify")

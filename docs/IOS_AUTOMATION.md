@@ -1,29 +1,29 @@
-# Spread — iOS automation (no Mac required)
+# Spread — iOS automation (no local Mac required)
 
-**Native verification and release authority: Codemagic.** Keep GitHub Actions on fast Linux/Ubuntu source checks. All native Codemagic workflows are manual; none runs on each commit. `main` stays untouched until the owner approves a merge.
+**Codemagic is the single native iOS validation/build path.** GitHub Actions runs fast, automated Ubuntu/Linux source checks only. No native Codemagic workflow runs per commit.
 
-| Job | Tool | Trigger / permissions |
+| Purpose | Tool | Trigger and controls |
 | --- | --- | --- |
-| Planner, browser bridge, TypeScript, portable Swift tests, source preflight | GitHub Actions | PR and `main` push; Ubuntu/Linux, no routine macOS |
-| iOS SwiftUI contracts, Life + Classic installed-app tests and screenshots | `spread-ios-verify` in `codemagic.yaml` | Manual on any reviewed branch; unsigned, no Apple integration or publishing |
-| Full signed iPhone/iPad/Duo release candidate | `spread-release-candidate` | Manual on `main` only; no publishing |
-| App Store Connect upload | `spread-ios-upload` | Manual on `main` only; requires `SPREAD_APPROVED_UPLOAD_SHA` equal to the full approved commit SHA |
-| Read-only store version/build check | `spread-store-status` | Manual |
+| TypeScript/planner, web bridge, portable Swift, security preflight | GitHub Actions | Automatic PR/main checks; no automatic macOS jobs |
+| Compile real iOS app, SwiftUI contracts and installed Life/Classic tests on iPhone, iPad and Duo | Codemagic `spread-ios-verify` | **Manual** on reviewed branch HEAD; unsigned, no Apple integration or publishing |
+| Sign one final IPA and upload to App Store Connect | Codemagic `spread-ios-upload` | **Manual**, current `main` only; `SPREAD_APPROVED_UPLOAD_SHA` must equal the reviewed 40-character SHA |
+| Inspect App Store Connect build versions (read only) | Codemagic `spread-store-status` | Manual, no writes |
 
-## Verify draft PR #160
+## Run draft PR #160 verification
 
-In [Codemagic](https://codemagic.io/apps), select the Spread app → **Start new build** → branch `feat/life-week-61-parity-20261107` → **Spread - unsigned native verification (manual)**.
+1. In [Codemagic](https://codemagic.io/apps), select Spread → **Start new build**, branch `feat/life-week-61-parity-20261107` → **Spread - unsigned native verification (manual)**.
+2. Codemagic confirms the checked-out SHA matches that branch's remote tip, bundles the local-first app, runs native SwiftUI contracts and focused real-app XCTest journeys on iPhone, iPad and Duo.
+3. Inspect `artifacts/native-verify/source-sha.txt`, `.xcresult` bundles and exported simulator screenshots. Any failure is a blocker; don't treat a passing GitHub source check as native acceptance.
+4. Fix failures on the same branch and rerun the exact current SHA. Physical haptics still require TestFlight on an actual iPhone.
 
-The workflow checks the checked-out SHA against the current branch tip, with both cloud flags off. It compiles/runs the native SwiftUI contracts and a focused installed-app Life/Classic suite on an iPhone simulator. Inspect `artifacts/native-verify/source-sha.txt`, the two `.xcresult` files and exported screenshots. A GitHub green check does **not** prove native acceptance. A cancelled or queued native job is **not** a pass.
+## Release authorization
 
-A broader candidate run on `main` uses the existing Duo suite plus an iPad Life/Classic smoke. Before any store upload, explicitly set `SPREAD_APPROVED_UPLOAD_SHA` to the exact reviewed `main` SHA in the Codemagic manual build variables. Uploading to App Store Connect is **not** authorization to submit to App Review or publish a store release.
+Run the **same unsigned verifier on the final reviewed `main` SHA**, then separately authorize `spread-ios-upload` by supplying `SPREAD_APPROVED_UPLOAD_SHA` in the manual Codemagic build variables. Only that upload workflow uses Apple signing credentials; it verifies source SHA and the latest remote `main` before signing/uploading. No workflow automatically submits to App Review or publishes a store release.
 
-**Physical device:** TestFlight on an actual iPhone is still needed for Taptic feedback and real-world gesture perception. Use a Mac only if remote debugging cannot reproduce a hardware-only issue.
+The verifier never signs, uploads, changes planner state or enables iCloud. The two cloud flags stay off. The approved upload builds the IPA **once**, avoiding the previous duplicate signed release-candidate build. App Store submission, TestFlight tester assignment and production remain separately controlled.
 
-## Preserved regression controls
+## Fallback and rollback
 
-`.github/workflows/ios.yml` is **manual-only legacy diagnostics** while its installed-app storage-loss and mirror-writer negative controls are migrated. Other older GitHub-native visual workflows remain manual diagnostics, not a second routine CI/release authority. Avoid running duplicate macOS matrices for each PR.
+`.github/workflows/ios.yml` remains **manual-only legacy diagnostics**, retaining its installed-app storage-loss and mirror-writer negative controls until proven under Codemagic. Older native GitHub visual workflows remain manual diagnostics, not routine acceptance gates. Do not start duplicate GitHub macOS matrices for each PR.
 
-No new user accounts, schema changes, cloud flags, merging, TestFlight distribution, App Review submission or production deployment are part of this pipeline change.
-
-**Rollback:** Revert the PR/commit, restoring the prior `codemagic.yaml` and GitHub workflows; separately fix any GitHub required-check settings that still reference retired native job names. See [iOS release record](IOS_RELEASE.md) and [App Store release plan](../APP_STORE_RELEASE_PLAN.md).
+Rollback by reverting the pipeline commit/PR, leaving `main` and production untouched. Check GitHub branch rules for required retired check names before merging. Consult [iOS release history](IOS_RELEASE.md) and [App Store release plan](../APP_STORE_RELEASE_PLAN.md).
