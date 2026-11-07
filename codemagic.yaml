@@ -1,7 +1,189 @@
-# Spread: existing React / Capacitor iOS application.
-# Manual only. Builds and uploads to App Store Connect, but never requests App Review.
-# Configure the Codemagic Developer Portal integration with the name "codemagic".
+# Spread native CI: manual Codemagic verification, candidate and approved upload.
+# No webhook-triggered native builds. The verifier has no signing or publishing.
 workflows:
+  spread-ios-verify:
+    name: Spread - unsigned native verification (manual)
+    # No triggering, signing, Apple integration or publishing. Read-only verification.
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      node: 22
+      xcode: 27.1
+      vars:
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+    scripts:
+      - name: Pin the reviewed source
+        script: |
+          set -eu
+          test "${CM_PULL_REQUEST:-false}" = false || { echo "Manual only" >&2; exit 1; }
+          test "$(printf '%s' "${CM_REPO_SLUG:-}" | tr '[:upper:]' '[:lower:]')" = "wglewis0721/spread-app" || exit 1
+          test -n "${CM_BRANCH:-}" && test -n "${CM_COMMIT:-}" || exit 1
+          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Branch moved; rerun reviewed tip" >&2; exit 1; }
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
+          mkdir -p artifacts/native-verify
+          printf '%s\n' "$CM_COMMIT" > artifacts/native-verify/source-sha.txt
+          xcodebuild -version | tee artifacts/native-verify/xcode.txt
+      - name: Prepare offline simulator app
+        script: |
+          set -eu
+          npm ci
+          python3 scripts/app-store-preflight.py
+          npm run ios:sync
+          python3 scripts/app-store-preflight.py --bundle dist-ios
+      - name: Run SwiftUI contracts and Life/Classic simulator journeys
+        script: |
+          set -eu
+          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/native-verify/simulator.env"
+          : > "$GITHUB_ENV"
+          node scripts/native-simulator.mjs 390
+          . "$GITHUB_ENV"
+          status=0
+          (cd ios/SpreadNativeV2 &&
+            xcodebuild test -scheme SpreadNativeV2 \
+              -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
+              -parallel-testing-enabled NO \
+              -resultBundlePath "$CM_BUILD_DIR/artifacts/native-verify/contracts.xcresult" \
+              CODE_SIGNING_ALLOWED=NO) || status=$?
+          if [ "$status" -eq 0 ]; then
+            xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+              -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
+              -parallel-testing-enabled NO \
+              -test-timeouts-enabled YES -maximum-test-execution-time-allowance 600 \
+              -only-testing:SpreadNativeUITests/LifeUITests/testLifeWeekInboxesAndMonthBrowsingStayInTheActiveLifeExperience \
+              -only-testing:SpreadNativeUITests/LifeUITests/testLifeNavigationAndUnmodifiedMoreReachability \
+              -only-testing:SpreadNativeUITests/LifeUITests/testCapacityUsesRealStoreAndSurvivesRelaunch \
+              -only-testing:SpreadNativeUITests/LifeUITests/testOptOutRestoresClassicWithoutDeletingThePlan \
+              -resultBundlePath artifacts/native-verify/life-classic.xcresult \
+              CODE_SIGNING_ALLOWED=NO || status=$?
+          fi
+          for result in artifacts/native-verify/*.xcresult; do
+            test -d "$result" || continue
+            name="$(basename "$result" .xcresult)"
+            xcrun xcresulttool export attachments --path "$result" \
+              --output-path "artifacts/native-verify/$name-screenshots" || true
+          done
+          xcrun simctl shutdown "$NATIVE_UDID" || true
+          xcrun simctl delete "$NATIVE_UDID" || true
+          exit "$status"
+    artifacts:
+      - artifacts/native-verify/**
+      - /tmp/xcodebuild_logs/*.log
+
+  spread-release-candidate:
+    name: Spread - iPhone iPad Duo release candidate
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.graymatter.spread
+      vars:
+        APP_STORE_APPLE_ID: "6821191009"
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 27.1
+    scripts:
+      - name: Guard exact candidate and local-first configuration
+        script: |
+          set -eu
+          test "$CM_BRANCH" = main || { echo "Release candidate requires main" >&2; exit 1; }
+          test "${CM_PULL_REQUEST:-false}" = false || { echo "Manual runs only" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate moved" >&2; exit 1; }
+      - name: Verify and bundle the candidate
+        script: |
+          set -eu
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test:spread
+          npm run test:scripts
+          npm run docs:check
+          swift test --package-path ios/SpreadNativeV2
+          swift test --package-path ios/App/SpreadCloudCore
+          python3 scripts/app-store-preflight.py
+          npm run ios:sync
+          python3 scripts/app-store-preflight.py --bundle dist-ios
+      - name: Real Duo simulator - modes and rendered appearance
+        script: |
+          set -eu
+          mkdir -p artifacts
+          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/duo-env"
+          node scripts/native-simulator.mjs duo
+          . "$GITHUB_ENV"
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
+            -only-testing:SpreadNativeUITests/DuoUITests \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testCrownHundredDragsWithThirtyReversals \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testDialArcSelectionAndPreferencePersistence \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally \
+            -only-testing:SpreadNativeUITests/SpreadFlowUITests \
+            -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
+          xcrun xcresulttool export attachments --path artifacts/Duo.xcresult --output-path artifacts/duo-screenshots
+          DUO_TOOLS="$(mktemp -d /tmp/spread-duo-tools.XXXXXX)"
+          npm install --prefix "$DUO_TOOLS" --ignore-scripts --no-save --no-audit --no-fund agent-device@0.21.36
+          bash scripts/native-system-appearance.sh "$DUO_TOOLS/node_modules/.bin/agent-device" "$NATIVE_UDID"
+      - name: iPad Life and Classic simulator smoke
+        script: |
+          set -eu
+          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/ipad-env"
+          : > "$GITHUB_ENV"
+          node scripts/native-simulator.mjs 820
+          . "$GITHUB_ENV"
+          status=0
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
+            -parallel-testing-enabled NO \
+            -only-testing:SpreadNativeUITests/LifeUITests/testLifeNavigationAndUnmodifiedMoreReachability \
+            -only-testing:SpreadNativeUITests/LifeUITests/testOptOutRestoresClassicWithoutDeletingThePlan \
+            -resultBundlePath artifacts/iPad.xcresult CODE_SIGNING_ALLOWED=NO || status=$?
+          if [ -d artifacts/iPad.xcresult ]; then
+            xcrun xcresulttool export attachments --path artifacts/iPad.xcresult \
+              --output-path artifacts/ipad-screenshots || true
+          fi
+          xcrun simctl shutdown "$NATIVE_UDID" || true
+          xcrun simctl delete "$NATIVE_UDID" || true
+          exit "$status"
+      - name: Select unused Apple build number and signing
+        script: |
+          set -eu
+          LATEST_APPLE_BUILD="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+          python3 scripts/ios_build_number.py set --latest-apple "$LATEST_APPLE_BUILD" \
+            --codemagic-build "$BUILD_NUMBER" --project ios/App/App.xcodeproj/project.pbxproj \
+            --record artifacts/build-version.json
+          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
+          xcode-project use-profiles
+      - name: Build App Store eligible signed IPA
+        script: |
+          set -eu
+          xcode-project build-ipa --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" --scheme App
+          for ipa in build/ios/ipa/*.ipa; do
+            test -f "$ipa" || exit 1
+            python3 scripts/app-store-preflight.py --ipa "$ipa"
+            LATEST_APPLE="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
+            python3 scripts/ios_build_number.py verify --ipa "$ipa" --record artifacts/build-version.json --latest-apple "$LATEST_APPLE"
+          done
+          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
+          test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate moved; refusing upload" >&2; exit 1; }
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - artifacts/**
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
+
+  # Life PR #146: manual-only signed verification. No publishing block on purpose.
   spread-ios-upload:
     name: Spread - signed iOS upload
     max_build_duration: 120
@@ -24,6 +206,11 @@ workflows:
         script: |
           set -eu
           test "$CM_BRANCH" = main || { echo "Build must use main" >&2; exit 1; }
+          test "${CM_PULL_REQUEST:-false}" = false || { echo "Manual only" >&2; exit 1; }
+          test -n "${SPREAD_APPROVED_UPLOAD_SHA:-}" && test "$SPREAD_APPROVED_UPLOAD_SHA" = "$CM_COMMIT" || { echo "Supply reviewed SPREAD_APPROVED_UPLOAD_SHA" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
+          CURRENT="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "main changed; abort upload" >&2; exit 1; }
           test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
           test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
       - name: Install and check the planner
@@ -130,329 +317,3 @@ workflows:
     artifacts:
       - artifacts/store-status/*-summary.json
 
-  spread-pr119-internal-testflight:
-    name: Spread PR #119 - manually approved INTERNAL TestFlight candidate
-    # No automatic triggers. Isolated from the existing main-only App Store release workflow.
-    # Launch manually on Codemagic, selecting branch claude/spread-swiftui-parity-87llx2.
-    max_build_duration: 120
-    instance_type: mac_mini_m2
-    integrations:
-      app_store_connect: Spread
-    environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.graymatter.spread
-      vars:
-        APP_STORE_APPLE_ID: "6821191009"
-        VITE_SPREAD_OPEN_ACCESS: "1"
-        VITE_SPREAD_CLOUD_BACKUP: "0"
-        VITE_SPREAD_CLOUD_SYNC: "0"
-      node: 22
-      xcode: 26.5
-    scripts:
-      - name: Guard approved native candidate branch and local-only flags
-        script: |
-          set -eu
-          test "$CM_BRANCH" = "claude/spread-swiftui-parity-87llx2" || { echo "Internal candidate branch only" >&2; exit 1; }
-          test "${CM_PULL_REQUEST:-false}" = false || { echo "No PR event can publish" >&2; exit 1; }
-          test "$(printf "%s" "${CM_REPO_SLUG:-}" | tr "[:upper:]" "[:lower:]")" = "wglewis0721/spread-app" || { echo "Unexpected repository" >&2; exit 1; }
-          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || { echo "Checked-out SHA mismatch" >&2; exit 1; }
-          CURRENT="$(git ls-remote https://github.com/WGLewis0721/spread-app.git refs/heads/claude/spread-swiftui-parity-87llx2 | cut -f1)"
-          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate branch changed during build; refuse upload" >&2; exit 1; }
-          test "$VITE_SPREAD_OPEN_ACCESS" = 1 || exit 1
-          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
-          test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
-      - name: Verify current candidate
-        script: |
-          set -eu
-          python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v
-          python3 scripts/app-store-preflight.py
-          npm ci
-          npm run typecheck
-          npm run lint
-          npm run test:spread
-          swift test --package-path ios/SpreadNativeV2
-          swift test --package-path ios/App/SpreadCloudCore
-      - name: Bundle and synchronize local-first Spread
-        script: |
-          set -eu
-          npm run ios:sync
-          python3 scripts/app-store-preflight.py --bundle dist-ios
-      - name: Reserve unused Apple build number
-        script: |
-          set -eu
-          LATEST_APPLE_BUILD="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
-          python3 scripts/ios_build_number.py set \
-            --latest-apple "$LATEST_APPLE_BUILD" \
-            --codemagic-build "$BUILD_NUMBER" \
-            --project ios/App/App.xcodeproj/project.pbxproj \
-            --record /tmp/spread-ios-build-version.json
-          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
-      - name: Sign INTERNAL TestFlight only
-        script: |
-          xcode-project use-profiles \
-            --custom-export-options='{"testFlightInternalTestingOnly": true}'
-      - name: Build and validate signed internal IPA
-        script: |
-          set -eu
-          xcode-project build-ipa \
-            --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
-            --scheme App
-          for ipa in build/ios/ipa/*.ipa; do
-            test -f "$ipa" || { echo "No signed IPA produced" >&2; exit 1; }
-            python3 scripts/app-store-preflight.py --ipa "$ipa"
-            LATEST_BEFORE_UPLOAD="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
-            python3 scripts/ios_build_number.py verify \
-              --ipa "$ipa" \
-              --record /tmp/spread-ios-build-version.json \
-              --latest-apple "$LATEST_BEFORE_UPLOAD"
-          done
-      - name: Recheck exact source before internal TestFlight upload
-        script: |
-          set -eu
-          CURRENT="$(git ls-remote https://github.com/WGLewis0721/spread-app.git refs/heads/claude/spread-swiftui-parity-87llx2 | cut -f1)"
-          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Branch moved; refusing to publish stale candidate" >&2; exit 1; }
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-    publishing:
-      app_store_connect:
-        auth: integration
-        # Upload to App Store Connect / TestFlight only; no external beta review or App Store review.
-        # Internal tester assignment still requires verification in App Store Connect.
-        submit_to_testflight: false
-        submit_to_app_store: false
-
-  spread-release-candidate:
-    name: Spread - iPhone iPad Duo release candidate
-    max_build_duration: 120
-    instance_type: mac_mini_m2
-    integrations:
-      app_store_connect: Spread
-    environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.graymatter.spread
-      vars:
-        APP_STORE_APPLE_ID: "6821191009"
-        VITE_SPREAD_CLOUD_BACKUP: "0"
-        VITE_SPREAD_CLOUD_SYNC: "0"
-      node: 22
-      xcode: 27.1
-    scripts:
-      - name: Guard exact candidate and local-first configuration
-        script: |
-          set -eu
-          case "$CM_BRANCH" in
-            main|fix/swiftui-finish) ;;
-            *) echo "Build must use main or the release candidate branch" >&2; exit 1 ;;
-          esac
-          test "${CM_PULL_REQUEST:-false}" = false || { echo "Manual runs only" >&2; exit 1; }
-          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
-          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
-          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
-          test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate moved" >&2; exit 1; }
-      - name: Verify and bundle the candidate
-        script: |
-          set -eu
-          npm ci
-          npm run typecheck
-          npm run lint
-          npm run test:spread
-          npm run test:scripts
-          npm run docs:check
-          swift test --package-path ios/SpreadNativeV2
-          swift test --package-path ios/App/SpreadCloudCore
-          python3 scripts/app-store-preflight.py
-          npm run ios:sync
-          python3 scripts/app-store-preflight.py --bundle dist-ios
-      - name: Real Duo simulator - modes and rendered appearance
-        script: |
-          set -eu
-          mkdir -p artifacts
-          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/duo-env"
-          node scripts/native-simulator.mjs duo
-          . "$GITHUB_ENV"
-          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
-            -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
-            -only-testing:SpreadNativeUITests/DuoUITests \
-            -only-testing:SpreadNativeUITests/PlannerUITests/testCrownHundredDragsWithThirtyReversals \
-            -only-testing:SpreadNativeUITests/PlannerUITests/testDialArcSelectionAndPreferencePersistence \
-            -only-testing:SpreadNativeUITests/PlannerUITests/testWeekScrollsVerticallyAndStillSwipesHorizontally \
-            -only-testing:SpreadNativeUITests/SpreadFlowUITests \
-            -resultBundlePath artifacts/Duo.xcresult CODE_SIGNING_ALLOWED=NO
-          xcrun xcresulttool export attachments --path artifacts/Duo.xcresult --output-path artifacts/duo-screenshots
-          DUO_TOOLS="$(mktemp -d /tmp/spread-duo-tools.XXXXXX)"
-          npm install --prefix "$DUO_TOOLS" --ignore-scripts --no-save --no-audit --no-fund agent-device@0.21.36
-          bash scripts/native-system-appearance.sh "$DUO_TOOLS/node_modules/.bin/agent-device" "$NATIVE_UDID"
-      - name: Select unused Apple build number and signing
-        script: |
-          set -eu
-          LATEST_APPLE_BUILD="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
-          python3 scripts/ios_build_number.py set --latest-apple "$LATEST_APPLE_BUILD" \
-            --codemagic-build "$BUILD_NUMBER" --project ios/App/App.xcodeproj/project.pbxproj \
-            --record artifacts/build-version.json
-          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
-          xcode-project use-profiles
-      - name: Build App Store eligible signed IPA
-        script: |
-          set -eu
-          xcode-project build-ipa --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" --scheme App
-          for ipa in build/ios/ipa/*.ipa; do
-            test -f "$ipa" || exit 1
-            python3 scripts/app-store-preflight.py --ipa "$ipa"
-            LATEST_APPLE="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
-            python3 scripts/ios_build_number.py verify --ipa "$ipa" --record artifacts/build-version.json --latest-apple "$LATEST_APPLE"
-          done
-          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
-          test "$CURRENT" = "$CM_COMMIT" || { echo "Candidate moved; refusing upload" >&2; exit 1; }
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - artifacts/**
-      - /tmp/xcodebuild_logs/*.log
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: false
-        submit_to_app_store: false
-
-  # Life PR #146: manual-only signed verification. No publishing block on purpose.
-  spread-life-verify:
-    name: Spread Life - verify and archive (NO upload)
-    max_build_duration: 120
-    instance_type: mac_mini_m2
-    integrations:
-      app_store_connect: Spread
-    environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.graymatter.spread
-      vars:
-        APP_STORE_APPLE_ID: "6821191009"
-        VITE_SPREAD_CLOUD_BACKUP: "0"
-        VITE_SPREAD_CLOUD_SYNC: "0"
-      node: 22
-      xcode: 27.1
-    scripts:
-      - name: Fail closed outside the reviewed Life branch and report tooling
-        script: |
-          set -eu
-          test "$CM_BRANCH" = "docs/life-ios-handoff-2026-11-06" || exit 1
-          test "${CM_PULL_REQUEST:-false}" = false || { echo "Manual only" >&2; exit 1; }
-          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
-          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
-          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
-          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || { echo "Source moved" >&2; exit 1; }
-          mkdir -p artifacts/life
-          printf '%s\n' "$CM_COMMIT" > artifacts/life/source-sha.txt
-          xcodebuild -version | tee artifacts/life/xcode-version.txt
-          xcrun simctl list devices available | tee artifacts/life/simulator-inventory.txt
-      - name: Verify planner, docs, offline preflight, native Swift
-        script: |
-          set -eu
-          python3 -m unittest discover -s scripts -p 'test*.py' -v
-          python3 scripts/app-store-preflight.py
-          npm ci
-          npm run typecheck
-          npm run lint
-          npm run test:spread
-          npm run test:scripts
-          npm run docs:check
-          swift test --package-path ios/SpreadNativeV2
-          swift test --package-path ios/App/SpreadCloudCore
-          npm run ios:sync
-          python3 scripts/app-store-preflight.py --bundle dist-ios
-      - name: Native Life and Classic simulator screenshot journeys
-        script: |
-          set -eu
-          for WIDTH in 375 390 430; do
-          export GITHUB_ENV="$CM_BUILD_DIR/artifacts/life/native-env-$WIDTH"
-          node scripts/native-simulator.mjs "$WIDTH"
-          . "$GITHUB_ENV"
-          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
-            -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
-            -parallel-testing-enabled NO \
-            -only-testing:SpreadNativeUITests/LifeUITests \
-            -resultBundlePath artifacts/life/Life-$WIDTH.xcresult CODE_SIGNING_ALLOWED=NO
-          xcrun xcresulttool export attachments --path artifacts/life/Life.xcresult \
-            --output-path "artifacts/life/screenshots-$WIDTH"
-          xcrun simctl shutdown "$NATIVE_UDID"
-          xcrun simctl delete "$NATIVE_UDID"
-          done
-      - name: Choose unused build, sign and archive; NO publishing
-        script: |
-          set -eu
-          LATEST="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
-          python3 scripts/ios_build_number.py set \
-            --latest-apple "$LATEST" --codemagic-build "$BUILD_NUMBER" \
-            --project ios/App/App.xcodeproj/project.pbxproj \
-            --record artifacts/life/build-version.json
-          /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
-          xcode-project use-profiles --custom-export-options='{"testFlightInternalTestingOnly": true}'
-          xcode-project build-ipa --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" --scheme App
-          set -- build/ios/ipa/*.ipa
-          test "$#" -eq 1 && test -f "$1" || { echo "Expected exactly one signed Life IPA" >&2; exit 1; }
-          for ipa in "$@"; do
-            python3 scripts/app-store-preflight.py --ipa "$ipa"
-            shasum -a 256 "$ipa" | tee -a artifacts/life/ipa-sha256.txt
-            python3 scripts/life_artifact.py create --ipa "$ipa" --source "$CM_COMMIT" --record artifacts/life/build-version.json --manifest artifacts/life/reviewed-artifact.json
-            shasum -a 256 artifacts/life/reviewed-artifact.json | tee artifacts/life/manifest-sha256.txt
-          done
-          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
-          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || exit 1
-    artifacts:
-      - artifacts/life/**
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-
-  # Manual-only transfer of the exact owner-reviewed verification artifact; never rebuild here.
-  spread-life-internal-upload:
-    name: Spread Life - approved exact IPA internal upload ONLY
-    max_build_duration: 30
-    instance_type: mac_mini_m2
-    integrations:
-      app_store_connect: Spread
-    environment:
-      vars:
-        APP_STORE_APPLE_ID: "6821191009"
-        VITE_SPREAD_CLOUD_BACKUP: "0"
-        VITE_SPREAD_CLOUD_SYNC: "0"
-      node: 22
-      xcode: 27.1
-    scripts:
-      - name: Require explicit approval of source and signed artifact
-        script: |
-          set -eu
-          test "$CM_BRANCH" = "docs/life-ios-handoff-2026-11-06" || exit 1
-          test "${CM_PULL_REQUEST:-false}" = false || exit 1
-          test -n "${SPREAD_LIFE_APPROVED_SHA:-}" && test "$SPREAD_LIFE_APPROVED_SHA" = "$CM_COMMIT" || exit 1
-          test "$(git rev-parse HEAD)" = "$CM_COMMIT" || exit 1
-          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 && test "$VITE_SPREAD_CLOUD_SYNC" = 0
-          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
-          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" || exit 1
-          test -n "${SPREAD_LIFE_APPROVED_IPA_SHA256:-}" || exit 1
-          test -n "${SPREAD_LIFE_APPROVED_MANIFEST_SHA256:-}" || exit 1
-          test -n "${SPREAD_LIFE_IPA_URL:-}" && test -n "${SPREAD_LIFE_MANIFEST_URL:-}" || exit 1
-          mkdir -p artifacts/life build/ios/ipa
-          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$SPREAD_LIFE_IPA_URL" -o build/ios/ipa/Spread.ipa
-          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$SPREAD_LIFE_MANIFEST_URL" -o artifacts/life/reviewed-artifact.json
-          python3 scripts/life_artifact.py verify --ipa build/ios/ipa/Spread.ipa --manifest artifacts/life/reviewed-artifact.json --source "$CM_COMMIT" --ipa-sha256 "$SPREAD_LIFE_APPROVED_IPA_SHA256" --manifest-sha256 "$SPREAD_LIFE_APPROVED_MANIFEST_SHA256" --record artifacts/life/build-version.json
-      - name: Recheck exact reviewed bytes and Apple build immediately before upload
-        script: |
-          set -eu
-          python3 scripts/life_artifact.py verify --ipa build/ios/ipa/Spread.ipa --manifest artifacts/life/reviewed-artifact.json --source "$CM_COMMIT" --ipa-sha256 "$SPREAD_LIFE_APPROVED_IPA_SHA256" --manifest-sha256 "$SPREAD_LIFE_APPROVED_MANIFEST_SHA256" --record artifacts/life/build-version.json
-          python3 scripts/app-store-preflight.py --ipa build/ios/ipa/Spread.ipa
-          LATEST="$(app-store-connect get-latest-build-number --platform IOS --all-versions "$APP_STORE_APPLE_ID")"
-          python3 scripts/ios_build_number.py verify --ipa build/ios/ipa/Spread.ipa --record artifacts/life/build-version.json --latest-apple "$LATEST"
-          CURRENT="$(git ls-remote origin "refs/heads/$CM_BRANCH" | cut -f1)"
-          test -n "$CURRENT" && test "$CURRENT" = "$CM_COMMIT" && test "$SPREAD_LIFE_APPROVED_SHA" = "$CM_COMMIT" || exit 1
-    artifacts:
-      - artifacts/life/**
-      - build/ios/ipa/*.ipa
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: false
-        submit_to_app_store: false
