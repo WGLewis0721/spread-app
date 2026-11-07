@@ -60,7 +60,7 @@ Owner: native and planner engineers.
 
 - [ ] Build the overlapping Wallet stack and sole-card focus behavior. Move accessibility focus into the selected card/details, then restore it on return.
 - [ ] Connect real tasks below the card. Preserve task completion, eligible-day placement, unscheduled work and task Undo.
-- [ ] Only pencil/Edit enables editing. Manage/Delete are invisible at rest, including translucent card backgrounds. Left swipe reveals Manage and right reveals Delete; BOTH must be tappable and execute their action. Preserve rigid card geometry and raise the breathing glow by 50% without moving text.
+- [ ] Only pencil/Edit enables editing. Manage/Delete are invisible at rest, including translucent card backgrounds. Left swipe reveals Manage and right reveals Delete; BOTH must be tappable and execute their action. Preserve rigid card geometry. Life's Edit halo must be perceptibly pulsing at **75% greater stroke width/outer glow radius than the last merged Life version**, with no text motion; capture both phases and the Reduce Motion static state.
 - [ ] Keep tap, keyboard and VoiceOver alternatives for edit-only swipe actions. Verify no actions show in normal mode, even after press-and-hold, selection, relaunch or gesture cancellation.
 - [ ] Keep production management scope explicit. Use the current global delete only with a confirmation that says it affects all weeks. Create a separate guarded week-only operation if that behavior is later chosen; do not disguise global deletion.
 - [ ] Add grouped, guarded edit Undo/Redo to the authoritative store. Preserve tasks, budgets, allocations and relevant metadata together. Refuse stale history after unrelated edits/profile/week changes.
