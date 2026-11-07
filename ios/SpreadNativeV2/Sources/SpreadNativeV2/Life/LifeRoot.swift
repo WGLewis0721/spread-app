@@ -397,13 +397,22 @@ struct LifeRoot: View {
             editing.toggle()
             closeNavigation()
         } label: {
-            Label(editing ? "Done editing Life areas" : "Edit Life areas",
-                  systemImage: editing ? "checkmark.circle" : "pencil")
-                .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
-                .contentShape(Rectangle())
+            HStack(spacing: 8) {
+                Image(systemName: editing ? "checkmark.circle" : "pencil")
+                    .font(.system(size: 21, weight: .medium))
+                if navigationOpen {
+                    Text(editing ? "Done editing" : "Edit Life areas")
+                        .font(.subheadline.weight(.medium))
+                } else if navigationExpanded {
+                    Text(editing ? "Done" : "Edit").font(.caption)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 52,
+                   alignment: navigationOpen ? .leading : .center)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.spreadPress)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
         .accessibilityIdentifier("life-edit")
     }
