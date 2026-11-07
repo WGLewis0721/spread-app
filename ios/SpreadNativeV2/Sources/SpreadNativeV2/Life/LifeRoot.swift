@@ -40,6 +40,7 @@ struct LifeRoot: View {
     @State private var dockOpenerCenterY: CGFloat = 31
     @State private var weekTick = 0
     @State private var weekMonthExpanded = false
+    @State private var lifeTodayTick = 0
     @State private var weekMonthAnchor: String?
     @State private var historyVisible = false
     @State private var pendingTask: (role: String, task: String)?
@@ -166,7 +167,7 @@ struct LifeRoot: View {
                              onManage: { localSheet = .manage($0) }, onDelete: { _ in },
                              onNewRole: onNewRole,
                              selectedRole: $focusedRole, expanded: $weekMonthExpanded,
-                             monthAnchor: $weekMonthAnchor)
+                             monthAnchor: $weekMonthAnchor, todaySelectionTick: lifeTodayTick)
             }.accessibilityIdentifier("life-week-page")
         }
     }
@@ -598,7 +599,11 @@ struct LifeRoot: View {
         Task { if await planner.send(["type": "changeWeek", "direction": delta]) { weekTick += 1 } }
     }
     private func today() {
-        Task { if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 } }
+        if destination == .week {
+            lifeTodayTick += 1  // select Today even if the store is already displaying this week
+        } else {
+            Task { if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 } }
+        }
     }
     @ViewBuilder private func sheetContent(_ item: LifeLocalSheet) -> some View {
         switch item {

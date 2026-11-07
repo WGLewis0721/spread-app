@@ -16,8 +16,10 @@ struct LifeWeekView: View {
     @Binding var selectedRole: String?
     @Binding var expanded: Bool
     @Binding var monthAnchor: String?
+    let todaySelectionTick: Int
     @GestureState private var dayTranslation: CGSize = .zero
     @State private var dayTravelDirection = 1
+    @State private var showingDayComplete = false
     @State private var toPlaceOpen = false
     @State private var overdueOpen = false
     @State private var overdueRows: [NativeOverdueTask] = []
@@ -43,6 +45,9 @@ struct LifeWeekView: View {
     private var visibleRole: String? { selectedRole ?? snapshot.roles.first?.id }
     private var toPlaceTasks: [PlannerTask] {
         LifeCalendarRules.toPlaceTasks(snapshot, selectedRoleId: visibleRole)
+    }
+    private var dayCompletionKey: String {
+        "\(date)|\(LifeCalendarRules.dayCompleted(snapshot, day: date))"
     }
     private var overdueRefreshKey: String {
         "\(profile)|\(planner.state?.sessionId ?? "")|\(snapshot.weekKey)|\(planner.state?.revision ?? 0)"
@@ -77,6 +82,36 @@ struct LifeWeekView: View {
         .onAppear { restoreProfile() }
         .onChange(of: profile) { _ in restoreProfile() }
         .onChange(of: expanded) { _, active in if !active { monthAnchor = nil } }
+        .onChange(of: todaySelectionTick) { _, _ in
+            withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded = false; monthAnchor = nil }
+            choose(PlannerDates.localISO())
+        }
+        .onChange(of: dayCompletionKey) { old, new in
+            let parts = old.split(separator: "|", omittingEmptySubsequences: false)
+            guard parts.count == 2, String(parts[0]) == date, String(parts[1]) == "false",
+                  new == date + "|true" else { return }
+            withAnimation(reduceMotion ? nil : SpreadTactile.settle) { showingDayComplete = true }
+            AccessibilityNotification.Announcement("Day complete").post()
+            // LifeTaskRows already emits one haptic on a successful completion; do not emit a second.
+            Task {
+                try? await Task.sleep(for: .seconds(1.3))
+                if !Task.isCancelled {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) { showingDayComplete = false }
+                }
+            }
+        }
+        .overlay {
+            if showingDayComplete {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 58, weight: .medium))
+                    .foregroundStyle(LifePalette.accent)
+                    .padding(20)
+                    .background(LifePalette.surface, in: Circle())
+                    .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+                    .allowsHitTesting(false)
+                    .accessibilityIdentifier("life-day-complete")
+            }
+        }
         .onChange(of: snapshot.weekKey) { week in
             guard activeProfile == profile else { restoreProfile(); return }
             let candidate = pendingDate.flatMap { PlannerDates.weekKey(for: PlannerDates.date($0)) == week ? $0 : nil }
