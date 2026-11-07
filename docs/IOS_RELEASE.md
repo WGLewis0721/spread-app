@@ -1,22 +1,13 @@
-# Spread for iPhone: release candidate runbook
+# Spread for iPhone: release and verification runbook
 
-> **November 3, 2026 update:** live Spread 2.0 SwiftUI hosting and its WebKit bridge merged in [PR #114](https://github.com/WGLewis0721/spread-app/pull/114), main `6aa2355`. Web production is deployed. Native acceptance is **NO-GO**: the latest full-shell persistence step fails and the 390-point audit reports clipped text; hardware and distribution gates remain open. Historical simulator passes below describe their recorded baseline, not acceptance of this native candidate. Read [the current handoff](SPREAD_2_NATIVE_HANDOFF.md) and [evidence ledger](evidence/issue-113/README.md) before packaging or describing release readiness. No TestFlight/App Store upload was performed.
+> **Current-source warning (November 7, 2026):** `main` has moved substantially beyond the November 3 SwiftUI candidate. The older build facts, simulator outcomes, identity values and procedure below are a **historical baseline**, not the status of the current IPA or App Store Connect record. Do not claim a build failed, passed, uploaded, was approved, or was released based solely on this record. Check the exact source SHA, resolved version/build, signed artifact, Codemagic result, Apple processing status and physical-device evidence.
 
-**Release automation (proposed, not yet executed):** The manual GitHub Actions + Fastlane internal-TestFlight pipeline and owner configuration are in [IOS_AUTOMATION.md](IOS_AUTOMATION.md). Existing security, physical-device and cloud release gates remain open.
+**Release authority:** [App Store release plan](../APP_STORE_RELEASE_PLAN.md) · [App Review checklist](APP_STORE_REVIEW_CHECKLIST.md) · [Life acceptance evidence (recorded candidate)](evidence/life-ios-implementation/acceptance.md) · [tactile QA evidence](evidence/tactile-precision/README.md) · [iCloud gates](ICLOUD_PLAN.md). The existing manual controls must remain approval-gated. This documentation change does not perform signing, upload or release.
 
-Spread 1.0 is the existing planner packaged with Capacitor for iPhone and iPad. It is local-first, has
-no Spread account, no subscription and no backend, and does not depend on Vercel once installed.
-iCloud Backup (automatic) and iCloud Sync (opt-in) are being added; see
-[ICLOUD_PLAN.md](ICLOUD_PLAN.md). **Until the phases in its status table are merged and verified on
-devices, the shipped build described below has no iCloud features and is iPhone-only.**
-This file says what the release candidate does, how to build and upload it, what has been checked,
-and what still needs an Apple account or a physical iPhone.
+**Historical scope of the instructions below:** Original Capacitor/local-first iOS packaging and pre-Life smoke tests. Re-verify every command and native target against today's repository before running; use the actual compiled IPA for device family, iOS minimum, entitlements, permissions and cloud flags.
 
-Status: **a tested simulator build, not yet a TestFlight build.** Nothing here has run on a
-physical iPhone or been signed. Do not describe it as release-ready until the device checklist
-below is done.
+## Historical identity snapshot (recheck against the actual app)
 
-## Identity
 
 | Item | Value |
 |---|---|

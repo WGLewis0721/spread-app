@@ -1,0 +1,51 @@
+name: Manual merged-branch housekeeping
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Preview only or delete verified merged branches older than 7 days'
+        type: choice
+        required: true
+        default: dry-run
+        options:
+          - dry-run
+          - delete
+      confirmation:
+        description: 'For delete mode only, type DELETE_MERGED_OVER_7_DAYS'
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate script
+        run: node --check scripts/maintenance/prune-merged-branches.mjs
+      - name: Guard destructive operation
+        if: inputs.mode == 'delete'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = 'DELETE_MERGED_OVER_7_DAYS'
+      - name: Audit / prune merged branches
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          BRANCH_CLEANUP_CONFIRM: ${{ inputs.confirmation }}
+          CLEANUP_MODE: ${{ inputs.mode }}
+        run: |
+          if [ "$CLEANUP_MODE" = 'delete' ]; then
+            node scripts/maintenance/prune-merged-branches.mjs --execute
+          else
+            node scripts/maintenance/prune-merged-branches.mjs
+          fi
