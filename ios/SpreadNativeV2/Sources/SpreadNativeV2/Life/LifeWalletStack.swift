@@ -76,10 +76,9 @@ struct LifeWalletStack: View {
                 .frame(height: focusActive ? focusedHeight :
                     CGFloat(max(0, ordered.count - 1)) * stackStep + (selectedRole == nil ? closedHeight : focusedHeight),
                     alignment: .top)
-                // No clipping at the shrinking stack boundary: cards remain
-                // whole while traveling through the bottom of the device.
-                .clipShape(Rectangle().inset(by:
-                    -max(viewportHeight + focusedHeight, LifeEditPulseTokens.peakHaloRadius)))
+                // Intentionally no stack-level clipping: outgoing sibling faces
+                // remain whole while the scroll viewport clips their device exit.
+                // This also avoids an oversized animated GPU mask.
             }
         }
         .animation(reduceMotion ? nil : SpreadTactile.walletFocus, value: selectedRole)
