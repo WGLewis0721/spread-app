@@ -101,12 +101,14 @@ final class TactilePrecisionTests: XCTestCase {
             traveled: 400, projected: 900, exitDistance: 0))
     }
 
+#if os(iOS)
     func testEmphasizedWalletTrayAndCardExitDurations() {
         XCTAssertEqual(SpreadTactile.showTravel, 1.75, accuracy: 0.00001)
         XCTAssertEqual(SpreadTactile.walletFocusDuration, 0.735, accuracy: 0.00001)
         XCTAssertEqual(SpreadTactile.trayDuration, 0.595, accuracy: 0.00001)
         XCTAssertEqual(SpreadTactile.cardDismissDuration, 0.700, accuracy: 0.00001)
     }
+#endif
 
     func testDrawerGlideRespectsEdgeFlickAndVerticalScrolling() {
         XCTAssertTrue(TactilePrecisionMath.drawerShouldClose(
