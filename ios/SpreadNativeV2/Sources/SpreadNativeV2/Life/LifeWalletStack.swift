@@ -28,6 +28,7 @@ struct LifeWalletStack: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @AccessibilityFocusState private var focusedRole: String?
     @State private var lastSelected: String?
+    @State private var activeSwipeRole: String?
     @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 164
     @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 182
     @ScaledMetric(relativeTo: .body) private var stackStep: CGFloat = 72
@@ -67,7 +68,8 @@ struct LifeWalletStack: View {
                                 : CGFloat(index) * stackStep)
                             .allowsHitTesting(!hidden)
                             .accessibilityHidden(hidden)
-                            .zIndex(selectedRole == role.id ? Double(ordered.count + 1) : Double(index))
+                            .zIndex(activeSwipeRole == role.id ? Double(ordered.count + 10) :
+                                    selectedRole == role.id ? Double(ordered.count + 1) : Double(index))
                             .animation(reduceMotion ? nil : SpreadTactile.walletFocus,
                                        value: focusActive)
                     }
@@ -82,6 +84,10 @@ struct LifeWalletStack: View {
             }
         }
         .animation(reduceMotion ? nil : SpreadTactile.walletFocus, value: selectedRole)
+        .onChange(of: editing) { _, active in if !active { activeSwipeRole = nil } }
+        .onChange(of: roles.map(\.id)) { _, ids in
+            if let activeSwipeRole, !ids.contains(activeSwipeRole) { self.activeSwipeRole = nil }
+        }
         .onChange(of: selectedRole) { old, new in
             if let new { lastSelected = new; focusedRole = new }
             else { focusedRole = old ?? lastSelected }
@@ -97,6 +103,10 @@ struct LifeWalletStack: View {
                        onSelect: { select(role.id) },
                        onManage: { onManage(role.id) },
                        onDelete: { await onDelete(role.id) },
+                       onSwipeActivity: { active in
+                           if active && activeSwipeRole != role.id { activeSwipeRole = role.id }
+                           else if !active && activeSwipeRole == role.id { activeSwipeRole = nil }
+                       },
                        exitDistance: max(viewportWidth + 32, 480))
             .frame(maxWidth: .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
@@ -119,6 +129,7 @@ private struct LifeWalletFace: View {
     let onSelect: () -> Void
     let onManage: () -> Void
     let onDelete: () async -> Bool
+    let onSwipeActivity: (Bool) -> Void
     let exitDistance: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -337,6 +348,7 @@ private struct LifeWalletFace: View {
                 guard abs(horizontal) > abs(vertical) * 1.5 else { return }
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
+                onSwipeActivity(true)
                 withTransaction(transaction) {
                     // Preserve the original directions: left = Manage, right =
                     // slide the entire card off screen to remove it.
@@ -353,6 +365,7 @@ private struct LifeWalletFace: View {
                     withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
                         translation = 0
                     }
+                    if reveal == 0 { onSwipeActivity(false) }
                     return
                 }
                 if horizontal > 0 {
@@ -371,6 +384,7 @@ private struct LifeWalletFace: View {
                             reveal = 0
                             translation = 0
                         }
+                        onSwipeActivity(false)
                     }
                     return
                 }
@@ -386,6 +400,7 @@ private struct LifeWalletFace: View {
                     reveal = CGFloat(manageTarget)
                     translation = 0
                 }
+                if manageTarget == 0 { onSwipeActivity(false) }
             }
     }
 
@@ -403,6 +418,7 @@ private struct LifeWalletFace: View {
                 try? await Task.sleep(for: .seconds(SpreadTactile.cardDismissDuration))
             }
             let saved = await onDelete()
+            onSwipeActivity(false)
             if !saved {
                 // Rejection or storage failure restores the real card.
                 withAnimation(reduceMotion ? nil : SpreadTactile.settle) {
