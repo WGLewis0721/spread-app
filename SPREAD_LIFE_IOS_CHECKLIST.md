@@ -60,9 +60,9 @@ Owner: native and planner engineers.
 
 - [ ] Build the overlapping Wallet stack and sole-card focus behavior. Move accessibility focus into the selected card/details, then restore it on return.
 - [ ] Connect real tasks below the card. Preserve task completion, eligible-day placement, unscheduled work and task Undo.
-- [ ] Only pencil/Edit enables editing. Manage/Delete are invisible at rest, including translucent card backgrounds. Left swipe reveals Manage and right reveals Delete; BOTH must be tappable and execute their action. Preserve rigid card geometry. Life's Edit halo must be perceptibly pulsing at **75% greater stroke width/outer glow radius than the last merged Life version**, with no text motion; capture both phases and the Reduce Motion static state.
+- [ ] Edit lives only in the adaptive side tray/rail. No edit header button. Left swipe reveals Manage; a deliberate rightward swipe carries the entire Life card offscreen and removes it without confirmation, with Undo available. A cancelled or failed swipe snaps back. No Delete tray, checkboxes or bulk deletion. Preserve rigid card geometry and the +75% Edit pulse.
 - [ ] Keep tap, keyboard and VoiceOver alternatives for edit-only swipe actions. Verify no actions show in normal mode, even after press-and-hold, selection, relaunch or gesture cancellation.
-- [ ] Keep production management scope explicit. Use the current global delete only with a confirmation that says it affects all weeks. Create a separate guarded week-only operation if that behavior is later chosen; do not disguise global deletion.
+- [ ] A rightward Life dismissal uses the existing global all-weeks delete command without confirmation **only in explicit Edit mode**, as approved November 6. Ensure Undo restores all weeks, tasks, allocations and metadata. Use accessible Edit-only removal action as the non-gesture alternative.
 - [ ] Add grouped, guarded edit Undo/Redo to the authoritative store. Preserve tasks, budgets, allocations and relevant metadata together. Refuse stale history after unrelated edits/profile/week changes.
 
 Finish when editing, deletion and history work on real data and their scope matches the confirmation.
@@ -219,7 +219,7 @@ Owner: product owner and QA.
 - [ ] Wait for Apple to finish processing. Resolve any reported compliance/processing issue. Add the processed build to the existing authorized internal TestFlight group; do not invent a group name or enable external review.
 - [ ] Open TestFlight on the iPhone 15, confirm the version/build and update the existing app in place. Keep its data and the protected backup; do not delete the installed app.
 - [ ] Open More and confirm it is unchanged. Use the existing Week + Month choice to open Life.
-- [ ] Focus/restore every card. Change its weekly area budget by 0.5h from its details or Manage sheet and verify relaunch persistence and full-capacity explanation. Edit name/color, reveal and ACTIVATE both swipe actions, cancel a deletion, and verify Undo/Redo.
+- [ ] Focus/restore every card with an intact bottom-of-device exit and no clipping. Use its chevron to restore all cards; no `All Life areas` button. Edit hours by 0.5h and verify persistence. Open Edit from side tray, left-swipe Manage, right-swipe completely offscreen to delete, then Undo and verify every task/allocation returns. Test cancelled swipe, failure and Reduce Motion.
 - [ ] Flick capacity, hold/drag slowly and quickly, turn an arc both directions and across the angle seam, fill the circle, hit a reservation limit and undo a committed change.
 - [ ] Set a priority, review its funded and unfunded cases, reserve time, and verify the week without moving unrelated work.
 - [ ] Morph Week/Month, cross month/year boundaries, open day cards and edit tasks from all three destinations.
