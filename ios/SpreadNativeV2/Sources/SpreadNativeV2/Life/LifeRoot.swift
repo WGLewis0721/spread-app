@@ -7,13 +7,12 @@ enum LifeDestination: String, CaseIterable, Identifiable {
     var icon: String { self == .life ? "icon-spread-list" : self == .hours ? "icon-rollover" : "icon-week" }
 }
 private enum LifeLocalSheet: Identifiable {
-    case manage(String), reserve(String), priority(String), delete(String), addTask, help
+    case manage(String), reserve(String), priority(String), addTask, help
     var id: String {
         switch self {
         case .manage(let id): return "manage-" + id
         case .reserve(let id): return "reserve-" + id
         case .priority(let id): return "priority-" + id
-        case .delete(let id): return "delete-" + id
         case .addTask: return "add-task"
         case .help: return "help"
         }
@@ -163,7 +162,8 @@ struct LifeRoot: View {
                 Text("One day at a time.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                 LifeWeekView(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask,
                              onReserve: { localSheet = .reserve($0) },
-                             onManage: { localSheet = .manage($0) }, onDelete: { localSheet = .delete($0) },
+                             onManage: { localSheet = .manage($0) }, onDelete: { _ in },
+
                              selectedRole: $weekSelectedRole)
             }.accessibilityIdentifier("life-week-page")
         }
@@ -589,7 +589,6 @@ struct LifeRoot: View {
         case .manage(let id): LifeManageSheet(planner: planner, roleId: id)
         case .reserve(let id): LifeReserveSheet(planner: planner, roleId: id)
         case .priority(let id): LifePrioritySheet(planner: planner, roleId: id)
-        case .delete(let id): LifeDeleteSheet(planner: planner, roleId: id)
         case .help: LifeGestureHelp()
         case .addTask:
             SpreadSheetStack {
