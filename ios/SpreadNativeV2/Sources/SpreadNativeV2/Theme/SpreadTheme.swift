@@ -189,6 +189,15 @@ public enum SpreadMotion {
 /// not to gesture thresholds, raw finger tracking, data writes, or haptic frequency.
 public enum SpreadTactile {
     public static let emphasis: Double = 1.25
+    /// Owner-requested visible travel: 75% more than ordinary 340–420ms UI movement.
+    /// Keep direct finger tracking unanimated, all motions interruptible.
+    public static let showTravel: Double = 1.75
+    public static let walletFocusDuration = 0.42 * showTravel
+    public static let trayDuration = 0.34 * showTravel
+    public static let cardDismissDuration = 0.40 * showTravel
+    public static let walletFocus = Animation.timingCurve(0.18, 0.0, 0.2, 1, duration: walletFocusDuration)
+    public static let traySlide = Animation.timingCurve(0.18, 0.0, 0.2, 1, duration: trayDuration)
+    public static let cardDismiss = Animation.timingCurve(0.22, 0.0, 0.4, 1, duration: cardDismissDuration)
     public static let contactDuration = 0.10 * emphasis
     public static let snapResponse = 0.22 * emphasis
     public static let settleResponse = 0.32 * emphasis
