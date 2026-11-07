@@ -28,6 +28,19 @@ final class LifeUITests: XCTestCase {
         destination.tap()
     }
 
+    private func tapEditInSideTray() {
+        let edit = app.buttons["life-edit"]
+        if !edit.isHittable {
+            let opener = app.buttons["life-navigation"]
+            XCTAssertTrue(opener.waitForExistence(timeout: 15),
+                          "Edit must be reachable through the compact side tray or wide rail")
+            opener.tap()
+        }
+        XCTAssertTrue(edit.waitForExistence(timeout: 10))
+        XCTAssertTrue(edit.isHittable)
+        edit.tap()
+    }
+
     private func capture(_ title: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = title
@@ -40,20 +53,15 @@ final class LifeUITests: XCTestCase {
         let card = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'life-card-'")).firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 20))
-        let edit = app.buttons["life-edit"]
-        XCTAssertEqual(edit.label, "Edit Life areas")
         capture("life-glow-off")
-
-        edit.tap()
-        XCTAssertEqual(edit.label, "Done editing Life areas")
+        tapEditInSideTray()
         XCTAssertTrue(card.exists, "Edit cannot remove or resize the Wallet card")
         capture("life-glow-on-low")
-        // Capture two animation phases for visual comparison. UIKit snapshots
-        // alone do not certify pulse intensity; device/video review is required.
+        // Two phases for human visual review; snapshots alone cannot prove
+        // perceptual intensity on the Taptic Engine-equipped device.
         Thread.sleep(forTimeInterval: 1.0)
         capture("life-glow-on-pulse")
-        edit.tap()
-        XCTAssertEqual(edit.label, "Edit Life areas")
+        tapEditInSideTray()
         XCTAssertTrue(card.exists)
         capture("life-glow-restored")
     }
@@ -65,49 +73,56 @@ final class LifeUITests: XCTestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 20))
         let id = String(card.identifier.dropFirst("life-card-".count))
         let manage = app.buttons["life-reveal-manage-" + id]
-        let delete = app.buttons["life-reveal-delete-" + id]
-        let edit = app.buttons["life-edit"]
 
-        XCTAssertFalse(manage.exists, "Manage is visible before editing")
-        XCTAssertFalse(delete.exists, "Delete is visible before editing")
+        XCTAssertFalse(manage.exists, "Manage must be hidden before Edit")
         card.press(forDuration: 0.7)
-        XCTAssertEqual(edit.label, "Edit Life areas", "Long press must not enter Edit")
-        XCTAssertFalse(manage.exists)
-        XCTAssertFalse(delete.exists)
+        XCTAssertFalse(manage.exists, "Long press must never expose Manage")
         card.tap()
-        XCTAssertFalse(manage.exists, "Tapping a Life card must not show Manage")
-        XCTAssertFalse(delete.exists, "Tapping a Life card must not show Delete")
+        XCTAssertFalse(manage.exists, "Normal tap focuses, not edits or deletes")
         capture("life-card-focus-without-actions")
 
-        edit.tap()
-        XCTAssertEqual(edit.label, "Done editing Life areas")
-        XCTAssertFalse(manage.exists, "Edit alone must not reveal Manage")
-        XCTAssertFalse(delete.exists, "Edit alone must not reveal Delete")
+        tapEditInSideTray()
+        XCTAssertFalse(manage.exists, "Edit alone does not reveal Manage")
         card.swipeLeft()
-        XCTAssertTrue(manage.waitForExistence(timeout: 10), "Only an Edit-mode left swipe reveals Manage")
-        XCTAssertFalse(delete.exists)
+        XCTAssertTrue(manage.waitForExistence(timeout: 10),
+                      "Only an Edit-mode left swipe reveals Manage")
         capture("life-card-edit-swipe-manage")
         manage.tap()
-        XCTAssertTrue(app.navigationBars["Manage Life area"].waitForExistence(timeout: 10),
-                      "Swiping Manage must open the actual management sheet")
+        XCTAssertTrue(app.navigationBars["Manage Life area"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.descendants(matching: .any)
             .matching(identifier: "life-manage-hour-stepper").firstMatch.exists ||
             app.staticTexts["Set weekly planning hours in Hours before allocating time to this area."].exists,
-            "Existing areas must offer an hours editor or an explicit capacity prerequisite")
+            "Existing Life areas must remain editable")
         app.buttons["Cancel"].tap()
-        card.swipeRight()
-        if !delete.exists { card.swipeRight() } // A first swipe may settle at neutral.
-        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Only an Edit-mode right swipe reveals Delete")
-        XCTAssertFalse(manage.exists)
-        capture("life-card-edit-swipe-delete")
-        edit.tap()
-        XCTAssertFalse(manage.exists, "Manage remains after leaving Edit")
-        XCTAssertFalse(delete.exists, "Delete remains after leaving Edit")
+
+        // Reset the Manage reveal so the right gesture starts from the neutral
+        // card position. No confirmation sheet; one undoable removal follows.
+        tapEditInSideTray()
+        tapEditInSideTray()
+        let from = card.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5))
+        let to = from.withOffset(CGVector(dx: max(card.frame.width * 0.90, 340), dy: 0))
+        from.press(forDuration: 0.10, thenDragTo: to)
+        let disappeared = NSPredicate(format: "exists == false")
+        expectation(for: disappeared, evaluatedWith: card)
+        waitForExpectations(timeout: 12)
+        XCTAssertFalse(app.navigationBars["Delete Life area"].exists,
+                       "A rightward offscreen dismissal must not open confirmation")
+        capture("life-card-right-offscreen-delete")
+
+        let undo = app.buttons["life-undo"]
+        XCTAssertTrue(undo.waitForExistence(timeout: 10),
+                      "Undo must restore a removed Life area and its tasks")
+        undo.tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 15),
+                      "The exact Life area must return after Undo")
+        capture("life-card-restored-by-undo")
+        tapEditInSideTray()
         navigate("week")
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-week-page").firstMatch
-            .waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'life-reveal-'")).firstMatch.exists,
-                       "Week cards have no Edit mode and must never expose Manage/Delete")
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-week-page").firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH 'life-reveal-'")).firstMatch.exists,
+            "Week cards have no Edit mode and must not expose card actions")
     }
 
     func testLifeNavigationDrawerCanBeDraggedClosed() {
