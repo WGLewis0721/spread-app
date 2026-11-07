@@ -145,11 +145,12 @@ private struct LifeWalletFace: View {
             // Keep the action layer structurally stable through the gesture.
             // A conditional insertion here cancels the parent swipe recognizer.
             revealedActions
+                // Clip the stationary Manage tray, not the moving Wallet face.
+                .clipShape(RoundedRectangle(cornerRadius: 23))
                 .opacity(editing && reveal + translation < -1 ? 1 : 0)
-                .allowsHitTesting(editing && reveal != 0)
+                .allowsHitTesting(editing && reveal < 0)
             selectionButton
         }
-        .clipShape(RoundedRectangle(cornerRadius: 23))
         // The glow MUST sit after the clip. Previously it lived inside the
         // card face and its bright outer shadow was clipped away.
         // Track the face when it reveals actions rather than lighting the
