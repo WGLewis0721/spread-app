@@ -28,7 +28,7 @@ function categoryInk(hex: string): "#16212A" | "#FFFFFF" {
   const channels = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255);
   const linear = channels.map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
   const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-  return luminance > 0.35 ? "#16212A" : "#FFFFFF";
+  return luminance > 0.30 ? "#16212A" : "#FFFFFF";
 }
 
 /** Same Lucide outline shapes as native RoleBadge, tinted by stored role colour. */
