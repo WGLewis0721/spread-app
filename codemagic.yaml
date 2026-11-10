@@ -376,7 +376,7 @@ workflows:
             -only-testing:SpreadNativeUITests/LifeUITests \
             -only-testing:SpreadNativeUITests/LifeEditorialUITests \
             -resultBundlePath artifacts/life/Life-$WIDTH.xcresult CODE_SIGNING_ALLOWED=NO
-          xcrun xcresulttool export attachments --path artifacts/life/Life.xcresult \
+          xcrun xcresulttool export attachments --path "artifacts/life/Life-$WIDTH.xcresult" \
             --output-path "artifacts/life/screenshots-$WIDTH"
           xcrun simctl shutdown "$NATIVE_UDID"
           xcrun simctl delete "$NATIVE_UDID"

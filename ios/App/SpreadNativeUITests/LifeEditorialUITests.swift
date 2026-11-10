@@ -1,8 +1,18 @@
 import XCTest
 
+/// Gate state for launches that do not choose the gate themselves. CI sets
+/// TEST_RUNNER_SPREAD_EDITORIAL_ART=1 so a suite runs with the editorial presentation on.
+/// Unset means the golden default, so existing suites are unaffected.
+enum EditorialArtTestMode {
+    static var arguments: [String] {
+        ProcessInfo.processInfo.environment["SPREAD_EDITORIAL_ART"] == "1"
+            ? ["-native.life.editorialArt.enabled", "YES"]
+            : []
+    }
+}
+
 /// Editorial Life cards behind the reversible presentation gate. The gate is a launch
-/// argument, so these tests never change stored planner data. Not yet run on a simulator:
-/// the first evidence comes from the native-journeys CI run.
+/// argument, so these tests never change stored planner data.
 final class LifeEditorialUITests: XCTestCase {
     private let app = XCUIApplication(bundleIdentifier: "com.graymatter.spread")
 
@@ -38,6 +48,16 @@ final class LifeEditorialUITests: XCTestCase {
         XCTAssertTrue(labelled("weekly budget").waitForExistence(timeout: 20),
                       "Editorial cards must speak the weekly budget and the assigned hours.")
         capture("life-editorial-on")
+    }
+
+    func testSelectingAnEditorialCardListsTheWeekDays() {
+        startLife(editorialArt: true)
+        let card = labelled("weekly budget")
+        XCTAssertTrue(card.waitForExistence(timeout: 20), "No editorial card was found to select.")
+        card.tap()
+        XCTAssertTrue(app.staticTexts["Days"].waitForExistence(timeout: 10),
+                      "The editorial details must list the week's days.")
+        capture("life-editorial-selected")
     }
 
     func testGateOffKeepsTheGoldenCardLabel() {
