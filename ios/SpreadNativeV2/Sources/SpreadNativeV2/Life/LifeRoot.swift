@@ -304,7 +304,8 @@ struct LifeRoot: View {
         }
     }
     private func details(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let weekdayHours = LifeCardWeekDistribution.hours(for: role.id, snapshot: snapshot)
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(role.name) this week").font(.headline)
@@ -323,7 +324,36 @@ struct LifeRoot: View {
             }
                 .frame(minHeight: 44).buttonStyle(.spreadPress)
                 .accessibilityIdentifier("life-change-area-hours")
-            DayMarks(snapshot: snapshot, role: role)
+            // The selected face already shows all seven days. The details
+            // field lists only meaningful assignments and keeps editing below.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Days").font(.headline)
+                    Spacer()
+                    Text(SpreadHours.text(LifeCardWeekDistribution.assigned(weekdayHours)) +
+                         " h assigned")
+                        .font(.caption).foregroundStyle(LifePalette.secondary)
+                }
+                ForEach(0..<7, id: \.self) { index in
+                    if weekdayHours[index] > 0 {
+                        HStack {
+                            Text(PlannerDates.label(
+                                PlannerDates.date(PlannerDates.dayISO(
+                                    weekKey: snapshot.weekKey, index: index)),
+                                pattern: "EEEE"))
+                            Spacer()
+                            Text(SpreadHours.text(weekdayHours[index]) + " h")
+                                .monospacedDigit()
+                        }
+                        .font(.subheadline)
+                        .padding(.vertical, 3)
+                    }
+                }
+                if !weekdayHours.contains(where: { $0 > 0 }) {
+                    Text("No hours assigned to days yet.")
+                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                }
+            }
             if !editing {
                 Button("Prioritize this week") { localSheet = .priority(role.id) }
                     .padding(.horizontal, 12).frame(minHeight: 44)
