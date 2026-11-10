@@ -109,6 +109,7 @@ struct LifeEditorialFace: View {
     let role: Responsibility
     let snapshot: PlannerSnapshot
     let selected: Bool
+    let titleSafeWidth: CGFloat
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat = 37
 
@@ -145,7 +146,7 @@ struct LifeEditorialFace: View {
                 .italic()
                 .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                 .minimumScaleFactor(typeSize.isAccessibilitySize ? 1 : 0.8)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: titleSafeWidth, alignment: .leading)
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(SpreadHours.text(role.hours) + " h")
                     .font(.system(size: typeSize.isAccessibilitySize ? 30 : 34,
@@ -155,11 +156,13 @@ struct LifeEditorialFace: View {
                     .font(.system(size: 10, weight: .semibold))
                     .tracking(1.6)
             }
+            .frame(maxWidth: titleSafeWidth, alignment: .leading)
             if remaining >= 0 {
                 Text(SpreadHours.text(assigned) + " h assigned · " +
                      SpreadHours.text(remaining) + " h unassigned")
                     .font(.caption2)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                    .frame(maxWidth: titleSafeWidth, alignment: .leading)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
             } else {
                 Text(SpreadHours.text(-remaining) + " h over budget")
                     .font(.caption.weight(.bold))
