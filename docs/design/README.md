@@ -26,8 +26,8 @@ Start here for Spread's design rules and task-specific references. For cross-pro
 | --- | --- | --- |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
-| Reviewing the implemented Life experience | [Native board](planner/SPREAD_NATIVE_BRAND_BOARD.md), [tactile contract](tactile-precision/README.md), [proposed editorial card art direction](planner/SPREAD_LIFE_CARD_ART_DIRECTION.md) | Historical [Life handoff](../../SPREAD_LIFE_IOS_HANDOFF.md), [spec](../../SPREAD_LIFE_IOS_SPEC.md) and [reference](../../tools/life-reference/README.md); do not reapply merged implementation |
-| Native SwiftUI / Wallet Stack (merged source) | [current native brand board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [iOS 27 behavior audit](platforms/IOS27_BEHAVIOR_AUDIT.md); owner's screenshots; historical [handoff](../../CLAUDE_NATIVE_UI_HANDOFF.md) |
+| Native Life design and artwork | [Editorial card sheet](planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [Life implementation spec](specs/2026-11-10-life-card-visual-implementation.md) |
+| SwiftUI / Wallet Stack | [Native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [iOS audit](platforms/IOS27_BEHAVIOR_AUDIT.md), [tactile contract](tactile-precision/README.md) |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
 | iPhone, iPad, Duo and resize / hinge support | [packs/device-layout.md](packs/device-layout.md) | [iOS 27 audit](platforms/IOS27_BEHAVIOR_AUDIT.md) and device guides |
