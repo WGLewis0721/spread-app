@@ -31,8 +31,14 @@ struct LifeWalletStack: View {
     @State private var activeSwipeRole: String?
     // A readable full-week strip needs a complete face, not the old 72pt pitch.
     // Small overlap retains Wallet depth without hiding any title, hours or day.
-    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 240
-    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 252
+    @ScaledMetric(relativeTo: .body) private var minimumFaceHeight: CGFloat = 232
+    // Preserve enough room for live weekdays on narrow phones without
+    // stretching every wide-scene card to an arbitrary fixed ratio.
+    private var closedHeight: CGFloat {
+        let available = min(700, max(0, viewportWidth - 32))
+        return max(minimumFaceHeight, min(318, available * 0.58))
+    }
+    private var focusedHeight: CGFloat { closedHeight + 12 }
     private var stackStep: CGFloat { max(0, closedHeight - 12) }
 
     private var ordered: [Responsibility] {
@@ -109,7 +115,9 @@ struct LifeWalletStack: View {
                            if active && activeSwipeRole != role.id { activeSwipeRole = role.id }
                            else if !active && activeSwipeRole == role.id { activeSwipeRole = nil }
                        },
-                       exitDistance: max(viewportWidth + 32, 480))
+                       exitDistance: max(viewportWidth + 32, 480),
+                       closedHeight: closedHeight,
+                       focusedHeight: focusedHeight)
             .frame(maxWidth: .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
     }
@@ -133,11 +141,11 @@ private struct LifeWalletFace: View {
     let onDelete: () async -> Bool
     let onSwipeActivity: (Bool) -> Void
     let exitDistance: CGFloat
+    let closedHeight: CGFloat
+    let focusedHeight: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
-    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 240
-    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 252
     private var cardHeight: CGFloat { selected ? focusedHeight : closedHeight }
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
