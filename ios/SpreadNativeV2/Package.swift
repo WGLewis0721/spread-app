@@ -14,6 +14,7 @@ let package = Package(
             resources: [
                 .copy("Resources/Chalk"),
                 .copy("Resources/Motion"),
+                .copy("Resources/Editorial"),
                 .process("Resources/Icons.xcassets")
             ]
         ),
