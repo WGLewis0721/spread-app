@@ -127,67 +127,99 @@ struct LifeEditorialFace: View {
         }.joined(separator: "; ")
     }
 
+    // Keep SwiftUI's generic type-checker work bounded: the complete face is
+    // composed from small, separately type-checked editorial components.
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 7) {
-                SpreadBrandMark(size: 16)
-                Text("SPREAD")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .tracking(2.2)
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.down")
-                    .font(.subheadline.weight(.semibold))
-                    .rotationEffect(.degrees(selected ? 180 : 0))
-                    .accessibilityHidden(true)
-            }
+            brandHeader
             Spacer(minLength: 7)
-            Text(role.name)
-                .font(.system(size: displaySize, weight: .semibold, design: .serif))
-                .italic()
-                .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-                .minimumScaleFactor(typeSize.isAccessibilitySize ? 1 : 0.8)
-                .frame(maxWidth: titleSafeWidth, alignment: .leading)
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(SpreadHours.text(role.hours) + " h")
-                    .font(.system(size: typeSize.isAccessibilitySize ? 30 : 34,
-                                  weight: .semibold, design: .serif))
-                    .monospacedDigit()
-                Text("THIS WEEK")
-                    .font(.system(size: 10, weight: .semibold))
-                    .tracking(1.6)
-            }
-            .frame(maxWidth: titleSafeWidth, alignment: .leading)
-            if remaining >= 0 {
-                Text(SpreadHours.text(assigned) + " h assigned · " +
-                     SpreadHours.text(remaining) + " h unassigned")
-                    .font(.caption2)
-                    .frame(maxWidth: titleSafeWidth, alignment: .leading)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-            } else {
-                Text(SpreadHours.text(-remaining) + " h over budget")
-                    .font(.caption.weight(.bold))
-            }
+            responsibilityTitle
+            weeklyBudget
+            assignmentSummary
             Spacer(minLength: 10)
-            if typeSize.isAccessibilitySize {
-                Text(dayDescription)
-                    .font(.caption)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                weekdayStrip
-            }
+            distributionFooter
         }
         .foregroundStyle(Color.white)
         .padding(.horizontal, 17)
-        // Keep the bottom day strip outside the next face's overlap.
         .padding(.top, 13)
         .padding(.bottom, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(role.name + ", " + SpreadHours.spoken(role.hours) +
-            " weekly budget, " + SpreadHours.spoken(assigned) + " assigned, " +
-            (remaining >= 0 ? SpreadHours.spoken(remaining) + " unassigned" :
-                SpreadHours.spoken(-remaining) + " over budget") +
-            ". " + dayDescription)
+        .accessibilityLabel(spokenCardLabel)
+    }
+
+    private var spokenCardLabel: String {
+        let budget = SpreadHours.spoken(role.hours)
+        let assignedText = SpreadHours.spoken(assigned)
+        let remainingText: String
+        if remaining >= 0 {
+            remainingText = SpreadHours.spoken(remaining) + " unassigned"
+        } else {
+            remainingText = SpreadHours.spoken(-remaining) + " over budget"
+        }
+        return role.name + ", " + budget + " weekly budget, " +
+            assignedText + " assigned, " + remainingText + ". " + dayDescription
+    }
+
+    private var brandHeader: some View {
+        HStack(spacing: 7) {
+            SpreadBrandMark(size: 16)
+            Text("SPREAD")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .tracking(2.2)
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.down")
+                .font(.subheadline.weight(.semibold))
+                .rotationEffect(.degrees(selected ? 180 : 0))
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var responsibilityTitle: some View {
+        Text(role.name)
+            .font(.system(size: displaySize, weight: .semibold, design: .serif))
+            .italic()
+            .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+            .minimumScaleFactor(typeSize.isAccessibilitySize ? 1 : 0.8)
+            .frame(maxWidth: titleSafeWidth, alignment: .leading)
+    }
+
+    private var weeklyBudget: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(SpreadHours.text(role.hours) + " h")
+                .font(.system(size: typeSize.isAccessibilitySize ? 30 : 34,
+                              weight: .semibold, design: .serif))
+                .monospacedDigit()
+            Text("THIS WEEK")
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(1.6)
+        }
+        .frame(maxWidth: titleSafeWidth, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var assignmentSummary: some View {
+        if remaining >= 0 {
+            Text(SpreadHours.text(assigned) + " h assigned · " +
+                 SpreadHours.text(remaining) + " h unassigned")
+                .font(.caption2)
+                .frame(maxWidth: titleSafeWidth, alignment: .leading)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+        } else {
+            Text(SpreadHours.text(-remaining) + " h over budget")
+                .font(.caption.weight(.bold))
+        }
+    }
+
+    @ViewBuilder
+    private var distributionFooter: some View {
+        if typeSize.isAccessibilitySize {
+            Text(dayDescription)
+                .font(.caption)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            weekdayStrip
+        }
     }
 
     private var weekdayStrip: some View {
