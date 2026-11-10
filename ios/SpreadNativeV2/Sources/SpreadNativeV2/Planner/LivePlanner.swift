@@ -101,7 +101,13 @@ struct HoursShortage: Equatable {
     private let exchange: (String) async throws -> String
     private var tail: Task<Bool, Never>?
     public init(exchange: @escaping (String) async throws -> String) { self.exchange = exchange }
-    var snapshot: PlannerSnapshot? { state?.envelope.snapshot }
+    var snapshot: PlannerSnapshot? {
+        #if DEBUG
+        // DEBUG-only preview fixture, selected by a launch argument. Release builds never compile this.
+        if let preview = PersonalPreviewFixture.snapshot { return preview }
+        #endif
+        return state?.envelope.snapshot
+    }
     public func refresh() async {
         let previous = tail
         let task = Task { @MainActor in
