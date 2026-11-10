@@ -66,10 +66,14 @@ struct LifeEditorialArtwork: View {
                     endPoint: .bottomTrailing
                 )
                 if let image = LifeEditorialArtworkRegistry.image(for: category) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: proxy.size.width, height: proxy.size.height)
+                    // Fill the proposed frame through an overlay so the image's intrinsic
+                    // width cannot widen the card or its tappable frame.
+                    Color.clear
+                        .overlay {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                        }
                         .clipped()
                 } else {
                     // Keep the existing original artwork available until a clean
