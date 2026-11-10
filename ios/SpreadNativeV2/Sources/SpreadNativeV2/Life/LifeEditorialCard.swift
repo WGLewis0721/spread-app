@@ -66,15 +66,17 @@ struct LifeEditorialArtwork: View {
                     endPoint: .bottomTrailing
                 )
                 if let image = LifeEditorialArtworkRegistry.image(for: category) {
-                    // Fill the proposed frame through an overlay so the image's intrinsic
-                    // width cannot widen the card or its tappable frame.
-                    Color.clear
-                        .overlay {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFill()
-                        }
+                    // The artwork is decorative. Its unclipped scaled-to-fill frame was exposed
+                    // as an accessibility child of the card button and widened that button to
+                    // 468.7 pt on a 390 pt screen, so the tap did not reach the selection action.
+                    // Bound the image to the card and hide it from accessibility and hit testing.
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: proxy.size.height)
                         .clipped()
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                 } else {
                     // Keep the existing original artwork available until a clean
                     // editorial export is supplied for this category.
