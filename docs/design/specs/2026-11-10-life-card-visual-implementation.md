@@ -11,8 +11,23 @@
 | Surface | Native SwiftUI Life/Wallet face and selected-card detail field; adaptive iPhone, iPad and Duo |
 | Size | L: native card shell, asset architecture, accessible adaptive presentation |
 | Author | ChatGPT design specification, 2026-11-10 |
-| Status | **Owner-selected visual direction, implementation proposed.** No app changes or release permission in this documentation PR. |
+| Status | **Owner-approved native presentation merge; no App Store deployment authorization.** See PR #162 for implementation evidence and native verification status. |
 | Governing docs read | [rules through design map](../README.md); [foundational UX](../FOUNDATIONAL_UX_PRINCIPLES.md); [native board](../planner/SPREAD_NATIVE_BRAND_BOARD.md); [tactile motion](../tactile-precision/MOTION_CONTRACT.md); [tactile QA](../tactile-precision/VERIFICATION.md); [iOS audit](../platforms/IOS27_BEHAVIOR_AUDIT.md); [Apple principles](../platforms/APPLE_DESIGN_PRINCIPLES.md); [icon handoff](../brand/ICON_HANDOFF.md); [spec pack](../packs/spec-writing.md) |
+
+## Current engineering contract (2026-11-10)
+
+The owner approved merging the isolated native presentation infrastructure; **this is not approval to release an App Store build**. The implementation is tracked in [PR #162](https://github.com/WGLewis0721/spread-app/pull/162). Its authoritative native components are:
+
+- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Editorial/` — **single category-artwork directory**, containing `README.md`. Intended clean assets: `work.webp`, `family.webp`, `fitness.webp`, `school.webp`, `home.webp`, `personal.webp`, and optional existing categories. Do not treat example filenames as installed assets.
+- `Life/LifeEditorialCard.swift` — `LifeEditorialArtworkRegistry`, `LifeEditorialArtwork` and `LifeEditorialFace`; all category image lookups are centralized here.
+- `Life/LifeWalletStack.swift` — responsive physical card geometry, selection, native swipe/edit gestures; art can be replaced without editing these handlers.
+- `Life/LifeRoot.swift` — opened Life card's actual planning details, nonzero day rows and optional tasks.
+- `PlannerSnapshot.swift` — one authoritative native view projection of the existing planner's role, week, day allocations and tasks.
+- `Package.swift` — registers `.copy("Resources/Editorial")`; missing art uses existing `Resources/Chalk` fallback.
+
+**Source-images are not drop-in production backgrounds.** The chosen Personal reference is **plum/bronze with coffee, journal, headphones, camera and plant**; its full mockup contains baked letters and hours. Export/re-create a **clean, text-free art-only asset** with a quiet left text area (~60%) and a legible full-width day-footer zone (~25%). SwiftUI renders the brand mark, category name, current budget, assigned/unassigned hours and all seven real weekdays in front of it. Do not cut out the mockup's typography and leave ghosts. Review-resolution exports are not Retina-quality masters.
+
+**No duplicated asset lookup.** Adding `personal.webp` to `Resources/Editorial` must only change Personal's appearance. Nothing in planner, hours, tasks, navigation or Wallet gestures may need edits. For unknown/custom category and missing art use a safe original Chalkboard fallback. The [Claude handoff](../planner/CLAUDE_EDITORIAL_ART_HANDOFF.md) is the direct execution entrypoint. Native build, XCUITest, accessibility, physical device and screenshot parity remain release gates; source-only checks never count as native QA.
 
 ## 1. Problem
 
