@@ -1,102 +1,47 @@
-# Spread icon handoff
+# Spread iconography — coordinated category system
 
-> Part of the Spread design brain. Start at [../README.md](../README.md) for the map, the rules and what to read for which task.
+> Part of the [Spread design brain](../README.md). This is the single source for icon ownership, visual rules, and licensing. Category illustrations on Life cards belong to [the editorial art sheet](../planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), not this icon file.
 
-The SVG files themselves stay in `public/icons/`; this file only documents them.
+## Decision: one category glyph family across iOS and React
 
-All production icons live in `public/icons/`. Prefer these SVGs. Do not invent filenames.
+**Use Lucide SVG outlines for the 10 responsibility categories.** Each uses a 24×24 vector grid, 2-unit rounded stroke and consistent optical weight. Native `RoleBadge` and web `CategoryBadge` show the exact same glyph geometry on a rounded, persisted role-colour tile. Icons communicate category identity, **not** completion or time tracking. Custom/unknown categories retain the original list fallback.
 
-## App icon
+| Category | Licensed Lucide source | Meaning |
+| --- | --- | --- |
+| Work | `briefcase-business` | Paid work and professional responsibility |
+| School | `graduation-cap` | Learning and education |
+| Home | `house` | Household responsibilities |
+| Health | `heart-pulse` | Health and care |
+| Family | `users-round` | Shared family responsibility |
+| Fitness | `dumbbell` | Gender-neutral physical activity |
+| Business | `building` | Operating a business (distinct from Work) |
+| Project | `layers` | Personal or professional projects |
+| Church | `church` | Optional faith/community responsibility |
+| Personal | `user-round` | Individual interests, no gender coding |
 
-| File | Use |
-|---|---|
-| `app-icon-spread-cards.svg` | Home screen / PWA / landing mark (concept D) |
+**Visual references evaluated:** [Apple SF Symbols HIG](https://developer.apple.com/design/human-interface-guidelines/sf-symbols), [Lucide](https://lucide.dev), [Iconoir](https://iconoir.com) and [Phosphor](https://phosphoricons.com). Lucide was selected for its readable 2-unit stroke at small sizes, consistent rounded geometry, downloadable SVG files, permissive ISC license, and ability to reuse one glyph on both iOS and web. Apple native **action controls** should continue using system SF Symbols where the existing UI does so. This category system **does not replace** the Apple launcher icon, Spread mark or image-rich Life card illustrations.
 
-Placement:
-- Landing page mark above the word Spread.
-- `public/favicon.svg` may stay the 3-bar mark, or switch to cards.
-- Rasterize to `public/__grok/icon-180.png` plus manifest 192 and 512.
+## File ownership — do not scatter or fork icons
 
-## Section 2 — UI action icons (outline, `#007AFF`)
+- **Source web SVGs:** `public/icons/icon-category-<category>.svg`; runtime colour is injected in `src/spread/components/category-badge.tsx` only after validating a six-digit hex colour.
+- **Native asset-catalog matches:** `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets/category-glyph-<category>.imageset/category-glyph-<category>.svg`; rendered as template images by `Theme/SpreadIcons.swift` `RoleBadge`.
+- **License notices:** `public/icons/LUCIDE_LICENSE.txt` and `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/LUCIDE_LICENSE.txt`. The latter is included as a bundled Swift package resource.
+- **Audit:** `scripts/icon-system.test.mjs` compares the vector paths across platforms and checks runtime tint, native templates and license presence.
 
-Size: 20×20 next to the label. Stroke icons. Use `currentColor` if you restyle; default is `#007AFF`.
+To update a category, change the web and native **SVG shapes together**, keeping size, strokes, container type and accessibility. No icon is allowed to directly modify planner hours or tasks. Avoid raster icons for toolbar actions. At small widths, show the readable category name; icon colour alone never encodes meaning. Prefer a 28–36pt visible badge within 44pt action targets. Reduced Motion applies to buttons, not an independently looping category icon.
 
-| File | Place it |
-|---|---|
-| `icon-spread-list.svg` | Spread / Week segmented control — Spread side |
-| `icon-week.svg` | Spread / Week segmented control — Week side |
-| `icon-add.svg` | “What matters most here?” add-task row; New Life can keep the badge plus |
-| `icon-rollover.svg` | Existing `Rollover` text link — prefix the label |
-| `icon-backup.svg` | More sheet — Back Up Spread (`.spread` file) |
-| `icon-restore.svg` | More sheet — Restore Spread |
-| `icon-export.svg` | More sheet — Copy week as text / Save Word |
-| `icon-share.svg` | More sheet — share / copy (iOS square-and-arrow-up) |
-| `icon-print.svg` | More sheet — Print / Save PDF |
-| `icon-photo.svg` | Task sheet tool — Photo |
-| `icon-table.svg` | Task sheet tool — Table |
-| `icon-outline.svg` | Task sheet tool — Outline |
-| `icon-palette.svg` | Tap-a-spread color picker |
-| `icon-drag.svg` | Reorder handle while dragging a spread or allocation |
-| `icon-check.svg` | Task complete / confirm |
-| `icon-edit.svg` | Bottom dock `Edit` |
-| `icon-settings.svg` | More sheet — Settings (appearance, log out) |
-| `icon-trash.svg` | Delete confirm only. Keep `#FF3B30`. Do not recolor blue |
+## Existing UI actions and brand assets
 
-### UI that may need to be added
+Do not replace action icon identities or production launcher branding as part of the category-family update. They are already consolidated under `public/icons/`, and their native analogues are in `Resources/Icons.xcassets/`, `SpreadIcon` and SF Symbols as appropriate:
 
-1. **More sheet rows with leading icons**
-   Backup, Restore, Export, Share, Print, Settings. Same list style as iOS Settings: 20px icon, title, optional chevron.
+| Category | Existing examples | Rule |
+| --- | --- | --- |
+| Navigation | `icon-spread-list.svg`, `icon-week.svg`, `icon-month.svg` | Keep original Week/Month morph contract and Crown |
+| Editing | `icon-add.svg`, `icon-edit.svg`, `icon-drag.svg`, `icon-check.svg`, `icon-trash.svg` | Use iOS-native patterns; destructive remains red |
+| Content/tools | `icon-notes.svg`, `icon-photo.svg`, `icon-table.svg`, `icon-palette.svg` | 20–24pt consistent visual weight |
+| More/Settings | `icon-backup.svg`, `icon-restore.svg`, `icon-share.svg`, `icon-print.svg`, `icon-settings.svg` | Actions retain labels and 44pt targets |
+| Brand | `app-icon-spread-cards.svg`, iOS `AppIcon.appiconset` | Never confuse small UI category pictograms with the branded Home Screen app icon |
 
-2. **Task sheet tool strip**
-   Notes is the default editor. Add a compact 4-item strip: Outline, Table, Photo, and keep Notes as text or a note glyph. Selecting one switches the task body.
+**Copyright:** Lucide's ISC license and full contributor/Feather notices are retained verbatim in both shipped resource locations. The category paths originate from `lucide-icons/lucide/icons/<source>.svg`. No network retrieval is required at runtime.
 
-3. **Color picker affordance**
-   Tapping the spread color dot already works. Show `icon-palette.svg` in the picker header or as a tiny badge on the dot when editing.
-
-4. **Drag handle**
-   During the hold-to-drag delay, fade in `icon-drag.svg` on the leading edge of the row so the gesture is discoverable.
-
-5. **Segmented control icons**
-   Optional. Spread / Week can stay text-only. If icons are used, pair `icon-spread-list` + `icon-week` at 16px, hide on very narrow widths.
-
-6. **Rollover confirmation**
-   Keep the existing “next week has tasks” confirm. Put `icon-rollover.svg` on the confirm button, not only the text link.
-
-## Section 3 — category badges (filled symbol in a circle)
-
-Size: same as today’s Work / Home / Health dots, about 28–32px.
-
-| File | Default color | Suggested default spread |
-|---|---|---|
-| `icon-category-work.svg` | `#34C759` | Work |
-| `icon-category-school.svg` | `#007AFF` | School |
-| `icon-category-home.svg` | `#FF9500` | Home |
-| `icon-category-health.svg` | `#30B0C7` | Health (today Health is blue — switching to teal is optional) |
-| `icon-category-family.svg` | `#AF52DE` | Family |
-| `icon-category-fitness.svg` | `#FFCC00` | Fitness |
-| `icon-category-business.svg` | `#5856D6` | Business |
-| `icon-category-project.svg` | `#FF9F0A` | Project |
-| `icon-category-church.svg` | `#BF5AF2` | Church |
-| `icon-category-personal.svg` | `#FF2D55` | Personal |
-| `icon-new-life.svg` | `#8E8E93` | New Life row only |
-
-### UI that may need to be added
-
-1. **Category field on a spread**
-   Spreads today have name + color only. Add an optional `category` key (`work`, `home`, …). If set, the badge uses that category SVG. If unset, keep the generic 3-line glyph on the user-picked color.
-
-2. **Category picker when creating / renaming**
-   New Life flow: name, color, category. Show the 10 badges in a wrap grid. Tapping a badge sets both a suggested color and the symbol. User can still change color after.
-
-3. **Do not bake color into runtime if the user recolors**
-   The SVGs include a default circle fill. For a user-picked color, either wrap a white glyph-only version in a CSS circle of the spread color, or replace the SVG circle fill with the spread color at render time.
-
-4. **Health color**
-   Live app uses blue for Health. Either keep blue and only swap the glyph to the heart, or move Health to teal `#30B0C7` so Work green / Home orange / Health teal stay distinct from School blue.
-
-## Do not
-
-- Edit `dist-pages` by hand.
-- Change gesture or week logic.
-- Recolor `icon-trash.svg` to accent blue.
-- Use the chat JPEG rasters in production (checkerboard is baked into those files).
+**Scope / rollback:** category glyph replacement plus a web/native tile-parity adjustment. No task model, planner state, category identifiers, screenshot-only new design language, global typography or release pipeline changes. Revert this icon PR to restore original SVGs.

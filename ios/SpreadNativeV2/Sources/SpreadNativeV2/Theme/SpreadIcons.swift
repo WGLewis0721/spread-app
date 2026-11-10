@@ -34,9 +34,10 @@ struct SpreadBrandMark: View {
     }
 }
 
-/// The category glyph on a soft, luminous tile in the role's colour (brand board: "real category glyphs in soft
-/// luminous colour tiles; initials are not replacements"). The tile takes the role colour (data); the glyph is the
-/// original category path (`category-glyph-*`, the source SVG with only its tinted circle removed).
+/// A consistent category glyph on a role-coloured tile. The ten source-matched
+/// Lucide outline SVGs live in Icons.xcassets and public/icons; both use a
+/// 24-point grid, 2-point round stroke. Colours remain persisted role data.
+/// The shared category art is separate from LifeEditorialArtwork backgrounds.
 struct RoleBadge: View {
     let category: String?
     let color: String
@@ -57,7 +58,7 @@ struct RoleBadge: View {
                     .foregroundStyle(.white)
                     .padding(size * 0.14)
             } else {
-                // No category: the planner shows a list mark on the role colour (lucide `List`, as before).
+                // Unknown/custom categories keep the neutral list mark on their selected colour.
                 ListMark().stroke(.white, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
                     .padding(size * 0.28)
             }
