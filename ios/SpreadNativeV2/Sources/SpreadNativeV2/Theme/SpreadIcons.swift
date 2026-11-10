@@ -43,6 +43,24 @@ struct RoleBadge: View {
     let color: String
     var size: CGFloat = 36
 
+    /// Match the React category tile's contrast rule for light user colours.
+    /// Using actual relative luminance avoids an unreadable white glyph on
+    /// yellow/orange/bright green without changing the role's stored colour.
+    private var glyphInk: Color {
+        let hex = color.hasPrefix("#") ? String(color.dropFirst()) : color
+        guard hex.count == 6, let rgb = Int(hex, radix: 16) else { return .white }
+        func linear(_ channel: Int) -> Double {
+            let value = Double(channel) / 255
+            return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+        let luminance = 0.2126 * linear((rgb >> 16) & 255)
+            + 0.7152 * linear((rgb >> 8) & 255)
+            + 0.0722 * linear(rgb & 255)
+        return luminance > 0.35
+            ? Color(red: 22 / 255, green: 33 / 255, blue: 42 / 255)
+            : .white
+    }
+
     var body: some View {
         let tint = Color(hex: color)
         let shape = RoundedRectangle(cornerRadius: size * 0.30, style: .continuous)
@@ -55,11 +73,11 @@ struct RoleBadge: View {
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(glyphInk)
                     .padding(size * 0.14)
             } else {
                 // Unknown/custom categories keep the neutral list mark on their selected colour.
-                ListMark().stroke(.white, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
+                ListMark().stroke(glyphInk, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
                     .padding(size * 0.28)
             }
         }
