@@ -46,12 +46,12 @@ The source images vary: some have a faux metal payment chip, subtitle or no hour
 
 ## 4. Personal card: production art brief
 
-**Purpose:** personal time, interests, self-directed growth, reflection, exploration. **Mood:** individual, sophisticated and gender-neutral without becoming sterile or corporate.
+**Approved Personal reference (2026-11-10):** the owner's **plum/bronze Personal** card featuring a journal, pen, coffee, headphones, camera, foliage and soft afternoon window light. Keep its warm, reflective, gender-neutral mood. The original mockup includes baked typography and an illustrative six-hour figure; do not ship that composite as native UI.
 
-- **Palette:** muted slate, smoke-violet or charcoal with brushed bronze or warm paper accents. Keep any lilac influence restrained, not pastel pink; a stored user-selected role color can tint a small edge/accent.
-- **Hero still life:** journal or notebook, headphones, compact camera, pencil and folded map or travel photo. A composition of personal pursuits, not gender stereotypes.
+- **Palette:** deep plum/ink with muted copper/bronze, warm cream highlights and restrained natural window light; avoid a pastel-pink or cosmetics identity. Stored role color remains authoritative for functional accents.
+- **Hero still life:** leather-bound journal, pen, ceramic coffee mug, over-ear headphones and vintage camera, plus subtle foliage and a small travel print. These objects occupy the right half while the left remains quiet for real native labels.
 - **Avoid:** cosmetic vanity, makeup/mirrors, florals as main motif, obligatory male/female silhouette, pink beauty branding, gendered hobby clichés, chips/contactless icons, fake card numbers or finance-dashboard controls.
-- **Typography / sample data for the conceptual image only:** `Personal`; `5 h this week`; Mon 0, Tue 0, Wed 0, Thu 0, Fri 1, Sat 2, Sun 2. Total = 5, unassigned = 0. Production values MUST come from planner state.
+- **Typography / sample data:** the owner-approved reference displays `Personal` and `6 h`; sample values are **not production data**. If creating test artwork previews, use one canonical internally consistent six-hour fixture: Mon 0, Tue 2, Wed 0, Thu 2, Fri 0, Sat 2, Sun 0. Production numbers always come from planner state.
 - **Composition:** one standalone card, not a five-card sheet. Match the first Fitness reference's strong left-side hierarchy, dark matte tactile finish, quietly detailed right-side illustration and full-width lower weekday strip.
 - **Quality check:** name/hours readable in a thumbnail; bottom-day values accurate; no important content covered by art; consistent with Family/Work/Fitness rather than a stand-alone poster.
 
@@ -66,6 +66,10 @@ Use a resource registry instead of scattering asset names/conditionals through L
 **Motion:** graphic art defaults static. Selection and allocation changes use the existing [Glide / Snap / Settle contract](../tactile-precision/MOTION_CONTRACT.md); avoid new decorative loops. Preserve old animated Chalkboard assets as fallback until owner approves any replacement/removal. Suppress optional visual motion under Reduce Motion.
 
 **Liquid Glass:** Apple system material is reserved for functional navigation/dock/sheet controls where supported, not the illustrated card or task rows; see [iOS 27 audit](../platforms/IOS27_BEHAVIOR_AUDIT.md) and [Apple principles](../platforms/APPLE_DESIGN_PRINCIPLES.md).
+
+### Canonical native artwork drop-in
+
+The repository's single image folder is `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Editorial/`; installed category art is looked up by `LifeEditorialArtworkRegistry` in `Life/LifeEditorialCard.swift`. Do not duplicate hard-coded image locations in the rest of the app. `personal.webp` may be replaced independently without changing planner or swipe code. Use fully clean image pixels: **no branding, category text, numbers, dates or weekday strip baked into the image**. The normal native system draws those values live over the image. The `Resources/Chalk/` images remain the fallback. See [Claude's asset handoff](CLAUDE_EDITORIAL_ART_HANDOFF.md) and [implementation spec](../specs/2026-11-10-life-card-visual-implementation.md). The folder currently has an instruction file, not final Retina assets.
 
 ## 6. Acceptance of an artwork revision
 
