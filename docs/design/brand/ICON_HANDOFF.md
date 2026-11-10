@@ -19,7 +19,7 @@
 | Church | `church` | Optional faith/community responsibility |
 | Personal | `user-round` | Individual interests, no gender coding |
 
-**Visual references evaluated:** [Apple SF Symbols HIG](https://developer.apple.com/design/human-interface-guidelines/sf-symbols), [Lucide](https://lucide.dev), [Iconoir](https://iconoir.com) and [Phosphor](https://phosphoricons.com). Lucide was selected for its readable 2-unit stroke at small sizes, consistent rounded geometry, downloadable SVG files, permissive ISC license, and ability to reuse one glyph on both iOS and web. Apple native **action controls** should continue using system SF Symbols where the existing UI does so. This category system **does not replace** the Apple launcher icon, Spread mark or image-rich Life card illustrations.
+**Accessibility:** The category tile keeps the user-selected role colour, while the glyph automatically switches between dark ink and white using relative luminance. Contrast is checked for bright yellow/orange/green as well as dark palette colours.\n\n**Visual references evaluated:** [Apple SF Symbols HIG](https://developer.apple.com/design/human-interface-guidelines/sf-symbols), [Lucide](https://lucide.dev), [Iconoir](https://iconoir.com) and [Phosphor](https://phosphoricons.com). Lucide was selected for its readable 2-unit stroke at small sizes, consistent rounded geometry, downloadable SVG files, permissive ISC license, and ability to reuse one glyph on both iOS and web. Apple native **action controls** should continue using system SF Symbols where the existing UI does so. This category system **does not replace** the Apple launcher icon, Spread mark or image-rich Life card illustrations.
 
 ## File ownership — do not scatter or fork icons
 
