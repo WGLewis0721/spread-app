@@ -49,7 +49,7 @@ test("React badge tints the tile and adapts glyph contrast to stored role colour
   assert.match(badge, /const fill = .*test\(color\)/);
   assert.match(badge, /replace\(\/\(<rect/);
   assert.match(badge, /function categoryInk\(hex: string\)/);
-  assert.match(badge, /luminance > 0\.35/);
+  assert.match(badge, /luminance > 0\.30/);
   assert.match(badge, /data-spread-category-glyph/);
   assert.match(badge, /aria-hidden="true"/);
 });
@@ -60,7 +60,7 @@ test("iOS badge maintains data-driven tint, glyph contrast, templates and catego
   assert.match(badge, /category-glyph-\\\(category\)/);
   assert.match(badge, /renderingMode\(\.template\)/);
   assert.match(badge, /private var glyphInk: Color/);
-  assert.match(badge, /luminance > 0\.35/);
+  assert.match(badge, /luminance > 0\.30/);
   assert.match(badge, /ListMark\(\)/);
 });
 
