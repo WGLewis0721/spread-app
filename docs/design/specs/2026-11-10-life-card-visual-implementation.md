@@ -18,7 +18,7 @@
 
 The owner approved merging the isolated native presentation infrastructure; **this is not approval to release an App Store build**. The implementation is tracked in [PR #162](https://github.com/WGLewis0721/spread-app/pull/162). Its authoritative native components are:
 
-- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Editorial/` — **single category-artwork directory**, containing `README.md`. Intended clean assets: `work.webp`, `family.webp`, `fitness.webp`, `school.webp`, `home.webp`, `personal.webp`, and optional existing categories. Do not treat example filenames as installed assets.
+- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Editorial/` — **single category-artwork directory**. The main baseline from PR #162 established its loader and README; **draft PR #163** installs six 3000 × 1800 WebPs for Work, Family, Fitness, School, Home and Personal. These images are not on `main` until an authorized merge. Missing categories retain the Chalkboard fallback.
 - `Life/LifeEditorialCard.swift` — `LifeEditorialArtworkRegistry`, `LifeEditorialArtwork` and `LifeEditorialFace`; all category image lookups are centralized here.
 - `Life/LifeWalletStack.swift` — responsive physical card geometry, selection, native swipe/edit gestures; art can be replaced without editing these handlers.
 - `Life/LifeRoot.swift` — opened Life card's actual planning details, nonzero day rows and optional tasks.
@@ -31,7 +31,7 @@ The owner approved merging the isolated native presentation infrastructure; **th
 
 ## 1. Problem
 
-A person with several weekly responsibilities should recognize a Life card immediately, understand its weekly time commitment and open it to work without losing their position. Today's native Wallet structure is a functional baseline, but the newly selected editorial card artwork is not yet a replaceable presentation layer. Baking generated art and runtime text into one image would make future artwork changes destructive and reduce accessibility.
+A person with several weekly responsibilities should recognize a Life card immediately, understand its weekly time commitment and open it to work without losing their position. The native Wallet stack remains the functional baseline; the centralized, replaceable editorial art layer is implemented on `main` (PR #162), with a reversible golden/editorial gate and six illustrative assets staged only in draft PR #163. Baking generated art and runtime text into one image would make future artwork changes destructive and reduce accessibility.
 
 ## 2. Evidence and context
 
