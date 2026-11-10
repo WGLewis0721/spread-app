@@ -117,7 +117,8 @@ struct LifeWalletStack: View {
                        },
                        exitDistance: max(viewportWidth + 32, 480),
                        closedHeight: closedHeight,
-                       focusedHeight: focusedHeight)
+                       focusedHeight: focusedHeight,
+                       presentationWidth: min(700, max(0, viewportWidth - 32)))
             .frame(maxWidth: .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
     }
@@ -143,6 +144,7 @@ private struct LifeWalletFace: View {
     let exitDistance: CGFloat
     let closedHeight: CGFloat
     let focusedHeight: CGFloat
+    let presentationWidth: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
@@ -295,7 +297,8 @@ private struct LifeWalletFace: View {
         }
     }
     private var face: some View {
-        LifeEditorialFace(role: role, snapshot: snapshot, selected: selected)
+        LifeEditorialFace(role: role, snapshot: snapshot, selected: selected,
+                          titleSafeWidth: presentationWidth * 0.61)
     }
 
     private var swipe: some Gesture {
