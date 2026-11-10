@@ -26,8 +26,16 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         capture("personal-collapsed")
 
         personal.tap()
-        XCTAssertTrue(app.staticTexts["Days"].waitForExistence(timeout: 10),
-                      "Expanding the Personal card did not list the week's days.")
+        if !app.staticTexts["Days"].waitForExistence(timeout: 10) {
+            // Diagnostics for the targeted run: the job log keeps this even when attachments are not exported.
+            print("PERSONAL_PREVIEW frame=\(personal.frame) hittable=\(personal.isHittable) type=\(personal.elementType.rawValue) label=\(personal.label)")
+            print("PERSONAL_PREVIEW_TREE_BEGIN")
+            print(String(app.debugDescription.prefix(60_000)))
+            print("PERSONAL_PREVIEW_TREE_END")
+            capture("personal-after-tap")
+            XCTFail("Expanding the Personal card did not list the week's days.")
+            return
+        }
         capture("personal-expanded")
     }
 
