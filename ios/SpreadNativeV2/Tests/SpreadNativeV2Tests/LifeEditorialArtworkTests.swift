@@ -4,10 +4,15 @@ import UIKit
 @testable import SpreadNativeV2
 
 final class LifeEditorialArtworkTests: XCTestCase {
-    func testPersonalArtworkResolvesFromEditorialFolder() throws {
-        let image = try XCTUnwrap(LifeEditorialArtworkRegistry.image(for: "personal"))
-        let width = try XCTUnwrap(image.cgImage?.width)
-        XCTAssertGreaterThan(width, 0)
+    func testAllSixApprovedArtworkFilesDecodeAtThreeThousandByEighteenHundred() throws {
+        let categories = ["work", "family", "fitness", "school", "home", "personal"]
+        for category in categories {
+            let image = try XCTUnwrap(LifeEditorialArtworkRegistry.image(for: category),
+                                      "Missing approved editorial artwork for \(category)")
+            let cgImage = try XCTUnwrap(image.cgImage)
+            XCTAssertEqual(cgImage.width, 3000, "Incorrect \(category) artwork width")
+            XCTAssertEqual(cgImage.height, 1800, "Incorrect \(category) artwork height")
+        }
     }
 
     func testUnknownCategoryMapsToCustom() {
