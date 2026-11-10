@@ -1,6 +1,8 @@
 # Spread Life cards: editorial art direction
 
 > Part of the [Spread design brain](../README.md). [Implementation spec](../specs/2026-11-10-life-card-visual-implementation.md). Owner-selected reference direction on 2026-11-10. **This is a visual target for a future native PR, not a statement that the target ships on main.**
+>
+> Summary: One swappable editorial Life card art grammar based on three owner reference images, a Personal card brief and a strict separation between static art, live planning data and native interaction.
 
 ## 1. Reference hierarchy and observed design
 
