@@ -374,6 +374,7 @@ workflows:
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" \
             -parallel-testing-enabled NO \
             -only-testing:SpreadNativeUITests/LifeUITests \
+            -only-testing:SpreadNativeUITests/LifeEditorialUITests \
             -resultBundlePath artifacts/life/Life-$WIDTH.xcresult CODE_SIGNING_ALLOWED=NO
           xcrun xcresulttool export attachments --path artifacts/life/Life.xcresult \
             --output-path "artifacts/life/screenshots-$WIDTH"

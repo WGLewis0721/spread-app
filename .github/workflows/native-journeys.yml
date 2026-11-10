@@ -56,6 +56,10 @@ jobs:
           - name: week-month-ipad
             width: 820
             tests: "WeekMonthUITests PlannerUITests/testFocusedWeekRetainsSidebarAndMorphsCalendar"
+          # Editorial Life card (gate on and off): the first Personal art pipeline evidence.
+          - name: life-editorial
+            width: 390
+            tests: "LifeEditorialUITests"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

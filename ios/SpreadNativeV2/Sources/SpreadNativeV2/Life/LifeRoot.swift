@@ -43,6 +43,7 @@ struct LifeRoot: View {
     @State private var historyVisible = false
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
+    @AppStorage(LifeEditorialPresentation.defaultsKey) private var editorialArt = false
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -324,35 +325,39 @@ struct LifeRoot: View {
             }
                 .frame(minHeight: 44).buttonStyle(.spreadPress)
                 .accessibilityIdentifier("life-change-area-hours")
-            // The selected face already shows all seven days. The details
-            // field lists only meaningful assignments and keeps editing below.
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Days").font(.headline)
-                    Spacer()
-                    Text(SpreadHours.text(LifeCardWeekDistribution.assigned(weekdayHours)) +
-                         " h assigned")
-                        .font(.caption).foregroundStyle(LifePalette.secondary)
-                }
-                ForEach(0..<7, id: \.self) { index in
-                    if weekdayHours[index] > 0 {
-                        HStack {
-                            Text(PlannerDates.label(
-                                PlannerDates.date(PlannerDates.dayISO(
-                                    weekKey: snapshot.weekKey, index: index)),
-                                pattern: "EEEE"))
-                            Spacer()
-                            Text(SpreadHours.text(weekdayHours[index]) + " h")
-                                .monospacedDigit()
+            if editorialArt {
+                // The selected face already shows all seven days. The details
+                // field lists only meaningful assignments and keeps editing below.
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Days").font(.headline)
+                        Spacer()
+                        Text(SpreadHours.text(LifeCardWeekDistribution.assigned(weekdayHours)) +
+                             " h assigned")
+                            .font(.caption).foregroundStyle(LifePalette.secondary)
+                    }
+                    ForEach(0..<7, id: \.self) { index in
+                        if weekdayHours[index] > 0 {
+                            HStack {
+                                Text(PlannerDates.label(
+                                    PlannerDates.date(PlannerDates.dayISO(
+                                        weekKey: snapshot.weekKey, index: index)),
+                                    pattern: "EEEE"))
+                                Spacer()
+                                Text(SpreadHours.text(weekdayHours[index]) + " h")
+                                    .monospacedDigit()
+                            }
+                            .font(.subheadline)
+                            .padding(.vertical, 3)
                         }
-                        .font(.subheadline)
-                        .padding(.vertical, 3)
+                    }
+                    if !weekdayHours.contains(where: { $0 > 0 }) {
+                        Text("No hours assigned to days yet.")
+                            .font(.subheadline).foregroundStyle(LifePalette.secondary)
                     }
                 }
-                if !weekdayHours.contains(where: { $0 > 0 }) {
-                    Text("No hours assigned to days yet.")
-                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                }
+            } else {
+                DayMarks(snapshot: snapshot, role: role)
             }
             if !editing {
                 Button("Prioritize this week") { localSheet = .priority(role.id) }
