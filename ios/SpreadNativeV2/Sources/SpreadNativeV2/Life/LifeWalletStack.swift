@@ -29,9 +29,17 @@ struct LifeWalletStack: View {
     @AccessibilityFocusState private var focusedRole: String?
     @State private var lastSelected: String?
     @State private var activeSwipeRole: String?
-    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 164
-    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 182
-    @ScaledMetric(relativeTo: .body) private var stackStep: CGFloat = 72
+    // A readable full-week strip needs a complete face, not the old 72pt pitch.
+    // Small overlap retains Wallet depth without hiding any title, hours or day.
+    @ScaledMetric(relativeTo: .body) private var minimumFaceHeight: CGFloat = 232
+    // Preserve enough room for live weekdays on narrow phones without
+    // stretching every wide-scene card to an arbitrary fixed ratio.
+    private var closedHeight: CGFloat {
+        let available = min(700, max(0, viewportWidth - 32))
+        return max(minimumFaceHeight, min(318, available * 0.58))
+    }
+    private var focusedHeight: CGFloat { closedHeight + 12 }
+    private var stackStep: CGFloat { max(0, closedHeight - 12) }
 
     private var ordered: [Responsibility] {
         let priority = snapshot.life?.priorityRoleId
@@ -107,7 +115,10 @@ struct LifeWalletStack: View {
                            if active && activeSwipeRole != role.id { activeSwipeRole = role.id }
                            else if !active && activeSwipeRole == role.id { activeSwipeRole = nil }
                        },
-                       exitDistance: max(viewportWidth + 32, 480))
+                       exitDistance: max(viewportWidth + 32, 480),
+                       closedHeight: closedHeight,
+                       focusedHeight: focusedHeight,
+                       presentationWidth: min(700, max(0, viewportWidth - 32)))
             .frame(maxWidth: .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
     }
@@ -131,11 +142,12 @@ private struct LifeWalletFace: View {
     let onDelete: () async -> Bool
     let onSwipeActivity: (Bool) -> Void
     let exitDistance: CGFloat
+    let closedHeight: CGFloat
+    let focusedHeight: CGFloat
+    let presentationWidth: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
-    @ScaledMetric(relativeTo: .body) private var closedHeight: CGFloat = 164
-    @ScaledMetric(relativeTo: .body) private var focusedHeight: CGFloat = 182
     private var cardHeight: CGFloat { selected ? focusedHeight : closedHeight }
     @State private var reveal: CGFloat = 0
     @State private var translation: CGFloat = 0
@@ -191,8 +203,10 @@ private struct LifeWalletFace: View {
     }
     // Resolve formatting as String before entering SwiftUI's overloaded text builders.
     private var spokenLabel: String {
-        let spokenHours: String = SpreadHours.spoken(hours)
-        return role.name + ", " + spokenHours
+        // Keep the selected week, not baked artwork values, in the spoken card.
+        let weekly = SpreadHours.spoken(role.hours)
+        let booked = SpreadHours.spoken(snapshot.placedHours(for: role.id))
+        return role.name + ", " + weekly + " weekly budget, " + booked + " assigned"
     }
 
     private var selectionButton: some View {
@@ -243,22 +257,10 @@ private struct LifeWalletFace: View {
         face
             .frame(maxWidth: .infinity)
             .frame(height: typeSize.isAccessibilitySize ? nil : cardHeight, alignment: .top)
-            .background(cardBackground)
+            .background { LifeEditorialArtwork(category: role.category, roleColor: roleColor) }
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected || editing ? 0.85 : 0.48), lineWidth: 1))
             .offset(x: cardOffset)
-    }
-
-    private var cardBackground: some View {
-        let tint = roleColor
-        let colors: [Color] = [tint.opacity(0.48), tint.opacity(0.16), .clear]
-        let gradient = LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-        return RoundedRectangle(cornerRadius: 24, style: .continuous)
-            .fill(Spread.cardFill)
-            .overlay {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(gradient)
-            }
     }
 
     @ViewBuilder
@@ -295,49 +297,10 @@ private struct LifeWalletFace: View {
         }
     }
     private var face: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                RoleBadge(category: role.category, color: role.color, size: 42)
-                Text(role.name).font(.title3.weight(.semibold)).frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-                if snapshot.life?.priorityRoleId == role.id {
-                    Text("Priority").font(.caption).padding(.horizontal, 5)
-                        .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: 5))
-                }
-                Text(SpreadHours.text(hours) + "h").font(.subheadline.bold()).monospacedDigit()
-                    .fixedSize(horizontal: true, vertical: false)
-                Image(systemName: "chevron.down").font(.subheadline.bold())
-                    .rotationEffect(.degrees(selected ? 180 : 0))
-                    .accessibilityHidden(true)
-            }.foregroundStyle(LifePalette.ink).frame(minHeight: 28)
-            if faceVisible || typeSize.isAccessibilitySize {
-                Spacer(minLength: 0)
-                HStack(alignment: .bottom, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(SpreadHours.text(reserved))h reserved")
-                        Text("\(openCount) open tasks")
-                    }
-                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    if !typeSize.isAccessibilitySize {
-                        ChalkMotionArt(category: role.category, size: 144)
-                            .frame(width: 144, height: 88, alignment: .top)
-                            .clipped()
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)
-                    }
-                }
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(LifePalette.fill)
-                        Capsule().fill(Color(hex: role.color))
-                            .frame(width: geometry.size.width * min(1, max(0, hours > 0 ? reserved / hours : 0)))
-                    }
-                }.frame(height: 4).accessibilityHidden(true)
-            }
-        }.padding(.horizontal, 18).padding(.vertical, 12)
+        LifeEditorialFace(role: role, snapshot: snapshot, selected: selected,
+                          titleSafeWidth: presentationWidth * 0.61)
     }
+
     private var swipe: some Gesture {
         DragGesture(minimumDistance: 14, coordinateSpace: .global)
             .updating($dragging) { _, active, _ in active = editing && !dismissing }
