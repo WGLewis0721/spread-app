@@ -58,3 +58,14 @@ test("iOS badge maintains data-driven tint, template rendering and category fall
   assert.match(badge, /renderingMode\(\.template\)/);
   assert.match(badge, /ListMark\(\)/);
 });
+
+test("bright role colours use contrast-aware glyph ink in native and web", () => {
+  const web = read("src/spread/components/category-badge.tsx");
+  const native = read("ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadIcons.swift");
+  assert.match(web, /function categoryInk\(/);
+  assert.match(web, /luminance > 0\.30/);
+  assert.match(web, /const ink = categoryInk\(fill\)/);
+  assert.match(native, /private var glyphInk: Color/);
+  assert.match(native, /luminance > 0\.30/);
+  assert.match(native, /foregroundStyle\(glyphInk\)/);
+});
