@@ -1,6 +1,8 @@
 # Spec: Editorial Life card identity and replaceable art
 
 > Part of the [Spread design brain](../README.md). Follow [../PLAN_SPEC_PROTOCOL.md](../PLAN_SPEC_PROTOCOL.md). The companion [art direction sheet](../planner/SPREAD_LIFE_CARD_ART_DIRECTION.md) owns the visual grammar; this file owns the implementation sequence and gates.
+>
+> Summary: Native Life card presentation spec, replaceable artwork placeholders, motion and Liquid Glass boundaries, 12 numbered Claude implementation steps, regression tests and rollback gates.
 
 | | |
 | --- | --- |
