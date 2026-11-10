@@ -26,7 +26,7 @@ Start here for Spread's design rules and task-specific references. For cross-pro
 | --- | --- | --- |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
-| Native Life design and artwork | [Editorial card sheet](planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [Life implementation spec](specs/2026-11-10-life-card-visual-implementation.md) |
+| Native Life design and artwork | [Editorial card sheet](planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [Life spec](specs/2026-11-10-life-card-visual-implementation.md), [Claude art handoff](planner/CLAUDE_EDITORIAL_ART_HANDOFF.md) |
 | SwiftUI / Wallet Stack | [Native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [iOS audit](platforms/IOS27_BEHAVIOR_AUDIT.md), [tactile contract](tactile-precision/README.md) |
 | A planner screen: Week, Spread, Month, sheets, toasts, task rows, the Crown | [packs/planner-change.md](packs/planner-change.md) | [planner/SPREAD_DESIGN_SYSTEM.md](planner/SPREAD_DESIGN_SYSTEM.md) sections named in the pack |
 | The public landing page | [packs/landing-change.md](packs/landing-change.md) | [landing/DESIGN.md](landing/DESIGN.md) sections named in the pack |
