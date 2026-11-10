@@ -56,8 +56,8 @@ struct RoleBadge: View {
         let luminance = 0.2126 * linear((rgb >> 16) & 255)
             + 0.7152 * linear((rgb >> 8) & 255)
             + 0.0722 * linear(rgb & 255)
-        return luminance > 0.35
-            ? Color(red: 22 / 255, green: 33 / 255, blue: 42 / 255)
+        return luminance > 0.30
+            ? Color(red: 22.0 / 255.0, green: 33.0 / 255.0, blue: 42.0 / 255.0)
             : .white
     }
 
