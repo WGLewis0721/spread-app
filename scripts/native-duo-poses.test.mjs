@@ -121,10 +121,13 @@ test('blocked Duo startup retains separate outer and inner display diagnostics w
   assert.equal(cell(result, '-', '-', 'startup').status, 'BLOCKED', 'diagnostics cannot bypass readiness');
 });
 
-test('the workflow runs this harness and never passes a scoped simulator set', () => {
-  const workflow = readFileSync(new URL('../.github/workflows/native-duo-poses.yml', import.meta.url), 'utf8');
-  assert.match(workflow, /scripts\/native-duo-poses\.mjs/);
-  assert.doesNotMatch(workflow, /--ios-simulator-device-set/);
+test('GitHub CI stays source-only; Duo harness is not an automatic native job', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /npm run typecheck/);
+  assert.match(workflow, /npm run lint/);
+  assert.match(workflow, /npm run test:spread/);
+  assert.match(workflow, /npm run test:scripts/);
+  assert.doesNotMatch(workflow, /xcodebuild|simctl|native-duo-poses\\.mjs/);
 });
 
 test('a refused rotation (the failure seen in runs 41852591875 and 41860698620) fails loudly but does not stop the matrix', async () => {
