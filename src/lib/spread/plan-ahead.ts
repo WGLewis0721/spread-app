@@ -1,5 +1,5 @@
 import {
-  ensureWeek, isoDate, parseKey, shiftWeek, uid, weekKey,
+  ensureWeek, isoDate, parseKey, uid, weekKey,
   type Allocation, type SpreadData, type Task, type WeekData,
 } from "./model.ts";
 
@@ -73,6 +73,8 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   const target = withDestination.weeks[targetWeek];
   const targetBox = target.boxes.find((box) => box.hatId === request.roleId);
   if (!targetBox) return reject("Life area not found in the destination.");
+  if (target.life && target.life.version !== 1)
+    return reject("This future week uses a newer planning format.");
   const capacity = request.targetCapacityHours ?? target.life?.capacityHours;
   if (capacity === undefined) return reject("Set the destination week's planning hours first.");
   if (!validHalfHours(capacity)) return reject("Destination weekly hours must be valid half-hour steps.");
@@ -122,6 +124,8 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
         }];
     if (movingTasks.length) {
       const movedIds = new Set(movingTasks.map((task) => task.id));
+      if (target.boxes.some((box) => box.tasks.some((task) => movedIds.has(task.id))))
+        return reject("Destination already contains one of these tasks.");
       if (sourceDayTaskOrder) {
         sourceDayTaskOrder = Object.fromEntries(Object.entries(sourceDayTaskOrder)
           .map(([day, ids]) => [day, ids.filter((id) => !movedIds.has(id))]));
