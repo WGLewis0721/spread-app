@@ -14,6 +14,8 @@ export type Task = {
   content?: TaskContent;
   /** Optional and informational: estimating does not reserve hours. */
   estimateMinutes?: number;
+  /** Familiar red !; does not alter deadlines, effort or day allocations. */
+  important?: boolean;
 };
 export type Hat = {
   id: string;
@@ -438,6 +440,8 @@ function normalizeTask(task: Task): Task {
   const next: Task = { ...structuredClone(task), id: task.id, text: task.text, done: Boolean(task.done) };
   if (typeof task.allocationId === "string") next.allocationId = task.allocationId;
   if (task.content) next.content = normalizeContent(task.content);
+  if (typeof task.important === "boolean") next.important = task.important;
+  else delete next.important;
   if (TASK_ESTIMATE_CHOICES.some((v) => v === task.estimateMinutes)) next.estimateMinutes = task.estimateMinutes;
   else delete next.estimateMinutes;
   return next;
