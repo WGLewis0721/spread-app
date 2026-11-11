@@ -17,7 +17,8 @@ struct LifeWalletStack: View {
     @State private var lastSelected: String?
     // Wallet-style stack: each collapsed card shows its name strip.
     // The front card shows the complete face with hours and the week strip.
-    @AppStorage(LifeEditorialPresentation.defaultsKey) private var editorialArt = false
+    // Owner-retired Chalk/doodle presentation; editorial art is now the only style.
+    private let editorialArt = true
     @ScaledMetric(relativeTo: .body) private var minimumFaceHeight: CGFloat = 232
     // Preserve enough room for live weekdays on narrow phones without
     // stretching every wide-scene card to an arbitrary fixed ratio.
