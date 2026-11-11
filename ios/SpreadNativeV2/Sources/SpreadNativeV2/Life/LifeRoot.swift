@@ -34,6 +34,10 @@ struct LifeRoot: View {
     @State private var hoursSelectedRole: String?
     @State private var weekSelectedRole: String?
     @State private var tasksOpen = false
+    @State private var budgetExpanded = false
+    @State private var budgetRoleID: String?
+    @State private var budgetCapacityText = ""
+    @State private var budgetError: String?
     @State private var navigationOpen = false
     @State private var navigationDrag: CGFloat = 0
     @State private var localSheet: LifeLocalSheet?
@@ -91,6 +95,7 @@ struct LifeRoot: View {
                             // as needed to show the closed card's strip in the stack.
                             .onChange(of: focusedRole) { old, new in
                                 tasksOpen = false
+                                if new != nil { budgetExpanded = false }
                                 withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
                                     if new != nil {
                                         proxy.scrollTo("life-top", anchor: .top)
@@ -129,12 +134,12 @@ struct LifeRoot: View {
         // (nil to loaded) is not a change, so a selection made before it survives.
         .onChange(of: planner.state?.envelope.profileId) { old, _ in
             guard old != nil else { return }
-            focusedRole = nil; tasksOpen = false; localSheet = nil; pendingTask = nil
+            focusedRole = nil; tasksOpen = false; budgetExpanded = false; localSheet = nil; pendingTask = nil
             hoursSelectedRole = nil; weekSelectedRole = nil
         }
         .onChange(of: planner.snapshot?.weekKey) { old, _ in
             guard old != nil else { return }
-            focusedRole = nil; tasksOpen = false; localSheet = nil
+            focusedRole = nil; tasksOpen = false; budgetExpanded = false; localSheet = nil
         }
         .onChange(of: planner.snapshot?.roles.map(\.id)) { _, roleIDs in
             if let focusedRole, !(roleIDs ?? []).contains(focusedRole) {
@@ -286,21 +291,28 @@ struct LifeRoot: View {
         .accessibilityIdentifier("life-new-area")
     }
 
-    /// Align the compact budget horizontally with Life on regular iPhones.
-    /// Narrow widths and accessibility sizes keep the fully readable stacked layout.
-    @ViewBuilder private func lifeOverview(_ snapshot: PlannerSnapshot, viewportWidth: CGFloat) -> some View {
-        if viewportWidth >= 375 && !dynamicTypeSize.isAccessibilitySize {
-            HStack(alignment: .center, spacing: 12) {
-                lifeHeading.frame(width: 96, alignment: .leading)
-                Spacer(minLength: 0)
-                timeBudgetLink(snapshot, compact: true)
-                    .frame(maxWidth: 440)
-                    .layoutPriority(1)
+    /// The read-only storage summary expands into the real planner's existing
+    /// capacity and per-role budget actions. No second stored allocation model.
+    private func lifeOverview(_ snapshot: PlannerSnapshot, viewportWidth: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if viewportWidth >= 375 && !dynamicTypeSize.isAccessibilitySize {
+                HStack(alignment: .center, spacing: 12) {
+                    lifeHeading.frame(width: 96, alignment: .leading)
+                    Spacer(minLength: 0)
+                    timeBudgetControl(snapshot, compact: true)
+                        .frame(maxWidth: 440)
+                        .layoutPriority(1)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    lifeHeading
+                    timeBudgetControl(snapshot, compact: false)
+                }
             }
-        } else {
-            VStack(alignment: .leading, spacing: 12) {
-                lifeHeading
-                timeBudgetLink(snapshot, compact: false)
+            if budgetExpanded {
+                budgetEditor(snapshot)
+                    .transition(SpreadTactile.walletDetailReveal)
+                    .accessibilityIdentifier("life-budget-editor")
             }
         }
     }
@@ -318,16 +330,188 @@ struct LifeRoot: View {
         .padding(.horizontal, 4)
     }
 
-    private func timeBudgetLink(_ snapshot: PlannerSnapshot, compact: Bool) -> some View {
-        Button { navigate(.hours) } label: {
-            LifeWeeklyTimeBudget(roles: snapshot.roles, capacity: snapshot.life?.capacityHours,
-                                 compact: compact)
-        }
-        .buttonStyle(.spreadPress)
-        .accessibilityLabel(LifeBudgetBarMath.accessibilityLabel(
-            roles: snapshot.roles, capacity: snapshot.life?.capacityHours))
-        .accessibilityHint("Opens Hours to change your weekly time budget.")
+    private func timeBudgetControl(_ snapshot: PlannerSnapshot, compact: Bool) -> some View {
+        LifeWeeklyTimeBudget(
+            roles: snapshot.roles,
+            capacity: snapshot.life?.capacityHours,
+            compact: compact,
+            expanded: budgetExpanded,
+            onToggle: {
+                if budgetExpanded {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
+                        budgetExpanded = false
+                    }
+                } else {
+                    openBudget(for: nil)
+                }
+            },
+            onSelectRole: { id in openBudget(for: id) }
+        )
         .accessibilityIdentifier("life-weekly-time-summary")
+    }
+
+    private func openBudget(for roleID: String?) {
+        budgetRoleID = roleID
+        budgetCapacityText = planner.snapshot?.life?.capacityHours.map(SpreadHours.text) ?? ""
+        budgetError = nil
+        withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
+            focusedRole = nil
+            budgetExpanded = true
+        }
+        LifeFeedback.selection()
+    }
+
+    private func budgetEditor(_ snapshot: PlannerSnapshot) -> some View {
+        let assigned = LifeBudgetBarMath.assigned(snapshot.roles)
+        let capacity = snapshot.life?.capacityHours
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Your weekly hours").font(.headline)
+                Spacer()
+                Button("Done") {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
+                        budgetExpanded = false
+                    }
+                }
+                .accessibilityIdentifier("life-budget-done")
+            }
+            HStack(spacing: 8) {
+                Button { adjustCapacity(by: -1, snapshot: snapshot) } label: {
+                    Image(systemName: "minus").frame(width: 44, height: 44)
+                }
+                .disabled(planner.busy || capacity == nil || capacity! <= assigned)
+                .accessibilityLabel("Remove one weekly hour")
+                TextField("Weekly hours", text: $budgetCapacityText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.center)
+                    .frame(minWidth: 76, minHeight: 44)
+                    .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("life-budget-capacity-input")
+                Button { adjustCapacity(by: 1, snapshot: snapshot) } label: {
+                    Image(systemName: "plus").frame(width: 44, height: 44)
+                }
+                .disabled(planner.busy || (capacity ?? 0) >= 168)
+                .accessibilityLabel("Add one weekly hour")
+                Button("Set") { commitBudgetCapacity(snapshot) }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(planner.busy)
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("life-budget-save-capacity")
+            }
+            .buttonStyle(.bordered)
+            HStack {
+                Text(SpreadHours.text(assigned) + "h budgeted")
+                Spacer()
+                Text(capacity.map { SpreadHours.text(max(0, $0 - assigned)) + "h available" }
+                     ?? "Set your weekly hours")
+            }
+            .font(.subheadline)
+            .foregroundStyle(Spread.secondary)
+            .accessibilityElement(children: .combine)
+            if !snapshot.roles.isEmpty {
+                Text("Choose a Life area to adjust").font(.subheadline.weight(.semibold))
+                ScrollView(.horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(snapshot.roles) { role in
+                            Button {
+                                budgetRoleID = role.id
+                                LifeFeedback.selection()
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
+                                    Text(role.name).lineLimit(1)
+                                    Text(SpreadHours.text(role.hours) + "h")
+                                        .monospacedDigit()
+                                }
+                                .font(.subheadline)
+                                .foregroundStyle(Spread.ink)
+                                .padding(.horizontal, 10)
+                                .frame(minHeight: 44)
+                                .background(budgetRoleID == role.id ? Spread.inset : Spread.elevated,
+                                            in: Capsule())
+                                .overlay(Capsule().strokeBorder(
+                                    budgetRoleID == role.id ? Spread.accent : Spread.line, lineWidth: 1.5))
+                            }
+                            .buttonStyle(.spreadPress)
+                            .accessibilityLabel(role.name + ", " + SpreadHours.text(role.hours) + " hours")
+                            .accessibilityAddTraits(budgetRoleID == role.id ? .isSelected : [])
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+            }
+            if let selected = snapshot.roles.first(where: { $0.id == budgetRoleID }) {
+                HStack {
+                    Text(selected.name).font(.headline)
+                    Spacer()
+                    Button { adjustRole(selected, by: -0.5, snapshot: snapshot) } label: {
+                        Image(systemName: "minus").frame(width: 44, height: 44)
+                    }
+                    .disabled(planner.busy || selected.hours - 0.5 < snapshot.placedHours(for: selected.id))
+                    .accessibilityLabel("Return half an hour from " + selected.name)
+                    Text(SpreadHours.text(selected.hours) + "h")
+                        .font(.headline).monospacedDigit()
+                        .frame(minWidth: 46)
+                    Button { adjustRole(selected, by: 0.5, snapshot: snapshot) } label: {
+                        Image(systemName: "plus").frame(width: 44, height: 44)
+                    }
+                    .disabled(planner.busy || capacity == nil ||
+                              assigned + 0.5 > (capacity ?? 0))
+                    .accessibilityLabel("Add half an hour to " + selected.name)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("life-budget-role-controls")
+            }
+            if let budgetError {
+                Text(budgetError).font(.callout).foregroundStyle(Spread.danger)
+                    .accessibilityIdentifier("life-budget-error")
+            }
+        }
+        .padding(16)
+        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard)
+            .strokeBorder(Spread.line, lineWidth: 1))
+        .accessibilityElement(children: .contain)
+    }
+
+    private func commitBudgetCapacity(_ snapshot: PlannerSnapshot) {
+        let text = budgetCapacityText.replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(text), value.isFinite, value >= LifeBudgetBarMath.assigned(snapshot.roles),
+              value <= 168, value >= 0, (value * 2).rounded() == value * 2 else {
+            budgetError = "Enter a valid weekly total in half-hour steps, no less than the hours already budgeted."
+            return
+        }
+        budgetError = nil
+        Task {
+            if await planner.send(["type": "setLifeCapacity", "hours": value]) {
+                LifeFeedback.accepted()
+            }
+        }
+    }
+
+    private func adjustCapacity(by delta: Double, snapshot: PlannerSnapshot) {
+        guard let capacity = snapshot.life?.capacityHours else { return }
+        let next = capacity + delta
+        guard next >= LifeBudgetBarMath.assigned(snapshot.roles), next <= 168 else { return }
+        budgetCapacityText = SpreadHours.text(next)
+        commitBudgetCapacity(snapshot)
+    }
+
+    private func adjustRole(_ role: Responsibility, by delta: Double, snapshot: PlannerSnapshot) {
+        guard let capacity = snapshot.life?.capacityHours else {
+            budgetError = "Set weekly hours first."
+            return
+        }
+        let next = role.hours + delta
+        let reserved = snapshot.placedHours(for: role.id)
+        guard next >= reserved, next >= 0, next <= 168,
+              LifeBudgetBarMath.assigned(snapshot.roles) + delta <= capacity else { return }
+        budgetError = nil
+        Task {
+            if await planner.send(["type": "setLifeBudget", "roleId": role.id, "hours": next]) {
+                LifeFeedback.accepted()
+            }
+        }
     }
 
     private func details(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
