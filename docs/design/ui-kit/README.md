@@ -1,10 +1,12 @@
 # Spread UI Kit
 
+> Part of the [Spread design brain](../README.md).
+
 Clear, consolidated design DNA for consistent work across the app, website, marketing, and ads.
 
 ## Start here
 
-**[UI_KIT.md](UI_KIT.md)** — the single source of truth.
+**[UI_KIT.md](UI_KIT.md)** — the consolidated cross-surface reference.
 
 It consolidates foundations, components, patterns, and cross-surface rules so quality stays consistent without needing Figma.
 
@@ -16,7 +18,4 @@ It consolidates foundations, components, patterns, and cross-surface rules so qu
 
 ## Relationship to the main repo
 
-This kit does not replace the existing files in `docs/design/`.  
-It is the clear top-level map and consolidated reference so anyone can stay consistent.
-
-Drop this folder into `docs/design/ui-kit/` or keep it as a reference.
+The kit consolidates established rules; the native brand board governs SwiftUI, planner specs govern behavior, and landing rules govern marketing. New design work must follow those authorities instead of creating a second design system.
