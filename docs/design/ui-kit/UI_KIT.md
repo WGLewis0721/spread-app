@@ -1,8 +1,10 @@
 # Spread UI Kit
 
-**Single source of truth for visual consistency across the app, website, marketing, and ads.**
+> Part of the [Spread design brain](../README.md).
 
-This kit consolidates the existing design DNA so anyone (or any AI) can produce consistent work without losing quality.
+**Consolidated visual reference across the app, website, marketing, and ads.**
+
+This kit consolidates Spread's existing visual language. It does not override the native SwiftUI brand board, the planner's behavior rules, or the landing-page authority.
 
 **Start here.** Then follow the links for deeper rules.
 
@@ -25,13 +27,12 @@ This kit consolidates the existing design DNA so anyone (or any AI) can produce 
 ### Colors
 
 **Light**
-- Canvas / Paper: `#F6F1E7`
+- Native canvas: `#F4F1EA` (use `Spread.canvas`; web uses `tokens.json`)
 - Elevated: elevated surface
-- Ink: `#171717`
-- Secondary: `#68645D`
-- Accent: `#0A84FF`
-- Sage: `#DCE6D6`
-- Peach: `#F1DFCF`
+- Native ink: `#0E1A2E` (use `Spread.ink`)
+- Native secondary: use `Spread.secondary` (web uses `tokens.json`)
+- Native accent: `#0860C8` (use `Spread.accent`; web uses `tokens.json`)
+- Sage and peach: supporting editorial/marketing references, not new native action colors
 
 **Dark**
 - Night canvas: `#060B18`
@@ -60,10 +61,10 @@ This kit consolidates the existing design DNA so anyone (or any AI) can produce 
 ### Spacing & Geometry
 
 - 4px / 8px grid
-- Minimum touch target: 44px
+- Minimum touch target: 44pt on iOS; 44px on web
 - Card radius: 20–28pt (`rounded-3xl`)
 - Nested content: `rounded-2xl`
-- Insets: 16–20pt
+- Insets: 16–20pt, using 4/8pt increments
 - Hairline dividers
 
 ### Motion
@@ -104,19 +105,19 @@ This kit consolidates the existing design DNA so anyone (or any AI) can produce 
 - Suggests availability
 
 ### Sheets
-- Radix Dialog with grabber
-- Used for More, new spread, open tasks
+- Native: use existing SwiftUI `SpreadSheetStack` and presentation detents
+- Web: follow the existing React dialog implementation; do not transplant a component library
 
 ### Feedback
 - Single toast system
-- 6-second Undo (latest change only)
-- Alert dialogs for destructive confirmations
+- Reuse the existing planner's Undo behavior and native feedback; do not invent new timeouts
+- Destructive confirmation follows the surface contract: native Life deletion uses Undo without an extra prompt; Classic retains its own rules
 - Status row: title + quiet detail (danger on problem titles)
 - Drop highlight: 2px accent outline
 
 ### Navigation
-- Segmented control (Spread / Week)
-- Crown for week navigation
+- Native: adaptive Life/Hours/Week navigation and existing metallic Crown for week changes
+- Web: preserve its current navigation; do not add mockup tabs
 - “Today” marker in accent
 
 ---
@@ -144,7 +145,7 @@ Roles → Hours → Week → Tasks
 
 ## 4. Surfaces (App, Website, Marketing, Ads)
 
-Use the same foundations and components everywhere.
+Share visual principles and role identity across surfaces, not identical controls. Native SwiftUI and marketing/web retain their own component implementations.
 
 **Do**
 - Use the exact color tokens and type scale
@@ -184,5 +185,4 @@ Use the same foundations and components everywhere.
 - `docs/design/RULES_CARD.md`
 - `docs/design/landing/DESIGN.md`
 
-**This file is the clear UI Kit.** Everything else is supporting detail.  
-Use this first when creating any new screen, marketing asset, or AI prompt.
+**This file is the visual entry point.** Native, planner, and landing source documents linked above remain authoritative for their own surfaces. Use the kit to avoid inconsistencies, not to replace working UI.
