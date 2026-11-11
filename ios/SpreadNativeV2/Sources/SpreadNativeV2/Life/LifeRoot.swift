@@ -374,6 +374,7 @@ struct LifeRoot: View {
             },
             onSelectRole: { id in openBudget(for: id) }
         )
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-weekly-time-summary")
     }
 
