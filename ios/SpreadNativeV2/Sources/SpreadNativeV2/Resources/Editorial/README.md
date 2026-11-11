@@ -34,6 +34,6 @@ The DEBUG-only `-SpreadPersonalPreviewFixture` argument loads six sample respons
 
 ## Physical hardware
 
-A debug build launched from Xcode can use `-native.life.editorialArt.enabled YES` in Scheme > Run > Arguments. This setting is a debug/testing option, not a public preference or TestFlight switch. Haptics, real VoiceOver focus, high-refresh-rate gesture feel, and physical iPad/phone scaling remain separate device acceptance requirements.
+A debug build launched from Xcode can use `-native.life.editorialArt.enabled YES` in Scheme > Run > Arguments. In any build, including TestFlight, the Life tray (iPhone) or rail (iPad) has a "Use new card art" / "Use original card art" button that flips the same flag on that device. The default stays off. Haptics, real VoiceOver focus, high-refresh-rate gesture feel, and physical iPad/phone scaling remain separate device acceptance requirements.
 
 No app storage, cloud, bridge schema, planner writes or server are introduced by this artwork folder.
