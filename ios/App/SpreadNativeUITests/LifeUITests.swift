@@ -35,6 +35,21 @@ final class LifeUITests: XCTestCase {
         add(attachment)
     }
 
+    func testLifeStorageBudgetSummaryShowsHoursAndOpensAllocator() {
+        startLife()
+        let summary = app.buttons["life-weekly-time-summary"]
+        XCTAssertTrue(summary.waitForExistence(timeout: 20))
+        XCTAssertTrue(summary.label.contains("budgeted"),
+                      "Budget summary must announce how much time is committed")
+        XCTAssertTrue(summary.label.contains("Adjust hours"),
+                      "Time budget remains a discoverable navigation control")
+        capture("life-storage-weekly-time-budget")
+        summary.tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-hours-page").firstMatch.waitForExistence(timeout: 20),
+            "The read-only Life preview must open the real Hours allocator")
+    }
+
     func testFocusedLifeDetailsAndTasksAreContextual() {
         startLife()
         let card = app.descendants(matching: .any)

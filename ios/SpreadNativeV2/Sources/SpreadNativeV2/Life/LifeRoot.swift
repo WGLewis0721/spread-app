@@ -224,7 +224,10 @@ struct LifeRoot: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                     .transition(.opacity)
                 Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
-                    .accessibilityLabel("Adjust weekly planning hours")
+                    .accessibilityLabel(LifeBudgetBarMath.accessibilityLabel(
+                        roles: snapshot.roles, capacity: snapshot.life?.capacityHours))
+                    .accessibilityHint("Opens Hours to change your weekly time budget.")
+                    .accessibilityIdentifier("life-weekly-time-summary")
                     .transition(.opacity)
             }
             if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
@@ -294,73 +297,9 @@ struct LifeRoot: View {
     }
 
     private func summary(_ snapshot: PlannerSnapshot) -> some View {
-        let assigned = snapshot.roles.reduce(0) { $0 + $1.hours }
-        return HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(.title3, weight: .semibold))
-                .foregroundStyle(Spread.accent)
-                .frame(width: 44, height: 44)
-                .background(Spread.accent.opacity(0.12),
-                            in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                summaryTitle(assigned: assigned)
-                Text("Across " + String(snapshot.roles.count) + " Life areas")
-                    .font(.caption).foregroundStyle(Spread.secondary)
-                capacitySummary(snapshot, assigned: assigned)
-                    .font(.caption)
-                summaryRoleColors(snapshot, assigned: assigned)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Image(systemName: "chevron.right")
-                .font(.system(.subheadline, weight: .bold))
-                .foregroundStyle(Spread.ink)
-                .frame(width: 20, height: 44)
-                .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 12).padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .spreadCard()
+        LifeWeeklyTimeBudget(roles: snapshot.roles, capacity: snapshot.life?.capacityHours)
     }
 
-    private func summaryTitle(assigned: Double) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(SpreadHours.text(assigned) + "h")
-                    .font(.system(.title2, weight: .bold)).monospacedDigit()
-                Text("assigned").font(.system(.subheadline, weight: .medium))
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(SpreadHours.text(assigned) + "h")
-                    .font(.system(.title2, weight: .bold)).monospacedDigit()
-                Text("assigned").font(.system(.subheadline, weight: .medium))
-            }
-        }
-        .foregroundStyle(Spread.ink)
-    }
-
-    private func summaryRoleColors(_ snapshot: PlannerSnapshot, assigned: Double) -> some View {
-        GeometryReader { geometry in
-            let roles = snapshot.roles.filter { $0.hours > 0 }
-            let gap: CGFloat = 3
-            let usable = max(0, geometry.size.width - CGFloat(max(0, roles.count - 1)) * gap)
-            HStack(spacing: gap) {
-                ForEach(roles) { role in
-                    Capsule().fill(Color(hex: role.color))
-                        .frame(width: usable * CGFloat(role.hours / max(assigned, 0.5)), height: 6)
-                }
-            }
-        }
-        .frame(maxWidth: 116).frame(height: 6)
-        .accessibilityHidden(true)
-    }
-    @ViewBuilder private func capacitySummary(_ snapshot: PlannerSnapshot, assigned: Double) -> some View {
-        if let capacity = snapshot.life?.capacityHours {
-            Text("\(SpreadHours.text(capacity - assigned))h unassigned").foregroundStyle(LifePalette.secondary)
-        } else {
-            Text("Set weekly hours").foregroundStyle(LifePalette.accent)
-        }
-    }
     private func details(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
         let weekdayHours = LifeCardWeekDistribution.hours(for: role.id, snapshot: snapshot)
         return VStack(alignment: .leading, spacing: 10) {
