@@ -5,7 +5,7 @@ All design guidance lives in one place: **[docs/design/README.md](docs/design/RE
 <!-- design-rules-card:start -->
 **Start here:** `docs/design/README.md` (router). Plans and specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens as data: `docs/design/tokens.json`. Read the task pack the router names, then only the section it points to.
 
-**Ship target: native iPhone (SwiftUI).** React web, landing, iCloud, multiplayer and waitlist are suspended; no new work there unless the owner asks. Snapshot: branch `parked/web-cloud-2026-11-11`. A change under about 50 lines needs no spec: restate it in one sentence, make it, run the checks.
+**Two products.** (1) The native iOS app in SwiftUI, iPhone only, no Android; Codemagic builds `main` to TestFlight on demand. (2) The marketing website: promo, one-page walkthrough, App Store link. The React web planner, beta sign-up, iCloud, multiplayer and waitlist are suspended (snapshot: branch `parked/web-cloud-2026-11-11`). A change under about 50 lines needs no spec: restate it in one sentence, make it, run the checks.
 
 **Look**
 - In unflagged **React**, use existing CSS tokens. **SwiftUI PR #127** follows `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` for navy, restrained glow, Chalkboard art and the metal Crown; React/landing keep their own rules.
