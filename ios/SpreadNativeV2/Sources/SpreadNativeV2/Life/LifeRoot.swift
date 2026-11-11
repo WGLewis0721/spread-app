@@ -585,6 +585,10 @@ struct LifeRoot: View {
             .offset(x: navigationDrag + (navigationOpen ? 0 : (crownRight ? -trayWidth : trayWidth)))
             .simultaneousGesture(navigationPan(width: trayWidth))
             .animation(reduceMotion ? nil : SpreadTactile.traySlide, value: navigationOpen)
+            // The tray is one modal container. Without its own element the modal trait and
+            // escape action were pushed onto every control inside, and Close navigation
+            // reported the whole tray as its frame, so tray controls were not hittable.
+            .accessibilityElement(children: .contain)
             .accessibilityAddTraits(.isModal)
             .accessibilityAction(.escape) { closeNavigation() }
         }
