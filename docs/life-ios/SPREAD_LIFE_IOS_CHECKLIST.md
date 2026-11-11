@@ -87,7 +87,7 @@ Owner: native engineer.
 - [ ] Draw arcs in proportion to acknowledged weekly budgets and capacity. Keep the center, assigned total and unassigned total consistent.
 - [ ] Add the slow orbit. Pause at the current angle and separate arcs when the center is tapped. Regroup without jumping.
 - [ ] Implement one-hour flicks and the approved accelerated vertical hold/drag. Cancel safely if interrupted or the active week/profile changes.
-- [ ] Implement counterclockwise add and clockwise return at half-hour detents. Track correctly across the circle's angle seam and on direction reversal.
+- [ ] Implement **clockwise/right add** and **counterclockwise/left return** at half-hour detents (November 11 owner update). Track correctly across the circle's angle seam and on direction reversal.
 - [ ] Update a local draft during the gesture. Commit one guarded final operation on release, with one Undo step. Do not flood the bridge with frame-by-frame writes.
 - [ ] Provide an editable capacity field, add/return buttons, keyboard actions and VoiceOver adjustment actions.
 - [ ] Test a full circle, reserved-hours floor, zero-capacity circle, maximum capacity and corrective edits after a Classic over-capacity change.

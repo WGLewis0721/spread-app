@@ -15,6 +15,8 @@
 | Baseline | GitHub main rechecked at `b074b881ff6b1134d745ce1697f841069d92cf4b`. |
 | Next document | [Step-by-step implementation checklist](SPREAD_LIFE_IOS_CHECKLIST.md). |
 
+> **November 11 native Hours gesture supersession:** The installed Hours dial now turns **clockwise/right to add** allocated hours and **counterclockwise/left to return** them, in the same ½-hour / 15-degree steps. The frozen browser reference retains its original mapping for historical comparison. Current native gesture authority: [motion contract](../design/tactile-precision/MOTION_CONTRACT.md). Capacity flick up/down is unchanged.
+
 ## 1. Problem
 
 The owner can plan comfortably in the approved browser prototype, but uses the installed iOS app to test real weeks. Its current preview has different navigation and interaction patterns. The owner needs the approved Life experience on the phone, with readable instructions and tactile cues that explain what changed when a gesture succeeds.
@@ -80,7 +82,7 @@ Life shows the real responsibility stack. Tapping a card leaves that card in foc
 
 **November 6 owner amendment (supersedes earlier horizontal Delete reveal and confirmation):** The only Edit button lives in the adaptive side navigation tray/rail. Tap/long-press on cards cannot enter Edit. While editing, a **left swipe reveals Manage**; a deliberate **rightward swipe slides the whole card completely off the device edge** and executes the existing all-weeks responsibility removal with **no confirmation**, followed by accessible Undo. A failed commit restores the card. No checkboxes, bulk delete, red Delete reveal or alternate vertical delete gesture. Show Undo/Redo after edits; one accepted deletion is one undoable history step. Preserve stored data and task content during Undo.
 
-Hours uses the approved central orbit. The center is the week's planning capacity. Arcs show assigned Life budgets; the remaining gap shows unassigned time. Tap the number to pause at its current angle and separate arcs. Tap again to regroup. Flick up/down changes the capacity draft by one hour. Hold and drag farther away to change it faster. Select a Life area, then circle counterclockwise to add and clockwise to subtract, in half-hour steps. Preserve the prototype's 15-degree detent and accelerated-drag curve as the initial native calibration. Keep explicit add/return buttons and an editable capacity field.
+Hours uses the approved central orbit. The center is the week's planning capacity. Arcs show assigned Life budgets; the remaining gap shows unassigned time. Tap the number to pause at its current angle and separate arcs. Tap again to regroup. Flick up/down changes the capacity draft by one hour. Hold and drag farther away to change it faster. Select a Life area, then circle clockwise/right to add and counterclockwise/left to subtract, in half-hour steps. Preserve the prototype's 15-degree detent and accelerated-drag curve as the initial native calibration. Keep explicit add/return buttons and an editable capacity field.
 
 Preview gesture changes immediately on the phone; commit once on release through the real store. Capacity cannot be below assigned budgets; a role budget cannot be below its reserved hours. Life cannot assign beyond capacity. The filled circle means there is no unassigned time. If Classic later creates an over-capacity plan, retain its data, display the shortfall, and allow corrective reductions or increased capacity. Do not silently shrink budgets or rewrite Classic's rules.
 
@@ -121,7 +123,7 @@ Add photos through the system photo picker and files/media through the system fi
 | Totals | `27 h assigned` and `9 h unassigned` |
 | Closed orbit instruction | `Tap the number to adjust your hours.` |
 | Capacity gesture help | `Flick up or down by 1 hour. Hold and drag to change faster.` |
-| Separated orbit instruction | `Choose an area. Turn left to add time. Turn right to return it.` |
+| Separated orbit instruction | `Choose an area. Turn right to add time. Turn left to return it.` |
 | Budget versus reservation | `Assigned to Family` versus `Reserved on your days` |
 | Full circle | `All hours are assigned. Add weekly hours to assign more.` |
 | Reserved-hours limit | `4 h are already reserved. Return time from a day first.` |

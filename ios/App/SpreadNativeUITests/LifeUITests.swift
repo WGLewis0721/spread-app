@@ -50,6 +50,34 @@ final class LifeUITests: XCTestCase {
             "The read-only Life preview must open the real Hours allocator")
     }
 
+    func testHoursGaugeDirectionInstructionsMatchActualRotation() {
+        startLife()
+        navigate("hours")
+        let summaryInstruction = "Tap the center to set your weekly hours. Choose an area, then turn right to add time or left to return it."
+        XCTAssertTrue(app.staticTexts[summaryInstruction].waitForExistence(timeout: 15))
+        let role = app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH 'life-hours-role-'")).firstMatch
+        if role.waitForExistence(timeout: 10) {
+            role.tap()
+            XCTAssertTrue(app.staticTexts[
+                "Turn right to add ½ hour. Turn left to return ½ hour to your weekly pool."
+            ].waitForExistence(timeout: 10))
+            let controls = app.descendants(matching: .any)
+                .matching(identifier: "life-selected-hours-controls").firstMatch
+            if controls.exists {
+                XCTAssertTrue(app.buttons["Return ½h"].exists)
+                XCTAssertTrue(app.buttons["Add ½h"].exists)
+            }
+        }
+        let help = app.buttons["Gesture help"]
+        XCTAssertTrue(help.waitForExistence(timeout: 10))
+        help.tap()
+        XCTAssertTrue(app.staticTexts[
+            "Choose an area. Turn right to add time. Turn left to return it."
+        ].waitForExistence(timeout: 10))
+        capture("hours-clockwise-add-gesture-instructions")
+    }
+
     func testFocusedLifeDetailsAndTasksAreContextual() {
         startLife()
         let card = app.descendants(matching: .any)

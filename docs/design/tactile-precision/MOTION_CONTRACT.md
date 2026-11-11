@@ -51,7 +51,7 @@ Rule: touching a moving control immediately redirects it. No transition blocks l
 
 ## 4. Hours: mechanical detents, honest capacity
 
-- Retain the Life Hours circle/orbit and its existing counterclockwise/clockwise semantics. One approved 15-degree dial step changes 0.5 hour; vertical capacity flick changes one hour. Do not reverse the gesture to imitate a physical gadget.
+- **November 11 owner update:** In native Life Hours, **clockwise/right adds** 0.5 hour and **counterclockwise/left returns** 0.5 hour per 15-degree detent. This reverses the original prototype's mapping; the production UI instructions, explicit buttons, keyboard shortcuts and gesture help must agree. Vertical capacity flick still changes one hour and is unchanged.
 - While dragging, display a draft. Each valid half-hour crossing may produce a light, rate-limited selection cue. On release, validate against planner limits and commit once through the existing authoritative store. An accepted store acknowledgment gets one distinct confirmation; a rejection restores or explains the previous value.
 - Do not provide haptics at every rendered frame. Preserve LifeHoursView.swift's existing cue throttle as the starting reference and test whether its 125 ms interval feels correct.
 - Support direct numeric entry, plus/minus controls and VoiceOver adjustable actions. Tactile play is never required to do work. No invented default planning capacity for real users.
