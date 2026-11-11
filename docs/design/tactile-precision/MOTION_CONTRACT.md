@@ -4,6 +4,8 @@
 >
 > Summary: Proposed Glide / Snap / Settle primitives used across native Life, Hours, Week, Wallet, sidebar, Crown and tasks. Retain approved visual identity, existing planner data and the frozen Life reference. Numbers below are initial in-app calibration targets, not accepted shipping values.
 
+> **November 11 owner supersession:** Retire the metallic Crown wheel and its 64pt detents. Calendar week navigation uses explicit adjacent-week controls plus bounded velocity-sensitive swipes. The Life Hours radial page is no longer the normal edit entry point: the storage-style summary expands into inline capacity and half-hour role controls. Use the existing planner and Wallet motion/haptics. Plan Ahead requires intentional preview and confirmation, never auto-rollover. Historical Crown, separate-Hours and chalk visual notes below do **not** authorize implementation.
+
 ## 1. Motion grammar
 
 | Primitive | Input/output contract | Where used |
