@@ -224,7 +224,7 @@ private struct LifeWalletFace: View {
             editorialSelection
         } else {
             Button {
-                if !editing { onSelect() }
+                if LifeCardSwipeRules.tapSelects(editing: editing) { onSelect() }
             } label: {
                 // Editorial only: the whole rounded card is the target, so a tap in its open
                 // middle reaches the action. The main-head card keeps its original hit area.
@@ -257,14 +257,14 @@ private struct LifeWalletFace: View {
     private var editorialSelection: some View {
         cardSurface
             .modifier(EditorialTapTarget(enabled: editorialArt))
-            .onTapGesture { if !editing { onSelect() } }
+            .onTapGesture { if LifeCardSwipeRules.tapSelects(editing: editing) { onSelect() } }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(spokenLabel))
             .accessibilityValue(selected ? "Focused" : "Closed")
             .accessibilityHint(selected ? "Close this area’s tasks" : "Show this area’s tasks")
             .accessibilityAddTraits(.isButton)
             .accessibilityAddTraits(selected ? .isSelected : [])
-            .accessibilityAction { if !editing { onSelect() } }
+            .accessibilityAction { if LifeCardSwipeRules.tapSelects(editing: editing) { onSelect() } }
             .accessibilityActions {
                 if editing {
                     Button("Manage") { if editing { onManage() } }
@@ -278,7 +278,7 @@ private struct LifeWalletFace: View {
     private var roleColor: Color { Color(hex: role.color) }
     // Left reveals Manage. Right follows the finger toward full-width dismissal.
     private var cardOffset: CGFloat {
-        max(-110, min(exitDistance, reveal + translation + dismissOffset))
+        max(-CGFloat(LifeCardSwipeRules.manageDragLimit), min(exitDistance, reveal + translation + dismissOffset))
     }
 
     // Keep each SwiftUI builder small enough for the release compiler to solve.
@@ -352,64 +352,56 @@ private struct LifeWalletFace: View {
             .updating($dragging) { _, active, _ in active = editing && !dismissing }
             .onChanged { value in
                 guard editing, !dismissing else { return }
-                let horizontal = value.translation.width
-                let vertical = value.translation.height
-                guard abs(horizontal) > abs(vertical) * 1.5 else { return }
+                let horizontal = Double(value.translation.width)
+                guard LifeCardSwipeRules.isHorizontal(horizontal: horizontal,
+                                                      vertical: Double(value.translation.height)) else { return }
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 onSwipeActivity(true)
                 withTransaction(transaction) {
                     // Preserve the original directions: left = Manage, right =
                     // slide the entire card off screen to remove it.
-                    translation = horizontal > 0
-                        ? min(exitDistance, horizontal)
-                        : max(-110, horizontal)
+                    translation = CGFloat(LifeCardSwipeRules.liveOffset(
+                        horizontal: horizontal, exitDistance: Double(exitDistance)))
                 }
             }
             .onEnded { value in
-                guard editing, !dismissing else { return }
-                let horizontal = value.translation.width
-                let vertical = value.translation.height
-                guard abs(horizontal) > abs(vertical) * 1.5 else {
+                // The release thresholds live in LifeCardSwipeRules so they are tested on their own.
+                switch LifeCardSwipeRules.outcome(
+                    editing: editing, dismissing: dismissing, reveal: Double(reveal),
+                    horizontal: Double(value.translation.width),
+                    vertical: Double(value.translation.height),
+                    predictedEnd: Double(value.predictedEndTranslation.width),
+                    exitDistance: Double(exitDistance)
+                ) {
+                case .ignore:
+                    return
+                case .keepReveal:
                     withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
                         translation = 0
                     }
                     if reveal == 0 { onSwipeActivity(false) }
-                    return
-                }
-                if horizontal > 0 {
-                    let traveled = max(0, reveal + horizontal)
-                    let projected = max(0, reveal + value.predictedEndTranslation.width)
-                    // Require a decisive gesture. The release spring completes
-                    // the visible offscreen travel, then the existing undoable
-                    // planner command deletes the Life area without a prompt.
-                    if TactilePrecisionMath.cardShouldDismissRight(
-                        traveled: Double(traveled), projected: Double(projected),
-                        exitDistance: Double(exitDistance)
-                    ) {
-                        performDismissal()
-                    } else {
-                        withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
-                            reveal = 0
-                            translation = 0
-                        }
-                        onSwipeActivity(false)
+                case .dismiss:
+                    // The release spring completes the visible offscreen travel, then the
+                    // existing undoable planner command deletes the Life area without a prompt.
+                    performDismissal()
+                case .closeReveal:
+                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                        reveal = 0
+                        translation = 0
                     }
-                    return
+                    onSwipeActivity(false)
+                case .reveal(let target):
+                    let manageTarget = CGFloat(target)
+                    if manageTarget < 0 && manageTarget != reveal {
+                        LifeFeedback.reveal(delete: false)
+                    }
+                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                        reveal = manageTarget
+                        translation = 0
+                    }
+                    if manageTarget == 0 { onSwipeActivity(false) }
                 }
-                let target = TactilePrecisionMath.revealTarget(
-                    current: Double(reveal), translation: Double(horizontal),
-                    projected: Double(value.predictedEndTranslation.width),
-                    threshold: 34, stop: 92)
-                let manageTarget = min(0, target)
-                if manageTarget < 0 && CGFloat(manageTarget) != reveal {
-                    LifeFeedback.reveal(delete: false)
-                }
-                withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
-                    reveal = CGFloat(manageTarget)
-                    translation = 0
-                }
-                if manageTarget == 0 { onSwipeActivity(false) }
             }
     }
 

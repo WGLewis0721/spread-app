@@ -158,6 +158,11 @@ struct LifeRoot: View {
             do { try await Task.sleep(for: .seconds(5)) } catch { return }
             historyVisible = false
         }
+        // A container identifier on a non-element view is pushed onto every
+        // descendant element, replacing ids such as life-navigation and
+        // life-more. Making the root a containing element keeps its own id
+        // while each child keeps its id, label and VoiceOver order.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-root")
         #if DEBUG
         .modifier(LifeDebugDynamicTypeOverride())
@@ -190,7 +195,7 @@ struct LifeRoot: View {
                              onManage: { localSheet = .manage($0) }, onDelete: { _ in },
 
                              selectedRole: $weekSelectedRole)
-            }.accessibilityIdentifier("life-week-page")
+            }.accessibilityElement(children: .contain).accessibilityIdentifier("life-week-page")
         }
     }
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
@@ -236,7 +241,7 @@ struct LifeRoot: View {
                     .frame(maxWidth: .infinity).padding(.top, 12)
             }
             if !snapshot.roles.isEmpty { newLifeArea }
-        }.accessibilityIdentifier("life-page")
+        }.accessibilityElement(children: .contain).accessibilityIdentifier("life-page")
     }
     private var newLifeArea: some View {
         Button(action: onNewRole) {
