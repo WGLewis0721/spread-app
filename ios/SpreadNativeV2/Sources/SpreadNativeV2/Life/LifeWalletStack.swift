@@ -159,9 +159,6 @@ private struct LifeWalletFace: View {
     @State private var dismissOffset: CGFloat = 0
     @State private var dismissing = false
     @GestureState private var dragging = false
-    // Set when the current touch has travelled, so a swipe that stays inside the card
-    // cannot select it. See EditorialTravelTracking.
-    @State private var pannedSinceTouchDown = false
     @State private var glow = false
     private var reserved: Double {
         snapshot.allocations.filter { $0.roleId == role.id && (day == nil || $0.day == day) }.reduce(0) { $0 + $1.hours }
@@ -187,8 +184,10 @@ private struct LifeWalletFace: View {
         // Track the face when it reveals actions rather than lighting the
         // stationary slot left behind.
         .overlay(editingOutline.offset(x: cardOffset))
-        .simultaneousGesture(swipe)
-        .modifier(EditorialTravelTracking(enabled: editorialArt, panned: $pannedSinceTouchDown))
+        // The swipe recognizer is live only in Edit. Outside Edit the native Button owns
+        // the touch, so taps select and vertical drags scroll. The gesture stays attached
+        // (mask only) so the view structure does not change when Edit toggles.
+        .simultaneousGesture(swipe, including: editing ? .all : .subviews)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
         .onChange(of: dragging) { _, active in
@@ -220,7 +219,7 @@ private struct LifeWalletFace: View {
 
     private var selectionButton: some View {
         Button {
-            if !editing && !dragging && !(editorialArt && pannedSinceTouchDown) { onSelect() }
+            if !editing { onSelect() }
         } label: {
             // Editorial only: the whole rounded card is the target, so a tap in its open
             // middle reaches the action. The main-head card keeps its original hit area.
@@ -413,30 +412,6 @@ private struct EditorialTapTarget: ViewModifier {
     func body(content: Content) -> some View {
         if enabled {
             content.contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        } else {
-            content
-        }
-    }
-}
-
-/// Editorial cards only. Records whether the current touch has moved, so a swipe that
-/// stays inside the card cannot select it. The Button's action runs at lift-off, after
-/// every movement event. A new touch starts with zero translation, which clears the flag.
-private struct EditorialTravelTracking: ViewModifier {
-    let enabled: Bool
-    @Binding var panned: Bool
-    func body(content: Content) -> some View {
-        if enabled {
-            content.simultaneousGesture(
-                DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                    .onChanged { value in
-                        if value.translation == .zero {
-                            panned = false
-                        } else if abs(value.translation.width) > 10 || abs(value.translation.height) > 10 {
-                            panned = true
-                        }
-                    }
-            )
         } else {
             content
         }
