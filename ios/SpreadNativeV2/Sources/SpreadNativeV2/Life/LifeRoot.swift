@@ -33,7 +33,7 @@ struct LifeRoot: View {
     @State private var focusedRole: String?
     @State private var hoursSelectedRole: String?
     @State private var weekSelectedRole: String?
-    @State private var editing = false
+    @State private var tasksOpen = false
     @State private var navigationOpen = false
     @State private var navigationDrag: CGFloat = 0
     @State private var localSheet: LifeLocalSheet?
@@ -56,7 +56,7 @@ struct LifeRoot: View {
                     if geometry.size.width >= 820 {
                         VStack(spacing: 8) {
                             compactRail
-                            if destination == .life { editControl; artControl }
+                            if destination == .life { artControl }
                         }
                     }
                     VStack(spacing: 0) {
@@ -91,7 +91,7 @@ struct LifeRoot: View {
                             // top so the card lands in a fixed slot. Closing scrolls only as far
                             // as needed to show the closed card's strip in the stack.
                             .onChange(of: focusedRole) { old, new in
-                                guard !editing else { return }
+                                tasksOpen = false
                                 withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
                                     if new != nil {
                                         proxy.scrollTo("life-top", anchor: .top)
@@ -130,14 +130,19 @@ struct LifeRoot: View {
         // (nil to loaded) is not a change, so a selection made before it survives.
         .onChange(of: planner.state?.envelope.profileId) { old, _ in
             guard old != nil else { return }
-            focusedRole = nil; editing = false; localSheet = nil; pendingTask = nil
+            focusedRole = nil; tasksOpen = false; localSheet = nil; pendingTask = nil
             hoursSelectedRole = nil; weekSelectedRole = nil
         }
         .onChange(of: planner.snapshot?.weekKey) { old, _ in
             guard old != nil else { return }
-            focusedRole = nil; editing = false; localSheet = nil
+            focusedRole = nil; tasksOpen = false; localSheet = nil
         }
-        .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
+        .onChange(of: planner.snapshot?.roles.map(\.id)) { _, roleIDs in
+            if let focusedRole, !(roleIDs ?? []).contains(focusedRole) {
+                self.focusedRole = nil
+                tasksOpen = false
+            }
+        }
         .onChange(of: navigationOpen) { _, open in
             navigationFocused = open
             if !open { openerFocused = true }
@@ -166,7 +171,7 @@ struct LifeRoot: View {
         #endif
     }
     /// True while one Life card is in the Wallet-style focus state.
-    private var lifeFocused: Bool { destination == .life && focusedRole != nil && !editing }
+    private var lifeFocused: Bool { destination == .life && focusedRole != nil }
     private var header: some View {
         HStack(spacing: 8) {
             if lifeFocused {
@@ -222,38 +227,45 @@ struct LifeRoot: View {
                     .accessibilityLabel("Adjust weekly planning hours")
                     .transition(.opacity)
             }
-            if editing {
-                Text("Swipe left to manage. Slide right offscreen to delete. Undo restores.")
-                    .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                if planner.undoId != nil || planner.redoId != nil { history }
-            }
+            if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             if snapshot.roles.isEmpty {
                 Text("Name the responsibilities you want to plan for.").font(.body)
                 newLifeArea
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
-                                selectedRole: $focusedRole, editing: editing,
-                                viewportHeight: viewportHeight,
-                                viewportWidth: viewportWidth,
-                                onManage: { localSheet = .manage($0) },
-                                onDelete: { id in
-                                    let ok = await planner.send(["type": "removeLifeRole", "roleId": id])
-                                    if ok {
-                                        LifeFeedback.accepted()
-                                        if focusedRole == id { focusedRole = nil }
-                                        historyVisible = true
-                                    }
-                                    return ok
-                                })
+                                selectedRole: $focusedRole,
+                                viewportHeight: viewportHeight, viewportWidth: viewportWidth)
                     .zIndex(2)
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
+                HStack(spacing: 12) {
+                    Button {
+                        localSheet = .manage(id)
+                    } label: {
+                        Label("Details", systemImage: "slider.horizontal.3")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .spreadChip(selected: false).buttonStyle(.spreadPress)
+                    .accessibilityIdentifier("life-details-button")
+                    Button {
+                        withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                            tasksOpen.toggle()
+                        }
+                    } label: {
+                        Label("Tasks", systemImage: "text.book.closed")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .spreadChip(selected: tasksOpen).buttonStyle(.spreadPress)
+                    .accessibilityValue(tasksOpen ? "Open" : "Closed")
+                    .accessibilityIdentifier("life-tasks-button")
+                }
+                .padding(.horizontal, 4)
                 details(role, snapshot: snapshot)
                     .id(id)
                     // Keep old and new fields visually connected as focus changes.
                     .transition(SpreadTactile.walletDetailReveal)
-            } else if !editing && !snapshot.roles.isEmpty {
-                Text("Tap a card to see its tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+            } else if !snapshot.roles.isEmpty {
+                Text("Tap a card to view its details and tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 12)
             }
             if !snapshot.roles.isEmpty && !lifeFocused { newLifeArea }
@@ -400,17 +412,17 @@ struct LifeRoot: View {
                         .font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
             }
-            if !editing {
-                Button("Prioritize this week") { localSheet = .priority(role.id) }
-                    .padding(.horizontal, 12).frame(minHeight: 44)
-                    .spreadChip(selected: false).buttonStyle(.spreadPress)
+            Button("Prioritize this week") { localSheet = .priority(role.id) }
+                .padding(.horizontal, 12).frame(minHeight: 44)
+                .spreadChip(selected: false).buttonStyle(.spreadPress)
+            if tasksOpen {
+                VStack(alignment: .leading, spacing: 0) {
+                    LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
+                    LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                }
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
-            VStack(alignment: .leading, spacing: 0) {
-                LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
-                LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-            }
-            .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .padding(16).spreadCard(radius: Spread.radiusCard)
         .accessibilityElement(children: .contain)
@@ -436,7 +448,7 @@ struct LifeRoot: View {
     }
     private func bottom(_ snapshot: PlannerSnapshot, wide: Bool) -> some View {
         VStack(spacing: 4) {
-            if !editing && historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
+            if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) {
                     if !crownRight { crown(snapshot).frame(maxWidth: 270) }
@@ -467,35 +479,6 @@ struct LifeRoot: View {
             if crownRight { addTaskButton }
         }.fixedSize(horizontal: true, vertical: false)
     }
-    /// Edit lives in the navigation tray/rail, never above the Life cards.
-    /// It is the only way to enter Edit mode.
-    private var editControl: some View {
-        Button {
-            guard destination == .life else { return }
-            focusedRole = nil
-            editing.toggle()
-            closeNavigation()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: editing ? "checkmark.circle" : "pencil")
-                    .font(.system(size: 21, weight: .medium))
-                if navigationOpen {
-                    Text(editing ? "Done editing" : "Edit Life areas")
-                        .font(.subheadline.weight(.medium))
-                } else if navigationExpanded {
-                    Text(editing ? "Done" : "Edit").font(.caption)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 52,
-                   alignment: navigationOpen ? .leading : .center)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.spreadPress)
-        .padding(.horizontal, 10)
-        .accessibilityLabel(editing ? "Done editing Life areas" : "Edit Life areas")
-        .accessibilityIdentifier("life-edit")
-    }
-
     /// Switches the Life card artwork between the original Chalk art and the new editorial
     /// art. It writes the same presentation flag the launch argument sets: no planner data.
     private var artControl: some View {
@@ -589,7 +572,7 @@ struct LifeRoot: View {
                             .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
-                    if destination == .life { editControl; artControl }
+                    if destination == .life { artControl }
                     history
                     Menu("Crown position") {
                         Button("Move Crown left") { crownRight = false }
@@ -633,7 +616,6 @@ struct LifeRoot: View {
         if destination != value { LifeFeedback.selection() }
         withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
             destination = value
-            editing = false
         }
         withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) {
             navigationOpen = false
