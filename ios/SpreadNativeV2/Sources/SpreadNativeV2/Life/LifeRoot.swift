@@ -243,7 +243,10 @@ struct LifeRoot: View {
                         Label("Details", systemImage: "slider.horizontal.3")
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .spreadChip(selected: false).buttonStyle(.spreadPress)
+                    .buttonStyle(.spreadPress)
+                    .foregroundStyle(Spread.ink)
+                    .background(Spread.elevated, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
                     .accessibilityIdentifier("life-details-button")
                     Button {
                         withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
@@ -253,7 +256,10 @@ struct LifeRoot: View {
                         Label("Tasks", systemImage: "text.book.closed")
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .spreadChip(selected: tasksOpen).buttonStyle(.spreadPress)
+                    .buttonStyle(.spreadPress)
+                    .foregroundStyle(Spread.ink)
+                    .background(tasksOpen ? Spread.inset : Spread.elevated, in: Capsule())
+                    .overlay(Capsule().strokeBorder(tasksOpen ? Spread.accent : Spread.line, lineWidth: 1))
                     .accessibilityValue(tasksOpen ? "Open" : "Closed")
                     .accessibilityIdentifier("life-tasks-button")
                 }
@@ -514,72 +520,77 @@ struct LifeRoot: View {
         }
     }
 
+    /// One obvious planning action, with extra details shown only when needed.
     private func details(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
         let weekdayHours = LifeCardWeekDistribution.hours(for: role.id, snapshot: snapshot)
-        return VStack(alignment: .leading, spacing: 10) {
+        let placed = LifeCardWeekDistribution.assigned(weekdayHours)
+        let remaining = snapshot.remainingHours(for: role.id)
+        return VStack(alignment: .leading, spacing: 12) {
             if tasksOpen {
                 VStack(alignment: .leading, spacing: 0) {
-                    LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
+                    LifeTaskRows(planner: planner, snapshot: snapshot,
+                                 tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
                     LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
                         .padding(.horizontal, 12).padding(.vertical, 6)
                 }
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("life-task-notebook")
             }
-            HStack {
+            HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(role.name) this week").font(.headline)
-                    Text("\(SpreadHours.text(snapshot.remainingHours(for: role.id)))h still to place")
-                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                    Text(SpreadHours.text(max(0, remaining)) + "h to plan")
+                        .font(.headline)
+                    Text(role.name + " · " + SpreadHours.text(placed) + "h on days")
+                        .font(.subheadline).foregroundStyle(Spread.secondary)
                 }
-                Spacer(minLength: 8)
-                Button("Place hours") { localSheet = .reserve(role.id) }
-                    .padding(.horizontal, 12).frame(minHeight: 44)
-                    .spreadChip(selected: true).buttonStyle(.spreadPress)
+                Spacer(minLength: 0)
+                Button("Plan days") { localSheet = .reserve(role.id) }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: 44)
+                    .padding(.horizontal, 14)
+                    .background(Spread.accent, in: Capsule())
+                    .foregroundStyle(Spread.onAccent)
+                    .buttonStyle(.spreadPress)
+                    .accessibilityIdentifier("life-place-hours")
             }
-            Button("Change area hours") {
-                // Preserve the card context when moving into the Hours instrument.
-                hoursSelectedRole = role.id
-                navigate(.hours)
+            Button {
+                openBudget(for: role.id)
+            } label: {
+                Label("Adjust weekly hours", systemImage: "slider.horizontal.3")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
-                .frame(minHeight: 44).buttonStyle(.spreadPress)
-                .accessibilityIdentifier("life-change-area-hours")
-            // The selected face already shows all seven days. The details
-            // field lists only meaningful assignments; notebook content opens via Tasks.
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Days").font(.headline)
-                    Spacer()
-                    Text(SpreadHours.text(LifeCardWeekDistribution.assigned(weekdayHours)) +
-                         " h assigned")
-                        .font(.caption).foregroundStyle(LifePalette.secondary)
-                }
-                ForEach(0..<7, id: \.self) { index in
-                    if weekdayHours[index] > 0 {
-                        HStack {
-                            Text(PlannerDates.label(
-                                PlannerDates.date(PlannerDates.dayISO(
-                                    weekKey: snapshot.weekKey, index: index)),
-                                pattern: "EEEE"))
-                            Spacer()
-                            Text(SpreadHours.text(weekdayHours[index]) + " h")
-                                .monospacedDigit()
+            .foregroundStyle(Spread.accent)
+            .buttonStyle(.spreadPress)
+            .accessibilityIdentifier("life-change-area-hours")
+            if placed > 0 {
+                DisclosureGroup("Days on your calendar") {
+                    VStack(spacing: 6) {
+                        ForEach(0..<7, id: \.self) { index in
+                            if weekdayHours[index] > 0 {
+                                HStack {
+                                    Text(PlannerDates.label(
+                                        PlannerDates.date(PlannerDates.dayISO(
+                                            weekKey: snapshot.weekKey, index: index)),
+                                        pattern: "EEEE"))
+                                    Spacer()
+                                    Text(SpreadHours.text(weekdayHours[index]) + "h")
+                                        .monospacedDigit()
+                                }
+                                .font(.subheadline)
+                            }
                         }
-                        .font(.subheadline)
-                        .padding(.vertical, 3)
                     }
                 }
-                if !weekdayHours.contains(where: { $0 > 0 }) {
-                    Text("No hours assigned to days yet.")
-                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
-                }
+                .tint(Spread.accent)
+                .accessibilityIdentifier("life-planned-days")
             }
-            Button("Prioritize this week") { localSheet = .priority(role.id) }
-                .padding(.horizontal, 12).frame(minHeight: 44)
-                .spreadChip(selected: false).buttonStyle(.spreadPress)
         }
-        .padding(16).spreadCard(radius: Spread.radiusCard)
+        .padding(16)
+        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard)
+            .strokeBorder(Spread.line, lineWidth: 1))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-task-details")
     }
