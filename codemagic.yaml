@@ -6,6 +6,12 @@ workflows:
     name: Spread - signed iOS upload
     max_build_duration: 120
     instance_type: mac_mini_m2
+    # Reuse downloaded Swift packages and Xcode 26+ compilation artifacts.
+    # Keep the full DerivedData tree ephemeral: Codemagic advises against caching it.
+    cache:
+      cache_paths:
+        - $HOME/Library/Caches/org.swift.swiftpm
+        - $HOME/Library/Developer/Xcode/DerivedData/CompilationCache.noindex
     integrations:
       app_store_connect: Spread
     environment:
@@ -65,7 +71,8 @@ workflows:
           # before exiting, preserving the failed archive status and blocking publication.
           if xcode-project build-ipa \
             --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
-            --scheme App; then
+            --scheme App \
+            --archive-xcargs "COMPILATION_CACHE_ENABLE_CACHING=True"; then
             :
           else
             ARCHIVE_STATUS=$?
