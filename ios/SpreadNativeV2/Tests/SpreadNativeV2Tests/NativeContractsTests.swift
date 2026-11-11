@@ -3,6 +3,51 @@ import XCTest
 
 final class NativeContractsTests: XCTestCase {
 #if os(iOS)
+    func testLifeStorageBudgetPreservesAllocatedAndAvailableHours() {
+        let roles = [
+            Responsibility(id: "work", name: "Work", category: "work", color: "#00AA55", hours: 8),
+            Responsibility(id: "home", name: "Home", category: "home", color: "#FF9500", hours: 7),
+            Responsibility(id: "fitness", name: "Fitness", category: "health", color: "#FF3470", hours: 4.5)
+        ]
+        let assigned = LifeBudgetBarMath.assigned(roles)
+        let track = LifeBudgetBarMath.trackHours(assigned: assigned, capacity: 40)
+        XCTAssertEqual(assigned, 19.5, accuracy: 0.001)
+        XCTAssertEqual(LifeBudgetBarMath.available(40, assigned: assigned)!, 20.5, accuracy: 0.001)
+        XCTAssertEqual(track, 40, accuracy: 0.001)
+        let pieces = roles.map { LifeBudgetBarMath.width(hours: $0.hours, track: track, totalWidth: 320) }
+        let remaining = LifeBudgetBarMath.width(hours: 20.5, track: track, totalWidth: 320)
+        XCTAssertEqual(Double(pieces.reduce(0, +) + remaining), 320, accuracy: 0.001)
+        XCTAssertEqual(Double(pieces[0]), 64, accuracy: 0.001)
+        XCTAssertTrue(LifeBudgetBarMath.accessibilityLabel(roles: roles, capacity: 40)
+            .contains("20.5 hours available"))
+    }
+
+    func testLifeStorageBudgetEightAreasAndNarrowSegments() {
+        let hours: [Double] = [5, 4, 4, 3.5, 3, 2.5, 2.5, 2]
+        let roles = hours.enumerated().map { index, hours in
+            Responsibility(id: String(index), name: "Area " + String(index),
+                           category: "custom", color: "#111111", hours: hours)
+        }
+        let assigned = LifeBudgetBarMath.assigned(roles)
+        XCTAssertEqual(assigned, 26.5, accuracy: 0.001)
+        XCTAssertEqual(LifeBudgetBarMath.available(40, assigned: assigned)!, 13.5, accuracy: 0.001)
+        let track = LifeBudgetBarMath.trackHours(assigned: assigned, capacity: 40)
+        let tiny = LifeBudgetBarMath.width(hours: 2, track: track, totalWidth: 320)
+        XCTAssertLessThan(tiny, 40, "Too-small bars must not squeeze unreadable hour labels")
+        XCTAssertNil(LifeBudgetBarMath.available(nil, assigned: assigned))
+        XCTAssertEqual(LifeBudgetBarMath.trackHours(assigned: assigned, capacity: nil), assigned)
+    }
+
+    func testLifeStorageBudgetOvercapacityAndEmptyState() {
+        XCTAssertEqual(LifeBudgetBarMath.available(10, assigned: 12), 0)
+        XCTAssertEqual(LifeBudgetBarMath.trackHours(assigned: 12, capacity: 10), 12)
+        XCTAssertEqual(LifeBudgetBarMath.assigned([]), 0)
+        XCTAssertEqual(LifeBudgetBarMath.available(40, assigned: 0), 40)
+        XCTAssertEqual(LifeBudgetBarMath.width(hours: 0, track: 40, totalWidth: 320), 0)
+        XCTAssertTrue(LifeBudgetBarMath.accessibilityLabel(roles: [], capacity: nil)
+            .contains("Weekly capacity not set"))
+    }
+
     func testLifeOrbitAngleWrapAndDetents() {
         XCTAssertEqual(LifeOrbitMath.orbitDegreesPerSecond, 22.5, accuracy: 0.001)
         XCTAssertEqual(LifeOrbitMath.orbitDegreesPerSecond * 16, 360, accuracy: 0.001)
