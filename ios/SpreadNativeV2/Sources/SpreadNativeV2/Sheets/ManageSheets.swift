@@ -155,11 +155,6 @@ struct RoleSheet: View {
         SpreadSheetStack {
             if let snapshot = planner.snapshot, let role {
                 Form {
-                    Section {
-                        ChalkMotionArt(category: role.category, size: 160)
-                            .frame(maxWidth: .infinity)
-                    }
-                        .listRowBackground(Spread.elevated)
                     Section("Responsibility") {
                         TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"))
                             .submitLabel(.done)
