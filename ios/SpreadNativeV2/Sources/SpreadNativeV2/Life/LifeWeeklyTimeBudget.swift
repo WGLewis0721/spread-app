@@ -13,6 +13,10 @@ struct LifeWeeklyTimeBudget: View {
 
     private var assigned: Double { LifeBudgetBarMath.assigned(roles) }
     private var hasCapacity: Bool { (capacity ?? 0) > 0 }
+    private var capacityCopy: String {
+        guard let capacity, capacity > 0 else { return "budgeted" }
+        return "of " + SpreadHours.text(capacity) + "h budgeted"
+    }
     private var available: Double? { LifeBudgetBarMath.available(capacity, assigned: assigned) }
     private var overBudget: Double {
         guard let capacity else { return 0 }
@@ -33,13 +37,13 @@ struct LifeWeeklyTimeBudget: View {
                         HStack(alignment: .firstTextBaseline, spacing: 5) {
                             Text(SpreadHours.text(assigned) + "h")
                                 .font(.system(.title2, weight: .bold)).monospacedDigit()
-                            Text(capacity.map { "of " + SpreadHours.text($0) + "h budgeted" } ?? "budgeted")
+                            Text(capacityCopy)
                                 .font(.subheadline).foregroundStyle(Spread.secondary)
                         }
                         VStack(alignment: .leading, spacing: 0) {
                             Text(SpreadHours.text(assigned) + "h")
                                 .font(.system(.title2, weight: .bold)).monospacedDigit()
-                            Text(capacity.map { "of " + SpreadHours.text($0) + "h budgeted" } ?? "budgeted")
+                            Text(capacityCopy)
                                 .font(.caption).foregroundStyle(Spread.secondary)
                         }
                     }
@@ -49,7 +53,7 @@ struct LifeWeeklyTimeBudget: View {
                     Text(!hasCapacity ? "—" : SpreadHours.text(overBudget > 0 ? overBudget : available ?? 0) + "h")
                         .font(.system(.title3, weight: .bold)).monospacedDigit()
                     Text(!hasCapacity ? "Set weekly hours" : (overBudget > 0 ? "Over budget" : "Available"))
-                        .font(.caption).foregroundStyle(overBudget > 0 ? Spread.danger : Spread.secondary)
+                        .font(.caption).foregroundStyle(hasCapacity && overBudget > 0 ? Spread.danger : Spread.secondary)
                         .multilineTextAlignment(.trailing)
                 }
             }
