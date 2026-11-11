@@ -18,14 +18,17 @@ final class LifeUITests: XCTestCase {
     }
 
     private func navigate(_ page: String) {
+        if page == "hours" {
+            let toggle = app.buttons["life-budget-toggle"]
+            XCTAssertTrue(toggle.waitForExistence(timeout: 20))
+            toggle.tap()
+            return
+        }
+        let direct = app.buttons["life-nav-" + page]
+        if direct.exists && direct.isHittable { direct.tap(); return }
         let rail = app.buttons["planner-nav-" + page]
         if rail.exists && rail.isHittable { rail.tap(); return }
-        let navigation = app.buttons["life-navigation"]
-        XCTAssertTrue(navigation.waitForExistence(timeout: 20))
-        navigation.tap()
-        let destination = app.buttons["life-nav-" + page]
-        XCTAssertTrue(destination.waitForExistence(timeout: 10))
-        destination.tap()
+        XCTFail("No active navigation control for " + page)
     }
 
     private func capture(_ title: String) {
@@ -37,69 +40,43 @@ final class LifeUITests: XCTestCase {
 
     func testLifeStorageBudgetSummaryShowsHoursAndOpensAllocator() {
         startLife()
-        let summary = app.buttons["life-weekly-time-summary"]
-        XCTAssertTrue(summary.waitForExistence(timeout: 20))
-        XCTAssertTrue(summary.label.contains("budgeted"),
-                      "Budget summary must announce how much time is committed")
-        XCTAssertTrue(summary.label.contains("Adjust hours"),
-                      "Time budget remains a discoverable navigation control")
+        let toggle = app.buttons["life-budget-toggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 20))
         capture("life-storage-weekly-time-budget")
-        summary.tap()
+        toggle.tap()
         XCTAssertTrue(app.descendants(matching: .any)
-            .matching(identifier: "life-hours-page").firstMatch.waitForExistence(timeout: 20),
-            "The read-only Life preview must open the real Hours allocator")
+            .matching(identifier: "life-budget-editor").firstMatch.waitForExistence(timeout: 20))
+        XCTAssertTrue(app.textFields["life-budget-capacity-input"].exists)
+        XCTAssertTrue(app.buttons["life-budget-save-capacity"].exists)
+        app.buttons["life-budget-done"].tap()
+        XCTAssertFalse(app.descendants(matching: .any)
+            .matching(identifier: "life-budget-editor").firstMatch.exists)
     }
-
     func testLifeTimeBudgetSharesTitleRowOnStandardIPhone() {
         startLife()
         let title = app.staticTexts["life-page-title"]
-        let summary = app.buttons["life-weekly-time-summary"]
+        let summary = app.descendants(matching: .any)
+            .matching(identifier: "life-weekly-time-summary").firstMatch
         XCTAssertTrue(title.waitForExistence(timeout: 20))
         XCTAssertTrue(summary.waitForExistence(timeout: 20))
-        // iPhone SE / accessibility sizes retain the readable vertical layout.
-        // Standard iPhones align the budget beside Life, never below its subtitle.
         if app.windows.firstMatch.frame.width >= 375 {
-            XCTAssertGreaterThan(summary.frame.minX, title.frame.maxX,
-                                 "The budget should sit to the right of Life")
-            XCTAssertLessThan(summary.frame.minY, title.frame.maxY,
-                              "The budget should begin on the Life heading row")
+            XCTAssertGreaterThan(summary.frame.minX, title.frame.maxX)
+            XCTAssertLessThan(summary.frame.minY, title.frame.maxY)
         }
-        XCTAssertGreaterThanOrEqual(summary.frame.height, 44,
-                                    "The whole summary remains a tappable control")
+        XCTAssertGreaterThanOrEqual(summary.frame.height, 44)
         capture("life-inline-weekly-budget")
-        summary.tap()
-        XCTAssertTrue(app.descendants(matching: .any)
-            .matching(identifier: "life-hours-page").firstMatch.waitForExistence(timeout: 20))
     }
-
-    func testHoursGaugeDirectionInstructionsMatchActualRotation() {
+    func testInlineBudgetAndTaskPriorityAreAccessible() {
         startLife()
-        navigate("hours")
-        let summaryInstruction = "Tap the center to set your weekly hours. Choose an area, then turn right to add time or left to return it."
-        XCTAssertTrue(app.staticTexts[summaryInstruction].waitForExistence(timeout: 15))
-        let role = app.buttons.matching(NSPredicate(
-            format: "identifier BEGINSWITH 'life-hours-role-'")).firstMatch
-        if role.waitForExistence(timeout: 10) {
-            role.tap()
-            XCTAssertTrue(app.staticTexts[
-                "Turn right to add ½ hour. Turn left to return ½ hour to your weekly pool."
-            ].waitForExistence(timeout: 10))
-            let controls = app.descendants(matching: .any)
-                .matching(identifier: "life-selected-hours-controls").firstMatch
-            if controls.exists {
-                XCTAssertTrue(app.buttons["Return ½h"].exists)
-                XCTAssertTrue(app.buttons["Add ½h"].exists)
-            }
-        }
-        let help = app.buttons["Gesture help"]
-        XCTAssertTrue(help.waitForExistence(timeout: 10))
-        help.tap()
-        XCTAssertTrue(app.staticTexts[
-            "Choose an area. Turn right to add time. Turn left to return it."
-        ].waitForExistence(timeout: 10))
-        capture("hours-clockwise-add-gesture-instructions")
+        let bar = app.descendants(matching: .any)
+            .matching(identifier: "life-budget-segments").firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["life-budget-toggle"].exists)
+        app.buttons["life-budget-toggle"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-budget-editor").firstMatch.waitForExistence(timeout: 20))
+        capture("life-expanded-weekly-hours")
     }
-
     func testFocusedLifeDetailsAndTasksAreContextual() {
         startLife()
         let card = app.descendants(matching: .any)
@@ -183,79 +160,67 @@ final class LifeUITests: XCTestCase {
             .matching(identifier: "life-week-page").firstMatch.waitForExistence(timeout: 10))
     }
 
-    func testLifeNavigationDrawerCanBeDraggedClosed() {
+    func testLifeWeekToggleAndCalendarNavigatorAreReachable() {
         startLife()
-        if app.descendants(matching: .any).matching(identifier: "life-compact-rail").firstMatch.exists { return }
-        let opener = app.buttons["life-navigation"]
-        XCTAssertTrue(opener.waitForExistence(timeout: 15))
-        opener.tap()
-        let destination = app.buttons["life-nav-life"]
-        XCTAssertTrue(destination.waitForExistence(timeout: 10))
-        let onLeft = destination.frame.midX < app.frame.midX
-        let start = destination.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        let finish = start.withOffset(CGVector(dx: onLeft ? -180 : 180, dy: 0))
-        start.press(forDuration: 0.1, thenDragTo: finish)
-        XCTAssertTrue(opener.waitForExistence(timeout: 10),
-                      "A horizontal swipe toward the tray edge must dismiss it")
-        capture("life-drawer-glide-dismiss")
-    }
-
-    func testLifeNavigationAndUnmodifiedMoreReachability() {
-        startLife()
-        let life = app.descendants(matching: .any).matching(identifier: "life-page").firstMatch
-        XCTAssertTrue(life.waitForExistence(timeout: 30))
-        capture("life-stack")
-        navigate("hours")
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-hours-page").firstMatch
-            .waitForExistence(timeout: 20))
-        capture("life-hours")
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-week-toggle").firstMatch.waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["life-nav-life"].exists)
+        XCTAssertTrue(app.buttons["life-nav-week"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "calendar-week-navigator").firstMatch.exists)
         navigate("week")
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-week-page").firstMatch
-            .waitForExistence(timeout: 20))
-        capture("life-week")
-        let morph = app.descendants(matching: .any).matching(identifier: "life-week-month-toggle").firstMatch
+        XCTAssertTrue(app.buttons["life-plan-ahead-open"].waitForExistence(timeout: 20))
+        app.buttons["life-plan-ahead-open"].tap()
+        XCTAssertTrue(app.buttons["plan-ahead-preview"].waitForExistence(timeout: 20))
+        capture("life-plan-ahead-intentional")
+    }
+    func testLifeWeekAndMoreReachability() {
+        startLife()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-page").firstMatch.waitForExistence(timeout: 30))
+        navigate("week")
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-week-page").firstMatch.waitForExistence(timeout: 20))
+        let inbox = app.buttons["life-to-place-inbox"]
+        XCTAssertTrue(inbox.waitForExistence(timeout: 20))
+        inbox.tap()
+        XCTAssertEqual(inbox.value as? String, "Expanded")
+        let morph = app.descendants(matching: .any)
+            .matching(identifier: "life-week-month-toggle").firstMatch
         XCTAssertTrue(morph.exists)
         morph.tap()
         capture("life-month")
         app.buttons["life-more"].tap()
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "more-overview").firstMatch
-            .waitForExistence(timeout: 20), "The existing More sheet is not available from Life.")
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "more-overview").firstMatch.waitForExistence(timeout: 20))
+        XCTAssertFalse(app.buttons["more-new-spread"].exists)
+        XCTAssertFalse(app.buttons["more-review-tasks"].exists)
+        XCTAssertFalse(app.buttons["more-rollover"].exists)
         capture("life-more")
     }
-
     func testCapacityUsesRealStoreAndSurvivesRelaunch() {
         startLife()
-        navigate("hours")
-        let field = app.descendants(matching: .any).matching(identifier: "life-capacity-input").firstMatch
-        if !field.waitForExistence(timeout: 5) {
-            let center = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
-            XCTAssertTrue(center.waitForExistence(timeout: 10))
-            center.tap()
-            // A selected area first returns to the weekly budget; a second tap opens its editor.
-            if !field.waitForExistence(timeout: 2) { center.tap() }
-        }
-        XCTAssertTrue(field.waitForExistence(timeout: 10), "The editable capacity must be reachable.")
+        let toggle = app.buttons["life-budget-toggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 20))
+        toggle.tap()
+        let field = app.textFields["life-budget-capacity-input"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
         field.tap()
         let existing = (field.value as? String) ?? ""
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count) + "168")
-        app.buttons["Set"].tap()
-        app.buttons["Done"].tap()
-        let number = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
+        app.buttons["life-budget-save-capacity"].tap()
+        let number = app.descendants(matching: .any)
+            .matching(identifier: "life-budget-segments").firstMatch
         XCTAssertTrue(number.waitForExistence(timeout: 20))
-        expectation(for: NSPredicate(format: "value CONTAINS %@", "168"), evaluatedWith: number)
-        waitForExpectations(timeout: 20)
-        let expectedValue = number.value as? String
-        XCTAssertTrue(expectedValue?.contains("168") == true, "Capacity must be acknowledged as 168, not merely render.")
         capture("life-capacity")
         app.terminate()
         startLife()
-        navigate("hours")
-        let restored = app.descendants(matching: .any).matching(identifier: "life-capacity-number").firstMatch
+        app.buttons["life-budget-toggle"].tap()
+        let restored = app.textFields["life-budget-capacity-input"]
         XCTAssertTrue(restored.waitForExistence(timeout: 20))
-        XCTAssertEqual(restored.value as? String, expectedValue, "Stored capacity must survive process relaunch.")
-        capture("life-capacity-after-relaunch")
+        XCTAssertTrue(((restored.value as? String) ?? "").contains("168"),
+                      "Acknowledged capacity should survive process relaunch")
     }
-
     func testOptOutRestoresClassicWithoutDeletingThePlan() {
         startLife()
         capture("life-before-classic")
@@ -267,37 +232,14 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch.exists)
         capture("classic-unchanged")
     }
-    func testTrayControlsMatchBothOuterEdges() {
+    func testNavigationHasNoMetallicCrownOrRedundantPlus() {
         startLife()
-        // Wide layouts use a persistent rail; this journey checks the phone drawer.
-        if app.descendants(matching: .any).matching(identifier: "life-compact-rail").firstMatch.exists { return }
-        for side in ["left", "right"] {
-            app.buttons["life-navigation"].tap()
-            app.buttons["Crown position"].tap()
-            app.buttons[side == "left" ? "Move Crown right" : "Move Crown left"].tap()
-            let close = app.buttons["life-navigation-close"]
-            XCTAssertTrue(close.waitForExistence(timeout: 10))
-            close.tap()
-            let opener = app.buttons["life-navigation"]
-            XCTAssertTrue(opener.waitForExistence(timeout: 10))
-            let openingFrame = opener.frame
-            let addFrame = app.buttons["Add task"].firstMatch.frame
-            if side == "left" { XCTAssertLessThan(openingFrame.midX, addFrame.midX) }
-            else { XCTAssertGreaterThan(openingFrame.midX, addFrame.midX) }
-            opener.tap()
-            XCTAssertTrue(close.waitForExistence(timeout: 10))
-            XCTAssertEqual(close.frame.midX, openingFrame.midX, accuracy: 1)
-            XCTAssertEqual(close.frame.midY, openingFrame.midY, accuracy: 1)
-            capture("life-tray-" + side)
-            close.tap()
-        }
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "calendar-week-navigator").firstMatch.waitForExistence(timeout: 20))
+        XCTAssertFalse(app.buttons["Add task"].exists)
+        XCTAssertFalse(app.buttons["Crown position"].exists)
+        capture("life-new-calendar-navigation")
     }
-
-}
-
-/// Regression journeys use one real planner across both presentations. Simulator
-/// attachments prove geometry/state only; they cannot certify physical haptics.
-final class TactileUITests: NativeUITestCase {
     func testClassicDetailsTaskAcknowledgementAndLifePersistence() throws {
         launch(["-native.weekMonth.previewEnabled", "NO", "-native.life.touchFeedback", "NO"])
         let tag = "Tactile " + String(UUID().uuidString.prefix(6))
@@ -330,10 +272,9 @@ final class TactileUITests: NativeUITestCase {
         XCTAssertTrue(app.staticTexts[tag + " task"].firstMatch.waitForExistence(timeout: 10))
         capture("tactile-life-same-task-after-relaunch")
         tapID("life-change-area-hours")
-        XCTAssertTrue(el("life-hours-page").waitForExistence(timeout: 10))
-        XCTAssertTrue(el("life-selected-hours-controls").exists ||
-                      el("life-selected-hours-needs-capacity").exists,
-                      "Changing an existing Life area's hours must retain its selection or explain the capacity prerequisite")
+        XCTAssertTrue(el("life-budget-editor").waitForExistence(timeout: 10))
+        XCTAssertTrue(el("life-budget-role-controls").exists,
+                      "Inline weekly hours must open with the selected Life area")
         capture("life-existing-area-hours-selected")
 
         app.terminate()
