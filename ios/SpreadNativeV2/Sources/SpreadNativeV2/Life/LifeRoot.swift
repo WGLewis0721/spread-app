@@ -297,6 +297,7 @@ struct LifeRoot: View {
                 Spacer(minLength: 0)
                 timeBudgetLink(snapshot, compact: true)
                     .frame(maxWidth: 440)
+                    .layoutPriority(1)
             }
         } else {
             VStack(alignment: .leading, spacing: 12) {
