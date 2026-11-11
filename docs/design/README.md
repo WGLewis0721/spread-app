@@ -1,12 +1,12 @@
 # Spread design brain
 
-Start here for Spread's design rules and task-specific references. For cross-product documentation and release records, use the [documentation map](../README.md).
+Start here for design rules and task references. Cross-product records: [documentation map](../README.md).
 
-**Product:** Responsibilities → Hours → Week → Tasks, local-first. Native: one approved Wallet Stack; preserve Week/Month and planner actions. React and landing stay separate.
+**Product:** Responsibilities → Hours → Week → Tasks. Local-first; one native Wallet Stack. React and landing are separate.
 
-**UI Kit:** [ui-kit/UI_KIT.md](ui-kit/UI_KIT.md) is the consolidated reference for consistent visuals across the app, website, marketing, and ads.
+**UI Kit:** [ui-kit/UI_KIT.md](ui-kit/UI_KIT.md) consolidates visuals for app, web and marketing.
 
-**Delivery:** Build full features in the existing app on a development branch. Test and refine in place. No isolated prototypes. No merge or release without owner approval.
+**Delivery:** Build and test integrated features on branches; no isolated prototypes or unauthorized merge/release.
 
 ---
 
@@ -42,7 +42,7 @@ Start here for Spread's design rules and task-specific references. For cross-pro
 | Recording a decision or checking what is undecided | [DECISIONS.md](DECISIONS.md) | |
 | Pointing an AI tool at these docs | [AI_TOOL_SETUP.md](AI_TOOL_SETUP.md) | |
 
-For cross-surface changes, read both packs.
+For cross-surface work, read both packs.
 
 ---
 
@@ -73,7 +73,7 @@ All paths are under `docs/design/`.
 | platforms/SPREAD_IPHONE_DUO_BUILD_GUIDE.md | iPhone Duo | Same as above |
 | brand/ICON_HANDOFF.md | Icon files and placement (SVGs stay in `public/icons/`) | Highest for icon files |
 
-**Authority:** Verified store behavior wins. Native UI follows the [Wallet board](planner/SPREAD_NATIVE_BRAND_BOARD.md) and [iOS audit](platforms/IOS27_BEHAVIOR_AUDIT.md). Five-mode notes are historical. React and landing stay separate.
+**Authority:** Shipped behavior wins. Native uses the [Wallet board](planner/SPREAD_NATIVE_BRAND_BOARD.md) and [iOS audit](platforms/IOS27_BEHAVIOR_AUDIT.md); five-mode notes are historical.
 
 ---
 
