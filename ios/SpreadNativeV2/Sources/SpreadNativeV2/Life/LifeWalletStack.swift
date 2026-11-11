@@ -189,12 +189,8 @@ private struct LifeWalletFace: View {
         }
     }
 
-    /// Editorial cards select with SwiftUI's native tap gesture instead of a Button. A Button
-    /// fires on lift-off after a horizontal drag that stays inside the card; a tap gesture
-    /// fails once the finger moves, so a swipe outside Edit never selects. The accessibility
-    /// surface mirrors the Button above: one button element with the same label, value, hint,
-    /// selected trait, default activation and Edit-only actions. The Button's pressed-state
-    /// scale (.spreadPress) is intentionally not reproduced here.
+    /// Editorial cards use a tap gesture so horizontal browsing cannot select a card.
+    /// Accessibility still exposes the same focus action as the non-editorial Button.
     private var editorialSelection: some View {
         cardSurface
             .modifier(EditorialTapTarget(enabled: editorialArt))
