@@ -1,6 +1,8 @@
 # Spread UI Kit
 
 > Part of the [Spread design brain](../README.md).
+>
+> Summary: Visual entry point for native and marketing design. Surface-specific specifications and shipped tokens take precedence.
 
 **Consolidated visual reference across the app, website, marketing, and ads.**
 
@@ -89,6 +91,12 @@ This kit consolidates Spread's existing visual language. It does not override th
 - Nested rows use canvas background
 - Dashed trays for “To place” and non-day containers
 - Native Wallet Stack: overlapping full-width cards with chevrons
+
+### Native Life Weekly Time
+- The read-only storage-style `LifeWeeklyTimeBudget` shows **allocated / total / available** hours using real planner data.
+- The bar proportions use the total weekly capacity. Role-colored segments show hour labels only when readable; the neutral hatched remainder is available time. Without capacity, show a neutral empty bar, not fictitious 100% usage.
+- One accessible touch target opens the existing Hours allocator; no legends, Liquid Glass, new allocation interactions, or second state store.
+- Keep the solid native card surface, existing Life Wallet artwork and Crown. [Native budget authority](../planner/SPREAD_NATIVE_BRAND_BOARD.md).
 
 ### Task Line
 - 44px grip + task text + single action (“Place” / “Move to”)
