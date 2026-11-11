@@ -29,8 +29,7 @@ type Fixtures = {
 };
 
 /**
- * Spread's web build is gated by a server-side beta sign-in. The installed-app build has no sign-in and runs the
- * same planner code, so the suite runs that bundle against the repo's own fake Capacitor bridge
+ * The website only shows the landing page. The installed-app build runs the planner, so the suite runs that bundle against the repo's own fake Capacitor bridge
  * (scripts/ios-bridge-sim/native-init.js). Nothing here talks to any real service: every non-local request is
  * aborted and recorded, and each test starts on an empty device.
  */

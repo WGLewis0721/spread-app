@@ -87,33 +87,21 @@ class Checks:
             self.check("Required-reason declarations", valid, "Each declared API requires a reason")
         self.check("App icon", (root / "ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png").is_file(),
                    "1024px app icon source must exist; visually inspect it")
-        # Web-only Better Auth construction during module import can crash a Capacitor origin.
-        # Studio already uses lazy initialization; require the same safety on every release path.
-        auth_client = root / "src/lib/auth/client.ts"
-        if auth_client.is_file():
-            auth_text = auth_client.read_text(encoding="utf-8")
-            eager_auth = re.search(r"\b(?:export\s+)?const\s+authClient\s*=\s*createAuthClient\s*\(", auth_text)
-            self.check("Native auth startup", eager_auth is None,
-                       "Do not eagerly create the web auth client on a native app origin")
-        else:
-            self.check("Native auth startup", False, "Missing web auth client source")
         paths = [root / path for path in (
             "src/lib/spread/native.ts",
             "src/lib/spread/store.ts",
-            "src/spread/components/use-beta-gate.ts",
             "src/spread/screens/spread-app.tsx",
         )]
         if all(path.is_file() for path in paths):
-            native, store, gate, app = (path.read_text(encoding="utf-8") for path in paths)
+            native, store, app = (path.read_text(encoding="utf-8") for path in paths)
             self.check("Native review access", "isNativeApp" in native and "NATIVE_LICENSE" in store
                        and "readLicense()" in store
                        and ("isNativeApp() ? NATIVE_LICENSE : null" in store
                             or "isInstalledPlanner() ? NATIVE_LICENSE : null" in store),
                        "Installed app must not require web beta approval")
-            self.check("Web beta isolation", ("if (native) return" in gate or "if (isNativeApp()) return" in gate)
-                       and "<WeekScreen />" in app, "Native entry skips the web beta status check")
+            self.check("Native entry", "<WeekScreen />" in app, "Installed app opens straight into the planner")
         else:
-            self.check("Native entry source", False, "Missing native, store, gate, or app source")
+            self.check("Native entry source", False, "Missing native, store, or app source")
 
     def bundle(self, path):
         index = path / "index.html"

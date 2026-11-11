@@ -148,8 +148,7 @@ e("set-close", "Settings", "Close", "recover", /^click\|button\|Close\|ctx=More/
 export const INVENTORY = entries;
 
 export const OUT_OF_SCOPE = [
-  "Landing page, hero, waitlist form and Light/Dark site switch: web-only, shown before the beta sign-in, not part of the installed-app bundle.",
-  "Beta sign-in, password reset and Log out: web only; needs the server-side beta sheet.",
+  "Landing page, hero, TestFlight beta link and Light/Dark site switch: web-only, not part of the installed-app bundle.",
   "iCloud Backup and Sync sheets, first-run backup notice: built behind flags that are off in the shipped configuration (covered by scripts/ios-bridge-sim).",
   "Print / Save PDF: offered only on the web; the installed app does not list it in Settings.",
   "The native share sheet and Files picker themselves: Playwright can observe the call, not the OS UI.",
