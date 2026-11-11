@@ -97,6 +97,7 @@ This kit consolidates Spread's existing visual language. It does not override th
 - The bar proportions use the total weekly capacity. Role-colored segments show hour labels only when readable; the neutral hatched remainder is available time. Without capacity, show a neutral empty bar, not fictitious 100% usage.
 - One accessible touch target opens the existing Hours allocator; no legends, Liquid Glass, new allocation interactions, or second state store.
 - Keep the solid native card surface, existing Life Wallet artwork and Crown. [Native budget authority](../planner/SPREAD_NATIVE_BRAND_BOARD.md).
+- Place the **compact** weekly time card horizontally beside the Life title on standard iPhones. Keep budgeted/total/available values and the whole-card Adjust hours action; use a stacked, full-width version for narrow devices and accessibility text sizes. Never stretch segments to force labels.
 
 ### Task Line
 - 44px grip + task text + single action (“Place” / “Move to”)
