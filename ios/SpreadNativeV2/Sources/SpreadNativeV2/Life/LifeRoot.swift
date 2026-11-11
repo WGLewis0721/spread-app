@@ -422,6 +422,7 @@ struct LifeRoot: View {
                         .padding(.horizontal, 12).padding(.vertical, 6)
                 }
                 .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityIdentifier("life-task-notebook")
             }
         }
         .padding(16).spreadCard(radius: Spread.radiusCard)
