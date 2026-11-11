@@ -15,6 +15,7 @@ struct LifeWeekView: View {
     @Binding var selectedRole: String?
     @GestureState private var dayTranslation: CGSize = .zero
     @State private var expanded = false
+    @State private var inboxOpen = false
     @State private var marks: [String: NativeDayMark] = [:]
     @State private var navigationID = UUID()
     @State private var pendingDate: String?
@@ -29,7 +30,7 @@ struct LifeWeekView: View {
     private var selectionKey: String { "native.life.selectedDate.\(profile)" }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 12) {
             calendarSurface
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -44,11 +45,10 @@ struct LifeWeekView: View {
                 arrow("Next day", system: "chevron.right") { choose(LifeCalendarRules.shiftDay(date, by: 1)) }
             }
             .simultaneousGesture(daySwipe)
-            room
-            if roles.isEmpty {
-                Text("Tap a Life area above to plan 1 hour on this day.")
-                    .font(.callout).foregroundStyle(LifePalette.secondary)
-            } else {
+            if !snapshot.roles.isEmpty {
+                room
+            }
+            if !roles.isEmpty {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: roles,
                     selectedRole: $selectedRole, day: date)
                 if let roleID = selectedRole, let role = roles.first(where: { $0.id == roleID }) {
@@ -223,17 +223,39 @@ struct LifeWeekView: View {
     }
 
     private var unplaced: some View {
-        let tasks = snapshot.tasks.filter { $0.allocationId == nil }
+        let tasks = snapshot.unplacedTasks
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("To place").font(.title3.weight(.semibold))
-                Spacer()
-                Text("\(tasks.count) tasks").font(.subheadline).foregroundStyle(LifePalette.secondary)
+                Spacer(minLength: 0)
+                Button {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.settle) { inboxOpen.toggle() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "tray.full")
+                            .font(.title3.weight(.medium))
+                        Text(String(tasks.count))
+                            .font(.subheadline.weight(.semibold))
+                            .monospacedDigit()
+                        Image(systemName: inboxOpen ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(Spread.ink)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 44)
+                    .background(Spread.elevated, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityLabel("Tasks to place, \(tasks.count)")
+                .accessibilityValue(inboxOpen ? "Expanded" : "Collapsed")
+                .accessibilityHint("Show or hide tasks waiting for a day")
+                .accessibilityIdentifier("life-to-place-inbox")
             }
-            if tasks.isEmpty {
-                Text("Everything has a place.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-            } else {
+            if inboxOpen && !tasks.isEmpty {
                 LifeTaskRows(planner: planner, snapshot: snapshot, tasks: tasks, onOpenTask: onOpenTask)
+                    .padding(12)
+                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }
