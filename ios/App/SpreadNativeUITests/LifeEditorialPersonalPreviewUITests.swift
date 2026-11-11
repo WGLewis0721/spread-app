@@ -36,18 +36,24 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
-    /// Presses the Edit control in the compact side tray or the wide rail.
+    /// Presses the Edit control in the compact side tray. It is found by its spoken label, which
+    /// is what VoiceOver announces and does not depend on accessibility identifiers.
     private func toggleEdit() {
-        let edit = app.buttons["life-edit"]
-        if !edit.isHittable {
-            let opener = app.buttons["life-navigation"]
-            XCTAssertTrue(opener.waitForExistence(timeout: 15),
-                          "Edit must be reachable through the compact side tray or wide rail")
-            opener.tap()
-        }
+        let opener = app.buttons["Open navigation"]
+        XCTAssertTrue(opener.waitForExistence(timeout: 15),
+                      "Edit must be reachable through the compact side tray")
+        opener.tap()
+        let edit = app.buttons.matching(NSPredicate(
+            format: "label == 'Edit Life areas' OR label == 'Done editing Life areas'")).firstMatch
         XCTAssertTrue(edit.waitForExistence(timeout: 10), "The Edit control did not appear")
         XCTAssertTrue(edit.isHittable, "The Edit control is not hittable")
         edit.tap()
+    }
+
+    /// The Manage action that sits behind a card: the one on the card's own row.
+    private func manageBehind(_ face: XCUIElement) -> XCUIElement? {
+        app.buttons.matching(NSPredicate(format: "label == 'Manage'")).allElementsBoundByIndex
+            .first { abs($0.frame.midY - face.frame.midY) < 2 }
     }
 
     /// Top edge of the persistent dock controls. Content whose bottom edge sits above
@@ -299,19 +305,20 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         launch(category: "work")
         let face = card(for: "Work")
         XCTAssertTrue(face.waitForExistence(timeout: 20), "The Work card was not rendered")
-        let manage = app.buttons["life-reveal-manage-work"]
-        XCTAssertFalse(manage.exists, "Manage must be hidden before Edit")
+        let restingX = face.frame.minX
+        func manageReachable() -> Bool { manageBehind(face)?.isHittable ?? false }
+        XCTAssertFalse(manageReachable(), "Manage must not be reachable before Edit")
 
         toggleEdit()
-        XCTAssertFalse(manage.exists, "Edit alone must not reveal Manage")
+        XCTAssertFalse(manageReachable(), "Edit alone must not reveal Manage")
         face.swipeLeft()
-        XCTAssertTrue(manage.waitForExistence(timeout: 10),
-                      "An Edit-mode left swipe must reveal Manage")
+        XCTAssertLessThan(face.frame.minX, restingX - 40,
+                          "An Edit-mode left swipe must slide the card: rest=\(restingX) now=\(face.frame)")
+        XCTAssertTrue(manageReachable(), "An Edit-mode left swipe must reveal Manage")
         XCTAssertEqual(face.value as? String, "Closed", "An Edit-mode swipe must not select the card")
 
         toggleEdit()
-        XCTAssertTrue(manage.waitForNonExistence(timeout: 10),
-                      "Leaving Edit must hide Manage")
+        XCTAssertFalse(manageReachable(), "Leaving Edit must hide Manage")
         XCTAssertTrue(face.waitForExistence(timeout: 10), "The Work card disappeared after Edit")
         waitForStableFrame(face)
         face.tap()

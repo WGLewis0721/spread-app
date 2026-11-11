@@ -32,13 +32,95 @@ final class LifeUITests: XCTestCase {
         let edit = app.buttons["life-edit"]
         if !edit.isHittable {
             let opener = app.buttons["life-navigation"]
-            XCTAssertTrue(opener.waitForExistence(timeout: 15),
-                          "Edit must be reachable through the compact side tray or wide rail")
+            let found = opener.waitForExistence(timeout: 15)
+            if !found {
+                printLocatorEvidence("edit-opener-missing")
+                probeEditContractByLabel()
+            }
+            XCTAssertTrue(found, "Edit must be reachable through the compact side tray or wide rail")
             opener.tap()
         }
         XCTAssertTrue(edit.waitForExistence(timeout: 10))
         XCTAssertTrue(edit.isHittable)
         edit.tap()
+    }
+
+    /// Failure-path evidence for a locator that did not resolve. Prints what XCUITest can see
+    /// for each identifier and spoken label, then the whole accessibility hierarchy.
+    private func printLocatorEvidence(_ context: String) {
+        func describe(_ element: XCUIElement) -> String {
+            "type=\(element.elementType.rawValue) id='\(element.identifier)' label='\(element.label)' hittable=\(element.isHittable) frame=\(element.frame)"
+        }
+        print("LIFE_LOCATOR_EVIDENCE context=\(context) app=\(app.frame)")
+        for id in ["life-edit", "life-navigation", "life-navigation-close", "life-nav-life", "life-undo"] {
+            let found = app.descendants(matching: .any).matching(identifier: id).allElementsBoundByIndex
+            print("LIFE_LOCATOR_EVIDENCE identifier=\(id) count=\(found.count) \(found.prefix(3).map(describe))")
+        }
+        for label in ["Open navigation", "Edit Life areas", "Done editing Life areas", "Close navigation", "Undo", "Manage"] {
+            let found = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", label)).allElementsBoundByIndex
+            print("LIFE_LOCATOR_EVIDENCE label=\(label) count=\(found.count) \(found.prefix(4).map(describe))")
+        }
+        print("LIFE_LOCATOR_EVIDENCE hierarchy-begin\n\(app.debugDescription)\nLIFE_LOCATOR_EVIDENCE hierarchy-end")
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = "hierarchy-" + context
+        tree.lifetime = .keepAlways
+        add(tree)
+        capture("locator-evidence-" + context)
+    }
+
+    /// Diagnostic probe, failure path only. Runs the Edit contract through spoken labels, which do
+    /// not depend on identifiers, so a missing identifier cannot hide whether Edit itself works.
+    private func probeEditContractByLabel() {
+        func say(_ text: String) { print("LIFE_EDIT_PROBE " + text) }
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Work,'")).firstMatch
+        let manageQuery = app.buttons.matching(NSPredicate(format: "label == 'Manage'"))
+        func state(_ title: String) {
+            let manage = manageQuery.allElementsBoundByIndex
+                .map { "[frame=\($0.frame) hittable=\($0.isHittable)]" }.joined()
+            say("\(title) card=\(card.frame) value=\(String(describing: card.value)) manage=\(manage)")
+        }
+        func toggleEdit() -> Bool {
+            let opener = app.buttons["Open navigation"]
+            guard opener.waitForExistence(timeout: 10) else { say("no Open navigation button"); return false }
+            opener.tap()
+            let edit = app.buttons.matching(NSPredicate(
+                format: "label == 'Edit Life areas' OR label == 'Done editing Life areas'")).firstMatch
+            guard edit.waitForExistence(timeout: 10), edit.isHittable else {
+                say("tray open but no hittable Edit control")
+                printLocatorEvidence("tray-open")
+                return false
+            }
+            say("tapping \(edit.label)")
+            edit.tap()
+            return true
+        }
+        state("start")
+        guard toggleEdit() else { return }
+        state("edit-on")
+        card.swipeLeft()
+        state("after-left-swipe")
+        if let manage = manageQuery.allElementsBoundByIndex.first(where: { abs($0.frame.midY - card.frame.midY) < 2 }),
+           manage.isHittable {
+            manage.tap()
+            say("manage sheet opened=\(app.navigationBars["Manage Life area"].waitForExistence(timeout: 10))")
+            if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
+        } else {
+            say("no hittable Manage on the Work row after the left swipe")
+        }
+        // Leave and re-enter Edit so the right gesture starts from the neutral card position.
+        guard toggleEdit(), toggleEdit() else { return }
+        state("edit-reentered")
+        let from = card.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5))
+        from.press(forDuration: 0.10, thenDragTo: from.withOffset(CGVector(dx: max(card.frame.width * 0.90, 340), dy: 0)))
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: card)
+        say("work card removed by right swipe: waiter result=\(XCTWaiter().wait(for: [gone], timeout: 12).rawValue) (1 = completed)")
+        let undoButtons = app.buttons.matching(NSPredicate(format: "label == 'Undo'")).allElementsBoundByIndex
+        say("undo buttons=\(undoButtons.map { "[frame=\($0.frame) hittable=\($0.isHittable)]" }.joined())")
+        if let undo = undoButtons.first(where: { $0.isHittable }) {
+            undo.tap()
+            say("work card restored by Undo=\(card.waitForExistence(timeout: 15))")
+        }
     }
 
     private func capture(_ title: String) {
