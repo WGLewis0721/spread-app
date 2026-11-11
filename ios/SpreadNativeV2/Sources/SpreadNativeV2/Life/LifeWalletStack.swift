@@ -273,6 +273,11 @@ struct LifeTaskRows: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(task.text).font(.body).strikethrough(task.done).foregroundStyle(LifePalette.ink)
+                                if task.important == true {
+                                    Label("High priority", systemImage: "exclamationmark")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Spread.danger)
+                                }
                                 Text(placement(task)).font(.subheadline).foregroundStyle(LifePalette.secondary)
                             }
                             Spacer(minLength: 6)
@@ -291,6 +296,29 @@ struct LifeTaskRows: View {
                                 }
                             }
                         }
+                    Button {
+                        guard !planner.busy, !pendingTasks.contains(task.id) else { return }
+                        pendingTasks.insert(task.id)
+                        Task {
+                            let ok = await planner.send([
+                                "type": "setTaskImportant", "roleId": task.roleId,
+                                "taskId": task.id, "important": task.important != true
+                            ])
+                            pendingTasks.remove(task.id)
+                            if ok { LifeFeedback.accepted() }
+                        }
+                    } label: {
+                        Image(systemName: task.important == true
+                              ? "exclamationmark.circle.fill" : "flag")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(task.important == true ? Spread.danger : Spread.secondary)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.spreadPress)
+                    .disabled(planner.busy || pendingTasks.contains(task.id))
+                    .accessibilityLabel((task.important == true
+                        ? "Remove high priority from " : "Mark high priority: ") + task.text)
+                    .accessibilityIdentifier("life-task-priority-" + task.id)
                     if day != nil {
                         Image(systemName: "line.3.horizontal")
                             .font(.footnote).foregroundStyle(LifePalette.secondary)
