@@ -6,7 +6,7 @@ Spread is a local-first weekly planner: **Responsibilities → Hours → Week �
 
 **Current source baseline (November 7, 2026):** `main` includes the native SwiftUI/WebKit foundation (#114), Wallet-style card work (#127), Life implementation (#146), tactile precision (#150), and subsequent Life polish through #158. These are merged *source changes*, not proof that a particular signed iOS binary or physical-device acceptance has passed. Verify candidate-specific evidence before any release claim.
 
-**Start here:** [documentation map](docs/README.md) · [current design](docs/design/README.md) · [native acceptance evidence](docs/evidence/life-ios-implementation/acceptance.md) · [iOS runbook](docs/IOS_RELEASE.md). The older [Life handoff](SPREAD_LIFE_IOS_HANDOFF.md), [spec](SPREAD_LIFE_IOS_SPEC.md), and [checklist](SPREAD_LIFE_IOS_CHECKLIST.md) are implementation provenance, **not instructions to re-run an already merged PR**.
+**Start here:** [documentation map](docs/README.md) · [current design](docs/design/README.md) · [native acceptance evidence](docs/evidence/life-ios-implementation/acceptance.md) · [iOS runbook](docs/IOS_RELEASE.md). The older [Life handoff](docs/life-ios/SPREAD_LIFE_IOS_HANDOFF.md), [spec](docs/life-ios/SPREAD_LIFE_IOS_SPEC.md), and [checklist](docs/life-ios/SPREAD_LIFE_IOS_CHECKLIST.md) are implementation provenance, **not instructions to re-run an already merged PR**.
 
 The weekly role spread. Roles first. Hours second. Tasks last.
 

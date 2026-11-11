@@ -1,7 +1,6 @@
 name: Deploy Pages
 on:
-  push:
-    branches: [main]
+  # Web app suspended 2026-11-11 (native iPhone is the shipping target). Manual runs only.
   workflow_dispatch:
 permissions:
   contents: read

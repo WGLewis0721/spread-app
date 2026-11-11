@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./user-testing/**)",
+      "Read(./tools/launch-video/**)",
+      "Read(./docs/archive/**)",
+      "Read(./docs/audits/**)",
+      "Read(./docs/evidence/**)",
+      "Read(./package-lock.json)"
+    ]
+  }
+}

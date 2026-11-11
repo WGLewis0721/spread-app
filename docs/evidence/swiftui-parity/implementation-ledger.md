@@ -1,6 +1,6 @@
 # SwiftUI working-build parity: implementation ledger (A01–F11)
 
-**Scope:** [CLAUDE_SWIFTUI_HANDOFF.md](../../../CLAUDE_SWIFTUI_HANDOFF.md) strict checklist, executed in order on branch `claude/spread-swiftui-parity-87llx2` from the documentation-inclusive baseline `67f18fa` (PR #118 head).
+**Scope:** [CLAUDE_SWIFTUI_HANDOFF.md](../../archive/CLAUDE_SWIFTUI_HANDOFF.md) strict checklist, executed in order on branch `claude/spread-swiftui-parity-87llx2` from the documentation-inclusive baseline `67f18fa` (PR #118 head).
 > **Update, 2026-11-04.** Sections 1 to 6 are the original code-only record and keep their wording. The state of the
 > app now, what was compiled and run, and what is still open is in **section 7**, which supersedes sections 5 and 6
 > wherever they differ.

@@ -1,11 +1,8 @@
 name: Launch video
 
 on:
-  pull_request:
-    paths: ["tools/launch-video/**", ".github/workflows/launch-video.yml"]
-  push:
-    branches: [main]
-    paths: ["tools/launch-video/**", ".github/workflows/launch-video.yml"]
+  # Promo film is paused. Manual runs only.
+  workflow_dispatch:
 
 jobs:
   verify-video:

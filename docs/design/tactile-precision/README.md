@@ -14,7 +14,7 @@
 | Gesture physics, state transitions, motion/haptics | [Motion contract](MOTION_CONTRACT.md) | Native targets, not visual override |
 | 20 animation tuning suggestions and source links | [Animation tuning guide](ANIMATION_TUNING_GUIDE.md) | Applied vs conditional vs rejected, code map |
 | Measurable checks, ownership, rollback and evidence | [Verification and release gates](VERIFICATION.md) | Acceptance plan |
-| Approved Life behavior and unchanged demo | [Life iOS spec](../../../SPREAD_LIFE_IOS_SPEC.md), [handoff](../../../SPREAD_LIFE_IOS_HANDOFF.md), [reference](../../../tools/life-reference/README.md) | Higher authority for current Life acceptance |
+| Approved Life behavior and unchanged demo | [Life iOS spec](../../life-ios/SPREAD_LIFE_IOS_SPEC.md), [handoff](../../life-ios/SPREAD_LIFE_IOS_HANDOFF.md), [reference](../../../tools/life-reference/README.md) | Higher authority for current Life acceptance |
 | Current native identity | [Native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md) | Higher authority for visual language |
 | iOS device guidance | [iOS 27 audit](../platforms/IOS27_BEHAVIOR_AUDIT.md) | Higher authority for platform and release |
 | Existing Week/Month decision set | [61 owner decisions](../specs/2026-11-04-week-month-owner-decisions.md) | Higher authority for navigation/behavior |

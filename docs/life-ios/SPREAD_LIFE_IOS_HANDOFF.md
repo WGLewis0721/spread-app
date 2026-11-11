@@ -13,8 +13,8 @@ npm --prefix tools/life-reference ci --ignore-scripts
 npm --prefix tools/life-reference run dev -- --port 4183
 ```
 
-4. Open `http://127.0.0.1:4183/iphone`. Tap through Life, Hours, Week, card editing and task notes/files. Try every gesture. Read [the reference README](tools/life-reference/README.md) for its independent checks and frozen test date.
-5. Inspect the [seven approved captures](docs/evidence/life-ios-reference/). Treat the running reference as the behavioral authority and the captures as the standard-size visual authority. Keep this reference unchanged while implementing native code.
+4. Open `http://127.0.0.1:4183/iphone`. Tap through Life, Hours, Week, card editing and task notes/files. Try every gesture. Read [the reference README](../../tools/life-reference/README.md) for its independent checks and frozen test date.
+5. Inspect the [seven approved captures](../evidence/life-ios-reference/). Treat the running reference as the behavioral authority and the captures as the standard-size visual authority. Keep this reference unchanged while implementing native code.
 
 Use Node 22.12 or newer for the reference. The app uses the existing Node 22 / Xcode 27.1 Codemagic configuration. Verify the actual build-machine inventory before choosing a simulator. The reference is development material, not part of the app bundle.
 

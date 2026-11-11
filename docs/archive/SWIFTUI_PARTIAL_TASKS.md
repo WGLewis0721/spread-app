@@ -1,8 +1,8 @@
 # SwiftUI parity: partially completed tasks
 
-> Historical inventory. PR #119/#120 are merged. Current continuation and verification: [release candidate](docs/evidence/swiftui-parity/release-candidate.md). The old no-test instruction below is superseded by the owner’s current release-build assignment.
+> Historical inventory. PR #119/#120 are merged. Current continuation and verification: [release candidate](../evidence/swiftui-parity/release-candidate.md). The old no-test instruction below is superseded by the owner’s current release-build assignment.
 
-**Source:** [docs/evidence/swiftui-parity/implementation-ledger.md](docs/evidence/swiftui-parity/implementation-ledger.md) (rows marked `PARTIAL (UNVERIFIED)`, plus the related gap and blocker register).
+**Source:** [docs/evidence/swiftui-parity/implementation-ledger.md](../evidence/swiftui-parity/implementation-ledger.md) (rows marked `PARTIAL (UNVERIFIED)`, plus the related gap and blocker register).
 **Branch:** `claude/spread-swiftui-parity-87llx2` · **PR:** [#119](https://github.com/WGLewis0721/spread-app/pull/119) (draft).
 **Status of everything below: UNVERIFIED. Nothing was built, tested, or run on a device.**
 
@@ -153,7 +153,7 @@ Each task lists what is already in code, what is still missing, and what is need
 
 ## Suggested order
 
-1. Compile review of all new Swift and TypeScript (see the watchlist in `SWIFTUI_HANDOFF_PROMPT.md`), because nothing has been built.
+1. Compile review of all new Swift and TypeScript (see the watchlist in `docs/archive/SWIFTUI_HANDOFF_PROMPT.md`), because nothing has been built.
 2. Code-only items that need no owner input: P4, P5, P6 press style, P8 missing animations, P9 keyframes and FX, P10 Dynamic Type, P11 refusal copy, P13 privacy manifest, G-11 vectors.
 3. Owner decisions: P1 theme and accent, P3 auto-turn, P6 sheet stack, P12 E-1, G-6 through G-8, E-4.
 4. Reference-dependent work once G0 is captured: P2, P7, P8 calibration, P9 pivot check, G-9.

@@ -57,7 +57,7 @@ All paths are under `docs/design/`.
 | specs/ (README.md is the index) | One spec per request | Plans, not approval |
 | packs/ | One digest per kind of task | Derived. The long documents win if they differ |
 | tokens.json | Planner tokens, light and dark | Generated from `src/styles.css` |
-| [root parity spec](../../SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Historical; five-mode direction superseded by Nov 4 owner choice |
+| [root parity spec](../archive/SPREAD_SWIFTUI_PARITY_SPEC.md) | Native behavior and reference provenance | Historical; five-mode direction superseded by Nov 4 owner choice |
 | planner/SPREAD_DESIGN_SYSTEM.md | React planner visuals, native behavior invariants | Governs legacy UI and behavior |
 | planner/SPREAD_NATIVE_BRAND_BOARD.md | Current SwiftUI: **single animated Wallet Stack**; [SVG](planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg) | Implemented on `main`; supersedes five-mode language |
 | tactile-precision/: [map](tactile-precision/README.md), [motion](tactile-precision/MOTION_CONTRACT.md), [tuning](tactile-precision/ANIMATION_TUNING_GUIDE.md), [QA](tactile-precision/VERIFICATION.md) | Native tactile system | Devices owed |
@@ -92,7 +92,7 @@ Studio's original rebuild proposal is [historical](specs/2026-10-28-studio-rebui
 
 ## 6. Historical supporting material
 
-Root native handoffs (`CLAUDE_NATIVE_UI_HANDOFF.md`, `SPREAD_NATIVE_UI_REMAINING_SPEC.md`, `SPREAD_SWIFTUI_PARITY_SPEC.md`) do not override the Wallet board. Evidence and release records stay separate; concept art is not native test evidence.
+Root native handoffs (`docs/archive/CLAUDE_NATIVE_UI_HANDOFF.md`, `docs/archive/SPREAD_NATIVE_UI_REMAINING_SPEC.md`, `docs/archive/SPREAD_SWIFTUI_PARITY_SPEC.md`) do not override the Wallet board. Evidence and release records stay separate; concept art is not native test evidence.
 
 ---
 

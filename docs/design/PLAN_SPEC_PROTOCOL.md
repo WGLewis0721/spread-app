@@ -4,6 +4,8 @@
 
 > Summary: the 13-step process, sizes, output contract and self-check for any plan or spec (sections 2 to 5). Section 1 is background on sources. For routine work read [packs/spec-writing.md](packs/spec-writing.md) first.
 
+**Fast path (added 2026-11-11):** skip this protocol for a bug fix, a copy or spacing tweak, or any change under about 50 lines inside an existing pattern. Restate the request in one sentence, make the change, run typecheck, lint and tests, and open the pull request. Use the full process below only for size M and L work.
+
 **Who this is for:** any person or AI tool (Claude, ChatGPT, Grok, Gemini, Codex, Copilot, Cursor) asked to make a plan or spec sheet for a Spread request.
 **What it does:** fixes the process and the output, so every tool starts from the same documents and returns the same shape of answer.
 **Template to fill in:** [specs/TEMPLATE.md](specs/TEMPLATE.md).
@@ -98,6 +100,6 @@ If unsure, choose the larger size.
 ## 6. Handing off to implementation
 
 - A spec is not approval to merge. Release authority stays with the owner ([RULES_CARD.md](RULES_CARD.md), Boundaries).
-- Implementation follows the repo flow: a branch, focused tests added to the explicit lists, the checks in the card's Verify list, and a pull request into `main`.
+- Implementation follows the repo flow: a branch, focused tests named `*.test.ts` or `*.test.mjs` (found automatically), the checks in the card's Verify list, and a pull request into `main`.
 - **Owner workflow (2026-11-06): no isolated prototyping.** Implement all scoped behavior in the actual app on a dedicated feature branch, then run automated tests and physical-device checks and refine in the same codebase. Use focused commits and intermediate validation without treating partial slices as finished features. An isolated demo is not a prerequisite for implementation.
 - When the work lands, update the governing documents and the map in the same change.

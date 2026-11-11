@@ -1,8 +1,8 @@
 # Handoff prompt: Spread SwiftUI working-build parity (historical continuation)
 
-> Current continuation is on `fix/swiftui-finish` from main `3852a9f`. See [release candidate evidence](docs/evidence/swiftui-parity/release-candidate.md). PR #119 is already merged; do not push its old build branch.
+> Current continuation is on `fix/swiftui-finish` from main `3852a9f`. See [release candidate evidence](../evidence/swiftui-parity/release-candidate.md). PR #119 is already merged; do not push its old build branch.
 
-> **Superseded for owner-approved PR #119 visual correction and QA (2026-11-03):** follow [CLAUDE_NATIVE_UI_HANDOFF.md](CLAUDE_NATIVE_UI_HANDOFF.md) and [native brand board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md). The older **code-only/no-test** rule below applied to a previous implementation session; it is **not** the current assignment. Preserve historical task and blocker details.
+> **Superseded for owner-approved PR #119 visual correction and QA (2026-11-03):** follow [CLAUDE_NATIVE_UI_HANDOFF.md](CLAUDE_NATIVE_UI_HANDOFF.md) and [native brand board](../design/planner/SPREAD_NATIVE_BRAND_BOARD.md). The older **code-only/no-test** rule below applied to a previous implementation session; it is **not** the current assignment. Preserve historical task and blocker details.
 
 Paste this file into a new session, or point the next agent at it. It is self-contained.
 
@@ -25,8 +25,8 @@ The first session has implemented the work **code-only**. Nothing has been built
   - `eeb4e3d` feat(planner): native intents and read-only export
   - Later commits, if any, follow in order. Do not rewrite these.
 - **Ledger:** `docs/evidence/swiftui-parity/implementation-ledger.md` (A01–F11 status, file map, exceptions, gaps, blockers)
-- **Partial tasks:** `SWIFTUI_PARTIAL_TASKS.md` (P1–P13 and the gap register)
-- **Original specs (read first):** `SPREAD_SWIFTUI_PARITY_SPEC.md`, `SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md`, `CLAUDE_SWIFTUI_HANDOFF.md`
+- **Partial tasks:** `docs/archive/SWIFTUI_PARTIAL_TASKS.md` (P1–P13 and the gap register)
+- **Original specs (read first):** `docs/archive/SPREAD_SWIFTUI_PARITY_SPEC.md`, `docs/archive/SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md`, `docs/archive/CLAUDE_SWIFTUI_HANDOFF.md`
 - **Project rules:** `CLAUDE.md`, `AGENTS.project.md`, `docs/design/RULES_CARD.md`
 
 Read the ledger and the partial-task list before touching code.
@@ -65,7 +65,7 @@ Nothing has been compiled. Before adding features, read the new Swift and TypeSc
 
 Fix what you find. Record each fix as a ledger note, not as a claim of verification.
 
-### 2. Partial tasks (from `SWIFTUI_PARTIAL_TASKS.md`)
+### 2. Partial tasks (from `docs/archive/SWIFTUI_PARTIAL_TASKS.md`)
 
 Work these in the order listed there. The code-only items are P4, P5, P6 (press style), P8 (missing Tabs pop, Day fill, Dial count-up), P9 (keyframes and FX), P10 (Dynamic Type and text styles), P11 (refusal copy), P13 (privacy manifest review), and G-11 (free-time vectors).
 
@@ -111,14 +111,14 @@ Swift package tests, `xcodebuild` build and UI tests, simulator and device runs 
 ## How to report back
 
 1. Update `docs/evidence/swiftui-parity/implementation-ledger.md`: change statuses only when the code change exists, and keep `UNVERIFIED` on every row.
-2. Update `SWIFTUI_PARTIAL_TASKS.md` by striking completed items and adding new ones.
+2. Update `docs/archive/SWIFTUI_PARTIAL_TASKS.md` by striking completed items and adding new ones.
 3. Commit in small, honest commits. Each message should say what changed and state that it is unverified. Use the attribution format of the repository's other commits, without model names.
 4. Keep PR #119 in draft. Add a comment for each owner decision.
 5. End with the explicit status: **IMPLEMENTATION COMPLETE/INCOMPLETE · UNVERIFIED · NOT READY FOR RELEASE**, with the count of remaining partial items and blocked items.
 
 ## Start checklist
 
-- [ ] Read `SWIFTUI_PARTIAL_TASKS.md` and the ledger.
+- [ ] Read `docs/archive/SWIFTUI_PARTIAL_TASKS.md` and the ledger.
 - [ ] Run the compile review by reading (no build).
 - [ ] Ask the owner the decisions in section 3 if the work depends on them.
 - [ ] Work the code-only partial tasks in order, committing each one.
