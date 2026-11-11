@@ -840,3 +840,61 @@ test("Saving an unfunded weekly priority records the goal without reserving or b
     assert.equal(useSpread.getState().data.weeks[data.currentWeek].life?.priorityDay, undefined);
   } finally { router.dispose(); }
 });
+
+test("important tasks are exposed by native projection and can be undone", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const changed = await router.dispatch(request({
+      type: "setTaskImportant", roleId, taskId: "task", important: true,
+    }));
+    assert.equal(changed.ok, true);
+    assert.ok(changed.undoId);
+    assert.equal(router.read()!.envelope.snapshot.tasks.find((task) => task.id === "task")?.important, true);
+    const undone = await router.dispatch(request({ type: "undo", editId: changed.undoId }));
+    assert.equal(undone.ok, true);
+    assert.equal(router.read()!.envelope.snapshot.tasks.find((task) => task.id === "task")?.important, undefined);
+  } finally { router.dispose(); }
+});
+
+test("Plan Ahead previews do not mutate, confirms one future move and Undo restores both weeks", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    // Setup has 2h scheduled out of an 8h source budget.
+    const initial = dataJSON();
+    const week = useSpread.getState().data.currentWeek;
+    const future = shiftWeek(week, 5);
+    const input = { roleId, toDay: future, hours: 1, targetCapacityHours: 40 };
+    const preview = await router.dispatch(request({ type: "previewPlanAhead", ...input }));
+    assert.equal(preview.ok, true);
+    assert.equal(preview.planAheadPreview?.eligible, true);
+    assert.equal(dataJSON(), initial, "Read-only previews never write");
+    const changed = await router.dispatch(request({ type: "transferPlanAhead", ...input }));
+    assert.equal(changed.ok, true);
+    assert.ok(changed.undoId);
+    const after = useSpread.getState().data;
+    assert.equal(after.currentWeek, week);
+    assert.equal(after.weeks[week].boxes[0].hours, 7);
+    assert.equal(after.weeks[future].boxes[0].hours, 9);
+    const undone = await router.dispatch(request({ type: "undo", editId: changed.undoId }));
+    assert.equal(undone.ok, true);
+    assert.equal(dataJSON(), initial);
+  } finally { router.dispose(); }
+});
+
+test("Plan Ahead refuses missing destination capacity and keeps source planner intact", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const initial = dataJSON();
+    const future = shiftWeek(useSpread.getState().data.currentWeek, 2);
+    const preview = await router.dispatch(request({
+      type: "previewPlanAhead", roleId, toDay: future, hours: 1,
+    }));
+    assert.equal(preview.ok, true);
+    assert.equal(preview.planAheadPreview?.eligible, false);
+    const denied = await router.dispatch(request({
+      type: "transferPlanAhead", roleId, toDay: future, hours: 1,
+    }));
+    assert.equal(denied.ok, false);
+    assert.equal(dataJSON(), initial);
+  } finally { router.dispose(); }
+});
