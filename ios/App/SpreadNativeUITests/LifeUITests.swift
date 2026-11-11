@@ -89,7 +89,9 @@ final class LifeUITests: XCTestCase {
         XCTAssertTrue(exact.exists, "Browsing gestures must not delete a Life area")
         XCTAssertFalse(app.buttons.matching(NSPredicate(
             format: "identifier BEGINSWITH 'life-reveal-manage-'")).firstMatch.exists)
-        card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+        if !app.buttons["life-details-button"].exists {
+            card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+        }
         XCTAssertTrue(app.buttons["life-details-button"].waitForExistence(timeout: 10))
         app.buttons["life-details-button"].tap()
         let delete = app.buttons["life-manage-delete"]
@@ -108,6 +110,8 @@ final class LifeUITests: XCTestCase {
         undo.tap()
         XCTAssertTrue(exact.waitForExistence(timeout: 15), "Undo must restore the exact Life area")
         capture("life-deleted-from-details-and-restored")
+        let close = app.buttons["life-navigation-close"]
+        if close.exists && close.isHittable { close.tap() }
 
         navigate("week")
         XCTAssertTrue(app.descendants(matching: .any)
