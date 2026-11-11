@@ -324,4 +324,34 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         face.tap()
         XCTAssertEqual(face.value as? String, "Focused", "A tap after leaving Edit must select the card")
     }
+
+    /// DIAGNOSTIC, to be removed once the Edit swipe is understood: which synthetic gestures
+    /// move an Edit-mode card? Prints LIFE_SWIPE_PROBE lines and asserts only that Edit is on.
+    func test14ProbeEditSwipeVariants() {
+        launch(category: "work")
+        let face = card(for: "Work")
+        XCTAssertTrue(face.waitForExistence(timeout: 20), "The Work card was not rendered")
+        toggleEdit()
+        waitForStableFrame(face)
+        let helper = app.staticTexts["Swipe left to manage. Slide right offscreen to delete. Undo restores."]
+        let editIsOn = helper.waitForExistence(timeout: 5)
+        print("LIFE_SWIPE_PROBE editHelperTextVisible=\(editIsOn)")
+        let rest = face.frame.minX
+        func report(_ name: String) {
+            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            let manage = app.buttons.matching(NSPredicate(format: "label == 'Manage'")).count
+            print("LIFE_SWIPE_PROBE variant=\(name) rest=\(rest) minX=\(face.frame.minX) manageButtons=\(manage)")
+        }
+        face.swipeLeft()
+        report("swipeLeft")
+        face.swipeLeft(velocity: .slow)
+        report("swipeLeftSlow")
+        let from = face.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+        let to = face.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.5))
+        from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.2)
+        report("coordinateDragSlow")
+        from.press(forDuration: 0.4, thenDragTo: to)
+        report("pressHoldThenDrag")
+        XCTAssertTrue(editIsOn, "Edit mode did not turn on: the Edit helper text is missing")
+    }
 }
