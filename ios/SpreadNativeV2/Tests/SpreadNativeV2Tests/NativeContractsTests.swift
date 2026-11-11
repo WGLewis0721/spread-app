@@ -52,6 +52,23 @@ final class NativeContractsTests: XCTestCase {
             .contains("Weekly capacity not set"))
     }
 
+    func testLifeOrbitDirectionRightAddsAndLeftReturns() {
+        // SwiftUI coordinates grow downward: top -> right is clockwise,
+        // so the signed angle delta must add half-hour detents.
+        let clockwise = LifeOrbitMath.delta(from: -90, to: 0)
+        let counterclockwise = LifeOrbitMath.delta(from: 0, to: -90)
+        XCTAssertEqual(clockwise, 90, accuracy: 0.00001)
+        XCTAssertEqual(counterclockwise, -90, accuracy: 0.00001)
+        XCTAssertEqual(LifeOrbitMath.budgetChange(forDetents: Int(clockwise / 15)), 3)
+        XCTAssertEqual(LifeOrbitMath.budgetChange(forDetents: Int(counterclockwise / 15)), -3)
+        XCTAssertEqual(LifeOrbitMath.budgetChange(forDetents: 1), 0.5)
+        XCTAssertEqual(LifeOrbitMath.budgetChange(forDetents: -1), -0.5)
+        XCTAssertEqual(LifeOrbitMath.budgetChange(forDetents: 0), 0)
+        // Crossing the -180/+180 seam keeps the right/clockwise sign.
+        XCTAssertGreaterThan(LifeOrbitMath.delta(from: 179, to: -179), 0)
+        XCTAssertLessThan(LifeOrbitMath.delta(from: -179, to: 179), 0)
+    }
+
     func testLifeOrbitAngleWrapAndDetents() {
         XCTAssertEqual(LifeOrbitMath.orbitDegreesPerSecond, 22.5, accuracy: 0.001)
         XCTAssertEqual(LifeOrbitMath.orbitDegreesPerSecond * 16, 360, accuracy: 0.001)
