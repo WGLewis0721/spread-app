@@ -51,7 +51,23 @@ struct NativeLifePriorityPreview: Decodable {
     let reserveHours: Double
     let shortageHours: Double
 }
+struct NativePlanAheadPreview: Decodable {
+    let sourceWeek: String
+    let targetWeek: String
+    let roleId: String
+    let hours: Double
+    let kind: String
+    let sourceBudgetBefore: Double
+    let sourceBudgetAfter: Double
+    let targetBudgetBefore: Double
+    let targetBudgetAfter: Double
+    let targetCapacityHours: Double?
+    let movedTasks: Int
+    let eligible: Bool
+    let reason: String?
+}
 struct LiveReply: Decodable {
+    let planAheadPreview: NativePlanAheadPreview?
     let priorityPreview: NativeLifePriorityPreview?
     let ok: Bool
     let taskDetail: NativeTaskDetail?
@@ -216,6 +232,23 @@ struct HoursShortage: Equatable {
               state?.envelope.profileId == current.envelope.profileId else { return nil }
         return reply
     }
+    func previewPlanAhead(roleId: String, toDay: String, hours: Double,
+                          fromDay: String?, targetCapacityHours: Double?) async -> NativePlanAheadPreview? {
+        let origin = state
+        var action: [String: Any] = [
+            "type": "previewPlanAhead", "roleId": roleId,
+            "toDay": toDay, "hours": hours
+        ]
+        if let fromDay { action["fromDay"] = fromDay }
+        if let targetCapacityHours { action["targetCapacityHours"] = targetCapacityHours }
+        let reply = await readWeekFeature(action)
+        guard state?.sessionId == origin?.sessionId,
+              state?.revision == origin?.revision,
+              state?.envelope.profileId == origin?.envelope.profileId,
+              state?.envelope.snapshot.weekKey == origin?.envelope.snapshot.weekKey else { return nil }
+        return reply?.planAheadPreview
+    }
+
     func previewLifePriority(roleId: String, goalHours: Double, day: String) async -> NativeLifePriorityPreview? {
         let origin = state
         let reply = await readWeekFeature(["type": "previewLifePriority", "roleId": roleId, "goalHours": goalHours, "day": day])
