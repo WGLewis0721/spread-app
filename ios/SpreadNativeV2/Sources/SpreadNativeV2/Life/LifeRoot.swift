@@ -445,7 +445,7 @@ struct LifeRoot: View {
                     Color.clear.preference(key: LifeDockHeightKey.self, value: geometry.size.height)
                 }
             }
-            .onPreferenceChange(LifeDockHeightKey.self) { dockControlsHeight = $0 }
+            .onPreferenceChange(LifeDockHeightKey.self) { if $0 > 0 { dockControlsHeight = $0 } }
             .onPreferenceChange(LifeDockOpenerCenterKey.self) { if $0 > 0 { dockOpenerCenterY = $0 } }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
@@ -683,14 +683,17 @@ struct LifeRoot: View {
     }
 }
 
+// Each key has one real source. Sibling views report the default, so the reducers keep
+// the largest value: `value = nextValue()` let a later sibling's default replace the
+// measured one, and the tray's Close control then sat lower than the dock opener.
 private struct LifeDockOpenerCenterKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 private struct LifeDockHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 62
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 private struct LifeGestureHelp: View {

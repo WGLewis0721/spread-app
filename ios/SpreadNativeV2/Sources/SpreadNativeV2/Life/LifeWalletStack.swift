@@ -170,8 +170,8 @@ private struct LifeWalletFace: View {
     }
     var body: some View {
         ZStack {
-            // Keep the action layer structurally stable through the gesture.
-            // A conditional insertion here cancels the parent swipe recognizer.
+            // Keep the action layer mounted through the gesture. Inserting the layer
+            // here cancels the parent swipe recognizer (see revealedActions).
             revealedActions
                 // Clip the stationary Manage tray, not the moving Wallet face.
                 .clipShape(RoundedRectangle(cornerRadius: 23))
@@ -287,16 +287,26 @@ private struct LifeWalletFace: View {
     private var revealedActions: some View {
         HStack(spacing: 0) {
             Spacer(minLength: 0)
-            Button {
-                guard editing, reveal < 0 else { return }
-                onManage()
-            } label: {
-                Label("Manage", systemImage: "pencil").font(.subheadline)
-                    .frame(width: 92, height: cardHeight).foregroundStyle(.white)
-                    .background(LifePalette.accent, in: RoundedRectangle(cornerRadius: 24))
-            }.accessibilityIdentifier("life-reveal-manage-\(role.id)")
-                .accessibilityHidden(!editing || reveal >= 0).allowsHitTesting(editing && reveal < 0)
+            // The layer itself stays mounted so a drag can show Manage under the finger.
+            // The control exists only once Manage has settled open in Edit: a hidden
+            // Button was still exposed to accessibility and hit tests outside Edit.
+            // `reveal` changes only when a drag ends or Edit changes, never mid-gesture.
+            if editing && reveal < 0 {
+                Button {
+                    guard editing, reveal < 0 else { return }
+                    onManage()
+                } label: { manageFace }
+                    .accessibilityIdentifier("life-reveal-manage-\(role.id)")
+                    .transition(.identity)
+            } else {
+                manageFace.accessibilityHidden(true).transition(.identity)
+            }
         }
+    }
+    private var manageFace: some View {
+        Label("Manage", systemImage: "pencil").font(.subheadline)
+            .frame(width: 92, height: cardHeight).foregroundStyle(.white)
+            .background(LifePalette.accent, in: RoundedRectangle(cornerRadius: 24))
     }
 
     private var cardSurface: some View {
