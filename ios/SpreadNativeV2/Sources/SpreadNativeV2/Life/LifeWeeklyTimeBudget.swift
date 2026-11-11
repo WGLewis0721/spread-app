@@ -7,6 +7,9 @@ struct LifeWeeklyTimeBudget: View {
     let roles: [Responsibility]
     let capacity: Double?
     let compact: Bool
+    let expanded: Bool
+    let onToggle: () -> Void
+    let onSelectRole: (String) -> Void
 
     @ScaledMetric(relativeTo: .body) private var barHeight: CGFloat = 32
     @ScaledMetric(relativeTo: .caption) private var minimumRoleLabelWidth: CGFloat = 40
@@ -70,13 +73,21 @@ struct LifeWeeklyTimeBudget: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
-                Text(hasCapacity ? "Adjust" : "Set hours")
+                Button(action: onToggle) {
+                    HStack(spacing: 3) {
+                        ViewThatFits(in: .horizontal) {
+                            Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
+                            Text(hasCapacity ? "Adjust" : "Set hours")
+                        }
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Spread.accent)
-                Image(systemName: "arrow.up.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Spread.accent)
-                    .accessibilityHidden(true)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(expanded ? "Close weekly hours" : "Set weekly hours")
+                .accessibilityIdentifier("life-budget-toggle")
             }
         }
     }
@@ -121,19 +132,25 @@ struct LifeWeeklyTimeBudget: View {
                 Text("\(roles.count) Life \(roles.count == 1 ? "area" : "areas")")
                     .font(.caption2).foregroundStyle(Spread.secondary)
                 Spacer(minLength: 8)
-                Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
+                Button(action: onToggle) {
+                    HStack(spacing: 4) {
+                        Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Spread.accent)
-                Image(systemName: "arrow.right")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Spread.accent)
-                    .accessibilityHidden(true)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(expanded ? "Close weekly hours" : "Set weekly hours")
+                .accessibilityIdentifier("life-budget-toggle")
             }
         }
     }
 
     private var storageBar: some View {
         GeometryReader { geometry in
+            ZStack {
             if let capacity, capacity > 0 {
                 let track = LifeBudgetBarMath.trackHours(assigned: assigned, capacity: capacity)
                 HStack(spacing: 0) {
@@ -196,9 +213,28 @@ struct LifeWeeklyTimeBudget: View {
                 .clipShape(Capsule())
                 .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
             }
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture(coordinateSpace: .local) { point in
+                    guard let capacity, capacity > 0 else { onToggle(); return }
+                    let track = LifeBudgetBarMath.trackHours(assigned: assigned, capacity: capacity)
+                    let x = Double(max(0, min(point.x, geometry.size.width)) /
+                                   max(1, geometry.size.width)) * track
+                    var cursor = 0.0
+                    for role in positiveRoles {
+                        cursor += role.hours
+                        if x <= cursor { onSelectRole(role.id); return }
+                    }
+                    onToggle()
+                }
+            }
         }
-        .frame(height: compact ? 22 : max(32, barHeight))
-        .accessibilityHidden(true)
+        .frame(height: compact ? 26 : max(32, barHeight))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(LifeBudgetBarMath.accessibilityLabel(roles: roles, capacity: capacity))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onToggle() }
+        .accessibilityIdentifier("life-budget-segments")
     }
 }
 
