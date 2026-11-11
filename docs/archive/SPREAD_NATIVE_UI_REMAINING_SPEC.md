@@ -1,6 +1,6 @@
 # Spread native UI: what is done, what is left, and how to finish it
 
-> **Owner update (2026-11-04):** The five-mode responsibility view described in this historical completion ledger has been superseded. See [the current native brand board amendment](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and [draft PR #127](https://github.com/WGLewis0721/spread-app/pull/127). The target is a single Wallet-style animated Stack with independent expansion, native task growth, persistent chevron and a common Edit/long-press mode. Legacy mode-specific test cases must be replaced with strict Stack tests, not silently skipped. All underlying planner and release constraints still apply.
+> **Owner update (2026-11-04):** The five-mode responsibility view described in this historical completion ledger has been superseded. See [the current native brand board amendment](../design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and [draft PR #127](https://github.com/WGLewis0721/spread-app/pull/127). The target is a single Wallet-style animated Stack with independent expansion, native task growth, persistent chevron and a common Edit/long-press mode. Legacy mode-specific test cases must be replaced with strict Stack tests, not silently skipped. All underlying planner and release constraints still apply.
 
 
 **Written:** 2026-11-04, after PR #119 was merged to `main` as `c66116c` (branch tip `57acfbc`, identical tree).
@@ -51,7 +51,7 @@ Priority: **P0** blocks trusting the build · **P1** visible defect or hard-rule
 
 **V1 Dark appearance has never been rendered. [P0] [ci]**
 - *Now:* the tour launches with `-AppleInterfaceStyle Dark`; this iOS ignores it, so every `tour-dark-*` image is light (canvas luminance about 240 of 255).
-- *Why:* dark navy is the owner's primary target; light working proves nothing about it. Apple: support Dark Mode with semantic colours and test it, and test Increase Contrast and Reduce Transparency too. Repo: [APPLE_DESIGN_PRINCIPLES section 6](docs/design/platforms/APPLE_DESIGN_PRINCIPLES.md).
+- *Why:* dark navy is the owner's primary target; light working proves nothing about it. Apple: support Dark Mode with semantic colours and test it, and test Increase Contrast and Reduce Transparency too. Repo: [APPLE_DESIGN_PRINCIPLES section 6](../design/platforms/APPLE_DESIGN_PRINCIPLES.md).
 - *Fix:* in each dark test set `XCUIDevice.shared.appearance = .dark` (iOS 17+), or run `xcrun simctl ui <udid> appearance dark` in a separate workflow step before the dark run. Also launch once with `-spread.native.appearance dark` (the app's own preference key) to test the in-app override, and once with System while the device is dark. Then grep the views for literals that assumed a light surface: `grep -rnE "Color\.(white|black)|\.white\b|\.black\b|Color\(hex" ios/SpreadNativeV2/Sources`.
 - *Done when:* dark captures of Spread (all five modes), Week, Month, More, Task, Move to, New Spread and a large-text pass exist, canvas luminance is under 80, the `.contrast` accessibility audit is clean, and the screens read like the SVG specimen (canvas `#060B18`, surface `#101C32`, ink `#F7FAFF`).
 
@@ -68,7 +68,7 @@ Priority: **P0** blocks trusting the build · **P1** visible defect or hard-rule
 **V4 The legacy layout audits fail. [P0] [ci]**
 - *Now, 390 pt:* `PlannerUITests.swift:776` asserts the screen is 390 pt wide. The `iPhone-15` simulator is 393 pt, so every 390 test stops at its first line and the audits never run.
 - *Now, 1024 pt:* (a) `view-mode-button` is missing on iPad (`PlannerUITests.swift:98`); the identifier must sit on a container above the `ViewThatFits` in `SpreadSurface.swift` so every alternative has it; (b) the hit-region audit reports "Hit area is too small" on Week top and in the iPad orientation test (`PlannerUITests.swift:151`); the element is named in the attachment `audit-issues-1024-week-top` in run 41751778627.
-- *Why:* 44 pt targets are a hard rule (CLAUDE.md; Apple HIG Layout and Accessibility; Fitts's Law in [FOUNDATIONAL_UX_PRINCIPLES](docs/design/FOUNDATIONAL_UX_PRINCIPLES.md)).
+- *Why:* 44 pt targets are a hard rule (CLAUDE.md; Apple HIG Layout and Accessibility; Fitts's Law in [FOUNDATIONAL_UX_PRINCIPLES](../design/FOUNDATIONAL_UX_PRINCIPLES.md)).
 - *Fix:* use a 390 pt device type (iPhone 14, 13 or 12) or assert the real width class; give the picker container the identifier on iPad; enlarge the offending control to at least 44 by 44 pt with `.frame(minWidth: 44, minHeight: 44)` and `.contentShape(Rectangle())`, never by shrinking its glyph.
 - *Done when:* `testAudit390`, `testAuditExtended390`, `testLayout390`, `testAudit820`, `testAudit1024` and `testIPadOrientations` pass with no ignored issue.
 
@@ -93,7 +93,7 @@ Priority: **P0** blocks trusting the build · **P1** visible defect or hard-rule
 
 **D1 The layout switcher breaks words at large text. [P1] [code]**
 - *Now:* at an accessibility text size the five buttons wrap mid-word ("Stac|k", "Tab|s"). `layoutPicker` in `Spread/SpreadSurface.swift` uses `ViewThatFits(in: .horizontal)`, and wrapping text still counts as "fits".
-- *Why:* Apple's controls that live in a bar (tab bar, segmented control) do not grow with Dynamic Type; they offer the Large Content Viewer instead. Words must never break mid-word. Repo: Scale in [FOUNDATIONAL_UX_PRINCIPLES](docs/design/FOUNDATIONAL_UX_PRINCIPLES.md).
+- *Why:* Apple's controls that live in a bar (tab bar, segmented control) do not grow with Dynamic Type; they offer the Large Content Viewer instead. Words must never break mid-word. Repo: Scale in [FOUNDATIONAL_UX_PRINCIPLES](../design/FOUNDATIONAL_UX_PRINCIPLES.md).
 - *Fix:* `.lineLimit(1)` with `.minimumScaleFactor(0.8)` on each label; when `dynamicTypeSize.isAccessibilitySize`, show icons only and add `.accessibilityShowsLargeContentViewer { Label(...) }` to each button, or switch to a `Menu` or a two-row grid. Keep the 44 pt target and the `view-mode-button` container.
 - *Done when:* the large-text tour shows five whole labels or five icons, nothing clipped, at 393 pt.
 
@@ -109,7 +109,7 @@ Priority: **P0** blocks trusting the build · **P1** visible defect or hard-rule
 
 **D4 The floating dock covers the last rows. [P1] [code]**
 - *Now:* on a long list the last task rows sit under the dock until scrolled.
-- *Fix:* reserve space with `.safeAreaInset(edge: .bottom)` on the scroll content (or `.contentMargins(.bottom, dockHeight, for: .scrollContent)`), and fade or blur content under the dock (the scroll edge treatment in [APPLE_DESIGN_PRINCIPLES section 2](docs/design/platforms/APPLE_DESIGN_PRINCIPLES.md)). Respect Reduce Transparency (opaque dock).
+- *Fix:* reserve space with `.safeAreaInset(edge: .bottom)` on the scroll content (or `.contentMargins(.bottom, dockHeight, for: .scrollContent)`), and fade or blur content under the dock (the scroll edge treatment in [APPLE_DESIGN_PRINCIPLES section 2](../design/platforms/APPLE_DESIGN_PRINCIPLES.md)). Respect Reduce Transparency (opaque dock).
 - *Done when:* the last row can scroll fully clear of the dock at every width and at large text.
 
 **D5 The New Spread sheet has no capture. [P2] [code] [ci]**

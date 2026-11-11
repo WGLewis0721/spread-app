@@ -4,9 +4,9 @@
 
 **Read these, in this order, before touching anything:**
 1. [SPREAD_NATIVE_UI_REMAINING_SPEC.md](SPREAD_NATIVE_UI_REMAINING_SPEC.md): the full register of what is done and what is left, with a fix and a "done when" for each item. This is your task list.
-2. [docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and the [SVG specimen](docs/design/planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg): the approved look and the acceptance gates.
-3. [docs/evidence/swiftui-parity/implementation-ledger.md](docs/evidence/swiftui-parity/implementation-ledger.md), section 7, and the [real captures](docs/evidence/swiftui-parity/screenshots/2026-11-04/README.md).
-4. [SWIFTUI_PARTIAL_TASKS.md](SWIFTUI_PARTIAL_TASKS.md) (P1 to P13), [docs/design/FOUNDATIONAL_UX_PRINCIPLES.md](docs/design/FOUNDATIONAL_UX_PRINCIPLES.md), [docs/design/platforms/APPLE_DESIGN_PRINCIPLES.md](docs/design/platforms/APPLE_DESIGN_PRINCIPLES.md), and [CLAUDE.md](CLAUDE.md).
+2. [docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md](../design/planner/SPREAD_NATIVE_BRAND_BOARD.md) and the [SVG specimen](../design/planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg): the approved look and the acceptance gates.
+3. [docs/evidence/swiftui-parity/implementation-ledger.md](../evidence/swiftui-parity/implementation-ledger.md), section 7, and the [real captures](../evidence/swiftui-parity/screenshots/2026-11-04/README.md).
+4. [SWIFTUI_PARTIAL_TASKS.md](SWIFTUI_PARTIAL_TASKS.md) (P1 to P13), [docs/design/FOUNDATIONAL_UX_PRINCIPLES.md](../design/FOUNDATIONAL_UX_PRINCIPLES.md), [docs/design/platforms/APPLE_DESIGN_PRINCIPLES.md](../design/platforms/APPLE_DESIGN_PRINCIPLES.md), and [CLAUDE.md](../../CLAUDE.md).
 
 ## Where things stand (the short version)
 

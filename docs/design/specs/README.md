@@ -11,7 +11,7 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 | Date | Spec | Status |
 | --- | --- | --- |
 | 2026-11-10 | [Editorial Life card implementation](2026-11-10-life-card-visual-implementation.md), [illustrated art direction](../planner/SPREAD_LIFE_CARD_ART_DIRECTION.md) | Owner-selected visual references. Implementation proposal on review branch; no native code change or merge approval. |
-| 2026-11-06 | [Life on iPhone](../../../SPREAD_LIFE_IOS_SPEC.md), [implementation checklist](../../../SPREAD_LIFE_IOS_CHECKLIST.md) and [engineer handoff](../../../SPREAD_LIFE_IOS_HANDOFF.md) | Implementation merged in #146 and refinements through #158; recorded device/release acceptance still separate. Historical handoff, not a new implementation request. |
+| 2026-11-06 | [Life on iPhone](../../life-ios/SPREAD_LIFE_IOS_SPEC.md), [implementation checklist](../../life-ios/SPREAD_LIFE_IOS_CHECKLIST.md) and [engineer handoff](../../life-ios/SPREAD_LIFE_IOS_HANDOFF.md) | Implementation merged in #146 and refinements through #158; recorded device/release acceptance still separate. Historical handoff, not a new implementation request. |
 | 2026-11-06 | [Tactile Precision proposal](2026-11-06-tactile-precision.md), [motion/QA map](../tactile-precision/README.md) | Motion implementation merged in #150; device calibration and release acceptance remain unverified in the recorded evidence. |
 | 2026-10-28 | [Token-efficient design docs](2026-10-28-token-efficient-docs.md) | Approved, implemented |
 | 2026-10-28 | [Studio rebuild](2026-10-28-studio-rebuild.md) | Draft, four owner decisions open |
@@ -22,7 +22,7 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 | 2026-11-04 | [Week/Month: 61 owner decisions](2026-11-04-week-month-owner-decisions.md) | Owner-approved direction; opt-in UI preview, release gated |
 | 2026-11-04 | [Week/Month component specification](2026-11-04-week-month-components-implementation.md) | Component source of truth for the 61 decisions; release gated |
 | 2026-11-04 | [Week/Month 61-decision verification status](2026-11-04-week-month-verification.md) | Historical #139 verification snapshot; merged code does not imply final-device acceptance. |
-| 2026-11-03 | [Working-build SwiftUI parity spec (root)](../../../SPREAD_SWIFTUI_PARITY_SPEC.md) and [implementation instructions](../../../SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) | Historical five-mode parity direction, superseded by current single Wallet/Life design. Retained for provenance. |
+| 2026-11-03 | [Working-build SwiftUI parity spec (root)](../../archive/SPREAD_SWIFTUI_PARITY_SPEC.md) and [implementation instructions](../../archive/SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) | Historical five-mode parity direction, superseded by current single Wallet/Life design. Retained for provenance. |
 
 - [Life and Classic: shared polish and tray controls](2026-11-06-life-classic-polish.md) — shared polish contract, with both recording reviews completed.
 

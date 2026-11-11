@@ -1,6 +1,6 @@
 # Spec: Life on iPhone
 
-> Part of the Spread design brain. Start at [docs/design/README.md](docs/design/README.md). Follows [docs/design/PLAN_SPEC_PROTOCOL.md](docs/design/PLAN_SPEC_PROTOCOL.md).
+> Part of the Spread design brain. Start at [docs/design/README.md](../design/README.md). Follows [docs/design/PLAN_SPEC_PROTOCOL.md](../design/PLAN_SPEC_PROTOCOL.md).
 >
 > Summary: Bring the approved browser design into the existing native preview mode. Keep Classic and More unchanged. Use the real planner, teach gestures with concise instructions and haptics, and deliver a signed internal-testing build through Codemagic after device checks.
 
@@ -37,7 +37,7 @@ The owner can plan comfortably in the approved browser prototype, but uses the i
 
 The approved browser is included at `tools/life-reference`; follow its README to run `http://127.0.0.1:4183/iphone`. These portable reference captures define the visual target, not installed-iOS evidence:
 
-[Life stack](docs/evidence/life-ios-reference/final-life-stack.png) · [focused card](docs/evidence/life-ios-reference/final-life-focus.png) · [Hours](docs/evidence/life-ios-reference/final-hours-orbit.png) · [separated arcs](docs/evidence/life-ios-reference/final-hours-separated.png) · [calendar](docs/evidence/life-ios-reference/final-calendar.png) · [Week cards](docs/evidence/life-ios-reference/final-week-wallet.png) · [notes](docs/evidence/life-ios-reference/final-task-notes.png).
+[Life stack](../evidence/life-ios-reference/final-life-stack.png) · [focused card](../evidence/life-ios-reference/final-life-focus.png) · [Hours](../evidence/life-ios-reference/final-hours-orbit.png) · [separated arcs](../evidence/life-ios-reference/final-hours-separated.png) · [calendar](../evidence/life-ios-reference/final-calendar.png) · [Week cards](../evidence/life-ios-reference/final-week-wallet.png) · [notes](../evidence/life-ios-reference/final-task-notes.png).
 
 ## 3. Goals, non-goals and budget
 
@@ -52,11 +52,11 @@ Do not rebuild the planner, load localhost into the app, copy sample data, add a
 | Rule and source | Application |
 | --- | --- |
 | Owner's November 6 approval and More clarification | The approved browser is the Life visual target. More remains unchanged. |
-| [Native board, reference authority and identity](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md) | Keep system type, original icons/art resources, stored role colors and metallic Crown. Scope the new treatment to Life mode. |
-| [Rules card, Behavior and Boundaries](docs/design/RULES_CARD.md) | Keep the real store, eligible-day rules, guarded writes and Undo. Preserve golden branches, landing, server and cloud paths. |
-| [App Store plan, chosen architecture and data strategy](APP_STORE_RELEASE_PLAN.md) | Keep the current Capacitor/native host, offline bundle, no mandatory account and upgrade/relaunch safety. |
-| [iCloud plan, migration strategy](docs/ICLOUD_PLAN.md) | Treat new content/storage as data work. Preserve older content, version new formats and protect recovery. Cloud backup/sync remain off. |
-| [iOS behavior audit](docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md) and [native-feel pack](docs/design/packs/apple-native-feel.md) | Honor safe areas, Dynamic Type, VoiceOver, motion/transparency/contrast preferences, and 44-point controls. |
+| [Native board, reference authority and identity](../design/planner/SPREAD_NATIVE_BRAND_BOARD.md) | Keep system type, original icons/art resources, stored role colors and metallic Crown. Scope the new treatment to Life mode. |
+| [Rules card, Behavior and Boundaries](../design/RULES_CARD.md) | Keep the real store, eligible-day rules, guarded writes and Undo. Preserve golden branches, landing, server and cloud paths. |
+| [App Store plan, chosen architecture and data strategy](../../APP_STORE_RELEASE_PLAN.md) | Keep the current Capacitor/native host, offline bundle, no mandatory account and upgrade/relaunch safety. |
+| [iCloud plan, migration strategy](../ICLOUD_PLAN.md) | Treat new content/storage as data work. Preserve older content, version new formats and protect recovery. Cloud backup/sync remain off. |
+| [iOS behavior audit](../design/platforms/IOS27_BEHAVIOR_AUDIT.md) and [native-feel pack](../design/packs/apple-native-feel.md) | Honor safe areas, Dynamic Type, VoiceOver, motion/transparency/contrast preferences, and 44-point controls. |
 
 Exceptions and scope: the latest owner request authorizes the browser's presentation within the existing preview mode, including separate Life/Hours/Week navigation. It supersedes earlier preview visuals there. Classic and More retain their existing design authority. Additional capacity/priority/content fields and native local-file handling require separate data-focused changes with compatibility tests; they are not UI-only edits. Do not alter shared theme tokens to achieve Life's appearance if that would repaint More or Classic.
 

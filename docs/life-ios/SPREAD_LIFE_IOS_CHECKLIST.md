@@ -1,6 +1,6 @@
 # Life on iPhone: implementation checklist
 
-> Part of the Spread design brain. Start at [docs/design/README.md](docs/design/README.md). The [Life iOS spec](SPREAD_LIFE_IOS_SPEC.md) owns behavior, copy and acceptance criteria.
+> Part of the Spread design brain. Start at [docs/design/README.md](../design/README.md). The [Life iOS spec](SPREAD_LIFE_IOS_SPEC.md) owns behavior, copy and acceptance criteria.
 >
 > Summary: Work through the steps in order. Preserve More and Classic, connect Life to the real planner, prove persistence and accessibility, then build and upload the exact reviewed candidate through Codemagic for internal iPhone 15 testing.
 

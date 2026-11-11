@@ -12,7 +12,7 @@
 | Size | L: cross-surface interaction system |
 | Author | Design specification, 2026-11-06 |
 | Status | **Draft motion contract.** Owner requested documentation; implementation, speed calibration and release are not approved. |
-| Governing docs read | [Root Life spec](../../../SPREAD_LIFE_IOS_SPEC.md), [native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), [61 Week/Month decisions](2026-11-04-week-month-owner-decisions.md), [rules card](../RULES_CARD.md), [Apple-native pack](../packs/apple-native-feel.md), [iOS 27 audit](../platforms/IOS27_BEHAVIOR_AUDIT.md) |
+| Governing docs read | [Root Life spec](../../life-ios/SPREAD_LIFE_IOS_SPEC.md), [native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), [61 Week/Month decisions](2026-11-04-week-month-owner-decisions.md), [rules card](../RULES_CARD.md), [Apple-native pack](../packs/apple-native-feel.md), [iOS 27 audit](../platforms/IOS27_BEHAVIOR_AUDIT.md) |
 
 ## 1. Problem
 
@@ -41,7 +41,7 @@ Someone planning a busy week moves between their life-area cards, time allocatio
 | --- | --- |
 | [Rules card](../RULES_CARD.md), Look/Behavior | Keep one native Wallet stack, original art, metal Crown, existing role data, tap and keyboard alternatives, reduced motion and store-driven mutations. |
 | [Native board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), Identity | Retain full-width overlapping Wallet and the approved native look. |
-| [Life spec](../../../SPREAD_LIFE_IOS_SPEC.md), Goals and approved reference | No change to More, Classic, demo hashes, current gesture directions or approved layout without owner decision. |
+| [Life spec](../../life-ios/SPREAD_LIFE_IOS_SPEC.md), Goals and approved reference | No change to More, Classic, demo hashes, current gesture directions or approved layout without owner decision. |
 | [61 Week decisions](2026-11-04-week-month-owner-decisions.md), Interaction contract | Preserve independent day/week gesture zones, sidebar semantics and scheduling invariants. |
 | [Apple-native pack](../packs/apple-native-feel.md), checklist | Reduce Motion, VoiceOver, Dynamic Type, haptics and device QA are required. |
 | [Rules card](../RULES_CARD.md), Boundaries | Native polish cannot mutate cloud, backup, schemas or planner data architecture. |

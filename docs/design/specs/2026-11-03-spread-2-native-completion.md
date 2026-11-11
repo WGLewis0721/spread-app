@@ -1,6 +1,6 @@
 # Spec: Spread 2.0 native SwiftUI completion — one cohesive release candidate
 
-> **Visual authority update (2026-11-03):** For any subsequent native UI/UX implementation, use the owner-directed [working-build parity specification](../../../SPREAD_SWIFTUI_PARITY_SPEC.md) and [outside-in instructions](../../../SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md). This historical spec remains useful for data integration and acceptance history but **does not override the installed pre-migration app's identity or features**.
+> **Visual authority update (2026-11-03):** For any subsequent native UI/UX implementation, use the owner-directed [working-build parity specification](../../archive/SPREAD_SWIFTUI_PARITY_SPEC.md) and [outside-in instructions](../../archive/SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md). This historical spec remains useful for data integration and acceptance history but **does not override the installed pre-migration app's identity or features**.
 
 > Part of the [Spread design brain](../README.md). Follow [PLAN_SPEC_PROTOCOL.md](../PLAN_SPEC_PROTOCOL.md). This is the combined engineering contract for issues [#110](https://github.com/WGLewis0721/spread-app/issues/110), [#111](https://github.com/WGLewis0721/spread-app/issues/111) and [#112](https://github.com/WGLewis0721/spread-app/issues/112).
 
