@@ -26,7 +26,7 @@ Start here for design rules and task references. Cross-product records: [documen
 
 | If you are doing... | Read | Then, only if needed |
 | --- | --- | --- |
-| Consistent UI across app, website, marketing, or ads | [ui-kit/UI_KIT.md](ui-kit/UI_KIT.md) | [ui-kit/README.md](ui-kit/README.md), then existing planner/landing docs as needed |
+| UI consistency and external references | [UI Kit](ui-kit/UI_KIT.md) | [Repository references](ui-kit/REFERENCE_LIBRARIES.md); native/landing specs take precedence |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
 | Native Life design and artwork | [Editorial card sheet](planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [Life spec](specs/2026-11-10-life-card-visual-implementation.md), [Claude art handoff](planner/CLAUDE_EDITORIAL_ART_HANDOFF.md) |
