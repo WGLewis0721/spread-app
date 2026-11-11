@@ -81,6 +81,15 @@ struct LifeManageSheet: View {
                         }
                     }
                 }
+                Section {
+                    Button("Delete Life area", role: .destructive) {
+                        Task { await deleteRole() }
+                    }
+                    .disabled(saving || savingHours || planner.busy)
+                    .accessibilityIdentifier("life-manage-delete")
+                    Text("This also removes its tasks and hours across all weeks. Undo is available until another unrelated change.")
+                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                }
                 if savingHours { ProgressView("Saving area hours…") }
                 if let error = planner.error { Text(error).foregroundStyle(Spread.danger) }
             }.spreadListSurface()
@@ -101,6 +110,16 @@ struct LifeManageSheet: View {
         .interactiveDismissDisabled(saving || savingHours)
         .presentationDragIndicator(.visible)
     }
+    private func deleteRole() async {
+        guard !saving && !savingHours && !planner.busy else { return }
+        saving = true
+        defer { saving = false }
+        if await planner.send(["type": "removeLifeRole", "roleId": roleId]) {
+            LifeFeedback.accepted()
+            dismiss()
+        }
+    }
+
     private func saveHours() async {
         guard !saving && !savingHours,
               let current = planner.snapshot?.roles.first(where: { $0.id == roleId }),
