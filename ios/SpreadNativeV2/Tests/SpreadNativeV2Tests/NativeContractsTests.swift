@@ -40,11 +40,15 @@ final class NativeContractsTests: XCTestCase {
 
     func testLifeStorageBudgetOvercapacityAndEmptyState() {
         XCTAssertEqual(LifeBudgetBarMath.available(10, assigned: 12), 0)
+        XCTAssertNil(LifeBudgetBarMath.available(0, assigned: 0),
+                     "Zero capacity must be presented as unset, not available")
         XCTAssertEqual(LifeBudgetBarMath.trackHours(assigned: 12, capacity: 10), 12)
         XCTAssertEqual(LifeBudgetBarMath.assigned([]), 0)
         XCTAssertEqual(LifeBudgetBarMath.available(40, assigned: 0), 40)
         XCTAssertEqual(LifeBudgetBarMath.width(hours: 0, track: 40, totalWidth: 320), 0)
         XCTAssertTrue(LifeBudgetBarMath.accessibilityLabel(roles: [], capacity: nil)
+            .contains("Weekly capacity not set"))
+        XCTAssertTrue(LifeBudgetBarMath.accessibilityLabel(roles: [], capacity: 0)
             .contains("Weekly capacity not set"))
     }
 
