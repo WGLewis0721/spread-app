@@ -33,6 +33,19 @@ final class LifeEditorialArtworkTests: XCTestCase {
         }
     }
 
+    func testArtButtonNamesWhatATapSwitchesTo() {
+        XCTAssertEqual(LifeEditorialPresentation.toggleLabel(enabled: false), "Use new card art")
+        XCTAssertEqual(LifeEditorialPresentation.toggleLabel(enabled: true), "Use original card art")
+    }
+
+    func testArtButtonLabelsAreDistinctAndNeverEmpty() {
+        let off = LifeEditorialPresentation.toggleLabel(enabled: false)
+        let on = LifeEditorialPresentation.toggleLabel(enabled: true)
+        XCTAssertNotEqual(off, on)
+        XCTAssertFalse(off.isEmpty)
+        XCTAssertFalse(on.isEmpty)
+    }
+
     func testEditorialPresentationGateDefaultsOffAndKeyIsStable() {
         XCTAssertEqual(LifeEditorialPresentation.defaultsKey, "native.life.editorialArt.enabled")
         let defaults = UserDefaults.standard

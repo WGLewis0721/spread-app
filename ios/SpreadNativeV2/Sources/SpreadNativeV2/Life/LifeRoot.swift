@@ -57,7 +57,7 @@ struct LifeRoot: View {
                     if geometry.size.width >= 820 {
                         VStack(spacing: 8) {
                             compactRail
-                            if destination == .life { editControl }
+                            if destination == .life { editControl; artControl }
                         }
                     }
                     VStack(spacing: 0) {
@@ -481,6 +481,33 @@ struct LifeRoot: View {
         .accessibilityIdentifier("life-edit")
     }
 
+    /// Switches the Life card artwork between the original Chalk art and the new editorial
+    /// art. It writes the same presentation flag the launch argument sets: no planner data.
+    private var artControl: some View {
+        Button {
+            editorialArt.toggle()
+            closeNavigation()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: editorialArt ? "photo.fill" : "photo")
+                    .font(.system(size: 21, weight: .medium))
+                if navigationOpen {
+                    Text(LifeEditorialPresentation.toggleLabel(enabled: editorialArt))
+                        .font(.subheadline.weight(.medium))
+                } else if navigationExpanded {
+                    Text("Art").font(.caption)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 52,
+                   alignment: navigationOpen ? .leading : .center)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.spreadPress)
+        .padding(.horizontal, 10)
+        .accessibilityLabel(LifeEditorialPresentation.toggleLabel(enabled: editorialArt))
+        .accessibilityIdentifier("life-art-toggle")
+    }
+
     private var trayButton: some View {
         Button {
             LifeFeedback.selection()
@@ -547,7 +574,7 @@ struct LifeRoot: View {
                             .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
-                    if destination == .life { editControl }
+                    if destination == .life { editControl; artControl }
                     history
                     Menu("Crown position") {
                         Button("Move Crown left") { crownRight = false }
