@@ -36,6 +36,20 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
+    /// Presses the Edit control in the compact side tray or the wide rail.
+    private func toggleEdit() {
+        let edit = app.buttons["life-edit"]
+        if !edit.isHittable {
+            let opener = app.buttons["life-navigation"]
+            XCTAssertTrue(opener.waitForExistence(timeout: 15),
+                          "Edit must be reachable through the compact side tray or wide rail")
+            opener.tap()
+        }
+        XCTAssertTrue(edit.waitForExistence(timeout: 10), "The Edit control did not appear")
+        XCTAssertTrue(edit.isHittable, "The Edit control is not hittable")
+        edit.tap()
+    }
+
     /// Top edge of the persistent dock controls. Content whose bottom edge sits above
     /// this line is not covered by the dock.
     private func dockTopY() -> CGFloat {
@@ -275,5 +289,32 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         XCTAssertEqual(face.value as? String, "Closed", "A second tap must collapse the Work card")
         XCTAssertTrue(days.waitForNonExistence(timeout: 5),
                       "Collapsing must remove the expanded Days section")
+    }
+
+    /// Edit mode on the tap-gesture card: a left swipe reveals Manage without selecting the
+    /// card, leaving Edit hides Manage, and a tap selects again afterwards. Removal and Undo
+    /// are not covered here: this fixture pins the planner snapshot, so removing a card could
+    /// not change what is displayed, and the fixture is declared read-only.
+    func test13EditSwipeRevealsManageAndTapSelectsAfterEdit() {
+        launch(category: "work")
+        let face = card(for: "Work")
+        XCTAssertTrue(face.waitForExistence(timeout: 20), "The Work card was not rendered")
+        let manage = app.buttons["life-reveal-manage-work"]
+        XCTAssertFalse(manage.exists, "Manage must be hidden before Edit")
+
+        toggleEdit()
+        XCTAssertFalse(manage.exists, "Edit alone must not reveal Manage")
+        face.swipeLeft()
+        XCTAssertTrue(manage.waitForExistence(timeout: 10),
+                      "An Edit-mode left swipe must reveal Manage")
+        XCTAssertEqual(face.value as? String, "Closed", "An Edit-mode swipe must not select the card")
+
+        toggleEdit()
+        XCTAssertTrue(manage.waitForNonExistence(timeout: 10),
+                      "Leaving Edit must hide Manage")
+        XCTAssertTrue(face.waitForExistence(timeout: 10), "The Work card disappeared after Edit")
+        waitForStableFrame(face)
+        face.tap()
+        XCTAssertEqual(face.value as? String, "Focused", "A tap after leaving Edit must select the card")
     }
 }
