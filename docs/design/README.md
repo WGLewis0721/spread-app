@@ -4,6 +4,8 @@ Start here for Spread's design rules and task-specific references. For cross-pro
 
 **Product:** Responsibilities → Hours → Week → Tasks, local-first. Native: one approved Wallet Stack; preserve Week/Month and planner actions. React and landing stay separate.
 
+**UI Kit:** [ui-kit/UI_KIT.md](ui-kit/UI_KIT.md) is the consolidated reference for consistent visuals across the app, website, marketing, and ads.
+
 **Delivery:** Build full features in the existing app on a development branch. Test and refine in place. No isolated prototypes. No merge or release without owner approval.
 
 ---
@@ -24,6 +26,7 @@ Start here for Spread's design rules and task-specific references. For cross-pro
 
 | If you are doing... | Read | Then, only if needed |
 | --- | --- | --- |
+| Consistent UI across app, website, marketing, or ads | [ui-kit/UI_KIT.md](ui-kit/UI_KIT.md) | [ui-kit/README.md](ui-kit/README.md), then existing planner/landing docs as needed |
 | A UX law review, flow simplification or foundational interaction check | [FOUNDATIONAL_UX_PRINCIPLES.md](FOUNDATIONAL_UX_PRINCIPLES.md) | Then use the product's pack; not a visual override |
 | A plan, spec sheet, redesign or UI review | [packs/spec-writing.md](packs/spec-writing.md) | [PLAN_SPEC_PROTOCOL.md](PLAN_SPEC_PROTOCOL.md), [specs/TEMPLATE.md](specs/TEMPLATE.md) |
 | Native Life design and artwork | [Editorial card sheet](planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), [native board](planner/SPREAD_NATIVE_BRAND_BOARD.md) | [Life spec](specs/2026-11-10-life-card-visual-implementation.md), [Claude art handoff](planner/CLAUDE_EDITORIAL_ART_HANDOFF.md) |
