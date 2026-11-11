@@ -92,14 +92,15 @@ struct LifeRoot: View {
                             // scroll area. The scroll area ends above the dock, so the Days
                             // heading and the first weekday read without manual scrolling.
                             // Golden presentation keeps its existing scroll behaviour.
-                            .onChange(of: focusedRole) { _, newRole in
-                                guard editorialArt, newRole != nil else { return }
-                                Task { @MainActor in
-                                    // Let the wallet's expansion lay out before scrolling.
-                                    try? await Task.sleep(for: .milliseconds(reduceMotion ? 60 : 320))
-                                    withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
-                                        proxy.scrollTo("life-details-top", anchor: .top)
-                                    }
+                            // The task is cancelled when the selection changes again, so a
+                            // collapse or a quick switch never runs a stale scroll.
+                            .task(id: editorialArt ? focusedRole : nil) {
+                                guard focusedRole != nil else { return }
+                                // Let the wallet's expansion lay out before scrolling.
+                                do { try await Task.sleep(for: .milliseconds(reduceMotion ? 60 : 320)) }
+                                catch { return }
+                                withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
+                                    proxy.scrollTo("life-details-top", anchor: .top)
                                 }
                             }
                         }
@@ -128,11 +129,17 @@ struct LifeRoot: View {
             if phase == .active { Task { await planner.refresh() } }
             else { navigationOpen = false }
         }
-        .onChange(of: planner.state?.envelope.profileId) { _, _ in
+        // Reset transient UI only on a real profile or week change. The first load
+        // (nil to loaded) is not a change, so a selection made before it survives.
+        .onChange(of: planner.state?.envelope.profileId) { old, _ in
+            guard old != nil else { return }
             focusedRole = nil; editing = false; localSheet = nil; pendingTask = nil
             hoursSelectedRole = nil; weekSelectedRole = nil
         }
-        .onChange(of: planner.snapshot?.weekKey) { _, _ in focusedRole = nil; editing = false; localSheet = nil }
+        .onChange(of: planner.snapshot?.weekKey) { old, _ in
+            guard old != nil else { return }
+            focusedRole = nil; editing = false; localSheet = nil
+        }
         .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
         .onChange(of: navigationOpen) { _, open in
             navigationFocused = open
