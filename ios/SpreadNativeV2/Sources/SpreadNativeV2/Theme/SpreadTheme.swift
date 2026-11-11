@@ -239,13 +239,14 @@ public enum SpreadTactile {
     }
 }
 
-/// Per-item presentation state, discarded on profile/role changes. Delays are bounded so a dense plan
-/// never leaves tasks waiting offscreen; controls retain hit testing while the short entrance runs.
+/// Blur used only by the Wallet detail transition.
 struct SpreadBlurEffect: ViewModifier {
     let radius: CGFloat
     func body(content: Content) -> some View { content.blur(radius: radius) }
 }
 
+/// Per-item presentation state, discarded on profile/role changes. Delays are bounded so a dense plan
+/// never leaves tasks waiting offscreen; controls retain hit testing while the short entrance runs.
 struct SpreadEntrance: ViewModifier {
     let index: Int
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
