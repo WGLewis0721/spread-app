@@ -420,40 +420,56 @@ struct LifeRoot: View {
         .shadow(color: Spread.shadow, radius: 8, y: 4)
     }
     private func bottom(_ snapshot: PlannerSnapshot, wide: Bool) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) {
-                    if !crownRight { crown(snapshot).frame(maxWidth: 270) }
-                    dockActions(wide: wide)
-                    if crownRight { crown(snapshot).frame(maxWidth: 270) }
+                HStack(spacing: 8) {
+                    lifeWeekToggle
+                    crown(snapshot)
                 }
                 VStack(spacing: 8) {
-                    HStack { if !crownRight { Spacer() }; dockActions(wide: wide); if crownRight { Spacer() } }
+                    lifeWeekToggle
                     crown(snapshot)
                 }
             }
-            .coordinateSpace(name: "life-dock-controls")
-            .background {
-                GeometryReader { geometry in
-                    Color.clear.preference(key: LifeDockHeightKey.self, value: geometry.size.height)
-                }
-            }
-            .onPreferenceChange(LifeDockHeightKey.self) { if $0 > 0 { dockControlsHeight = $0 } }
-            .onPreferenceChange(LifeDockOpenerCenterKey.self) { if $0 > 0 { dockOpenerCenterY = $0 } }
         }
-        .padding(.horizontal, 16).padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
         .background(LifePalette.surface, ignoresSafeAreaEdges: .bottom)
     }
-    private func dockActions(wide: Bool) -> some View {
-        HStack(spacing: 8) {
-            if !crownRight { addTaskButton }
-            if !wide { trayButton }
-            if crownRight { addTaskButton }
-        }.fixedSize(horizontal: true, vertical: false)
+
+    /// Two destinations, one consistent control. Hours editing now lives on Life.
+    private var lifeWeekToggle: some View {
+        HStack(spacing: 2) {
+            ForEach([LifeDestination.life, LifeDestination.week]) { item in
+                Button {
+                    navigate(item)
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: item == .life ? "square.stack.fill" : "calendar")
+                            .font(.subheadline)
+                        Text(item == .life ? "Life" : "Week")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(destination == item ? Spread.onAccent : Spread.ink)
+                    .frame(width: 51, minHeight: 52)
+                    .background(destination == item ? Spread.accent : Color.clear,
+                                in: RoundedRectangle(cornerRadius: 12))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityLabel(item == .life ? "Life" : "Calendar week")
+                .accessibilityAddTraits(destination == item ? .isSelected : [])
+                .accessibilityIdentifier("life-nav-" + item.rawValue.lowercased())
+            }
+        }
+        .padding(3)
+        .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+        .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow)
+            .strokeBorder(Spread.line, lineWidth: 1))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("life-week-toggle")
     }
-    /// Switches the Life card artwork between the original Chalk art and the new editorial
-    /// art. It writes the same presentation flag the launch argument sets: no planner data.
     private var artControl: some View {
         Button {
             editorialArt.toggle()
@@ -507,14 +523,8 @@ struct LifeRoot: View {
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
         WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
-                      detail: "Week Crown", onDetail: today, onMove: goWeek)
-            .contextMenu {
-                Button("Move Crown left") { crownRight = false }
-                Button("Move Crown right") { crownRight = true }
-            }
-            .accessibilityAction(named: "Move Crown left") { crownRight = false }
-            .accessibilityAction(named: "Move Crown right") { crownRight = true }
-            .accessibilityIdentifier("life-bottom-crown")
+                      detail: "Calendar week", onDetail: today, onMove: goWeek)
+            .accessibilityIdentifier("life-week-navigator")
     }
     private func navigation(width: CGFloat) -> some View {
         let trayWidth = min(CGFloat(300), max(CGFloat(0), width - CGFloat(32)))
@@ -642,7 +652,14 @@ struct LifeRoot: View {
         .accessibilityIdentifier("life-compact-rail")
     }
     private func goWeek(_ delta: Int) {
-        Task { if await planner.send(["type": "changeWeek", "direction": delta]) { weekTick += 1 } }
+        guard delta != 0, let week = planner.snapshot?.weekKey,
+              let target = PlannerDates.calendar.date(byAdding: .weekOfYear, value: delta,
+                                                       to: PlannerDates.date(week)) else { return }
+        Task {
+            if await planner.send(["type": "openWeek", "weekKey": PlannerDates.weekKey(for: target)]) {
+                weekTick += 1
+            }
+        }
     }
     private func today() {
         Task { if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 } }
