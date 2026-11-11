@@ -38,6 +38,7 @@ struct LifeRoot: View {
     @State private var budgetRoleID: String?
     @State private var budgetCapacityText = ""
     @State private var budgetError: String?
+    @State private var showPlanAhead = false
     @State private var navigationOpen = false
     @State private var navigationDrag: CGFloat = 0
     @State private var localSheet: LifeLocalSheet?
@@ -152,6 +153,11 @@ struct LifeRoot: View {
             if !open { openerFocused = true }
         }
         .onChange(of: weekTick) { _, _ in SpreadHaptics.selection() }
+        .sheet(isPresented: $showPlanAhead) {
+            if let snapshot = planner.snapshot {
+                LifePlanAheadSheet(planner: planner, snapshot: snapshot)
+            }
+        }
         .sheet(item: $localSheet, onDismiss: {
             if let pending = pendingTask {
                 pendingTask = nil
@@ -208,9 +214,24 @@ struct LifeRoot: View {
         case .hours:
             LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { localSheet = .help }, selectedRole: $hoursSelectedRole)
         case .week:
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Your week").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                Text("One day at a time.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Your week").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                        Text("One day at a time.")
+                            .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Button {
+                        showPlanAhead = true
+                    } label: {
+                        Label("Plan Ahead", systemImage: "calendar.badge.clock")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("life-plan-ahead-open")
+                }
                 LifeWeekView(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask,
                              onReserve: { localSheet = .reserve($0) },
                              onManage: { localSheet = .manage($0) }, onDelete: { _ in },
