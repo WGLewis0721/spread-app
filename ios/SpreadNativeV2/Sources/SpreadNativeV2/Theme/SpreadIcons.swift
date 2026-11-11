@@ -34,13 +34,32 @@ struct SpreadBrandMark: View {
     }
 }
 
-/// The category glyph on a soft, luminous tile in the role's colour (brand board: "real category glyphs in soft
-/// luminous colour tiles; initials are not replacements"). The tile takes the role colour (data); the glyph is the
-/// original category path (`category-glyph-*`, the source SVG with only its tinted circle removed).
+/// A consistent category glyph on a role-coloured tile. The ten source-matched
+/// Lucide outline SVGs live in Icons.xcassets and public/icons; both use a
+/// 24-point grid, 2-point round stroke. Colours remain persisted role data.
+/// The shared category art is separate from LifeEditorialArtwork backgrounds.
 struct RoleBadge: View {
     let category: String?
     let color: String
     var size: CGFloat = 36
+
+    /// Match the React category tile's contrast rule for light user colours.
+    /// Using actual relative luminance avoids an unreadable white glyph on
+    /// yellow/orange/bright green without changing the role's stored colour.
+    private var glyphInk: Color {
+        let hex = color.hasPrefix("#") ? String(color.dropFirst()) : color
+        guard hex.count == 6, let rgb = Int(hex, radix: 16) else { return .white }
+        func linear(_ channel: Int) -> Double {
+            let value = Double(channel) / 255
+            return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+        let luminance = 0.2126 * linear((rgb >> 16) & 255)
+            + 0.7152 * linear((rgb >> 8) & 255)
+            + 0.0722 * linear(rgb & 255)
+        return luminance > 0.30
+            ? Color(red: 22.0 / 255.0, green: 33.0 / 255.0, blue: 42.0 / 255.0)
+            : .white
+    }
 
     var body: some View {
         let tint = Color(hex: color)
@@ -54,11 +73,11 @@ struct RoleBadge: View {
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(glyphInk)
                     .padding(size * 0.14)
             } else {
-                // No category: the planner shows a list mark on the role colour (lucide `List`, as before).
-                ListMark().stroke(.white, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
+                // Unknown/custom categories keep the neutral list mark on their selected colour.
+                ListMark().stroke(glyphInk, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
                     .padding(size * 0.28)
             }
         }
