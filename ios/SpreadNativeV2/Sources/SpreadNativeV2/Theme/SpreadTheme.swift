@@ -192,10 +192,11 @@ public enum SpreadTactile {
     /// Owner-requested visible travel: 75% more than ordinary 340–420ms UI movement.
     /// Keep direct finger tracking unanimated, all motions interruptible.
     public static let showTravel: Double = 1.75
-    public static let walletFocusDuration = 0.42 * showTravel
+    /// Spring response for Wallet focus. Not scaled by showTravel (owner decision 2026-11-11).
+    public static let walletFocusDuration = 0.42
     public static let trayDuration = 0.34 * showTravel
     public static let cardDismissDuration = 0.40 * showTravel
-    public static let walletFocus = Animation.timingCurve(0.18, 0.0, 0.2, 1, duration: walletFocusDuration)
+    public static let walletFocus = Animation.spring(response: walletFocusDuration, dampingFraction: 0.82)
     public static let traySlide = Animation.timingCurve(0.18, 0.0, 0.2, 1, duration: trayDuration)
     public static let cardDismiss = Animation.timingCurve(0.22, 0.0, 0.4, 1, duration: cardDismissDuration)
     public static let contactDuration = 0.10 * emphasis
@@ -227,6 +228,11 @@ public enum SpreadTactile {
     public static var detailReveal: AnyTransition {
         .asymmetric(insertion: .offset(y: detailDistance).combined(with: .opacity), removal: .opacity)
     }
+    /// Wallet-style details: sharpen in place under the focused card, with no travel.
+    public static var walletDetailReveal: AnyTransition {
+        AnyTransition.opacity.combined(with: AnyTransition.modifier(
+            active: SpreadBlurEffect(radius: 8), identity: SpreadBlurEffect(radius: 0)))
+    }
 
     public static func resolved(_ animation: Animation, reduceMotion: Bool) -> Animation? {
         reduceMotion ? nil : animation
@@ -235,6 +241,11 @@ public enum SpreadTactile {
 
 /// Per-item presentation state, discarded on profile/role changes. Delays are bounded so a dense plan
 /// never leaves tasks waiting offscreen; controls retain hit testing while the short entrance runs.
+struct SpreadBlurEffect: ViewModifier {
+    let radius: CGFloat
+    func body(content: Content) -> some View { content.blur(radius: radius) }
+}
+
 struct SpreadEntrance: ViewModifier {
     let index: Int
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
