@@ -125,7 +125,9 @@ struct LifeWalletStack: View {
                        focusedHeight: focusedHeight,
                        presentationWidth: min(700, max(0, viewportWidth - 32)),
                        editorialArt: editorialArt)
-            .frame(maxWidth: .infinity)
+            // Editorial cards are capped at the presentation width. Artwork must never
+            // widen the card beyond the margins, which it did at height x 5/3.
+            .frame(maxWidth: editorialArt ? min(700, max(0, viewportWidth - 32)) : .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
     }
     private func select(_ id: String) {
@@ -224,7 +226,10 @@ private struct LifeWalletFace: View {
         Button {
             if !editing && !dragging { onSelect() }
         } label: {
+            // The whole rounded card is the target. Without this, a tap in the open
+            // middle of an editorial card lands on empty space and reaches no action.
             cardSurface
+                .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(.spreadPress)
         .accessibilityLabel(Text(spokenLabel))
