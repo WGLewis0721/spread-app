@@ -17,7 +17,7 @@ ios/SpreadNativeV2/
     Resources/
       Editorial/                                # SINGLE home of clean card backgrounds
         README.md                               # image preparation instructions
-        work.webp                               # add these after approval / export
+        work.webp                               # included in PR #163; pending owner release acceptance
         family.webp
         fitness.webp
         school.webp
@@ -34,7 +34,7 @@ ios/SpreadNativeV2/
     LifeCardWeekDistributionTests.swift          # projection invariant checks
 ```
 
-The filenames above are **illustrative targets** until the clean image assets actually exist. The app currently falls back to Chalkboard art when missing. Don't claim the images are in the repo unless verified.
+**Current draft PR #163** contains all six approved 3000 × 1800 display-resolution WebPs in the folder above, verified by Git blob SHA; the originals were generated at 1619 × 971 before resizing. The golden face is still the default (gate off). Health, Business, Project, Church, Custom and missing categories keep the original Chalkboard fallback. These assets are **not yet on main** until explicitly merged. Native screenshot and device acceptance remain independent release gates.
 
 ## Fixed rules
 

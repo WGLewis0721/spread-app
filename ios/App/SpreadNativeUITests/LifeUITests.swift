@@ -11,7 +11,7 @@ final class LifeUITests: XCTestCase {
 
     private func startLife() {
         if app.state != .notRunning { app.terminate() }
-        app.launchArguments = ["-native.weekMonth.previewEnabled", "YES"]
+        app.launchArguments = ["-native.weekMonth.previewEnabled", "YES"] + EditorialArtTestMode.arguments
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch
             .waitForExistence(timeout: 90), "The opted-in native Life root did not load.")
@@ -263,7 +263,7 @@ final class TactileUITests: NativeUITestCase {
 
         // Relaunch the same installed binary and data, enabling the existing Life choice.
         app.terminate()
-        app.launchArguments = ["-native.weekMonth.previewEnabled", "YES", "-native.life.touchFeedback", "NO"]
+        app.launchArguments = ["-native.weekMonth.previewEnabled", "YES", "-native.life.touchFeedback", "NO"] + EditorialArtTestMode.arguments
         app.launch()
         XCTAssertTrue(el("life-root").waitForExistence(timeout: 90))
         let card = el("life-card-" + roleID)

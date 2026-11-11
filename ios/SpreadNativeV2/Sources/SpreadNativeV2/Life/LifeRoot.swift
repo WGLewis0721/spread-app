@@ -43,6 +43,7 @@ struct LifeRoot: View {
     @State private var historyVisible = false
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
+    @AppStorage(LifeEditorialPresentation.defaultsKey) private var editorialArt = false
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -87,6 +88,21 @@ struct LifeRoot: View {
                             // this the dock boundary prematurely crops full cards.
                             .scrollClipDisabled()
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
+                            // Editorial expansion moves the details panel to the top of the
+                            // scroll area. The scroll area ends above the dock, so the Days
+                            // heading and the first weekday read without manual scrolling.
+                            // Golden presentation keeps its existing scroll behaviour.
+                            // The task is cancelled when the selection changes again, so a
+                            // collapse or a quick switch never runs a stale scroll.
+                            .task(id: editorialArt ? focusedRole : nil) {
+                                guard editorialArt, focusedRole != nil else { return }
+                                // Let the wallet's expansion lay out before scrolling.
+                                do { try await Task.sleep(for: .milliseconds(reduceMotion ? 60 : 320)) }
+                                catch { return }
+                                withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
+                                    proxy.scrollTo("life-details-top", anchor: .top)
+                                }
+                            }
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
                     } else {
@@ -113,11 +129,17 @@ struct LifeRoot: View {
             if phase == .active { Task { await planner.refresh() } }
             else { navigationOpen = false }
         }
-        .onChange(of: planner.state?.envelope.profileId) { _, _ in
+        // Reset transient UI only on a real profile or week change. The first load
+        // (nil to loaded) is not a change, so a selection made before it survives.
+        .onChange(of: planner.state?.envelope.profileId) { old, _ in
+            guard old != nil else { return }
             focusedRole = nil; editing = false; localSheet = nil; pendingTask = nil
             hoursSelectedRole = nil; weekSelectedRole = nil
         }
-        .onChange(of: planner.snapshot?.weekKey) { _, _ in focusedRole = nil; editing = false; localSheet = nil }
+        .onChange(of: planner.snapshot?.weekKey) { old, _ in
+            guard old != nil else { return }
+            focusedRole = nil; editing = false; localSheet = nil
+        }
         .onChange(of: editing) { _, active in LifeFeedback.edit(active) }
         .onChange(of: navigationOpen) { _, open in
             navigationFocused = open
@@ -137,6 +159,9 @@ struct LifeRoot: View {
             historyVisible = false
         }
         .accessibilityIdentifier("life-root")
+        #if DEBUG
+        .modifier(LifeDebugDynamicTypeOverride())
+        #endif
     }
     private var header: some View {
         HStack(spacing: 8) {
@@ -365,6 +390,13 @@ struct LifeRoot: View {
                     .padding(.horizontal, 12).padding(.vertical, 6)
             }
             .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        // Scroll target for editorial expansion: the top edge of the panel. Editorial only.
+        // A 1pt clear overlay adds no layout and cannot receive taps.
+        .overlay(alignment: .top) {
+            if editorialArt {
+                Color.clear.frame(height: 1).allowsHitTesting(false).id("life-details-top")
+            }
         }
         .padding(16).spreadCard(radius: Spread.radiusCard)
         .accessibilityIdentifier("life-task-details")
@@ -673,4 +705,20 @@ private struct LifeGestureHelp: View {
         }.presentationDetents([.medium, .large])
     }
 }
+
+#if DEBUG
+/// Test seam for accessibility text size. `-SpreadTestDynamicType accessibility3` applies
+/// that size to the Life view. XCUITest launch arguments populate the defaults domain, and
+/// the simulator's own content-size launch argument does not reach this SwiftUI tree.
+/// Release builds never compile this.
+private struct LifeDebugDynamicTypeOverride: ViewModifier {
+    func body(content: Content) -> some View {
+        if UserDefaults.standard.string(forKey: "SpreadTestDynamicType") == "accessibility3" {
+            content.environment(\.dynamicTypeSize, .accessibility3)
+        } else {
+            content
+        }
+    }
+}
+#endif
 #endif

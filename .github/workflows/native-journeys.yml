@@ -56,6 +56,25 @@ jobs:
           - name: week-month-ipad
             width: 820
             tests: "WeekMonthUITests PlannerUITests/testFocusedWeekRetainsSidebarAndMorphsCalendar"
+          # Editorial Life card, gate ON via TEST_RUNNER_SPREAD_EDITORIAL_ART. LifeEditorialUITests
+          # also captures the gate OFF screen in each job, so ON and OFF are compared side by side.
+          - name: life-editorial-390
+            width: 390
+            editorial_art: "1"
+            tests: "LifeEditorialUITests LifeUITests"
+          - name: life-editorial-820
+            width: 820
+            editorial_art: "1"
+            tests: "LifeEditorialUITests"
+          - name: life-editorial-1024
+            width: 1024
+            editorial_art: "1"
+            tests: "LifeEditorialUITests"
+          - name: life-editorial-reduce-motion
+            width: 390
+            editorial_art: "1"
+            reduce_motion: "1"
+            tests: "LifeEditorialUITests"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -77,12 +96,14 @@ jobs:
       - name: Run actual-app UI tests (${{ matrix.name }})
         env:
           SELECTED_TESTS: ${{ matrix.tests }}
+          EDITORIAL_ART: ${{ matrix.editorial_art }}
         run: |
           ONLY=""
           for t in $SELECTED_TESTS; do ONLY="$ONLY -only-testing:SpreadNativeUITests/$t"; done
           xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
             -destination "platform=iOS Simulator,id=$NATIVE_UDID" -parallel-testing-enabled NO \
             -test-timeouts-enabled YES -maximum-test-execution-time-allowance 900 \
+            TEST_RUNNER_SPREAD_EDITORIAL_ART="$EDITORIAL_ART" \
             $ONLY -resultBundlePath artifacts/${{ matrix.name }}.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Export actual screenshots and attachments
         if: always()
