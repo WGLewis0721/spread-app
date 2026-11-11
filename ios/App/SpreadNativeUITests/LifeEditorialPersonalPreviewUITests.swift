@@ -142,8 +142,12 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         launch(category: "personal", editorial: false)
         let personal = card(for: "Personal")
         XCTAssertTrue(personal.waitForExistence(timeout: 20))
-        XCTAssertFalse(personal.label.contains("weekly budget"),
-                       "Gate-off must preserve the original golden card description")
+        // Golden baseline is main head (bffb8ba). Its spoken description carries the
+        // weekly budget and assigned hours, which the gate-off card must keep.
+        XCTAssertTrue(personal.label.contains("6 hours weekly budget"),
+                      "Gate-off must keep main's weekly budget description")
+        XCTAssertTrue(personal.label.contains("4 hours assigned"),
+                      "Gate-off must keep main's assigned-hours description")
         capture("editorial-gate-off-personal-golden")
     }
 
