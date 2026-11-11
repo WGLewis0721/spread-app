@@ -10,16 +10,16 @@ This card is the single source for the always-loaded design rules. `npm run docs
 **Two products.** (1) The native iOS app in SwiftUI, iPhone only, no Android; Codemagic builds `main` to TestFlight on demand. (2) The marketing website: promo, one-page walkthrough, App Store link. The React web planner, beta sign-up, iCloud, multiplayer and waitlist are suspended (snapshot: branch `parked/web-cloud-2026-11-11`). A change under about 50 lines needs no spec: restate it in one sentence, make it, run the checks.
 
 **Look**
-- In unflagged **React**, use existing CSS tokens. **SwiftUI PR #127** follows `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` for navy, restrained glow, Chalkboard art and the metal Crown; React/landing keep their own rules.
+- In **React**, use existing CSS tokens. **Native SwiftUI** follows `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` for solid navy/cream, editorial Life art, accessible controls and calendar-week navigation. No doodles, Liquid Glass, or metal Crown.
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week keeps three kinds of thing: solid day cards, a dashed To place tray, tinted Free time chips.
-- Keep Crown, Spread/Week/Month, hour bank and original artwork. **Native Spread has ONE Wallet-style animated Stack**: full-width overlapping cards; a focused card offers Details (name, weekly hours, icon, color, undoable deletion) and Tasks (its notebook). Life has no global Edit, swipe-to-manage or swipe-to-delete; Delete is in Details with Undo (no confirmation). Classic retains its own swipe/confirmation rules. Five-mode directions are historical for native only.
+- Native has ONE Wallet-style Life Stack. A focused card offers Details (edit/delete with Undo) and Tasks. The inline weekly time strip edits capacity and role budgets through the existing store. The dock toggles Life/Week and shows a velocity-aware calendar-week navigator. No global Life Edit, swipe-delete or redundant dock plus. Classic retains its own rules.
 - The landing page is separate (`docs/design/landing/DESIGN.md`): one focal object per section, both modes.
 
 **Behavior**
-- A task goes on its own role's day only. Every drag has a tap and a keyboard path. Drags and "Not today" offer Undo.
-- Nothing may claim iCloud works. Cloud behavior stays behind its `cloud.*` flag.
+- A task goes on its own role's day only. High priority is an optional red ! plus spoken label, not a scheduling mutation. Every drag has a tap/keyboard path and Undo.
+- Plan Ahead is explicitly opened, previewed, validated and confirmed before moving hours to a future week; never auto-roll over. Nothing may claim iCloud works.
 - Motion uses existing classes; reduced motion removes movement. One light haptic on completing a task, iPhone only.
 
 **Boundaries**
