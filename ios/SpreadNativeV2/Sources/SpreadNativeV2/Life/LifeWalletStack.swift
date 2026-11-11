@@ -187,11 +187,11 @@ private struct LifeWalletFace: View {
         // Track the face when it reveals actions rather than lighting the
         // stationary slot left behind.
         .overlay(editingOutline.offset(x: cardOffset))
-        // The swipe recognizer is live only in Edit. Outside Edit the native selection
-        // control (Button, or the tap gesture on editorial cards) owns the touch, so taps
-        // select and vertical drags scroll. The gesture stays attached (mask only) so the
-        // view structure does not change when Edit toggles.
-        .simultaneousGesture(swipe, including: editing ? .all : .subviews)
+        // Same attachment PR #158 shipped. The handlers act only in Edit (every branch guards
+        // on `editing`), and selection is owned by the native control below, so outside Edit
+        // taps select and vertical drags scroll. The mask that flipped with `editing` (added
+        // in #163) is not needed for that and is removed.
+        .simultaneousGesture(swipe)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
         .onChange(of: dragging) { _, active in
