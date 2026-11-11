@@ -10,6 +10,11 @@ enum LifeOrbitMath {
         let value = (next - old + 540).truncatingRemainder(dividingBy: 360)
         return value - 180
     }
+    /// Positive steps are a clockwise rotation in screen coordinates.
+    /// Clockwise adds time; counterclockwise returns time to the weekly pool.
+    static func budgetChange(forDetents steps: Int) -> Double {
+        Double(steps) * 0.5
+    }
     static func angle(x: Double, y: Double, center: Double) -> Double {
         atan2(y - center, x - center) * 180 / .pi
     }
@@ -100,7 +105,7 @@ struct LifeHoursView: View {
                 }
                 .accessibilityLabel("Gesture help")
             }
-            Text(selectedRole == nil ? "Tap the center to set your weekly hours. Choose an area, then turn left to give it time or right to take time back." : "Turn left to add ½ hour. Turn right to return ½ hour to your weekly pool.")
+            Text(selectedRole == nil ? "Tap the center to set your weekly hours. Choose an area, then turn right to add time or left to return it." : "Turn right to add ½ hour. Turn left to return ½ hour to your weekly pool.")
                 .font(.callout).foregroundStyle(LifePalette.secondary)
             orbit
             roleChoices
@@ -314,13 +319,13 @@ struct LifeHoursView: View {
             }
             let controls = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 12))
             controls {
-                Button { changeBudget(by: 0.5) } label: {
-                    Label("Add ½h", systemImage: "arrow.counterclockwise")
+                Button { changeBudget(by: -0.5) } label: {
+                    Label("Return ½h", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .keyboardShortcut(.leftArrow, modifiers: [.option])
-                Button { changeBudget(by: -0.5) } label: {
-                    Label("Return ½h", systemImage: "arrow.clockwise")
+                Button { changeBudget(by: 0.5) } label: {
+                    Label("Add ½h", systemImage: "arrow.clockwise")
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .keyboardShortcut(.rightArrow, modifiers: [.option])
@@ -422,7 +427,7 @@ struct LifeHoursView: View {
                 let assignedElsewhere = storedAssigned - role.hours
                 let minBudget = snapshot.placedHours(for: role.id)
                 let maxBudget = max(current, max(minBudget, capacity - assignedElsewhere))
-                let proposed = LifeOrbitMath.limit(current - Double(steps) * 0.5,
+                let proposed = LifeOrbitMath.limit(current + LifeOrbitMath.budgetChange(forDetents: steps),
                                                    minimum: minBudget, maximum: maxBudget)
                 if proposed == current {
                     warn(proposed <= minBudget ? "\(SpreadHours.text(minBudget)) h are already reserved. Return time from a day first." :
