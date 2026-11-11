@@ -342,39 +342,35 @@ struct LifeRoot: View {
             }
                 .frame(minHeight: 44).buttonStyle(.spreadPress)
                 .accessibilityIdentifier("life-change-area-hours")
-            if editorialArt {
-                // The selected face already shows all seven days. The details
-                // field lists only meaningful assignments and keeps editing below.
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Days").font(.headline)
-                        Spacer()
-                        Text(SpreadHours.text(LifeCardWeekDistribution.assigned(weekdayHours)) +
-                             " h assigned")
-                            .font(.caption).foregroundStyle(LifePalette.secondary)
-                    }
-                    ForEach(0..<7, id: \.self) { index in
-                        if weekdayHours[index] > 0 {
-                            HStack {
-                                Text(PlannerDates.label(
-                                    PlannerDates.date(PlannerDates.dayISO(
-                                        weekKey: snapshot.weekKey, index: index)),
-                                    pattern: "EEEE"))
-                                Spacer()
-                                Text(SpreadHours.text(weekdayHours[index]) + " h")
-                                    .monospacedDigit()
-                            }
-                            .font(.subheadline)
-                            .padding(.vertical, 3)
+            // The selected face already shows all seven days. The details
+            // field lists only meaningful assignments and keeps editing below.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Days").font(.headline)
+                    Spacer()
+                    Text(SpreadHours.text(LifeCardWeekDistribution.assigned(weekdayHours)) +
+                         " h assigned")
+                        .font(.caption).foregroundStyle(LifePalette.secondary)
+                }
+                ForEach(0..<7, id: \.self) { index in
+                    if weekdayHours[index] > 0 {
+                        HStack {
+                            Text(PlannerDates.label(
+                                PlannerDates.date(PlannerDates.dayISO(
+                                    weekKey: snapshot.weekKey, index: index)),
+                                pattern: "EEEE"))
+                            Spacer()
+                            Text(SpreadHours.text(weekdayHours[index]) + " h")
+                                .monospacedDigit()
                         }
-                    }
-                    if !weekdayHours.contains(where: { $0 > 0 }) {
-                        Text("No hours assigned to days yet.")
-                            .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                        .font(.subheadline)
+                        .padding(.vertical, 3)
                     }
                 }
-            } else {
-                DayMarks(snapshot: snapshot, role: role)
+                if !weekdayHours.contains(where: { $0 > 0 }) {
+                    Text("No hours assigned to days yet.")
+                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                }
             }
             if !editing {
                 Button("Prioritize this week") { localSheet = .priority(role.id) }
@@ -388,10 +384,12 @@ struct LifeRoot: View {
             }
             .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        // Scroll target for editorial expansion: the top edge of the panel. A 1pt clear
-        // overlay adds no layout and cannot receive taps.
+        // Scroll target for editorial expansion: the top edge of the panel. Editorial only.
+        // A 1pt clear overlay adds no layout and cannot receive taps.
         .overlay(alignment: .top) {
-            Color.clear.frame(height: 1).allowsHitTesting(false).id("life-details-top")
+            if editorialArt {
+                Color.clear.frame(height: 1).allowsHitTesting(false).id("life-details-top")
+            }
         }
         .padding(16).spreadCard(radius: Spread.radiusCard)
         .accessibilityIdentifier("life-task-details")
