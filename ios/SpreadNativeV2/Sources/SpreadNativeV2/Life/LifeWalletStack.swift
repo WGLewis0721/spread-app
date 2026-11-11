@@ -177,7 +177,10 @@ private struct LifeWalletFace: View {
                 .clipShape(RoundedRectangle(cornerRadius: 23))
                 .opacity(editing && reveal + translation < -1 ? 1 : 0)
                 .allowsHitTesting(editing && reveal < 0)
+            // The card id sits on the selection element itself. On the ZStack it was
+            // pushed onto every element inside, replacing life-reveal-manage-<id>.
             selectionButton
+                .accessibilityIdentifier("life-card-\(role.id)")
         }
         // The glow MUST sit after the clip. Previously it lived inside the
         // card face and its bright outer shadow was clipped away.
@@ -208,7 +211,6 @@ private struct LifeWalletFace: View {
         .onChange(of: editing) { _, _ in synchronizeGlow() }
         .onChange(of: reduceMotion) { _, _ in synchronizeGlow() }
         .onChange(of: scenePhase) { _, _ in synchronizeGlow() }
-        .accessibilityIdentifier("life-card-\(role.id)")
     }
     // Resolve formatting as String before entering SwiftUI's overloaded text builders.
     private var spokenLabel: String {

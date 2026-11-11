@@ -74,6 +74,7 @@ struct LifeWeekView: View {
         }
         .offset(x: reduceMotion ? 0 : max(-28, min(28, dayTranslation.width * 0.35)))
         .foregroundStyle(LifePalette.ink)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-week-page")
         .onAppear { restoreProfile() }
         .onChange(of: profile) { _ in restoreProfile() }

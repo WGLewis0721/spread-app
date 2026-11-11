@@ -160,6 +160,7 @@ struct LifeHoursView: View {
         }
         .onDisappear { isVisible = false; resetGestures() }
         .onReceive(clock) { now in advanceClock(now) }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-hours-page")
     }
 
@@ -247,6 +248,7 @@ struct LifeHoursView: View {
             .frame(maxWidth: .infinity)
         }
         .frame(height: typeSize.isAccessibilitySize ? max(390, numberSize * 5.5) : 280)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-orbit")
     }
 

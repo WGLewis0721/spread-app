@@ -404,6 +404,7 @@ struct LifeRoot: View {
             }
         }
         .padding(16).spreadCard(radius: Spread.radiusCard)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-task-details")
     }
     private var history: some View {
