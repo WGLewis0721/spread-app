@@ -46,7 +46,6 @@ struct LifeRoot: View {
     @AppStorage(LifeEditorialPresentation.defaultsKey) private var editorialArt = false
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -88,19 +87,17 @@ struct LifeRoot: View {
                             // this the dock boundary prematurely crops full cards.
                             .scrollClipDisabled()
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
-                            // Editorial expansion moves the details panel to the top of the
-                            // scroll area. The scroll area ends above the dock, so the Days
-                            // heading and the first weekday read without manual scrolling.
-                            // Golden presentation keeps its existing scroll behaviour.
-                            // The task is cancelled when the selection changes again, so a
-                            // collapse or a quick switch never runs a stale scroll.
-                            .task(id: editorialArt ? focusedRole : nil) {
-                                guard editorialArt, focusedRole != nil else { return }
-                                // Let the wallet's expansion lay out before scrolling.
-                                do { try await Task.sleep(for: .milliseconds(reduceMotion ? 60 : 320)) }
-                                catch { return }
+                            // Stack, Focus, Stack in one motion. Opening returns the page to its
+                            // top so the card lands in a fixed slot. Closing scrolls only as far
+                            // as needed to show the closed card's strip in the stack.
+                            .onChange(of: focusedRole) { old, new in
+                                guard !editing else { return }
                                 withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
-                                    proxy.scrollTo("life-details-top", anchor: .top)
+                                    if new != nil {
+                                        proxy.scrollTo("life-top", anchor: .top)
+                                    } else if let old {
+                                        proxy.scrollTo("life-slot-" + old)
+                                    }
                                 }
                             }
                         }
@@ -168,18 +165,33 @@ struct LifeRoot: View {
         .modifier(LifeDebugDynamicTypeOverride())
         #endif
     }
+    /// True while one Life card is in the Wallet-style focus state.
+    private var lifeFocused: Bool { destination == .life && focusedRole != nil && !editing }
     private var header: some View {
         HStack(spacing: 8) {
-            Button { navigate(.life) } label: {
-                HStack(spacing: 8) { SpreadBrandMark(size: 27); Text("Spread").font(.title3.bold()) }
-                    .frame(minHeight: 44)
-            }.buttonStyle(.plain).accessibilityLabel("Spread, Life").accessibilityIdentifier("life-home")
+            if lifeFocused {
+                Button {
+                    withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) { focusedRole = nil }
+                } label: {
+                    Image(systemName: "xmark").frame(width: 44, height: 44)
+                        .background(LifePalette.surface, in: Circle())
+                }.accessibilityLabel("Close Life area").accessibilityIdentifier("life-close-focus")
+                    .transition(.opacity)
+            } else {
+                Button { navigate(.life) } label: {
+                    HStack(spacing: 8) { SpreadBrandMark(size: 27); Text("Spread").font(.title3.bold()) }
+                        .frame(minHeight: 44)
+                }.buttonStyle(.plain).accessibilityLabel("Spread, Life").accessibilityIdentifier("life-home")
+                    .transition(.opacity)
+            }
             Spacer(minLength: 4)
             Button(action: onMore) {
                 Image(systemName: "ellipsis").frame(width: 44, height: 44)
                     .background(LifePalette.surface, in: Circle())
             }.accessibilityLabel("More").accessibilityIdentifier("life-more")
         }.padding(.horizontal, 16).padding(.vertical, 4)
+            .background(LifePalette.canvas, ignoresSafeAreaEdges: .top)
+            .zIndex(1)
     }
     @ViewBuilder private func surface(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         switch destination {
@@ -200,12 +212,16 @@ struct LifeRoot: View {
     }
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
-            Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
-                .accessibilityLabel("Adjust weekly planning hours")
+            if !lifeFocused {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                    Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
+                    .transition(.opacity)
+                Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
+                    .accessibilityLabel("Adjust weekly planning hours")
+                    .transition(.opacity)
+            }
             if editing {
                 Text("Swipe left to manage. Slide right offscreen to delete. Undo restores.")
                     .font(.subheadline).foregroundStyle(LifePalette.secondary)
@@ -235,12 +251,12 @@ struct LifeRoot: View {
                 details(role, snapshot: snapshot)
                     .id(id)
                     // Keep old and new fields visually connected as focus changes.
-                    .transition(SpreadTactile.detailReveal)
+                    .transition(SpreadTactile.walletDetailReveal)
             } else if !editing && !snapshot.roles.isEmpty {
                 Text("Tap a card to see its tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 12)
             }
-            if !snapshot.roles.isEmpty { newLifeArea }
+            if !snapshot.roles.isEmpty && !lifeFocused { newLifeArea }
         }.accessibilityElement(children: .contain).accessibilityIdentifier("life-page")
     }
     private var newLifeArea: some View {
@@ -396,13 +412,6 @@ struct LifeRoot: View {
             }
             .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        // Scroll target for editorial expansion: the top edge of the panel. Editorial only.
-        // A 1pt clear overlay adds no layout and cannot receive taps.
-        .overlay(alignment: .top) {
-            if editorialArt {
-                Color.clear.frame(height: 1).allowsHitTesting(false).id("life-details-top")
-            }
-        }
         .padding(16).spreadCard(radius: Spread.radiusCard)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-task-details")
@@ -449,7 +458,7 @@ struct LifeRoot: View {
             .onPreferenceChange(LifeDockOpenerCenterKey.self) { if $0 > 0 { dockOpenerCenterY = $0 } }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
-        .background(reduceTransparency ? LifePalette.surface : LifePalette.surface.opacity(0.94))
+        .background(LifePalette.surface, ignoresSafeAreaEdges: .bottom)
     }
     private func dockActions(wide: Bool) -> some View {
         HStack(spacing: 8) {

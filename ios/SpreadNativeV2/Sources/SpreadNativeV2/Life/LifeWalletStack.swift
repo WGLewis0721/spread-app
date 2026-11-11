@@ -26,11 +26,12 @@ struct LifeWalletStack: View {
     let onDelete: (String) async -> Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AccessibilityFocusState private var focusedRole: String?
     @State private var lastSelected: String?
     @State private var activeSwipeRole: String?
-    // A readable full-week strip needs a complete face, not the old 72pt pitch.
-    // Small overlap retains Wallet depth without hiding any title, hours or day.
+    // Wallet-style stack: each collapsed card shows its name strip.
+    // The front card shows the complete face with hours and the week strip.
     @AppStorage(LifeEditorialPresentation.defaultsKey) private var editorialArt = false
     @ScaledMetric(relativeTo: .body) private var minimumFaceHeight: CGFloat = 232
     // Preserve enough room for live weekdays on narrow phones without
@@ -40,7 +41,7 @@ struct LifeWalletStack: View {
         return max(minimumFaceHeight, min(318, available * 0.58))
     }
     private var focusedHeight: CGFloat { closedHeight + 12 }
-    private var stackStep: CGFloat { max(0, closedHeight - 12) }
+    private var stackStep: CGFloat { (closedHeight * 0.40).rounded() }
 
     private var ordered: [Responsibility] {
         let priority = snapshot.life?.priorityRoleId
@@ -77,10 +78,21 @@ struct LifeWalletStack: View {
                                 : CGFloat(index) * stackStep)
                             .allowsHitTesting(!hidden)
                             .accessibilityHidden(hidden)
+                            .opacity(hidden ? 0.35 : 1)
+                            .blur(radius: hidden && !reduceTransparency ? 10 : 0)
                             .zIndex(activeSwipeRole == role.id ? Double(ordered.count + 10) :
                                     selectedRole == role.id ? Double(ordered.count + 1) : Double(index))
                             .animation(reduceMotion ? nil : SpreadTactile.walletFocus,
                                        value: focusActive)
+                    }
+                    // Layout-only markers at each card's resting strip, so closing can
+                    // scroll back to where that card sits in the stack.
+                    ForEach(Array(ordered.enumerated()), id: \.element.id) { index, role in
+                        Color.clear.frame(height: stackStep)
+                            .alignmentGuide(VerticalAlignment.top) { _ in -CGFloat(index) * stackStep }
+                            .id("life-slot-" + role.id)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .top)
@@ -125,6 +137,19 @@ struct LifeWalletStack: View {
             // widen the card beyond the margins, which it did at height x 5/3.
             .frame(maxWidth: editorialArt ? min(700, max(0, viewportWidth - 32)) : .infinity)
             .accessibilityFocused($focusedRole, equals: role.id)
+            .simultaneousGesture(pullToClose(role.id))
+    }
+    /// Wallet-style exit: a deliberate downward pull on the focused card closes it.
+    /// The scroll view supplies the visible pull. This only decides on release.
+    private func pullToClose(_ id: String) -> some Gesture {
+        DragGesture(minimumDistance: 20, coordinateSpace: .global)
+            .onEnded { value in
+                guard focusActive, selectedRole == id else { return }
+                let down = value.translation.height
+                guard down > abs(value.translation.width) * 1.5,
+                      down > 110 || value.predictedEndTranslation.height > 260 else { return }
+                select(id)
+            }
     }
     private func select(_ id: String) {
         withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {

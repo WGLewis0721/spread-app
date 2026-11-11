@@ -78,9 +78,11 @@ final class LifeUITests: XCTestCase {
         let exact = app.descendants(matching: .any).matching(identifier: "life-card-" + id).firstMatch
 
         XCTAssertFalse(manage.exists, "Manage must be hidden before Edit")
-        card.press(forDuration: 0.7)
+        // Collapsed cards overlap. Touch the exposed top strip, not the covered center.
+        let strip = card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+        strip.press(forDuration: 0.7)
         XCTAssertFalse(manage.exists, "Long press must never expose Manage")
-        card.tap()
+        strip.tap()
         XCTAssertFalse(manage.exists, "Normal tap focuses, not edits or deletes")
         capture("life-card-focus-without-actions")
 
@@ -270,7 +272,7 @@ final class TactileUITests: NativeUITestCase {
         app.launch()
         XCTAssertTrue(el("life-root").waitForExistence(timeout: 90))
         let card = el("life-card-" + roleID)
-        scrollIntoView(card); card.tap()
+        scrollIntoView(card); card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
         XCTAssertTrue(el("life-task-details").waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts[tag + " task"].firstMatch.waitForExistence(timeout: 10))
         capture("tactile-life-same-task-after-relaunch")
