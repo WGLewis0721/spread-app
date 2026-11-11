@@ -12,7 +12,7 @@ export type NativeV2Snapshot = {
   weekKey: string;
   roles: { id: string; name: string; category: string; color: string; hours: number }[];
   allocations: { id: string; roleId: string; day: string; hours: number; order: number }[];
-  tasks: { id: string; roleId: string; text: string; done: boolean; allocationId: string | null; estimateMinutes?: number }[];
+  tasks: { id: string; roleId: string; text: string; done: boolean; allocationId: string | null; estimateMinutes?: number; important?: boolean }[];
   /** Only present when the user has manually reordered tasks in Week. */
   dayTaskOrder?: Record<string, string[]>;
   /** Absent until a person explicitly sets capacity in Life. */
@@ -65,6 +65,7 @@ export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): 
           roleId: hat.id,
           text: task.text,
           done: task.done,
+          ...(task.important ? { important: true } : {}),
           ...(task.estimateMinutes !== undefined ? { estimateMinutes: task.estimateMinutes } : {}),
           // Match the current To place logic: a stale allocation link is not scheduled.
           allocationId:
