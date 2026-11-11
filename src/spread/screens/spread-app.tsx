@@ -38,10 +38,7 @@ import { WeekCrown } from "@/spread/components/week-crown";
 import { useBrowserFrame, useLockPageScroll } from "@/spread/components/use-browser-frame";
 import { PaperToProduct } from "@/spread/components/landing-preview";
 import { SpreadStack } from "@/spread/components/landing-stack";
-import { LandingWaitlist } from "@/spread/components/landing-waitlist";
-import { BetaAccessCard } from "@/spread/components/beta-access";
-import { useBetaGate, type BetaGate } from "@/spread/components/use-beta-gate";
-import { signOut } from "@/lib/auth/client";
+import { TESTFLIGHT_URL } from "@/lib/links";
 import { HourGrid, HowItWorks, ListVersusSpread, PrivacyFacts, WeekBand } from "@/spread/components/landing-sections";
 
 type Sheet = "more" | "new" | "icloud" | null;
@@ -62,7 +59,6 @@ export function SpreadApp() {
   const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
   const boot = useSpread((s) => s.boot);
-  const gate = useBetaGate();
   useBrowserFrame();
 
   useClientLayout(() => {
@@ -126,7 +122,7 @@ export function SpreadApp() {
           },
         }}
       />
-      {hydrated && ready && (license ? <WeekScreen /> : gate.checking ? null : <UnlockScreen gate={gate} />)}
+      {hydrated && ready && (license ? <WeekScreen /> : <UnlockScreen />)}
     </>
   );
 }
@@ -143,7 +139,7 @@ function useSystemDark() {
   );
 }
 
-function UnlockScreen({ gate }: { gate: BetaGate }) {
+function UnlockScreen() {
   const theme = useSpread((s) => s.theme);
   const setTheme = useSpread((s) => s.setTheme);
   const systemDark = useSystemDark();
@@ -166,9 +162,6 @@ function UnlockScreen({ gate }: { gate: BetaGate }) {
     if (doc.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) doc.startViewTransition(() => flushSync(run));
     else run();
   }
-  function keepTheme() {
-    if (!known && theme !== "system") setTheme(theme);
-  }
 
   return (
     <main className="spread-site min-h-dvh" data-site-theme={dark ? "dark" : "light"}>
@@ -184,7 +177,7 @@ function UnlockScreen({ gate }: { gate: BetaGate }) {
             <button type="button" aria-pressed={!dark} aria-label="Light mode" onClick={() => chooseTheme("light")}><Sun size={15} strokeWidth={1.8} aria-hidden="true" /></button>
             <button type="button" aria-pressed={dark} aria-label="Dark mode" onClick={() => chooseTheme("dark")}><Moon size={15} strokeWidth={1.8} aria-hidden="true" /></button>
           </div>
-          <a href="#start" className="site-nav-cta">Open Spread</a>
+          <a href="#start" className="site-nav-cta">Join the beta</a>
         </div>
       </nav>
 
@@ -244,7 +237,7 @@ function UnlockScreen({ gate }: { gate: BetaGate }) {
 
       <section className="site-privacy">
         <div><span className="privacy-mark"><LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" /></span></div>
-        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>Beta testers sign in once to open the web planner; the iPhone app needs no account. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
+        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>The iPhone app needs no account. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
         <PrivacyFacts />
       </section>
 
@@ -252,15 +245,14 @@ function UnlockScreen({ gate }: { gate: BetaGate }) {
         <div className="site-start-copy">
           <p className="site-kicker">Start where you are</p>
           <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
-          <p>Spread is in private beta. Approved testers sign in below to open the planner. Everything you plan stays on your device.</p>
+          <p>Spread is in private beta on TestFlight. Join below to try the iPhone app. Everything you plan stays on your device.</p>
           <HourGrid />
         </div>
         <div className="site-start-card">
-          <BetaAccessCard gate={gate} askName={!known} onEntered={keepTheme} />
+          <a href={TESTFLIGHT_URL} className="site-button site-button-full" target="_blank" rel="noopener noreferrer">Join the TestFlight beta <ChevronRight size={17} aria-hidden="true" /></a>
         </div>
       </section>
 
-      <LandingWaitlist />
       <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><a href="https://thespreadapp.com/privacy.html">Privacy policy</a><span>Made by Gray Matter</span></footer>
     </main>
   );
@@ -1629,7 +1621,6 @@ function keyStoreOf(entries: Record<string, string>) {
 }
 
 function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; onPrint: () => void }) {
-  const license = useSpread((s) => s.license);
   const theme = useSpread((s) => s.theme);
   const setTheme = useSpread((s) => s.setTheme);
   const accent = useSpread((s) => s.accent);
@@ -1722,7 +1713,7 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
       </div>
       <Dialog.Title className="text-2xl font-bold tracking-tight">More</Dialog.Title>
       <Dialog.Description className="mt-1 text-sm text-secondary">
-        {native ? (backupAvailable() ? "Saved on this device." : "Everything stays on this device.") : license ? "Signed in to the Spread beta." : "Not signed in."}
+        {backupAvailable() ? "Saved on this device." : "Everything stays on this device."}
       </Dialog.Description>
       <LocalStatusRow />
       <ProfilesSection
@@ -1829,18 +1820,6 @@ function MoreSheet({ setSheet, onPrint }: { setSheet: (sheet: Sheet) => void; on
           />
         ))}
       </div>
-      {native ? null : (
-        <button
-          type="button"
-          className="mt-4 h-12 w-full rounded-full text-base font-semibold text-danger"
-          onClick={() => {
-            // The session is a server cookie, so ask the server to end it; this reloads the page.
-            signOut("/").catch(() => toast.error("Couldn't sign out. Check your connection and try again."));
-          }}
-        >
-          Sign out
-        </button>
-      )}
       <AlertDialog.Root open={pickedCopy !== null} onOpenChange={(open) => !open && setPickedCopy(null)}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="scrim no-print fixed inset-0 z-[60] bg-scrim" />
