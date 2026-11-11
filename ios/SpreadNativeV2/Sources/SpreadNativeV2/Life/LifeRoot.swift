@@ -46,6 +46,7 @@ struct LifeRoot: View {
     @AppStorage(LifeEditorialPresentation.defaultsKey) private var editorialArt = false
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -218,16 +219,7 @@ struct LifeRoot: View {
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             if !lifeFocused {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                    Text("Choose a Life area.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
-                    .transition(.opacity)
-                Button { navigate(.hours) } label: { summary(snapshot) }.buttonStyle(.spreadPress)
-                    .accessibilityLabel(LifeBudgetBarMath.accessibilityLabel(
-                        roles: snapshot.roles, capacity: snapshot.life?.capacityHours))
-                    .accessibilityHint("Opens Hours to change your weekly time budget.")
-                    .accessibilityIdentifier("life-weekly-time-summary")
+                lifeOverview(snapshot, viewportWidth: viewportWidth)
                     .transition(.opacity)
             }
             if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
@@ -296,8 +288,47 @@ struct LifeRoot: View {
         .accessibilityIdentifier("life-new-area")
     }
 
-    private func summary(_ snapshot: PlannerSnapshot) -> some View {
-        LifeWeeklyTimeBudget(roles: snapshot.roles, capacity: snapshot.life?.capacityHours)
+    /// Align the compact budget horizontally with Life on regular iPhones.
+    /// Narrow widths and accessibility sizes keep the fully readable stacked layout.
+    @ViewBuilder private func lifeOverview(_ snapshot: PlannerSnapshot, viewportWidth: CGFloat) -> some View {
+        if viewportWidth >= 375 && !dynamicTypeSize.isAccessibilitySize {
+            HStack(alignment: .center, spacing: 12) {
+                lifeHeading.frame(width: 96, alignment: .leading)
+                Spacer(minLength: 0)
+                timeBudgetLink(snapshot, compact: true)
+                    .frame(maxWidth: 440)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                lifeHeading
+                timeBudgetLink(snapshot, compact: false)
+            }
+        }
+    }
+
+    private var lifeHeading: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("life-page-title")
+            Text("Choose a Life area.")
+                .font(.subheadline)
+                .foregroundStyle(LifePalette.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+    }
+
+    private func timeBudgetLink(_ snapshot: PlannerSnapshot, compact: Bool) -> some View {
+        Button { navigate(.hours) } label: {
+            LifeWeeklyTimeBudget(roles: snapshot.roles, capacity: snapshot.life?.capacityHours,
+                                 compact: compact)
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityLabel(LifeBudgetBarMath.accessibilityLabel(
+            roles: snapshot.roles, capacity: snapshot.life?.capacityHours))
+        .accessibilityHint("Opens Hours to change your weekly time budget.")
+        .accessibilityIdentifier("life-weekly-time-summary")
     }
 
     private func details(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
