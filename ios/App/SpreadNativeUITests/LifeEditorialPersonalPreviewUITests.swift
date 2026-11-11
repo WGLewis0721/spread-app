@@ -66,6 +66,20 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         return isClearOfChrome(target)
     }
 
+    /// Waits until the card's frame is unchanged across reads and it is hittable.
+    /// On cold CI launches the card can exist while the wallet is still laying out.
+    /// This only delays the tap. The real tap and the Focused assertion are unchanged.
+    private func waitForStableFrame(_ target: XCUIElement, timeout: TimeInterval = 15) {
+        let deadline = Date().addingTimeInterval(timeout)
+        var previous = target.frame
+        while Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            let current = target.frame
+            if current == previous && target.isHittable { return }
+            previous = current
+        }
+    }
+
     private func capture(_ name: String) {
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
         let image = XCTAttachment(screenshot: app.screenshot())
@@ -84,7 +98,9 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
                       "\(name) must display the live allocations")
         capture("editorial-\(category)-collapsed")
 
-        // Use the real card tap, not a test-only selection override.
+        // Use the real card tap, not a test-only selection override. Settle the frame
+        // first so the tap does not land on a card that is still laying out.
+        waitForStableFrame(face)
         face.tap()
         capture("editorial-\(category)-after-tap")
 
