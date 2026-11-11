@@ -106,6 +106,13 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
 
         // Focus must be real. Capturing after tap is not itself proof that it opened.
         guard (face.value as? String) == "Focused" else {
+            // Diagnostic only, on the failure path. Shows whether the value changes after the tap settles.
+            var timeline: [String] = []
+            for _ in 0..<8 {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+                timeline.append(String(describing: face.value))
+            }
+            print("EDITORIAL_VALUE_TIMELINE category=\(category) after-failure=\(timeline)")
             print("EDITORIAL_INTERACTION_FAILURE category=\(category) value=\(String(describing: face.value)) frame=\(face.frame)")
             XCTFail("Tap did not focus the \(name) card")
             return

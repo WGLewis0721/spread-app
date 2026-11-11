@@ -65,8 +65,8 @@ final class LifeEditorialUITests: XCTestCase {
         let card = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'life-card-'")).firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 20), "The golden Life cards did not load.")
-        XCTAssertFalse(labelled("weekly budget").exists,
-                       "The golden face must keep its original spoken label.")
+        XCTAssertTrue(labelled("weekly budget").waitForExistence(timeout: 20),
+                      "The golden face must keep main's spoken label, which includes the weekly budget.")
         capture("life-editorial-off")
     }
 }
