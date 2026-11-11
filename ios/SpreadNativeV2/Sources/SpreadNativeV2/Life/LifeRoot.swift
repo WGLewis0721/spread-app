@@ -664,7 +664,7 @@ private struct LifeGestureHelp: View {
             Form {
                 Section("Changing time") {
                     Text("Flick up or down by 1 hour. Hold and drag to change faster.")
-                    Text("Choose an area. Turn left to add time. Turn right to return it.")
+                    Text("Choose an area. Turn right to add time. Turn left to return it.")
                     Text("Tap the center number to pause and separate Life areas.")
                 }
                 Section("Feedback") {
