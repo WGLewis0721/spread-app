@@ -95,7 +95,7 @@ struct LifeRoot: View {
                             // The task is cancelled when the selection changes again, so a
                             // collapse or a quick switch never runs a stale scroll.
                             .task(id: editorialArt ? focusedRole : nil) {
-                                guard focusedRole != nil else { return }
+                                guard editorialArt, focusedRole != nil else { return }
                                 // Let the wallet's expansion lay out before scrolling.
                                 do { try await Task.sleep(for: .milliseconds(reduceMotion ? 60 : 320)) }
                                 catch { return }
