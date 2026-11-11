@@ -50,6 +50,28 @@ final class LifeUITests: XCTestCase {
             "The read-only Life preview must open the real Hours allocator")
     }
 
+    func testLifeTimeBudgetSharesTitleRowOnStandardIPhone() {
+        startLife()
+        let title = app.staticTexts["life-page-title"]
+        let summary = app.buttons["life-weekly-time-summary"]
+        XCTAssertTrue(title.waitForExistence(timeout: 20))
+        XCTAssertTrue(summary.waitForExistence(timeout: 20))
+        // iPhone SE / accessibility sizes retain the readable vertical layout.
+        // Standard iPhones align the budget beside Life, never below its subtitle.
+        if app.windows.firstMatch.frame.width >= 375 {
+            XCTAssertGreaterThan(summary.frame.minX, title.frame.maxX,
+                                 "The budget should sit to the right of Life")
+            XCTAssertLessThan(summary.frame.minY, title.frame.maxY,
+                              "The budget should begin on the Life heading row")
+        }
+        XCTAssertGreaterThanOrEqual(summary.frame.height, 44,
+                                    "The whole summary remains a tappable control")
+        capture("life-inline-weekly-budget")
+        summary.tap()
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(identifier: "life-hours-page").firstMatch.waitForExistence(timeout: 20))
+    }
+
     func testHoursGaugeDirectionInstructionsMatchActualRotation() {
         startLife()
         navigate("hours")
