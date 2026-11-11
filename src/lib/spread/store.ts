@@ -17,6 +17,7 @@ import {
   type Profile,
 } from "@/lib/spread/profiles";
 import { carryOpenTasks, type CarryPick } from "@/lib/spread/task-rollover";
+import { planAheadTransfer, type PlanAheadRequest, type PlanAheadPreview } from "@/lib/spread/plan-ahead";
 import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
@@ -145,6 +146,8 @@ type Store = {
   setTaskContent: (hatId: string, taskId: string, content: TaskContent) => void;
   setTaskEstimate: (hatId: string, taskId: string, minutes: number | null) => boolean;
   setTaskImportant: (hatId: string, taskId: string, important: boolean) => boolean;
+  previewPlanAhead: (request: PlanAheadRequest) => PlanAheadPreview;
+  transferPlanAhead: (request: PlanAheadRequest) => boolean;
   setHatColor: (hatId: string, color: string) => void;
   setHatCategory: (hatId: string, category: SpreadCategory) => void;
   addAllocation: (hatId: string, day: string, hours?: number) => void;
@@ -842,6 +845,13 @@ export const useSpread = create<Store>((set, get) => ({
       tasks: box.tasks.map((task) => (task.id === taskId ? { ...task, content } : task)),
     }));
     stage(set, next);
+  },
+  previewPlanAhead: (request) => planAheadTransfer(get().data, request).preview,
+  transferPlanAhead: (request) => {
+    const result = planAheadTransfer(get().data, request);
+    if (!result.preview.eligible) return false;
+    commit(set, result.data);
+    return true;
   },
   setTaskImportant: (hatId, taskId, important) => {
     const week = get().data.weeks[get().data.currentWeek];
