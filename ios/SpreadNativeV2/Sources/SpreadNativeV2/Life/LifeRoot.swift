@@ -383,7 +383,7 @@ struct LifeRoot: View {
                 .frame(minHeight: 44).buttonStyle(.spreadPress)
                 .accessibilityIdentifier("life-change-area-hours")
             // The selected face already shows all seven days. The details
-            // field lists only meaningful assignments and keeps editing below.
+            // field lists only meaningful assignments; notebook content opens via Tasks.
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Days").font(.headline)
@@ -422,6 +422,7 @@ struct LifeRoot: View {
                         .padding(.horizontal, 12).padding(.vertical, 6)
                 }
                 .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("life-task-notebook")
             }
         }
