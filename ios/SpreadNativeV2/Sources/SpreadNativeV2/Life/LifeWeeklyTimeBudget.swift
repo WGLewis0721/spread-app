@@ -12,6 +12,7 @@ struct LifeWeeklyTimeBudget: View {
     @ScaledMetric(relativeTo: .caption) private var minimumAvailableLabelWidth: CGFloat = 54
 
     private var assigned: Double { LifeBudgetBarMath.assigned(roles) }
+    private var hasCapacity: Bool { (capacity ?? 0) > 0 }
     private var available: Double? { LifeBudgetBarMath.available(capacity, assigned: assigned) }
     private var overBudget: Double {
         guard let capacity else { return 0 }
@@ -45,9 +46,9 @@ struct LifeWeeklyTimeBudget: View {
                 }
                 Spacer(minLength: 4)
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(capacity == nil ? "—" : SpreadHours.text(overBudget > 0 ? overBudget : available ?? 0) + "h")
+                    Text(!hasCapacity ? "—" : SpreadHours.text(overBudget > 0 ? overBudget : available ?? 0) + "h")
                         .font(.system(.title3, weight: .bold)).monospacedDigit()
-                    Text(capacity == nil ? "Set weekly hours" : (overBudget > 0 ? "Over budget" : "Available"))
+                    Text(!hasCapacity ? "Set weekly hours" : (overBudget > 0 ? "Over budget" : "Available"))
                         .font(.caption).foregroundStyle(overBudget > 0 ? Spread.danger : Spread.secondary)
                         .multilineTextAlignment(.trailing)
                 }
@@ -59,7 +60,7 @@ struct LifeWeeklyTimeBudget: View {
                 Text("\(roles.count) Life \(roles.count == 1 ? "area" : "areas")")
                     .font(.caption2).foregroundStyle(Spread.secondary)
                 Spacer(minLength: 8)
-                Text(capacity == nil ? "Set weekly hours" : "Adjust hours")
+                Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Spread.accent)
                 Image(systemName: "arrow.right")
