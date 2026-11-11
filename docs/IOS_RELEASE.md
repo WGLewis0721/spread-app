@@ -4,6 +4,14 @@
 
 **Release authority:** [App Store release plan](../APP_STORE_RELEASE_PLAN.md) · [App Review checklist](APP_STORE_REVIEW_CHECKLIST.md) · [Life acceptance evidence (recorded candidate)](evidence/life-ios-implementation/acceptance.md) · [tactile QA evidence](evidence/tactile-precision/README.md) · [iCloud gates](ICLOUD_PLAN.md). The existing manual controls must remain approval-gated. This documentation change does not perform signing, upload or release.
 
+## Current iOS build lanes (2026-11-11)
+
+- **Every PR:** GitHub `CI` (typecheck/lint/planner and script tests), App Store source preflight, and the `iOS shell` **app compilation** when native inputs change. The SwiftUI slice's focused package checks still run when its own paths change.
+- **Targeted native QA:** Manually dispatch GitHub `iOS shell` to run full simulator install/launch, native planning UI journeys and an unsigned Release archive. Additional device/matrix workflows remain manual. A normal PR **does not** claim these journeys passed.
+- **Signed release:** Manually select `Spread - signed iOS upload` in Codemagic **from `main` only**. It still reruns its independent release checks, verifies Apple build numbers, signs the IPA, validates it, and uploads without submitting for review. There is no automatic Codemagic release on merge.
+- **Performance:** Codemagic caches the SwiftPM global download cache and Xcode's `CompilationCache.noindex` (Xcode 26+). The first build is cold; only later successful runs can reuse the cache. Compare Codemagic step timings and `CompilationCacheMetrics` to assess gains. Do not cache all DerivedData.
+- **Gate:** Review passing native compilation, targeted UI/device evidence, privacy and signing before approving release. No QA is waived by moving the slow acceptance lane to manual dispatch.
+
 **Historical scope of the instructions below:** Original Capacitor/local-first iOS packaging and pre-Life smoke tests. Re-verify every command and native target against today's repository before running; use the actual compiled IPA for device family, iOS minimum, entitlements, permissions and cloud flags.
 
 ## Historical identity snapshot (recheck against the actual app)
