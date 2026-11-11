@@ -144,6 +144,7 @@ type Store = {
   setTaskText: (hatId: string, taskId: string, text: string) => void;
   setTaskContent: (hatId: string, taskId: string, content: TaskContent) => void;
   setTaskEstimate: (hatId: string, taskId: string, minutes: number | null) => boolean;
+  setTaskImportant: (hatId: string, taskId: string, important: boolean) => boolean;
   setHatColor: (hatId: string, color: string) => void;
   setHatCategory: (hatId: string, category: SpreadCategory) => void;
   addAllocation: (hatId: string, day: string, hours?: number) => void;
@@ -841,6 +842,20 @@ export const useSpread = create<Store>((set, get) => ({
       tasks: box.tasks.map((task) => (task.id === taskId ? { ...task, content } : task)),
     }));
     stage(set, next);
+  },
+  setTaskImportant: (hatId, taskId, important) => {
+    const week = get().data.weeks[get().data.currentWeek];
+    const task = week?.boxes.find((box) => box.hatId === hatId)?.tasks
+      .find((item) => item.id === taskId);
+    if (!task) return false;
+    if (Boolean(task.important) === important) return true;
+    const next = mapBox(get().data, hatId, (box) => ({
+      ...box,
+      tasks: box.tasks.map((item) => item.id === taskId
+        ? { ...item, important: important || undefined } : item),
+    }));
+    commit(set, next);
+    return true;
   },
   setTaskEstimate: (hatId, taskId, minutes) => {
     if (minutes !== null && !TASK_ESTIMATE_CHOICES.some((choice) => choice === minutes)) return false;
