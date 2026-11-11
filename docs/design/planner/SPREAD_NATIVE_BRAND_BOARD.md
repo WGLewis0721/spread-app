@@ -1,8 +1,12 @@
+> Part of the [Spread design brain](../README.md).
+
+> **November 11 Life editing amendment ([Issue #169](https://github.com/WGLewis0721/spread-app/issues/169)):** Only a focused Life card shows **Details** (the existing name/hours/icon/color editor and undoable Delete) and **Tasks** (the existing responsibility notebook). Remove Life's global side-tray Edit, edit glow, and swipe-only Manage/Delete actions. Deletion remains undoable without additional confirmation. This **supersedes every November 4–6 Life Edit instruction below**; Wallet motion, Week, Classic, More and planner storage remain unchanged by this editing decision.
+
 > **November 6 updated Life interaction authority:** The Life Edit control moves into the side tray/rail. Left swipe in Edit reveals Manage; right swipe carries the complete card off the device and deletes it without a prompt, using Undo for recovery. Focused Wallet siblings slide fully through the bottom of the viewport; the existing focused-card chevron restores all cards. `All Life areas` is removed. Motion travel is calibrated at 1.75× the normal baseline; never delay direct finger tracking. This amendment overrides older right-to-reveal-Delete and confirmation language below. Classic retains its own approved behavior.
 
 # Spread — Native iOS Brand Board (owner-approved 2026-11-03)
 
-> Summary: Current single-Wallet/Life visual and interaction authority. Life's November 6 card focus, Edit reveal, swipe dismissal and 1.75× presentation motion supersede the older directions retained below. Classic and the authoritative planner model are preserved.
+> Summary: Single-Wallet/Life visual authority. The November 11 focused Details/Tasks amendment supersedes the older Life Edit/reveal/dismissal instructions below. Existing Wallet focus motion, Classic and planner data are preserved.
 
 > Part of the [Spread design brain](../README.md).
 
