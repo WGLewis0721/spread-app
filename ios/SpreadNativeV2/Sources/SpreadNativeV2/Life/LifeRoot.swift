@@ -43,7 +43,6 @@ struct LifeRoot: View {
     @State private var historyVisible = false
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
-    @AppStorage(LifeEditorialPresentation.defaultsKey) private var editorialArt = false
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -57,8 +56,7 @@ struct LifeRoot: View {
                     if geometry.size.width >= 820 {
                         VStack(spacing: 8) {
                             compactRail
-                            if destination == .life { artControl }
-                        }
+                                }
                     }
                     VStack(spacing: 0) {
                     header
@@ -268,21 +266,21 @@ struct LifeRoot: View {
     }
     private var newLifeArea: some View {
         Button(action: onNewRole) {
-            HStack(spacing: 12) {
-                SpreadIcon(name: "icon-new-life", size: 32, original: true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Add a Life area").font(.system(.body, weight: .semibold))
-                    Text("Make room for what matters.").font(Spread.footnote)
-                        .foregroundStyle(Spread.secondary)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "plus").font(.subheadline.weight(.semibold))
+            HStack(spacing: 10) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
                     .foregroundStyle(Spread.accent)
+                Text("Add Life")
+                    .font(.headline)
+                    .foregroundStyle(Spread.ink)
+                Spacer(minLength: 0)
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-            .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
-            .contentShape(RoundedRectangle(cornerRadius: Spread.radiusCard))
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+            .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow)
+                .strokeBorder(Spread.line, lineWidth: 1))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.spreadPress)
         .accessibilityIdentifier("life-new-area")
@@ -470,31 +468,6 @@ struct LifeRoot: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-week-toggle")
     }
-    private var artControl: some View {
-        Button {
-            editorialArt.toggle()
-            closeNavigation()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: editorialArt ? "photo.fill" : "photo")
-                    .font(.system(size: 21, weight: .medium))
-                if navigationOpen {
-                    Text(LifeEditorialPresentation.toggleLabel(enabled: editorialArt))
-                        .font(.subheadline.weight(.medium))
-                } else if navigationExpanded {
-                    Text("Art").font(.caption)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 52,
-                   alignment: navigationOpen ? .leading : .center)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.spreadPress)
-        .padding(.horizontal, 10)
-        .accessibilityLabel(LifeEditorialPresentation.toggleLabel(enabled: editorialArt))
-        .accessibilityIdentifier("life-art-toggle")
-    }
-
     private var trayButton: some View {
         Button {
             LifeFeedback.selection()
@@ -555,7 +528,6 @@ struct LifeRoot: View {
                             .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
-                    if destination == .life { artControl }
                     history
                     Menu("Crown position") {
                         Button("Move Crown left") { crownRight = false }
@@ -682,7 +654,7 @@ struct LifeRoot: View {
                             })
                         }
                         if planner.snapshot?.roles.isEmpty == true {
-                            Button("Add a Life area") { localSheet = nil; onNewRole() }.frame(minHeight: 44)
+                            Button("Add Life") { localSheet = nil; onNewRole() }.frame(minHeight: 44)
                         }
                     }.padding()
                 }.navigationTitle("Add task")
