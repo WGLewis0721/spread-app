@@ -8,6 +8,8 @@ struct LifeWeeklyTimeBudget: View {
     let capacity: Double?
 
     @ScaledMetric(relativeTo: .body) private var barHeight: CGFloat = 32
+    @ScaledMetric(relativeTo: .caption) private var minimumRoleLabelWidth: CGFloat = 40
+    @ScaledMetric(relativeTo: .caption) private var minimumAvailableLabelWidth: CGFloat = 54
 
     private var assigned: Double { LifeBudgetBarMath.assigned(roles) }
     private var available: Double? { LifeBudgetBarMath.available(capacity, assigned: assigned) }
@@ -18,7 +20,7 @@ struct LifeWeeklyTimeBudget: View {
     private var positiveRoles: [Responsibility] { roles.filter { $0.hours > 0 } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("WEEKLY TIME")
@@ -66,7 +68,7 @@ struct LifeWeeklyTimeBudget: View {
                     .accessibilityHidden(true)
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
@@ -76,6 +78,7 @@ struct LifeWeeklyTimeBudget: View {
 
     private var storageBar: some View {
         GeometryReader { geometry in
+            if let capacity, capacity > 0 {
             let track = LifeBudgetBarMath.trackHours(assigned: assigned, capacity: capacity)
             HStack(spacing: 0) {
                 ForEach(positiveRoles) { role in
@@ -84,9 +87,9 @@ struct LifeWeeklyTimeBudget: View {
                         Color(hex: role.color)
                         LinearGradient(colors: [.white.opacity(0.16), .clear],
                                        startPoint: .top, endPoint: .bottom)
-                        if width >= 40 {
+                        if width >= minimumRoleLabelWidth {
                             Text(SpreadHours.text(role.hours) + "h")
-                                .font(.system(size: width < 50 ? 11 : 13, weight: .bold))
+                                .font(.caption.weight(.bold))
                                 .monospacedDigit()
                                 .foregroundStyle(LifeBudgetBarMath.ink(for: role.color))
                                 .lineLimit(1)
@@ -104,9 +107,9 @@ struct LifeWeeklyTimeBudget: View {
                         Spread.inset
                         LifeBudgetHatch()
                             .stroke(Spread.secondary.opacity(0.14), lineWidth: 5)
-                        if width >= 48 {
+                        if width >= minimumAvailableLabelWidth {
                             Text(SpreadHours.text(available) + "h")
-                                .font(.system(size: width < 62 ? 11 : 13, weight: .bold))
+                                .font(.caption.weight(.bold))
                                 .monospacedDigit()
                                 .foregroundStyle(Spread.ink)
                                 .lineLimit(1)
@@ -122,6 +125,21 @@ struct LifeWeeklyTimeBudget: View {
             .background(Spread.inset)
             .clipShape(Capsule())
             .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+            } else {
+                // A missing weekly capacity is unknown, not a 100%-filled
+                // budget. Defer proportions until the user sets Hours.
+                ZStack {
+                    Spread.inset
+                    LifeBudgetHatch()
+                        .stroke(Spread.secondary.opacity(0.14), lineWidth: 5)
+                    Text("Set weekly hours")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Spread.secondary)
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .clipShape(Capsule())
+                .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+            }
         }
         .frame(height: max(32, barHeight))
         .accessibilityHidden(true)
