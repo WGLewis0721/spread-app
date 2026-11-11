@@ -88,6 +88,20 @@ struct LifeRoot: View {
                             // this the dock boundary prematurely crops full cards.
                             .scrollClipDisabled()
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
+                            // Editorial expansion moves the details panel to the top of the
+                            // scroll area. The scroll area ends above the dock, so the Days
+                            // heading and the first weekday read without manual scrolling.
+                            // Golden presentation keeps its existing scroll behaviour.
+                            .onChange(of: focusedRole) { _, newRole in
+                                guard editorialArt, newRole != nil else { return }
+                                Task { @MainActor in
+                                    // Let the wallet's expansion lay out before scrolling.
+                                    try? await Task.sleep(for: .milliseconds(reduceMotion ? 60 : 320))
+                                    withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
+                                        proxy.scrollTo("life-details-top", anchor: .top)
+                                    }
+                                }
+                            }
                         }
                         bottom(snapshot, wide: geometry.size.width >= 820)
                     } else {
@@ -349,6 +363,7 @@ struct LifeRoot: View {
                             }
                             .font(.subheadline)
                             .padding(.vertical, 3)
+                            .accessibilityIdentifier("life-day-row-\(index)")
                         }
                     }
                     if !weekdayHours.contains(where: { $0 > 0 }) {
@@ -370,6 +385,11 @@ struct LifeRoot: View {
                     .padding(.horizontal, 12).padding(.vertical, 6)
             }
             .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        // Scroll target for editorial expansion: the top edge of the panel. A 1pt clear
+        // overlay adds no layout and cannot receive taps.
+        .overlay(alignment: .top) {
+            Color.clear.frame(height: 1).allowsHitTesting(false).id("life-details-top")
         }
         .padding(16).spreadCard(radius: Spread.radiusCard)
         .accessibilityIdentifier("life-task-details")
