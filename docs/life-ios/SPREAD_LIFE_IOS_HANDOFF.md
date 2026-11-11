@@ -2,6 +2,8 @@
 
 Implement the approved Life demo in this PR. Work through the steps below without asking the owner to choose layouts, wording, libraries or gesture behavior. The decisions are fixed here and in the linked spec. Keep the PR in draft until the implementation and required evidence are complete. Do not merge it.
 
+> **November 11 native gesture amendment:** This is the historical handoff for the frozen browser demo. Current native Hours reverses the original dial direction: clockwise/right adds ½ hour, counterclockwise/left returns ½ hour. See [the native motion contract](../design/tactile-precision/MOTION_CONTRACT.md). Do not modify the frozen reference prototype.
+
 ## Start here
 
 1. Read `AGENTS.md` and `AGENTS.project.md`, then [the spec](SPREAD_LIFE_IOS_SPEC.md) and [the checklist](SPREAD_LIFE_IOS_CHECKLIST.md).
@@ -30,7 +32,7 @@ Use Node 22.12 or newer for the reference. The app uses the existing Node 22 / X
 | Which visual style? | The approved demo in standard text sizes. Use native system typography and the spec's explicit readability/accessibility adaptations. Scope Life colors/materials so they do not repaint More or Classic. |
 | Which data? | Actual responsibilities, tasks, allocations and profiles from the current planner. No sample store, second Swift database or localhost dependency. |
 | What is the center number? | Total weekly planning hours. Ask the app user to set it when absent. Never silently assign the prototype's 36-hour sample value to a real profile. |
-| Which dial direction? | Counterclockwise adds; clockwise returns. One 15-degree step changes half an hour. |
+| Which dial direction? | Native: clockwise/right adds; counterclockwise/left returns. One 15-degree step changes half an hour. The frozen reference demo is unchanged. |
 | Which capacity gesture? | Upward flick adds one hour; downward flick returns one hour. A sustained vertical drag changes faster as distance grows. Start from the included demo's thresholds and rate curve. |
 | Which management scope? | Keep current global name/color/symbol/deletion semantics and state all-weeks deletion clearly. Life budget gestures affect the selected week and do not rewrite global default hours. |
 | Where do new controls go? | Put gesture help/optional touch feedback in Life, and left/right Crown placement in its Life-local action menu. Add nothing to More. |
