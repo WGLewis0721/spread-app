@@ -184,9 +184,10 @@ private struct LifeWalletFace: View {
         // Track the face when it reveals actions rather than lighting the
         // stationary slot left behind.
         .overlay(editingOutline.offset(x: cardOffset))
-        // The swipe recognizer is live only in Edit. Outside Edit the native Button owns
-        // the touch, so taps select and vertical drags scroll. The gesture stays attached
-        // (mask only) so the view structure does not change when Edit toggles.
+        // The swipe recognizer is live only in Edit. Outside Edit the native selection
+        // control (Button, or the tap gesture on editorial cards) owns the touch, so taps
+        // select and vertical drags scroll. The gesture stays attached (mask only) so the
+        // view structure does not change when Edit toggles.
         .simultaneousGesture(swipe, including: editing ? .all : .subviews)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
@@ -217,29 +218,61 @@ private struct LifeWalletFace: View {
         return role.name + ", " + weekly + " weekly budget, " + booked + " assigned"
     }
 
+    @ViewBuilder
     private var selectionButton: some View {
-        Button {
-            if !editing { onSelect() }
-        } label: {
-            // Editorial only: the whole rounded card is the target, so a tap in its open
-            // middle reaches the action. The main-head card keeps its original hit area.
-            cardSurface
-                .modifier(EditorialTapTarget(enabled: editorialArt))
-        }
-        .buttonStyle(.spreadPress)
-        .accessibilityLabel(Text(spokenLabel))
-        .accessibilityValue(selected ? "Focused" : "Closed")
-        .accessibilityHint(selected ? "Close this area’s tasks" : "Show this area’s tasks")
-        .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityActions {
-            // VoiceOver can reach swipe-only actions, but only after Edit is pressed.
-            if editing {
-                Button("Manage") { if editing { onManage() } }
-                Button("Remove Life area", role: .destructive) {
-                    if editing { performDismissal() }
+        if editorialArt {
+            editorialSelection
+        } else {
+            Button {
+                if !editing { onSelect() }
+            } label: {
+                // Editorial only: the whole rounded card is the target, so a tap in its open
+                // middle reaches the action. The main-head card keeps its original hit area.
+                cardSurface
+                    .modifier(EditorialTapTarget(enabled: editorialArt))
+            }
+            .buttonStyle(.spreadPress)
+            .accessibilityLabel(Text(spokenLabel))
+            .accessibilityValue(selected ? "Focused" : "Closed")
+            .accessibilityHint(selected ? "Close this area’s tasks" : "Show this area’s tasks")
+            .accessibilityAddTraits(selected ? .isSelected : [])
+            .accessibilityActions {
+                // VoiceOver can reach swipe-only actions, but only after Edit is pressed.
+                if editing {
+                    Button("Manage") { if editing { onManage() } }
+                    Button("Remove Life area", role: .destructive) {
+                        if editing { performDismissal() }
+                    }
                 }
             }
         }
+    }
+
+    /// Editorial cards select with SwiftUI's native tap gesture instead of a Button. A Button
+    /// fires on lift-off after a horizontal drag that stays inside the card; a tap gesture
+    /// fails once the finger moves, so a swipe outside Edit never selects. The accessibility
+    /// surface mirrors the Button above: one button element with the same label, value, hint,
+    /// selected trait, default activation and Edit-only actions. The Button's pressed-state
+    /// scale (.spreadPress) is intentionally not reproduced here.
+    private var editorialSelection: some View {
+        cardSurface
+            .modifier(EditorialTapTarget(enabled: editorialArt))
+            .onTapGesture { if !editing { onSelect() } }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(spokenLabel))
+            .accessibilityValue(selected ? "Focused" : "Closed")
+            .accessibilityHint(selected ? "Close this area’s tasks" : "Show this area’s tasks")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAddTraits(selected ? .isSelected : [])
+            .accessibilityAction { if !editing { onSelect() } }
+            .accessibilityActions {
+                if editing {
+                    Button("Manage") { if editing { onManage() } }
+                    Button("Remove Life area", role: .destructive) {
+                        if editing { performDismissal() }
+                    }
+                }
+            }
     }
 
     private var roleColor: Color { Color(hex: role.color) }
