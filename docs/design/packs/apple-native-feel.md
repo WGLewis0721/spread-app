@@ -4,6 +4,8 @@
 
 **Use when:** you touch materials, translucency, color in controls, sheets, corners, motion or accessibility settings, or review a screen for "does this look like an Apple app". For per-device layout use [device-layout.md](device-layout.md). For token values use [../tokens.json](../tokens.json).
 
+> **Current owner direction (November 11):** Native Life uses editorial imagery, solid dynamic surfaces and a labeled calendar-week navigator; metallic Crown and Chalk art have been retired. Weekly budget controls expand in Life; Plan Ahead is deliberate, guarded and previewed. [Native authority](../planner/SPREAD_NATIVE_BRAND_BOARD.md).
+
 ## Facts to work from
 
 **Principles.** The job is scanning days, tasks and hours calmly. Hierarchy comes from size, weight and spacing. One functional accent, system type and legibility first. Role colors are data. **Owner-approved PR #119 native exception:** [native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md) permits deep navy, restrained metal Crown and bounded role-colored edge light in visible SwiftUI only. React/Studio/landing keep existing constraints. `[Repo][Apple]`
