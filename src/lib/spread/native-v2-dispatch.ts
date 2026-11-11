@@ -69,6 +69,7 @@ const action = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("removeLifeRole"), roleId: id }),
   z.strictObject({ type: z.literal("setLifeBudget"), roleId: id, hours }),
   z.strictObject({ type: z.literal("setLifePriority"), priorityRoleId: id.nullable(), goalHours: hours.optional(), day: day.optional() }),
+  z.strictObject({ type: z.literal("setTaskImportant"), roleId: id, taskId: id, important: z.boolean() }),
   z.strictObject({ type: z.literal("setTaskEstimate"), roleId: id, taskId: id,
     minutes: z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60),
       z.literal(90), z.literal(120), z.literal(180), z.literal(240), z.literal(480), z.null()]) }),
@@ -383,6 +384,9 @@ export function createNativeV2Dispatcher(sessionId: string) {
           case "setLifePriority":
             if (!state.setLifePriority(a.priorityRoleId, a.goalHours, a.day)) throw new Error("life-priority-refused");
             break;
+          case "setTaskImportant":
+            if (!state.setTaskImportant(a.roleId, a.taskId, a.important)) throw new Error("task-important-refused");
+            break;
           case "setTaskEstimate":
             if (!state.setTaskEstimate(a.roleId, a.taskId, a.minutes)) throw new Error("life-estimate-refused");
             flushSpread();
@@ -498,7 +502,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
         }
       };
       const lifeAction = ["setLifeCapacity", "setLifeBudget", "setLifePriority", "applyLifePriority",
-        "editLifeRole", "removeLifeRole", "setTaskEstimate"].includes(a.type) ||
+        "editLifeRole", "removeLifeRole", "setTaskEstimate", "setTaskImportant"].includes(a.type) ||
         ((a.type === "addTask" || a.type === "addTaskForDay") && a.life === true);
       if (lifeAction) {
         undoId = state.lifeUndoable(mutate);
