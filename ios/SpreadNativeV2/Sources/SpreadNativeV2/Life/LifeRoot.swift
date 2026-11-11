@@ -364,6 +364,16 @@ struct LifeRoot: View {
     private func details(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
         let weekdayHours = LifeCardWeekDistribution.hours(for: role.id, snapshot: snapshot)
         return VStack(alignment: .leading, spacing: 10) {
+            if tasksOpen {
+                VStack(alignment: .leading, spacing: 0) {
+                    LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
+                    LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                }
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("life-task-notebook")
+            }
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(role.name) this week").font(.headline)
@@ -415,16 +425,6 @@ struct LifeRoot: View {
             Button("Prioritize this week") { localSheet = .priority(role.id) }
                 .padding(.horizontal, 12).frame(minHeight: 44)
                 .spreadChip(selected: false).buttonStyle(.spreadPress)
-            if tasksOpen {
-                VStack(alignment: .leading, spacing: 0) {
-                    LifeTaskRows(planner: planner, snapshot: snapshot, tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
-                    LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                }
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("life-task-notebook")
-            }
         }
         .padding(16).spreadCard(radius: Spread.radiusCard)
         .accessibilityElement(children: .contain)
