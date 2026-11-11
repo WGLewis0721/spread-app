@@ -158,6 +158,11 @@ struct LifeRoot: View {
             do { try await Task.sleep(for: .seconds(5)) } catch { return }
             historyVisible = false
         }
+        // A container identifier on a non-element view is pushed onto every
+        // descendant element, replacing ids such as life-navigation and
+        // life-more. Making the root a containing element keeps its own id
+        // while each child keeps its id, label and VoiceOver order.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-root")
         #if DEBUG
         .modifier(LifeDebugDynamicTypeOverride())
@@ -190,7 +195,7 @@ struct LifeRoot: View {
                              onManage: { localSheet = .manage($0) }, onDelete: { _ in },
 
                              selectedRole: $weekSelectedRole)
-            }.accessibilityIdentifier("life-week-page")
+            }.accessibilityElement(children: .contain).accessibilityIdentifier("life-week-page")
         }
     }
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
@@ -236,7 +241,7 @@ struct LifeRoot: View {
                     .frame(maxWidth: .infinity).padding(.top, 12)
             }
             if !snapshot.roles.isEmpty { newLifeArea }
-        }.accessibilityIdentifier("life-page")
+        }.accessibilityElement(children: .contain).accessibilityIdentifier("life-page")
     }
     private var newLifeArea: some View {
         Button(action: onNewRole) {
@@ -399,6 +404,7 @@ struct LifeRoot: View {
             }
         }
         .padding(16).spreadCard(radius: Spread.radiusCard)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-task-details")
     }
     private var history: some View {
@@ -439,7 +445,7 @@ struct LifeRoot: View {
                     Color.clear.preference(key: LifeDockHeightKey.self, value: geometry.size.height)
                 }
             }
-            .onPreferenceChange(LifeDockHeightKey.self) { dockControlsHeight = $0 }
+            .onPreferenceChange(LifeDockHeightKey.self) { if $0 > 0 { dockControlsHeight = $0 } }
             .onPreferenceChange(LifeDockOpenerCenterKey.self) { if $0 > 0 { dockOpenerCenterY = $0 } }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
@@ -606,6 +612,10 @@ struct LifeRoot: View {
             .offset(x: navigationDrag + (navigationOpen ? 0 : (crownRight ? -trayWidth : trayWidth)))
             .simultaneousGesture(navigationPan(width: trayWidth))
             .animation(reduceMotion ? nil : SpreadTactile.traySlide, value: navigationOpen)
+            // The tray is one modal container. Without its own element the modal trait and
+            // escape action were pushed onto every control inside, and Close navigation
+            // reported the whole tray as its frame, so tray controls were not hittable.
+            .accessibilityElement(children: .contain)
             .accessibilityAddTraits(.isModal)
             .accessibilityAction(.escape) { closeNavigation() }
         }
@@ -700,14 +710,17 @@ struct LifeRoot: View {
     }
 }
 
+// Each key has one real source. Sibling views report the default, so the reducers keep
+// the largest value: `value = nextValue()` let a later sibling's default replace the
+// measured one, and the tray's Close control then sat lower than the dock opener.
 private struct LifeDockOpenerCenterKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 private struct LifeDockHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 62
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 private struct LifeGestureHelp: View {

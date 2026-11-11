@@ -170,25 +170,28 @@ private struct LifeWalletFace: View {
     }
     var body: some View {
         ZStack {
-            // Keep the action layer structurally stable through the gesture.
-            // A conditional insertion here cancels the parent swipe recognizer.
+            // Keep the action layer mounted through the gesture. Inserting the layer
+            // here cancels the parent swipe recognizer (see revealedActions).
             revealedActions
                 // Clip the stationary Manage tray, not the moving Wallet face.
                 .clipShape(RoundedRectangle(cornerRadius: 23))
                 .opacity(editing && reveal + translation < -1 ? 1 : 0)
                 .allowsHitTesting(editing && reveal < 0)
+            // The card id sits on the selection element itself. On the ZStack it was
+            // pushed onto every element inside, replacing life-reveal-manage-<id>.
             selectionButton
+                .accessibilityIdentifier("life-card-\(role.id)")
         }
         // The glow MUST sit after the clip. Previously it lived inside the
         // card face and its bright outer shadow was clipped away.
         // Track the face when it reveals actions rather than lighting the
         // stationary slot left behind.
         .overlay(editingOutline.offset(x: cardOffset))
-        // The swipe recognizer is live only in Edit. Outside Edit the native selection
-        // control (Button, or the tap gesture on editorial cards) owns the touch, so taps
-        // select and vertical drags scroll. The gesture stays attached (mask only) so the
-        // view structure does not change when Edit toggles.
-        .simultaneousGesture(swipe, including: editing ? .all : .subviews)
+        // Same attachment PR #158 shipped. The handlers act only in Edit (every branch guards
+        // on `editing`), and selection is owned by the native control below, so outside Edit
+        // taps select and vertical drags scroll. The mask that flipped with `editing` (added
+        // in #163) is not needed for that and is removed.
+        .simultaneousGesture(swipe)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
         .onChange(of: dragging) { _, active in
@@ -208,7 +211,6 @@ private struct LifeWalletFace: View {
         .onChange(of: editing) { _, _ in synchronizeGlow() }
         .onChange(of: reduceMotion) { _, _ in synchronizeGlow() }
         .onChange(of: scenePhase) { _, _ in synchronizeGlow() }
-        .accessibilityIdentifier("life-card-\(role.id)")
     }
     // Resolve formatting as String before entering SwiftUI's overloaded text builders.
     private var spokenLabel: String {
@@ -224,7 +226,7 @@ private struct LifeWalletFace: View {
             editorialSelection
         } else {
             Button {
-                if !editing { onSelect() }
+                if LifeCardSwipeRules.tapSelects(editing: editing) { onSelect() }
             } label: {
                 // Editorial only: the whole rounded card is the target, so a tap in its open
                 // middle reaches the action. The main-head card keeps its original hit area.
@@ -257,14 +259,14 @@ private struct LifeWalletFace: View {
     private var editorialSelection: some View {
         cardSurface
             .modifier(EditorialTapTarget(enabled: editorialArt))
-            .onTapGesture { if !editing { onSelect() } }
+            .onTapGesture { if LifeCardSwipeRules.tapSelects(editing: editing) { onSelect() } }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(spokenLabel))
             .accessibilityValue(selected ? "Focused" : "Closed")
             .accessibilityHint(selected ? "Close this area’s tasks" : "Show this area’s tasks")
             .accessibilityAddTraits(.isButton)
             .accessibilityAddTraits(selected ? .isSelected : [])
-            .accessibilityAction { if !editing { onSelect() } }
+            .accessibilityAction { if LifeCardSwipeRules.tapSelects(editing: editing) { onSelect() } }
             .accessibilityActions {
                 if editing {
                     Button("Manage") { if editing { onManage() } }
@@ -278,23 +280,33 @@ private struct LifeWalletFace: View {
     private var roleColor: Color { Color(hex: role.color) }
     // Left reveals Manage. Right follows the finger toward full-width dismissal.
     private var cardOffset: CGFloat {
-        max(-110, min(exitDistance, reveal + translation + dismissOffset))
+        max(-CGFloat(LifeCardSwipeRules.manageDragLimit), min(exitDistance, reveal + translation + dismissOffset))
     }
 
     // Keep each SwiftUI builder small enough for the release compiler to solve.
     private var revealedActions: some View {
         HStack(spacing: 0) {
             Spacer(minLength: 0)
-            Button {
-                guard editing, reveal < 0 else { return }
-                onManage()
-            } label: {
-                Label("Manage", systemImage: "pencil").font(.subheadline)
-                    .frame(width: 92, height: cardHeight).foregroundStyle(.white)
-                    .background(LifePalette.accent, in: RoundedRectangle(cornerRadius: 24))
-            }.accessibilityIdentifier("life-reveal-manage-\(role.id)")
-                .accessibilityHidden(!editing || reveal >= 0).allowsHitTesting(editing && reveal < 0)
+            // The layer itself stays mounted so a drag can show Manage under the finger.
+            // The control exists only once Manage has settled open in Edit: a hidden
+            // Button was still exposed to accessibility and hit tests outside Edit.
+            // `reveal` changes only when a drag ends or Edit changes, never mid-gesture.
+            if editing && reveal < 0 {
+                Button {
+                    guard editing, reveal < 0 else { return }
+                    onManage()
+                } label: { manageFace }
+                    .accessibilityIdentifier("life-reveal-manage-\(role.id)")
+                    .transition(.identity)
+            } else {
+                manageFace.accessibilityHidden(true).transition(.identity)
+            }
         }
+    }
+    private var manageFace: some View {
+        Label("Manage", systemImage: "pencil").font(.subheadline)
+            .frame(width: 92, height: cardHeight).foregroundStyle(.white)
+            .background(LifePalette.accent, in: RoundedRectangle(cornerRadius: 24))
     }
 
     private var cardSurface: some View {
@@ -352,64 +364,56 @@ private struct LifeWalletFace: View {
             .updating($dragging) { _, active, _ in active = editing && !dismissing }
             .onChanged { value in
                 guard editing, !dismissing else { return }
-                let horizontal = value.translation.width
-                let vertical = value.translation.height
-                guard abs(horizontal) > abs(vertical) * 1.5 else { return }
+                let horizontal = Double(value.translation.width)
+                guard LifeCardSwipeRules.isHorizontal(horizontal: horizontal,
+                                                      vertical: Double(value.translation.height)) else { return }
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 onSwipeActivity(true)
                 withTransaction(transaction) {
                     // Preserve the original directions: left = Manage, right =
                     // slide the entire card off screen to remove it.
-                    translation = horizontal > 0
-                        ? min(exitDistance, horizontal)
-                        : max(-110, horizontal)
+                    translation = CGFloat(LifeCardSwipeRules.liveOffset(
+                        horizontal: horizontal, exitDistance: Double(exitDistance)))
                 }
             }
             .onEnded { value in
-                guard editing, !dismissing else { return }
-                let horizontal = value.translation.width
-                let vertical = value.translation.height
-                guard abs(horizontal) > abs(vertical) * 1.5 else {
+                // The release thresholds live in LifeCardSwipeRules so they are tested on their own.
+                switch LifeCardSwipeRules.outcome(
+                    editing: editing, dismissing: dismissing, reveal: Double(reveal),
+                    horizontal: Double(value.translation.width),
+                    vertical: Double(value.translation.height),
+                    predictedEnd: Double(value.predictedEndTranslation.width),
+                    exitDistance: Double(exitDistance)
+                ) {
+                case .ignore:
+                    return
+                case .keepReveal:
                     withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
                         translation = 0
                     }
                     if reveal == 0 { onSwipeActivity(false) }
-                    return
-                }
-                if horizontal > 0 {
-                    let traveled = max(0, reveal + horizontal)
-                    let projected = max(0, reveal + value.predictedEndTranslation.width)
-                    // Require a decisive gesture. The release spring completes
-                    // the visible offscreen travel, then the existing undoable
-                    // planner command deletes the Life area without a prompt.
-                    if TactilePrecisionMath.cardShouldDismissRight(
-                        traveled: Double(traveled), projected: Double(projected),
-                        exitDistance: Double(exitDistance)
-                    ) {
-                        performDismissal()
-                    } else {
-                        withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
-                            reveal = 0
-                            translation = 0
-                        }
-                        onSwipeActivity(false)
+                case .dismiss:
+                    // The release spring completes the visible offscreen travel, then the
+                    // existing undoable planner command deletes the Life area without a prompt.
+                    performDismissal()
+                case .closeReveal:
+                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                        reveal = 0
+                        translation = 0
                     }
-                    return
+                    onSwipeActivity(false)
+                case .reveal(let target):
+                    let manageTarget = CGFloat(target)
+                    if manageTarget < 0 && manageTarget != reveal {
+                        LifeFeedback.reveal(delete: false)
+                    }
+                    withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                        reveal = manageTarget
+                        translation = 0
+                    }
+                    if manageTarget == 0 { onSwipeActivity(false) }
                 }
-                let target = TactilePrecisionMath.revealTarget(
-                    current: Double(reveal), translation: Double(horizontal),
-                    projected: Double(value.predictedEndTranslation.width),
-                    threshold: 34, stop: 92)
-                let manageTarget = min(0, target)
-                if manageTarget < 0 && CGFloat(manageTarget) != reveal {
-                    LifeFeedback.reveal(delete: false)
-                }
-                withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
-                    reveal = CGFloat(manageTarget)
-                    translation = 0
-                }
-                if manageTarget == 0 { onSwipeActivity(false) }
             }
     }
 

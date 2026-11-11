@@ -73,6 +73,9 @@ final class LifeUITests: XCTestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 20))
         let id = String(card.identifier.dropFirst("life-card-".count))
         let manage = app.buttons["life-reveal-manage-" + id]
+        // The removal and restore checks need this exact card. A prefix query would
+        // re-resolve to the next card once this one is gone.
+        let exact = app.descendants(matching: .any).matching(identifier: "life-card-" + id).firstMatch
 
         XCTAssertFalse(manage.exists, "Manage must be hidden before Edit")
         card.press(forDuration: 0.7)
@@ -99,11 +102,11 @@ final class LifeUITests: XCTestCase {
         // card position. No confirmation sheet; one undoable removal follows.
         tapEditInSideTray()
         tapEditInSideTray()
-        let from = card.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5))
-        let to = from.withOffset(CGVector(dx: max(card.frame.width * 0.90, 340), dy: 0))
+        let from = exact.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5))
+        let to = from.withOffset(CGVector(dx: max(exact.frame.width * 0.90, 340), dy: 0))
         from.press(forDuration: 0.10, thenDragTo: to)
         let disappeared = NSPredicate(format: "exists == false")
-        expectation(for: disappeared, evaluatedWith: card)
+        expectation(for: disappeared, evaluatedWith: exact)
         waitForExpectations(timeout: 12)
         XCTAssertFalse(app.navigationBars["Delete Life area"].exists,
                        "A rightward offscreen dismissal must not open confirmation")
@@ -113,7 +116,7 @@ final class LifeUITests: XCTestCase {
         XCTAssertTrue(undo.waitForExistence(timeout: 10),
                       "Undo must restore a removed Life area and its tasks")
         undo.tap()
-        XCTAssertTrue(card.waitForExistence(timeout: 15),
+        XCTAssertTrue(exact.waitForExistence(timeout: 15),
                       "The exact Life area must return after Undo")
         capture("life-card-restored-by-undo")
         tapEditInSideTray()
