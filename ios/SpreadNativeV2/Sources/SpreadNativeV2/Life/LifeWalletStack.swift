@@ -163,6 +163,9 @@ private struct LifeWalletFace: View {
     @State private var dismissOffset: CGFloat = 0
     @State private var dismissing = false
     @GestureState private var dragging = false
+    // Set when the current touch has travelled, so a swipe that stays inside the card
+    // cannot select it. See travelTracker.
+    @State private var pannedSinceTouchDown = false
     @State private var glow = false
     private var reserved: Double {
         snapshot.allocations.filter { $0.roleId == role.id && (day == nil || $0.day == day) }.reduce(0) { $0 + $1.hours }
@@ -189,6 +192,7 @@ private struct LifeWalletFace: View {
         // stationary slot left behind.
         .overlay(editingOutline.offset(x: cardOffset))
         .simultaneousGesture(swipe)
+        .simultaneousGesture(travelTracker)
         .shadow(color: roleColor.opacity(selected || editing ? 0.18 : 0.09),
                 radius: selected || editing ? 16 : 8, y: 4)
         .onChange(of: dragging) { _, active in
@@ -224,7 +228,7 @@ private struct LifeWalletFace: View {
 
     private var selectionButton: some View {
         Button {
-            if !editing && !dragging { onSelect() }
+            if !editing && !dragging && !pannedSinceTouchDown { onSelect() }
         } label: {
             // The whole rounded card is the target. Without this, a tap in the open
             // middle of an editorial card lands on empty space and reaches no action.
@@ -379,6 +383,22 @@ private struct LifeWalletFace: View {
                 }
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
+    }
+
+    /// Records whether the current touch has moved. A new touch starts with zero
+    /// translation, which clears the flag. The Button's action runs at lift-off,
+    /// after every movement event, so a pan cannot end in a selection. Clearing
+    /// happens at the next touch-down, not at drag end, so the ordering with the
+    /// Button's action does not matter.
+    private var travelTracker: some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+            .onChanged { value in
+                if value.translation == .zero {
+                    pannedSinceTouchDown = false
+                } else if abs(value.translation.width) > 10 || abs(value.translation.height) > 10 {
+                    pannedSinceTouchDown = true
+                }
+            }
     }
 
     private var swipe: some Gesture {

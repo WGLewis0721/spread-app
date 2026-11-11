@@ -164,12 +164,14 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
                       "Days must be visible above the dock without manual scrolling: frame=\(days.frame) header=\(headerBottomY()) dock=\(dockTopY())")
         capture("editorial-work-days-visible-after-expansion")
 
-        let firstRow = (0..<7).map { element("life-day-row-\($0)") }.first { $0.exists }
-        XCTAssertNotNil(firstRow, "Work has assigned hours, so a weekday row must be present")
-        if let firstRow {
-            XCTAssertTrue(scrollUntilClearOfChrome(firstRow),
-                          "First assigned weekday is not clear of the dock: frame=\(firstRow.frame) dock=\(dockTopY())")
-        }
+        // Weekday rows are matched by their visible names. The collapsed card's seven-day
+        // strip is a combined element, so these static texts belong to the day list.
+        let weekdayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        let firstRow = app.staticTexts.matching(NSPredicate(format: "label IN %@", weekdayNames)).firstMatch
+        XCTAssertTrue(firstRow.waitForExistence(timeout: 5),
+                      "Work has assigned hours, so a weekday row must be listed")
+        XCTAssertTrue(scrollUntilClearOfChrome(firstRow),
+                      "First assigned weekday is not clear of the dock: frame=\(firstRow.frame) dock=\(dockTopY())")
 
         let prioritize = app.buttons["Prioritize this week"]
         XCTAssertTrue(scrollUntilClearOfChrome(prioritize),
@@ -205,10 +207,8 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         XCTAssertTrue(standard.waitForExistence(timeout: 20), "The Work card was not rendered")
         let standardHeight = standard.frame.height
 
-        launch(category: "work", extraArgs: [
-            "-UIPreferredContentSizeCategoryName",
-            "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge",
-        ])
+        // DEBUG-only seam in LifeRoot applies the accessibility size from the defaults domain.
+        launch(category: "work", extraArgs: ["-SpreadTestDynamicType", "accessibility3"])
         let large = card(for: "Work")
         XCTAssertTrue(large.waitForExistence(timeout: 20),
                       "The Work card did not render at accessibility text size")

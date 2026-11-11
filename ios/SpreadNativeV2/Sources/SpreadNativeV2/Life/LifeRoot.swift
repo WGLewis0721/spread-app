@@ -152,6 +152,9 @@ struct LifeRoot: View {
             historyVisible = false
         }
         .accessibilityIdentifier("life-root")
+        #if DEBUG
+        .modifier(LifeDebugDynamicTypeOverride())
+        #endif
     }
     private var header: some View {
         HStack(spacing: 8) {
@@ -363,7 +366,6 @@ struct LifeRoot: View {
                             }
                             .font(.subheadline)
                             .padding(.vertical, 3)
-                            .accessibilityIdentifier("life-day-row-\(index)")
                         }
                     }
                     if !weekdayHours.contains(where: { $0 > 0 }) {
@@ -698,4 +700,20 @@ private struct LifeGestureHelp: View {
         }.presentationDetents([.medium, .large])
     }
 }
+
+#if DEBUG
+/// Test seam for accessibility text size. `-SpreadTestDynamicType accessibility3` applies
+/// that size to the Life view. XCUITest launch arguments populate the defaults domain, and
+/// the simulator's own content-size launch argument does not reach this SwiftUI tree.
+/// Release builds never compile this.
+private struct LifeDebugDynamicTypeOverride: ViewModifier {
+    func body(content: Content) -> some View {
+        if UserDefaults.standard.string(forKey: "SpreadTestDynamicType") == "accessibility3" {
+            content.environment(\.dynamicTypeSize, .accessibility3)
+        } else {
+            content
+        }
+    }
+}
+#endif
 #endif
