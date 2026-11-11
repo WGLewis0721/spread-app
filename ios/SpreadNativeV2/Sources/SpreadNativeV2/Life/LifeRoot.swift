@@ -452,7 +452,7 @@ struct LifeRoot: View {
                             .font(.caption2.weight(.semibold))
                     }
                     .foregroundStyle(destination == item ? Spread.onAccent : Spread.ink)
-                    .frame(width: 51, minHeight: 52)
+                    .frame(width: 51).frame(minHeight: 52)
                     .background(destination == item ? Spread.accent : Color.clear,
                                 in: RoundedRectangle(cornerRadius: 12))
                     .contentShape(Rectangle())
