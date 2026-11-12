@@ -31,6 +31,8 @@ public struct SpreadLiveRoot: View {
     @State private var loadedProfile: String?
     /// Counts week moves the store has acknowledged. The selection haptic listens to it, so it never fires at launch.
     @State private var weekTick = 0
+    @State private var pendingWeekMoves = 0
+    @State private var weekMoveRunning = false
     @State private var classicNavigationOpen = false
     @State private var classicHoursExpanded = false
     @State private var usableWidth: CGFloat = 0
@@ -735,13 +737,28 @@ public struct SpreadLiveRoot: View {
         withAnimation(reduceMotion ? nil : SpreadMotion.curve) { destination = .spread }
     }
 
+    /// A long press may request new weeks faster than bridge saves complete.
+    /// Queue and coalesce those requests against the current acknowledged week.
     private func goWeek(_ delta: Int) {
-        guard delta != 0, let week = planner.snapshot?.weekKey,
-              let target = PlannerDates.calendar.date(byAdding: .weekOfYear, value: delta,
-                                                       to: PlannerDates.date(week)) else { return }
-        let targetWeek = PlannerDates.weekKey(for: target)
+        guard delta != 0 else { return }
+        pendingWeekMoves += delta
+        guard !weekMoveRunning else { return }
+        weekMoveRunning = true
         Task {
-            if await planner.send(["type": "openWeek", "weekKey": targetWeek]) {
+            defer { weekMoveRunning = false }
+            while pendingWeekMoves != 0 {
+                let move = pendingWeekMoves
+                pendingWeekMoves = 0
+                guard let week = planner.snapshot?.weekKey,
+                      let target = PlannerDates.calendar.date(byAdding: .weekOfYear,
+                                                               value: move, to: PlannerDates.date(week)) else {
+                    pendingWeekMoves = 0
+                    return
+                }
+                guard await planner.send(["type": "openWeek", "weekKey": PlannerDates.weekKey(for: target)]) else {
+                    pendingWeekMoves = 0
+                    return
+                }
                 weekTick += 1
             }
         }
