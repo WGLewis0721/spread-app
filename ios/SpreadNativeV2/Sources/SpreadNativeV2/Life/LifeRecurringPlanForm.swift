@@ -186,6 +186,11 @@ struct LifeRecurringPlanForm: View {
                                   systemImage: "info.circle")
                                 .font(.subheadline)
                         }
+                        if let managed = preview.managedFromWeek, managed < preview.startWeek {
+                            Text("The selected Life area will have 0h in earlier unplanned weeks from " +
+                                 PlannerDates.label(PlannerDates.date(managed), pattern: "MMM d") + ".")
+                                .font(.caption).foregroundStyle(Spread.secondary)
+                        }
                         Text("Existing tasks and day placements will not be duplicated.")
                             .font(.caption).foregroundStyle(Spread.secondary)
                     } else {

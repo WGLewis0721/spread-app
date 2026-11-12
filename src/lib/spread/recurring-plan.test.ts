@@ -111,3 +111,18 @@ test("stop from the first week persists as a tombstone and can be followed by a 
   const newWeek = ensureWeek({ ...restarted.data, currentWeek: shiftWeek(first, 4) });
   assert.equal(newWeek.weeks[newWeek.currentWeek].boxes.find((b) => b.hatId === gym)?.hours, 1);
 });
+
+test("a later first occurrence clears the inherited default in the intervening week", () => {
+  const { data, service, first } = make();
+  data.hats.find((h) => h.id === service)!.defaultHours = 4;
+  const serviceFirst = shiftWeek(first, 1);
+  const result = applyRecurringPlan(data, {
+    roleId: service, startWeek: serviceFirst, everyWeeks: 2, hours: 2, capacityHours: 140,
+  });
+  assert.equal(result.preview.eligible, true);
+  assert.equal(result.preview.managedFromWeek, first);
+  const weekA = ensureWeek({ ...result.data, currentWeek: first });
+  assert.equal(weekA.weeks[first].boxes.find((b) => b.hatId === service)?.hours, 0);
+  const weekB = ensureWeek({ ...weekA, currentWeek: serviceFirst });
+  assert.equal(weekB.weeks[serviceFirst].boxes.find((b) => b.hatId === service)?.hours, 2);
+});

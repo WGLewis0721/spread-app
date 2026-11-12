@@ -43,7 +43,8 @@ export function flatten(data: SpreadData, profileName: string): PlainItem[] {
     [ids("recurringPlans")]: (data.recurringPlans ?? []).map((plan) => plan.id) });
   for (const plan of data.recurringPlans ?? []) {
     put(out, "recurring-plan:" + plan.id, {
-      roleId: plan.roleId, startWeek: plan.startWeek, everyWeeks: plan.everyWeeks,
+      roleId: plan.roleId, startWeek: plan.startWeek, managedFromWeek: plan.managedFromWeek,
+      everyWeeks: plan.everyWeeks,
       hours: plan.hours, capacityHours: plan.capacityHours, endWeek: plan.endWeek,
       terminatedWeek: plan.terminatedWeek,
     });
@@ -221,6 +222,7 @@ export function assemble(live: PlainItem[], currentWeek: string): { data: Spread
     const candidate = {
       id: entryId.slice("recurring-plan:".length),
       roleId: text(fields.roleId), startWeek: text(fields.startWeek),
+      ...(typeof fields.managedFromWeek === "string" ? { managedFromWeek: fields.managedFromWeek } : {}),
       everyWeeks: num(fields.everyWeeks), hours: num(fields.hours),
       capacityHours: num(fields.capacityHours),
       ...(typeof fields.endWeek === "string" ? { endWeek: fields.endWeek } : {}),

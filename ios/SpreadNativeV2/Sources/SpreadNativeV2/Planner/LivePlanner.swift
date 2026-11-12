@@ -72,6 +72,7 @@ struct NativeRecurringPreview: Decodable {
     let roleId: String
     let hours: Double
     let startWeek: String
+    let managedFromWeek: String?
     let everyWeeks: Int
     let endWeek: String?
     let nextOccurrences: [String]

@@ -17,7 +17,7 @@ export type NativeV2Snapshot = {
   dayTaskOrder?: Record<string, string[]>;
   /** Absent until a person explicitly sets capacity in Life. */
   life?: { version: 1; capacityHours?: number; priorityRoleId?: string; priorityGoalHours?: number; priorityDay?: string };
-  recurringPlans?: { id: string; roleId: string; startWeek: string; everyWeeks: number; hours: number; endWeek?: string; terminatedWeek?: string; capacityHours: number }[];
+  recurringPlans?: { id: string; roleId: string; startWeek: string; managedFromWeek?: string; everyWeeks: number; hours: number; endWeek?: string; terminatedWeek?: string; capacityHours: number }[];
   recurrenceIssue?: string;
 };
 

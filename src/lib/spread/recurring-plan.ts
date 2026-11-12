@@ -23,6 +23,7 @@ export type RecurringPreview = {
   startWeek: string;
   everyWeeks: number;
   endWeek?: string;
+  managedFromWeek?: string;
   nextOccurrences: string[];
   preservedWeeks: string[];
   /** A finite count; ongoing schedules are never generated indefinitely. */
@@ -39,10 +40,15 @@ const rangeOverlaps = (a: RecurringPlan, b: RecurringPlan) =>
   b.startWeek <= effectiveEnd(a);
 function candidate(data: Readonly<SpreadData>, request: RecurringRequest): RecurringPlan {
   const current = data.recurringPlans?.find((p) => p.id === request.planId);
+  const firstWeek = request.editFromWeek ?? request.startWeek;
+  const hasEarlierSeries = (data.recurringPlans ?? []).some((p) =>
+    p.roleId === request.roleId && p.id !== request.planId && p.startWeek < firstWeek);
   return {
     id: request.editFromWeek ? "proposed-split" : request.planId ?? "proposed",
     roleId: request.roleId,
-    startWeek: request.editFromWeek ?? request.startWeek,
+    startWeek: firstWeek,
+    managedFromWeek: request.editFromWeek ?? current?.managedFromWeek ??
+      (hasEarlierSeries ? firstWeek : shiftWeek(data.currentWeek, 1)),
     everyWeeks: request.everyWeeks,
     hours: request.hours,
     capacityHours: request.capacityHours ?? current?.capacityHours ??
@@ -54,7 +60,8 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
   const draft = candidate(data, request);
   const result: RecurringPreview = {
     eligible: false, roleId: request.roleId, hours: request.hours,
-    startWeek: draft.startWeek, endWeek: draft.endWeek, everyWeeks: request.everyWeeks,
+    startWeek: draft.startWeek, endWeek: draft.endWeek,
+    managedFromWeek: draft.managedFromWeek, everyWeeks: request.everyWeeks,
     nextOccurrences: [], preservedWeeks: [],
   };
   const reject = (reason: string) => ({ ...result, reason });
@@ -99,7 +106,7 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
     nextOccurrences.push(week);
   }
   const preservedWeeks = Object.keys(data.weeks).filter((week) =>
-    week >= draft.startWeek && (!draft.endWeek || week <= draft.endWeek) &&
+    week >= (draft.managedFromWeek ?? draft.startWeek) && (!draft.endWeek || week <= draft.endWeek) &&
     !data.weeks[week].recurrenceSource?.[draft.roleId] &&
     week !== data.currentWeek).sort();
   return {

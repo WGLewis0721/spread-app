@@ -53,6 +53,7 @@ public struct NativeRecurringPlan: Codable, Equatable, Identifiable, Sendable {
     public let id: String
     public let roleId: String
     public let startWeek: String
+    public let managedFromWeek: String?
     public let everyWeeks: Int
     public let hours: Double
     public let endWeek: String?

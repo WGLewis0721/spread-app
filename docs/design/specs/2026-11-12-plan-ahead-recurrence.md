@@ -54,7 +54,7 @@ System SF typography, existing native background/accent/role data colors; one pr
 ## 7. Technical contract
 
 - `model.ts`: `RecurringPlan`, optional `WeekData.recurrenceSource` and `SpreadData.recurringPlans`. Existing weeks without origin remain untouched.
-- `recurring-plan.ts`: pure preview, apply, split and stop. A rule affects role budget per week, not task/day allocations. Every interval is 1–12 weeks; dates use Monday week keys and UTC whole-week differences for DST safety. Validation tests representative cycle phases and configured capacity.
+- `recurring-plan.ts`: pure preview, apply, split and stop. A rule affects role budget per week, not task/day allocations. The rule controls future unplanned weeks from the next week onward (0h before its first occurrence); existing materialized weeks remain protected. Every interval is 1–12 weeks; dates use Monday week keys and UTC whole-week differences for DST safety. Validation tests representative cycle phases and configured capacity.
 - `store.ts`: one atomic commit/Undo; Life budget edits mark manual week overrides. No second store.
 - `native-v2-dispatch.ts`: validated preview and create/edit/stop commands, stale revision and profile protections.
 - `LifeRecurringPlanForm.swift`: native editors and review. Original transfer sheet remains accessible.

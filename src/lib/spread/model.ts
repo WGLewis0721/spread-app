@@ -36,6 +36,8 @@ export type RecurringPlan = {
   id: string;
   roleId: string;
   startWeek: string;
+  /** The first future week this rule controls. Non-occurrence weeks are zero, even before startWeek. */
+  managedFromWeek?: string;
   everyWeeks: number;
   hours: number;
   capacityHours: number;
@@ -267,10 +269,11 @@ export function recurringForRole(data: Readonly<SpreadData>, roleId: string, key
   // The latest series controls this role after its start, including weeks following
   // a finite end or an explicit stop. Those weeks have zero recurring hours.
   const plan = (data.recurringPlans ?? [])
-    .filter((p) => p.roleId === roleId && key >= p.startWeek)
+    .filter((p) => p.roleId === roleId && key >= (p.managedFromWeek ?? p.startWeek))
     .sort((a, b) => b.startWeek.localeCompare(a.startWeek))[0];
   if (!plan) return null;
-  if ((plan.endWeek !== undefined && key > plan.endWeek) ||
+  if (key < plan.startWeek ||
+      (plan.endWeek !== undefined && key > plan.endWeek) ||
       (plan.terminatedWeek !== undefined && key >= plan.terminatedWeek))
     return { plan, hours: 0 };
   const offset = recurrenceWeekOffset(plan.startWeek, key);
@@ -286,6 +289,7 @@ export function validRecurringPlan(value: unknown): value is RecurringPlan {
   return typeof p.id === "string" && p.id.length > 0 &&
     typeof p.roleId === "string" && p.roleId.length > 0 &&
     validWeek(p.startWeek) &&
+    (p.managedFromWeek === undefined || (validWeek(p.managedFromWeek) && p.managedFromWeek <= p.startWeek!)) &&
     (p.endWeek === undefined || (validWeek(p.endWeek) && p.endWeek >= p.startWeek!)) &&
     (p.terminatedWeek === undefined || (validWeek(p.terminatedWeek) && p.terminatedWeek >= p.startWeek!)) &&
     Number.isInteger(p.everyWeeks) && p.everyWeeks! >= 1 && p.everyWeeks! <= 12 &&
