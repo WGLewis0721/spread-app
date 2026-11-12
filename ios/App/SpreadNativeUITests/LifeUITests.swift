@@ -253,6 +253,35 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch.exists)
         capture("classic-unchanged")
     }
+    func testHoldingWeekArrowMovesFasterThanSingleTap() {
+        startLife()
+        let current = app.buttons["calendar-period-label"]
+        let next = app.buttons["Next week"]
+        let previous = app.buttons["Previous week"]
+        XCTAssertTrue(current.waitForExistence(timeout: 20))
+        XCTAssertTrue(next.exists && previous.exists)
+        let before = current.label
+
+        next.tap()
+        let singleAdvance = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@", before), object: current)
+        XCTAssertEqual(XCTWaiter.wait(for: [singleAdvance], timeout: 20), .completed)
+        let once = current.label
+
+        previous.tap()
+        let reset = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label == %@", before), object: current)
+        XCTAssertEqual(XCTWaiter.wait(for: [reset], timeout: 20), .completed)
+
+        next.press(forDuration: 1.7)
+        let multipleAdvances = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@ AND label != %@", before, once),
+            object: current)
+        XCTAssertEqual(XCTWaiter.wait(for: [multipleAdvances], timeout: 20), .completed,
+                       "Held right arrow must advance past one week without a fast swipe")
+        capture("life-held-calendar-arrow")
+    }
+
     func testNavigationHasNoMetallicCrownOrRedundantPlus() {
         startLife()
         XCTAssertTrue(app.descendants(matching: .any)
