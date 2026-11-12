@@ -78,6 +78,8 @@ struct NativeRecurringPreview: Decodable {
     let nextOccurrences: [String]
     let preservedWeeks: [String]
     let occurrenceCount: Int?
+    /// Set days the schedule would place, when the preview has them.
+    let dayHours: [NativeDayHours]?
 }
 struct LiveReply: Decodable {
     let planAheadPreview: NativePlanAheadPreview?
