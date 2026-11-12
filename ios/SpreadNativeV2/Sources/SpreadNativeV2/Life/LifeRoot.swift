@@ -402,6 +402,11 @@ struct LifeRoot: View {
                 }
                 .accessibilityIdentifier("life-budget-done")
             }
+            if snapshot.recurringPlans?.isEmpty == false {
+                Text("Changes here affect only this week. Edit repeating schedules in Plan Ahead.")
+                    .font(.caption)
+                    .foregroundStyle(Spread.secondary)
+            }
             SpreadArrowValueControl(
                 value: capacity.map { SpreadHours.text($0) + "h" } ?? "Set hours",
                 detail: "Weekly total",

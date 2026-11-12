@@ -99,8 +99,11 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
     if (total > active[0]!.plan.capacityHours)
       return reject("The schedule exceeds weekly available time. Reduce hours or increase the weekly total.");
   }
+  // For edits to long-running series, review the NEXT scheduled weeks, not old dates.
+  const elapsed = Math.max(0, recurrenceWeekOffset(draft.startWeek, data.currentWeek));
+  const firstIndex = Math.ceil(elapsed / draft.everyWeeks);
   const nextOccurrences: string[] = [];
-  for (let n = 0; n < 4; n += 1) {
+  for (let n = firstIndex; n < firstIndex + 4; n += 1) {
     const week = shiftWeek(draft.startWeek, n * draft.everyWeeks);
     if (draft.endWeek && week > draft.endWeek) break;
     nextOccurrences.push(week);

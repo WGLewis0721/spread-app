@@ -126,3 +126,37 @@ test("a later first occurrence clears the inherited default in the intervening w
   const weekB = ensureWeek({ ...weekA, currentWeek: serviceFirst });
   assert.equal(weekB.weeks[serviceFirst].boxes.find((b) => b.hatId === service)?.hours, 2);
 });
+
+test("editing a series updates only untouched generated weeks and keeps manual exceptions", () => {
+  const { data, gym, first } = make();
+  const created = applyRecurringPlan(data, { roleId: gym, startWeek: first,
+    everyWeeks: 2, hours: 2, capacityHours: 140 });
+  const ruleId = created.data.recurringPlans![0].id;
+  let next = ensureWeek({ ...created.data, currentWeek: first });
+  const later = shiftWeek(first, 2);
+  next = ensureWeek({ ...next, currentWeek: later });
+  next.weeks[later].boxes.find((b) => b.hatId === gym)!.hours = 4;
+  next.weeks[later].recurrenceSource![gym].manual = true;
+  const modified = applyRecurringPlan(next, { roleId: gym, planId: ruleId,
+    startWeek: first, everyWeeks: 2, hours: 3, capacityHours: 140 });
+  assert.equal(modified.preview.eligible, true);
+  assert.equal(modified.data.weeks[first].boxes.find((b) => b.hatId === gym)?.hours, 3);
+  assert.equal(modified.data.weeks[later].boxes.find((b) => b.hatId === gym)?.hours, 4);
+  assert.equal(modified.data.weeks[later].recurrenceSource?.[gym]?.manual, true);
+});
+test("splitting a schedule reassigns provenance even if generated hours are unchanged", () => {
+  const { data, gym, first } = make();
+  let next = applyRecurringPlan(data, { roleId: gym, startWeek: first,
+    everyWeeks: 2, hours: 2, capacityHours: 140 }).data;
+  const oldId = next.recurringPlans![0].id;
+  const split = shiftWeek(first, 2);
+  next = ensureWeek({ ...next, currentWeek: split });
+  const modified = applyRecurringPlan(next, {
+    roleId: gym, planId: oldId, startWeek: first, editFromWeek: split,
+    everyWeeks: 2, hours: 2, capacityHours: 140,
+  });
+  assert.equal(modified.preview.eligible, true);
+  assert.equal(modified.data.recurringPlans?.length, 2);
+  assert.notEqual(modified.data.weeks[split].recurrenceSource?.[gym]?.planId, oldId);
+  assert.equal(modified.data.weeks[split].boxes.find((b) => b.hatId === gym)?.hours, 2);
+});
