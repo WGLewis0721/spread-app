@@ -21,6 +21,7 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         if let category {
             args += ["-SpreadEditorialPreviewCategory", category]
         }
+        args += ["-native.whatsNew.lastSeenRelease", "2026-11-11-life-week"]
         args += extraArgs
         app.launchArguments = args
         app.launch()

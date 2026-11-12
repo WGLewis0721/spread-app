@@ -6,6 +6,7 @@ This is not proof of App Store approval, actual device behavior, or store metada
 from __future__ import annotations
 
 import argparse
+from datetime import date
 import json
 import os
 from pathlib import Path
@@ -85,6 +86,7 @@ class Checks:
                 for entry in categories
             )
             self.check("Required-reason declarations", valid, "Each declared API requires a reason")
+        self.release_notes(root)
         self.check("App icon", (root / "ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png").is_file(),
                    "1024px app icon source must exist; visually inspect it")
         paths = [root / path for path in (
@@ -102,6 +104,52 @@ class Checks:
             self.check("Native entry", "<WeekScreen />" in app, "Installed app opens straight into the planner")
         else:
             self.check("Native entry source", False, "Missing native, store, or app source")
+
+    def release_notes(self, root):
+        """Ensure the version shipping from Xcode has a current, valid offline update note."""
+        raw = self.file(root, "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/ReleaseNotes.json")
+        project = self.file(root, "ios/App/App.xcodeproj/project.pbxproj")
+        if raw is None or project is None:
+            return
+        try:
+            catalog = json.loads(raw)
+            releases = catalog["releases"]
+            if catalog.get("formatVersion") != 1 or not isinstance(releases, list) or not releases:
+                raise ValueError("Expected a nonempty formatVersion 1 release catalog")
+            ids = set()
+            for item in releases:
+                if not isinstance(item, dict):
+                    raise ValueError("Every release must be an object")
+                release_id = item.get("id")
+                version = item.get("version")
+                title = item.get("title")
+                changes = item.get("changes")
+                if not isinstance(release_id, str) or not re.fullmatch(r"[a-zA-Z0-9._-]{1,80}", release_id):
+                    raise ValueError("Invalid release ID")
+                if release_id in ids:
+                    raise ValueError("Repeated release ID")
+                ids.add(release_id)
+                if not isinstance(version, str) or not re.fullmatch(r"\d+(?:\.\d+){1,2}", version):
+                    raise ValueError("Invalid release version")
+                if not isinstance(title, str) or not 1 <= len(title.strip()) <= 100:
+                    raise ValueError("Invalid release title")
+                if not isinstance(changes, list) or not 1 <= len(changes) <= 8 or not all(
+                    isinstance(change, str) and 1 <= len(change.strip()) <= 200 for change in changes
+                ):
+                    raise ValueError("Release changes must be one to eight short, plain-language items")
+                date.fromisoformat(item["date"])
+            versions = set(re.findall(r"\bMARKETING_VERSION\s*=\s*([0-9]+(?:\.[0-9]+){1,2})\s*;",
+                                      project.decode("utf-8")))
+            if len(versions) != 1:
+                raise ValueError("Expected a single Xcode marketing version")
+            marketing_version = versions.pop()
+            if releases[0]["version"] != marketing_version:
+                raise ValueError("Latest release notes must match Xcode marketing version " + marketing_version)
+        except (ValueError, TypeError, KeyError, UnicodeDecodeError) as error:
+            self.check("Bundled release notes", False, str(error))
+            return
+        self.check("Bundled release notes", True,
+                   "Current version " + marketing_version + "; " + str(len(releases)) + " releases, unique IDs")
 
     def bundle(self, path):
         index = path / "index.html"

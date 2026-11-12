@@ -477,6 +477,8 @@ struct MoreSheet: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showCalendarPicker = false
     @State private var showRecentlyDeleted = false
+    @State private var showWhatsNew = false
+    @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
 
     private var activeProfileName: String {
         planner.profiles.first(where: { $0.id == planner.state?.envelope.profileId })?.name ?? "Current profile"
@@ -673,6 +675,49 @@ struct MoreSheet: View {
                                 .accessibilityIdentifier("more-recently-deleted")
                             }
                         }
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("About Spread")
+                            Button {
+                                showWhatsNew = true
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "sparkles")
+                                        .font(.title3)
+                                        .foregroundStyle(Spread.accent)
+                                        .frame(width: 32)
+                                        .accessibilityHidden(true)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("What's New")
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(Spread.ink)
+                                        Text("Version " + SpreadReleaseNotes.appVersion)
+                                            .font(.caption)
+                                            .foregroundStyle(Spread.secondary)
+                                    }
+                                    Spacer(minLength: 8)
+                                    if SpreadReleaseNotes.shouldPresent(
+                                        version: SpreadReleaseNotes.appVersion,
+                                        lastSeenID: lastSeenReleaseID) {
+                                        Text("New")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(Spread.accent)
+                                    }
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Spread.secondary)
+                                        .accessibilityHidden(true)
+                                }
+                                .padding(.horizontal, 14)
+                                .frame(maxWidth: .infinity, minHeight: 54)
+                                .background(Spread.elevated,
+                                            in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                                .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow))
+                            }
+                            .buttonStyle(.spreadPress)
+                            .accessibilityLabel("What's New in Spread")
+                            .accessibilityHint("Read release notes and earlier updates")
+                            .accessibilityIdentifier("more-whats-new")
+                        }
                     }
                     .frame(maxWidth: 620)
                     .padding(.horizontal, 16)
@@ -693,6 +738,13 @@ struct MoreSheet: View {
                 }
             }
             .sheet(isPresented: $showRecentlyDeleted) { RecentlyDeletedSheet(planner: planner) }
+            .sheet(isPresented: $showWhatsNew, onDismiss: {
+                if let latest = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion) {
+                    lastSeenReleaseID = latest.id
+                }
+            }) {
+                WhatsNewSheet(showHistory: true)
+            }
         }
         // Start fully presented so the entire compact menu is visible immediately.
         // Scrolling is still possible on smaller iPhones, keyboard and large text.

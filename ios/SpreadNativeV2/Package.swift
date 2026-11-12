@@ -15,6 +15,7 @@ let package = Package(
                 .copy("Resources/Chalk"),
                 .copy("Resources/Motion"),
                 .copy("Resources/Editorial"),
+                .process("Resources/ReleaseNotes.json"),
                 .copy("Resources/LUCIDE_LICENSE.txt"),
                 .process("Resources/Icons.xcassets")
             ]
