@@ -6,9 +6,10 @@ import SwiftUI
 struct WhatsNewSheet: View {
     var showHistory = false
     @Environment(\.dismiss) private var dismiss
+    @State private var historyExpanded = false
 
     private var releases: [SpreadReleaseNote] {
-        if showHistory { return SpreadReleaseNotes.entries }
+        if showHistory || historyExpanded { return SpreadReleaseNotes.entries }
         return SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion)
             .map { [$0] } ?? []
     }
@@ -43,9 +44,9 @@ struct WhatsNewSheet: View {
                             releaseCard(release)
                         }
                     }
-                    if !showHistory && SpreadReleaseNotes.entries.count > 1 {
-                        NavigationLink {
-                            WhatsNewSheet(showHistory: true)
+                    if !showHistory && !historyExpanded && SpreadReleaseNotes.entries.count > 1 {
+                        Button {
+                            historyExpanded = true
                         } label: {
                             Label("See past updates", systemImage: "clock.arrow.circlepath")
                                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
