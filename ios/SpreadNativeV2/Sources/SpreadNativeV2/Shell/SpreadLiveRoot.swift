@@ -765,6 +765,7 @@ public struct SpreadLiveRoot: View {
     }
 
     private func moveToToday() async {
+        pendingWeekMoves = 0
         weekDirection = 0
         if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 }
     }
