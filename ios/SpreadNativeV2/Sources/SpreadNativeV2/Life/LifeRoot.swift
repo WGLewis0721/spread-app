@@ -344,6 +344,7 @@ struct LifeRoot: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("life-plan-ahead-from-home")
+                Spacer()
             }
             if budgetExpanded {
                 budgetEditor(snapshot)
