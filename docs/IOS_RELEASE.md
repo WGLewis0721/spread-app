@@ -12,6 +12,19 @@
 - **Performance:** Scoped SwiftPM and Xcode compilation caches may accelerate **subsequent** Codemagic signed builds; measure actual results. The first build has a cold cache.
 - **Release gate:** Do not claim simulator or real-device acceptance from GitHub checks. Complete physical iPhone testing, accessibility/persistence checks, and release checklist review separately before approving a release.
 
+## In-app What's New release contract (November 11, 2026 onward)
+
+The native app includes a read-only, offline **What's New** screen in **More**, available in both Life and Classic. After a release with a new note ID, the latest notes appear once after the planner loads. Dismissing them stores only the last-seen release ID in local device preferences, independent of Life areas and profiles. App Store/Codemagic **build number** increments alone do not trigger repeat announcements.
+
+**For every shipped user-facing update:**
+
+1. Prepend a short, accurate, user-facing entry in `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/ReleaseNotes.json` with a unique `id`, the shipped Xcode `MARKETING_VERSION`, an ISO date, a title and 1–8 plain-English changes. Keep previous entries for the in-app history. **Even if the marketing version stays 1.0, use a fresh release ID for a newly released feature set.**
+2. Mention only features actually included and verified for that candidate. Do not paste Git commits, technical implementation details or unshipped plans into customer notes.
+3. Run existing `scripts/app-store-preflight.py` and `swift test --package-path ios/SpreadNativeV2`. The preflight fails closed when the latest entry is missing, malformed, duplicated or for a different marketing version.
+4. On an actual iPhone, verify first presentation after update, dismissal, no second popup on relaunch, **More → What's New** history, system appearances, Dynamic Type and VoiceOver. Check Classic and Life and ensure all planner data is unchanged.
+
+This does **not** create an update feed, analytics, user accounts, background polling or automatic App Store submission. Manual Codemagic and release approvals remain mandatory.
+
 **Historical scope of the instructions below:** Original Capacitor/local-first iOS packaging and pre-Life smoke tests. Re-verify every command and native target against today's repository before running; use the actual compiled IPA for device family, iOS minimum, entitlements, permissions and cloud flags.
 
 ## Historical identity snapshot (recheck against the actual app)
