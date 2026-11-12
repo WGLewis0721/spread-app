@@ -27,7 +27,7 @@ enum SpreadReleaseNotes {
         return document.releases
     }()
 
-    static func newest(for version: String, in entries: [SpreadReleaseNote] = entries) -> SpreadReleaseNote? {
+    static func newest(for version: String, in entries: [SpreadReleaseNote] = SpreadReleaseNotes.entries) -> SpreadReleaseNote? {
         entries.first(where: { $0.version == version })
     }
 
@@ -35,7 +35,7 @@ enum SpreadReleaseNotes {
     /// when CFBundleVersion changes but the user-facing release has not.
     /// An unlisted app version does not trigger stale patch notes.
     static func shouldPresent(version: String, lastSeenID: String,
-                              entries: [SpreadReleaseNote] = entries) -> Bool {
+                              entries: [SpreadReleaseNote] = SpreadReleaseNotes.entries) -> Bool {
         guard let newest = newest(for: version, in: entries) else { return false }
         return newest.id != lastSeenID
     }
