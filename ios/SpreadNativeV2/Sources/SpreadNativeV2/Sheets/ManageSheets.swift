@@ -479,6 +479,7 @@ struct MoreSheet: View {
     @State private var showRecentlyDeleted = false
     @State private var showWhatsNew = false
     @State private var showReminders = false
+    @AppStorage(SpreadWidgetPublisher.enabledKey) private var todayWidgetsEnabled = false
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
 
     private var activeProfileName: String {
@@ -616,6 +617,18 @@ struct MoreSheet: View {
                             .accessibilityIdentifier("spread-reminder-settings")
                         }
 
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Widgets")
+                            Toggle("Show Today on widgets", isOn: $todayWidgetsEnabled)
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 12)
+                                .frame(minHeight: 48)
+                                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                                .accessibilityIdentifier("today-widget-enabled")
+                            Text("Only task counts and hours placed today are shared locally. No task names or accounts.")
+                                .font(.footnote)
+                                .foregroundStyle(Spread.secondary)
+                        }
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Profiles")
                             HStack(spacing: 10) {
@@ -765,6 +778,13 @@ struct MoreSheet: View {
         // Scrolling is still possible on smaller iPhones, keyboard and large text.
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .onChange(of: todayWidgetsEnabled) { _, enabled in
+            if enabled {
+                if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+            } else {
+                SpreadWidgetPublisher.revoke()
+            }
+        }
     }
 }
 #endif
