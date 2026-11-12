@@ -273,7 +273,7 @@ export function validRecurringPlan(value: unknown): value is RecurringPlan {
   if (!value || typeof value !== "object") return false;
   const p = value as Partial<RecurringPlan>;
   const validWeek = (key: unknown) => typeof key === "string" &&
-    /^\\d{4}-\\d{2}-\\d{2}$/.test(key) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(key) &&
     Number.isFinite(Date.parse(key + "T12:00:00Z")) && weekKey(parseKey(key)) === key;
   return typeof p.id === "string" && p.id.length > 0 &&
     typeof p.roleId === "string" && p.roleId.length > 0 &&

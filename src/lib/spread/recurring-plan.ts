@@ -30,7 +30,7 @@ export type RecurringPreview = {
 };
 const validHalf = (value: number) => Number.isFinite(value) && value >= 0 &&
   value <= 168 && Number.isInteger(value * 2);
-const validWeek = (key: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(key) &&
+const validWeek = (key: string) => /^\d{4}-\d{2}-\d{2}$/.test(key) &&
   Number.isFinite(Date.parse(key + "T12:00:00Z")) && weekKey(parseKey(key)) === key;
 const rangeOverlaps = (a: RecurringPlan, b: RecurringPlan) =>
   a.roleId === b.roleId && a.startWeek <= (b.endWeek ?? "9999-12-31") &&

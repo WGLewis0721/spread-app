@@ -24,8 +24,10 @@ export const SCHEMA_KEY = "spread.schema";
  *    silently rewrite these records away after downgrade; existing profiles need no rewrite.
  * 4: optional Life capacity/priority, task estimates, attributed notes and native file references.
  *    No bulk rewrite. Schema 3 binaries must lock writes rather than drop unfamiliar fields.
+ * 5: optional recurring budgets and generated-week provenance. Older builds lock
+ *    writes to avoid dropping the schedule on downgrade. No bulk rewrite.
  */
-export const CURRENT_SCHEMA = 4;
+export const CURRENT_SCHEMA = 5;
 
 export type SchemaStorage = KeyStore & { removeItem?(key: string): void };
 
@@ -44,6 +46,7 @@ export const STEPS: MigrationStep[] = [
   { from: 2, run: () => undefined },
   // 3 -> 4 protects the new optional native Life data from older normalizers.
   { from: 3, run: () => undefined },
+  { from: 4, run: () => undefined },
 ];
 
 export type SchemaOutcome =
