@@ -56,6 +56,7 @@ struct LifeRoot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         GeometryReader { geometry in
@@ -160,6 +161,8 @@ struct LifeRoot: View {
         .sheet(isPresented: $showPlanAhead) {
             if let snapshot = planner.snapshot {
                 LifePlanAheadSheet(planner: planner, snapshot: snapshot)
+                    // Sheets are separate presentations: match Life’s resolved system/app appearance.
+                    .preferredColorScheme(colorScheme)
             }
         }
         .sheet(item: $localSheet, onDismiss: {
