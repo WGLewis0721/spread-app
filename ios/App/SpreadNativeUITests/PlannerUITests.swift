@@ -22,7 +22,8 @@ class NativeUITestCase: XCTestCase {
 
     func launch(_ arguments: [String] = []) {
         if app.state != .notRunning { app.terminate() }
-        app.launchArguments = arguments
+        app.launchArguments = arguments.contains("-native.whatsNew.lastSeenRelease") ? arguments :
+            arguments + ["-native.whatsNew.lastSeenRelease", "2026-11-11-life-week"]
         app.launch()
         XCTAssertTrue(app.buttons["native-spread"].waitForExistence(timeout: 90), "The native planner never appeared")
     }
