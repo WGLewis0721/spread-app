@@ -17,6 +17,8 @@ export type NativeV2Snapshot = {
   dayTaskOrder?: Record<string, string[]>;
   /** Absent until a person explicitly sets capacity in Life. */
   life?: { version: 1; capacityHours?: number; priorityRoleId?: string; priorityGoalHours?: number; priorityDay?: string };
+  recurringPlans?: { id: string; roleId: string; startWeek: string; everyWeeks: number; hours: number; endWeek?: string; capacityHours: number }[];
+  recurrenceIssue?: string;
 };
 
 export type NativeV2Envelope = {
@@ -59,6 +61,8 @@ export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): 
       })),
       ...(week?.dayTaskOrder ? { dayTaskOrder: week.dayTaskOrder } : {}),
       ...(week?.life?.version === 1 ? { life: week.life } : {}),
+      ...(data.recurringPlans?.length ? { recurringPlans: data.recurringPlans } : {}),
+      ...(week?.recurrenceIssue ? { recurrenceIssue: week.recurrenceIssue } : {}),
       tasks: data.hats.flatMap((hat) =>
         (boxes.get(hat.id)?.tasks ?? []).map((task) => ({
           id: task.id,

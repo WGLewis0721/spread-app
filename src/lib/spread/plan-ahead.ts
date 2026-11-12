@@ -150,10 +150,16 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   } : box);
   const nextSource: WeekData = {
     ...source, boxes: sourceBoxes, allocations: sourceAllocations,
+    ...(source.recurrenceSource?.[request.roleId]
+      ? { recurrenceSource: { ...source.recurrenceSource,
+        [request.roleId]: { ...source.recurrenceSource[request.roleId], manual: true } } } : {}),
     ...(sourceDayTaskOrder ? { dayTaskOrder: sourceDayTaskOrder } : {}),
   };
   const nextTarget: WeekData = {
     ...target, boxes: targetBoxes, allocations: targetAllocations,
+    ...(target.recurrenceSource?.[request.roleId]
+      ? { recurrenceSource: { ...target.recurrenceSource,
+        [request.roleId]: { ...target.recurrenceSource[request.roleId], manual: true } } } : {}),
     ...(targetDayTaskOrder ? { dayTaskOrder: targetDayTaskOrder } : {}),
     life: { ...target.life, version: 1, capacityHours: capacity },
   };
