@@ -681,7 +681,7 @@ struct MoreSheet: View {
                                 showWhatsNew = true
                             } label: {
                                 HStack(spacing: 12) {
-                                    Image(systemName: "sparkles.rectangle.stack")
+                                    Image(systemName: "sparkles")
                                         .font(.title3)
                                         .foregroundStyle(Spread.accent)
                                         .frame(width: 32)
