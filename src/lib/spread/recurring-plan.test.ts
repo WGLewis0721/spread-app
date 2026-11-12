@@ -73,8 +73,41 @@ test("finite range stops on its end week and a stop leaves existing manual work 
   week.allocations.push({ id: "kept", hatId: gym, day: first, hours: 1, order: 0 });
   const stopped = stopRecurringPlan(next, next.recurringPlans![0].id, first);
   assert.ok(stopped);
-  assert.equal(stopped!.recurringPlans?.length, 0);
+  assert.equal(stopped!.recurringPlans?.[0].terminatedWeek, first);
   assert.equal(stopped!.weeks[first].allocations[0].id, "kept");
   const after = ensureWeek({ ...stopped!, currentWeek: shiftWeek(end, 1) });
   assert.equal(after.weeks[shiftWeek(end, 1)].boxes.find((b) => b.hatId === gym)?.hours, 0);
+});
+
+test("an ended schedule never restarts old default hours in later weeks", () => {
+  const { data, gym, first } = make();
+  const end = shiftWeek(first, 2);
+  data.hats.find((h) => h.id === gym)!.defaultHours = 6;
+  const saved = applyRecurringPlan(data, {
+    roleId: gym, startWeek: first, everyWeeks: 2, hours: 2,
+    endWeek: end, capacityHours: 140,
+  });
+  assert.equal(saved.preview.eligible, true);
+  const later = shiftWeek(end, 1);
+  const next = ensureWeek({ ...saved.data, currentWeek: later });
+  assert.equal(next.weeks[later].boxes.find((b) => b.hatId === gym)?.hours, 0);
+  assert.equal(next.weeks[later].life?.capacityHours, 140);
+});
+test("stop from the first week persists as a tombstone and can be followed by a new series", () => {
+  const { data, gym, first } = make();
+  data.hats.find((h) => h.id === gym)!.defaultHours = 6;
+  const saved = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 2,
+    hours: 2, capacityHours: 140 });
+  const planId = saved.data.recurringPlans![0].id;
+  const stopped = stopRecurringPlan(saved.data, planId, first)!;
+  assert.equal(stopped.recurringPlans![0].terminatedWeek, first);
+  assert.equal(normalizeData(stopped).recurringPlans![0].terminatedWeek, first);
+  const later = ensureWeek({ ...stopped, currentWeek: shiftWeek(first, 3) });
+  assert.equal(later.weeks[later.currentWeek].boxes.find((b) => b.hatId === gym)?.hours, 0);
+  const restarted = applyRecurringPlan(stopped, {
+    roleId: gym, startWeek: shiftWeek(first, 4), everyWeeks: 1, hours: 1, capacityHours: 140,
+  });
+  assert.equal(restarted.preview.eligible, true);
+  const newWeek = ensureWeek({ ...restarted.data, currentWeek: shiftWeek(first, 4) });
+  assert.equal(newWeek.weeks[newWeek.currentWeek].boxes.find((b) => b.hatId === gym)?.hours, 1);
 });

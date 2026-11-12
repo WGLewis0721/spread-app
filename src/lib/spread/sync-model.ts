@@ -45,6 +45,7 @@ export function flatten(data: SpreadData, profileName: string): PlainItem[] {
     put(out, "recurring-plan:" + plan.id, {
       roleId: plan.roleId, startWeek: plan.startWeek, everyWeeks: plan.everyWeeks,
       hours: plan.hours, capacityHours: plan.capacityHours, endWeek: plan.endWeek,
+      terminatedWeek: plan.terminatedWeek,
     });
   }
   for (const hat of data.hats) {
@@ -223,6 +224,7 @@ export function assemble(live: PlainItem[], currentWeek: string): { data: Spread
       everyWeeks: num(fields.everyWeeks), hours: num(fields.hours),
       capacityHours: num(fields.capacityHours),
       ...(typeof fields.endWeek === "string" ? { endWeek: fields.endWeek } : {}),
+      ...(typeof fields.terminatedWeek === "string" ? { terminatedWeek: fields.terminatedWeek } : {}),
     };
     if (validRecurringPlan(candidate)) recurringPlans.push(candidate);
   }

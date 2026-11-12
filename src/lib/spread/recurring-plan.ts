@@ -28,13 +28,15 @@ export type RecurringPreview = {
   /** A finite count; ongoing schedules are never generated indefinitely. */
   occurrenceCount?: number;
 };
-const validHalf = (value: number) => Number.isFinite(value) && value >= 0 &&
-  value <= 168 && Number.isInteger(value * 2);
 const validWeek = (key: string) => /^\d{4}-\d{2}-\d{2}$/.test(key) &&
   Number.isFinite(Date.parse(key + "T12:00:00Z")) && weekKey(parseKey(key)) === key;
+const effectiveEnd = (p: RecurringPlan) =>
+  p.terminatedWeek
+    ? [p.endWeek ?? "9999-12-31", shiftWeek(p.terminatedWeek, -1)].sort()[0]
+    : p.endWeek ?? "9999-12-31";
 const rangeOverlaps = (a: RecurringPlan, b: RecurringPlan) =>
-  a.roleId === b.roleId && a.startWeek <= (b.endWeek ?? "9999-12-31") &&
-  b.startWeek <= (a.endWeek ?? "9999-12-31");
+  a.roleId === b.roleId && a.startWeek <= effectiveEnd(b) &&
+  b.startWeek <= effectiveEnd(a);
 function candidate(data: Readonly<SpreadData>, request: RecurringRequest): RecurringPlan {
   const current = data.recurringPlans?.find((p) => p.id === request.planId);
   return {
@@ -61,6 +63,7 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
   const original = data.recurringPlans?.find((p) => p.id === request.planId);
   if (request.planId && !original) return reject("This repeating plan no longer exists.");
   if (original && original.roleId !== request.roleId) return reject("The Life area cannot change.");
+  if (original?.terminatedWeek) return reject("This schedule has already been stopped.");
   if (request.editFromWeek && (!original || !validWeek(request.editFromWeek) ||
       request.editFromWeek <= original.startWeek ||
       (original.endWeek !== undefined && request.editFromWeek > original.endWeek)))
@@ -120,7 +123,8 @@ function reconcileGenerated(data: SpreadData, touched: Set<string>, fromWeek: st
       const hours = next?.hours ?? data.hats.find((h) => h.id === box.hatId)?.defaultHours ?? 0;
       const placed = week.allocations.filter((a) => a.hatId === box.hatId).reduce((v, a) => v + a.hours, 0);
       if (hours < placed) return box;
-      changed = changed || box.hours !== hours;
+      changed = changed || box.hours !== hours ||
+        (next !== null && (marker.planId !== next.plan.id || marker.generatedHours !== next.hours));
       return { ...box, hours };
     });
     const sum = boxes.reduce((v, b) => v + b.hours, 0);
@@ -160,10 +164,10 @@ export function applyRecurringPlan(data: SpreadData, request: RecurringRequest):
 }
 export function stopRecurringPlan(data: SpreadData, planId: string, fromWeek: string): SpreadData | null {
   const plan = data.recurringPlans?.find((p) => p.id === planId);
-  if (!plan || !validWeek(fromWeek) || fromWeek < plan.startWeek) return null;
-  const endWeek = shiftWeek(fromWeek, -1);
-  const recurringPlans = data.recurringPlans!.flatMap((p) =>
-    p.id !== planId ? [p] : endWeek < p.startWeek ? [] : [{ ...p, endWeek }]);
+  if (!plan || !validWeek(fromWeek) || fromWeek < plan.startWeek ||
+      (plan.endWeek !== undefined && fromWeek > plan.endWeek) || plan.terminatedWeek) return null;
+  const recurringPlans = data.recurringPlans!.map((p) =>
+    p.id === planId ? { ...p, terminatedWeek: fromWeek } : p);
   const next: SpreadData = { ...data, recurringPlans };
   return reconcileGenerated(next, new Set([planId]), fromWeek);
 }

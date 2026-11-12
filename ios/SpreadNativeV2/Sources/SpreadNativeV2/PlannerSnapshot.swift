@@ -56,6 +56,7 @@ public struct NativeRecurringPlan: Codable, Equatable, Identifiable, Sendable {
     public let everyWeeks: Int
     public let hours: Double
     public let endWeek: String?
+    public let terminatedWeek: String?
     public let capacityHours: Double
 }
 

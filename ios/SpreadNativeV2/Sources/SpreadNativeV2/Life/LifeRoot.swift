@@ -328,6 +328,12 @@ struct LifeRoot: View {
         VStack(alignment: .leading, spacing: 12) {
             timeBudgetControl(snapshot, compact: true)
                 .frame(maxWidth: .infinity)
+            if let issue = snapshot.recurrenceIssue {
+                Label(issue, systemImage: "exclamationmark.triangle")
+                    .font(.subheadline)
+                    .foregroundStyle(Spread.danger)
+                    .accessibilityIdentifier("life-recurrence-issue")
+            }
             HStack {
                 Spacer()
                 Button {

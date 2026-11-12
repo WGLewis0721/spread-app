@@ -26,6 +26,12 @@ struct LifeRecurringPlanForm: View {
         PlannerDates.calendar.date(byAdding: .weekOfYear, value: 1,
             to: PlannerDates.date(snapshot.weekKey)) ?? Date()
     }
+    private var activeRules: [NativeRecurringPlan] {
+        (snapshot.recurringPlans ?? []).filter { rule in
+            rule.terminatedWeek == nil &&
+                (rule.endWeek == nil || rule.endWeek! >= PlannerDates.weekKey(for: earliest))
+        }
+    }
     private var selectedRule: NativeRecurringPlan? {
         snapshot.recurringPlans?.first(where: { $0.id == editingPlanId })
     }
@@ -118,9 +124,9 @@ struct LifeRecurringPlanForm: View {
                     .foregroundStyle(Spread.danger)
                 }
             }
-            if let plans = snapshot.recurringPlans, !plans.isEmpty {
+            if !activeRules.isEmpty {
                 Section("Saved repeating schedules") {
-                    ForEach(plans) { plan in
+                    ForEach(activeRules) { plan in
                         Button {
                             editingPlanId = plan.id
                             roleId = plan.roleId

@@ -40,6 +40,8 @@ export type RecurringPlan = {
   hours: number;
   capacityHours: number;
   endWeek?: string;
+  /** Stop from this week (inclusive) without resurrecting the role's old default hours. */
+  terminatedWeek?: string;
 };
 /** Provenance lets a person override one week without changing future occurrences. */
 export type RecurrenceSource = Record<string, { planId: string; generatedHours: number; manual?: boolean }>;
@@ -262,9 +264,15 @@ export function recurrenceWeekOffset(start: string, target: string): number {
 
 export function recurringForRole(data: Readonly<SpreadData>, roleId: string, key: string):
   { plan: RecurringPlan; hours: number } | null {
-  const plan = data.recurringPlans?.find((p) =>
-    p.roleId === roleId && key >= p.startWeek && (p.endWeek === undefined || key <= p.endWeek));
+  // The latest series controls this role after its start, including weeks following
+  // a finite end or an explicit stop. Those weeks have zero recurring hours.
+  const plan = (data.recurringPlans ?? [])
+    .filter((p) => p.roleId === roleId && key >= p.startWeek)
+    .sort((a, b) => b.startWeek.localeCompare(a.startWeek))[0];
   if (!plan) return null;
+  if ((plan.endWeek !== undefined && key > plan.endWeek) ||
+      (plan.terminatedWeek !== undefined && key >= plan.terminatedWeek))
+    return { plan, hours: 0 };
   const offset = recurrenceWeekOffset(plan.startWeek, key);
   return { plan, hours: offset >= 0 && offset % plan.everyWeeks === 0 ? plan.hours : 0 };
 }
@@ -277,7 +285,9 @@ export function validRecurringPlan(value: unknown): value is RecurringPlan {
     Number.isFinite(Date.parse(key + "T12:00:00Z")) && weekKey(parseKey(key)) === key;
   return typeof p.id === "string" && p.id.length > 0 &&
     typeof p.roleId === "string" && p.roleId.length > 0 &&
-    validWeek(p.startWeek) && (p.endWeek === undefined || (validWeek(p.endWeek) && p.endWeek >= p.startWeek!)) &&
+    validWeek(p.startWeek) &&
+    (p.endWeek === undefined || (validWeek(p.endWeek) && p.endWeek >= p.startWeek!)) &&
+    (p.terminatedWeek === undefined || (validWeek(p.terminatedWeek) && p.terminatedWeek >= p.startWeek!)) &&
     Number.isInteger(p.everyWeeks) && p.everyWeeks! >= 1 && p.everyWeeks! <= 12 &&
     Number.isFinite(p.hours) && p.hours! > 0 && p.hours! <= 168 && Number.isInteger(p.hours! * 2) &&
     Number.isFinite(p.capacityHours) && p.capacityHours! >= 0 &&
