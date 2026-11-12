@@ -19,7 +19,7 @@ struct WhatsNewSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Image(systemName: "sparkles.rectangle.stack")
+                        Image(systemName: "sparkles")
                             .font(.system(size: 28, weight: .medium))
                             .foregroundStyle(Spread.accent)
                             .frame(width: 54, height: 54)
@@ -72,6 +72,7 @@ struct WhatsNewSheet: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("whats-new-sheet")
     }
 
