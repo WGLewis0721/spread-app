@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "releases": [
+    {
+      "id": "2026-11-11-life-week",
+      "version": "1.0",
+      "date": "2026-11-11",
+      "title": "A clearer way to plan your week",
+      "changes": [
+        "Set weekly hours right from Life. Tap an area in the time strip to adjust its hours.",
+        "Plan Ahead lets you move hours into future weeks after reviewing the change.",
+        "The Week screen has a smaller task inbox and a clearer way to browse weeks.",
+        "Mark important tasks with a red exclamation point.",
+        "Create areas with Add Life and find fewer duplicate controls in More."
+      ]
+    }
+  ]
+}
