@@ -43,17 +43,18 @@ A person with two repeating schedules opens Plan Ahead and sees a blank repeat f
 | Native board: accessible controls, 44 pt | Rows are full-width buttons at least 44 pt tall. |
 | Spec 2026-11-12-plan-ahead-recurrence, sections 3 and 7 | Amended for plans that carry `dayHours`, and only for them (exception 2). Plans without set days are unchanged: weekly hours only. Intervals of 1 to 12 weeks match the engine's limit. |
 
-**Open exceptions (owner decides):**
+**Exceptions, decided 2026-11-12 under the owner's direction ("make the decision on all 5 based on what will achieve the goal"):**
 
-1. **Saved days: built, owner to confirm.** Section 12 covers it. Saved days add optional fields inside schema v5 data (`recurringPlans` and `recurrenceSource`), and they touch the schema and sync files (`model.ts`, `sync-model.ts`). The 2026-11-12 schema authorization covers the recurring plan data; the owner confirms that these fields fall within it.
-2. **Recurrence spec sections 3 and 7: amended for `dayHours` plans only.** Confirm the amendment. Plans without set days are unaffected.
-3. **Life-card day prefill: not built.** Requested: the repeat form opens with the days chosen on the Life card, and the person can change them. The repeat form does not read those Life card choices yet.
-4. **Monthly cadence (Budgeting, 1 h monthly): not built.** The engine accepts 1 to 12 weeks. A monthly rule needs an engine decision and a spec amendment.
+1. **Saved days: approved within schema v5.** Saved days add optional fields inside schema v5 data (`recurringPlans` and `recurrenceSource`), touching `model.ts` and `sync-model.ts`. `CURRENT_SCHEMA` is already 5 on main, so this adds no version and no new lockout. `schema.ts` is untouched.
+2. **Recurrence spec sections 3 and 7: amended for `dayHours` plans only.** Plans without set days are unchanged.
+3. **No per-day capacity.** Only the weekly capacity limits a schedule's days. Fixed appointments are placed and shown without a per-day limit. Revisit only if real schedules overbook a day.
+4. **Life-card day prefill: built.** A new schedule starts from the days its Life area already has this week, using the same hours the Life card shows. The person can change them. Nothing is saved until Confirm.
+5. **Monthly cadence: not built.** Fixed appointments recur weekly. Monthly budgeting needs an engine decision and its own spec.
 
 **Resolved this round (owner asked for them):**
 
-5. **12-week intervals.** Accepted. The repeat picker offers every week through every 12 weeks.
-6. **8-week outlook.** Built as read-only and opt-in. It adds an optional `outlook` field to the native payload only. No schema or sync file changes.
+6. **12-week intervals.** Accepted. The repeat picker offers every week through every 12 weeks.
+7. **8-week outlook.** Built as read-only and opt-in. It adds an optional `outlook` field to the native payload only. No schema or sync file changes.
 
 ## 5. Options and the chosen concept
 
@@ -161,6 +162,7 @@ Branch `feature/plan-ahead-plans-list`, one pull request. No flag. Revert the co
 | 2026-11-12 | Monthly cadence excluded, pending owner decision | Tool, per recurrence spec | This spec, section 4 |
 | 2026-11-12 | Owner goal: plan ahead for responsibilities with fixed schedules and hours | Owner | This spec, sections 3 and 12 |
 | 2026-11-12 | Owner direction: "You own this addition." Set days saved with each schedule, placed in generated weeks, limited by weekly capacity only | Owner (direction), tool (design, listed as exceptions 1 and 2) | This spec, sections 4 and 12 |
+| 2026-11-12 | Owner: "make the decision on all 5 based on what will achieve the goal", then merge and deploy. Decided: schema v5 scope approved; recurrence amendment for set-day plans; weekly capacity only; Life-card prefill built; monthly cadence not built | Owner (direction), tool (decisions) | This spec, sections 4, 11 and 12; DECISIONS.md |
 
 ## 12. Fixed schedules: planned days and hours (built; exceptions open)
 
@@ -175,22 +177,17 @@ Branch `feature/plan-ahead-plans-list`, one pull request. No flag. Revert the co
 - **Protected days:** the days a schedule generated are recorded per responsibility in `recurrenceSource.generatedDays`. Reconciling a schedule replaces them only while they are intact: same count, day and hours, and no linked task. If any generated day was edited or has a linked task, that week keeps its days as they are, and only its weekly hours follow the schedule.
 - **Limits:** the model has no per-day capacity. Days are checked for a valid weekday, a half-hour amount from 0.5 to 24, no repeated day, and a weekly total equal to their sum. The existing weekly capacity rule still applies to the total. A refused plan writes nothing.
 - **Invalid saved days:** on load, a `dayHours` value that fails those checks is dropped, and the schedule keeps its weekly hours.
-- **Form:** a "Fixed days (optional)" section with a toggle per weekday, and a 0.5-hour stepper for each chosen day. While days are chosen, the weekly total is their sum and the weekly hours stepper is hidden. Editing opens pre-filled. Review lists the days before Confirm.
+- **Form:** a "Fixed days (optional)" section with a toggle per weekday, and a 0.5-hour stepper for each chosen day. While days are chosen, the weekly total is their sum and the weekly hours stepper is hidden. Editing opens pre-filled. A new schedule starts from the days its Life area already has this week, and Review lists the days before Confirm.
 - **Plan list and outlook:** plan rows show the days, for example "Mon 1h · Fri 1h every week". The outlook shows set days for future weeks that are not stored yet, and stored weeks show their own allocations.
 - **Data:** `dayHours` is an optional field inside each `recurringPlans` item, and `generatedDays` is an optional field inside each week's `recurrenceSource` entry. Both are checked on load and mapped in `sync-model.ts`. Both sit inside the existing schema v5 data, so no new schema version is added. The older-version lockout and downgrade rules in the recurrence spec apply unchanged.
 
 **Spec change needed:** recurrence spec sections 3 and 7 say a rule affects weekly budget, not task or day allocations. This section amends that for plans that carry `dayHours`, and only for them.
 
-**Exceptions for the owner to confirm:**
-
-1. **Schema scope.** `dayHours` and `generatedDays` sit inside schema v5 data. The 2026-11-12 schema authorization covers the recurring plan data. Confirm that these fields fall within it. If not, they need their own approval before any schema change ships.
-2. **Recurrence spec amendment.** Sections 3 and 7 of the recurrence spec say a rule sets weekly budget only. This section amends that for plans that carry `dayHours`, and only for them.
-3. **No per-day capacity.** Only the weekly capacity limits a schedule's days. Per-day capacity would need its own design.
-4. **Each day has its own hours.** A set day holds its own hours, rather than one weekly total split across the chosen days.
+**Decisions:** exceptions 1 to 5 in section 4 were decided on 2026-11-12. Each set day holds its own hours, rather than one weekly total split across the chosen days. Per-day capacity and monthly cadence are not built.
 
 **Tests:** the recurrence engine suite covers set days placed in occurrence weeks only, reconciling an untouched week, an edited week keeping its days, a task-linked day keeping its placement, removing days, stopping a schedule, refusing invalid days, and saved days surviving a reload with invalid days keeping the weekly hours. The sync suite covers the roundtrip of `dayHours` and `generatedDays`. The projection suite covers outlook days for weeks not yet stored, and the native dispatch suite covers preview and save with days. Run results: typecheck clean, `test:spread` 511 of 511, `test:scripts` 209 passing with 4 skipped, lint with 0 errors, `docs:check` ok.
 
-**Still owed (not run here):** Swift has not been compiled, so the Codemagic build is the first compile. Also owed on a device or simulator: the LifeUITests run, a Swift decode check for `dayHours` and the outlook, VoiceOver, Dynamic Type, light and dark, Reduce Motion, and the 390-point width. The Life-card day prefill (section 4, exception 3) is not built.
+**Still owed (not run here):** Swift has not been compiled, so the Codemagic build is the first compile. Also owed on a device or simulator: the LifeUITests run, a Swift decode check for `dayHours` and the outlook, VoiceOver, Dynamic Type, light and dark, Reduce Motion, and the 390-point width. The Life-card prefill (section 4, exception 4) is form-only, has no TypeScript test, and needs the same device checks.
 
 **Not touched:** cloud, server, backup and restore code, `ios/App/App/Cloud/**`, `ios/App/SpreadCloudCore/**`.
 

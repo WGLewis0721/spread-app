@@ -94,6 +94,16 @@ struct LifeRecurringPlanForm: View {
             set: { dayHours[code] = $0 }
         )
     }
+    /// The days this Life area already has this week, the same hours the Life card shows.
+    /// They start a new schedule's set days. Nothing is saved until Confirm.
+    private func cardDays(for roleId: String) -> [String: Double] {
+        let hours = LifeCardWeekDistribution.hours(for: roleId, snapshot: snapshot)
+        var result: [String: Double] = [:]
+        for (index, amount) in hours.enumerated() where index < Self.weekdays.count && amount >= 0.5 {
+            result[Self.weekdays[index].code] = min(24, SpreadHours.clamp(amount))
+        }
+        return result
+    }
     private var payload: [String: Any] {
         var value: [String: Any] = [
             "roleId": roleId, "hours": weeklyHours, "everyWeeks": everyWeeks,
@@ -285,9 +295,15 @@ struct LifeRecurringPlanForm: View {
             if let id = initialPlanId,
                let plan = snapshot.recurringPlans?.first(where: { $0.id == id }) {
                 load(plan)
+            } else {
+                dayHours = cardDays(for: roleId)
             }
         }
-        .onChange(of: roleId) { _, _ in invalidate() }
+        .onChange(of: roleId) { _, newRole in
+            invalidate()
+            // A new schedule starts from the days of the Life area it is for.
+            if editingPlanId == nil { dayHours = cardDays(for: newRole) }
+        }
         .onChange(of: hours) { _, _ in invalidate() }
         .onChange(of: dayHours) { _, _ in invalidate() }
         .onChange(of: everyWeeks) { _, _ in invalidate() }
