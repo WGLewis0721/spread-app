@@ -66,26 +66,43 @@ final class LifeUITests: XCTestCase {
         toggle.tap()
         XCTAssertTrue(app.descendants(matching: .any)
             .matching(identifier: "life-budget-editor").firstMatch.waitForExistence(timeout: 20))
-        XCTAssertTrue(app.textFields["life-budget-capacity-input"].exists)
+        XCTAssertTrue(app.buttons["life-budget-capacity-value"].exists)
+        XCTAssertFalse(app.buttons["life-budget-save-capacity"].exists,
+                       "Direct entry actions should stay out of the way until requested")
+        app.buttons["life-budget-capacity-value"].tap()
+        XCTAssertTrue(app.textFields["life-budget-capacity-input"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["life-budget-save-capacity"].exists)
         app.buttons["life-budget-done"].tap()
         XCTAssertFalse(app.descendants(matching: .any)
             .matching(identifier: "life-budget-editor").firstMatch.exists)
     }
-    func testLifeTimeBudgetSharesTitleRowOnStandardIPhone() {
+    func testLifeWeeklyTimeIsFullWidthWithoutRedundantLifeHeading() {
         startLife()
-        let title = app.staticTexts["life-page-title"]
         let summary = app.descendants(matching: .any)
             .matching(identifier: "life-weekly-time-summary").firstMatch
-        XCTAssertTrue(title.waitForExistence(timeout: 20))
         XCTAssertTrue(summary.waitForExistence(timeout: 20))
-        if app.windows.firstMatch.frame.width >= 375 {
-            XCTAssertGreaterThan(summary.frame.minX, title.frame.maxX)
-            XCTAssertLessThan(summary.frame.minY, title.frame.maxY)
-        }
-        XCTAssertGreaterThanOrEqual(summary.frame.height, 44)
-        capture("life-inline-weekly-budget")
+        XCTAssertFalse(app.staticTexts["life-page-title"].exists,
+                       "The Life heading must not squeeze the Weekly Time strip")
+        let window = app.windows.firstMatch.frame
+        let expectedMinWidth = window.width <= 700 ? window.width - 48 : 640
+        XCTAssertGreaterThanOrEqual(summary.frame.width, expectedMinWidth)
+        XCTAssertLessThanOrEqual(summary.frame.width, window.width)
+        capture("life-full-width-weekly-time")
     }
+    func testHourAndCalendarValuesShareArrowControl() {
+        startLife()
+        app.buttons["life-budget-toggle"].tap()
+        XCTAssertTrue(app.buttons["life-budget-capacity-value"].waitForExistence(timeout: 10))
+        // Both hour controllers reuse the same compact navigation shape.
+        let role = app.descendants(matching: .any)
+            .matching(identifier: "life-budget-role-controls").firstMatch
+        XCTAssertTrue(role.waitForExistence(timeout: 10) || app.staticTexts["Choose a Life area to adjust"].exists)
+        let week = app.descendants(matching: .any)
+            .matching(identifier: "calendar-week-navigator").firstMatch
+        XCTAssertTrue(week.exists)
+        capture("life-shared-arrow-controls")
+    }
+
     func testInlineBudgetAndTaskPriorityAreAccessible() {
         startLife()
         let bar = app.descendants(matching: .any)
@@ -223,6 +240,9 @@ final class LifeUITests: XCTestCase {
         let toggle = app.buttons["life-budget-toggle"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 20))
         toggle.tap()
+        let value = app.buttons["life-budget-capacity-value"]
+        XCTAssertTrue(value.waitForExistence(timeout: 10))
+        value.tap()
         let field = app.textFields["life-budget-capacity-input"]
         XCTAssertTrue(field.waitForExistence(timeout: 10))
         field.tap()
@@ -236,6 +256,7 @@ final class LifeUITests: XCTestCase {
         app.terminate()
         startLife()
         app.buttons["life-budget-toggle"].tap()
+        app.buttons["life-budget-capacity-value"].tap()
         let restored = app.textFields["life-budget-capacity-input"]
         XCTAssertTrue(restored.waitForExistence(timeout: 20))
         XCTAssertTrue(((restored.value as? String) ?? "").contains("168"),
@@ -252,6 +273,35 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch.exists)
         capture("classic-unchanged")
     }
+    func testHoldingWeekArrowMovesFasterThanSingleTap() {
+        startLife()
+        let current = app.buttons["calendar-period-label"]
+        let next = app.buttons["Next week"]
+        let previous = app.buttons["Previous week"]
+        XCTAssertTrue(current.waitForExistence(timeout: 20))
+        XCTAssertTrue(next.exists && previous.exists)
+        let before = current.label
+
+        next.tap()
+        let singleAdvance = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@", before), object: current)
+        XCTAssertEqual(XCTWaiter.wait(for: [singleAdvance], timeout: 20), .completed)
+        let once = current.label
+
+        previous.tap()
+        let reset = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label == %@", before), object: current)
+        XCTAssertEqual(XCTWaiter.wait(for: [reset], timeout: 20), .completed)
+
+        next.press(forDuration: 1.7)
+        let multipleAdvances = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@ AND label != %@", before, once),
+            object: current)
+        XCTAssertEqual(XCTWaiter.wait(for: [multipleAdvances], timeout: 20), .completed,
+                       "Held right arrow must advance past one week without a fast swipe")
+        capture("life-held-calendar-arrow")
+    }
+
     func testNavigationHasNoMetallicCrownOrRedundantPlus() {
         startLife()
         XCTAssertTrue(app.descendants(matching: .any)

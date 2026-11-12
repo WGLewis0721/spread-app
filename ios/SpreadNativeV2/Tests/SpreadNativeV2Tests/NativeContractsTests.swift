@@ -52,14 +52,14 @@ final class NativeContractsTests: XCTestCase {
             .contains("Weekly capacity not set"))
     }
 
-    func testCalendarWeekNavigationSwipesAtControlledSpeeds() {
-        XCTAssertEqual(WeekSwipeSpeed.steps(translation: -10, velocity: -3000), 0)
-        XCTAssertEqual(WeekSwipeSpeed.steps(translation: -75, velocity: -200), 1)
-        XCTAssertEqual(WeekSwipeSpeed.steps(translation: 75, velocity: 200), -1)
-        XCTAssertEqual(WeekSwipeSpeed.steps(translation: -100, velocity: -1200), 2)
-        XCTAssertEqual(WeekSwipeSpeed.steps(translation: 100, velocity: 2200), -4)
-        XCTAssertEqual(WeekSwipeSpeed.steps(translation: -300, velocity: -10000), 8)
-        XCTAssertEqual(WeekSwipeSpeed.steps(translation: 300, velocity: 10000), -8)
+    func testHeldCalendarArrowsAccelerateWithBoundedCadence() {
+        XCTAssertEqual(SpreadHoldPace.initialDelayMilliseconds, 440)
+        XCTAssertEqual(SpreadHoldPace.repeatDelayMilliseconds(afterStep: 0), 270)
+        XCTAssertEqual(SpreadHoldPace.repeatDelayMilliseconds(afterStep: 4), 270)
+        XCTAssertEqual(SpreadHoldPace.repeatDelayMilliseconds(afterStep: 5), 165)
+        XCTAssertEqual(SpreadHoldPace.repeatDelayMilliseconds(afterStep: 14), 105)
+        XCTAssertLessThan(SpreadHoldPace.repeatDelayMilliseconds(afterStep: 14),
+                          SpreadHoldPace.repeatDelayMilliseconds(afterStep: 0))
     }
 
     func testNativeTaskImportanceIsOptionalAndBackwardCompatible() throws {

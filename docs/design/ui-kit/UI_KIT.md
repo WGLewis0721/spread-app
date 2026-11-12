@@ -100,7 +100,7 @@ This kit consolidates Spread's existing visual language. It does not override th
 - The bar proportions use the total weekly capacity. Role-colored segments show hour labels only when readable; the neutral hatched remainder is available time. Without capacity, show a neutral empty bar, not fictitious 100% usage.
 - One accessible touch target opens the existing Hours allocator; no legends, Liquid Glass, new allocation interactions, or second state store.
 - Keep the solid native card surface, existing Life Wallet artwork and Crown. [Native budget authority](../planner/SPREAD_NATIVE_BRAND_BOARD.md).
-- Place the **compact** weekly time card horizontally beside the Life title on standard iPhones. Keep budgeted/total/available values and the whole-card Adjust hours action; use a stacked, full-width version for narrow devices and accessibility text sizes. Never stretch segments to force labels.
+- **Current Life control:** Remove the redundant Life heading/subtitle; Weekly Time spans the content width on iPhone, with proportional budgeted/total/available segments. The expandable editor uses the same compact **left / current value / right** control as calendar navigation for overall capacity and individual Life areas. Tapping the weekly value still permits direct numeric entry. Preserve half-hour allocations, planner limits, Undo and Dynamic Type; do not stretch segment ratios.
 
 ### Task Line
 
@@ -133,9 +133,9 @@ This kit consolidates Spread's existing visual language. It does not override th
 
 ### Navigation
 
-> **Current native navigation:** Two labeled destinations, **Life** and **Week**, in one compact dock toggle. The old metallic Crown is retired; use a solid-surface calendar-week control with explicit previous/next buttons and velocity-aware horizontal swipes (one week slowly, bounded skips quickly). Weekly navigation changes the viewed week, never transfers time. The unrelated Plan Ahead sheet is explicitly opened, previews the source/destination impact and requires confirmation. Do not resurrect dock plus, Crown-position, or Rollover controls.
+> **Current native navigation:** Two labeled destinations, **Life** and **Week**, in one compact dock toggle. The old metallic Crown is retired; use a solid-surface calendar-week control with explicit previous/next buttons: tap advances one week; pressing and holding repeats with bounded acceleration until release. Horizontal swipe velocity no longer controls week navigation. Weekly navigation changes the viewed week, never transfers time. The unrelated Plan Ahead sheet is explicitly opened, previews the source/destination impact and requires confirmation. Do not resurrect dock plus, Crown-position, or Rollover controls.
 
-- Native: adaptive Life/Hours/Week navigation and existing metallic Crown for week changes
+- Native: a compact Life/Week toggle using the original Spread mark for Life, plus a solid calendar week controller. No metallic Crown or independent Hours destination in ordinary Life use.
 - Web: preserve its current navigation; do not add mockup tabs
 - “Today” marker in accent
 

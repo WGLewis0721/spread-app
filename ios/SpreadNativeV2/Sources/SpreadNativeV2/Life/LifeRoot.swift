@@ -37,6 +37,10 @@ struct LifeRoot: View {
     @State private var budgetExpanded = false
     @State private var budgetRoleID: String?
     @State private var budgetCapacityText = ""
+    @State private var capacityEntryVisible = false
+    @FocusState private var capacityInputFocused: Bool
+    @State private var pendingWeekMoves = 0
+    @State private var weekMoveRunning = false
     @State private var budgetError: String?
     @State private var showPlanAhead = false
     @State private var navigationOpen = false
@@ -243,7 +247,7 @@ struct LifeRoot: View {
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             if !lifeFocused {
-                lifeOverview(snapshot, viewportWidth: viewportWidth)
+                lifeOverview(snapshot)
                     .transition(.opacity)
             }
             if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
@@ -318,43 +322,20 @@ struct LifeRoot: View {
         .accessibilityIdentifier("life-new-area")
     }
 
-    /// The read-only storage summary expands into the real planner's existing
-    /// capacity and per-role budget actions. No second stored allocation model.
-    private func lifeOverview(_ snapshot: PlannerSnapshot, viewportWidth: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if viewportWidth >= 375 && !dynamicTypeSize.isAccessibilitySize {
-                HStack(alignment: .center, spacing: 12) {
-                    lifeHeading.frame(width: 96, alignment: .leading)
-                    Spacer(minLength: 0)
-                    timeBudgetControl(snapshot, compact: true)
-                        .frame(maxWidth: 440)
-                        .layoutPriority(1)
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    lifeHeading
-                    timeBudgetControl(snapshot, compact: false)
-                }
-            }
+    /// Weekly Time is now the primary full-width Life control, not a sidebar
+    /// alongside a redundant Life heading. The budget editor stays attached.
+    private func lifeOverview(_ snapshot: PlannerSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            timeBudgetControl(snapshot, compact: true)
+                .frame(maxWidth: .infinity)
             if budgetExpanded {
                 budgetEditor(snapshot)
                     .transition(SpreadTactile.walletDetailReveal)
                     .accessibilityIdentifier("life-budget-editor")
             }
         }
-    }
-
-    private var lifeHeading: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Life").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("life-page-title")
-            Text("Choose a Life area.")
-                .font(.subheadline)
-                .foregroundStyle(LifePalette.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("life-time-overview")
     }
 
     private func timeBudgetControl(_ snapshot: PlannerSnapshot, compact: Bool) -> some View {
@@ -381,6 +362,7 @@ struct LifeRoot: View {
     private func openBudget(for roleID: String?) {
         budgetRoleID = roleID
         budgetCapacityText = planner.snapshot?.life?.capacityHours.map(SpreadHours.text) ?? ""
+        capacityEntryVisible = false
         budgetError = nil
         withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
             focusedRole = nil
@@ -403,30 +385,54 @@ struct LifeRoot: View {
                 }
                 .accessibilityIdentifier("life-budget-done")
             }
-            HStack(spacing: 8) {
-                Button { adjustCapacity(by: -1, snapshot: snapshot) } label: {
-                    Image(systemName: "minus").frame(width: 44, height: 44)
+            SpreadArrowValueControl(
+                value: capacity.map { SpreadHours.text($0) + "h" } ?? "Set hours",
+                detail: "Weekly total",
+                valueIdentifier: "life-budget-capacity-value",
+                onValue: {
+                    budgetCapacityText = capacity.map(SpreadHours.text) ?? ""
+                    capacityEntryVisible = true
+                    capacityInputFocused = true
+                },
+                leftDisabled: planner.busy || capacity == nil || (capacity ?? 0) - 1 < assigned,
+                rightDisabled: planner.busy || (capacity ?? 0) + 1 > 168,
+                leftLabel: "Remove one weekly hour",
+                rightLabel: "Add one weekly hour",
+                onMove: { direction in
+                    adjustCapacity(by: Double(direction), snapshot: snapshot)
                 }
-                .disabled(planner.busy || capacity == nil || capacity! <= assigned)
-                .accessibilityLabel("Remove one weekly hour")
-                TextField("Weekly hours", text: $budgetCapacityText)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.center)
-                    .frame(minWidth: 76, minHeight: 44)
-                    .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
-                    .accessibilityIdentifier("life-budget-capacity-input")
-                Button { adjustCapacity(by: 1, snapshot: snapshot) } label: {
-                    Image(systemName: "plus").frame(width: 44, height: 44)
-                }
-                .disabled(planner.busy || (capacity ?? 0) >= 168)
-                .accessibilityLabel("Add one weekly hour")
-                Button("Set") { commitBudgetCapacity(snapshot) }
+            )
+            .accessibilityIdentifier("life-budget-capacity-controls")
+            if capacityEntryVisible {
+                HStack(spacing: 10) {
+                    TextField("Weekly hours", text: $budgetCapacityText)
+                        .keyboardType(.decimalPad)
+                        .focused($capacityInputFocused)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                        .accessibilityIdentifier("life-budget-capacity-input")
+                        .onAppear { capacityInputFocused = true }
+                    Button("Set") {
+                        commitBudgetCapacity(snapshot)
+                        if budgetError == nil {
+                            capacityInputFocused = false
+                            capacityEntryVisible = false
+                        }
+                    }
                     .buttonStyle(.borderedProminent)
                     .disabled(planner.busy)
                     .frame(minHeight: 44)
                     .accessibilityIdentifier("life-budget-save-capacity")
+                    Button("Cancel") {
+                        budgetError = nil
+                        capacityInputFocused = false
+                        capacityEntryVisible = false
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(minHeight: 44)
+                }
             }
-            .buttonStyle(.bordered)
             HStack {
                 Text(SpreadHours.text(assigned) + "h budgeted")
                 Spacer()
@@ -469,25 +475,24 @@ struct LifeRoot: View {
                 .scrollIndicators(.hidden)
             }
             if let selected = snapshot.roles.first(where: { $0.id == budgetRoleID }) {
-                HStack {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(selected.name).font(.headline)
-                    Spacer()
-                    Button { adjustRole(selected, by: -0.5, snapshot: snapshot) } label: {
-                        Image(systemName: "minus").frame(width: 44, height: 44)
-                    }
-                    .disabled(planner.busy || selected.hours - 0.5 < snapshot.placedHours(for: selected.id))
-                    .accessibilityLabel("Return half an hour from " + selected.name)
-                    Text(SpreadHours.text(selected.hours) + "h")
-                        .font(.headline).monospacedDigit()
-                        .frame(minWidth: 46)
-                    Button { adjustRole(selected, by: 0.5, snapshot: snapshot) } label: {
-                        Image(systemName: "plus").frame(width: 44, height: 44)
-                    }
-                    .disabled(planner.busy || capacity == nil ||
-                              assigned + 0.5 > (capacity ?? 0))
-                    .accessibilityLabel("Add half an hour to " + selected.name)
+                    SpreadArrowValueControl(
+                        value: SpreadHours.text(selected.hours) + "h",
+                        detail: "This week",
+                        valueIdentifier: "life-budget-role-value",
+                        leftDisabled: planner.busy ||
+                            selected.hours - 0.5 < snapshot.placedHours(for: selected.id),
+                        rightDisabled: planner.busy || capacity == nil ||
+                            assigned + 0.5 > (capacity ?? 0),
+                        leftLabel: "Remove half an hour from " + selected.name,
+                        rightLabel: "Add half an hour to " + selected.name,
+                        onMove: { direction in
+                            adjustRole(selected, by: Double(direction) * 0.5, snapshot: snapshot)
+                        }
+                    )
                 }
-                .buttonStyle(.bordered)
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("life-budget-role-controls")
             }
             if let budgetError {
@@ -636,7 +641,7 @@ struct LifeRoot: View {
     }
     private func bottom(_ snapshot: PlannerSnapshot, wide: Bool) -> some View {
         VStack(spacing: 6) {
-            if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
+            if destination != .life && historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
                     lifeWeekToggle
@@ -661,8 +666,12 @@ struct LifeRoot: View {
                     navigate(item)
                 } label: {
                     VStack(spacing: 2) {
-                        Image(systemName: item == .life ? "square.stack.fill" : "calendar")
-                            .font(.subheadline)
+                        if item == .life {
+                            SpreadBrandMark(size: 23)
+                        } else {
+                            Image(systemName: "calendar")
+                                .font(.subheadline)
+                        }
                         Text(item == .life ? "Life" : "Week")
                             .font(.caption2.weight(.semibold))
                     }
@@ -840,17 +849,34 @@ struct LifeRoot: View {
         }
         .accessibilityIdentifier("life-compact-rail")
     }
+    /// Held week arrows may emit several steps before the bridge acknowledges
+    /// the previous write. Coalesce them against the latest *acknowledged* week.
     private func goWeek(_ delta: Int) {
-        guard delta != 0, let week = planner.snapshot?.weekKey,
-              let target = PlannerDates.calendar.date(byAdding: .weekOfYear, value: delta,
-                                                       to: PlannerDates.date(week)) else { return }
+        guard delta != 0 else { return }
+        pendingWeekMoves += delta
+        guard !weekMoveRunning else { return }
+        weekMoveRunning = true
         Task {
-            if await planner.send(["type": "openWeek", "weekKey": PlannerDates.weekKey(for: target)]) {
+            defer { weekMoveRunning = false }
+            while pendingWeekMoves != 0 {
+                let move = pendingWeekMoves
+                pendingWeekMoves = 0
+                guard let week = planner.snapshot?.weekKey,
+                      let target = PlannerDates.calendar.date(byAdding: .weekOfYear,
+                                                               value: move, to: PlannerDates.date(week)) else {
+                    pendingWeekMoves = 0
+                    return
+                }
+                guard await planner.send(["type": "openWeek", "weekKey": PlannerDates.weekKey(for: target)]) else {
+                    pendingWeekMoves = 0
+                    return
+                }
                 weekTick += 1
             }
         }
     }
     private func today() {
+        pendingWeekMoves = 0
         Task { if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 } }
     }
     @ViewBuilder private func sheetContent(_ item: LifeLocalSheet) -> some View {
