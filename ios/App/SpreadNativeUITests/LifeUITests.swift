@@ -9,9 +9,11 @@ final class LifeUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    private func startLife() {
+    private func startLife(showWhatsNew: Bool = false) {
         if app.state != .notRunning { app.terminate() }
-        app.launchArguments = ["-native.weekMonth.previewEnabled", "YES"] + EditorialArtTestMode.arguments
+        let seen = showWhatsNew ? "test-previous-release" : "2026-11-11-life-week"
+        app.launchArguments = ["-native.weekMonth.previewEnabled", "YES",
+                               "-native.whatsNew.lastSeenRelease", seen] + EditorialArtTestMode.arguments
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch
             .waitForExistence(timeout: 90), "The opted-in native Life root did not load.")
@@ -36,6 +38,24 @@ final class LifeUITests: XCTestCase {
         attachment.name = title
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    func testWhatsNewAppearsOnUpdateAndCanBeReopenedFromMore() {
+        startLife(showWhatsNew: true)
+        let done = app.buttons["whats-new-done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 20),
+                      "An unseen update should explain what changed")
+        XCTAssertTrue(app.staticTexts["A clearer way to plan your week"].exists)
+        capture("whats-new-first-launch")
+        done.tap()
+        let more = app.buttons["life-more"]
+        XCTAssertTrue(more.waitForExistence(timeout: 20))
+        more.tap()
+        let notes = app.buttons["more-whats-new"]
+        XCTAssertTrue(notes.waitForExistence(timeout: 10))
+        notes.tap()
+        XCTAssertTrue(app.staticTexts["A clearer way to plan your week"].waitForExistence(timeout: 10))
+        capture("whats-new-from-more")
     }
 
     func testLifeStorageBudgetSummaryShowsHoursAndOpensAllocator() {
