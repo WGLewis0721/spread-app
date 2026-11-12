@@ -5,6 +5,8 @@ import SwiftUI
 struct LifeRecurringPlanForm: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
+    /// When set, the form opens pre-filled with this saved schedule (Edit series).
+    var initialPlanId: String? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var roleId = ""
     @State private var hours = 2.0
@@ -26,11 +28,17 @@ struct LifeRecurringPlanForm: View {
         PlannerDates.calendar.date(byAdding: .weekOfYear, value: 1,
             to: PlannerDates.date(snapshot.weekKey)) ?? Date()
     }
-    private var activeRules: [NativeRecurringPlan] {
-        (snapshot.recurringPlans ?? []).filter { rule in
-            rule.terminatedWeek == nil &&
-                (rule.endWeek == nil || rule.endWeek! >= PlannerDates.weekKey(for: earliest))
-        }
+    private func load(_ plan: NativeRecurringPlan) {
+        editingPlanId = plan.id
+        roleId = plan.roleId
+        hours = plan.hours
+        everyWeeks = plan.everyWeeks
+        startDate = PlannerDates.date(plan.startWeek)
+        hasEnd = plan.endWeek != nil
+        if let end = plan.endWeek { endDate = PlannerDates.date(end) }
+        editScope = "all"
+        editFromDate = earliest
+        preview = nil
     }
     private var selectedRule: NativeRecurringPlan? {
         snapshot.recurringPlans?.first(where: { $0.id == editingPlanId })
@@ -130,37 +138,6 @@ struct LifeRecurringPlanForm: View {
                     .foregroundStyle(Spread.danger)
                 }
             }
-            if !activeRules.isEmpty {
-                Section("Saved repeating schedules") {
-                    ForEach(activeRules) { plan in
-                        Button {
-                            editingPlanId = plan.id
-                            roleId = plan.roleId
-                            hours = plan.hours
-                            everyWeeks = plan.everyWeeks
-                            startDate = PlannerDates.date(plan.startWeek)
-                            hasEnd = plan.endWeek != nil
-                            if let end = plan.endWeek { endDate = PlannerDates.date(end) }
-                            editScope = "all"
-                            editFromDate = earliest
-                            preview = nil
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(snapshot.roles.first(where: { $0.id == plan.roleId })?.name ?? "Life area")
-                                        .foregroundStyle(Spread.ink)
-                                    Text(SpreadHours.text(plan.hours) + "h every " +
-                                        (plan.everyWeeks == 1 ? "week" : "\(plan.everyWeeks) weeks"))
-                                        .font(.caption).foregroundStyle(Spread.secondary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundStyle(Spread.secondary)
-                            }.frame(minHeight: 44)
-                        }
-                    }
-                }
-            }
             if let preview {
                 Section("Review before confirming") {
                     if preview.eligible {
@@ -227,6 +204,10 @@ struct LifeRecurringPlanForm: View {
             startDate = earliest
             editFromDate = earliest
             endDate = PlannerDates.calendar.date(byAdding: .month, value: 3, to: earliest) ?? earliest
+            if let id = initialPlanId,
+               let plan = snapshot.recurringPlans?.first(where: { $0.id == id }) {
+                load(plan)
+            }
         }
         .onChange(of: roleId) { _, _ in invalidate() }
         .onChange(of: hours) { _, _ in invalidate() }

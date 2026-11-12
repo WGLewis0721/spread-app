@@ -7,7 +7,8 @@ struct LifePlanAheadSheet: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
     @Environment(\.dismiss) private var dismiss
-    @State private var planMode = "repeat"
+    @State private var planMode = "plans"
+    @State private var formPlanId: String?
     @State private var roleId = ""
     @State private var sourceDay = ""
     @State private var dailyTransfer = false
@@ -47,17 +48,25 @@ struct LifePlanAheadSheet: View {
     var body: some View {
         SpreadSheetStack {
             Form {
-                Section {
-                    Picker("Plan Ahead action", selection: $planMode) {
-                        Text("Repeat schedule").tag("repeat")
-                        Text("Move once").tag("move")
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("plan-ahead-mode")
-                }
-                if planMode == "repeat" {
-                    LifeRecurringPlanForm(planner: planner, snapshot: snapshot)
+                if planMode == "plans" {
+                    plansSections
                 } else {
+                    Section {
+                        Button {
+                            formPlanId = nil
+                            preview = nil
+                            planMode = "plans"
+                        } label: {
+                            Label("Your plans", systemImage: "chevron.backward")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(minHeight: 44)
+                        }
+                        .accessibilityIdentifier("plan-ahead-back-to-plans")
+                    }
+                    if planMode == "repeat" {
+                        LifeRecurringPlanForm(planner: planner, snapshot: snapshot,
+                                              initialPlanId: formPlanId)
+                    } else {
                 Section {
                     Text("Move time to another week. Nothing moves until you preview and confirm.")
                         .font(.subheadline)
@@ -147,6 +156,7 @@ struct LifePlanAheadSheet: View {
                     .disabled(saving || planner.busy || preview?.eligible != true)
                     .accessibilityIdentifier("plan-ahead-confirm")
                 } header: { Text("Review before moving") }
+                    }
                 }
             }
             .spreadListSurface()
@@ -174,6 +184,86 @@ struct LifePlanAheadSheet: View {
         .onChange(of: destinationDate) { _, _ in preview = nil }
         .onChange(of: targetCapacityText) { _, _ in preview = nil }
         .accessibilityIdentifier("life-plan-ahead-sheet")
+    }
+
+    /// Repeating schedules that still apply from next week onward.
+    private var activeRules: [NativeRecurringPlan] {
+        (snapshot.recurringPlans ?? []).filter { rule in
+            rule.terminatedWeek == nil &&
+                (rule.endWeek == nil || rule.endWeek! >= PlannerDates.weekKey(for: earliestDestination))
+        }
+    }
+
+    private func roleName(_ id: String) -> String {
+        snapshot.roles.first(where: { $0.id == id })?.name ?? "Life area"
+    }
+
+    private func planSummary(_ plan: NativeRecurringPlan) -> String {
+        let every = plan.everyWeeks == 1 ? "every week" : "every \(plan.everyWeeks) weeks"
+        let start = PlannerDates.label(PlannerDates.date(plan.startWeek), pattern: "MMM d")
+        return SpreadHours.text(plan.hours) + "h " + every + ", from " + start
+    }
+
+    /// Entry screen: shows what is already planned before asking for input.
+    /// Reads the store snapshot only; tapping a row opens a form, nothing is sent.
+    @ViewBuilder
+    private var plansSections: some View {
+        Section {
+            if activeRules.isEmpty {
+                Text("No repeating schedules yet. A schedule sets weekly hours for one Life area.")
+                    .font(.subheadline)
+                    .foregroundStyle(Spread.secondary)
+            } else {
+                ForEach(activeRules) { plan in
+                    Button {
+                        formPlanId = plan.id
+                        preview = nil
+                        planMode = "repeat"
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(roleName(plan.roleId))
+                                    .foregroundStyle(Spread.ink)
+                                Text(planSummary(plan))
+                                    .font(.caption)
+                                    .foregroundStyle(Spread.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(Spread.secondary)
+                        }
+                        .frame(minHeight: 44)
+                    }
+                    .accessibilityIdentifier("plan-ahead-plan-row")
+                }
+            }
+        } header: {
+            Text("Your plans")
+        }
+        Section {
+            Button {
+                formPlanId = nil
+                preview = nil
+                planMode = "repeat"
+            } label: {
+                Label("New schedule", systemImage: "plus")
+                    .frame(minHeight: 44)
+            }
+            .disabled(snapshot.roles.isEmpty)
+            .accessibilityIdentifier("plan-ahead-new-schedule")
+        }
+        Section {
+            Button {
+                preview = nil
+                planMode = "move"
+            } label: {
+                Label("Move hours once", systemImage: "arrow.left.arrow.right")
+                    .frame(minHeight: 44)
+            }
+            .accessibilityIdentifier("plan-ahead-move-once")
+        } footer: {
+            Text("Move time from this week to another week. Nothing moves until you preview and confirm.")
+        }
     }
 
     private func requestPreview() async {
