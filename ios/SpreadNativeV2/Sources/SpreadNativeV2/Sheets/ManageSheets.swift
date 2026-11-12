@@ -478,6 +478,7 @@ struct MoreSheet: View {
     @State private var showCalendarPicker = false
     @State private var showRecentlyDeleted = false
     @State private var showWhatsNew = false
+    @State private var showReminders = false
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
 
     private var activeProfileName: String {
@@ -600,6 +601,19 @@ struct MoreSheet: View {
                             .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
                             .accessibilityElement(children: .contain)
                             .accessibilityIdentifier("appearance-picker")
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Notifications")
+                            Button { showReminders = true } label: {
+                                Label("Daily planning reminder", systemImage: "bell")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                            }
+                            .buttonStyle(.spreadPress)
+                            .accessibilityIdentifier("spread-reminder-settings")
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
