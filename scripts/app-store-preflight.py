@@ -129,7 +129,7 @@ class Checks:
                 if release_id in ids:
                     raise ValueError("Repeated release ID")
                 ids.add(release_id)
-                if not isinstance(version, str) or not re.fullmatch(r"\\d+(?:\\.\\d+){1,2}", version):
+                if not isinstance(version, str) or not re.fullmatch(r"\d+(?:\.\d+){1,2}", version):
                     raise ValueError("Invalid release version")
                 if not isinstance(title, str) or not 1 <= len(title.strip()) <= 100:
                     raise ValueError("Invalid release title")
@@ -138,7 +138,7 @@ class Checks:
                 ):
                     raise ValueError("Release changes must be one to eight short, plain-language items")
                 date.fromisoformat(item["date"])
-            versions = set(re.findall(r"\\bMARKETING_VERSION\\s*=\\s*([0-9]+(?:\\.[0-9]+){1,2})\\s*;",
+            versions = set(re.findall(r"\bMARKETING_VERSION\s*=\s*([0-9]+(?:\.[0-9]+){1,2})\s*;",
                                       project.decode("utf-8")))
             if len(versions) != 1:
                 raise ValueError("Expected a single Xcode marketing version")
