@@ -18,6 +18,8 @@ import {
 } from "@/lib/spread/profiles";
 import { carryOpenTasks, type CarryPick } from "@/lib/spread/task-rollover";
 import { planAheadTransfer, type PlanAheadRequest, type PlanAheadPreview } from "@/lib/spread/plan-ahead";
+import { applyRecurringPlan, previewRecurringPlan, stopRecurringPlan,
+  type RecurringRequest, type RecurringPreview } from "@/lib/spread/recurring-plan.ts";
 import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
@@ -147,6 +149,9 @@ type Store = {
   setTaskEstimate: (hatId: string, taskId: string, minutes: number | null) => boolean;
   setTaskImportant: (hatId: string, taskId: string, important: boolean) => boolean;
   previewPlanAhead: (request: PlanAheadRequest) => PlanAheadPreview;
+  previewRecurringPlan: (request: RecurringRequest) => RecurringPreview;
+  saveRecurringPlan: (request: RecurringRequest) => boolean;
+  stopRecurringPlan: (planId: string, fromWeek: string) => boolean;
   transferPlanAhead: (request: PlanAheadRequest) => boolean;
   setHatColor: (hatId: string, color: string) => void;
   setHatCategory: (hatId: string, category: SpreadCategory) => void;
@@ -661,6 +666,13 @@ export const useSpread = create<Store>((set, get) => ({
     const current = ensureWeek(get().data);
     const value = clampHours(hours);
     const data = mapBox(current, hatId, (box) => ({ ...box, hours: value }));
+    const week = data.weeks[data.currentWeek];
+    if (week.recurrenceSource?.[hatId]) {
+      data.weeks[data.currentWeek] = { ...week, recurrenceSource: {
+        ...week.recurrenceSource,
+        [hatId]: { ...week.recurrenceSource[hatId], manual: true },
+      } };
+    }
     data.hats = data.hats.map((hat) => (hat.id === hatId ? { ...hat, defaultHours: value } : hat));
     commit(set, data);
   },
@@ -687,7 +699,10 @@ export const useSpread = create<Store>((set, get) => ({
     const assigned = week.boxes.reduce((sum, item) => sum + (item.hatId === hatId ? hours : item.hours), 0);
     if ((week.life && week.life.version !== 1) || hours < reserved || (capacity !== undefined && assigned > capacity && hours >= existing.hours)) return false;
     const boxes = week.boxes.map((box) => box.hatId === hatId ? { ...box, hours } : box);
-    commit(set, writeWeek(data, { ...week, boxes }));
+    const recurrenceSource = week.recurrenceSource?.[hatId]
+      ? { ...week.recurrenceSource, [hatId]: { ...week.recurrenceSource[hatId], manual: true } }
+      : week.recurrenceSource;
+    commit(set, writeWeek(data, { ...week, boxes, ...(recurrenceSource ? { recurrenceSource } : {}) }));
     return true;
   },
   setLifePriority: (hatId, goalHours, day) => {
@@ -746,7 +761,8 @@ export const useSpread = create<Store>((set, get) => ({
         allocations: (week.allocations ?? []).filter((item) => item.hatId !== hatId),
       };
     }
-    const next = { ...data, hats: data.hats.filter((hat) => hat.id !== hatId), weeks };
+    const next = { ...data, hats: data.hats.filter((hat) => hat.id !== hatId), weeks,
+      ...(data.recurringPlans ? { recurringPlans: data.recurringPlans.filter((p) => p.roleId !== hatId) } : {}) };
     commit(set, next);
   },
   addHat: (name, hours, options) => {
@@ -845,6 +861,19 @@ export const useSpread = create<Store>((set, get) => ({
       tasks: box.tasks.map((task) => (task.id === taskId ? { ...task, content } : task)),
     }));
     stage(set, next);
+  },
+  previewRecurringPlan: (request) => previewRecurringPlan(get().data, request),
+  saveRecurringPlan: (request) => {
+    const result = applyRecurringPlan(get().data, request);
+    if (!result.preview.eligible || result.data === get().data) return false;
+    commit(set, result.data);
+    return true;
+  },
+  stopRecurringPlan: (planId, fromWeek) => {
+    const next = stopRecurringPlan(get().data, planId, fromWeek);
+    if (!next) return false;
+    commit(set, next);
+    return true;
   },
   previewPlanAhead: (request) => planAheadTransfer(get().data, request).preview,
   transferPlanAhead: (request) => {

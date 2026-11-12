@@ -16,7 +16,7 @@
  * a stand-in spread) instead, so a merge can lose a place for something but never the thing.
  */
 import { ID_LIST_SUFFIX, type Json } from "./merge.ts";
-import { normalizeData, type Allocation, type Box, type DeletedTask, type Hat, type SpreadData, type Task, type WeekData } from "./model.ts";
+import { normalizeData, validRecurringPlan, type Allocation, type Box, type DeletedTask, type Hat, type RecurringPlan, type SpreadData, type Task, type WeekData } from "./model.ts";
 
 export type PlainItem = { id: string; fields: Record<string, Json> };
 
@@ -39,12 +39,26 @@ function put(out: PlainItem[], id: string, fields: Record<string, Json | undefin
 
 export function flatten(data: SpreadData, profileName: string): PlainItem[] {
   const out: PlainItem[] = [];
-  put(out, PROFILE_ITEM, { name: profileName, [ids("hats")]: data.hats.map((hat) => hat.id) });
+  put(out, PROFILE_ITEM, { name: profileName, [ids("hats")]: data.hats.map((hat) => hat.id),
+    [ids("recurringPlans")]: (data.recurringPlans ?? []).map((plan) => plan.id) });
+  for (const plan of data.recurringPlans ?? []) {
+    put(out, "recurring-plan:" + plan.id, {
+      roleId: plan.roleId, startWeek: plan.startWeek, managedFromWeek: plan.managedFromWeek,
+      everyWeeks: plan.everyWeeks,
+      hours: plan.hours, capacityHours: plan.capacityHours, endWeek: plan.endWeek,
+      terminatedWeek: plan.terminatedWeek,
+    });
+  }
   for (const hat of data.hats) {
     put(out, hatItem(hat.id), { name: hat.name, defaultHours: hat.defaultHours, color: hat.color, category: hat.category });
   }
   for (const [week, body] of Object.entries(data.weeks)) {
-    put(out, weekItem(week), { [ids("boxes")]: body.boxes.map((box) => box.hatId), [ids("allocations")]: body.allocations.map((a) => a.id) });
+    put(out, weekItem(week), {
+      [ids("boxes")]: body.boxes.map((box) => box.hatId),
+      [ids("allocations")]: body.allocations.map((a) => a.id),
+      ...(body.recurrenceSource ? { recurrenceSource: json(body.recurrenceSource) } : {}),
+      ...(body.recurrenceIssue ? { recurrenceIssue: body.recurrenceIssue } : {}),
+    });
     for (const [dayKey, taskIds] of Object.entries(body.dayTaskOrder ?? {})) {
       put(out, "day-order:" + week + ":" + dayKey,
         { week, dayKey, [ids("taskOrder")]: taskIds });
@@ -175,7 +189,13 @@ export function assemble(live: PlainItem[], currentWeek: string): { data: Spread
       const key = text(fields.dayKey);
       if (key) dayTaskOrder[key] = list(fields[ids("taskOrder")]);
     }
-    weeks[week] = { boxes, allocations, ...(Object.keys(dayTaskOrder).length ? { dayTaskOrder } : {}) };
+    weeks[week] = {
+      boxes, allocations, ...(Object.keys(dayTaskOrder).length ? { dayTaskOrder } : {}),
+      ...(weekFields.recurrenceSource && typeof weekFields.recurrenceSource === "object" &&
+          !Array.isArray(weekFields.recurrenceSource)
+        ? { recurrenceSource: weekFields.recurrenceSource as unknown as WeekData["recurrenceSource"] } : {}),
+      ...(typeof weekFields.recurrenceIssue === "string" ? { recurrenceIssue: weekFields.recurrenceIssue } : {}),
+    };
   }
 
   const hats = inOrder(list(profile?.[ids("hats")]), hatMap) as Hat[];
@@ -196,5 +216,25 @@ export function assemble(live: PlainItem[], currentWeek: string): { data: Spread
       task: candidate as unknown as Task,
     });
   }
-  return { data: normalizeData({ hats, weeks, currentWeek, ...(deletedTasks.length ? { deletedTasks } : {}) }), name };
+  const recurringPlans: RecurringPlan[] = [];
+  for (const [entryId, fields] of byId) {
+    if (!entryId.startsWith("recurring-plan:")) continue;
+    const candidate = {
+      id: entryId.slice("recurring-plan:".length),
+      roleId: text(fields.roleId), startWeek: text(fields.startWeek),
+      ...(typeof fields.managedFromWeek === "string" ? { managedFromWeek: fields.managedFromWeek } : {}),
+      everyWeeks: num(fields.everyWeeks), hours: num(fields.hours),
+      capacityHours: num(fields.capacityHours),
+      ...(typeof fields.endWeek === "string" ? { endWeek: fields.endWeek } : {}),
+      ...(typeof fields.terminatedWeek === "string" ? { terminatedWeek: fields.terminatedWeek } : {}),
+    };
+    if (validRecurringPlan(candidate)) recurringPlans.push(candidate);
+  }
+  const orderedPlans = inOrder(list(profile?.[ids("recurringPlans")]),
+    new Map(recurringPlans.map((p) => [p.id, p])));
+  return { data: normalizeData({
+    hats, weeks, currentWeek,
+    ...(orderedPlans.length ? { recurringPlans: orderedPlans } : {}),
+    ...(deletedTasks.length ? { deletedTasks } : {}),
+  }), name };
 }

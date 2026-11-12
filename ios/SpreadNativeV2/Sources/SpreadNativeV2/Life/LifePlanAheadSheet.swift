@@ -7,6 +7,7 @@ struct LifePlanAheadSheet: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
     @Environment(\.dismiss) private var dismiss
+    @State private var planMode = "repeat"
     @State private var roleId = ""
     @State private var sourceDay = ""
     @State private var dailyTransfer = false
@@ -47,6 +48,17 @@ struct LifePlanAheadSheet: View {
         SpreadSheetStack {
             Form {
                 Section {
+                    Picker("Plan Ahead action", selection: $planMode) {
+                        Text("Repeat schedule").tag("repeat")
+                        Text("Move once").tag("move")
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("plan-ahead-mode")
+                }
+                if planMode == "repeat" {
+                    LifeRecurringPlanForm(planner: planner, snapshot: snapshot)
+                } else {
+                Section {
                     Text("Move time to another week. Nothing moves until you preview and confirm.")
                         .font(.subheadline)
                         .foregroundStyle(Spread.secondary)
@@ -78,6 +90,8 @@ struct LifePlanAheadSheet: View {
                 Section {
                     DatePicker("Move to", selection: $destinationDate,
                                in: earliestDestination..., displayedComponents: .date)
+                        .environment(\.calendar, PlannerDates.calendar)
+                        .environment(\.timeZone, PlannerDates.calendar.timeZone)
                     Stepper(value: $amount, in: 0.5...168, step: 0.5) {
                         Text(SpreadHours.text(amount) + " hours")
                             .font(.headline).monospacedDigit()
@@ -133,6 +147,7 @@ struct LifePlanAheadSheet: View {
                     .disabled(saving || planner.busy || preview?.eligible != true)
                     .accessibilityIdentifier("plan-ahead-confirm")
                 } header: { Text("Review before moving") }
+                }
             }
             .spreadListSurface()
             .navigationTitle("Plan Ahead")

@@ -328,6 +328,23 @@ struct LifeRoot: View {
         VStack(alignment: .leading, spacing: 12) {
             timeBudgetControl(snapshot, compact: true)
                 .frame(maxWidth: .infinity)
+            if let issue = snapshot.recurrenceIssue {
+                Label(issue, systemImage: "exclamationmark.triangle")
+                    .font(.subheadline)
+                    .foregroundStyle(Spread.danger)
+                    .accessibilityIdentifier("life-recurrence-issue")
+            }
+            HStack {
+                Spacer()
+                Button {
+                    showPlanAhead = true
+                } label: {
+                    Label("Plan Ahead", systemImage: "calendar.badge.clock")
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("life-plan-ahead-from-home")
+            }
             if budgetExpanded {
                 budgetEditor(snapshot)
                     .transition(SpreadTactile.walletDetailReveal)
@@ -384,6 +401,11 @@ struct LifeRoot: View {
                     }
                 }
                 .accessibilityIdentifier("life-budget-done")
+            }
+            if snapshot.recurringPlans?.isEmpty == false {
+                Text("Changes here affect only this week. Edit repeating schedules in Plan Ahead.")
+                    .font(.caption)
+                    .foregroundStyle(Spread.secondary)
             }
             SpreadArrowValueControl(
                 value: capacity.map { SpreadHours.text($0) + "h" } ?? "Set hours",

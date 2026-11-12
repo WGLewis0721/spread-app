@@ -66,8 +66,22 @@ struct NativePlanAheadPreview: Decodable {
     let eligible: Bool
     let reason: String?
 }
+struct NativeRecurringPreview: Decodable {
+    let eligible: Bool
+    let reason: String?
+    let roleId: String
+    let hours: Double
+    let startWeek: String
+    let managedFromWeek: String?
+    let everyWeeks: Int
+    let endWeek: String?
+    let nextOccurrences: [String]
+    let preservedWeeks: [String]
+    let occurrenceCount: Int?
+}
 struct LiveReply: Decodable {
     let planAheadPreview: NativePlanAheadPreview?
+    let recurringPreview: NativeRecurringPreview?
     let priorityPreview: NativeLifePriorityPreview?
     let ok: Bool
     let taskDetail: NativeTaskDetail?
@@ -232,6 +246,18 @@ struct HoursShortage: Equatable {
               state?.envelope.profileId == current.envelope.profileId else { return nil }
         return reply
     }
+    func previewRecurringPlan(_ action: [String: Any]) async -> NativeRecurringPreview? {
+        let origin = state
+        var query = action
+        query["type"] = "previewRecurringPlan"
+        let reply = await readWeekFeature(query)
+        guard state?.sessionId == origin?.sessionId,
+              state?.revision == origin?.revision,
+              state?.envelope.profileId == origin?.envelope.profileId,
+              state?.envelope.snapshot.weekKey == origin?.envelope.snapshot.weekKey else { return nil }
+        return reply?.recurringPreview
+    }
+
     func previewPlanAhead(roleId: String, toDay: String, hours: Double,
                           fromDay: String?, targetCapacityHours: Double?) async -> NativePlanAheadPreview? {
         let origin = state

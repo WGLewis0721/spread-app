@@ -898,3 +898,42 @@ test("Plan Ahead refuses missing destination capacity and keeps source planner i
     assert.equal(dataJSON(), initial);
   } finally { router.dispose(); }
 });
+
+test("native recurrence preview is read-only, save is undoable, later weeks alternate", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const week = useSpread.getState().data.currentWeek;
+    const first = shiftWeek(week, 1);
+    const payload = { roleId, startWeek: first, everyWeeks: 2, hours: 2, capacityHours: 40 };
+    const before = dataJSON();
+    const preview = await router.dispatch(request({ type: "previewRecurringPlan", ...payload }));
+    assert.equal(preview.ok, true);
+    assert.equal(preview.recurringPreview?.eligible, true);
+    assert.deepEqual(preview.recurringPreview?.nextOccurrences.slice(0, 2), [first, shiftWeek(first, 2)]);
+    assert.equal(dataJSON(), before);
+    const saved = await router.dispatch(request({ type: "saveRecurringPlan", ...payload }));
+    assert.equal(saved.ok, true);
+    assert.ok(saved.undoId);
+    assert.equal(useSpread.getState().data.recurringPlans?.length, 1);
+    const undo = await router.dispatch(request({ type: "undo", editId: saved.undoId }));
+    assert.equal(undo.ok, true);
+    assert.equal(dataJSON(), before, "Undo restores the rule and every week");
+    const redone = await router.dispatch(request({ type: "saveRecurringPlan", ...payload }));
+    assert.equal(redone.ok, true);
+    const openA = await router.dispatch(request({ type: "openWeek", weekKey: first }));
+    assert.equal(openA.ok, true);
+    assert.equal(router.read()?.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 2);
+    const overridden = await router.dispatch(request({ type: "setLifeBudget", roleId, hours: 3 }));
+    assert.equal(overridden.ok, true);
+    assert.equal(useSpread.getState().data.weeks[first].recurrenceSource?.[roleId]?.manual, true);
+    const offWeek = shiftWeek(first, 1);
+    assert.equal((await router.dispatch(request({ type: "openWeek", weekKey: offWeek }))).ok, true);
+    assert.equal(router.read()?.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 0);
+    const following = shiftWeek(first, 2);
+    assert.equal((await router.dispatch(request({ type: "openWeek", weekKey: following }))).ok, true);
+    assert.equal(router.read()?.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 2);
+    assert.equal((await router.dispatch(request({ type: "openWeek", weekKey: first }))).ok, true);
+    assert.equal(router.read()?.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 3);
+    assert.equal(useSpread.getState().data.weeks[first].boxes[0].tasks.length, 0);
+  } finally { router.dispose(); }
+});

@@ -31,12 +31,37 @@ export type Allocation = { id: string; hatId: string; day: string; hours: number
 /** Life is optional and week-local. Old profiles must not acquire an invented capacity. */
 export type LifeWeekMetadata = { version: 1; capacityHours?: number; priorityRoleId?: string; priorityGoalHours?: number; priorityDay?: string };
 /** dayTaskOrder affects only Week presentation, never the responsibility's canonical task order. */
-export type WeekData = { boxes: Box[]; allocations: Allocation[]; dayTaskOrder?: Record<string, string[]>; life?: LifeWeekMetadata };
+/** A recurring commitment is a weekly hours budget, not a generated appointment or task. */
+export type RecurringPlan = {
+  id: string;
+  roleId: string;
+  startWeek: string;
+  /** The first future week this rule controls. Non-occurrence weeks are zero, even before startWeek. */
+  managedFromWeek?: string;
+  everyWeeks: number;
+  hours: number;
+  capacityHours: number;
+  endWeek?: string;
+  /** Stop from this week (inclusive) without resurrecting the role's old default hours. */
+  terminatedWeek?: string;
+};
+/** Provenance lets a person override one week without changing future occurrences. */
+export type RecurrenceSource = Record<string, { planId: string; generatedHours: number; manual?: boolean }>;
+export type WeekData = {
+  boxes: Box[];
+  allocations: Allocation[];
+  dayTaskOrder?: Record<string, string[]>;
+  life?: LifeWeekMetadata;
+  recurrenceSource?: RecurrenceSource;
+  recurrenceIssue?: string;
+};
 export const TASK_ESTIMATE_CHOICES = [15, 30, 45, 60, 90, 120, 180, 240, 480] as const;
 export type SpreadData = {
   hats: Hat[];
   weeks: Record<string, WeekData>;
   currentWeek: string;
+  /** Saved in the same profile as weeks and roles, never a separate native store. */
+  recurringPlans?: RecurringPlan[];
   /** Optional for backward compatibility with older backups, snapshots and synced profiles. */
   deletedTasks?: DeletedTask[];
 };
@@ -233,25 +258,71 @@ export function defaultData(): SpreadData {
   };
 }
 
+/** Whole-week UTC arithmetic avoids DST changing a biweekly cycle's parity. */
+export function recurrenceWeekOffset(start: string, target: string): number {
+  const day = (iso: string) => Date.parse(iso + "T12:00:00Z");
+  return Math.round((day(target) - day(start)) / (7 * 86400000));
+}
+
+export function recurringForRole(data: Readonly<SpreadData>, roleId: string, key: string):
+  { plan: RecurringPlan; hours: number } | null {
+  // The latest series controls this role after its start, including weeks following
+  // a finite end or an explicit stop. Those weeks have zero recurring hours.
+  const plan = (data.recurringPlans ?? [])
+    .filter((p) => p.roleId === roleId && key >= (p.managedFromWeek ?? p.startWeek))
+    .sort((a, b) => b.startWeek.localeCompare(a.startWeek))[0];
+  if (!plan) return null;
+  if (key < plan.startWeek ||
+      (plan.endWeek !== undefined && key > plan.endWeek) ||
+      (plan.terminatedWeek !== undefined && key >= plan.terminatedWeek))
+    return { plan, hours: 0 };
+  const offset = recurrenceWeekOffset(plan.startWeek, key);
+  return { plan, hours: offset >= 0 && offset % plan.everyWeeks === 0 ? plan.hours : 0 };
+}
+
+export function validRecurringPlan(value: unknown): value is RecurringPlan {
+  if (!value || typeof value !== "object") return false;
+  const p = value as Partial<RecurringPlan>;
+  const validWeek = (key: unknown) => typeof key === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(key) &&
+    Number.isFinite(Date.parse(key + "T12:00:00Z")) && weekKey(parseKey(key)) === key;
+  return typeof p.id === "string" && p.id.length > 0 &&
+    typeof p.roleId === "string" && p.roleId.length > 0 &&
+    validWeek(p.startWeek) &&
+    (p.managedFromWeek === undefined || (validWeek(p.managedFromWeek) && p.managedFromWeek <= p.startWeek!)) &&
+    (p.endWeek === undefined || (validWeek(p.endWeek) && p.endWeek >= p.startWeek!)) &&
+    (p.terminatedWeek === undefined || (validWeek(p.terminatedWeek) && p.terminatedWeek >= p.startWeek!)) &&
+    Number.isInteger(p.everyWeeks) && p.everyWeeks! >= 1 && p.everyWeeks! <= 12 &&
+    Number.isFinite(p.hours) && p.hours! > 0 && p.hours! <= 168 && Number.isInteger(p.hours! * 2) &&
+    Number.isFinite(p.capacityHours) && p.capacityHours! >= 0 &&
+    p.capacityHours! <= 168 && Number.isInteger(p.capacityHours! * 2);
+}
+
 export function ensureWeek(data: SpreadData): SpreadData {
   const key = data.currentWeek || weekKey();
   const existing = data.weeks[key];
   if (!existing) {
-    return {
-      ...data,
-      currentWeek: key,
-      weeks: {
-        ...data.weeks,
-        [key]: {
-          boxes: data.hats.map((hat) => ({
-            hatId: hat.id,
-            hours: hat.defaultHours,
-            tasks: [],
-          })),
-          allocations: [],
-        },
-      },
+    const matched = data.hats.map((hat) => ({ hat, match: recurringForRole(data, hat.id, key) }));
+    const active = matched.filter((entry) => entry.match !== null);
+    const capacity = active[0]?.match?.plan.capacityHours;
+    const consistent = active.every((entry) => entry.match?.plan.capacityHours === capacity);
+    const plannedTotal = matched.reduce((sum, entry) => sum + (entry.match?.hours ?? entry.hat.defaultHours), 0);
+    const valid = active.length === 0 || (consistent && capacity !== undefined && plannedTotal <= capacity);
+    // Fail visibly rather than silently expanding a person's weekly capacity.
+    const usePlan = active.length > 0 && valid;
+    const week: WeekData = {
+      boxes: matched.map(({ hat, match }) => ({
+        hatId: hat.id, hours: usePlan ? (match?.hours ?? hat.defaultHours) : hat.defaultHours, tasks: [],
+      })),
+      allocations: [],
+      ...(usePlan ? {
+        life: { version: 1 as const, capacityHours: capacity },
+        recurrenceSource: Object.fromEntries(active.map(({ hat, match }) =>
+          [hat.id, { planId: match!.plan.id, generatedHours: match!.hours }])),
+      } : {}),
+      ...(!valid ? { recurrenceIssue: "Recurring hours do not fit this week's total. Review Plan Ahead." } : {}),
     };
+    return { ...data, currentWeek: key, weeks: { ...data.weeks, [key]: week } };
   }
   const boxes = existing.boxes.slice();
   for (const hat of data.hats) {
@@ -285,11 +356,29 @@ export function normalizeData(raw: unknown): SpreadData {
         ...(week.dayTaskOrder && typeof week.dayTaskOrder === "object"
           ? { dayTaskOrder: normalizeDayTaskOrder(week.dayTaskOrder) } : {}),
         ...(normalizeLifeWeek(week.life) ? { life: normalizeLifeWeek(week.life) } : {}),
+        ...(week.recurrenceSource && typeof week.recurrenceSource === "object" ? {
+          recurrenceSource: Object.fromEntries(
+            Object.entries(week.recurrenceSource).filter(([, entry]) =>
+              !!entry && typeof entry.planId === "string" &&
+              typeof entry.generatedHours === "number" && Number.isFinite(entry.generatedHours))
+              .map(([roleId, entry]) => [roleId, {
+                planId: entry.planId, generatedHours: entry.generatedHours,
+                ...(entry.manual ? { manual: true } : {}),
+              }]),
+          ),
+        } : {}),
+        ...(typeof week.recurrenceIssue === "string" ? { recurrenceIssue: week.recurrenceIssue } : {}),
       };
     }
   }
   const currentWeek = typeof value.currentWeek === "string" ? value.currentWeek : weekKey();
-  const result = ensureWeek({ hats, weeks: repairDuplicateIds(weeks), currentWeek });
+  const recurringPlans = Array.isArray(value.recurringPlans)
+    ? value.recurringPlans.filter(validRecurringPlan).filter((p) => hats.some((h) => h.id === p.roleId))
+    : [];
+  const result = ensureWeek({
+    hats, weeks: repairDuplicateIds(weeks), currentWeek,
+    ...(recurringPlans.length ? { recurringPlans } : {}),
+  });
   const deletedTasks = Array.isArray(value.deletedTasks)
     ? value.deletedTasks.filter(isDeletedTask).map((entry) => ({
         id: entry.id,

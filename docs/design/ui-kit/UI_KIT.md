@@ -133,6 +133,8 @@ This kit consolidates Spread's existing visual language. It does not override th
 
 ### Navigation
 
+> **Nov 12 Plan Ahead:** Available directly from Life as well as Week. The same sheet offers **Repeat schedule** (weekly budget recurrence) and **Move once** (original one-time transfer). Both show a read-only review, real affected weeks and one primary confirmation. Scheduled day allocations and tasks are never inferred from a repeating weekly budget. Preserve previously planned weeks and distinguish a single-week edit from an entire-series change.
+
 > **Current native navigation:** Two labeled destinations, **Life** and **Week**, in one compact dock toggle. The old metallic Crown is retired; use a solid-surface calendar-week control with explicit previous/next buttons: tap advances one week; pressing and holding repeats with bounded acceleration until release. Horizontal swipe velocity no longer controls week navigation. Weekly navigation changes the viewed week, never transfers time. The unrelated Plan Ahead sheet is explicitly opened, previews the source/destination impact and requires confirmation. Do not resurrect dock plus, Crown-position, or Rollover controls.
 
 - Native: a compact Life/Week toggle using the original Spread mark for Life, plus a solid calendar week controller. No metallic Crown or independent Hours destination in ordinary Life use.
