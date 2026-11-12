@@ -1,5 +1,6 @@
 """No-network regression tests for Spread's release preflight."""
 import importlib.util
+import json
 from pathlib import Path
 import plistlib
 import sys
@@ -50,6 +51,44 @@ class PreflightTests(unittest.TestCase):
             checks.ipa(ipa)
             self.assertTrue(checks.items)
             self.assertTrue(all(ok for _, ok, _ in checks.items))
+
+    def test_release_notes_are_valid_and_version_matched(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            notes = root / "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/ReleaseNotes.json"
+            project = root / "ios/App/App.xcodeproj/project.pbxproj"
+            notes.parent.mkdir(parents=True)
+            project.parent.mkdir(parents=True)
+            project.write_text("MARKETING_VERSION = 1.0;\\nMARKETING_VERSION = 1.0;\\n")
+            catalog = {
+                "formatVersion": 1,
+                "releases": [{"id": "test-1", "version": "1.0", "date": "2026-11-11",
+                              "title": "What's new", "changes": ["A feature improved."]}],
+            }
+            notes.write_text(json.dumps(catalog))
+            checks = preflight.Checks()
+            checks.release_notes(root)
+            self.assertEqual(checks.items[-1][1], True, checks.items[-1][2])
+            catalog["releases"][0]["version"] = "0.9"
+            notes.write_text(json.dumps(catalog))
+            checks = preflight.Checks()
+            checks.release_notes(root)
+            self.assertFalse(checks.items[-1][1], "Old version release notes cannot ship")
+            catalog["releases"][0]["version"] = "1.0"
+            catalog["releases"].append(dict(catalog["releases"][0]))
+            notes.write_text(json.dumps(catalog))
+            checks = preflight.Checks()
+            checks.release_notes(root)
+            self.assertFalse(checks.items[-1][1], "Duplicate release IDs cannot ship")
+
+    def test_release_notes_cannot_be_empty_or_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "ios/App/App.xcodeproj").mkdir(parents=True)
+            (root / "ios/App/App.xcodeproj/project.pbxproj").write_text("MARKETING_VERSION = 1.0;")
+            checks = preflight.Checks()
+            checks.release_notes(root)
+            self.assertTrue(any(not ok for _, ok, _ in checks.items))
 
     def test_bad_ipa_is_blocking(self):
         with tempfile.TemporaryDirectory() as tmp:
