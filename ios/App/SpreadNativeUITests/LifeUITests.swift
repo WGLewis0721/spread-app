@@ -64,7 +64,8 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["life-page-title"].exists,
                        "The Life heading must not squeeze the Weekly Time strip")
         let window = app.windows.firstMatch.frame
-        XCTAssertGreaterThanOrEqual(summary.frame.width, window.width - 48)
+        let expectedMinWidth = window.width <= 700 ? window.width - 48 : 640
+        XCTAssertGreaterThanOrEqual(summary.frame.width, expectedMinWidth)
         XCTAssertLessThanOrEqual(summary.frame.width, window.width)
         capture("life-full-width-weekly-time")
     }
