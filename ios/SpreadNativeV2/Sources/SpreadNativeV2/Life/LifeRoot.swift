@@ -334,18 +334,6 @@ struct LifeRoot: View {
                     .foregroundStyle(Spread.danger)
                     .accessibilityIdentifier("life-recurrence-issue")
             }
-            HStack {
-                Spacer()
-                Button {
-                    showPlanAhead = true
-                } label: {
-                    Label("Plan Ahead", systemImage: "calendar.badge.clock")
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("life-plan-ahead-from-home")
-                Spacer()
-            }
             if budgetExpanded {
                 budgetEditor(snapshot)
                     .transition(SpreadTactile.walletDetailReveal)
