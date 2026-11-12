@@ -73,16 +73,25 @@ public struct NativeOutlookPlacement: Codable, Equatable, Sendable {
     public let hours: Double
 }
 
+/// One set day of a fixed-day schedule: a weekday code (mon...sun) and the hours planned on it.
+public struct NativeDayHours: Codable, Equatable, Sendable {
+    public let weekday: String
+    public let hours: Double
+}
+
 public struct NativeRecurringPlan: Codable, Equatable, Identifiable, Sendable {
     public let id: String
     public let roleId: String
     public let startWeek: String
     public let managedFromWeek: String?
     public let everyWeeks: Int
+    /// Weekly total. Equals the sum of dayHours when the schedule has set days.
     public let hours: Double
     public let endWeek: String?
     public let terminatedWeek: String?
     public let capacityHours: Double
+    /// Absent for weekly-only schedules, which the planner places without a set day.
+    public var dayHours: [NativeDayHours]? = nil
 }
 
 public struct LifeWeekSnapshot: Codable, Equatable, Sendable {

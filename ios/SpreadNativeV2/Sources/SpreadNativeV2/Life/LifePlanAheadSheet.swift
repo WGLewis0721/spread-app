@@ -201,7 +201,13 @@ struct LifePlanAheadSheet: View {
     private func planSummary(_ plan: NativeRecurringPlan) -> String {
         let every = plan.everyWeeks == 1 ? "every week" : "every \(plan.everyWeeks) weeks"
         let start = PlannerDates.label(PlannerDates.date(plan.startWeek), pattern: "MMM d")
-        return SpreadHours.text(plan.hours) + "h " + every + ", from " + start
+        let amount: String
+        if let days = plan.dayHours, !days.isEmpty {
+            amount = LifeRecurringPlanForm.dayLine(days)
+        } else {
+            amount = SpreadHours.text(plan.hours) + "h"
+        }
+        return amount + " " + every + ", from " + start
     }
 
     private func outlookHoursText(_ week: NativeOutlookWeek) -> String {

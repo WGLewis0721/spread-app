@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { RecurringRequest } from "./recurring-plan.ts";
-import { isSpreadCategory, remainingHours, shiftWeek, type SpreadData, type TaskContent } from "./model.ts";
+import { isSpreadCategory, PLAN_WEEKDAYS, remainingHours, shiftWeek, type SpreadData, type TaskContent } from "./model.ts";
 import { getSaveFacts } from "./local-status.ts";
 import { projectNativeV2, type NativeV2Envelope } from "./native-v2-projection.ts";
 import { flushSpread, previewLifePriority, retrySpreadSave, useSpread } from "./store.ts";
@@ -13,6 +13,11 @@ const id = z.string().trim().min(1).max(200);
 const text = z.string().trim().min(1).max(10000);
 const hours = z.number().finite().min(0).max(168).multipleOf(0.5);
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+/** Fixed days for a repeating schedule: one entry per weekday, Monday first in the model. */
+const dayHoursSchema = z.array(z.strictObject({
+  weekday: z.enum(PLAN_WEEKDAYS),
+  hours: z.number().finite().min(0.5).max(24).multipleOf(0.5),
+})).min(1).max(7);
 const contentSchema = z.strictObject({
   blocks: z
     .array(
@@ -71,10 +76,10 @@ const action = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("setLifeBudget"), roleId: id, hours }),
   z.strictObject({ type: z.literal("setLifePriority"), priorityRoleId: id.nullable(), goalHours: hours.optional(), day: day.optional() }),
   z.strictObject({ type: z.literal("previewRecurringPlan"), roleId: id, startWeek: day,
-    everyWeeks: z.number().int().min(1).max(12), hours: hours.refine((v) => v > 0),
+    everyWeeks: z.number().int().min(1).max(12), hours: hours.refine((v) => v > 0), dayHours: dayHoursSchema.optional(),
     endWeek: day.optional(), capacityHours: hours.optional(), planId: id.optional(), editFromWeek: day.optional() }),
   z.strictObject({ type: z.literal("saveRecurringPlan"), roleId: id, startWeek: day,
-    everyWeeks: z.number().int().min(1).max(12), hours: hours.refine((v) => v > 0),
+    everyWeeks: z.number().int().min(1).max(12), hours: hours.refine((v) => v > 0), dayHours: dayHoursSchema.optional(),
     endWeek: day.optional(), capacityHours: hours.optional(), planId: id.optional(), editFromWeek: day.optional() }),
   z.strictObject({ type: z.literal("stopRecurringPlan"), planId: id, fromWeek: day }),
   z.strictObject({ type: z.literal("previewPlanAhead"), roleId: id, toDay: day,

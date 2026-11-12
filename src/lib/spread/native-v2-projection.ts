@@ -1,4 +1,4 @@
-import { isSpreadCategory, recurringForRole, shiftWeek, type SpreadData } from "./model.ts";
+import { isSpreadCategory, planPlacements, recurringForRole, shiftWeek, type SpreadData } from "./model.ts";
 
 /**
  * Wire protocol v1 for the *read-only* native SwiftUI vertical slice.
@@ -17,7 +17,7 @@ export type NativeV2Snapshot = {
   dayTaskOrder?: Record<string, string[]>;
   /** Absent until a person explicitly sets capacity in Life. */
   life?: { version: 1; capacityHours?: number; priorityRoleId?: string; priorityGoalHours?: number; priorityDay?: string };
-  recurringPlans?: { id: string; roleId: string; startWeek: string; managedFromWeek?: string; everyWeeks: number; hours: number; endWeek?: string; terminatedWeek?: string; capacityHours: number }[];
+  recurringPlans?: { id: string; roleId: string; startWeek: string; managedFromWeek?: string; everyWeeks: number; hours: number; endWeek?: string; terminatedWeek?: string; capacityHours: number; dayHours?: { weekday: string; hours: number }[] }[];
   recurrenceIssue?: string;
   /** Present only when requested. Read-only forecast of the weeks after the selected one. */
   outlook?: NativeOutlookWeek[];
@@ -58,9 +58,17 @@ export function projectOutlook(data: Readonly<SpreadData>, weeks: number): Nativ
       const generated = recurringForRole(data, hat.id, weekKey);
       return { roleId: hat.id, hours: box?.hours ?? generated?.hours ?? hat.defaultHours };
     });
-    const placed = (stored?.allocations ?? [])
-      .filter((a) => roleIds.has(a.hatId))
-      .map((a) => ({ roleId: a.hatId, day: a.day, hours: a.hours }));
+    // A stored week shows its own placements. An unstored week shows the set days its schedule would place.
+    const placed = stored
+      ? (stored.allocations ?? [])
+        .filter((a) => roleIds.has(a.hatId))
+        .map((a) => ({ roleId: a.hatId, day: a.day, hours: a.hours }))
+      : data.hats.flatMap((hat) => {
+        const generated = recurringForRole(data, hat.id, weekKey);
+        if (!generated || generated.hours <= 0 || !generated.plan.dayHours) return [];
+        return planPlacements(weekKey, generated.plan.dayHours)
+          .map((entry) => ({ roleId: hat.id, day: entry.day, hours: entry.hours }));
+      });
     return { weekKey, kept, hours, placed };
   });
 }

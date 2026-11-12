@@ -169,6 +169,18 @@ test("legacy wrong-role links render in To place without rewriting the original 
   assert.equal(JSON.stringify(data), original);
 });
 
+test("native v2 outlook shows the set days of a schedule for weeks not yet stored", () => {
+  const data = source();
+  data.recurringPlans = [{ id: "gym", roleId: "work", startWeek: "2026-11-09", everyWeeks: 1, hours: 2, capacityHours: 40,
+    dayHours: [{ weekday: "wed", hours: 1 }, { weekday: "mon", hours: 1 }] }];
+  const outlook = projectNativeV2(data, "p1", { outlookWeeks: 8 }).snapshot.outlook!;
+  assert.deepEqual(outlook[0].placed, [
+    { roleId: "work", day: "2026-11-09", hours: 1 },
+    { roleId: "work", day: "2026-11-11", hours: 1 },
+  ]);
+  assert.equal(outlook[0].kept, false);
+});
+
 test("native v2 outlook is opt-in and absent from the default contract", () => {
   assert.equal(projectNativeV2(source(), "p1").snapshot.outlook, undefined);
 });

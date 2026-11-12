@@ -10,7 +10,7 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 
 | Date | Spec | Status |
 | --- | --- | --- |
-| 2026-11-12 | [Plan Ahead opens to your plans](2026-11-12-plan-ahead-plans-list.md) | In review. Branch `feature/plan-ahead-plans-list`: 1 to 12 week intervals and a read-only 8-week outlook built; native compile and device checks pending. Life-card day prefill and monthly cadence are open owner exceptions. |
+| 2026-11-12 | [Plan Ahead opens to your plans](2026-11-12-plan-ahead-plans-list.md) | In review. Branch `feature/plan-ahead-plans-list`: 1 to 12 week intervals, a read-only 8-week outlook, and set days saved with each schedule are built; native compile and device checks pending. Saved days need owner confirmation. Life-card day prefill and monthly cadence are open owner exceptions. |
 | 2026-11-12 | [Plan Ahead recurring weekly budgets](2026-11-12-plan-ahead-recurrence.md) | Owner-approved interaction; implementation proposed in draft PR #181; native build and real-device QA pending. |
 | 2026-11-11 | [Life: full Wallet behavior (Stack, Focus, Stack)](2026-11-11-life-wallet-parity.md) | Owner-approved for implementation on `feat/life-wallet-focus`. Not compiled or device-verified yet. |
 | 2026-11-10 | [Editorial Life card implementation](2026-11-10-life-card-visual-implementation.md), [illustrated art direction](../planner/SPREAD_LIFE_CARD_ART_DIRECTION.md) | Owner-selected visual references. Implementation proposal on review branch; no native code change or merge approval. |
