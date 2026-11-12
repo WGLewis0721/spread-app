@@ -83,6 +83,8 @@ struct LifeRecurringPlanForm: View {
                 if selectedRule == nil {
                     DatePicker("Starts week of", selection: $startDate, in: earliest...,
                                displayedComponents: .date)
+                        .environment(\.calendar, PlannerDates.calendar)
+                        .environment(\.timeZone, PlannerDates.calendar.timeZone)
                 } else {
                     HStack {
                         Text("Starts")
@@ -96,6 +98,8 @@ struct LifeRecurringPlanForm: View {
                     DatePicker("Ends week of", selection: $endDate,
                                in: (selectedRule.map { PlannerDates.date($0.startWeek) } ?? startDate)...,
                                displayedComponents: .date)
+                        .environment(\.calendar, PlannerDates.calendar)
+                        .environment(\.timeZone, PlannerDates.calendar.timeZone)
                 }
             } header: {
                 Text(editingPlanId == nil ? "Repeat weekly hours" : "Edit repeating schedule")
@@ -111,6 +115,8 @@ struct LifeRecurringPlanForm: View {
                     if editScope == "following" {
                         DatePicker("Starting week", selection: $editFromDate,
                                    in: earliest..., displayedComponents: .date)
+                            .environment(\.calendar, PlannerDates.calendar)
+                            .environment(\.timeZone, PlannerDates.calendar.timeZone)
                     }
                     Button("New schedule") {
                         editingPlanId = nil

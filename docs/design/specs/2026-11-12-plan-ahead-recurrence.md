@@ -49,7 +49,7 @@ Empty: ask person to create a Life area. No capacity: explain requirement to set
 
 ## 6. Interaction and accessibility
 
-System SF typography, existing native background/accent/role data colors; one primary action in each state. Sheets and tap controls at least 44 pt. VoiceOver announces field, hour amount, repeat frequency, start/end and confirmation status. No glow or animation is needed for comprehension. Verify dark/light, Dynamic Type, Reduce Motion and spoken confirmations on a physical iPhone.
+System SF typography, existing native background/accent/role data colors; one primary action in each state. Sheets and tap controls at least 44 pt. VoiceOver announces field, hour amount, repeat frequency, start/end and confirmation status. No glow or animation is needed for comprehension. Verify dark/light, Dynamic Type, Reduce Motion and spoken confirmations on a physical iPhone. Date pickers must use the same UTC Gregorian calendar as Monday week keys to avoid a Sunday/Monday display mismatch in local time zones.
 
 ## 7. Technical contract
 

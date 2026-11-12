@@ -90,6 +90,8 @@ struct LifePlanAheadSheet: View {
                 Section {
                     DatePicker("Move to", selection: $destinationDate,
                                in: earliestDestination..., displayedComponents: .date)
+                        .environment(\.calendar, PlannerDates.calendar)
+                        .environment(\.timeZone, PlannerDates.calendar.timeZone)
                     Stepper(value: $amount, in: 0.5...168, step: 0.5) {
                         Text(SpreadHours.text(amount) + " hours")
                             .font(.headline).monospacedDigit()
