@@ -752,6 +752,7 @@ struct MoreSheet: View {
                 }
             }
             .sheet(isPresented: $showRecentlyDeleted) { RecentlyDeletedSheet(planner: planner) }
+            .sheet(isPresented: $showReminders) { SpreadReminderSettingsSheet() }
             .sheet(isPresented: $showWhatsNew, onDismiss: {
                 if let latest = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion) {
                     lastSeenReleaseID = latest.id
