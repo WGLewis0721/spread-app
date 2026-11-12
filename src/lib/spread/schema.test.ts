@@ -127,7 +127,7 @@ test("v2 planner migrates to v3 without rewriting stored tasks or allocations", 
 });
 
 
-test("Life schema upgrade is marker-only, snapshots old planner and protects it against schema3 downgrade", () => {
+test("Life and recurrence schema upgrade is marker-only and protects against downgrade", () => {
   const store = planner();
   const raw = JSON.stringify({ hats: [{ id: "work", name: "Work", defaultHours: 8, color: "#007AFF" }],
     currentWeek: "2026-11-02", weeks: { "2026-11-02": {
@@ -140,11 +140,26 @@ test("Life schema upgrade is marker-only, snapshots old planner and protects it 
   store.setItem(SCHEMA_KEY, "3");
   const snapshots: Record<string, string>[] = [];
   assert.deepEqual(runMigrations(store, { snapshot: (_label, entries) => snapshots.push(entries) }),
-    { status: "migrated", from: 3, to: 4 });
+    { status: "migrated", from: 3, to: 5 });
   assert.equal(store.getItem(STORE_KEY), raw, "upgrade never rewrites a real profile");
   assert.equal(snapshots[0][STORE_KEY], raw);
   const upgraded = JSON.stringify([...store.map]);
-  assert.deepEqual(runMigrations(store, { current: 3 }), { status: "newer", version: 4 });
+  assert.deepEqual(runMigrations(store, { current: 3 }), { status: "newer", version: 5 });
   assert.equal(JSON.stringify([...store.map]), upgraded, "downgraded binary must not touch native Life records");
-  assert.deepEqual(runMigrations(store), { status: "current", version: 4 });
+  assert.deepEqual(runMigrations(store), { status: "current", version: 5 });
+});
+
+test("recurrence schema 4-to-5 keeps all stored user data byte-for-byte intact", () => {
+  const store = planner();
+  const data = { hats: [{ id: "work", name: "Work", defaultHours: 2, color: "#123456" }],
+    currentWeek: "2026-11-09", weeks: { "2026-11-09": {
+      boxes: [{ hatId: "work", hours: 2, tasks: [] }], allocations: [] } },
+    recurringPlans: [{ id: "rule1", roleId: "work", startWeek: "2026-11-16",
+      everyWeeks: 2, hours: 2, capacityHours: 20 }] };
+  store.setItem(STORE_KEY, JSON.stringify(data));
+  store.setItem(SCHEMA_KEY, "4");
+  const raw = store.getItem(STORE_KEY);
+  assert.deepEqual(runMigrations(store), { status: "migrated", from: 4, to: 5 });
+  assert.equal(store.getItem(STORE_KEY), raw);
+  assert.deepEqual(runMigrations(store, { current: 4 }), { status: "newer", version: 5 });
 });

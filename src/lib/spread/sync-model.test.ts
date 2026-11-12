@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { assemble, boxItem, flatten, taskItem, weekItem } from "./sync-model.ts";
-import { defaultData, normalizeData, type SpreadData } from "./model.ts";
+import { defaultData, normalizeData, shiftWeek, type SpreadData } from "./model.ts";
 import { canonical } from "./merge.ts";
 
 function sample(): SpreadData {
@@ -96,4 +96,21 @@ test("normalizing a week preserves daily task order while restoring missing resp
   const normalized = normalizeData(data);
   assert.deepEqual(normalized.weeks[key].dayTaskOrder, taskOrder);
   assert.ok(normalized.weeks[key].boxes.some((box) => box.hatId === missingRole));
+});
+
+test("recurring schedules and generated-week provenance survive item sync roundtrip", () => {
+  const data = sample();
+  const first = shiftWeek(data.currentWeek, 1);
+  const id = data.hats[0].id;
+  data.recurringPlans = [{ id: "a", roleId: id, startWeek: first,
+    everyWeeks: 2, hours: 2, capacityHours: 40 }];
+  data.weeks[first] = {
+    boxes: data.hats.map((hat) => ({ hatId: hat.id, hours: hat.id === id ? 2 : 0, tasks: [] })),
+    allocations: [], life: { version: 1, capacityHours: 40 },
+    recurrenceSource: { [id]: { planId: "a", generatedHours: 2, manual: true } },
+  };
+  const actual = assemble(flatten(data, "My plan"), data.currentWeek).data;
+  assert.deepEqual(actual.recurringPlans, data.recurringPlans);
+  assert.deepEqual(actual.weeks[first].recurrenceSource, data.weeks[first].recurrenceSource);
+  assert.equal(actual.weeks[first].boxes.find((b) => b.hatId === id)?.hours, 2);
 });

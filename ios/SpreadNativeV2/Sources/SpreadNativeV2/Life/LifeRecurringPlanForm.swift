@@ -41,7 +41,7 @@ struct LifeRecurringPlanForm: View {
                 value["editFromWeek"] = PlannerDates.weekKey(for: editFromDate)
             }
         }
-        if let capacity = snapshot.life?.capacityHours {
+        if selectedRule == nil, let capacity = snapshot.life?.capacityHours {
             value["capacityHours"] = capacity
         }
         return value
