@@ -1,4 +1,4 @@
-import { isSpreadCategory, type SpreadData } from "./model.ts";
+import { isSpreadCategory, recurringForRole, shiftWeek, type SpreadData } from "./model.ts";
 
 /**
  * Wire protocol v1 for the *read-only* native SwiftUI vertical slice.
@@ -19,6 +19,17 @@ export type NativeV2Snapshot = {
   life?: { version: 1; capacityHours?: number; priorityRoleId?: string; priorityGoalHours?: number; priorityDay?: string };
   recurringPlans?: { id: string; roleId: string; startWeek: string; managedFromWeek?: string; everyWeeks: number; hours: number; endWeek?: string; terminatedWeek?: string; capacityHours: number }[];
   recurrenceIssue?: string;
+  /** Present only when requested. Read-only forecast of the weeks after the selected one. */
+  outlook?: NativeOutlookWeek[];
+};
+
+/** One future week in the Plan Ahead outlook. Never written back to storage. */
+export type NativeOutlookWeek = {
+  weekKey: string;
+  /** A stored week that a schedule would otherwise change (edited, or made before the schedule). */
+  kept: boolean;
+  hours: { roleId: string; hours: number }[];
+  placed: { roleId: string; day: string; hours: number }[];
 };
 
 export type NativeV2Envelope = {
@@ -27,7 +38,38 @@ export type NativeV2Envelope = {
   snapshot: NativeV2Snapshot;
 };
 
-export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): NativeV2Envelope {
+/**
+ * Forecast the weeks after the selected one. A stored week shows its own budgets and day
+ * placements. An unstored week shows what ensureWeek would seed when it is opened.
+ * Pure: reads data, never writes it.
+ */
+export function projectOutlook(data: Readonly<SpreadData>, weeks: number): NativeOutlookWeek[] {
+  const roleIds = new Set(data.hats.map((hat) => hat.id));
+  return Array.from({ length: weeks }, (_, index) => {
+    const weekKey = shiftWeek(data.currentWeek, index + 1);
+    const stored = data.weeks[weekKey];
+    const kept = !!stored && data.hats.some((hat) => {
+      if (!recurringForRole(data, hat.id, weekKey)) return false;
+      const marker = stored.recurrenceSource?.[hat.id];
+      return !marker || marker.manual === true;
+    });
+    const hours = data.hats.map((hat) => {
+      const box = stored?.boxes.find((b) => b.hatId === hat.id);
+      const generated = recurringForRole(data, hat.id, weekKey);
+      return { roleId: hat.id, hours: box?.hours ?? generated?.hours ?? hat.defaultHours };
+    });
+    const placed = (stored?.allocations ?? [])
+      .filter((a) => roleIds.has(a.hatId))
+      .map((a) => ({ roleId: a.hatId, day: a.day, hours: a.hours }));
+    return { weekKey, kept, hours, placed };
+  });
+}
+
+export function projectNativeV2(
+  data: Readonly<SpreadData>,
+  profileId: string,
+  options: { outlookWeeks?: number } = {},
+): NativeV2Envelope {
   if (!profileId.trim()) throw new Error("Native v2 projection requires an active profile ID.");
 
   const week = data.weeks[data.currentWeek];
@@ -63,6 +105,7 @@ export function projectNativeV2(data: Readonly<SpreadData>, profileId: string): 
       ...(week?.life?.version === 1 ? { life: week.life } : {}),
       ...(data.recurringPlans?.length ? { recurringPlans: data.recurringPlans } : {}),
       ...(week?.recurrenceIssue ? { recurrenceIssue: week.recurrenceIssue } : {}),
+      ...(options.outlookWeeks ? { outlook: projectOutlook(data, options.outlookWeeks) } : {}),
       tasks: data.hats.flatMap((hat) =>
         (boxes.get(hat.id)?.tasks ?? []).map((task) => ({
           id: task.id,

@@ -204,6 +204,61 @@ struct LifePlanAheadSheet: View {
         return SpreadHours.text(plan.hours) + "h " + every + ", from " + start
     }
 
+    private func outlookHoursText(_ week: NativeOutlookWeek) -> String {
+        let parts: [String] = week.hours
+            .filter { (entry: NativeOutlookHours) -> Bool in entry.hours > 0 }
+            .map { (entry: NativeOutlookHours) -> String in
+                roleName(entry.roleId) + " " + SpreadHours.text(entry.hours) + "h"
+            }
+        return parts.isEmpty ? "No hours planned" : parts.joined(separator: ", ")
+    }
+
+    private func outlookPlacedText(_ week: NativeOutlookWeek) -> String {
+        let parts: [String] = week.placed.map { (placement: NativeOutlookPlacement) -> String in
+            let day = PlannerDates.label(PlannerDates.date(placement.day), pattern: "EEE")
+            return roleName(placement.roleId) + " " + day + " " + SpreadHours.text(placement.hours) + "h"
+        }
+        return "Days set: " + parts.joined(separator: ", ")
+    }
+
+    /// Next eight weeks, read-only. Built from the same planner state as Life and Week.
+    /// Text rows rather than a dot grid, so VoiceOver reads each week in full.
+    @ViewBuilder
+    private var outlookSection: some View {
+        if let weeks = snapshot.outlook, !weeks.isEmpty {
+            Section {
+                ForEach(weeks) { week in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Week of " + PlannerDates.label(PlannerDates.date(week.weekKey), pattern: "MMM d"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Spread.ink)
+                            Spacer()
+                            if week.kept {
+                                Text("Kept as set")
+                                    .font(.caption)
+                                    .foregroundStyle(Spread.secondary)
+                            }
+                        }
+                        Text(outlookHoursText(week))
+                            .font(.caption)
+                            .foregroundStyle(Spread.secondary)
+                        if !week.placed.isEmpty {
+                            Text(outlookPlacedText(week))
+                                .font(.caption)
+                                .foregroundStyle(Spread.secondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            } header: {
+                Text("Next 8 weeks")
+            } footer: {
+                Text("Read-only. Change a week in Week. A schedule does not change kept weeks.")
+            }
+        }
+    }
+
     /// Entry screen: shows what is already planned before asking for input.
     /// Reads the store snapshot only; tapping a row opens a form, nothing is sent.
     @ViewBuilder
@@ -240,6 +295,7 @@ struct LifePlanAheadSheet: View {
         } header: {
             Text("Your plans")
         }
+        outlookSection
         Section {
             Button {
                 formPlanId = nil

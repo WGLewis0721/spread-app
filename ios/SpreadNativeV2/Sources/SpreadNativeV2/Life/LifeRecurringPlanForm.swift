@@ -83,10 +83,10 @@ struct LifeRecurringPlanForm: View {
                         .font(.body)
                 }
                 Picker("Repeat", selection: $everyWeeks) {
-                    Text("Every week").tag(1)
-                    Text("Every 2 weeks").tag(2)
-                    Text("Every 3 weeks").tag(3)
-                    Text("Every 4 weeks").tag(4)
+                    // Matches the engine limit: intervals of 1 to 12 weeks.
+                    ForEach(1...12, id: \.self) { weeks in
+                        Text(weeks == 1 ? "Every week" : "Every \(weeks) weeks").tag(weeks)
+                    }
                 }
                 if selectedRule == nil {
                     DatePicker("Starts week of", selection: $startDate, in: earliest...,

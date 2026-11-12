@@ -217,7 +217,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
   function read(): NativeRead | null {
     const state = useSpread.getState();
     return !disposed && state.ready && state.activeId
-      ? { sessionId, revision, envelope: projectNativeV2(state.data, state.activeId) }
+      ? { sessionId, revision, envelope: projectNativeV2(state.data, state.activeId, { outlookWeeks: 8 }) }
       : null;
   }
   async function execute(raw: unknown): Promise<NativeReply> {
