@@ -388,6 +388,7 @@ struct LifeRoot: View {
             SpreadArrowValueControl(
                 value: capacity.map { SpreadHours.text($0) + "h" } ?? "Set hours",
                 detail: "Weekly total",
+                valueIdentifier: "life-budget-capacity-value",
                 onValue: {
                     budgetCapacityText = capacity.map(SpreadHours.text) ?? ""
                     capacityEntryVisible = true
@@ -411,6 +412,7 @@ struct LifeRoot: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
                         .accessibilityIdentifier("life-budget-capacity-input")
+                        .onAppear { capacityInputFocused = true }
                     Button("Set") {
                         commitBudgetCapacity(snapshot)
                         if budgetError == nil {
@@ -478,6 +480,7 @@ struct LifeRoot: View {
                     SpreadArrowValueControl(
                         value: SpreadHours.text(selected.hours) + "h",
                         detail: "This week",
+                        valueIdentifier: "life-budget-role-value",
                         leftDisabled: planner.busy ||
                             selected.hours - 0.5 < snapshot.placedHours(for: selected.id),
                         rightDisabled: planner.busy || capacity == nil ||
