@@ -11,6 +11,8 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
     public var dayTaskOrder: [String: [String]]? = nil
     /// Optional per-week Life metadata. Missing means capacity was never configured.
     public var life: LifeWeekSnapshot? = nil
+    public var recurringPlans: [NativeRecurringPlan]? = nil
+    public var recurrenceIssue: String? = nil
 
     public init(weekKey: String, roles: [Responsibility], allocations: [DayAllocation], tasks: [PlannerTask]) {
         self.weekKey = weekKey
@@ -45,6 +47,16 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
         return allocations.filter { $0.roleId == task.roleId && $0.hours > 0 }
             .sorted { $0.day == $1.day ? $0.order < $1.order : $0.day < $1.day }
     }
+}
+
+public struct NativeRecurringPlan: Codable, Equatable, Identifiable, Sendable {
+    public let id: String
+    public let roleId: String
+    public let startWeek: String
+    public let everyWeeks: Int
+    public let hours: Double
+    public let endWeek: String?
+    public let capacityHours: Double
 }
 
 public struct LifeWeekSnapshot: Codable, Equatable, Sendable {

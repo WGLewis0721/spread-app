@@ -328,6 +328,17 @@ struct LifeRoot: View {
         VStack(alignment: .leading, spacing: 12) {
             timeBudgetControl(snapshot, compact: true)
                 .frame(maxWidth: .infinity)
+            HStack {
+                Spacer()
+                Button {
+                    showPlanAhead = true
+                } label: {
+                    Label("Plan Ahead", systemImage: "calendar.badge.clock")
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("life-plan-ahead-from-home")
+            }
             if budgetExpanded {
                 budgetEditor(snapshot)
                     .transition(SpreadTactile.walletDetailReveal)
