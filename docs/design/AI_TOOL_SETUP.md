@@ -6,6 +6,8 @@ Goal: any AI tool asked to plan or spec a Spread request reads the map, follows 
 
 There are two kinds of tool. Tools that **work inside the repository** read an instruction file automatically. Chat apps **do not see the repository**; they only know what you paste or attach.
 
+**External UI research:** Before using GitHub components or 21st.dev for design inspiration, follow the [curated UI reference register](ui-kit/REFERENCE_LIBRARIES.md). It separates SwiftUI from React, notes compatibility/licensing risks, and requires an approved, focused implementation before adding dependencies or connecting AI services.
+
 Vendor features change. The file names below are the conventions each vendor documents as I know them; I did not re-verify them against current vendor documentation on 2026-10-28. Re-check when a tool stops following the instructions.
 
 ---

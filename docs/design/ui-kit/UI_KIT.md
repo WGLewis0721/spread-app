@@ -8,7 +8,7 @@
 
 This kit consolidates Spread's existing visual language. It does not override the native SwiftUI brand board, the planner's behavior rules, or the landing-page authority.
 
-**Start here.** Then follow the links for deeper rules.
+**Start here.** Then follow the links for deeper rules. For vetted optional GitHub resources and AI-agent adoption gates, use [reference libraries](REFERENCE_LIBRARIES.md); no third-party kit is an approved dependency.
 
 ---
 
