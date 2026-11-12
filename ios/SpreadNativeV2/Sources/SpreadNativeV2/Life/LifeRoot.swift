@@ -876,6 +876,7 @@ struct LifeRoot: View {
         }
     }
     private func today() {
+        pendingWeekMoves = 0
         Task { if await planner.send(["type": "changeWeek", "direction": "today"]) { weekTick += 1 } }
     }
     @ViewBuilder private func sheetContent(_ item: LifeLocalSheet) -> some View {
