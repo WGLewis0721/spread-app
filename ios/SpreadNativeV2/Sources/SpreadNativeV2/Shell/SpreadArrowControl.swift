@@ -91,6 +91,7 @@ struct SpreadArrowValueControl: View {
     let value: String
     var detail: String? = nil
     var onValue: (() -> Void)? = nil
+    var valueIdentifier = "arrow-current-value"
     var leftDisabled = false
     var rightDisabled = false
     var repeatsOnHold = false
@@ -124,7 +125,7 @@ struct SpreadArrowValueControl: View {
             .buttonStyle(.plain)
             .disabled(onValue == nil)
             .accessibilityLabel(value + (detail.map { ", " + $0 } ?? ""))
-            .accessibilityIdentifier("calendar-period-label")
+            .accessibilityIdentifier(valueIdentifier)
             SpreadArrowButton(direction: 1, label: rightLabel,
                               disabled: rightDisabled, repeatsOnHold: repeatsOnHold) { onMove(1) }
         }
