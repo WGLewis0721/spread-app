@@ -388,12 +388,12 @@ struct LifeRoot: View {
             SpreadArrowValueControl(
                 value: capacity.map { SpreadHours.text($0) + "h" } ?? "Set hours",
                 detail: "Weekly total",
-                valueIdentifier: "life-budget-capacity-value",
                 onValue: {
                     budgetCapacityText = capacity.map(SpreadHours.text) ?? ""
                     capacityEntryVisible = true
                     capacityInputFocused = true
                 },
+                valueIdentifier: "life-budget-capacity-value",
                 leftDisabled: planner.busy || capacity == nil || (capacity ?? 0) - 1 < assigned,
                 rightDisabled: planner.busy || (capacity ?? 0) + 1 > 168,
                 leftLabel: "Remove one weekly hour",
