@@ -23,6 +23,8 @@ public struct SpreadLiveRoot: View {
     @State private var selectedRole: String?
     @State private var focusDay: String?
     @State private var sheet: LiveSheet?
+    @State private var showWhatsNew = false
+    @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
     @State private var editing = false
     @State private var gearTurn = false
     // Labels fold into their icons once after the planner first appears.
@@ -68,6 +70,19 @@ public struct SpreadLiveRoot: View {
             } else {
                 presented // Classic keeps its original destination and planner semantics.
             }
+        }
+        .task(id: planner.snapshot != nil) {
+            // Show only when the real planner is ready, not over its launch screen.
+            guard planner.snapshot != nil, sheet == nil, !showWhatsNew else { return }
+            showWhatsNew = SpreadReleaseNotes.shouldPresent(
+                version: SpreadReleaseNotes.appVersion, lastSeenID: lastSeenReleaseID)
+        }
+        .sheet(isPresented: $showWhatsNew, onDismiss: {
+            if let latest = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion) {
+                lastSeenReleaseID = latest.id
+            }
+        }) {
+            WhatsNewSheet()
         }
     }
 
