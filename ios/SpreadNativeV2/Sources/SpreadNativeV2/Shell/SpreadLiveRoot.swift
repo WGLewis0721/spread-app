@@ -436,7 +436,7 @@ public struct SpreadLiveRoot: View {
                     destinationRail
                 }
             }
-            WeekCrownView(title: title, detail: detail, onDetail: detailAction, onMove: move)
+            WeekCrownView(title: title, detail: detail, onDetail: detailAction, onMove: move, isMonth: isMonth)
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)
@@ -736,8 +736,15 @@ public struct SpreadLiveRoot: View {
     }
 
     private func goWeek(_ delta: Int) {
-        weekDirection = delta
-        Task { if await planner.send(["type": "changeWeek", "direction": delta]) { weekTick += 1 } }
+        guard delta != 0, let week = planner.snapshot?.weekKey,
+              let target = PlannerDates.calendar.date(byAdding: .weekOfYear, value: delta,
+                                                       to: PlannerDates.date(week)) else { return }
+        let targetWeek = PlannerDates.weekKey(for: target)
+        Task {
+            if await planner.send(["type": "openWeek", "weekKey": targetWeek]) {
+                weekTick += 1
+            }
+        }
     }
 
     private func moveToToday() async {

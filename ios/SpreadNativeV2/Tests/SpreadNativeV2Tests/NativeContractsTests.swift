@@ -52,6 +52,29 @@ final class NativeContractsTests: XCTestCase {
             .contains("Weekly capacity not set"))
     }
 
+    func testCalendarWeekNavigationSwipesAtControlledSpeeds() {
+        XCTAssertEqual(WeekSwipeSpeed.steps(translation: -10, velocity: -3000), 0)
+        XCTAssertEqual(WeekSwipeSpeed.steps(translation: -75, velocity: -200), 1)
+        XCTAssertEqual(WeekSwipeSpeed.steps(translation: 75, velocity: 200), -1)
+        XCTAssertEqual(WeekSwipeSpeed.steps(translation: -100, velocity: -1200), 2)
+        XCTAssertEqual(WeekSwipeSpeed.steps(translation: 100, velocity: 2200), -4)
+        XCTAssertEqual(WeekSwipeSpeed.steps(translation: -300, velocity: -10000), 8)
+        XCTAssertEqual(WeekSwipeSpeed.steps(translation: 300, velocity: 10000), -8)
+    }
+
+    func testNativeTaskImportanceIsOptionalAndBackwardCompatible() throws {
+        let old = """
+        {"id":"t1","roleId":"work","text":"Read","done":false,"allocationId":null}
+        """
+        let task = try JSONDecoder().decode(PlannerTask.self, from: Data(old.utf8))
+        XCTAssertNil(task.important)
+        let marked = PlannerTask(id: "t2", roleId: "work", text: "Urgent",
+                                 done: false, allocationId: nil, important: true)
+        let restored = try JSONDecoder().decode(PlannerTask.self,
+                                               from: JSONEncoder().encode(marked))
+        XCTAssertEqual(restored.important, true)
+    }
+
     func testLifeOrbitDirectionRightAddsAndLeftReturns() {
         // SwiftUI coordinates grow downward: top -> right is clockwise,
         // so the signed angle delta must add half-hour detents.

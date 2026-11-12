@@ -93,12 +93,20 @@ This kit consolidates Spread's existing visual language. It does not override th
 - Native Wallet Stack: overlapping full-width cards with chevrons
 
 ### Native Life Weekly Time
+
+> **November 11 owner supersession:** The storage-style time bar sits beside Life on regular iPhones (stacks on narrow/accessibility sizes), opens inline with the Life Wallet focus motion, and edits total weekly capacity and each Life-area budget through the authoritative planner. Tap an actual colored segment to select its responsibility; the blue action expands/collapses the editor with a down/up chevron. No standalone Hours page is needed for normal Life use. Retain readable proportions, role colors, available hours, capacity limits, Undo and VoiceOver.
+
 - The read-only storage-style `LifeWeeklyTimeBudget` shows **allocated / total / available** hours using real planner data.
 - The bar proportions use the total weekly capacity. Role-colored segments show hour labels only when readable; the neutral hatched remainder is available time. Without capacity, show a neutral empty bar, not fictitious 100% usage.
 - One accessible touch target opens the existing Hours allocator; no legends, Liquid Glass, new allocation interactions, or second state store.
 - Keep the solid native card surface, existing Life Wallet artwork and Crown. [Native budget authority](../planner/SPREAD_NATIVE_BRAND_BOARD.md).
+- Place the **compact** weekly time card horizontally beside the Life title on standard iPhones. Keep budgeted/total/available values and the whole-card Adjust hours action; use a stacked, full-width version for narrow devices and accessibility text sizes. Never stretch segments to force labels.
 
 ### Task Line
+
+- Task importance is a familiar red **!** with text and VoiceOver label; a single toggle adds/removes importance without changing date, effort or completion.
+- Week's **To place** control is a single task-inbox icon with count; it reveals the task list on tap. Empty days do not reserve a large fixed-height tray.
+
 - 44px grip + task text + single action (“Place” / “Move to”)
 - Hairline dividers between tasks
 - Day chips for scheduled time
@@ -124,6 +132,9 @@ This kit consolidates Spread's existing visual language. It does not override th
 - Drop highlight: 2px accent outline
 
 ### Navigation
+
+> **Current native navigation:** Two labeled destinations, **Life** and **Week**, in one compact dock toggle. The old metallic Crown is retired; use a solid-surface calendar-week control with explicit previous/next buttons and velocity-aware horizontal swipes (one week slowly, bounded skips quickly). Weekly navigation changes the viewed week, never transfers time. The unrelated Plan Ahead sheet is explicitly opened, previews the source/destination impact and requires confirmation. Do not resurrect dock plus, Crown-position, or Rollover controls.
+
 - Native: adaptive Life/Hours/Week navigation and existing metallic Crown for week changes
 - Web: preserve its current navigation; do not add mockup tabs
 - “Today” marker in accent

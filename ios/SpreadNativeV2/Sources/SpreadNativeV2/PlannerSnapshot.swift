@@ -94,14 +94,16 @@ public struct PlannerTask: Codable, Equatable, Identifiable, Sendable {
     public let done: Bool
     public let allocationId: String?
     public let estimateMinutes: Int?
+    public let important: Bool?
 
-    public init(id: String, roleId: String, text: String, done: Bool, allocationId: String?, estimateMinutes: Int? = nil) {
+    public init(id: String, roleId: String, text: String, done: Bool, allocationId: String?, estimateMinutes: Int? = nil, important: Bool? = nil) {
         self.id = id
         self.roleId = roleId
         self.text = text
         self.done = done
         self.allocationId = allocationId
         self.estimateMinutes = estimateMinutes
+        self.important = important
     }
 }
 

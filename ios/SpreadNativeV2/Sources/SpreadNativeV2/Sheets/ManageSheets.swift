@@ -24,7 +24,7 @@ struct NewSpreadSheet: View {
         SpreadSheetStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Name the spreads you actually live. Add as many as you need.")
+                    Text("What would you like to make time for?")
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
                     ForEach(drafts.indices, id: \.self) { index in
                         draftCard(index)
@@ -35,7 +35,7 @@ struct NewSpreadSheet: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus").font(.system(.subheadline, weight: .bold))
-                            Text("Add another spread").font(.system(.subheadline, weight: .semibold))
+                            Text("Add another Life area").font(.system(.subheadline, weight: .semibold))
                         }
                         .foregroundStyle(Spread.accent)
                         .frame(maxWidth: .infinity, minHeight: 44)
@@ -44,7 +44,7 @@ struct NewSpreadSheet: View {
                     .buttonStyle(.spreadPress)
                     .accessibilityIdentifier("add-another-spread")
                     Button { save() } label: {
-                        Text("Save spreads").font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
+                        Text("Save Life areas").font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Capsule().fill(Spread.accentGradient))
                     }
@@ -55,7 +55,7 @@ struct NewSpreadSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle("New Spread")
+            .navigationTitle("Add Life")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -86,8 +86,6 @@ struct NewSpreadSheet: View {
                         .accessibilityLabel("Spread \(index + 1) name")
                         .accessibilityIdentifier("role-name-field")
                 }
-                ChalkMotionArt(category: draft.category ?? "custom", size: 72)
-                    .frame(width: 72, height: 50)
             }
             HStack {
                 Text("Hours each week").font(Spread.callout).foregroundStyle(Spread.secondary)
@@ -157,11 +155,6 @@ struct RoleSheet: View {
         SpreadSheetStack {
             if let snapshot = planner.snapshot, let role {
                 Form {
-                    Section {
-                        ChalkMotionArt(category: role.category, size: 160)
-                            .frame(maxWidth: .infinity)
-                    }
-                        .listRowBackground(Spread.elevated)
                     Section("Responsibility") {
                         TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"))
                             .submitLabel(.done)
@@ -482,9 +475,6 @@ struct MoreSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var newSpread = false
-    @State private var openTasks = false
-    @State private var confirmRollover = false
     @State private var showCalendarPicker = false
     @State private var showRecentlyDeleted = false
 
@@ -503,19 +493,6 @@ struct MoreSheet: View {
                 if let url = WeekExport.wordFile(base64: exported.content) { WeekExport.share([url]) }
             default:
                 WeekExport.share([exported.content])
-            }
-        }
-    }
-
-    private func rollover() {
-        Task {
-            // Clear a previous confirmation before requesting the current week's
-            // outcome. The dispatcher returns ok=true even when the current
-            // rollover is a non-mutating "confirm" response.
-            planner.rolloverOutcome = nil
-            guard await planner.send(["type": "rollover", "force": false]) else { return }
-            if planner.rolloverOutcome == "confirm" {
-                confirmRollover = true
             }
         }
     }
@@ -584,23 +561,6 @@ struct MoreSheet: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            sectionLabel("Spreads")
-                            LazyVGrid(columns: columns, spacing: 8) {
-                                tile("New Spread", symbol: "plus", id: "more-new-spread") {
-                                    newSpread = true
-                                }
-                                tile("Review tasks", symbol: "tray", id: "more-review-tasks",
-                                     accessibilityLabel: "Review open tasks") {
-                                    openTasks = true
-                                }
-                                tile("Rollover", symbol: "arrow.right.square", id: "more-rollover",
-                                     accessibilityLabel: "Rollover to next week") {
-                                    rollover()
-                                }
-                            }
-                        }
-
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Appearance")
                             appearanceLayout {
@@ -732,15 +692,7 @@ struct MoreSheet: View {
                         .accessibilityIdentifier("close-more")
                 }
             }
-            .sheet(isPresented: $newSpread) { NewSpreadSheet(planner: planner) }
-            .sheet(isPresented: $openTasks) { CarryOverSheet(planner: planner) }
             .sheet(isPresented: $showRecentlyDeleted) { RecentlyDeletedSheet(planner: planner) }
-            .confirmationDialog("Replace next week?", isPresented: $confirmRollover, titleVisibility: .visible) {
-                Button("Replace", role: .destructive) { Task { await planner.send(["type": "rollover", "force": true]) } }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Next week already has tasks or days. This week stays as it is.")
-            }
         }
         // Start fully presented so the entire compact menu is visible immediately.
         // Scrolling is still possible on smaller iPhones, keyboard and large text.

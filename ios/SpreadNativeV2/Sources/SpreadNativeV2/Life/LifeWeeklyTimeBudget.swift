@@ -6,6 +6,10 @@ import SwiftUI
 struct LifeWeeklyTimeBudget: View {
     let roles: [Responsibility]
     let capacity: Double?
+    let compact: Bool
+    let expanded: Bool
+    let onToggle: () -> Void
+    let onSelectRole: (String) -> Void
 
     @ScaledMetric(relativeTo: .body) private var barHeight: CGFloat = 32
     @ScaledMetric(relativeTo: .caption) private var minimumRoleLabelWidth: CGFloat = 40
@@ -25,6 +29,70 @@ struct LifeWeeklyTimeBudget: View {
     private var positiveRoles: [Responsibility] { roles.filter { $0.hours > 0 } }
 
     var body: some View {
+        Group {
+            if compact { compactContent }
+            else { fullContent }
+        }
+        .padding(.horizontal, compact ? 12 : 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
+            .strokeBorder(Spread.line, lineWidth: 1))
+    }
+
+    /// Keep the budget beside the Life heading on a standard iPhone.
+    /// This preserves the same planner values and full-width tap action.
+    private var compactContent: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("WEEKLY TIME")
+                .font(.caption2.weight(.semibold))
+                .tracking(1.2)
+                .foregroundStyle(Spread.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(SpreadHours.text(assigned) + "h")
+                    .font(.title3.bold())
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(hasCapacity ? "of " + SpreadHours.text(capacity ?? 0) + "h" : "budgeted")
+                    .font(.caption)
+                    .foregroundStyle(Spread.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+            }
+            storageBar
+            HStack(spacing: 4) {
+                Text(hasCapacity
+                    ? (overBudget > 0 ? SpreadHours.text(overBudget) + "h over budget"
+                                      : SpreadHours.text(available ?? 0) + "h available")
+                    : "Capacity not set")
+                    .font(.caption2)
+                    .foregroundStyle(overBudget > 0 ? Spread.danger : Spread.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                Button(action: onToggle) {
+                    HStack(spacing: 3) {
+                        ViewThatFits(in: .horizontal) {
+                            Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
+                            Text(hasCapacity ? "Adjust" : "Set hours")
+                        }
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Spread.accent)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(expanded ? "Close weekly hours" : "Set weekly hours")
+                .accessibilityIdentifier("life-budget-toggle")
+            }
+        }
+    }
+
+    private var fullContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -64,25 +132,25 @@ struct LifeWeeklyTimeBudget: View {
                 Text("\(roles.count) Life \(roles.count == 1 ? "area" : "areas")")
                     .font(.caption2).foregroundStyle(Spread.secondary)
                 Spacer(minLength: 8)
-                Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
+                Button(action: onToggle) {
+                    HStack(spacing: 4) {
+                        Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Spread.accent)
-                Image(systemName: "arrow.right")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Spread.accent)
-                    .accessibilityHidden(true)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(expanded ? "Close weekly hours" : "Set weekly hours")
+                .accessibilityIdentifier("life-budget-toggle")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
-            .strokeBorder(Spread.line, lineWidth: 1))
     }
 
     private var storageBar: some View {
         GeometryReader { geometry in
+            ZStack {
             if let capacity, capacity > 0 {
                 let track = LifeBudgetBarMath.trackHours(assigned: assigned, capacity: capacity)
                 HStack(spacing: 0) {
@@ -145,9 +213,28 @@ struct LifeWeeklyTimeBudget: View {
                 .clipShape(Capsule())
                 .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
             }
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture(coordinateSpace: .local) { point in
+                    guard let capacity, capacity > 0 else { onToggle(); return }
+                    let track = LifeBudgetBarMath.trackHours(assigned: assigned, capacity: capacity)
+                    let x = Double(max(0, min(point.x, geometry.size.width)) /
+                                   max(1, geometry.size.width)) * track
+                    var cursor = 0.0
+                    for role in positiveRoles {
+                        cursor += role.hours
+                        if x <= cursor { onSelectRole(role.id); return }
+                    }
+                    onToggle()
+                }
+            }
         }
-        .frame(height: max(32, barHeight))
-        .accessibilityHidden(true)
+        .frame(height: compact ? 26 : max(32, barHeight))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(LifeBudgetBarMath.accessibilityLabel(roles: roles, capacity: capacity))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onToggle() }
+        .accessibilityIdentifier("life-budget-segments")
     }
 }
 

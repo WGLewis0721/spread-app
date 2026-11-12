@@ -51,112 +51,44 @@ enum LifeEditorialArtworkRegistry {
     }
 }
 
-/// Artwork and legibility masks are contained here. The card's text and values
-/// are rendered separately as live SwiftUI content in LifeEditorialFace.
+/// Artwork and legibility masks stay behind live SwiftUI text. The owner
+/// retired Chalk/doodle art: missing editorial assets use a calm color gradient.
 struct LifeEditorialArtwork: View {
     let category: String
     let roleColor: Color
-    /// Off (default): the main-head artwork, which never reads editorial files, so the
-    /// default presentation matches main. On: the layered base and the editorial art.
-    var editorial = false
+    var editorial = true
 
     var body: some View {
-        if editorial {
-            layeredBody
-        } else {
-            mainHeadBody
-        }
-    }
-
-    // Unchanged from main. Main ships no editorial files, so the registry would return
-    // nothing here. The gate-off path skips it and always draws the Chalk fallback.
-    private var mainHeadBody: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .trailing) {
-                LinearGradient(
-                    colors: [roleColor.opacity(0.85), Color(red: 0.10, green: 0.13, blue: 0.15)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                // Keep the existing original artwork available until a clean
-                // editorial export is supplied for this category.
-                ChalkMotionArt(category: category, size: min(210, proxy.size.width * 0.58))
-                    .frame(width: proxy.size.width * 0.58, height: proxy.size.height * 0.73)
-                    .padding(.trailing, 12)
-                // Keep the title and weekly values readable regardless of art.
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.black.opacity(0.62), location: 0),
-                        .init(color: Color.black.opacity(0.44), location: 0.49),
-                        .init(color: Color.black.opacity(0.14), location: 1)
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                LinearGradient(
-                    colors: [.clear, Color.black.opacity(0.43)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipped()
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    private var layeredBody: some View {
-        // Editorial only. The base is a flexible gradient, and every art and mask layer sits
-        // in an overlay. Overlays never contribute to layout. The earlier GeometryReader base
-        // reported the artwork's scaled width (height x 5/3) as its own width.
         LinearGradient(
             colors: [roleColor.opacity(0.85), Color(red: 0.10, green: 0.13, blue: 0.15)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
-        .overlay { artLayer }
-        // Keep the title and weekly values readable regardless of art.
         .overlay {
-            LinearGradient(
-                stops: [
-                    .init(color: Color.black.opacity(0.62), location: 0),
-                    .init(color: Color.black.opacity(0.44), location: 0.49),
-                    .init(color: Color.black.opacity(0.14), location: 1)
-                ],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
+            if let image = LifeEditorialArtworkRegistry.image(for: category) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            }
         }
         .overlay {
             LinearGradient(
-                colors: [.clear, Color.black.opacity(0.43)],
-                startPoint: .center,
-                endPoint: .bottom
+                stops: [
+                    .init(color: Color.black.opacity(0.66), location: 0),
+                    .init(color: Color.black.opacity(0.40), location: 0.50),
+                    .init(color: Color.black.opacity(0.12), location: 1)
+                ],
+                startPoint: .leading, endPoint: .trailing
             )
+        }
+        .overlay {
+            LinearGradient(colors: [.clear, Color.black.opacity(0.40)],
+                           startPoint: .center, endPoint: .bottom)
         }
         .clipped()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-    }
-
-    @ViewBuilder
-    private var artLayer: some View {
-        if let image = LifeEditorialArtworkRegistry.image(for: category) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .clipped()
-        } else {
-            // Keep the existing original artwork available until a clean
-            // editorial export is supplied for this category.
-            GeometryReader { proxy in
-                ChalkMotionArt(category: category, size: min(210, proxy.size.width * 0.58))
-                    .frame(width: proxy.size.width * 0.58, height: proxy.size.height * 0.73)
-                    .padding(.trailing, 12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-            }
-        }
     }
 }
 

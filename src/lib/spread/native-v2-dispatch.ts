@@ -69,6 +69,11 @@ const action = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("removeLifeRole"), roleId: id }),
   z.strictObject({ type: z.literal("setLifeBudget"), roleId: id, hours }),
   z.strictObject({ type: z.literal("setLifePriority"), priorityRoleId: id.nullable(), goalHours: hours.optional(), day: day.optional() }),
+  z.strictObject({ type: z.literal("previewPlanAhead"), roleId: id, toDay: day,
+    hours: hours.refine((value) => value > 0), fromDay: day.optional(), targetCapacityHours: hours.optional() }),
+  z.strictObject({ type: z.literal("transferPlanAhead"), roleId: id, toDay: day,
+    hours: hours.refine((value) => value > 0), fromDay: day.optional(), targetCapacityHours: hours.optional() }),
+  z.strictObject({ type: z.literal("setTaskImportant"), roleId: id, taskId: id, important: z.boolean() }),
   z.strictObject({ type: z.literal("setTaskEstimate"), roleId: id, taskId: id,
     minutes: z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60),
       z.literal(90), z.literal(120), z.literal(180), z.literal(240), z.literal(480), z.null()]) }),
@@ -182,6 +187,7 @@ export type NativeReply = {
   bulkPreview?: { taskId: string; weekKey: string; hatId: string; targetAllocationId?: string; error?: string }[];
   bulkMoved?: number;
   priorityPreview?: ReturnType<typeof previewLifePriority>;
+  planAheadPreview?: ReturnType<ReturnType<typeof useSpread.getState>["previewPlanAhead"]>;
   state: NativeRead | null;
 };
 
@@ -231,7 +237,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (command.action.type === "monthMarks")
       return monthMarks(command, command.action.year, command.action.month, command.action.selectedRoleId, fail);
     // Volatile, read-only result sets: never cache task text in replay receipts.
-    if (["readDeletedTasks", "readOverdueTasks", "previewBulkOverdue", "previewLifePriority"].includes(command.action.type))
+    if (["readDeletedTasks", "readOverdueTasks", "previewBulkOverdue", "previewLifePriority", "previewPlanAhead"].includes(command.action.type))
       return run(command, fail);
     const prior = requests.get(command.requestId);
     if (prior) {
@@ -313,13 +319,20 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
     if (command.expectedWeek !== state.data.currentWeek) return fail("stale-week");
     if (command.expectedRevision !== revision) return fail("stale-revision");
-    if (getSaveFacts().failed && !["retrySave", "readTaskContent", "readDeletedTasks", "readOverdueTasks", "previewBulkOverdue", "previewLifePriority"].includes(command.action.type))
+    if (getSaveFacts().failed && !["retrySave", "readTaskContent", "readDeletedTasks", "readOverdueTasks", "previewBulkOverdue", "previewLifePriority", "previewPlanAhead"].includes(command.action.type))
       return fail("save-unavailable");
     const a = command.action;
     if (a.type === "exportWeek") return fail("export-not-here");
     if (a.type === "monthMarks") return fail("read-not-here");
     if (a.type === "previewLifePriority") {
       return { requestId: command.requestId, ok: true, state: read(), priorityPreview: previewLifePriority(state.data, a.roleId, a.goalHours, a.day) };
+    }
+    if (a.type === "previewPlanAhead") {
+      return { requestId: command.requestId, ok: true, state: read(),
+        planAheadPreview: state.previewPlanAhead({
+          roleId: a.roleId, toDay: a.toDay, hours: a.hours,
+          fromDay: a.fromDay, targetCapacityHours: a.targetCapacityHours,
+        }) };
     }
     if (a.type === "readDeletedTasks") {
       return { requestId: command.requestId, ok: true, state: read(),
@@ -382,6 +395,15 @@ export function createNativeV2Dispatcher(sessionId: string) {
             break;
           case "setLifePriority":
             if (!state.setLifePriority(a.priorityRoleId, a.goalHours, a.day)) throw new Error("life-priority-refused");
+            break;
+          case "transferPlanAhead":
+            if (!state.transferPlanAhead({
+              roleId: a.roleId, toDay: a.toDay, hours: a.hours,
+              fromDay: a.fromDay, targetCapacityHours: a.targetCapacityHours,
+            })) throw new Error("plan-ahead-refused");
+            break;
+          case "setTaskImportant":
+            if (!state.setTaskImportant(a.roleId, a.taskId, a.important)) throw new Error("task-important-refused");
             break;
           case "setTaskEstimate":
             if (!state.setTaskEstimate(a.roleId, a.taskId, a.minutes)) throw new Error("life-estimate-refused");
@@ -498,7 +520,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
         }
       };
       const lifeAction = ["setLifeCapacity", "setLifeBudget", "setLifePriority", "applyLifePriority",
-        "editLifeRole", "removeLifeRole", "setTaskEstimate"].includes(a.type) ||
+        "editLifeRole", "removeLifeRole", "setTaskEstimate", "setTaskImportant", "transferPlanAhead"].includes(a.type) ||
         ((a.type === "addTask" || a.type === "addTaskForDay") && a.life === true);
       if (lifeAction) {
         undoId = state.lifeUndoable(mutate);
