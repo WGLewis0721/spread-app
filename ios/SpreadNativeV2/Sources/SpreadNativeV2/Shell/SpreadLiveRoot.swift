@@ -73,6 +73,17 @@ public struct SpreadLiveRoot: View {
                 presented // Classic keeps its original destination and planner semantics.
             }
         }
+        .task(id: planner.state?.revision) {
+            if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+        }
+        .onAppear {
+            if UserDefaults.standard.bool(forKey: "native.widget.openToday") {
+                weekFocusEnabled = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenToday"))) { _ in
+            weekFocusEnabled = true
+        }
         .task(id: planner.snapshot != nil) {
             // Show only when the real planner is ready, not over its launch screen.
             guard planner.snapshot != nil, sheet == nil, !showWhatsNew else { return }
