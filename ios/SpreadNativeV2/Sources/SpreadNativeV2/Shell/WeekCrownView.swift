@@ -16,6 +16,7 @@ struct WeekCrownView: View {
             value: title,
             detail: detail ?? (isMonth ? "Calendar month" : "Calendar week"),
             onValue: onDetail,
+            valueIdentifier: "calendar-period-label",
             repeatsOnHold: true,
             leftLabel: isMonth ? "Previous month" : "Previous week",
             rightLabel: isMonth ? "Next month" : "Next week",
