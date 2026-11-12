@@ -56,6 +56,7 @@ struct LifeRoot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         GeometryReader { geometry in
@@ -160,6 +161,8 @@ struct LifeRoot: View {
         .sheet(isPresented: $showPlanAhead) {
             if let snapshot = planner.snapshot {
                 LifePlanAheadSheet(planner: planner, snapshot: snapshot)
+                    // Sheets are separate presentations: match Life’s resolved system/app appearance.
+                    .preferredColorScheme(colorScheme)
             }
         }
         .sheet(item: $localSheet, onDismiss: {
@@ -333,17 +336,6 @@ struct LifeRoot: View {
                     .font(.subheadline)
                     .foregroundStyle(Spread.danger)
                     .accessibilityIdentifier("life-recurrence-issue")
-            }
-            HStack {
-                Spacer()
-                Button {
-                    showPlanAhead = true
-                } label: {
-                    Label("Plan Ahead", systemImage: "calendar.badge.clock")
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("life-plan-ahead-from-home")
             }
             if budgetExpanded {
                 budgetEditor(snapshot)
