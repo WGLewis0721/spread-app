@@ -19,12 +19,12 @@ struct LifePlanAheadSheet: View {
     @State private var previewing = false
     @State private var saving = false
 
+    /// The first Monday a move can land on, as a device-local day for the picker.
     private var earliestDestination: Date {
-        PlannerDates.calendar.date(byAdding: .weekOfYear, value: 1,
-                                   to: PlannerDates.date(snapshot.weekKey)) ?? Date()
+        PlannerDates.localDate(PlannerDates.weekISO(base: snapshot.weekKey, offset: 1))
     }
     private var destinationISO: String {
-        PlannerDates.label(destinationDate, pattern: "yyyy-MM-dd")
+        PlannerDates.localISO(destinationDate)
     }
     private var availableDays: [String] {
         Array(Set(snapshot.allocations.filter { $0.roleId == roleId }.map(\.day))).sorted()
@@ -99,8 +99,8 @@ struct LifePlanAheadSheet: View {
                 Section {
                     DatePicker("Move to", selection: $destinationDate,
                                in: earliestDestination..., displayedComponents: .date)
-                        .environment(\.calendar, PlannerDates.calendar)
-                        .environment(\.timeZone, PlannerDates.calendar.timeZone)
+                        .environment(\.calendar, PlannerDates.deviceCalendar)
+                        .environment(\.timeZone, TimeZone.current)
                     Stepper(value: $amount, in: 0.5...168, step: 0.5) {
                         Text(SpreadHours.text(amount) + " hours")
                             .font(.headline).monospacedDigit()
@@ -190,7 +190,7 @@ struct LifePlanAheadSheet: View {
     private var activeRules: [NativeRecurringPlan] {
         (snapshot.recurringPlans ?? []).filter { rule in
             rule.terminatedWeek == nil &&
-                (rule.endWeek == nil || rule.endWeek! >= PlannerDates.weekKey(for: earliestDestination))
+                (rule.endWeek == nil || rule.endWeek! >= PlannerDates.weekKey(localDay: earliestDestination))
         }
     }
 

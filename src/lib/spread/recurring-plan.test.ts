@@ -274,3 +274,35 @@ test("saved set days survive a reload, and invalid days keep the weekly hours", 
   assert.equal(kept.recurringPlans?.[0].dayHours, undefined);
   assert.equal(kept.recurringPlans?.[0].hours, 2);
 });
+test("a week opened before the schedule was created still takes its fixed days", () => {
+  const { data, gym, first } = make();
+  // Opening the week stores it, then the person returns to the current week to create the schedule.
+  const opened = { ...ensureWeek({ ...data, currentWeek: first }), currentWeek: data.currentWeek };
+  assert.equal(opened.weeks[first].allocations.length, 0);
+  const { data: saved, preview } = applyRecurringPlan(opened, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 3,
+    dayHours: [{ weekday: "tue", hours: 1 }, { weekday: "thu", hours: 1 }, { weekday: "sat", hours: 1 }] });
+  assert.equal(preview.eligible, true);
+  assert.equal(preview.preservedWeeks.includes(first), false);
+  const seen = ensureWeek({ ...saved, currentWeek: first });
+  assert.deepEqual(seen.weeks[first].allocations.map((a) => [a.day, a.hours]),
+    [[planDayIso(first, "tue"), 1], [planDayIso(first, "thu"), 1], [planDayIso(first, "sat"), 1]]);
+  assert.equal(seen.weeks[first].boxes.find((b) => b.hatId === gym)?.hours, 3);
+});
+test("a week the person changed keeps its contents when a schedule is created", () => {
+  const { data, gym, first } = make();
+  const edited = { ...ensureWeek({ ...data, currentWeek: first }), currentWeek: data.currentWeek };
+  edited.weeks[first] = { ...edited.weeks[first],
+    boxes: edited.weeks[first].boxes.map((b) => (b.hatId === gym ? { ...b, hours: 5 } : b)) };
+  const { data: saved, preview } = applyRecurringPlan(edited, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 2 });
+  assert.equal(preview.eligible, true);
+  assert.equal(preview.preservedWeeks.includes(first), true);
+  assert.equal(saved.weeks[first].boxes.find((b) => b.hatId === gym)?.hours, 5);
+});
+test("a schedule without a weekly life total says where to set one", () => {
+  const data = defaultData();
+  const gym = data.hats[0].id;
+  delete data.weeks[data.currentWeek].life;
+  const preview = previewRecurringPlan(data, { roleId: gym, startWeek: shiftWeek(data.currentWeek, 1), everyWeeks: 1, hours: 2 });
+  assert.equal(preview.eligible, false);
+  assert.match(preview.reason ?? "", /Life card/);
+});
