@@ -1,0 +1,60 @@
+name: Native type-check
+
+# EXCEPTION FOR THE OWNER TO DECIDE. docs/IOS_RELEASE.md says GitHub runs no iOS build or simulator
+# workflow and that Codemagic is the only signed iOS build and upload lane. This job changes none of
+# that: it does not build, archive, sign, upload or run a simulator. It only asks the Swift compiler
+# whether the native sources are valid against the iOS Simulator SDK, in a minute or two, so a mistake
+# shows on the pull request instead of at the next Codemagic archive. It follows the existing
+# swift-cloudkit-typecheck job in cloud-checks.yml. To remove it, delete this file.
+#
+# It runs only for pull requests that touch native Swift, and it is not a release gate: the iOS
+# deployment target is 17 and the Xcode here may be older than Codemagic's, so an SDK difference is
+# reported, not hidden.
+on:
+  pull_request:
+    paths:
+      - 'ios/SpreadNativeV2/Sources/**'
+      - 'ios/App/SpreadWidget/**'
+      - 'ios/App/App/*.swift'
+      - '.github/workflows/native-typecheck.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-typecheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-typecheck:
+    name: native-typecheck
+    runs-on: macos-26
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Type-check the widget extension
+        # The exact files the SpreadWidget target compiles (ios/App/App.xcodeproj, widget Sources phase).
+        run: >
+          xcrun --sdk iphonesimulator swiftc -typecheck -parse-as-library
+          -target arm64-apple-ios17.0-simulator -swift-version 5
+          ios/App/SpreadWidget/SpreadTodayWidget.swift
+          ios/App/SpreadWidget/SpreadTimerWidget.swift
+          ios/App/SpreadWidget/SpreadLifeCardsWidget.swift
+          ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusActivityAttributes.swift
+          ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadWidgetShared.swift
+
+      - name: Type-check the native Swift package
+        # Reported even when the widget step fails, so one run shows every problem.
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+          # SwiftPM synthesizes Bundle.module for a real build. A type-check has none, so give it a stand-in.
+          mkdir -p "$RUNNER_TEMP/stub"
+          printf 'import Foundation\nextension Bundle { static var module: Bundle { .main } }\n' > "$RUNNER_TEMP/stub/BundleModule.swift"
+          find ios/SpreadNativeV2/Sources/SpreadNativeV2 -name '*.swift' > "$RUNNER_TEMP/files.txt"
+          echo "Type-checking $(wc -l < "$RUNNER_TEMP/files.txt") files"
+          xcrun --sdk iphonesimulator swiftc -typecheck -parse-as-library \
+            -target arm64-apple-ios17.0-simulator -swift-version 5 \
+            @"$RUNNER_TEMP/files.txt" "$RUNNER_TEMP/stub/BundleModule.swift"
