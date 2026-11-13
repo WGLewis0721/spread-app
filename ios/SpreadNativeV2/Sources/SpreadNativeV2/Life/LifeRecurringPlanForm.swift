@@ -1,10 +1,19 @@
 #if os(iOS)
 import SwiftUI
 
-/// Recurring schedules reserve WEEKLY hours. No appointments or tasks are copied.
+/// One weekday a schedule can take. `code` matches PLAN_WEEKDAYS in the planner.
+struct LifeWeekday: Identifiable, Equatable {
+    let code: String
+    let name: String
+    var id: String { code }
+}
+
+/// Recurring schedules reserve weekly hours, or hours on chosen days. No appointments or tasks are copied.
 struct LifeRecurringPlanForm: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
+    /// When set, the form opens pre-filled with this saved schedule (Edit series).
+    var initialPlanId: String? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var roleId = ""
     @State private var hours = 2.0
@@ -21,25 +30,86 @@ struct LifeRecurringPlanForm: View {
     @State private var saving = false
     @State private var stopCandidate: NativeRecurringPlan?
     @State private var showStopConfirmation = false
+    /// Hours per chosen weekday. Empty means weekly hours only, which the planner places without a set day.
+    @State private var dayHours: [String: Double] = [:]
+
+    static let weekdays: [LifeWeekday] = [
+        LifeWeekday(code: "mon", name: "Monday"), LifeWeekday(code: "tue", name: "Tuesday"),
+        LifeWeekday(code: "wed", name: "Wednesday"), LifeWeekday(code: "thu", name: "Thursday"),
+        LifeWeekday(code: "fri", name: "Friday"), LifeWeekday(code: "sat", name: "Saturday"),
+        LifeWeekday(code: "sun", name: "Sunday"),
+    ]
+
+    /// "Mon 1h · Fri 1.5h", shared by the review and the plan list.
+    static func dayLine(_ days: [NativeDayHours]) -> String {
+        days.map { (day: NativeDayHours) -> String in
+            let name = Self.weekdays.first(where: { $0.code == day.weekday })?.name ?? day.weekday
+            return String(name.prefix(3)) + " " + SpreadHours.text(day.hours) + "h"
+        }.joined(separator: " · ")
+    }
 
     private var earliest: Date {
         PlannerDates.calendar.date(byAdding: .weekOfYear, value: 1,
             to: PlannerDates.date(snapshot.weekKey)) ?? Date()
     }
-    private var activeRules: [NativeRecurringPlan] {
-        (snapshot.recurringPlans ?? []).filter { rule in
-            rule.terminatedWeek == nil &&
-                (rule.endWeek == nil || rule.endWeek! >= PlannerDates.weekKey(for: earliest))
-        }
+    private func load(_ plan: NativeRecurringPlan) {
+        editingPlanId = plan.id
+        roleId = plan.roleId
+        hours = plan.hours
+        dayHours = Dictionary((plan.dayHours ?? []).map { ($0.weekday, $0.hours) },
+                              uniquingKeysWith: { first, _ in first })
+        everyWeeks = plan.everyWeeks
+        startDate = PlannerDates.date(plan.startWeek)
+        hasEnd = plan.endWeek != nil
+        if let end = plan.endWeek { endDate = PlannerDates.date(end) }
+        editScope = "all"
+        editFromDate = earliest
+        preview = nil
     }
     private var selectedRule: NativeRecurringPlan? {
         snapshot.recurringPlans?.first(where: { $0.id == editingPlanId })
     }
+    /// Weekly total. With chosen days it is their sum, so the form and the planner cannot disagree.
+    private var weeklyHours: Double {
+        dayHours.isEmpty ? hours : dayHours.values.reduce(0, +)
+    }
+    /// Chosen days in week order, for example [["weekday": "mon", "hours": 1.0]].
+    private var dayPayload: [[String: Any]] {
+        Self.weekdays.compactMap { (day: LifeWeekday) -> [String: Any]? in
+            guard let amount = dayHours[day.code] else { return nil }
+            return ["weekday": day.code, "hours": amount]
+        }
+    }
+    private func dayToggle(_ code: String) -> Binding<Bool> {
+        Binding(
+            get: { dayHours[code] != nil },
+            set: { isOn in
+                if isOn { dayHours[code] = dayHours[code] ?? 1 } else { dayHours[code] = nil }
+            }
+        )
+    }
+    private func dayAmount(_ code: String) -> Binding<Double> {
+        Binding(
+            get: { dayHours[code] ?? 1 },
+            set: { dayHours[code] = $0 }
+        )
+    }
+    /// The days this Life area already has this week, the same hours the Life card shows.
+    /// They start a new schedule's set days. Nothing is saved until Confirm.
+    private func cardDays(for roleId: String) -> [String: Double] {
+        let hours = LifeCardWeekDistribution.hours(for: roleId, snapshot: snapshot)
+        var result: [String: Double] = [:]
+        for (index, amount) in hours.enumerated() where index < Self.weekdays.count && amount >= 0.5 {
+            result[Self.weekdays[index].code] = min(24, SpreadHours.clamp(amount))
+        }
+        return result
+    }
     private var payload: [String: Any] {
         var value: [String: Any] = [
-            "roleId": roleId, "hours": hours, "everyWeeks": everyWeeks,
+            "roleId": roleId, "hours": weeklyHours, "everyWeeks": everyWeeks,
             "startWeek": selectedRule?.startWeek ?? PlannerDates.weekKey(for: startDate),
         ]
+        if !dayHours.isEmpty { value["dayHours"] = dayPayload }
         if hasEnd { value["endWeek"] = PlannerDates.weekKey(for: endDate) }
         if let selectedRule {
             value["planId"] = selectedRule.id
@@ -70,15 +140,17 @@ struct LifeRecurringPlanForm: View {
                     }
                 }
                 .disabled(editingPlanId != nil)
-                Stepper(value: $hours, in: 0.5...168, step: 0.5) {
-                    Text(SpreadHours.text(hours) + " hours per scheduled week")
-                        .font(.body)
+                if dayHours.isEmpty {
+                    Stepper(value: $hours, in: 0.5...168, step: 0.5) {
+                        Text(SpreadHours.text(hours) + " hours per scheduled week")
+                            .font(.body)
+                    }
                 }
                 Picker("Repeat", selection: $everyWeeks) {
-                    Text("Every week").tag(1)
-                    Text("Every 2 weeks").tag(2)
-                    Text("Every 3 weeks").tag(3)
-                    Text("Every 4 weeks").tag(4)
+                    // Matches the engine limit: intervals of 1 to 12 weeks.
+                    ForEach(1...12, id: \.self) { weeks in
+                        Text(weeks == 1 ? "Every week" : "Every \(weeks) weeks").tag(weeks)
+                    }
                 }
                 if selectedRule == nil {
                     DatePicker("Starts week of", selection: $startDate, in: earliest...,
@@ -104,7 +176,27 @@ struct LifeRecurringPlanForm: View {
             } header: {
                 Text(editingPlanId == nil ? "Repeat weekly hours" : "Edit repeating schedule")
             } footer: {
-                Text("This sets aside weekly hours. It does not choose a day or repeat tasks.")
+                Text(dayHours.isEmpty
+                     ? "This sets aside weekly hours. It does not choose a day or repeat tasks."
+                     : "Hours go on the chosen days in each scheduled week. No tasks are copied.")
+            }
+            Section {
+                ForEach(Self.weekdays) { day in
+                    Toggle(day.name, isOn: dayToggle(day.code))
+                        .accessibilityIdentifier("plan-ahead-day-" + day.code)
+                    if dayHours[day.code] != nil {
+                        Stepper(value: dayAmount(day.code), in: 0.5...24, step: 0.5) {
+                            Text(SpreadHours.text(dayHours[day.code] ?? 1) + " hours on " + day.name)
+                                .font(.body)
+                        }
+                    }
+                }
+            } header: {
+                Text("Fixed days (optional)")
+            } footer: {
+                Text(dayHours.isEmpty
+                     ? "Pick days to plan fixed hours on them. With no days chosen, only weekly hours are set."
+                     : "Total " + SpreadHours.text(weeklyHours) + " hours per scheduled week.")
             }
             if selectedRule != nil {
                 Section("Change") {
@@ -130,43 +222,16 @@ struct LifeRecurringPlanForm: View {
                     .foregroundStyle(Spread.danger)
                 }
             }
-            if !activeRules.isEmpty {
-                Section("Saved repeating schedules") {
-                    ForEach(activeRules) { plan in
-                        Button {
-                            editingPlanId = plan.id
-                            roleId = plan.roleId
-                            hours = plan.hours
-                            everyWeeks = plan.everyWeeks
-                            startDate = PlannerDates.date(plan.startWeek)
-                            hasEnd = plan.endWeek != nil
-                            if let end = plan.endWeek { endDate = PlannerDates.date(end) }
-                            editScope = "all"
-                            editFromDate = earliest
-                            preview = nil
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(snapshot.roles.first(where: { $0.id == plan.roleId })?.name ?? "Life area")
-                                        .foregroundStyle(Spread.ink)
-                                    Text(SpreadHours.text(plan.hours) + "h every " +
-                                        (plan.everyWeeks == 1 ? "week" : "\(plan.everyWeeks) weeks"))
-                                        .font(.caption).foregroundStyle(Spread.secondary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundStyle(Spread.secondary)
-                            }.frame(minHeight: 44)
-                        }
-                    }
-                }
-            }
             if let preview {
                 Section("Review before confirming") {
                     if preview.eligible {
                         Text(lifeName + " · " + SpreadHours.text(preview.hours) +
                              "h every " + (preview.everyWeeks == 1 ? "week" : "\(preview.everyWeeks) weeks"))
                             .font(.headline)
+                        if let days = preview.dayHours, !days.isEmpty {
+                            Text(Self.dayLine(days))
+                                .font(.subheadline)
+                        }
                         HStack {
                             Text("Starts")
                             Spacer()
@@ -227,9 +292,20 @@ struct LifeRecurringPlanForm: View {
             startDate = earliest
             editFromDate = earliest
             endDate = PlannerDates.calendar.date(byAdding: .month, value: 3, to: earliest) ?? earliest
+            if let id = initialPlanId,
+               let plan = snapshot.recurringPlans?.first(where: { $0.id == id }) {
+                load(plan)
+            } else {
+                dayHours = cardDays(for: roleId)
+            }
         }
-        .onChange(of: roleId) { _, _ in invalidate() }
+        .onChange(of: roleId) { _, newRole in
+            invalidate()
+            // A new schedule starts from the days of the Life area it is for.
+            if editingPlanId == nil { dayHours = cardDays(for: newRole) }
+        }
         .onChange(of: hours) { _, _ in invalidate() }
+        .onChange(of: dayHours) { _, _ in invalidate() }
         .onChange(of: everyWeeks) { _, _ in invalidate() }
         .onChange(of: startDate) { _, _ in invalidate() }
         .onChange(of: hasEnd) { _, _ in invalidate() }

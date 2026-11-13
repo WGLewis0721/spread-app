@@ -2,6 +2,15 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-9ac32d4",
+      "version": "1.0",
+      "date": "2026-11-12",
+      "title": "Recent updates",
+      "changes": [
+        "Plan Ahead can now save fixed days, such as the gym on set days, with hours for each day."
+      ]
+    },
+    {
       "id": "2026-11-11-life-week",
       "version": "1.0",
       "date": "2026-11-11",

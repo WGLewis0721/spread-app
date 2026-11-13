@@ -1,0 +1,31 @@
+name: Draft What's New line for each merge
+
+# Every merge to main adds one draft line to the single pending release-notes PR.
+# Nothing is published here. Merging the pending PR publishes its lines with the next signed build.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Merges can land in quick succession. Run them one at a time so they update the same pending branch.
+concurrency:
+  group: release-notes-draft
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: Draft the What's New line
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add one draft line to the pending release-notes PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: python3 scripts/release_notes_draft.py

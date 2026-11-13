@@ -14,7 +14,7 @@
 
 ## In-app What's New release contract (November 11, 2026 onward)
 
-The native app includes a read-only, offline **What's New** screen in **More**, available in both Life and Classic. After a release with a new note ID, the latest notes appear once after the planner loads. Dismissing them stores only the last-seen release ID in local device preferences, independent of Life areas and profiles. App Store/Codemagic **build number** increments alone do not trigger repeat announcements.
+The native app includes a read-only, offline **What's New** screen in **More**, available in both Life and Classic. After a release with a new note ID, every note newer than the last one dismissed appears once after the planner loads, as one list. Dismissing them stores only the last-seen release ID in local device preferences, independent of Life areas and profiles. App Store/Codemagic **build number** increments alone do not trigger repeat announcements.
 
 **For every shipped user-facing update:**
 

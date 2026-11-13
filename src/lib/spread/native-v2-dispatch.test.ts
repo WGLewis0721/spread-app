@@ -899,6 +899,30 @@ test("Plan Ahead refuses missing destination capacity and keeps source planner i
   } finally { router.dispose(); }
 });
 
+test("native fixed-day schedule: preview shows the days, save places them, bad days are refused", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const first = shiftWeek(useSpread.getState().data.currentWeek, 1);
+    const dayHours = [{ weekday: "mon", hours: 1 }, { weekday: "fri", hours: 1 }];
+    const payload = { roleId, startWeek: first, everyWeeks: 1, hours: 2, capacityHours: 40, dayHours };
+    const preview = await router.dispatch(request({ type: "previewRecurringPlan", ...payload }));
+    assert.equal(preview.ok, true);
+    assert.equal(preview.recurringPreview?.eligible, true);
+    assert.deepEqual(preview.recurringPreview?.dayHours, dayHours);
+    const mismatched = await router.dispatch(request({ type: "previewRecurringPlan", ...payload, hours: 3 }));
+    assert.equal(mismatched.recurringPreview?.eligible, false);
+    const unknownDay = await router.dispatch(request({ type: "previewRecurringPlan", ...payload,
+      dayHours: [{ weekday: "funday", hours: 1 }] }));
+    assert.equal(unknownDay.ok, false);
+    const saved = await router.dispatch(request({ type: "saveRecurringPlan", ...payload }));
+    assert.equal(saved.ok, true);
+    assert.deepEqual(useSpread.getState().data.recurringPlans?.[0].dayHours, dayHours);
+    await router.dispatch(request({ type: "openWeek", weekKey: first }));
+    const week = useSpread.getState().data.weeks[first];
+    assert.deepEqual(week.allocations.map((a) => a.hours), [1, 1]);
+  } finally { router.dispose(); }
+});
+
 test("native recurrence preview is read-only, save is undoable, later weeks alternate", async () => {
   const { router, request, roleId } = setup();
   try {

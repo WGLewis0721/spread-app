@@ -1,14 +1,17 @@
 import {
-  recurrenceWeekOffset, recurringForRole, shiftWeek, validRecurringPlan, weekKey, parseKey, uid,
-  type RecurringPlan, type SpreadData, type WeekData,
+  plannedAllocations, recurrenceWeekOffset, recurringForRole, shiftWeek, validDayHours, validRecurringPlan,
+  weekKey, parseKey, uid,
+  type DayHours, type GeneratedDay, type RecurrenceSource, type RecurringPlan, type SpreadData, type WeekData,
 } from "./model.ts";
 
-/** All recurrence is explicit; it only reserves week-level hours. Tasks and days never repeat. */
+/** Recurrence reserves weekly hours. A plan with fixed days also places those hours on their weekdays. Tasks never repeat. */
 export type RecurringRequest = {
   roleId: string;
   startWeek: string;
   everyWeeks: number;
   hours: number;
+  /** Optional fixed days. Their sum must equal `hours`. */
+  dayHours?: DayHours[];
   endWeek?: string;
   capacityHours?: number;
   /** Edit entire series. If editFromWeek is set, split at that week instead. */
@@ -28,7 +31,10 @@ export type RecurringPreview = {
   preservedWeeks: string[];
   /** A finite count; ongoing schedules are never generated indefinitely. */
   occurrenceCount?: number;
+  /** Fixed days the schedule would place, Monday first. Absent when the schedule has no fixed days. */
+  dayHours?: DayHours[];
 };
+type Marker = RecurrenceSource[string];
 const validWeek = (key: string) => /^\d{4}-\d{2}-\d{2}$/.test(key) &&
   Number.isFinite(Date.parse(key + "T12:00:00Z")) && weekKey(parseKey(key)) === key;
 const effectiveEnd = (p: RecurringPlan) =>
@@ -50,19 +56,28 @@ function candidate(data: Readonly<SpreadData>, request: RecurringRequest): Recur
     managedFromWeek: request.editFromWeek ?? current?.managedFromWeek ??
       (hasEarlierSeries ? firstWeek : shiftWeek(data.currentWeek, 1)),
     everyWeeks: request.everyWeeks,
-    hours: request.hours,
+    // With fixed days, the weekly total is their sum, so the two can never disagree.
+    hours: request.dayHours ? request.dayHours.reduce((sum, day) => sum + day.hours, 0) : request.hours,
     capacityHours: request.capacityHours ?? current?.capacityHours ??
       data.weeks[data.currentWeek]?.life?.capacityHours ?? NaN,
     ...(request.endWeek ? { endWeek: request.endWeek } : {}),
+    ...(request.dayHours ? { dayHours: request.dayHours } : {}),
   };
 }
 export function previewRecurringPlan(data: Readonly<SpreadData>, request: RecurringRequest): RecurringPreview {
+  if (request.dayHours && !validDayHours(request.dayHours, request.hours))
+    return {
+      eligible: false, roleId: request.roleId, hours: request.hours, startWeek: request.startWeek,
+      everyWeeks: request.everyWeeks, nextOccurrences: [], preservedWeeks: [],
+      reason: "Each set day needs one weekday and a positive half-hour amount, and the weekly total must equal their sum.",
+    };
   const draft = candidate(data, request);
   const result: RecurringPreview = {
-    eligible: false, roleId: request.roleId, hours: request.hours,
+    eligible: false, roleId: request.roleId, hours: draft.hours,
     startWeek: draft.startWeek, endWeek: draft.endWeek,
     managedFromWeek: draft.managedFromWeek, everyWeeks: request.everyWeeks,
     nextOccurrences: [], preservedWeeks: [],
+    ...(draft.dayHours ? { dayHours: draft.dayHours } : {}),
   };
   const reject = (reason: string) => ({ ...result, reason });
   if (!validRecurringPlan(draft) || !data.hats.some((h) => h.id === draft.roleId))
@@ -120,36 +135,65 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
   };
 }
 
-/** Reconcile only generated and still-unedited budgets. Never alter linked tasks or allocations. */
+/**
+ * True while the only allocations on this responsibility are the placements the rule made
+ * and no task is linked to them. Anything else means the person has edited that week.
+ */
+function generatedIntact(week: WeekData, hatId: string, marker: Marker): boolean {
+  const generated = marker.generatedDays ?? [];
+  const own = week.allocations.filter((item) => item.hatId === hatId);
+  if (own.length !== generated.length) return false;
+  const linked = new Set(week.boxes.find((box) => box.hatId === hatId)?.tasks
+    .map((task) => task.allocationId).filter((id): id is string => !!id));
+  return generated.every((entry) => {
+    const item = own.find((candidateItem) => candidateItem.id === entry.id);
+    return !!item && item.day === entry.day && item.hours === entry.hours && !linked.has(entry.id);
+  });
+}
+
+/**
+ * Reconcile only generated and still-unedited budgets. Days follow the plan only while untouched;
+ * an edited week keeps its days and only its hours follow the existing rule.
+ */
 function reconcileGenerated(data: SpreadData, touched: Set<string>, fromWeek: string): SpreadData {
   let weeks = data.weeks;
   for (const [key, week] of Object.entries(data.weeks)) {
     if (key < fromWeek || !week.recurrenceSource) continue;
     let changed = false;
+    let allocations = week.allocations;
+    const recurrenceSource: RecurrenceSource = { ...week.recurrenceSource };
     const boxes = week.boxes.map((box) => {
       const marker = week.recurrenceSource?.[box.hatId];
       if (!marker || marker.manual || !touched.has(marker.planId)) return box;
       const next = recurringForRole(data, box.hatId, key);
       const hours = next?.hours ?? data.hats.find((h) => h.id === box.hatId)?.defaultHours ?? 0;
-      const placed = week.allocations.filter((a) => a.hatId === box.hatId).reduce((v, a) => v + a.hours, 0);
+      let generatedDays: GeneratedDay[] | undefined = marker.generatedDays;
+      if (generatedIntact(week, box.hatId, marker)) {
+        const previous = new Set((marker.generatedDays ?? []).map((entry) => entry.id));
+        const kept = allocations.filter((item) => !previous.has(item.id));
+        const fresh = next && next.hours > 0 && next.plan.dayHours
+          ? plannedAllocations(key, box.hatId, next.plan.dayHours, kept) : [];
+        if (fresh.length || previous.size) changed = true;
+        allocations = [...kept, ...fresh];
+        generatedDays = fresh.length
+          ? fresh.map(({ id, day, hours: amount }) => ({ id, day, hours: amount })) : undefined;
+      }
+      const nextMarker: Marker | undefined = next
+        ? { planId: next.plan.id, generatedHours: next.hours, ...(generatedDays?.length ? { generatedDays } : {}) }
+        : undefined;
+      if (JSON.stringify(nextMarker) !== JSON.stringify(marker)) changed = true;
+      if (nextMarker) recurrenceSource[box.hatId] = nextMarker;
+      else delete recurrenceSource[box.hatId];
+      const placed = allocations.filter((a) => a.hatId === box.hatId).reduce((v, a) => v + a.hours, 0);
       if (hours < placed) return box;
-      changed = changed || box.hours !== hours ||
-        (next !== null && (marker.planId !== next.plan.id || marker.generatedHours !== next.hours));
-      return { ...box, hours };
+      if (box.hours !== hours) changed = true;
+      return box.hours === hours ? box : { ...box, hours };
     });
     const sum = boxes.reduce((v, b) => v + b.hours, 0);
     const capacity = week.life?.capacityHours;
     if (!changed || (capacity !== undefined && sum > capacity)) continue;
-    const recurrenceSource = { ...week.recurrenceSource };
-    for (const box of boxes) {
-      const mark = recurrenceSource[box.hatId];
-      if (!mark || mark.manual || !touched.has(mark.planId)) continue;
-      const next = recurringForRole(data, box.hatId, key);
-      if (next) recurrenceSource[box.hatId] = { planId: next.plan.id, generatedHours: next.hours };
-      else delete recurrenceSource[box.hatId];
-    }
     if (weeks === data.weeks) weeks = { ...weeks };
-    weeks[key] = { ...week, boxes, recurrenceSource };
+    weeks[key] = { ...week, boxes, allocations, recurrenceSource };
   }
   return weeks === data.weeks ? data : { ...data, weeks };
 }

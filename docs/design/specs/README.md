@@ -11,6 +11,7 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 | Date | Spec | Status |
 | --- | --- | --- |
 | 2026-11-12 | [Focus Timer and local notifications](2026-11-12-focus-timer-local-notifications.md) | Implemented in stacked PR #186; native and device verification pending. |
+| 2026-11-12 | [Plan Ahead opens to your plans](2026-11-12-plan-ahead-plans-list.md) | Built and in review. Branch `feature/plan-ahead-plans-list`: 1 to 12 week intervals, a read-only 8-week outlook, set days saved with each schedule, and the Life-card day prefill. Owner decisions are in section 4. Monthly cadence is not built. Native compile (Codemagic) and device checks pending. |
 | 2026-11-12 | [Plan Ahead recurring weekly budgets](2026-11-12-plan-ahead-recurrence.md) | Owner-approved interaction; implementation proposed in draft PR #181; native build and real-device QA pending. |
 | 2026-11-11 | [Life: full Wallet behavior (Stack, Focus, Stack)](2026-11-11-life-wallet-parity.md) | Owner-approved for implementation on `feat/life-wallet-focus`. Not compiled or device-verified yet. |
 | 2026-11-10 | [Editorial Life card implementation](2026-11-10-life-card-visual-implementation.md), [illustrated art direction](../planner/SPREAD_LIFE_CARD_ART_DIRECTION.md) | Owner-selected visual references. Implementation proposal on review branch; no native code change or merge approval. |
@@ -33,3 +34,5 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 - [Life recording specification](2026-11-06-life-video-spec.md) — timestamped findings, corrections and candidate acceptance.
 
 - [Annotated iPhone precision](2026-11-06-annotated-iphone-precision.md): owner corrections for Life, Hours and Week; implementation and native evidence pending.
+
+- [What's New shows everything the last build changed](2026-11-12-whats-new-every-update.md): every unseen note opens as one list; Swift compile and device checks owed.

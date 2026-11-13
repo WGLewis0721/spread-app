@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultData, ensureWeek, normalizeData, shiftWeek } from "./model.ts";
-import { applyRecurringPlan, previewRecurringPlan, stopRecurringPlan } from "./recurring-plan.ts";
+import { defaultData, ensureWeek, normalizeData, planDayIso, shiftWeek } from "./model.ts";
+import { applyRecurringPlan, previewRecurringPlan, stopRecurringPlan, type RecurringRequest } from "./recurring-plan.ts";
 
 function make() {
   const data = defaultData();
@@ -159,4 +159,118 @@ test("splitting a schedule reassigns provenance even if generated hours are unch
   assert.equal(modified.data.recurringPlans?.length, 2);
   assert.notEqual(modified.data.weeks[split].recurrenceSource?.[gym]?.planId, oldId);
   assert.equal(modified.data.weeks[split].boxes.find((b) => b.hatId === gym)?.hours, 2);
+});
+test("set days place each weekday in occurrence weeks, and the budget equals their sum", () => {
+  const { data, gym, first } = make();
+  const { data: saved, preview } = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 2, hours: 3,
+    dayHours: [{ weekday: "wed", hours: 1 }, { weekday: "mon", hours: 2 }] });
+  assert.equal(preview.eligible, true);
+  const week = ensureWeek({ ...saved, currentWeek: first }).weeks[first];
+  assert.equal(week.boxes.find((b) => b.hatId === gym)?.hours, 3);
+  assert.deepEqual(week.allocations.map((a) => [a.day, a.hours]),
+    [[planDayIso(first, "mon"), 2], [planDayIso(first, "wed"), 1]]);
+  assert.deepEqual(week.recurrenceSource?.[gym]?.generatedDays?.map((g) => g.day),
+    [planDayIso(first, "mon"), planDayIso(first, "wed")]);
+});
+test("set days are placed only in occurrence weeks", () => {
+  const { data, gym, first } = make();
+  const { data: saved } = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 2, hours: 1,
+    dayHours: [{ weekday: "tue", hours: 1 }] });
+  const off = shiftWeek(first, 1);
+  const week = ensureWeek({ ...saved, currentWeek: off }).weeks[off];
+  assert.equal(week.boxes.find((b) => b.hatId === gym)?.hours, 0);
+  assert.equal(week.allocations.length, 0);
+});
+test("changing set days reconciles an untouched generated week", () => {
+  const { data, gym, first } = make();
+  const created = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 2,
+    dayHours: [{ weekday: "mon", hours: 1 }, { weekday: "wed", hours: 1 }] }).data;
+  const planId = created.recurringPlans![0].id;
+  const ready = ensureWeek({ ...created, currentWeek: first });
+  const edited = applyRecurringPlan(ready, { roleId: gym, planId, startWeek: first, everyWeeks: 1, hours: 2,
+    dayHours: [{ weekday: "fri", hours: 2 }] });
+  assert.equal(edited.preview.eligible, true);
+  const after = edited.data.weeks[first];
+  assert.equal(after.boxes.find((b) => b.hatId === gym)?.hours, 2);
+  assert.deepEqual(after.allocations.map((a) => [a.day, a.hours]), [[planDayIso(first, "fri"), 2]]);
+  assert.deepEqual(after.recurrenceSource?.[gym]?.generatedDays?.map((g) => g.day), [planDayIso(first, "fri")]);
+});
+test("an edited generated week keeps its placed days when the set days change", () => {
+  const { data, gym, first } = make();
+  const created = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 2,
+    dayHours: [{ weekday: "mon", hours: 1 }, { weekday: "wed", hours: 1 }] }).data;
+  const planId = created.recurringPlans![0].id;
+  const ready = ensureWeek({ ...created, currentWeek: first });
+  const week = ready.weeks[first];
+  const moved = { ...week, allocations: week.allocations.map((a, i) => (i === 0 ? { ...a, hours: 0.5 } : a)) };
+  const edited = applyRecurringPlan({ ...ready, weeks: { ...ready.weeks, [first]: moved } }, {
+    roleId: gym, planId, startWeek: first, everyWeeks: 1, hours: 2, dayHours: [{ weekday: "fri", hours: 2 }],
+  });
+  assert.equal(edited.preview.eligible, true);
+  assert.deepEqual(edited.data.weeks[first].allocations, moved.allocations);
+});
+test("a task linked to a generated day keeps that placement", () => {
+  const { data, gym, first } = make();
+  const created = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 2,
+    dayHours: [{ weekday: "mon", hours: 1 }, { weekday: "wed", hours: 1 }] }).data;
+  const planId = created.recurringPlans![0].id;
+  const week = ensureWeek({ ...created, currentWeek: first }).weeks[first];
+  const linked = { ...week, boxes: week.boxes.map((b) => b.hatId === gym
+    ? { ...b, tasks: [{ id: "t1", text: "Session", done: false, allocationId: week.allocations[0].id }] } : b) };
+  const edited = applyRecurringPlan({ ...created, currentWeek: first, weeks: { ...created.weeks, [first]: linked } }, {
+    roleId: gym, planId, startWeek: first, everyWeeks: 1, hours: 2, dayHours: [{ weekday: "fri", hours: 2 }],
+  });
+  assert.equal(edited.data.weeks[first].allocations.length, 2);
+  assert.deepEqual(edited.data.weeks[first].allocations, linked.allocations);
+});
+test("removing set days clears untouched placements and keeps the weekly hours", () => {
+  const { data, gym, first } = make();
+  const created = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 2,
+    dayHours: [{ weekday: "mon", hours: 1 }, { weekday: "wed", hours: 1 }] }).data;
+  const planId = created.recurringPlans![0].id;
+  const ready = ensureWeek({ ...created, currentWeek: first });
+  const weekly = applyRecurringPlan(ready, { roleId: gym, planId, startWeek: first, everyWeeks: 1, hours: 2 });
+  assert.equal(weekly.data.recurringPlans![0].dayHours, undefined);
+  assert.equal(weekly.data.weeks[first].allocations.length, 0);
+  assert.equal(weekly.data.weeks[first].boxes.find((b) => b.hatId === gym)?.hours, 2);
+});
+test("stopping a schedule clears untouched placements from the stop week", () => {
+  const { data, gym, first } = make();
+  const created = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 2,
+    dayHours: [{ weekday: "mon", hours: 1 }, { weekday: "wed", hours: 1 }] }).data;
+  const planId = created.recurringPlans![0].id;
+  const stopped = stopRecurringPlan(ensureWeek({ ...created, currentWeek: first }), planId, first);
+  assert.ok(stopped);
+  assert.equal(stopped.weeks[first].allocations.length, 0);
+  assert.equal(stopped.weeks[first].boxes.find((b) => b.hatId === gym)?.hours, 0);
+});
+test("invalid set days are refused and write nothing", () => {
+  const { data, gym, first } = make();
+  const bad: RecurringRequest[] = [
+    { roleId: gym, startWeek: first, everyWeeks: 1, hours: 2, dayHours: [{ weekday: "mon", hours: 1 }, { weekday: "mon", hours: 1 }] },
+    { roleId: gym, startWeek: first, everyWeeks: 1, hours: 3, dayHours: [{ weekday: "mon", hours: 1 }] },
+    { roleId: gym, startWeek: first, everyWeeks: 1, hours: 1.25, dayHours: [{ weekday: "mon", hours: 1.25 }] },
+    { roleId: gym, startWeek: first, everyWeeks: 1, hours: 0, dayHours: [] },
+  ];
+  for (const request of bad) {
+    const result = applyRecurringPlan(data, request);
+    assert.equal(result.preview.eligible, false);
+    assert.equal(result.data, data);
+  }
+});
+test("saved set days survive a reload, and invalid days keep the weekly hours", () => {
+  const { data, gym, first } = make();
+  const created = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 2,
+    dayHours: [{ weekday: "tue", hours: 1 }, { weekday: "thu", hours: 1 }] }).data;
+  const ready = ensureWeek({ ...created, currentWeek: first });
+  const restored = normalizeData(JSON.parse(JSON.stringify(ready)));
+  assert.deepEqual(restored.recurringPlans?.[0].dayHours, created.recurringPlans![0].dayHours);
+  assert.deepEqual(restored.weeks[first].recurrenceSource?.[gym]?.generatedDays,
+    ready.weeks[first].recurrenceSource?.[gym]?.generatedDays);
+  const broken = JSON.parse(JSON.stringify(created));
+  broken.recurringPlans[0].dayHours = [{ weekday: "mon", hours: 1 }];
+  const kept = normalizeData(broken);
+  assert.equal(kept.recurringPlans?.length, 1);
+  assert.equal(kept.recurringPlans?.[0].dayHours, undefined);
+  assert.equal(kept.recurringPlans?.[0].hours, 2);
 });
