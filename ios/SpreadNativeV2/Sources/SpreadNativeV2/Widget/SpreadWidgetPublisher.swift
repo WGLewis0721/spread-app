@@ -45,7 +45,9 @@ enum SpreadWidgetPublisher {
     }
 
     static func revoke() {
-        UserDefaults(suiteName: appGroup)?.removeObject(forKey: key)
+        guard let shared = UserDefaults(suiteName: appGroup),
+              shared.object(forKey: key) != nil else { return }
+        shared.removeObject(forKey: key)
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
     }
 }
