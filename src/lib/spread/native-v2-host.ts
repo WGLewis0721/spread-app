@@ -1,7 +1,18 @@
 import { getNativeRecoveryNotice, onNativeRecoveryNotice } from "./native-mirror.ts";
 import { createNativeV2Dispatcher } from "./native-v2-dispatch.ts";
-import { useSpread } from "./store.ts";
+import { buildBackupText, useSpread } from "./store.ts";
 import { getSaveFacts } from "./local-status.ts";
+import { parseAnyBackup } from "./backup.ts";
+import { applyRestore } from "./restore-apply.ts";
+import { backupRequestOf, handleBackupRequest, type BackupDeps } from "./native-backup-bridge.ts";
+
+/** The file work the modern sheet asks for: the same functions the web planner's More sheet uses. */
+const backupDeps: BackupDeps = {
+  buildText: () => buildBackupText(useSpread.getState().data),
+  fileName: () => `Spread-${useSpread.getState().data.currentWeek}.spread`,
+  parse: (text) => parseAnyBackup(text),
+  apply: (backup, select) => applyRestore(backup, select),
+};
 
 /** Installed only inside the bundled native runtime after storage restoration and boot.
  * WKWebView passes structured arguments; no command is ever interpolated into JS source.
@@ -12,6 +23,11 @@ export function installNativeV2Host() {
     async exchange(message: string): Promise<string> {
       try {
         const request: unknown = JSON.parse(message);
+        const backup = backupRequestOf(request);
+        if (backup) {
+          const requestId = (request as { requestId?: unknown }).requestId ?? null;
+          return JSON.stringify({ requestId, ...(await handleBackupRequest(backup, backupDeps)) });
+        }
         const reply =
           request === null ? { ok: true, state: router.read() } : await router.dispatch(request);
         if ("error" in reply && reply.error === "session-capacity") {

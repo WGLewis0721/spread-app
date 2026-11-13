@@ -274,7 +274,7 @@ public struct SpreadLiveRoot: View {
             Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
         }
         if planner.errorOffersBackup {
-            Button("Open web planner") { recovery() }
+            Button("Backup and restore") { sheet = .backup }
         }
     }
 
@@ -649,7 +649,7 @@ public struct SpreadLiveRoot: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label(notice, systemImage: "exclamationmark.shield").foregroundStyle(Spread.caution)
                 HStack {
-                    Button { recovery() } label: { Text("Open web planner").tapTarget() }
+                    Button { sheet = .backup } label: { Text("Backup and restore").tapTarget() }
                     Button { dismissedNotice = notice } label: { Text("Got it").tapTarget() }
                 }
             }
@@ -668,7 +668,7 @@ public struct SpreadLiveRoot: View {
                         Button { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } } label: { Text("Retry saving").tapTarget() }
                             .accessibilityIdentifier("retry-saving")
                     }
-                    Button { recovery() } label: { Text("Open web planner").tapTarget() }
+                    Button { sheet = .backup } label: { Text("Back up").tapTarget() }
                         .accessibilityIdentifier("back-up")
                 }
             }
@@ -920,9 +920,11 @@ public struct SpreadLiveRoot: View {
         case .review:
             CarryOverSheet(planner: planner)
         case .more:
-            MoreSheet(planner: planner, focusTimer: focusTimer, recovery: recovery, showProfiles: { sheet = .profiles }, appearance: $appearance, weekFocusEnabled: $weekFocusEnabled)
+            MoreSheet(planner: planner, focusTimer: focusTimer, backup: { sheet = .backup }, showProfiles: { sheet = .profiles }, appearance: $appearance, weekFocusEnabled: $weekFocusEnabled)
         case .profiles:
             ProfilesSheet(planner: planner)
+        case .backup:
+            BackupRestoreSheet(planner: planner)
         case .confirmRollover:
             RolloverConfirm(planner: planner)
         case .confirmDeleteRole(let roleId):

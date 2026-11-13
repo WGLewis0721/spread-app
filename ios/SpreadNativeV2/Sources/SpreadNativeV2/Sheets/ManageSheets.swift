@@ -469,7 +469,7 @@ struct ProfilesSheet: View {
 struct MoreSheet: View {
     @ObservedObject var planner: LivePlanner
     @ObservedObject var focusTimer: SpreadFocusTimer
-    let recovery: () -> Void
+    let backup: () -> Void
     let showProfiles: () -> Void
     @Binding var appearance: SpreadAppearance
     @Binding var weekFocusEnabled: Bool
@@ -697,10 +697,9 @@ struct MoreSheet: View {
                             sectionLabel("Data")
                             HStack(spacing: 8) {
                                 Button {
-                                    dismiss()
-                                    recovery()
+                                    backup()
                                 } label: {
-                                    Label("Open web planner", systemImage: "externaldrive")
+                                    Label("Backup and restore", systemImage: "externaldrive")
                                         .font(.system(.subheadline, weight: .semibold))
                                         .foregroundStyle(Spread.ink)
                                         .lineLimit(2)

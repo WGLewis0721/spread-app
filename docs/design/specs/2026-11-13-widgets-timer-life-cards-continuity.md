@@ -295,4 +295,30 @@ Every button in the native app was read from source: the labels, the accessibili
 - "Open existing planner": it opens the web planner with the saved plan.
 - The parked web planner has the same "Rollover" and "Review open tasks" wording. It was not changed.
 
+**Superseded in part by section 18.** The "Open web planner" labels above are back to "Backup and restore" and "Back up", and they now open the native backup sheet, not the web planner.
+
 **Not verified.** None of this has run on a device or a simulator.
+
+## 18. Modern backup and restore (2026-11-13)
+
+**Owner direction.** Backup and restore work from modern Spread without opening classic Spread or the web planner's screens. Classic Spread and the web planner are to be decommissioned later. That migration is a separate decision, with its own spec, and is not part of this section.
+
+**What it does.**
+- **Back up.** The existing "Backup and restore" entry (More, Data; the save notice; the error alert) opens one sheet. "Back up Spread" asks the planner for the same file the web planner's "Back Up Spread" makes, with the same function (`buildBackupText`). It is saved as `Spread-<week>.spread` and shared with the iPhone share sheet.
+- **Restore.** "Choose a backup file" reads a `.spread` file and lists its profiles. A damaged profile is listed and cannot be chosen. The chosen profiles are added as new profiles, through the same restore as the web planner (`applyRestore`), which takes a safety copy first. Current profiles are not changed.
+- **Older one-week files** are refused in modern Spread with a plain message. Modern restores full backups only.
+
+**How it reaches the planner.** Three requests (`backupFile`, `restorePreview`, `restoreApply`) are answered by the planner's host before the planner's dispatcher. Planner commands are unchanged. The requests do not depend on the open week or revision.
+
+**Existing code changed.** The rule that kept backup and restore out of this work is the owner's to lift, and this is that direction. Two moves, with no change in behaviour:
+- `store.ts`: `saveBackup` now calls `buildBackupText`, which holds the same steps.
+- `applyRestore` moved from the web restore screen to `restore-apply.ts`, so both use one copy.
+
+**Not in this change.**
+- Restore from a safety copy (classic only) is not in modern Spread.
+- iCloud backup stays off. Nothing says iCloud works.
+- Restoring a one-week file.
+
+**Verified here.** Web typecheck. `test:spread`: 525 passed. `test:scripts`: 242 passed, including the wiring tests in `scripts/native-backup.test.mjs`. Lint: 0 errors. The Swift compile runs on GitHub.
+
+**Owed on a device.** The share sheet from an iPhone. Choosing a file from Files or iCloud Drive. Restoring onto a fresh install and comparing the profiles. A damaged profile listed and left out. A file that is not a backup.

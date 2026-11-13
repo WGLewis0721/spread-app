@@ -1,0 +1,75 @@
+import type { ParsedBackup } from "./backup.ts";
+
+/**
+ * The three backup requests the modern native sheet can send through the planner's bridge. They reuse the same
+ * file code as the web planner's More sheet: the file is built, read and restored by the existing functions.
+ */
+export type BackupRequest =
+  | { type: "backupFile" }
+  | { type: "restorePreview"; text: string }
+  | { type: "restoreApply"; text: string; select: string[] };
+
+export type BackupProfile = { id: string; name: string; readable: boolean; weeks: number; tasks: number; range: string };
+
+export type BackupReply =
+  | { ok: true; kind: "file"; name: string; text: string }
+  | { ok: true; kind: "preview"; profiles: BackupProfile[]; weeks: number; tasks: number }
+  | { ok: true; kind: "restored"; message: string }
+  | { ok: false; error: "unreadable" | "week-file" | "no-selection" | "failed"; message: string };
+
+export type BackupDeps = {
+  buildText: () => Promise<string>;
+  fileName: () => string;
+  parse: (text: string) => Promise<ParsedBackup | null>;
+  apply: (backup: ParsedBackup, select: string[]) => Promise<{ ok: boolean; message: string }>;
+};
+
+const TYPES = new Set(["backupFile", "restorePreview", "restoreApply"]);
+
+/** The backup request in a bridge message, or null when the message is a planner command. */
+export function backupRequestOf(value: unknown): BackupRequest | null {
+  if (!value || typeof value !== "object") return null;
+  const action = (value as { action?: unknown }).action;
+  if (!action || typeof action !== "object") return null;
+  const item = action as { type?: unknown; text?: unknown; select?: unknown };
+  if (typeof item.type !== "string" || !TYPES.has(item.type)) return null;
+  if (item.type === "backupFile") return { type: "backupFile" };
+  if (typeof item.text !== "string") return null;
+  if (item.type === "restorePreview") return { type: "restorePreview", text: item.text };
+  const select = Array.isArray(item.select) && item.select.every((id) => typeof id === "string") ? item.select : [];
+  return { type: "restoreApply", text: item.text, select };
+}
+
+export async function handleBackupRequest(request: BackupRequest, deps: BackupDeps): Promise<BackupReply> {
+  if (request.type === "backupFile") {
+    return { ok: true, kind: "file", name: deps.fileName(), text: await deps.buildText() };
+  }
+  const parsed = await deps.parse(request.text);
+  if (!parsed) return { ok: false, error: "unreadable", message: "That file isn’t a Spread backup, or it is damaged." };
+  if (parsed.kind !== "full") {
+    return {
+      ok: false,
+      error: "week-file",
+      message: "This is a one-week backup from an older version. Modern Spread restores full backups.",
+    };
+  }
+  if (request.type === "restorePreview") {
+    const { profiles, weeks, tasks } = parsed.summary;
+    return {
+      ok: true,
+      kind: "preview",
+      profiles: profiles.map(({ id, name, readable, weeks: profileWeeks, tasks: profileTasks, range }) => ({
+        id, name, readable, weeks: profileWeeks, tasks: profileTasks, range,
+      })),
+      weeks,
+      tasks,
+    };
+  }
+  if (request.select.length === 0) {
+    return { ok: false, error: "no-selection", message: "Choose at least one profile to restore." };
+  }
+  const outcome = await deps.apply(parsed, request.select);
+  return outcome.ok
+    ? { ok: true, kind: "restored", message: outcome.message }
+    : { ok: false, error: "failed", message: outcome.message };
+}

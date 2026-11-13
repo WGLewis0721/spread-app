@@ -211,6 +211,55 @@ struct HoursShortage: Equatable {
         }
     }
 
+    /// Backup and restore for modern Spread. Each request goes through the planner's bridge but does not depend on the
+    /// open week or revision, so it can run at any time. It changes the plan only when a restore is confirmed.
+    private func backupRequest(_ action: [String: Any]) async -> BackupReply? {
+        let requestId = UUID().uuidString
+        let request: [String: Any] = ["protocolVersion": 1, "requestId": requestId, "action": action]
+        guard let bytes = try? JSONSerialization.data(withJSONObject: request),
+              let json = String(data: bytes, encoding: .utf8),
+              let text = try? await exchange(json),
+              let reply = try? JSONDecoder().decode(BackupReply.self, from: Data(text.utf8)),
+              reply.requestId == requestId else { return nil }
+        return reply
+    }
+
+    /// The backup file for every profile, ready to share.
+    func makeBackupFile() async -> Result<BackupFile, BackupFailure> {
+        let unchanged = "The backup could not be made. Your plan is unchanged."
+        guard let reply = await backupRequest(["type": "backupFile"]) else {
+            return .failure(BackupFailure(message: unchanged))
+        }
+        guard reply.ok, let name = reply.name, let text = reply.text else {
+            return .failure(BackupFailure(message: reply.message ?? unchanged))
+        }
+        return .success(BackupFile(name: name, text: text))
+    }
+
+    /// Reads a backup file and lists its profiles. Changes nothing.
+    func previewBackup(_ text: String) async -> Result<BackupPreview, BackupFailure> {
+        let unreadable = "That backup could not be read. Nothing was changed."
+        guard let reply = await backupRequest(["type": "restorePreview", "text": text]) else {
+            return .failure(BackupFailure(message: unreadable))
+        }
+        guard reply.ok, let profiles = reply.profiles else {
+            return .failure(BackupFailure(message: reply.message ?? unreadable))
+        }
+        return .success(BackupPreview(profiles: profiles, weeks: reply.weeks ?? 0, tasks: reply.tasks ?? 0))
+    }
+
+    /// Adds the chosen profiles from a backup file as new profiles. Returns the message to show.
+    func restoreBackup(_ text: String, select: [String]) async -> Result<String, BackupFailure> {
+        let unchanged = "The profiles could not be added. Nothing was changed."
+        guard let reply = await backupRequest(["type": "restoreApply", "text": text, "select": select]) else {
+            return .failure(BackupFailure(message: unchanged))
+        }
+        guard reply.ok, let message = reply.message else {
+            return .failure(BackupFailure(message: reply.message ?? unchanged))
+        }
+        return .success(message)
+    }
+
     /// Role dots for every cell of one calendar month, any week (`month` is 0-11 as in the planner's own month grid).
     /// A read: it changes nothing and is not queued behind writes. Returns nil when the profile has moved on or the
     /// planner cannot answer, so the caller keeps whatever it can already draw.
@@ -400,6 +449,7 @@ enum LiveSheet: Identifiable, Equatable {
     case profiles
     case confirmRollover
     case confirmDeleteRole(String)
+    case backup
 
     var id: String {
         switch self {
@@ -411,6 +461,7 @@ enum LiveSheet: Identifiable, Equatable {
         case .profiles: return "profiles"
         case .confirmRollover: return "confirmRollover"
         case .confirmDeleteRole(let id): return "confirmDeleteRole-" + id
+        case .backup: return "backup"
         }
     }
 }
