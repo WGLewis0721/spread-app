@@ -35,6 +35,43 @@ class PreflightTests(unittest.TestCase):
             checks.bundle(root)
             self.assertTrue(all(ok for _, ok, _ in checks.items))
 
+    def test_widget_extension_plist_has_embeddable_identity(self):
+        root = Path(__file__).resolve().parent.parent
+        widget_plist = plistlib.loads(
+            (root / "ios/App/SpreadWidget/Info.plist").read_bytes()
+        )
+        expected = {
+            "CFBundleIdentifier": "$(PRODUCT_BUNDLE_IDENTIFIER)",
+            "CFBundleExecutable": "$(EXECUTABLE_NAME)",
+            "CFBundleName": "$(PRODUCT_NAME)",
+            "CFBundlePackageType": "XPC!",
+            "CFBundleShortVersionString": "$(MARKETING_VERSION)",
+            "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
+        }
+        for key, value in expected.items():
+            with self.subTest(key=key):
+                self.assertEqual(widget_plist.get(key), value)
+        self.assertEqual(
+            widget_plist["NSExtension"]["NSExtensionPointIdentifier"],
+            "com.apple.widgetkit-extension",
+        )
+
+        # Both extension configurations must retain a valid app-prefixed ID
+        # and match the host app's marketing version.
+        project = (root / "ios/App/App.xcodeproj/project.pbxproj").read_text()
+        widget_configs = [
+            line for line in project.splitlines()
+            if "/* Widget Debug */" in line or "/* Widget Release */" in line
+        ]
+        self.assertEqual(len(widget_configs), 2)
+        for config in widget_configs:
+            self.assertIn(
+                "PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread.widget;",
+                config,
+            )
+            self.assertIn("MARKETING_VERSION = 1.0;", config)
+            self.assertIn("INFOPLIST_FILE = SpreadWidget/Info.plist;", config)
+
     def test_ipa_metadata_and_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
             ipa = Path(tmp) / "Spread.ipa"
