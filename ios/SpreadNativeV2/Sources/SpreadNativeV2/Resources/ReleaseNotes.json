@@ -12,7 +12,8 @@
         "Privacy-first Today widgets and App Group bridge",
         "Focus Timer Live Activity and Dynamic Island",
         "Select build number for app and WidgetKit extension",
-        "Correct widget font initializer compile errors"
+        "Correct widget font initializer compile errors",
+        "Restore WidgetKit extension bundle metadata for archive validation"
       ]
     },
     {
