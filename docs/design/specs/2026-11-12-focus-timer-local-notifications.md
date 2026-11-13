@@ -33,3 +33,10 @@ Timer completion alerts are **off by default** and requested in context. In More
 ## Rollback
 
 Remove the native Focus sources and the two SwiftUI entry points. Local session preferences are optional and ignored by older binaries. Planner data requires no migration.
+
+## External interaction references (patterns only)
+
+- [Refero: FocusPomo focus-session flow](https://refero.design/flows/5259): keep role selection and Start visible in one short path.
+- [Refero: FocusPomo countdown screen](https://refero.design/screens/385a83c4-f4a6-4a84-977b-eef7ce9c6899): one legible primary timer readout.
+- [Dribbble: focus timer UI exploration](https://dribbble.com/search/focus-timer-app): borrow legibility, not unrelated gamification or colors.
+- [21st.dev: Fade Slide Tabs](https://preview.21st.dev/%40ruixen.ui/components/fade-slide-tabs): interaction reference for low-travel page motion; keep native SwiftUI and Spread tokens.
