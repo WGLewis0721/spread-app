@@ -143,10 +143,16 @@ struct LifeRoot: View {
         .foregroundStyle(LifePalette.ink).tint(LifePalette.accent)
         .task { await planner.refresh() }
         .task(id: planner.snapshot != nil) {
-            if planner.snapshot != nil { openTodayFromWidgetIfNeeded() }
+            if planner.snapshot != nil {
+                openTodayFromWidgetIfNeeded()
+                openFocusFromActivityIfNeeded()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenToday"))) { _ in
             openTodayFromWidgetIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenFocus"))) { _ in
+            openFocusFromActivityIfNeeded()
         }
         // A deadline, not a background stopwatch, owns elapsed time across suspension.
         .task {
@@ -898,6 +904,14 @@ struct LifeRoot: View {
             .accessibilityAction(.escape) { closeNavigation() }
         }
     }
+    private func openFocusFromActivityIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: "native.widget.openFocus"),
+              planner.snapshot != nil else { return }
+        UserDefaults.standard.removeObject(forKey: "native.widget.openFocus")
+        preferredFocusRoleId = focusTimer.session?.roleId
+        showFocusTimer = true
+    }
+
     private func openTodayFromWidgetIfNeeded() {
         guard UserDefaults.standard.bool(forKey: "native.widget.openToday"),
               planner.snapshot != nil else { return }
