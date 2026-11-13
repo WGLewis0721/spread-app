@@ -45,7 +45,7 @@ Someone starts a focus session. The Lock Screen and the Dynamic Island show it, 
 | `focus-live-activity.md`: title is "Focus session" unless the person allows the name | The timer mirror follows the same rule and the same switch. |
 | `docs/IOS_RELEASE.md`: no GitHub iOS build or simulator workflows; Codemagic is the only signed lane | See exception 2. |
 
-**Exceptions needed (owner decides, do not assume):**
+**Exceptions needed (decided on 2026-11-13, see section 15):**
 1. **Life area names on the Home Screen.** The Today widget spec says widgets show no responsibility names. A Life card is its name, so the Life cards widget breaks that line. It is off by default behind its own switch, "Show Life cards on widgets", with a footnote that anyone who can see the Home Screen can see them. The owner should confirm this.
 2. **A type-check job on GitHub.** `.github/workflows/native-typecheck.yml` asks the Swift compiler whether the native sources are valid against the iOS Simulator SDK. It does not build, archive, sign, upload or run a simulator, and it follows the existing `swift-cloudkit-typecheck` job. It does sit close to the line the owner drew on 2026-11-11 when retiring GitHub "SwiftUI native compile". It is a separate commit; delete the file to remove it.
 3. **No card artwork on widgets.** The widget draws the app's no-art gradient. Artwork would add images to the extension and entries to its Resources phase. Decide whether to add it.
@@ -172,7 +172,7 @@ What this builds:
 - **Only the profile on screen acts.** The widgets, the island and the intents do nothing for another profile's session, and the mirror is removed on a profile switch.
 
 What this does not build:
-- **Concepts 3, 4, 5 and 6 stay wireframes.** Today progress (3) and the card spotlight (4) are not built here. A scheduled prompt (5) would have the app pick a time, which the principle rules out. A deadline countdown (6) needs a due time that tasks do not have.
+- **Concepts 4, 5 and 6 stay wireframes.** Today progress (3) was built later as a read-only line (section 15). The card spotlight (4) is not built. A scheduled prompt (5) would have the app pick a time, which the principle rules out. A deadline countdown (6) needs a due time that tasks do not have.
 - **Limited-width layout.** The compact view is not yet fitted to the 28 pt limited-width circle. The environment value that reports it may need a newer iOS than the app's iOS 17 floor, and this container cannot check the SDK. It is owed to the type-check job and a device.
 - **An expired last round stays on the island until the person ends it.** Without a server nothing removes it at its deadline. The system removes it after eight hours.
 - **Break alerts from the island** use the notification setting that is stored in the app's defaults. This is read in the app's process, which is where the intents run. Device check owed.
@@ -231,3 +231,24 @@ Checked against `RULES_CARD.md`, the native brand board (sections 3 to 5), the m
 | Do not claim shipped behavior (`UX_REVIEW_AND_SPEC_PROTOCOL`) | Pass | Concepts 3 to 6 and the option 2 wireframes are described as not built. |
 
 **Verified here:** the contract tests and docs check, and the GitHub Swift type-check for the widget and the package. **Not verified here:** any simulator or device run, screenshots at 390, 820 and 1024 pt, Dynamic Type at accessibility sizes, VoiceOver, the island with the app closed, and the widget in tinted mode.
+
+## 15. Decisions taken for the owner (2026-11-13)
+
+The owner asked for the open items to be decided, with the aim of a planning tool that helps people spend their time well without being spread thin. Each decision below says what it commits to and how to reverse it.
+
+| Item | Decision | Why | To reverse |
+| --- | --- | --- | --- |
+| Life area names on widgets (exception 1) | Keep the switch, off by default. Names show only when the person turns it on in More. Progress counts never name an area. | A Life card's name is its content. Anyone who can see the Home Screen can read it, so the default is private. | Change the default in More. The widgets read the switch. |
+| Type-check job on GitHub (exception 2) | Keep `native-typecheck.yml`. It compiles the Swift sources against the iOS Simulator SDK and does not build, sign, upload or run a simulator. This amends the 2026-11-11 build-ownership note for compile checks only. | It caught two compile errors on this branch before a Codemagic build would have. | Delete the workflow file. |
+| Card artwork on widgets (exception 3) | Not in this release. The widget keeps the no-art face, the same face the app uses for a category without artwork. | Artwork needs the editorial images added to the widget target's resources, which no device has run yet. Adding them blind risks a broken extension. Revisit after the device checks pass. | Add the Editorial folder to the widget target and reuse `LifeEditorialArtworkRegistry`. |
+| Block completion kept in the App Group (exception 4) | Keep it as app UI state. It is not planner data: no task, hour or week is written, and it resets each day. The planner store remains the only source of plans. The owner should confirm that "no second store" in `RULES_CARD.md` means planner data. | Moving it into `store.ts` would make the planner aware of focus sessions. That is outside its job and needs schema work. | Move `spread.dayplan.done.v1` into the planner store under its own spec. |
+| Dynamic Type in the Life cards widget | Not changed. Labels stay at 9 to 14 pt until a device check shows the widget at accessibility sizes. | Changing widget type sizes without seeing the layout risks clipping. | After the device check, switch the labels to text styles. |
+| Compact layout at limited width | Not fitted. The island's compact view stays as it is. | The environment value that reports a limited width may need a newer iOS than the iOS 17 floor. It cannot be checked here. | Fit it once the type-check job or a device shows the value is available. |
+| Today progress (concept 3) | Built as a read-only line. While a block is on offer, the timer widget shows "1 of 3 blocks done today." When every block is done it shows "All 3 blocks done today." With no plan it shows nothing. Counts only: no streaks, no time pressure, no names. | It shows where the day stands and asks nothing of the person. | Remove the progress line in `SpreadTimerWidget.idle`. |
+| Spread-thin principle | The day's blocks are offered one at a time, largest first. The island, the widgets and the sheet never start a second block or round on their own. Each round and each break needs a tap. | Several things at once is how people get spread thin. One clear next step keeps attention in one place. | Already how the code behaves. |
+
+**Continuity contract.** Each fact has one record in the App Group, written only by the app: the focus session (`spread.widget.focus.v1`, mirrored from the timer), the day plan (`spread.dayplan.v1`) and the day's finished blocks (`spread.dayplan.done.v1`). The island, the widgets and the sheet read these. Widgets never write planner data and never start anything without a tap.
+
+**Not built.** Logging focus time against hours (it would write planner data, so it needs its own owner decision). The card spotlight (concept 4). A deadline countdown (concept 6), because tasks have no due time.
+
+**Verified here.** The Linux test slice runs 64 tests with no failures, including three new progress tests in `SpreadDayPlanTests`. The docs check and the script tests run in CI. The Swift compile runs on GitHub. Nothing has run on a simulator or a device, so the device checks in sections 9 and 13 are still owed.

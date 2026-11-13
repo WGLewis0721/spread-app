@@ -241,8 +241,8 @@ private struct SpreadTimerEntry: TimelineEntry {
     let startMinutes: Int?
     /// Today's next planned block, when one is on offer.
     let block: SpreadOfferedBlock?
-    /// True when today has planned blocks and every one of them is finished.
-    let allDone: Bool
+    /// How today's planned blocks are going, when today has a plan for the profile on screen.
+    let progress: SpreadDayProgress?
 }
 
 private struct SpreadTimerProvider: TimelineProvider {
@@ -253,7 +253,7 @@ private struct SpreadTimerProvider: TimelineProvider {
               canStart: SpreadFocusStore.canStartFromWidget(now: date),
               startMinutes: SpreadFocusStore.loadChoice()?.plan.focusMinutes,
               block: SpreadDayPlanStore.nextBlock(now: date),
-              allDone: SpreadDayPlanStore.allDoneToday(now: date))
+              progress: SpreadDayPlanStore.progress(now: date))
     }
 
     func placeholder(in context: Context) -> Entry {
@@ -306,6 +306,12 @@ private struct SpreadTimerView: View {
             Text(idleDetail)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            // While a block is still on offer, say how far through today's blocks the person is. Counts only.
+            if let progress = entry.progress, !progress.allDone {
+                Text(SpreadBlockText.progress(progress))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -313,7 +319,7 @@ private struct SpreadTimerView: View {
 
     private var idleDetail: String {
         if let offered = entry.block { return SpreadBlockText.summary(offered.entry.plan) }
-        if entry.allDone { return "Today's planned blocks are done." }
+        if let progress = entry.progress, progress.allDone { return SpreadBlockText.progress(progress) }
         return entry.canStart ? "Start your last plan here." : "Choose a plan in Spread to start."
     }
 
