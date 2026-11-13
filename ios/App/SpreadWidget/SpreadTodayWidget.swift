@@ -1,6 +1,7 @@
 import WidgetKit
 import SwiftUI
 import Foundation
+import ActivityKit
 
 private struct SpreadToday: Decodable {
     let day: String
@@ -132,9 +133,84 @@ struct SpreadTodayWidget: Widget {
     }
 }
 
+/// The Lock Screen and Dynamic Island show only a bounded, explicitly enabled session.
+private struct SpreadFocusLiveView: View {
+    let context: ActivityViewContext<SpreadFocusActivityAttributes>
+
+    @ViewBuilder private var remaining: some View {
+        if context.state.phase == "running", let deadline = context.state.deadline {
+            Text(timerInterval: Date.now...max(deadline, Date.now), countsDown: true)
+                .monospacedDigit()
+        } else if context.state.phase == "paused" {
+            Text("Paused")
+        } else {
+            Text("Finished")
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "timer").accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(context.attributes.title).font(.headline).lineLimit(1)
+                Text(context.state.phase == "paused" ? "Focus paused" : "Focus timer")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            remaining.font(.title3.weight(.semibold))
+        }
+        .padding()
+        .activityBackgroundTint(Color(uiColor: .systemBackground))
+        .activitySystemActionForegroundColor(.primary)
+        .widgetURL(URL(string: "spread://focus"))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct SpreadFocusLiveActivityWidget: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: SpreadFocusActivityAttributes.self) { context in
+            SpreadFocusLiveView(context: context)
+        } dynamicIsland: { context in
+            DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    Label("Focus", systemImage: "timer")
+                        .font(.subheadline.weight(.semibold))
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    if context.state.phase == "running", let deadline = context.state.deadline {
+                        Text(timerInterval: Date.now...max(deadline, Date.now), countsDown: true)
+                            .monospacedDigit()
+                    } else {
+                        Text(context.state.phase == "paused" ? "Paused" : "Done")
+                    }
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    Text(context.attributes.title)
+                        .lineLimit(1)
+                }
+            } compactLeading: {
+                Image(systemName: "timer")
+            } compactTrailing: {
+                if context.state.phase == "running", let deadline = context.state.deadline {
+                    Text(timerInterval: Date.now...max(deadline, Date.now), countsDown: true)
+                        .monospacedDigit()
+                        .font(.caption2)
+                } else {
+                    Image(systemName: "pause.fill")
+                }
+            } minimal: {
+                Image(systemName: "timer")
+            }
+            .widgetURL(URL(string: "spread://focus"))
+        }
+    }
+}
+
 @main
 struct SpreadWidgetBundle: WidgetBundle {
     var body: some Widget {
         SpreadTodayWidget()
+        SpreadFocusLiveActivityWidget()
     }
 }
