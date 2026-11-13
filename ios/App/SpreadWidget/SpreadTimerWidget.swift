@@ -37,6 +37,7 @@ struct SpreadFocusFace {
     var statusText: String {
         if finished {
             if state.nextLabel == nil { return "Done" }
+            if state.stoppedEarly == true { return "Stopped" }
             return isBreak ? "Break over" : "Focus done"
         }
         if state.phase == .paused { return "Paused" }
@@ -123,6 +124,41 @@ struct SpreadFocusPanel: View {
     }
 }
 
+/// One focus control as a button. The Timer widget and the Dynamic Island both use it, so a control looks and acts
+/// the same on every surface.
+struct SpreadFocusControlButton: View {
+    let control: SpreadFocusControl
+    /// The words for Forward, such as "Start break".
+    let nextLabel: String?
+
+    var body: some View {
+        switch control {
+        case .pause:
+            Button(intent: PauseSpreadFocusIntent()) {
+                Label("Pause", systemImage: "pause.fill")
+            }
+        case .resume:
+            Button(intent: ResumeSpreadFocusIntent()) {
+                Label("Resume", systemImage: "play.fill")
+            }
+        case .forward:
+            Button(intent: ForwardSpreadFocusIntent()) {
+                Label(nextLabel ?? "Forward", systemImage: "forward.fill")
+            }
+        case .stop:
+            Button(intent: StopSpreadFocusIntent()) {
+                Label("Stop", systemImage: "stop.fill")
+            }
+        case .cancel:
+            Button(intent: CancelSpreadFocusIntent()) {
+                Label("Cancel", systemImage: "xmark.circle")
+            }
+        case .startBlock, .startFocus, .openSpread:
+            EmptyView()
+        }
+    }
+}
+
 /// One control for the focus session, for the Today widget's panel. The Timer widget lays out every control itself.
 struct SpreadFocusActionButton: View {
     let running: Bool
@@ -139,7 +175,7 @@ struct SpreadFocusActionButton: View {
                 Label("Resume", systemImage: "play.fill")
             }
         } else if let nextLabel {
-            Button(intent: ContinueSpreadFocusIntent()) {
+            Button(intent: ForwardSpreadFocusIntent()) {
                 Label(nextLabel, systemImage: "forward.fill")
             }
         } else {
@@ -168,6 +204,7 @@ struct SpreadFocusLiveStatus {
 
     var caption: String {
         if isPaused { return "Paused" }
+        if isWaiting && state.stoppedEarly == true { return "Stopped" }
         if isWaiting { return isBreak ? "Break over" : "Focus done" }
         if !isRunning { return "Done" }
         if let round = state.round, let rounds = state.rounds, rounds > 1 {
@@ -357,11 +394,12 @@ private struct SpreadTimerView: View {
             available = SpreadFocusControlRules.all(
                 running: !face.finished && state.phase == .running,
                 paused: state.phase == .paused,
-                waitingNext: face.finished && state.nextLabel != nil,
+                waiting: face.finished,
+                hasNext: state.nextLabel != nil,
                 hasBlock: false, canStart: false)
         } else {
             available = SpreadFocusControlRules.all(
-                running: false, paused: false, waitingNext: false,
+                running: false, paused: false, waiting: false, hasNext: false,
                 hasBlock: entry.block != nil, canStart: entry.canStart)
         }
         return SpreadFocusControlRules.shown(available, size: size)
@@ -369,22 +407,6 @@ private struct SpreadTimerView: View {
 
     @ViewBuilder private func control(_ kind: SpreadFocusControl) -> some View {
         switch kind {
-        case .pause:
-            Button(intent: PauseSpreadFocusIntent()) {
-                Label("Pause", systemImage: "pause.fill")
-            }
-        case .resume:
-            Button(intent: ResumeSpreadFocusIntent()) {
-                Label("Resume", systemImage: "play.fill")
-            }
-        case .next:
-            Button(intent: ContinueSpreadFocusIntent()) {
-                Label(entry.state?.nextLabel ?? "Next step", systemImage: "forward.fill")
-            }
-        case .finish:
-            Button(intent: FinishSpreadFocusIntent()) {
-                Label("Finish", systemImage: "stop.fill")
-            }
         case .startBlock:
             if let offered = entry.block {
                 Button(intent: StartSpreadBlockIntent()) {
@@ -400,6 +422,8 @@ private struct SpreadTimerView: View {
             Link(destination: SpreadWidgetLink.focus.url) {
                 Label("Open Spread", systemImage: "arrow.up.forward.app")
             }
+        case .pause, .resume, .forward, .stop, .cancel:
+            SpreadFocusControlButton(control: kind, nextLabel: entry.state?.nextLabel)
         }
     }
 

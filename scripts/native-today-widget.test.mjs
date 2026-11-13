@@ -205,22 +205,30 @@ test("the type-check job compiles the same widget files as the widget target", (
 
 test("every surface uses the same focus intents, and the timer's sizes share one rule set", () => {
   for (const name of ["StartSpreadFocusIntent", "PauseSpreadFocusIntent", "ResumeSpreadFocusIntent",
-    "ContinueSpreadFocusIntent", "FinishSpreadFocusIntent"]) {
+    "ForwardSpreadFocusIntent", "StopSpreadFocusIntent", "CancelSpreadFocusIntent"]) {
     assert.match(focusControls, new RegExp(`struct ${name}: LiveActivityIntent`));
   }
   // The Timer widget picks its controls from the shared rules, so small, medium and large cannot drift apart.
   assert.match(timerWidgetSource, /SpreadFocusControlRules\.all\(/);
   assert.match(timerWidgetSource, /SpreadFocusControlRules\.shown\(/);
+  // One shared button view draws every control, for the widget sizes and the island alike.
+  assert.match(timerWidgetSource, /struct SpreadFocusControlButton: View/);
   assert.match(timerWidgetSource, /Button\(intent: PauseSpreadFocusIntent\(\)\)/);
   assert.match(timerWidgetSource, /Button\(intent: ResumeSpreadFocusIntent\(\)\)/);
-  assert.match(timerWidgetSource, /Button\(intent: ContinueSpreadFocusIntent\(\)\)/);
-  assert.match(timerWidgetSource, /Button\(intent: FinishSpreadFocusIntent\(\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: ForwardSpreadFocusIntent\(\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: StopSpreadFocusIntent\(\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: CancelSpreadFocusIntent\(\)\)/);
   assert.match(timerWidgetSource, /Button\(intent: StartSpreadFocusIntent\(\)\)/);
+  // The island reuses that button view and the same rules, so its controls match the widgets.
+  assert.match(source, /SpreadFocusIslandControls\(status:/);
+  assert.match(source, /SpreadFocusControlRules\.all\(/);
+  assert.match(source, /SpreadFocusControlButton\(control: kind/);
   // With the switch off, the widget says so, and the app records the switch for it.
   assert.match(timerWidgetSource, /Turn on Show Today on widgets in More to see your timer here/);
   assert.match(focusPublisher, /shared\.set\(true, forKey: SpreadWidgetShared\.timerEnabledMirrorKey\)/);
   assert.match(focusPublisher, /shared\.set\(enabled, forKey: SpreadWidgetShared\.timerEnabledMirrorKey\)/);
-  assert.match(source, /SpreadFocusActionButton\(/);
+  // The island no longer uses the old single-control button, so it cannot show a lone control again.
+  assert.doesNotMatch(source, /SpreadFocusActionButton\(/);
 });
 
 test("a break or the next round never starts on its own", () => {

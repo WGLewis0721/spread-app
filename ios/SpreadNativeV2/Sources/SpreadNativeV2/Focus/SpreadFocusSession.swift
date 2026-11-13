@@ -55,6 +55,8 @@ struct SpreadFocusSession: Codable, Equatable {
     var breakSeconds: Int?
     /// The day of the planned block this session works through, as YYYY-MM-DD. Nil for a session started by hand.
     var blockDay: String?
+    /// True when the person stopped this stretch before its time ran out. The next step then waits for a tap.
+    var stoppedEarly: Bool?
 
     init(id: String, profileId: String, roleId: String, roleName: String, durationSeconds: Int,
          pausedSeconds: Int, endAt: Date?, phase: Phase, kind: SpreadFocusKind? = nil,
@@ -184,6 +186,27 @@ enum SpreadFocusMachine {
             rounds: ended.roundCount)
         return stretch(id: id, profileId: ended.profileId, roleId: ended.roleId, roleName: ended.roleName,
                        plan: plan, kind: step.kind, round: step.round, now: now, blockDay: ended.blockDay)
+    }
+
+    /// Stops a running or paused stretch now. The flow is kept: the step that follows waits for a tap, so Forward
+    /// can start it. Nil when there is no stretch running or paused.
+    static func stopped(_ session: SpreadFocusSession, now: Date) -> SpreadFocusSession? {
+        guard session.phase == .running || session.phase == .paused else { return nil }
+        var next = finished(session)
+        next.stoppedEarly = true
+        return next
+    }
+
+    /// Moves on to the step that follows the current stretch, starting it now. A running or paused stretch ends
+    /// first, as if it were stopped. Nil when nothing follows.
+    static func forward(_ session: SpreadFocusSession, id: String, now: Date) -> SpreadFocusSession? {
+        let ended: SpreadFocusSession
+        if session.phase == .running || session.phase == .paused {
+            ended = stopped(session, now: now) ?? session
+        } else {
+            ended = session
+        }
+        return followUp(after: ended, id: id, now: now)
     }
 
     /// Whether the session still matters on screen: running or paused, or finished with a next step.

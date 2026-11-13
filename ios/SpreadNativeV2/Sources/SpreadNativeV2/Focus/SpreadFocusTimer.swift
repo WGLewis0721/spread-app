@@ -75,11 +75,18 @@ final class SpreadFocusTimer: ObservableObject {
         return true
     }
 
-    /// Starts the break, or the next focus round, once the person asks for it.
-    func continueFlow(profileId: String, notify: Bool) {
+    /// Moves on to the break or the next focus round, now. A running stretch ends first.
+    func forward(profileId: String, notify: Bool) {
         guard let current = visibleSession(for: profileId),
-              let next = SpreadFocusMachine.followUp(after: current, id: UUID().uuidString, now: Date()) else { return }
+              let next = SpreadFocusMachine.forward(current, id: UUID().uuidString, now: Date()) else { return }
         commit(next, notify: notify)
+    }
+
+    /// Stops the running or paused stretch now. The next step waits for a tap.
+    func stop(profileId: String) {
+        guard let current = visibleSession(for: profileId),
+              let next = SpreadFocusMachine.stopped(current, now: Date()) else { return }
+        commit(next, notify: false)
     }
 
     func pause(profileId: String) {
@@ -94,10 +101,11 @@ final class SpreadFocusTimer: ObservableObject {
         commit(next, notify: notify)
     }
 
-    /// Ends the whole flow: the current stretch, and anything that would have followed it.
-    func finish(profileId: String) {
-        guard let current = visibleSession(for: profileId) else { return }
-        commit(SpreadFocusMachine.finished(current), notify: false)
+    /// Cancels the whole session: the current stretch, and anything that would have followed it. The island and
+    /// the widgets release it at once. Nothing is recorded as done.
+    func cancel(profileId: String) {
+        guard visibleSession(for: profileId) != nil else { return }
+        commit(nil, notify: false)
     }
 
     func pauseForProfileSwitch(to newProfileId: String) {
