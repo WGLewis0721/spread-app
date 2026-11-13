@@ -22,6 +22,7 @@ private enum LifeLocalSheet: Identifiable {
 /// Life owns transient presentation only. Every edit is an awaited planner intent.
 struct LifeRoot: View {
     @ObservedObject var planner: LivePlanner
+    @ObservedObject var focusTimer: SpreadFocusTimer
     let onMore: () -> Void
     let onOpenRole: (String) -> Void
     let onOpenTask: (String, String) -> Void
@@ -51,7 +52,6 @@ struct LifeRoot: View {
     @State private var dockOpenerCenterY: CGFloat = 31
     @State private var weekTick = 0
     @State private var historyVisible = false
-    @StateObject private var focusTimer = SpreadFocusTimer()
     @State private var showFocusTimer = false
     @State private var preferredFocusRoleId: String?
     @State private var pendingTask: (role: String, task: String)?
@@ -155,13 +155,6 @@ struct LifeRoot: View {
             openFocusFromActivityIfNeeded()
         }
         // A deadline, not a background stopwatch, owns elapsed time across suspension.
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-                if Task.isCancelled { break }
-                focusTimer.reconcile()
-            }
-        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 focusTimer.reconcile()
