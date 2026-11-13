@@ -65,7 +65,7 @@ private struct SpreadTodayView: View {
                 if let plan {
                     VStack(spacing: 0) {
                         Text("\(plan.doneTasks)")
-                            .font(.system(.title3, weight: .semibold, design: .rounded))
+                            .font(.system(.title3, design: .rounded, weight: .semibold))
                         Text("/ \(plan.totalTasks)")
                             .font(.system(.caption2))
                     }
@@ -97,7 +97,7 @@ private struct SpreadTodayView: View {
                     }
                     if let plan {
                         Text("\(plan.doneTasks) of \(plan.totalTasks)")
-                            .font(.system(.title2, weight: .semibold, design: .rounded))
+                            .font(.system(.title2, design: .rounded, weight: .semibold))
                             .minimumScaleFactor(0.75)
                         Text("tasks done").font(.caption)
                         Text("\(plan.hoursPlaced, specifier: "%.1f") hours placed today")
