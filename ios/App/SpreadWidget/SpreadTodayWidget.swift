@@ -183,13 +183,15 @@ private struct SpreadFocusIslandControls: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             ForEach(Array(controls.enumerated()), id: \.offset) { _, kind in
-                SpreadFocusControlButton(control: kind, nextLabel: nil)
+                SpreadFocusControlButton(control: kind, nextLabel: status.state.nextLabel, iconOnly: true)
+                    .frame(maxWidth: .infinity, minHeight: 44)
             }
         }
         .buttonStyle(.bordered)
-        .controlSize(.small)
+        .controlSize(.regular)
+        .frame(maxWidth: .infinity)
     }
 }
 

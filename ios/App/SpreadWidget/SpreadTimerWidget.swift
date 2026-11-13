@@ -130,8 +130,21 @@ struct SpreadFocusControlButton: View {
     let control: SpreadFocusControl
     /// The words for Forward, such as "Start break".
     let nextLabel: String?
+    /// Icon only, for the Lock Screen banner and the island, where a text label wraps mid-word. The name stays
+    /// as the accessibility label, so VoiceOver still reads "Pause", "Forward" and so on.
+    var iconOnly = false
 
     var body: some View {
+        Group {
+            if iconOnly {
+                controlButton.labelStyle(.iconOnly)
+            } else {
+                controlButton
+            }
+        }
+    }
+
+    @ViewBuilder private var controlButton: some View {
         switch control {
         case .pause:
             Button(intent: PauseSpreadFocusIntent()) {
