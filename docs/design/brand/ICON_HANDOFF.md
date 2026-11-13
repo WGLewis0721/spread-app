@@ -1,6 +1,7 @@
 # Spread iconography — coordinated category system
 
-> Part of the [Spread design brain](../README.md). This is the single source for icon ownership, visual rules, and licensing. Category illustrations on Life cards belong to [the editorial art sheet](../planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), not this icon file.
+> Part of the [Spread design brain](../README.md).
+> Summary: Lucide governs ten category glyphs and sixteen common utility actions across native and web. SF Symbols and Spread's original branded/motion icons remain separate. This is the single source for icon ownership, visual rules, and licensing. Category illustrations on Life cards belong to [the editorial art sheet](../planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), not this icon file.
 
 ## Decision: one category glyph family across iOS and React
 
@@ -48,6 +49,8 @@ Spread's category icons were already matched between iOS and React. A subsequent
 | `table` | `table-2` | `trash` | `trash` |
 
 **Semantics and compatibility:** destructive Trash stays red; other monochrome SVGs stay accent blue in source and inherit SwiftUI/CSS tint at runtime. The native asset-catalog template flags remain unchanged. No icon changes trigger planner actions themselves. iOS built-in control affordances continue using Apple's SF Symbols. Branding, animated Week/Month morph, Create Life mark, navigation, category glyphs, and editorial cards remain unchanged.
+
+**Visual reference:** [16-icon light/dark gallery](ICON_GALLERY.svg) (asset sheet; not a device screenshot).
 
 **License and source:** [Lucide SVG repository](https://github.com/lucide-icons/lucide/tree/main/icons), [ISC license](https://lucide.dev/license). The existing full notices remain at `public/icons/LUCIDE_LICENSE.txt` and `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/LUCIDE_LICENSE.txt`. Automated `scripts/icon-system.test.mjs` checks each native/web pair and icon catalog metadata.
 
