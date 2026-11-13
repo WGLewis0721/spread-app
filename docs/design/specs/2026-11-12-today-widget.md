@@ -29,3 +29,9 @@ Lock Screen may be visible to others. Counts and hours only; no names, task desc
 
 ## Rollback
 Remove extension target/embedded file and group entitlements; keep the existing app planner unchanged. Clear optional App Group snapshot on opt-out. No planner schema migration.
+
+## External interaction references (patterns only)
+
+- [Refero: Todoist daily progress](https://refero.design/screens/7705b208-8b80-4d8c-8cfd-7c3c74846f21): glanceable task count, not a dashboard.
+- [Dribbble: task manager widgets](https://dribbble.com/search/task-manager-ios): prioritize legibility at small sizes.
+- [Apple WidgetKit strategy](https://developer.apple.com/documentation/WidgetKit/Developing-a-WidgetKit-strategy): independent extension, local App Group data and Lock Screen privacy.
