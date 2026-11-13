@@ -31,3 +31,25 @@ test("widget read model contains only counters, hours and dates", () => {
   assert.match(writer, /SpreadWidgetPublisher/);
   assert.match(source, /widgetURL\(URL\(string: "spread:\/\/today"\)\)/);
 });
+
+
+test("one bounded Live Activity supports Lock Screen and Dynamic Island presentations", () => {
+  const attrs = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusActivityAttributes.swift");
+  const controller = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusLiveActivityController.swift");
+  const info = get("ios/App/App/Info.plist");
+  const timer = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimer.swift");
+  assert.match(attrs, /struct SpreadFocusActivityAttributes: ActivityAttributes/);
+  assert.match(attrs, /deadline: Date\?/);
+  assert.match(project, /SpreadFocusActivityAttributes.swift/);
+  assert.match(source, /ActivityConfiguration\(for: SpreadFocusActivityAttributes\.self\)/);
+  assert.match(source, /DynamicIslandExpandedRegion/);
+  assert.match(source, /compactLeading:/);
+  assert.match(source, /compactTrailing:/);
+  assert.match(source, /minimal:/);
+  assert.match(info, /NSSupportsLiveActivities/);
+  assert.match(controller, /ActivityAuthorizationInfo/);
+  assert.match(controller, /dismissalPolicy: \.immediate/);
+  assert.match(timer, /SpreadFocusLiveActivityController\.start/);
+  assert.match(timer, /SpreadFocusLiveActivityController\.update/);
+  assert.match(timer, /SpreadFocusLiveActivityController\.end/);
+});

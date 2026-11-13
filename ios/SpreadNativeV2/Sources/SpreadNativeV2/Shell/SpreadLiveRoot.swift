@@ -87,11 +87,15 @@ public struct SpreadLiveRoot: View {
             }
         }
         .onAppear {
-            if UserDefaults.standard.bool(forKey: "native.widget.openToday") {
+            if UserDefaults.standard.bool(forKey: "native.widget.openToday") ||
+                UserDefaults.standard.bool(forKey: "native.widget.openFocus") {
                 weekFocusEnabled = true
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenToday"))) { _ in
+            weekFocusEnabled = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenFocus"))) { _ in
             weekFocusEnabled = true
         }
         .task {

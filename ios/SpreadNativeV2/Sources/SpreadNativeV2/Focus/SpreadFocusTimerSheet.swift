@@ -8,6 +8,8 @@ struct SpreadFocusTimerSheet: View {
     let roles: [Responsibility]
     @Environment(\.dismiss) private var dismiss
     @AppStorage("native.focus.notifyWhenDone") private var notifyWhenDone = false
+    @AppStorage("native.focus.liveActivityEnabled") private var showLiveTimer = false
+    @AppStorage("native.focus.showNameOutsideApp") private var showNameOutsideApp = false
     @State private var roleId: String
     @State private var minutes = 25
     @State private var message: String?
@@ -97,6 +99,11 @@ struct SpreadFocusTimerSheet: View {
                 Section("Outside Spread") {
                     Toggle("Notify when the timer finishes", isOn: $notifyWhenDone)
                         .accessibilityIdentifier("focus-notification-toggle")
+                    Toggle("Show active timer on Lock Screen and Dynamic Island", isOn: $showLiveTimer)
+                        .accessibilityIdentifier("focus-live-activity-toggle")
+                    Toggle("Show Life area name outside Spread", isOn: $showNameOutsideApp)
+                        .disabled(current?.phase == .running)
+                        .accessibilityIdentifier("focus-live-activity-name")
                     Text("Notifications are optional and only requested when you turn them on.")
                         .font(.footnote).foregroundStyle(Spread.secondary)
                 }
@@ -114,6 +121,16 @@ struct SpreadFocusTimerSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }.frame(minHeight: 44)
                 }
+            }
+        }
+        .onChange(of: showLiveTimer) { _, enabled in
+            if enabled {
+                if let current = timer.visibleSession(for: profileId),
+                   current.phase != .finished {
+                    SpreadFocusLiveActivityController.start(current)
+                }
+            } else {
+                SpreadFocusLiveActivityController.end()
             }
         }
         .onChange(of: notifyWhenDone) { _, enabled in

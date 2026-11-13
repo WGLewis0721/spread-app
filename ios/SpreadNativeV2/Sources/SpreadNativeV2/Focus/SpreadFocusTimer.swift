@@ -45,6 +45,9 @@ final class SpreadFocusTimer: ObservableObject {
             session = try? JSONDecoder().decode(SpreadFocusSession.self, from: data)
         }
         reconcile()
+        if let current = session, current.phase != .finished {
+            SpreadFocusLiveActivityController.update(current)
+        }
     }
 
     func visibleSession(for profileId: String) -> SpreadFocusSession? {
@@ -66,6 +69,7 @@ final class SpreadFocusTimer: ObservableObject {
             endAt: Date().addingTimeInterval(TimeInterval(duration)), phase: .running)
         session = next
         persist()
+        SpreadFocusLiveActivityController.start(next)
         if notify { Task { await SpreadLocalAlerts.scheduleFocus(next) } }
         return true
     }
@@ -77,6 +81,7 @@ final class SpreadFocusTimer: ObservableObject {
         current.phase = current.pausedSeconds > 0 ? .paused : .finished
         session = current
         persist()
+        SpreadFocusLiveActivityController.update(current)
         SpreadLocalAlerts.cancelFocus()
     }
 
@@ -87,6 +92,7 @@ final class SpreadFocusTimer: ObservableObject {
         current.phase = .running
         session = current
         persist()
+        SpreadFocusLiveActivityController.update(current)
         if notify { Task { await SpreadLocalAlerts.scheduleFocus(current) } }
     }
 
@@ -97,6 +103,7 @@ final class SpreadFocusTimer: ObservableObject {
         current.pausedSeconds = 0
         session = current
         persist()
+        SpreadFocusLiveActivityController.end()
         SpreadLocalAlerts.cancelFocus()
     }
 
@@ -104,6 +111,7 @@ final class SpreadFocusTimer: ObservableObject {
         guard let current = session, current.profileId != newProfileId,
               current.phase == .running else { return }
         pause(profileId: current.profileId)
+        SpreadFocusLiveActivityController.end()
     }
 
     func reconcile() {
@@ -114,6 +122,7 @@ final class SpreadFocusTimer: ObservableObject {
         current.pausedSeconds = 0
         session = current
         persist()
+        SpreadFocusLiveActivityController.end()
     }
 
     private func persist() {
