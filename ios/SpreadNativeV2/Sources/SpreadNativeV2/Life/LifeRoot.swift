@@ -302,7 +302,6 @@ struct LifeRoot: View {
                 lifeOverview(snapshot)
                     .transition(.opacity)
             }
-            if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             if snapshot.roles.isEmpty {
                 Text("Name the responsibilities you want to plan for.").font(.body)
                 newLifeArea
@@ -745,7 +744,8 @@ struct LifeRoot: View {
                 .accessibilityLabel("Focus timer, " + session.roleName)
                 .accessibilityIdentifier("spread-focus-mini")
             }
-            if destination != .life && historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
+            // Shared anchored feedback: independent of Life/Week page content.
+            if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
                     lifeWeekToggle
