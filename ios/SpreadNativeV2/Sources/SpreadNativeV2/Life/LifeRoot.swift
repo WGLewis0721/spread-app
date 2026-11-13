@@ -521,20 +521,11 @@ struct LifeRoot: View {
                                 budgetRoleID = role.id
                                 LifeFeedback.selection()
                             } label: {
-                                HStack(spacing: 5) {
-                                    Circle().fill(chipColor(role)).frame(width: 10, height: 10)
-                                    Text(role.name).lineLimit(1)
-                                    Text(SpreadHours.text(role.hours) + "h")
-                                        .monospacedDigit()
-                                }
-                                .font(.subheadline)
-                                .foregroundStyle(Spread.ink)
-                                .padding(.horizontal, 10)
-                                .frame(minHeight: 44)
-                                .background(budgetRoleID == role.id ? Spread.inset : Spread.elevated,
-                                            in: Capsule())
-                                .overlay(Capsule().strokeBorder(
-                                    budgetRoleID == role.id ? Spread.accent : Spread.line, lineWidth: 1.5))
+                                LifeBudgetChip(
+                                    name: role.name,
+                                    hours: SpreadHours.text(role.hours) + "h",
+                                    color: chipColor(role),
+                                    selected: budgetRoleID == role.id)
                             }
                             .buttonStyle(.spreadPress)
                             .accessibilityLabel(role.name + ", " + SpreadHours.text(role.hours) + " hours")
@@ -1083,6 +1074,28 @@ private struct LifeDockOpenerCenterKey: PreferenceKey {
 private struct LifeDockHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+/// One Life area's budget chip. Its own view with plain inputs, so the Swift type-checker finishes quickly.
+private struct LifeBudgetChip: View {
+    let name: String
+    let hours: String
+    let color: Color
+    let selected: Bool
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: 10, height: 10)
+            Text(name).lineLimit(1)
+            Text(hours).monospacedDigit()
+        }
+        .font(.subheadline)
+        .foregroundStyle(Spread.ink)
+        .padding(.horizontal, 10)
+        .frame(minHeight: 44)
+        .background(selected ? Spread.inset : Spread.elevated, in: Capsule())
+        .overlay(Capsule().strokeBorder(selected ? Spread.accent : Spread.line, lineWidth: 1.5))
+    }
 }
 
 private struct LifeGestureHelp: View {
