@@ -9,6 +9,8 @@ struct LifePlanAheadSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var planMode = "plans"
     @State private var formPlanId: String?
+    /// A suggestion the person opened. It only pre-fills the form; nothing is saved from here.
+    @State private var formPreset: PlanAheadPreset?
     @State private var roleId = ""
     @State private var sourceDay = ""
     @State private var dailyTransfer = false
@@ -54,6 +56,7 @@ struct LifePlanAheadSheet: View {
                     Section {
                         Button {
                             formPlanId = nil
+                            formPreset = nil
                             preview = nil
                             planMode = "plans"
                         } label: {
@@ -65,7 +68,7 @@ struct LifePlanAheadSheet: View {
                     }
                     if planMode == "repeat" {
                         LifeRecurringPlanForm(planner: planner, snapshot: snapshot,
-                                              initialPlanId: formPlanId)
+                                              initialPlanId: formPlanId, initialPreset: formPreset)
                     } else {
                 Section {
                     Text("Move time to another week. Nothing moves until you preview and confirm.")
@@ -210,57 +213,58 @@ struct LifePlanAheadSheet: View {
         return amount + " " + every + ", from " + start
     }
 
-    private func outlookHoursText(_ week: NativeOutlookWeek) -> String {
-        let parts: [String] = week.hours
-            .filter { (entry: NativeOutlookHours) -> Bool in entry.hours > 0 }
-            .map { (entry: NativeOutlookHours) -> String in
-                roleName(entry.roleId) + " " + SpreadHours.text(entry.hours) + "h"
-            }
-        return parts.isEmpty ? "No hours planned" : parts.joined(separator: ", ")
+    /// Suggestions from this week for Life areas that have no schedule yet.
+    private var presets: [PlanAheadPreset] {
+        PlanAheadPreset.suggestions(for: snapshot, excluding: Set(activeRules.map { $0.roleId }))
     }
 
-    private func outlookPlacedText(_ week: NativeOutlookWeek) -> String {
-        let parts: [String] = week.placed.map { (placement: NativeOutlookPlacement) -> String in
-            let day = PlannerDates.label(PlannerDates.date(placement.day), pattern: "EEE")
-            return roleName(placement.roleId) + " " + day + " " + SpreadHours.text(placement.hours) + "h"
-        }
-        return "Days set: " + parts.joined(separator: ", ")
+    /// What a suggestion would save, in one line: its days (or weekly hours), the cadence and the start.
+    private func presetSummary(_ preset: PlanAheadPreset) -> String {
+        let amount = preset.days.isEmpty
+            ? SpreadHours.text(preset.weeklyHours) + "h a week"
+            : LifeRecurringPlanForm.dayLine(preset.days)
+        let start = PlannerDates.label(PlannerDates.date(preset.startWeek), pattern: "MMM d")
+        return amount + ", every week from " + start
     }
 
-    /// Next eight weeks, read-only. Built from the same planner state as Life and Week.
-    /// Text rows rather than a dot grid, so VoiceOver reads each week in full.
+    /// Each suggestion opens the repeat form pre-filled and reviewed, so the person can confirm it
+    /// or change anything first. Tapping one saves nothing. Replaces the old read-only 8-week table,
+    /// which read as weeks that were already planned.
     @ViewBuilder
-    private var outlookSection: some View {
-        if let weeks = snapshot.outlook, !weeks.isEmpty {
+    private var presetsSection: some View {
+        if !presets.isEmpty {
             Section {
-                ForEach(weeks) { week in
-                    VStack(alignment: .leading, spacing: 4) {
+                ForEach(presets) { preset in
+                    Button {
+                        formPlanId = nil
+                        formPreset = preset
+                        preview = nil
+                        planMode = "repeat"
+                    } label: {
                         HStack {
-                            Text("Week of " + PlannerDates.label(PlannerDates.date(week.weekKey), pattern: "MMM d"))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Spread.ink)
-                            Spacer()
-                            if week.kept {
-                                Text("Kept as set")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(preset.roleName)
+                                    .foregroundStyle(Spread.ink)
+                                Text(presetSummary(preset))
                                     .font(.caption)
                                     .foregroundStyle(Spread.secondary)
                             }
-                        }
-                        Text(outlookHoursText(week))
-                            .font(.caption)
-                            .foregroundStyle(Spread.secondary)
-                        if !week.placed.isEmpty {
-                            Text(outlookPlacedText(week))
-                                .font(.caption)
+                            Spacer()
+                            Text("Review")
+                                .font(.subheadline)
+                                .foregroundStyle(Spread.secondary)
+                            Image(systemName: "chevron.right")
                                 .foregroundStyle(Spread.secondary)
                         }
+                        .frame(minHeight: 44)
                     }
-                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("plan-ahead-preset-row")
+                    .accessibilityHint("Opens the schedule to review. Nothing is saved until you confirm.")
                 }
             } header: {
-                Text("Next 8 weeks")
+                Text("Suggested plans")
             } footer: {
-                Text("Read-only. Change a week in Week. A schedule does not change kept weeks.")
+                Text("Based on this week. Tap one to review it. Nothing is saved until you confirm, and you can change anything first.")
             }
         }
     }
@@ -270,6 +274,20 @@ struct LifePlanAheadSheet: View {
     @ViewBuilder
     private var plansSections: some View {
         Section {
+            Button {
+                formPlanId = nil
+                formPreset = nil
+                preview = nil
+                planMode = "repeat"
+            } label: {
+                Label("Make a new plan", systemImage: "plus")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(snapshot.roles.isEmpty)
+            .accessibilityIdentifier("plan-ahead-new-schedule")
+        }
+        Section {
             if activeRules.isEmpty {
                 Text("No repeating schedules yet. A schedule sets weekly hours for one Life area.")
                     .font(.subheadline)
@@ -278,6 +296,7 @@ struct LifePlanAheadSheet: View {
                 ForEach(activeRules) { plan in
                     Button {
                         formPlanId = plan.id
+                        formPreset = nil
                         preview = nil
                         planMode = "repeat"
                     } label: {
@@ -301,19 +320,7 @@ struct LifePlanAheadSheet: View {
         } header: {
             Text("Your plans")
         }
-        outlookSection
-        Section {
-            Button {
-                formPlanId = nil
-                preview = nil
-                planMode = "repeat"
-            } label: {
-                Label("New schedule", systemImage: "plus")
-                    .frame(minHeight: 44)
-            }
-            .disabled(snapshot.roles.isEmpty)
-            .accessibilityIdentifier("plan-ahead-new-schedule")
-        }
+        presetsSection
         Section {
             Button {
                 preview = nil

@@ -1,6 +1,6 @@
 import {
-  plannedAllocations, recurrenceWeekOffset, recurringForRole, shiftWeek, validDayHours, validRecurringPlan,
-  weekKey, parseKey, uid,
+  ensureWeek, plannedAllocations, recurrenceWeekOffset, recurringForRole, shiftWeek, untouchedWeek,
+  validDayHours, validRecurringPlan, weekKey, parseKey, uid,
   type DayHours, type GeneratedDay, type RecurrenceSource, type RecurringPlan, type SpreadData, type WeekData,
 } from "./model.ts";
 
@@ -138,18 +138,6 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
   };
 }
 
-/**
- * A week the person has not changed: default hours, no tasks, no placements, no life total,
- * and no rule has written to it. Opening a week stores it, so an untouched week must not
- * block a schedule created later.
- */
-function untouchedWeek(week: WeekData, hats: SpreadData["hats"]): boolean {
-  return Object.keys(week.recurrenceSource ?? {}).length === 0 && week.life === undefined &&
-    week.allocations.length === 0 &&
-    week.boxes.every((box) => box.tasks.length === 0 &&
-      box.hours === (hats.find((hat) => hat.id === box.hatId)?.defaultHours ?? box.hours));
-}
-
 /** Drops untouched weeks from the plan's occurrence range so they are seeded from the plan again. */
 function releaseUntouchedWeeks(data: SpreadData, plan: RecurringPlan): SpreadData["weeks"] {
   return Object.fromEntries(Object.entries(data.weeks).filter(([key, week]) =>
@@ -233,10 +221,10 @@ export function applyRecurringPlan(data: SpreadData, request: RecurringRequest):
     plans = [...plans, { ...original, endWeek: shiftWeek(request.editFromWeek, -1) }];
   plans = [...plans, draft];
   const next = { ...data, recurringPlans: plans, weeks: releaseUntouchedWeeks(data, draft) };
-  return {
-    data: original ? reconcileGenerated(next, new Set([original.id]), request.editFromWeek ?? draft.startWeek) : next,
-    preview,
-  };
+  const reconciled = original
+    ? reconcileGenerated(next, new Set([original.id]), request.editFromWeek ?? draft.startWeek) : next;
+  // The open week is never released, so fill it now if it is empty and the schedule covers it.
+  return { data: ensureWeek(reconciled), preview };
 }
 export function stopRecurringPlan(data: SpreadData, planId: string, fromWeek: string): SpreadData | null {
   const plan = data.recurringPlans?.find((p) => p.id === planId);

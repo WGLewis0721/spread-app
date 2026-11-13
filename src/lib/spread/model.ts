@@ -368,10 +368,32 @@ export function plannedAllocations(key: string, hatId: string, dayHours: DayHour
   });
 }
 
+/**
+ * A week the person has not changed: default hours, no tasks, no placements, no life total,
+ * and no rule has written to it. Opening a week stores it, so an untouched week must not
+ * block a schedule that is created or edited later.
+ */
+export function untouchedWeek(week: WeekData, hats: SpreadData["hats"]): boolean {
+  return Object.keys(week.recurrenceSource ?? {}).length === 0 && week.life === undefined &&
+    week.allocations.length === 0 &&
+    week.boxes.every((box) => box.tasks.length === 0 &&
+      box.hours === (hats.find((hat) => hat.id === box.hatId)?.defaultHours ?? box.hours));
+}
+
+/**
+ * An opened-but-empty week that a schedule now covers with hours. It holds nothing of the person's,
+ * so it is seeded exactly as if it had never been stored. This repairs a week an earlier build left
+ * empty, including the week that is open while the person edits the schedule.
+ */
+function emptyWeekUnderPlan(data: SpreadData, week: WeekData, key: string): boolean {
+  return untouchedWeek(week, data.hats) &&
+    data.hats.some((hat) => (recurringForRole(data, hat.id, key)?.hours ?? 0) > 0);
+}
+
 export function ensureWeek(data: SpreadData): SpreadData {
   const key = data.currentWeek || weekKey();
   const existing = data.weeks[key];
-  if (!existing) {
+  if (!existing || emptyWeekUnderPlan(data, existing, key)) {
     const matched = data.hats.map((hat) => ({ hat, match: recurringForRole(data, hat.id, key) }));
     const active = matched.filter((entry) => entry.match !== null);
     const capacity = active[0]?.match?.plan.capacityHours;

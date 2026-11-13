@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultData, ensureWeek, normalizeData, planDayIso, shiftWeek } from "./model.ts";
+import { defaultData, ensureWeek, normalizeData, planDayIso, shiftWeek, type DayHours, type WeekData } from "./model.ts";
 import { applyRecurringPlan, previewRecurringPlan, stopRecurringPlan, type RecurringRequest } from "./recurring-plan.ts";
 
 function make() {
@@ -305,4 +305,40 @@ test("a schedule without a weekly life total says where to set one", () => {
   const preview = previewRecurringPlan(data, { roleId: gym, startWeek: shiftWeek(data.currentWeek, 1), everyWeeks: 1, hours: 2 });
   assert.equal(preview.eligible, false);
   assert.match(preview.reason ?? "", /Life card/);
+});
+
+// A week opened before its schedule existed is stored empty. An earlier build left such weeks behind.
+const emptyStoredWeek = (data: ReturnType<typeof defaultData>): WeekData =>
+  ({ boxes: data.hats.map((hat) => ({ hatId: hat.id, hours: hat.defaultHours, tasks: [] })), allocations: [] });
+const tueThu = (hours: number): DayHours[] => [{ weekday: "tue", hours }, { weekday: "thu", hours }];
+
+test("a week stored empty before its schedule existed is filled when it is opened", () => {
+  const { data, gym, first } = make();
+  const saved = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 3, dayHours: tueThu(1.5) }).data;
+  saved.weeks[first] = emptyStoredWeek(saved);
+  const week = ensureWeek({ ...saved, currentWeek: first }).weeks[first];
+  assert.equal(week.boxes.find((box) => box.hatId === gym)?.hours, 3);
+  assert.deepEqual(week.allocations.map((item) => item.day).sort(), [planDayIso(first, "tue"), planDayIso(first, "thu")]);
+});
+
+test("saving a schedule from its own first week fills that week at once", () => {
+  const { data, gym, first } = make();
+  let saved = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 3, dayHours: tueThu(1.5) }).data;
+  const planId = saved.recurringPlans![0].id;
+  // The person stands on the schedule's first week, which an earlier build left empty, and saves a change.
+  saved = { ...saved, currentWeek: first, weeks: { ...saved.weeks, [first]: emptyStoredWeek(saved) } };
+  const edited = applyRecurringPlan(saved, { planId, roleId: gym, startWeek: first, everyWeeks: 1, hours: 4, dayHours: tueThu(2) });
+  assert.equal(edited.preview.eligible, true);
+  const week = edited.data.weeks[first];
+  assert.equal(week.boxes.find((box) => box.hatId === gym)?.hours, 4);
+  assert.deepEqual(week.allocations.map((item) => `${item.day}:${item.hours}`).sort(),
+    [`${planDayIso(first, "tue")}:2`, `${planDayIso(first, "thu")}:2`]);
+});
+
+test("a week the person changed is not refilled when it is opened", () => {
+  const { data, gym, first } = make();
+  const saved = applyRecurringPlan(data, { roleId: gym, startWeek: first, everyWeeks: 1, hours: 3, dayHours: tueThu(1.5) }).data;
+  saved.weeks[first] = { boxes: saved.hats.map((hat) => ({ hatId: hat.id, hours: 5, tasks: [] })), allocations: [] };
+  const week = ensureWeek({ ...saved, currentWeek: first }).weeks[first];
+  assert.deepEqual(week, saved.weeks[first]);
 });
