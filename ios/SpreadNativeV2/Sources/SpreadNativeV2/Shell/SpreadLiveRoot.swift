@@ -27,6 +27,8 @@ public struct SpreadLiveRoot: View {
     @State private var showWhatsNew = false
     @State private var presentedNotes: [SpreadReleaseNote] = []
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
+    /// The "Show Life area name outside Spread" switch in the focus sheet. Block labels are written with it.
+    @AppStorage("native.focus.showNameOutsideApp") private var showNamesOutsideApp = false
     @State private var editing = false
     @State private var gearTurn = false
     // Labels fold into their icons once after the planner first appears.
@@ -84,6 +86,12 @@ public struct SpreadLiveRoot: View {
                     SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
                 }
             }
+        }
+        .onChange(of: showNamesOutsideApp) { _, _ in
+            // Block labels and the focus title are written with the names setting, so write them again now.
+            guard let snapshot = planner.snapshot, let profile = planner.state?.envelope.profileId else { return }
+            SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
+            SpreadFocusWidgetPublisher.republishFromStore()
         }
         .onChange(of: planner.state?.envelope.profileId) { old, new in
             if old != nil && old != new {

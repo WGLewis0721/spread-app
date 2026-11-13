@@ -193,7 +193,7 @@ struct SpreadFocusTimerSheet: View {
                     Toggle("Show Life area name outside Spread", isOn: $showNameOutsideApp)
                         .disabled(current?.phase == .running)
                         .accessibilityIdentifier("focus-live-activity-name")
-                    Text("Notifications are optional and only requested when you turn them on.")
+                    Text("Notifications are optional and only requested when you turn them on. Life area names appear on the Lock Screen, the Dynamic Island and the timer widget only while the name switch is on. It can't change during a session.")
                         .font(.footnote).foregroundStyle(Spread.secondary)
                 }
                 if let message {

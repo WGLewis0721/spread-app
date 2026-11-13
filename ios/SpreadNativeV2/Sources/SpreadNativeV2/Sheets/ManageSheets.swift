@@ -808,12 +808,20 @@ struct MoreSheet: View {
         .presentationDragIndicator(.visible)
         .onChange(of: todayWidgetsEnabled) { _, enabled in
             if enabled {
-                if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+                if let snapshot = planner.snapshot {
+                    SpreadWidgetPublisher.publish(snapshot: snapshot)
+                    // Today's planned block is offered on the widgets now, not at the next planner change.
+                    if let profile = planner.state?.envelope.profileId {
+                        SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
+                    }
+                }
                 // A session that is already running should appear on the widgets right away.
                 SpreadFocusWidgetPublisher.republishFromStore()
             } else {
                 SpreadWidgetPublisher.revoke()
                 SpreadFocusWidgetPublisher.revoke()
+                // Off means off: the widgets stop offering today's planned block.
+                SpreadDayPlanPublisher.clear()
             }
         }
         .onChange(of: lifeCardsWidgetsEnabled) { _, enabled in

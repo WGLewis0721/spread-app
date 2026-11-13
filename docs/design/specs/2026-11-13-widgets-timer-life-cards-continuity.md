@@ -252,3 +252,19 @@ The owner asked for the open items to be decided, with the aim of a planning too
 **Not built.** Logging focus time against hours (it would write planner data, so it needs its own owner decision). The card spotlight (concept 4). A deadline countdown (concept 6), because tasks have no due time.
 
 **Verified here.** The Linux test slice runs 64 tests with no failures, including three new progress tests in `SpreadDayPlanTests`. The docs check and the script tests run in CI. The Swift compile runs on GitHub. Nothing has run on a simulator or a device, so the device checks in sections 9 and 13 are still owed.
+
+## 16. Switches checked (2026-11-13)
+
+Every switch that goes with the widgets, the island and the focus timer was traced from its control, through the key it writes, to the surface it controls. Two gaps were found and fixed. The contract tests in `scripts/native-today-widget.test.mjs` cover each row. The two fixed rows fail on the previous code.
+
+| Switch (where) | Stored key | On | Off | Status |
+| --- | --- | --- | --- | --- |
+| Show Today on widgets (More, Widgets) | `native.widget.enabled` | Publishes the Today counters, the focus mirror and today's planned block. Fixed: the block used to wait for the next planner change. | Revokes the counters and the focus mirror, and clears today's planned block. Fixed: the timer widget kept offering the block. The Today widget shows "Open Spread to enable Today widget." | Fixed and tested |
+| Show Life cards on widgets (More, Widgets) | `native.widget.lifeCardsEnabled` | Publishes the Life cards for this week. | Deletes the cards. The widget shows "Turn on Life cards on widgets in More, then open Spread." | Tested |
+| Show Life area name outside Spread (Focus timer, Outside Spread) | `native.focus.showNameOutsideApp` | Block labels and the island and widget titles show the Life area name. Fixed: the change now rewrites them at once. | Shows "Planned block" and "Focus session". Locked while a session runs, and the footer says so. | Fixed and tested |
+| Show active timer on Lock Screen and Dynamic Island (Focus timer, Outside Spread) | `native.focus.liveActivityEnabled` | Starts and refreshes the island. | Ends the island. Nothing starts while it is off. | Tested |
+| Notify when a stretch ends (Focus timer, Outside Spread) | `native.focus.notifyWhenDone` | Asks for permission the first time, then schedules each stretch's alert. | Cancels the scheduled alert. | Tested |
+
+**Not verified.** Nothing above has run on a device or a simulator. The visual state of each switch in the running app, the Life cards widget when it is off, and the island and notifications with the app closed are all still owed.
+
+**Not part of this change.** "Remind me to plan each day" and "Touch feedback" were not touched.
