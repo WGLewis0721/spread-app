@@ -1,5 +1,7 @@
 # Focus Timer and local notifications
 
+> Part of the [Spread design brain](../README.md). Follow the current native design and release rules.
+
 > Implements the approved local-first time utility on a stacked, unmerged branch. This is not a time-tracker or a task-completion system.
 
 ## User flow
