@@ -2,6 +2,15 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-9ac32d4",
+      "version": "1.0",
+      "date": "2026-11-12",
+      "title": "Recent updates",
+      "changes": [
+        "Every merge to main adds one What's New line to a single pending release-notes PR, so the owner reviews each line before it ships."
+      ]
+    },
+    {
       "id": "2026-11-11-life-week",
       "version": "1.0",
       "date": "2026-11-11",
