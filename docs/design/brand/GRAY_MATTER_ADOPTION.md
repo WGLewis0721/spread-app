@@ -22,6 +22,8 @@ Spread's approved native [brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md),
 
 **Icon source:** [Lucide](https://lucide.dev) (ISC-licensed), already used for ten Life category icons and present as `lucide-react` for the React project. [Phosphor](https://phosphoricons.com) (MIT) was evaluated as an alternative but would create a second design family and unnecessary migration. Higgsfield is better reserved for art backgrounds with coherent illustration styles; generating microscopic button icons introduces blur, shape drift and weak accessibility.
 
+**Preview:** [16 utility icons on light/dark surfaces](ICON_GALLERY.svg) (asset review only; not an application screenshot).
+
 **Implementation:** Align 16 shared SVG utility controls to the same Lucide 24×24 grid and 2pt round-stroke rules as category glyphs. Ship identical React SVG and iOS asset-catalog paths; preserve all existing logical names, bindings, colors, labels, tap targets, semantics, SF Symbols, native UI behavior and brand art. [Icon mapping and license ownership](ICON_HANDOFF.md) is the single detailed source. No new dependencies.
 
 **QA to complete before merge:** run `npm run test:scripts`, `npm run typecheck`, `npm run lint`, and `npm run build` when a checkout with dependencies is available; build native Swift package/app in Codemagic; compare existing Life, Week, Classic, More/Settings screenshots in both appearances, at small and large text sizes. Record visual regressions and correct them on the PR. Static vector parity is not App Store/device verification.
