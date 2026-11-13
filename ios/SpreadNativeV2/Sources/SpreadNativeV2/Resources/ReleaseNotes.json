@@ -2,6 +2,16 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-4dd8f3654a36",
+      "version": "1.0",
+      "date": "2026-11-13",
+      "title": "Recent updates",
+      "changes": [
+        "The timer widget shows how many of today's planned blocks you have finished.",
+        "The progress line shows counts only. Nothing starts on its own, and Life area names appear only if you turn them on."
+      ]
+    },
+    {
       "id": "notes-69a0397be63b",
       "version": "1.0",
       "date": "2026-11-13",
@@ -60,5 +70,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "69a0397be63baaf4e8a04afed2fff3ed65fb66ce"
+  "lastProcessedCommit": "4dd8f3654a36543d83bf34a129773be282d81416"
 }
