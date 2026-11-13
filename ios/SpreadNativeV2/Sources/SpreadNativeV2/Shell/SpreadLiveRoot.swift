@@ -25,6 +25,7 @@ public struct SpreadLiveRoot: View {
     @State private var focusDay: String?
     @State private var sheet: LiveSheet?
     @State private var showWhatsNew = false
+    @State private var presentedNotes: [SpreadReleaseNote] = []
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
     @State private var editing = false
     @State private var gearTurn = false
@@ -103,15 +104,17 @@ public struct SpreadLiveRoot: View {
         .task(id: planner.snapshot != nil) {
             // Show only when the real planner is ready, not over its launch screen.
             guard planner.snapshot != nil, sheet == nil, !showWhatsNew else { return }
-            showWhatsNew = SpreadReleaseNotes.shouldPresent(
-                version: SpreadReleaseNotes.appVersion, lastSeenID: lastSeenReleaseID)
+            let unseen = SpreadReleaseNotes.unseen(
+                for: SpreadReleaseNotes.appVersion, lastSeenID: lastSeenReleaseID)
+            presentedNotes = unseen
+            showWhatsNew = !unseen.isEmpty
         }
         .sheet(isPresented: $showWhatsNew, onDismiss: {
             if let latest = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion) {
                 lastSeenReleaseID = latest.id
             }
         }) {
-            WhatsNewSheet()
+            WhatsNewSheet(current: presentedNotes)
         }
     }
 

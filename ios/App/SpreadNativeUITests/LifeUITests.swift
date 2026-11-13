@@ -208,6 +208,10 @@ final class LifeUITests: XCTestCase {
         navigate("week")
         XCTAssertTrue(app.buttons["life-plan-ahead-open"].waitForExistence(timeout: 20))
         app.buttons["life-plan-ahead-open"].tap()
+        // Plan Ahead opens to the plans list; one-time moves are one tap away.
+        XCTAssertTrue(app.buttons["plan-ahead-move-once"].waitForExistence(timeout: 20))
+        capture("life-plan-ahead-plans")
+        app.buttons["plan-ahead-move-once"].tap()
         XCTAssertTrue(app.buttons["plan-ahead-preview"].waitForExistence(timeout: 20))
         capture("life-plan-ahead-intentional")
     }

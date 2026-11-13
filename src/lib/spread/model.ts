@@ -44,9 +44,20 @@ export type RecurringPlan = {
   endWeek?: string;
   /** Stop from this week (inclusive) without resurrecting the role's old default hours. */
   terminatedWeek?: string;
+  /** Optional fixed days. When present, `hours` is their sum and each day is placed in generated weeks. */
+  dayHours?: DayHours[];
 };
+/** Weekdays a plan can be set on, Monday first. Keys, so a plan means the same weekday in every week. */
+export const PLAN_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+export type PlanWeekday = (typeof PLAN_WEEKDAYS)[number];
+/** Hours a responsibility is planned on one set day of an occurrence week. */
+export type DayHours = { weekday: PlanWeekday; hours: number };
+/** A day placement a rule created, kept so a later change can tell an untouched placement from an edited one. */
+export type GeneratedDay = { id: string; day: string; hours: number };
 /** Provenance lets a person override one week without changing future occurrences. */
-export type RecurrenceSource = Record<string, { planId: string; generatedHours: number; manual?: boolean }>;
+export type RecurrenceSource = Record<string, {
+  planId: string; generatedHours: number; manual?: boolean; generatedDays?: GeneratedDay[];
+}>;
 export type WeekData = {
   boxes: Box[];
   allocations: Allocation[];
@@ -295,7 +306,66 @@ export function validRecurringPlan(value: unknown): value is RecurringPlan {
     Number.isInteger(p.everyWeeks) && p.everyWeeks! >= 1 && p.everyWeeks! <= 12 &&
     Number.isFinite(p.hours) && p.hours! > 0 && p.hours! <= 168 && Number.isInteger(p.hours! * 2) &&
     Number.isFinite(p.capacityHours) && p.capacityHours! >= 0 &&
-    p.capacityHours! <= 168 && Number.isInteger(p.capacityHours! * 2);
+    p.capacityHours! <= 168 && Number.isInteger(p.capacityHours! * 2) &&
+    (p.dayHours === undefined || validDayHours(p.dayHours, p.hours!));
+}
+
+/** Each set day once, a positive half-hour amount, and a weekly total equal to their sum. */
+export function validDayHours(value: unknown, total: number): value is DayHours[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 7) return false;
+  const seen = new Set<string>();
+  let sum = 0;
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") return false;
+    const { weekday, hours } = entry as Partial<DayHours>;
+    if (typeof weekday !== "string" || !(PLAN_WEEKDAYS as readonly string[]).includes(weekday) || seen.has(weekday)) return false;
+    if (typeof hours !== "number" || !Number.isFinite(hours) || hours <= 0 || hours > 24 || !Number.isInteger(hours * 2)) return false;
+    seen.add(weekday);
+    sum += hours;
+  }
+  return sum === total;
+}
+
+/** A plan whose set days no longer fit keeps its weekly hours and loses only the days. */
+export function withValidDays(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const plan = value as Partial<RecurringPlan>;
+  if (plan.dayHours === undefined || validDayHours(plan.dayHours, plan.hours as number)) return value;
+  const { dayHours: _dropped, ...rest } = plan;
+  void _dropped;
+  return rest;
+}
+
+export function isGeneratedDay(value: unknown): value is GeneratedDay {
+  const entry = value as Partial<GeneratedDay> | null;
+  return !!entry && typeof entry === "object" && typeof entry.id === "string" &&
+    typeof entry.day === "string" && typeof entry.hours === "number" && Number.isFinite(entry.hours);
+}
+
+/** ISO date of a set weekday inside the week that starts on `key` (a Monday). */
+export function planDayIso(key: string, weekday: PlanWeekday): string {
+  const monday = parseKey(key);
+  const date = new Date(monday);
+  date.setDate(monday.getDate() + PLAN_WEEKDAYS.indexOf(weekday));
+  return isoDate(date);
+}
+
+/** Day placements for one occurrence week, Monday first. Pure. */
+export function planPlacements(key: string, dayHours: DayHours[]): { day: string; hours: number }[] {
+  return [...dayHours]
+    .sort((a, b) => PLAN_WEEKDAYS.indexOf(a.weekday) - PLAN_WEEKDAYS.indexOf(b.weekday))
+    .map((entry) => ({ day: planDayIso(key, entry.weekday), hours: entry.hours }));
+}
+
+/** Allocations a rule places for one responsibility, appended after whatever already sits on each day. */
+export function plannedAllocations(key: string, hatId: string, dayHours: DayHours[], existing: Allocation[]): Allocation[] {
+  const nextOrder = new Map<string, number>();
+  for (const item of existing) nextOrder.set(item.day, Math.max(nextOrder.get(item.day) ?? -1, item.order));
+  return planPlacements(key, dayHours).map(({ day, hours }) => {
+    const order = (nextOrder.get(day) ?? -1) + 1;
+    nextOrder.set(day, order);
+    return { id: uid(), hatId, day, hours, order };
+  });
 }
 
 export function ensureWeek(data: SpreadData): SpreadData {
@@ -310,15 +380,25 @@ export function ensureWeek(data: SpreadData): SpreadData {
     const valid = active.length === 0 || (consistent && capacity !== undefined && plannedTotal <= capacity);
     // Fail visibly rather than silently expanding a person's weekly capacity.
     const usePlan = active.length > 0 && valid;
+    // Fixed days are placed only in an occurrence week, and each placement is recorded for reconciliation.
+    const allocations: Allocation[] = [];
+    const recurrenceSource: RecurrenceSource = {};
+    if (usePlan) {
+      for (const { hat, match } of active) {
+        const placed = match!.hours > 0 ? plannedAllocations(key, hat.id, match!.plan.dayHours ?? [], allocations) : [];
+        allocations.push(...placed);
+        recurrenceSource[hat.id] = { planId: match!.plan.id, generatedHours: match!.hours,
+          ...(placed.length ? { generatedDays: placed.map(({ id, day, hours }) => ({ id, day, hours })) } : {}) };
+      }
+    }
     const week: WeekData = {
       boxes: matched.map(({ hat, match }) => ({
         hatId: hat.id, hours: usePlan ? (match?.hours ?? hat.defaultHours) : hat.defaultHours, tasks: [],
       })),
-      allocations: [],
+      allocations,
       ...(usePlan ? {
         life: { version: 1 as const, capacityHours: capacity },
-        recurrenceSource: Object.fromEntries(active.map(({ hat, match }) =>
-          [hat.id, { planId: match!.plan.id, generatedHours: match!.hours }])),
+        recurrenceSource,
       } : {}),
       ...(!valid ? { recurrenceIssue: "Recurring hours do not fit this week's total. Review Plan Ahead." } : {}),
     };
@@ -364,6 +444,8 @@ export function normalizeData(raw: unknown): SpreadData {
               .map(([roleId, entry]) => [roleId, {
                 planId: entry.planId, generatedHours: entry.generatedHours,
                 ...(entry.manual ? { manual: true } : {}),
+                ...(Array.isArray(entry.generatedDays)
+                  ? { generatedDays: (entry.generatedDays as unknown[]).filter(isGeneratedDay) } : {}),
               }]),
           ),
         } : {}),
@@ -373,7 +455,7 @@ export function normalizeData(raw: unknown): SpreadData {
   }
   const currentWeek = typeof value.currentWeek === "string" ? value.currentWeek : weekKey();
   const recurringPlans = Array.isArray(value.recurringPlans)
-    ? value.recurringPlans.filter(validRecurringPlan).filter((p) => hats.some((h) => h.id === p.roleId))
+    ? value.recurringPlans.map(withValidDays).filter(validRecurringPlan).filter((p) => hats.some((h) => h.id === p.roleId))
     : [];
   const result = ensureWeek({
     hats, weeks: repairDuplicateIds(weeks), currentWeek,

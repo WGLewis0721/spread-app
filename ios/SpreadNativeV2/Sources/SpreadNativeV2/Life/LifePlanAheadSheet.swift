@@ -7,7 +7,8 @@ struct LifePlanAheadSheet: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
     @Environment(\.dismiss) private var dismiss
-    @State private var planMode = "repeat"
+    @State private var planMode = "plans"
+    @State private var formPlanId: String?
     @State private var roleId = ""
     @State private var sourceDay = ""
     @State private var dailyTransfer = false
@@ -47,17 +48,25 @@ struct LifePlanAheadSheet: View {
     var body: some View {
         SpreadSheetStack {
             Form {
-                Section {
-                    Picker("Plan Ahead action", selection: $planMode) {
-                        Text("Repeat schedule").tag("repeat")
-                        Text("Move once").tag("move")
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("plan-ahead-mode")
-                }
-                if planMode == "repeat" {
-                    LifeRecurringPlanForm(planner: planner, snapshot: snapshot)
+                if planMode == "plans" {
+                    plansSections
                 } else {
+                    Section {
+                        Button {
+                            formPlanId = nil
+                            preview = nil
+                            planMode = "plans"
+                        } label: {
+                            Label("Your plans", systemImage: "chevron.backward")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(minHeight: 44)
+                        }
+                        .accessibilityIdentifier("plan-ahead-back-to-plans")
+                    }
+                    if planMode == "repeat" {
+                        LifeRecurringPlanForm(planner: planner, snapshot: snapshot,
+                                              initialPlanId: formPlanId)
+                    } else {
                 Section {
                     Text("Move time to another week. Nothing moves until you preview and confirm.")
                         .font(.subheadline)
@@ -147,6 +156,7 @@ struct LifePlanAheadSheet: View {
                     .disabled(saving || planner.busy || preview?.eligible != true)
                     .accessibilityIdentifier("plan-ahead-confirm")
                 } header: { Text("Review before moving") }
+                    }
                 }
             }
             .spreadListSurface()
@@ -174,6 +184,148 @@ struct LifePlanAheadSheet: View {
         .onChange(of: destinationDate) { _, _ in preview = nil }
         .onChange(of: targetCapacityText) { _, _ in preview = nil }
         .accessibilityIdentifier("life-plan-ahead-sheet")
+    }
+
+    /// Repeating schedules that still apply from next week onward.
+    private var activeRules: [NativeRecurringPlan] {
+        (snapshot.recurringPlans ?? []).filter { rule in
+            rule.terminatedWeek == nil &&
+                (rule.endWeek == nil || rule.endWeek! >= PlannerDates.weekKey(for: earliestDestination))
+        }
+    }
+
+    private func roleName(_ id: String) -> String {
+        snapshot.roles.first(where: { $0.id == id })?.name ?? "Life area"
+    }
+
+    private func planSummary(_ plan: NativeRecurringPlan) -> String {
+        let every = plan.everyWeeks == 1 ? "every week" : "every \(plan.everyWeeks) weeks"
+        let start = PlannerDates.label(PlannerDates.date(plan.startWeek), pattern: "MMM d")
+        let amount: String
+        if let days = plan.dayHours, !days.isEmpty {
+            amount = LifeRecurringPlanForm.dayLine(days)
+        } else {
+            amount = SpreadHours.text(plan.hours) + "h"
+        }
+        return amount + " " + every + ", from " + start
+    }
+
+    private func outlookHoursText(_ week: NativeOutlookWeek) -> String {
+        let parts: [String] = week.hours
+            .filter { (entry: NativeOutlookHours) -> Bool in entry.hours > 0 }
+            .map { (entry: NativeOutlookHours) -> String in
+                roleName(entry.roleId) + " " + SpreadHours.text(entry.hours) + "h"
+            }
+        return parts.isEmpty ? "No hours planned" : parts.joined(separator: ", ")
+    }
+
+    private func outlookPlacedText(_ week: NativeOutlookWeek) -> String {
+        let parts: [String] = week.placed.map { (placement: NativeOutlookPlacement) -> String in
+            let day = PlannerDates.label(PlannerDates.date(placement.day), pattern: "EEE")
+            return roleName(placement.roleId) + " " + day + " " + SpreadHours.text(placement.hours) + "h"
+        }
+        return "Days set: " + parts.joined(separator: ", ")
+    }
+
+    /// Next eight weeks, read-only. Built from the same planner state as Life and Week.
+    /// Text rows rather than a dot grid, so VoiceOver reads each week in full.
+    @ViewBuilder
+    private var outlookSection: some View {
+        if let weeks = snapshot.outlook, !weeks.isEmpty {
+            Section {
+                ForEach(weeks) { week in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Week of " + PlannerDates.label(PlannerDates.date(week.weekKey), pattern: "MMM d"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Spread.ink)
+                            Spacer()
+                            if week.kept {
+                                Text("Kept as set")
+                                    .font(.caption)
+                                    .foregroundStyle(Spread.secondary)
+                            }
+                        }
+                        Text(outlookHoursText(week))
+                            .font(.caption)
+                            .foregroundStyle(Spread.secondary)
+                        if !week.placed.isEmpty {
+                            Text(outlookPlacedText(week))
+                                .font(.caption)
+                                .foregroundStyle(Spread.secondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            } header: {
+                Text("Next 8 weeks")
+            } footer: {
+                Text("Read-only. Change a week in Week. A schedule does not change kept weeks.")
+            }
+        }
+    }
+
+    /// Entry screen: shows what is already planned before asking for input.
+    /// Reads the store snapshot only; tapping a row opens a form, nothing is sent.
+    @ViewBuilder
+    private var plansSections: some View {
+        Section {
+            if activeRules.isEmpty {
+                Text("No repeating schedules yet. A schedule sets weekly hours for one Life area.")
+                    .font(.subheadline)
+                    .foregroundStyle(Spread.secondary)
+            } else {
+                ForEach(activeRules) { plan in
+                    Button {
+                        formPlanId = plan.id
+                        preview = nil
+                        planMode = "repeat"
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(roleName(plan.roleId))
+                                    .foregroundStyle(Spread.ink)
+                                Text(planSummary(plan))
+                                    .font(.caption)
+                                    .foregroundStyle(Spread.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(Spread.secondary)
+                        }
+                        .frame(minHeight: 44)
+                    }
+                    .accessibilityIdentifier("plan-ahead-plan-row")
+                }
+            }
+        } header: {
+            Text("Your plans")
+        }
+        outlookSection
+        Section {
+            Button {
+                formPlanId = nil
+                preview = nil
+                planMode = "repeat"
+            } label: {
+                Label("New schedule", systemImage: "plus")
+                    .frame(minHeight: 44)
+            }
+            .disabled(snapshot.roles.isEmpty)
+            .accessibilityIdentifier("plan-ahead-new-schedule")
+        }
+        Section {
+            Button {
+                preview = nil
+                planMode = "move"
+            } label: {
+                Label("Move hours once", systemImage: "arrow.left.arrow.right")
+                    .frame(minHeight: 44)
+            }
+            .accessibilityIdentifier("plan-ahead-move-once")
+        } footer: {
+            Text("Move time from this week to another week. Nothing moves until you preview and confirm.")
+        }
     }
 
     private func requestPreview() async {

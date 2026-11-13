@@ -5,13 +5,14 @@ import SwiftUI
 /// It is informational only: no account, tracking, update polling or planner writes.
 struct WhatsNewSheet: View {
     var showHistory = false
+    /// The entries this build brought in, shown as one card until the user asks for history.
+    var current: [SpreadReleaseNote] = []
     @Environment(\.dismiss) private var dismiss
     @State private var historyExpanded = false
 
     private var releases: [SpreadReleaseNote] {
         if showHistory || historyExpanded { return SpreadReleaseNotes.entries }
-        return SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion)
-            .map { [$0] } ?? []
+        return SpreadReleaseNotes.combined(current).map { [$0] } ?? []
     }
 
     var body: some View {

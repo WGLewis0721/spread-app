@@ -16,7 +16,7 @@
  * a stand-in spread) instead, so a merge can lose a place for something but never the thing.
  */
 import { ID_LIST_SUFFIX, type Json } from "./merge.ts";
-import { normalizeData, validRecurringPlan, type Allocation, type Box, type DeletedTask, type Hat, type RecurringPlan, type SpreadData, type Task, type WeekData } from "./model.ts";
+import { normalizeData, validRecurringPlan, withValidDays, type Allocation, type Box, type DayHours, type DeletedTask, type Hat, type RecurringPlan, type SpreadData, type Task, type WeekData } from "./model.ts";
 
 export type PlainItem = { id: string; fields: Record<string, Json> };
 
@@ -47,6 +47,7 @@ export function flatten(data: SpreadData, profileName: string): PlainItem[] {
       everyWeeks: plan.everyWeeks,
       hours: plan.hours, capacityHours: plan.capacityHours, endWeek: plan.endWeek,
       terminatedWeek: plan.terminatedWeek,
+      ...(plan.dayHours ? { dayHours: json(plan.dayHours) } : {}),
     });
   }
   for (const hat of data.hats) {
@@ -219,7 +220,7 @@ export function assemble(live: PlainItem[], currentWeek: string): { data: Spread
   const recurringPlans: RecurringPlan[] = [];
   for (const [entryId, fields] of byId) {
     if (!entryId.startsWith("recurring-plan:")) continue;
-    const candidate = {
+    const candidate = withValidDays({
       id: entryId.slice("recurring-plan:".length),
       roleId: text(fields.roleId), startWeek: text(fields.startWeek),
       ...(typeof fields.managedFromWeek === "string" ? { managedFromWeek: fields.managedFromWeek } : {}),
@@ -227,7 +228,8 @@ export function assemble(live: PlainItem[], currentWeek: string): { data: Spread
       capacityHours: num(fields.capacityHours),
       ...(typeof fields.endWeek === "string" ? { endWeek: fields.endWeek } : {}),
       ...(typeof fields.terminatedWeek === "string" ? { terminatedWeek: fields.terminatedWeek } : {}),
-    };
+      ...(Array.isArray(fields.dayHours) ? { dayHours: fields.dayHours as unknown as DayHours[] } : {}),
+    });
     if (validRecurringPlan(candidate)) recurringPlans.push(candidate);
   }
   const orderedPlans = inOrder(list(profile?.[ids("recurringPlans")]),
