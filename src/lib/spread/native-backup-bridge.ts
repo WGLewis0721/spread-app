@@ -1,8 +1,9 @@
 import type { ParsedBackup } from "./backup.ts";
 
 /**
- * The three backup requests the modern native sheet can send through the planner's bridge. They reuse the same
- * file code as the web planner's More sheet: the file is built, read and restored by the existing functions.
+ * The backup requests the modern native sheet can send through the planner's bridge. They reuse the same file code
+ * as the web planner's More sheet: the `.spread` file is built, read and restored by the existing functions, and the
+ * editable plan file is built and read by plan-file.ts.
  */
 export type BackupRequest =
   | { type: "backupFile" }
@@ -12,15 +13,19 @@ export type BackupRequest =
 export type BackupProfile = { id: string; name: string; readable: boolean; weeks: number; tasks: number; range: string };
 
 export type BackupReply =
-  | { ok: true; kind: "file"; name: string; text: string }
+  | { ok: true; kind: "file"; name: string; text: string; planName: string; planText: string }
   | { ok: true; kind: "preview"; profiles: BackupProfile[]; weeks: number; tasks: number }
   | { ok: true; kind: "restored"; message: string }
   | { ok: false; error: "unreadable" | "week-file" | "no-selection" | "failed"; message: string };
 
+/** What reading a file gives back: a backup to preview and restore, or the plain reasons it cannot be used. */
+export type ReadResult = { ok: true; parsed: ParsedBackup } | { ok: false; message: string };
+
 export type BackupDeps = {
   buildText: () => Promise<string>;
+  buildPlan: () => { name: string; text: string };
   fileName: () => string;
-  parse: (text: string) => Promise<ParsedBackup | null>;
+  parse: (text: string) => Promise<ReadResult>;
   apply: (backup: ParsedBackup, select: string[]) => Promise<{ ok: boolean; message: string }>;
 };
 
@@ -42,10 +47,24 @@ export function backupRequestOf(value: unknown): BackupRequest | null {
 
 export async function handleBackupRequest(request: BackupRequest, deps: BackupDeps): Promise<BackupReply> {
   if (request.type === "backupFile") {
-    return { ok: true, kind: "file", name: deps.fileName(), text: await deps.buildText() };
+    try {
+      const plan = deps.buildPlan();
+      return {
+        ok: true,
+        kind: "file",
+        name: deps.fileName(),
+        text: await deps.buildText(),
+        planName: plan.name,
+        planText: plan.text,
+      };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "";
+      return { ok: false, error: "failed", message: `The backup could not be made. Nothing was saved. ${reason}`.trim() };
+    }
   }
-  const parsed = await deps.parse(request.text);
-  if (!parsed) return { ok: false, error: "unreadable", message: "That file isn’t a Spread backup, or it is damaged." };
+  const read = await deps.parse(request.text);
+  if (!read.ok) return { ok: false, error: "unreadable", message: read.message };
+  const parsed = read.parsed;
   if (parsed.kind !== "full") {
     return {
       ok: false,

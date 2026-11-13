@@ -21,6 +21,9 @@ struct BackupReply: Decodable {
     let kind: String?
     let name: String?
     let text: String?
+    /// The plan file for the same profile: its name and its plain-text schedule. Present on a backup reply.
+    let planName: String?
+    let planText: String?
     let profiles: [BackupProfile]?
     let weeks: Int?
     let tasks: Int?
@@ -28,10 +31,12 @@ struct BackupReply: Decodable {
     let error: String?
 }
 
-/// The file to share: its name and its text.
+/// The files to share: the `.spread` backup (name and text) and the plan file (name and text).
 struct BackupFile: Equatable {
     let name: String
     let text: String
+    let planName: String?
+    let planText: String?
 }
 
 /// What a backup file holds, before anything is restored.

@@ -233,7 +233,7 @@ struct HoursShortage: Equatable {
         guard reply.ok, let name = reply.name, let text = reply.text else {
             return .failure(BackupFailure(message: reply.message ?? unchanged))
         }
-        return .success(BackupFile(name: name, text: text))
+        return .success(BackupFile(name: name, text: text, planName: reply.planName, planText: reply.planText))
     }
 
     /// Reads a backup file and lists its profiles. Changes nothing.

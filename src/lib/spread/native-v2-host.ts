@@ -4,13 +4,34 @@ import { buildBackupText, useSpread } from "./store.ts";
 import { getSaveFacts } from "./local-status.ts";
 import { parseAnyBackup } from "./backup.ts";
 import { applyRestore } from "./restore-apply.ts";
-import { backupRequestOf, handleBackupRequest, type BackupDeps } from "./native-backup-bridge.ts";
+import { buildPlanText, parsePlanFile, planParsedBackup } from "./plan-file.ts";
+import { backupRequestOf, handleBackupRequest, type BackupDeps, type ReadResult } from "./native-backup-bridge.ts";
 
-/** The file work the modern sheet asks for: the same functions the web planner's More sheet uses. */
+/**
+ * Reads a file the person chose: a `.spread` backup, or a plan file. A plan file with problems returns every problem,
+ * so whoever edited it can see what to fix. Nothing is written by reading.
+ */
+async function readBackupFile(text: string): Promise<ReadResult> {
+  const full = await parseAnyBackup(text);
+  if (full) return { ok: true, parsed: full };
+  const plan = parsePlanFile(text);
+  if (plan.ok) return { ok: true, parsed: planParsedBackup(plan.data, plan.name) };
+  if (/"kind"\s*:\s*"spread-plan"/.test(text)) {
+    return { ok: false, message: `This plan file has problems, so nothing was restored.\n${plan.issues.join("\n")}` };
+  }
+  return { ok: false, message: "That file isn’t a Spread backup or plan, or it is damaged." };
+}
+
+/** The file work the modern sheet asks for: the same functions the web planner's More sheet uses, plus the plan file. */
 const backupDeps: BackupDeps = {
   buildText: () => buildBackupText(useSpread.getState().data),
+  buildPlan: () => {
+    const state = useSpread.getState();
+    const name = state.profiles.find((profile) => profile.id === state.activeId)?.name ?? "Spread plan";
+    return { name: `Spread-plan-${state.data.currentWeek}.json`, text: buildPlanText(state.data, name) };
+  },
   fileName: () => `Spread-${useSpread.getState().data.currentWeek}.spread`,
-  parse: (text) => parseAnyBackup(text),
+  parse: readBackupFile,
   apply: (backup, select) => applyRestore(backup, select),
 };
 

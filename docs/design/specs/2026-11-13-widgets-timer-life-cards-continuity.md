@@ -322,3 +322,46 @@ Every button in the native app was read from source: the labels, the accessibili
 **Verified here.** Web typecheck. `test:spread`: 525 passed. `test:scripts`: 242 passed, including the wiring tests in `scripts/native-backup.test.mjs`. Lint: 0 errors. The Swift compile runs on GitHub.
 
 **Owed on a device.** The share sheet from an iPhone. Choosing a file from Files or iCloud Drive. Restoring onto a fresh install and comparing the profiles. A damaged profile listed and left out. A file that is not a backup.
+
+## 19. Plan file: the editable schedule (2026-11-13)
+
+Security comes first. The `.spread` backup stays as it is: checksummed, and not editable. The plan file is a separate, locked-down file for one profile's schedule.
+
+**What the plan file holds.** The areas (name, weekly hours, colour, category), the weeks (a Monday start, each area's hour budget, an optional week capacity, tasks with an optional day, and hour allocations by day), and the current week. It holds at most 100 areas and the 104 most recent weeks.
+
+**What it leaves out.** Settings and accents, recovery copies, the licence, sync and cloud keys, attachments and photos, rich notes, recurring plans, the recycle bin, and the day-order presentation. Those stay in the `.spread` backup.
+
+**How "Back up Spread" makes it.** One action makes both files and shares both. No button is added: the Backup sheet keeps its three actions. The sheet says plainly that the backup cannot be edited, that the plan file is plain text and can be edited or given to an AI tool, and that whatever is shared goes to whoever receives it.
+
+**How a file comes back.** "Choose a backup file" accepts either file. A `.spread` backup is read as before. A plan file is checked by `parsePlanFile`. Every problem is listed (up to 20), and nothing is restored unless the whole file is clean. A clean plan file is restored as a new profile through the same restore as a backup: a safety copy first, all or nothing, and current profiles unchanged.
+
+**Security controls.**
+- A file over 5 MB is refused before it is read.
+- Only the listed fields are accepted. Any other field, at any level, is refused. Prototype keys are refused.
+- The importer builds every object and identifier itself. Nothing from the file is used as an identifier.
+- Dates must be real days. A week must start on a Monday. A day must be inside its week.
+- Hours are half-hour steps: 0 to 168 for areas and weeks, 0.5 to 24 for an allocation. Capacity is 0 to 168.
+- An area's placed hours must fit its budget, and the areas in a week must fit its capacity.
+- A task with a day needs hours for its area on that day.
+- Text must be non-empty, on one line, free of control characters, and at most 2000 characters. Categories, estimates and colours must be ones the planner uses.
+- Area names are unique, ignoring capitals. Week keys are unique.
+
+**Limits of the protection.** Anyone can write a valid plan file. It is not a verified record of who wrote it. A checksum or signature would break every edit, so the file has neither. The importer checks structure and the planner's hour rules, not authorship. The app never acts on the guide, or on any instruction written in the file.
+
+**Owed on a device.** Sharing both files from an iPhone. Choosing a plan file from Files or iCloud Drive. A plan with problems showing every problem. A clean plan restored onto a fresh install.
+
+## 20. iCloud backup and restore: saved for later (2026-11-13)
+
+**Status.** The code is merged and dormant. Both cloud switches (`VITE_SPREAD_CLOUD_BACKUP`, `VITE_SPREAD_CLOUD_SYNC`) default to off. The reinstall restore has not been proven on hardware, so Gate 3 in `docs/ICLOUD_PLAN.md` is not met.
+
+**What already exists.** `src/lib/spread/cloud-backup.ts`, `cloud-sync.ts`, `cloud-flags.ts` and the sync modules. The Swift files under `ios/App/App/Cloud/` and the `ios/App/SpreadCloudCore` package. The App entitlements already request an iCloud container and the CloudKit and CloudDocuments services.
+
+**Scaffold decision.** No further iCloud code was added. What is left is hardware gates, not code. More code would need changes to `ios/App/App/Cloud/**`, which the project rules keep out of this work, and signing changes that could break a deployment.
+
+**Deployment risk to check before the next signed build.** The App entitlements request iCloud and CloudKit. A signed build needs the App ID to carry those capabilities. This could not be checked from the repository.
+
+**What iOS does on reinstall.** Deleting an app removes its own data. A reinstall starts empty. Data comes back only through a whole-device restore from an iCloud or computer backup, or through the app's own cloud copy. CloudKit records in the user's iCloud can take a relaunch to appear. Keychain persistence is not a guarantee.
+
+**Turning it on later.** QA and TestFlight builds can set the flag at build time. The defaults change only after Gate 3 passes on hardware. The checklist is in `docs/ICLOUD_PLAN.md`.
+
+**Tests.** `scripts/native-backup.test.mjs` asserts that both flags default to off, and that the backup sheet has no iCloud action.

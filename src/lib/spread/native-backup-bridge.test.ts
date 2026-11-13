@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ParsedBackup } from "./backup.ts";
-import { backupRequestOf, handleBackupRequest, type BackupDeps } from "./native-backup-bridge.ts";
+import { backupRequestOf, handleBackupRequest, type BackupDeps, type ReadResult } from "./native-backup-bridge.ts";
 
 const profile = (id: string, name: string, readable = true) => ({
   id, name, readable, spreads: ["Work"], weeks: 3, tasks: 14, range: "Jan 5 to Feb 1",
@@ -17,11 +17,17 @@ const weekBackup = { kind: "week", data: {}, summary: {} } as unknown as ParsedB
 
 function deps(overrides: Partial<BackupDeps> = {}): BackupDeps & { applied: string[][] } {
   const applied: string[][] = [];
+  const readers: Record<string, ReadResult> = {
+    good: { ok: true, parsed: fullBackup },
+    week: { ok: true, parsed: weekBackup },
+    bad: { ok: false, message: "That file isn’t a Spread backup or plan, or it is damaged." },
+  };
   return {
     applied,
     buildText: async () => "FILE-TEXT",
+    buildPlan: () => ({ name: "Spread-plan-2026-11-09.json", text: "PLAN-TEXT" }),
     fileName: () => "Spread-2026-11-09.spread",
-    parse: async (text) => (text === "good" ? fullBackup : text === "week" ? weekBackup : null),
+    parse: async (text) => readers[text] ?? { ok: false, message: "unknown" },
     apply: async (_backup, select) => {
       applied.push(select);
       return { ok: true, message: "2 profiles restored." };
@@ -30,9 +36,25 @@ function deps(overrides: Partial<BackupDeps> = {}): BackupDeps & { applied: stri
   };
 }
 
-test("backupFile returns the file name and the text the existing backup code builds", async () => {
+test("backupFile returns the backup file and the plan file, each with its name and text", async () => {
   const reply = await handleBackupRequest({ type: "backupFile" }, deps());
-  assert.deepEqual(reply, { ok: true, kind: "file", name: "Spread-2026-11-09.spread", text: "FILE-TEXT" });
+  assert.deepEqual(reply, {
+    ok: true,
+    kind: "file",
+    name: "Spread-2026-11-09.spread",
+    text: "FILE-TEXT",
+    planName: "Spread-plan-2026-11-09.json",
+    planText: "PLAN-TEXT",
+  });
+});
+
+test("if the plan file cannot be made, the backup says so and nothing is offered to save", async () => {
+  const reply = await handleBackupRequest({ type: "backupFile" }, deps({
+    buildPlan: () => { throw new Error("There are too many areas for a plan file."); },
+  }));
+  assert.equal(reply.ok, false);
+  assert.equal(reply.ok === false && reply.error, "failed");
+  assert.equal(reply.ok === false && reply.message.includes("Nothing was saved"), true);
 });
 
 test("restorePreview lists each profile with its counts and only what the sheet needs", async () => {
@@ -49,13 +71,21 @@ test("restorePreview lists each profile with its counts and only what the sheet 
   });
 });
 
-test("a file that is not a Spread backup is refused and nothing is restored", async () => {
+test("a file that cannot be read is refused with the reason, and nothing is restored", async () => {
   const d = deps();
-  const reply = await handleBackupRequest({ type: "restorePreview", text: "nonsense" }, d);
-  assert.equal(reply.ok, false);
+  const reply = await handleBackupRequest({ type: "restorePreview", text: "bad" }, d);
   assert.equal(reply.ok === false && reply.error, "unreadable");
-  await handleBackupRequest({ type: "restoreApply", text: "nonsense", select: ["a"] }, d);
+  assert.equal(reply.ok === false && reply.message.includes("isn’t a Spread backup"), true);
+  await handleBackupRequest({ type: "restoreApply", text: "bad", select: ["a"] }, d);
   assert.deepEqual(d.applied, []);
+});
+
+test("a plan file with problems returns every problem to the sheet", async () => {
+  const problems = "This plan file has problems, so nothing was restored.\nWeek 2026-11-16: hours must be half hours.";
+  const reply = await handleBackupRequest({ type: "restorePreview", text: "plan" }, deps({
+    parse: async () => ({ ok: false, message: problems }),
+  }));
+  assert.equal(reply.ok === false && reply.message, problems);
 });
 
 test("a one-week file from the older version is refused with a plain reason", async () => {

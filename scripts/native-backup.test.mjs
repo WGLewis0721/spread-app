@@ -58,7 +58,7 @@ test("the backup sheet has the two actions, a preview, and identifiers the UI te
   }
   assert.match(sheet, /Button \{ makeBackup\(\) \}/);
   assert.match(sheet, /\.fileImporter\(isPresented: \$importing/);
-  assert.match(sheet, /WeekExport\.share\(\[url\]\)/);
+  assert.match(sheet, /WeekExport\.share\(items\)/);
   // Restore only adds profiles: the sheet never calls the replace-the-open-plan path.
   assert.doesNotMatch(sheet, /replaceData|rollback|Replace/);
 });
@@ -68,4 +68,38 @@ test("the native planner exposes the three calls and a failure says why, in plai
   assert.match(livePlanner, /func previewBackup\(_ text: String\) async -> Result<BackupPreview, BackupFailure>/);
   assert.match(livePlanner, /func restoreBackup\(_ text: String, select: \[String\]\) async -> Result<String, BackupFailure>/);
   assert.match(livePlanner, /Your plan is unchanged\./);
+});
+
+const planFile = get("src/lib/spread/plan-file.ts");
+const cloudFlags = get("src/lib/spread/cloud-flags.ts");
+
+test("the plan file is built and read by one module, and the backup reply carries it", () => {
+  assert.match(planFile, /export function buildPlanText\(/);
+  assert.match(planFile, /export function parsePlanFile\(/);
+  assert.match(host, /buildPlanText\(state\.data, name\)/);
+  assert.match(host, /parsePlanFile\(text\)/);
+  assert.match(bridge, /planName: plan\.name/);
+  assert.match(backupTypes, /let planText: String\?/);
+});
+
+test("both files are written before the share sheet opens, and a large file is refused before it is read", () => {
+  assert.match(sheet, /WeekExport\.share\(items\)/);
+  assert.match(sheet, /fileSize, size > 5_000_000/);
+});
+
+test("the sheet says there are two files, that the backup cannot be edited, and what the plan leaves out", () => {
+  assert.match(sheet, /makes two files/);
+  assert.match(sheet, /can't be edited/);
+  assert.match(sheet, /leaves out settings, attachments, rich notes, recurring plans and the recycle bin/);
+});
+
+test("the sheet adds no buttons: its three actions are the only Button blocks, plus the sheet's Done", () => {
+  assert.equal((sheet.match(/\bButton \{/g) ?? []).length, 3);
+  assert.equal((sheet.match(/Button\("Done"\)/g) ?? []).length, 1);
+});
+
+test("iCloud stays off in this build, and the backup sheet offers no iCloud action", () => {
+  assert.match(cloudFlags, /backup: flag\(env\.VITE_SPREAD_CLOUD_BACKUP, false\)/);
+  assert.match(cloudFlags, /sync: flag\(env\.VITE_SPREAD_CLOUD_SYNC, false\)/);
+  assert.doesNotMatch(sheet, /iCloud|CloudKit|SpreadCloud/);
 });
