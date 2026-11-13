@@ -36,14 +36,32 @@ def select_build(latest_apple: str, codemagic_build: str) -> int:
 
 def patch_project(path: Path, selected: int) -> None:
     before = path.read_text(encoding="utf-8")
+    # The app has Debug/Release versions. A WidgetKit extension adds two more.
+    # All bundled executables must use the same selected App Store build number.
+    widget_targets = len(re.findall(
+        r"\\bPRODUCT_BUNDLE_IDENTIFIER = com\\.graymatter\\.spread\\.widget;",
+        before,
+    ))
+    app_targets = len(re.findall(
+        r"\\bPRODUCT_BUNDLE_IDENTIFIER = com\\.graymatter\\.spread;",
+        before,
+    ))
+    if widget_targets:
+        if widget_targets != 2 or app_targets != 2:
+            raise ValueError(
+                "Expected two App and two SpreadWidget build configurations; no changes made"
+            )
+        expected = 4
+    else:
+        expected = 2  # Preserve support for the original two-configuration app.
     after, changes = re.subn(
         r"CURRENT_PROJECT_VERSION = [0-9]+;",
         f"CURRENT_PROJECT_VERSION = {selected};",
         before,
     )
-    if changes != 2:
+    if changes != expected:
         raise ValueError(
-            f"Expected exactly two App CURRENT_PROJECT_VERSION settings, found {changes}; no changes made"
+            f"Expected {expected} CURRENT_PROJECT_VERSION settings, found {changes}; no changes made"
         )
     path.write_text(after, encoding="utf-8")
 
