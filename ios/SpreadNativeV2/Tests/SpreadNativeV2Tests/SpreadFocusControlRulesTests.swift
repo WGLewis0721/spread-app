@@ -1,24 +1,33 @@
 import XCTest
 @testable import SpreadNativeV2
 
-/// The controls each focus widget size shows. The rules are shared, so the Linux slice tests them directly.
+/// The controls each focus surface shows. The rules are shared by the Timer widget, the Today panel and the island,
+/// so the Linux slice tests them directly.
 final class SpreadFocusControlRulesTests: XCTestCase {
-    private func all(running: Bool = false, paused: Bool = false, waitingNext: Bool = false,
+    private func all(running: Bool = false, paused: Bool = false, waiting: Bool = false, hasNext: Bool = false,
                      hasBlock: Bool = false, canStart: Bool = false) -> [SpreadFocusControl] {
-        SpreadFocusControlRules.all(running: running, paused: paused, waitingNext: waitingNext,
+        SpreadFocusControlRules.all(running: running, paused: paused, waiting: waiting, hasNext: hasNext,
                                     hasBlock: hasBlock, canStart: canStart)
     }
 
-    func testRunningOffersPauseThenFinishThenTheLink() {
-        XCTAssertEqual(all(running: true), [.pause, .finish, .openSpread])
+    func testRunningOffersPauseForwardStopCancelThenTheLink() {
+        XCTAssertEqual(all(running: true, hasNext: true), [.pause, .forward, .stop, .cancel, .openSpread])
     }
 
-    func testPausedOffersResumeThenFinish() {
-        XCTAssertEqual(all(paused: true), [.resume, .finish, .openSpread])
+    func testRunningTheLastStretchHasNoForward() {
+        XCTAssertEqual(all(running: true), [.pause, .stop, .cancel, .openSpread])
     }
 
-    func testWaitingForATapOffersTheNextStepThenFinish() {
-        XCTAssertEqual(all(waitingNext: true), [.next, .finish, .openSpread])
+    func testPausedOffersResumeInPlaceOfPause() {
+        XCTAssertEqual(all(paused: true, hasNext: true), [.resume, .forward, .stop, .cancel, .openSpread])
+    }
+
+    func testAStretchWaitingForATapOffersForwardThenCancel() {
+        XCTAssertEqual(all(waiting: true, hasNext: true), [.forward, .cancel, .openSpread])
+    }
+
+    func testAWaitingStretchWithNothingAfterItOffersOnlyCancel() {
+        XCTAssertEqual(all(waiting: true), [.cancel, .openSpread])
     }
 
     func testIdleOffersTodaysBlockBeforeTheLastPlan() {
@@ -31,16 +40,18 @@ final class SpreadFocusControlRulesTests: XCTestCase {
     }
 
     func testTheSmallSizeShowsOneControlTheMediumTwoAndTheLargeAll() {
-        let running = all(running: true)
+        let running = all(running: true, hasNext: true)
         XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .small), [.pause])
-        XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .medium), [.pause, .finish])
-        XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .large), [.pause, .finish, .openSpread])
+        XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .medium), [.pause, .forward])
+        XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .large),
+                       [.pause, .forward, .stop, .cancel, .openSpread])
     }
 
     func testTheControlsGrowWithTheSizeWhateverTheState() {
         let states = [
-            all(running: true), all(paused: true), all(waitingNext: true),
-            all(hasBlock: true, canStart: true), all(canStart: true), all(),
+            all(running: true, hasNext: true), all(running: true), all(paused: true, hasNext: true),
+            all(waiting: true, hasNext: true), all(waiting: true), all(hasBlock: true, canStart: true),
+            all(canStart: true), all(),
         ]
         for controls in states {
             let small = SpreadFocusControlRules.shown(controls, size: .small).count
@@ -49,6 +60,12 @@ final class SpreadFocusControlRulesTests: XCTestCase {
             XCTAssertLessThanOrEqual(small, medium)
             XCTAssertLessThanOrEqual(medium, large)
             XCTAssertEqual(large, controls.count, "the large size shows every control that applies")
+        }
+    }
+
+    func testCancelIsOfferedWhileAnyStretchIsOnScreen() {
+        for controls in [all(running: true), all(paused: true), all(waiting: true)] {
+            XCTAssertTrue(controls.contains(.cancel), "cancel must release the session from any stretch on screen")
         }
     }
 

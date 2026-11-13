@@ -402,3 +402,21 @@ Security comes first. The `.spread` backup stays as it is: checksummed, and not 
 **Tests.** `src/lib/spread/week-copy.test.ts` covers the batches, the day shift, the task links, skipped weeks, refusals, fresh ids, and that no repeat bookkeeping is copied. `SpreadFocusControlRulesTests` covers the controls each size shows in each state. `scripts/native-today-widget.test.mjs` covers the families, the five focus intents and the empty-state message.
 
 **Owed on a device.** The timer widgets at small, medium and large, running, paused, waiting for a tap, and idle, in light and dark, with reduced motion. Finish clearing the widget. Turning the Today switch on and off. The Plan Ahead copy at 390 and 820 points, the preview rows, a batch with some weeks kept, and the Life undo after a copy.
+
+## 23. Stop, Forward and Cancel on the island and the widgets (2026-11-13)
+
+**What was wrong.** On a device, the app's End button set the current stretch to finished but kept its follow-up step. In a flow with more than one round, the island and the widget mirror stayed up, still offering "Start break", so the timer was never released. The island's own controls had no way to stop or cancel. Section 22's Finish control was the start of the fix, and this section replaces it.
+
+**The four controls.** Every surface shows the same controls, from one rule set and one button view:
+- **Pause**, or **Resume** while paused. Keeps the time left.
+- **Forward**, shown when a step follows (a break or the next round). It ends the current stretch if it still runs, and starts the next step at once. Its label names the step, such as "Start break".
+- **Stop**, shown while a stretch runs or is paused. It ends that stretch now and records it as stopped early. The next step waits for a tap, so Forward starts it. A stopped stretch reads "Stopped" on the island and the widgets. Stopping the last round ends the flow and releases the island.
+- **Cancel**, shown whenever a session is on screen. It ends the whole session at once. The island and the widgets release it. Nothing is recorded as done, and nothing starts. In the app this is the "Cancel session" button, which now does the same.
+
+**Where they show.** The Dynamic Island's expanded view and the Lock Screen banner show all the controls that apply. The Timer widget shows one control at small, two at medium, and every control at large, as section 22 says. Compact and minimal island views show no buttons, as before.
+
+**Rules.** Stop and Forward live in `SpreadFocusMachine` (`stopped` and `forward`), so the app, the intents and the tests share them. Cancel clears the session through the one save path, so the island, the widget mirror and the reminder are cleared together. Block completion is unchanged: a block counts as done only when its last focus round finishes, and a stop or cancel before that does not count.
+
+**Tests.** `SpreadFocusStopForwardTests` covers Stop and Forward, the stopped flag through a save and reload, and the refusals at the end of a flow. `SpreadFocusControlRulesTests` covers the controls each surface shows, and that Cancel is offered whenever a stretch is on screen. `scripts/native-today-widget.test.mjs` covers the intents, the shared button view, and that the island uses the shared controls.
+
+**Owed on a device.** Stop, Forward and Cancel from the island, the Lock Screen banner, each widget size, and the app sheet. A cancelled session leaves no island, and a stopped one keeps Forward. A three-round plan stopped mid-round, then cancelled from the app: the island and the widgets must both clear.

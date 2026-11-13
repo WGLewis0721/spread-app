@@ -166,27 +166,53 @@ struct SpreadTodayWidget: Widget {
     }
 }
 
-/// The Lock Screen and the Dynamic Island show one bounded focus session: a countdown while it runs, a
-/// waiting state at its end, and the one control from the Timer widget. The island keeps the same record as
-/// the app and the widgets, so a tap here is the same tap there.
+/// The controls for one focus stretch, on the Dynamic Island and the Lock Screen banner: Pause or Resume, Forward
+/// when a step follows, Stop while it runs, and Cancel. These are the same buttons and the same rules as the Timer
+/// widget, so a control on one surface is the control on the other.
+private struct SpreadFocusIslandControls: View {
+    let status: SpreadFocusLiveStatus
+
+    private var controls: [SpreadFocusControl] {
+        SpreadFocusControlRules.all(
+            running: status.isRunning,
+            paused: status.isPaused,
+            waiting: !status.isRunning && !status.isPaused,
+            hasNext: status.state.nextLabel != nil,
+            hasBlock: false, canStart: false)
+            .filter { $0 != .openSpread }
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(Array(controls.enumerated()), id: \.offset) { _, kind in
+                SpreadFocusControlButton(control: kind, nextLabel: nil)
+            }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+    }
+}
+
+/// The Lock Screen and the Dynamic Island show one bounded focus session: a countdown while it runs, a waiting
+/// state at its end, and the same controls as the Timer widget. The island keeps the same record as the app and
+/// the widgets, so a tap here is the same tap there.
 private struct SpreadFocusLiveView: View {
     let context: ActivityViewContext<SpreadFocusActivityAttributes>
 
     var body: some View {
         let status = SpreadFocusLiveActivityWidget.status(context)
-        HStack(spacing: 12) {
-            Image(systemName: status.symbol).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(context.attributes.title).font(.headline).lineLimit(1)
-                Text(status.caption).font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: status.symbol).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(context.attributes.title).font(.headline).lineLimit(1)
+                    Text(status.caption).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                SpreadFocusTimeText(status: status, deadline: context.state.deadline)
+                    .font(.title3.weight(.semibold))
             }
-            Spacer(minLength: 0)
-            SpreadFocusTimeText(status: status, deadline: context.state.deadline)
-                .font(.title3.weight(.semibold))
-            SpreadFocusActionButton(
-                running: status.isRunning,
-                paused: status.isPaused,
-                nextLabel: status.isWaiting ? status.state.nextLabel : nil)
+            SpreadFocusIslandControls(status: status)
         }
         .padding()
         .activityBackgroundTint(Color(uiColor: .systemBackground))
@@ -217,15 +243,11 @@ struct SpreadFocusLiveActivityWidget: Widget {
                                         deadline: context.state.deadline)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 8) {
                         Text(SpreadFocusLiveActivityWidget.status(context).caption)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        SpreadFocusActionButton(
-                            running: SpreadFocusLiveActivityWidget.status(context).isRunning,
-                            paused: SpreadFocusLiveActivityWidget.status(context).isPaused,
-                            nextLabel: SpreadFocusLiveActivityWidget.status(context).isWaiting
-                                ? context.state.nextLabel : nil)
+                        SpreadFocusIslandControls(status: SpreadFocusLiveActivityWidget.status(context))
                     }
                 }
             } compactLeading: {

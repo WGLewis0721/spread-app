@@ -13,11 +13,14 @@ public struct SpreadFocusActivityAttributes: ActivityAttributes {
         public var kind: String?
         public var round: Int?
         public var rounds: Int?
-        /// What the Continue control starts once this stretch ends, such as "Start break". Nil when nothing follows.
+        /// What the Forward control starts next, such as "Start break". Nil when nothing follows.
         public var nextLabel: String?
+        /// True when the person stopped this stretch before its time ran out. The island then says "Stopped".
+        public var stoppedEarly: Bool?
 
         public init(phase: String, deadline: Date?, remainingSeconds: Int,
-                    kind: String? = nil, round: Int? = nil, rounds: Int? = nil, nextLabel: String? = nil) {
+                    kind: String? = nil, round: Int? = nil, rounds: Int? = nil, nextLabel: String? = nil,
+                    stoppedEarly: Bool? = nil) {
             self.phase = phase
             self.deadline = deadline
             self.remainingSeconds = remainingSeconds
@@ -25,6 +28,7 @@ public struct SpreadFocusActivityAttributes: ActivityAttributes {
             self.round = round
             self.rounds = rounds
             self.nextLabel = nextLabel
+            self.stoppedEarly = stoppedEarly
         }
     }
 

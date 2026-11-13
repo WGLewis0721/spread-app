@@ -33,7 +33,8 @@ enum SpreadFocusWidgetPublisher {
             kind: session.currentKind.rawValue,
             round: session.roundNumber,
             rounds: session.roundCount,
-            nextLabel: SpreadFocusMachine.nextLabel(after: session))
+            nextLabel: SpreadFocusMachine.nextLabel(after: session),
+            stoppedEarly: session.stoppedEarly)
         guard let data = try? JSONEncoder().encode(state) else { return }
         shared.set(true, forKey: SpreadWidgetShared.timerEnabledMirrorKey)
         shared.set(data, forKey: SpreadWidgetShared.focusKey)

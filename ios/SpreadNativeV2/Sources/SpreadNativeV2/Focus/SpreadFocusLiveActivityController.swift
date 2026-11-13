@@ -31,7 +31,8 @@ enum SpreadFocusLiveActivityController {
             kind: session.currentKind.rawValue,
             round: session.roundNumber,
             rounds: session.roundCount,
-            nextLabel: SpreadFocusMachine.nextLabel(after: session))
+            nextLabel: SpreadFocusMachine.nextLabel(after: session),
+            stoppedEarly: session.stoppedEarly)
         return ActivityContent(
             state: state,
             staleDate: session.phase == .running ? session.endAt : nil,

@@ -110,27 +110,37 @@ struct SpreadFocusTimerSheet: View {
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .accessibilityIdentifier("focus-resume")
                         }
-                        Button("Finish session") { timer.finish(profileId: profileId) }
+                        if SpreadFocusMachine.nextLabel(after: current) != nil {
+                            Button("Forward") { timer.forward(profileId: profileId, notify: notifyWhenDone) }
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                                .accessibilityIdentifier("focus-forward")
+                        }
+                        Button("Stop") { timer.stop(profileId: profileId) }
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .accessibilityIdentifier("focus-stop")
+                        Button("Cancel session") { timer.cancel(profileId: profileId) }
                             .foregroundStyle(Spread.danger)
                             .frame(maxWidth: .infinity, minHeight: 44)
-                            .accessibilityIdentifier("focus-finish")
+                            .accessibilityIdentifier("focus-cancel")
                     } else if let current, isWaiting(current) {
-                        Text(current.currentKind == .rest
-                             ? "Break is over. Start the next focus round when you're ready."
-                             : "Round \(current.roundNumber) is done. Start your break when you're ready.")
+                        Text(current.stoppedEarly == true
+                             ? "Stopped. Forward starts the next step when you're ready."
+                             : (current.currentKind == .rest
+                                ? "Break is over. Start the next focus round when you're ready."
+                                : "Round \(current.roundNumber) is done. Start your break when you're ready."))
                             .font(.subheadline)
                             .foregroundStyle(Spread.secondary)
                             .accessibilityIdentifier("focus-waiting")
-                        Button(SpreadFocusMachine.nextLabel(after: current) ?? "Continue") {
-                            timer.continueFlow(profileId: profileId, notify: notifyWhenDone)
+                        Button(SpreadFocusMachine.nextLabel(after: current) ?? "Forward") {
+                            timer.forward(profileId: profileId, notify: notifyWhenDone)
                         }
                         .buttonStyle(.borderedProminent)
                         .frame(maxWidth: .infinity, minHeight: 50)
-                        .accessibilityIdentifier("focus-continue")
-                        Button("Finish session") { timer.finish(profileId: profileId) }
+                        .accessibilityIdentifier("focus-forward")
+                        Button("Cancel session") { timer.cancel(profileId: profileId) }
                             .foregroundStyle(Spread.danger)
                             .frame(maxWidth: .infinity, minHeight: 44)
-                            .accessibilityIdentifier("focus-finish")
+                            .accessibilityIdentifier("focus-cancel")
                     } else {
                         if let offered = SpreadDayPlanStore.nextBlock(now: Date()) {
                             todaysBlockRows(offered)

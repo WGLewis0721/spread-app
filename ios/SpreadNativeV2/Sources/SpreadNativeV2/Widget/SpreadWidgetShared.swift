@@ -43,10 +43,13 @@ public struct SpreadFocusWidgetState: Codable, Equatable {
     public let rounds: Int?
     /// What the Continue control starts once this stretch ends, such as "Start break". Nil when nothing follows.
     public let nextLabel: String?
+    /// True when the person stopped this stretch before its time ran out. The widget then says "Stopped".
+    public let stoppedEarly: Bool?
 
     public init(sessionId: String, phase: Phase, endAt: Date?, pausedSeconds: Int,
                 durationSeconds: Int, title: String, writtenAt: Date,
-                kind: String? = nil, round: Int? = nil, rounds: Int? = nil, nextLabel: String? = nil) {
+                kind: String? = nil, round: Int? = nil, rounds: Int? = nil, nextLabel: String? = nil,
+                stoppedEarly: Bool? = nil) {
         self.sessionId = sessionId
         self.phase = phase
         self.endAt = endAt
@@ -58,6 +61,7 @@ public struct SpreadFocusWidgetState: Codable, Equatable {
         self.round = round
         self.rounds = rounds
         self.nextLabel = nextLabel
+        self.stoppedEarly = stoppedEarly
     }
 
     /// Whole seconds left at `now`. A running session counts down to its deadline; a paused one is frozen.
@@ -118,7 +122,7 @@ public struct SpreadFocusWidgetState: Codable, Equatable {
 
 /// One control on a focus surface. Each one changes the same record as the Dynamic Island.
 public enum SpreadFocusControl: Equatable {
-    case pause, resume, next, finish, startBlock, startFocus, openSpread
+    case pause, resume, forward, stop, cancel, startBlock, startFocus, openSpread
 }
 
 /// Which controls a focus widget shows. The small size shows one, the medium shows two, and the large shows
@@ -127,12 +131,20 @@ public enum SpreadFocusControl: Equatable {
 public enum SpreadFocusControlRules {
     public enum Size: Equatable { case small, medium, large }
 
-    /// Every control that applies right now, most important first, ending with the link to Spread.
-    public static func all(running: Bool, paused: Bool, waitingNext: Bool,
+    /// Every control that applies right now, most important first, ending with the link to Spread. A stretch that
+    /// runs or is paused offers Pause or Resume, then Forward when a step follows, then Stop and Cancel. A stretch
+    /// that is waiting for a tap offers Forward when a step follows, then Cancel. Idle offers the start controls.
+    public static func all(running: Bool, paused: Bool, waiting: Bool, hasNext: Bool,
                            hasBlock: Bool, canStart: Bool) -> [SpreadFocusControl] {
-        if running { return [.pause, .finish, .openSpread] }
-        if paused { return [.resume, .finish, .openSpread] }
-        if waitingNext { return [.next, .finish, .openSpread] }
+        if running || paused {
+            let toggle: SpreadFocusControl = running ? .pause : .resume
+            let forward: [SpreadFocusControl] = hasNext ? [.forward] : []
+            return [toggle] + forward + [.stop, .cancel, .openSpread]
+        }
+        if waiting {
+            let forward: [SpreadFocusControl] = hasNext ? [.forward] : []
+            return forward + [.cancel, .openSpread]
+        }
         if hasBlock { return [.startBlock, .openSpread] }
         if canStart { return [.startFocus, .openSpread] }
         return [.openSpread]

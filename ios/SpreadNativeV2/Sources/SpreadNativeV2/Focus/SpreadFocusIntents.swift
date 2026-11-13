@@ -111,28 +111,45 @@ struct ResumeSpreadFocusIntent: LiveActivityIntent {
     }
 }
 
-/// Ends the whole focus flow: the current stretch and anything that would have followed it. Nothing starts, and
-/// the widgets and the island clear. Hours, tasks and the week are not changed.
-struct FinishSpreadFocusIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Finish focus"
-    static var description = IntentDescription("End the focus session. Nothing starts after it.")
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        guard let session = SpreadFocusControls.current() else { return .result() }
-        SpreadFocusControls.apply(SpreadFocusMachine.finished(session), notify: false)
-        return .result()
-    }
-}
-
-/// Starts the break, or the next focus round, once the previous stretch has ended. The label says which.
-struct ContinueSpreadFocusIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Start next step"
+/// Stops the running or paused stretch now. The flow is kept: the next step waits for a tap, so Forward starts it.
+/// Nothing starts. Hours, tasks and the week are not changed.
+struct StopSpreadFocusIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Stop focus"
+    static var description = IntentDescription("Stop the current stretch now. Nothing starts after it.")
 
     @MainActor
     func perform() async throws -> some IntentResult {
         guard let session = SpreadFocusControls.current(),
-              let next = SpreadFocusMachine.followUp(after: session, id: UUID().uuidString, now: Date()) else {
+              let stopped = SpreadFocusMachine.stopped(session, now: Date()) else { return .result() }
+        SpreadFocusControls.apply(stopped, notify: false)
+        return .result()
+    }
+}
+
+/// Cancels the whole focus session: the current stretch and anything that would have followed it. The island and
+/// the widgets release it at once. Nothing is recorded as done, and nothing starts.
+struct CancelSpreadFocusIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Cancel focus"
+    static var description = IntentDescription("Cancel the focus session. Nothing is recorded, and nothing starts.")
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        guard SpreadFocusControls.current() != nil else { return .result() }
+        SpreadFocusControls.apply(nil, notify: false)
+        return .result()
+    }
+}
+
+/// Moves on to the next step: the break or the next focus round. A running stretch ends first, so Forward also
+/// skips the rest of a stretch. Nothing starts without this tap.
+struct ForwardSpreadFocusIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Forward to next step"
+    static var description = IntentDescription("Start the break, or the next focus round, now.")
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        guard let session = SpreadFocusControls.current(),
+              let next = SpreadFocusMachine.forward(session, id: UUID().uuidString, now: Date()) else {
             return .result()
         }
         SpreadFocusControls.apply(next, notify: SpreadFocusControls.notifyWhenDone)
