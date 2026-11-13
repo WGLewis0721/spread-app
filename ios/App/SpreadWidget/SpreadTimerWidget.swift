@@ -6,8 +6,8 @@ import Foundation
 // The focus timer on the Home Screen and the Dynamic Island. The app's timer stays the only source of truth:
 // the widgets and the island read the record the app and the intents keep in the shared App Group. A running
 // stretch carries an absolute deadline, so the digits count down by themselves with no refresh. A stretch that
-// ran out shows as waiting for a tap, and nothing starts on its own. The one control on each surface uses the
-// same intent as the island.
+// ran out shows as waiting for a tap, and nothing starts on its own. Each size shows more of the same controls:
+// the small widget one, the medium two, and the large every control that applies right now.
 
 /// Reads the focus mirror the app writes into the shared App Group.
 enum SpreadFocusWidgetStore {
@@ -15,6 +15,12 @@ enum SpreadFocusWidgetStore {
         guard let data = UserDefaults(suiteName: SpreadWidgetShared.appGroup)?
             .data(forKey: SpreadWidgetShared.focusKey) else { return nil }
         return try? JSONDecoder().decode(SpreadFocusWidgetState.self, from: data)
+    }
+
+    /// The "Show Today on widgets" switch as the app last wrote it. False until the app has written it.
+    static func timerEnabled() -> Bool {
+        UserDefaults(suiteName: SpreadWidgetShared.appGroup)?
+            .bool(forKey: SpreadWidgetShared.timerEnabledMirrorKey) ?? false
     }
 }
 
@@ -117,8 +123,7 @@ struct SpreadFocusPanel: View {
     }
 }
 
-/// The one control for the focus session, on the widgets and the island alike. Pause while running, Resume
-/// when paused, and the next step (a break or the next round) once a stretch has ended. Nothing else.
+/// One control for the focus session, for the Today widget's panel. The Timer widget lays out every control itself.
 struct SpreadFocusActionButton: View {
     let running: Bool
     let paused: Bool
@@ -243,6 +248,8 @@ private struct SpreadTimerEntry: TimelineEntry {
     let block: SpreadOfferedBlock?
     /// How today's planned blocks are going, when today has a plan for the profile on screen.
     let progress: SpreadDayProgress?
+    /// Whether "Show Today on widgets" is on. When it is off, the widget says so instead of a plain "no timer".
+    let enabled: Bool
 }
 
 private struct SpreadTimerProvider: TimelineProvider {
@@ -253,7 +260,8 @@ private struct SpreadTimerProvider: TimelineProvider {
               canStart: SpreadFocusStore.canStartFromWidget(now: date),
               startMinutes: SpreadFocusStore.loadChoice()?.plan.focusMinutes,
               block: SpreadDayPlanStore.nextBlock(now: date),
-              progress: SpreadDayPlanStore.progress(now: date))
+              progress: SpreadDayPlanStore.progress(now: date),
+              enabled: SpreadFocusWidgetStore.timerEnabled())
     }
 
     func placeholder(in context: Context) -> Entry {
@@ -284,16 +292,33 @@ private struct SpreadTimerView: View {
     let entry: SpreadTimerEntry
     @Environment(\.widgetFamily) private var family
 
+    private var size: SpreadFocusControlRules.Size {
+        switch family {
+        case .systemLarge: return .large
+        case .systemMedium: return .medium
+        default: return .small
+        }
+    }
+
     var body: some View {
         Group {
-            if family == .systemLarge {
-                largeBody
-            } else {
-                smallBody
+            switch family {
+            case .systemLarge: largeBody
+            case .systemMedium: mediumBody
+            default: smallBody
             }
         }
         .containerBackground(.background, for: .widget)
         .widgetURL(SpreadWidgetLink.focus.url)
+    }
+
+    /// The face: the running, paused or waiting timer, or the idle words.
+    @ViewBuilder private var face: some View {
+        if let state = entry.state {
+            SpreadFocusPanel(state: state, date: entry.date)
+        } else {
+            idle
+        }
     }
 
     private var idle: some View {
@@ -307,7 +332,7 @@ private struct SpreadTimerView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             // While a block is still on offer, say how far through today's blocks the person is. Counts only.
-            if let progress = entry.progress, !progress.allDone {
+            if entry.enabled, let progress = entry.progress, !progress.allDone {
                 Text(SpreadBlockText.progress(progress))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -318,47 +343,74 @@ private struct SpreadTimerView: View {
     }
 
     private var idleDetail: String {
+        if !entry.enabled { return "Turn on Show Today on widgets in More to see your timer here." }
         if let offered = entry.block { return SpreadBlockText.summary(offered.entry.plan) }
         if let progress = entry.progress, progress.allDone { return SpreadBlockText.progress(progress) }
         return entry.canStart ? "Start your last plan here." : "Choose a plan in Spread to start."
     }
 
-    /// The one control. An idle timer starts today's planned block when there is one, then the last plan, and
-    /// otherwise opens Spread.
-    @ViewBuilder private var control: some View {
+    /// The controls that apply right now, cut down to this widget's size. Each size shows more of them.
+    private var controls: [SpreadFocusControl] {
+        let available: [SpreadFocusControl]
         if let state = entry.state {
-            let finished = state.isFinished(at: entry.date)
-            SpreadFocusActionButton(
-                running: !finished && state.phase == .running,
+            let face = SpreadFocusFace(state: state, date: entry.date)
+            available = SpreadFocusControlRules.all(
+                running: !face.finished && state.phase == .running,
                 paused: state.phase == .paused,
-                nextLabel: finished ? state.nextLabel : nil)
-        } else if let offered = entry.block {
-            Button(intent: StartSpreadBlockIntent()) {
-                Label("Start \(offered.entry.label) · \(SpreadBlockText.hours(offered.entry.hours))",
-                      systemImage: "play.fill")
+                waitingNext: face.finished && state.nextLabel != nil,
+                hasBlock: false, canStart: false)
+        } else {
+            available = SpreadFocusControlRules.all(
+                running: false, paused: false, waitingNext: false,
+                hasBlock: entry.block != nil, canStart: entry.canStart)
+        }
+        return SpreadFocusControlRules.shown(available, size: size)
+    }
+
+    @ViewBuilder private func control(_ kind: SpreadFocusControl) -> some View {
+        switch kind {
+        case .pause:
+            Button(intent: PauseSpreadFocusIntent()) {
+                Label("Pause", systemImage: "pause.fill")
             }
-        } else if entry.canStart {
+        case .resume:
+            Button(intent: ResumeSpreadFocusIntent()) {
+                Label("Resume", systemImage: "play.fill")
+            }
+        case .next:
+            Button(intent: ContinueSpreadFocusIntent()) {
+                Label(entry.state?.nextLabel ?? "Next step", systemImage: "forward.fill")
+            }
+        case .finish:
+            Button(intent: FinishSpreadFocusIntent()) {
+                Label("Finish", systemImage: "stop.fill")
+            }
+        case .startBlock:
+            if let offered = entry.block {
+                Button(intent: StartSpreadBlockIntent()) {
+                    Label("Start \(offered.entry.label) · \(SpreadBlockText.hours(offered.entry.hours))",
+                          systemImage: "play.fill")
+                }
+            }
+        case .startFocus:
             Button(intent: StartSpreadFocusIntent()) {
                 Label(entry.startMinutes.map { "Start \($0) min focus" } ?? "Start focus", systemImage: "play.fill")
             }
-        } else {
+        case .openSpread:
             Link(destination: SpreadWidgetLink.focus.url) {
                 Label("Open Spread", systemImage: "arrow.up.forward.app")
             }
         }
     }
 
-    @ViewBuilder private var smallBody: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let state = entry.state {
-                SpreadFocusPanel(state: state, date: entry.date)
-            } else {
-                idle
+    private var controlRow: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(controls.enumerated()), id: \.offset) { _, kind in
+                control(kind)
             }
-            control
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .buttonStyle(.bordered)
+        .controlSize(.small)
     }
 
     @ViewBuilder private var endsAt: some View {
@@ -393,15 +445,30 @@ private struct SpreadTimerView: View {
         .accessibilityElement(children: .combine)
     }
 
+    @ViewBuilder private var smallBody: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            face
+            controlRow
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder private var mediumBody: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            face
+            endsAt
+            controlRow
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
     @ViewBuilder private var largeBody: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let state = entry.state {
-                SpreadFocusPanel(state: state, date: entry.date)
-            } else {
-                idle
-            }
+            face
             endsAt
-            control
+            controlRow
             Divider()
             Link(destination: SpreadWidgetLink.today.url) {
                 todayRow
@@ -419,7 +486,7 @@ struct SpreadTimerWidget: Widget {
             SpreadTimerView(entry: entry)
         }
         .configurationDisplayName("Focus timer")
-        .description("Your focus session and breaks, counting down on your Home Screen.")
-        .supportedFamilies([.systemSmall, .systemLarge])
+        .description("Your focus session and its controls, counting down on your Home Screen. Small shows one control, medium two, and large every control.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

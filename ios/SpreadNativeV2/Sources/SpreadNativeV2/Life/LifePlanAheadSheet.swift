@@ -1,8 +1,8 @@
 #if os(iOS)
 import SwiftUI
 
-/// Explicit forward planning. The only mutation is a guarded, previewed command
-/// to Spread's authoritative local store. No automatic rollover or copy.
+/// Explicit forward planning. The only mutations are guarded, previewed commands to Spread's authoritative local
+/// store. No automatic rollover: a copy of the week on screen is previewed and confirmed before anything is written.
 struct LifePlanAheadSheet: View {
     @ObservedObject var planner: LivePlanner
     let snapshot: PlannerSnapshot
@@ -20,6 +20,11 @@ struct LifePlanAheadSheet: View {
     @State private var preview: NativePlanAheadPreview?
     @State private var previewing = false
     @State private var saving = false
+    /// Which eight-week batch to copy the week on screen into: 1 is the next eight weeks.
+    @State private var copyBatch = 1
+    @State private var copyPreview: NativeWeekCopyPreview?
+    @State private var copyPreviewing = false
+    @State private var copySaving = false
 
     /// The first Monday a move can land on, as a device-local day for the picker.
     private var earliestDestination: Date {
@@ -52,6 +57,8 @@ struct LifePlanAheadSheet: View {
             Form {
                 if planMode == "plans" {
                     plansSections
+                } else if planMode == "copy" {
+                    copySections
                 } else {
                     Section {
                         Button {
@@ -273,6 +280,7 @@ struct LifePlanAheadSheet: View {
     /// Reads the store snapshot only; tapping a row opens a form, nothing is sent.
     @ViewBuilder
     private var plansSections: some View {
+        copyEntrySection
         Section {
             Button {
                 formPlanId = nil
@@ -332,6 +340,135 @@ struct LifePlanAheadSheet: View {
             .accessibilityIdentifier("plan-ahead-move-once")
         } footer: {
             Text("Move time from this week to another week. Nothing moves until you preview and confirm.")
+        }
+    }
+
+    /// The entry row for copying. It sits above the repeating plans, because it is the plain way to plan forward.
+    private var copyEntrySection: some View {
+        Section {
+            Button {
+                copyPreview = nil
+                planMode = "copy"
+            } label: {
+                Label("Copy this week forward", systemImage: "doc.on.doc")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(snapshot.roles.isEmpty)
+            .accessibilityIdentifier("plan-ahead-copy-week")
+        } footer: {
+            Text("Copies this week's hours, day hours and tasks into the eight weeks after it. Weeks that already have a plan are kept. Copied tasks start not done.")
+        }
+    }
+
+    private var copyFirstWeek: Int { (copyBatch - 1) * 8 + 1 }
+    private var copyLastWeek: Int { copyBatch * 8 }
+
+    private var copyBatchBinding: Binding<Int> {
+        Binding(get: { copyBatch }, set: { value in
+            copyBatch = value
+            copyPreview = nil
+        })
+    }
+
+    /// Copy the week on screen forward. Explicit: it is previewed, then confirmed, and the planner writes only the
+    /// weeks the preview marks as empty. Nothing is repeated by rule.
+    @ViewBuilder
+    private var copySections: some View {
+        Section {
+            Button {
+                planMode = "plans"
+                copyPreview = nil
+            } label: {
+                Label("Your plans", systemImage: "chevron.backward")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: 44)
+            }
+            .accessibilityIdentifier("plan-ahead-back-to-plans")
+        }
+        Section {
+            Text("Copies the week of \(PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d")) into the next eight weeks. Nothing changes until you confirm.")
+                .font(.subheadline)
+                .foregroundStyle(Spread.secondary)
+            Stepper(value: copyBatchBinding, in: 1...13) {
+                Text("Weeks \(copyFirstWeek) to \(copyLastWeek) ahead")
+                    .font(.headline).monospacedDigit()
+            }
+            .accessibilityIdentifier("plan-ahead-copy-batch")
+        } header: {
+            Text("Copy this week forward")
+        } footer: {
+            Text("Each batch covers eight weeks. Copy the next batch later, when you want it.")
+        }
+        Section {
+            Button {
+                Task { await requestCopyPreview() }
+            } label: {
+                Label(copyPreviewing ? "Checking…" : "Preview copy", systemImage: "eye")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .disabled(copyPreviewing || copySaving || planner.busy)
+            .accessibilityIdentifier("plan-ahead-copy-preview")
+            if let copyPreview {
+                copyPreviewRows(copyPreview)
+            }
+            Button {
+                Task { await confirmCopy() }
+            } label: {
+                Text(copySaving ? "Copying…" : "Copy to these weeks")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(copySaving || planner.busy || copyPreview?.eligible != true)
+            .accessibilityIdentifier("plan-ahead-copy-confirm")
+        } header: {
+            Text("Review before copying")
+        }
+    }
+
+    /// The preview, in words: how many weeks fill, what each receives, and each week's status.
+    @ViewBuilder
+    private func copyPreviewRows(_ preview: NativeWeekCopyPreview) -> some View {
+        if preview.eligible {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(preview.fillCount) \(preview.fillCount == 1 ? "week" : "weeks") will be filled. \(preview.skipCount) kept.")
+                    .font(.headline)
+                Text("Each filled week gets \(SpreadHours.text(preview.hours))h and \(preview.tasks) \(preview.tasks == 1 ? "task" : "tasks"), not done.")
+                    .font(.subheadline)
+                ForEach(preview.targets, id: \.key) { target in
+                    HStack {
+                        Text("Week of \(PlannerDates.label(PlannerDates.date(target.key), pattern: "MMM d"))")
+                        Spacer()
+                        Text(target.status == "fill" ? "Will be filled" : "Already planned, kept")
+                            .foregroundStyle(Spread.secondary)
+                    }
+                    .font(.subheadline)
+                }
+            }
+            .foregroundStyle(Spread.ink)
+        } else {
+            Label(preview.reason ?? "This copy is not available.", systemImage: "exclamationmark.circle")
+                .foregroundStyle(Spread.danger)
+        }
+    }
+
+    private func requestCopyPreview() async {
+        guard !copyPreviewing, !copySaving else { return }
+        copyPreviewing = true
+        copyPreview = await planner.previewWeekCopy(batch: copyBatch)
+        copyPreviewing = false
+    }
+
+    private func confirmCopy() async {
+        guard !copySaving, copyPreview?.eligible == true else { return }
+        copySaving = true
+        let ok = await planner.send(["type": "copyWeekForward", "batch": copyBatch])
+        copySaving = false
+        if ok {
+            LifeFeedback.accepted()
+            dismiss()
+        } else {
+            copyPreview = nil
         }
     }
 

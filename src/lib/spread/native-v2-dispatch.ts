@@ -86,6 +86,8 @@ const action = z.discriminatedUnion("type", [
     hours: hours.refine((value) => value > 0), fromDay: day.optional(), targetCapacityHours: hours.optional() }),
   z.strictObject({ type: z.literal("transferPlanAhead"), roleId: id, toDay: day,
     hours: hours.refine((value) => value > 0), fromDay: day.optional(), targetCapacityHours: hours.optional() }),
+  z.strictObject({ type: z.literal("previewWeekCopy"), batch: z.number().int().min(1).max(13) }),
+  z.strictObject({ type: z.literal("copyWeekForward"), batch: z.number().int().min(1).max(13) }),
   z.strictObject({ type: z.literal("setTaskImportant"), roleId: id, taskId: id, important: z.boolean() }),
   z.strictObject({ type: z.literal("setTaskEstimate"), roleId: id, taskId: id,
     minutes: z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60),
@@ -202,6 +204,7 @@ export type NativeReply = {
   priorityPreview?: ReturnType<typeof previewLifePriority>;
   planAheadPreview?: ReturnType<ReturnType<typeof useSpread.getState>["previewPlanAhead"]>;
   recurringPreview?: ReturnType<ReturnType<typeof useSpread.getState>["previewRecurringPlan"]>;
+  weekCopyPreview?: ReturnType<ReturnType<typeof useSpread.getState>["previewWeekCopy"]>;
   state: NativeRead | null;
 };
 
@@ -251,7 +254,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (command.action.type === "monthMarks")
       return monthMarks(command, command.action.year, command.action.month, command.action.selectedRoleId, fail);
     // Volatile, read-only result sets: never cache task text in replay receipts.
-    if (["readDeletedTasks", "readOverdueTasks", "previewBulkOverdue", "previewLifePriority", "previewPlanAhead", "previewRecurringPlan"].includes(command.action.type))
+    if (["readDeletedTasks", "readOverdueTasks", "previewBulkOverdue", "previewLifePriority", "previewPlanAhead", "previewRecurringPlan", "previewWeekCopy"].includes(command.action.type))
       return run(command, fail);
     const prior = requests.get(command.requestId);
     if (prior) {
@@ -333,7 +336,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
     if (command.expectedProfileId !== state.activeId) return fail("stale-profile");
     if (command.expectedWeek !== state.data.currentWeek) return fail("stale-week");
     if (command.expectedRevision !== revision) return fail("stale-revision");
-    if (getSaveFacts().failed && !["retrySave", "readTaskContent", "readDeletedTasks", "readOverdueTasks", "previewBulkOverdue", "previewLifePriority", "previewPlanAhead", "previewRecurringPlan"].includes(command.action.type))
+    if (getSaveFacts().failed && !["retrySave", "readTaskContent", "readDeletedTasks", "readOverdueTasks", "previewBulkOverdue", "previewLifePriority", "previewPlanAhead", "previewRecurringPlan", "previewWeekCopy"].includes(command.action.type))
       return fail("save-unavailable");
     const a = command.action;
     if (a.type === "exportWeek") return fail("export-not-here");
@@ -353,6 +356,10 @@ export function createNativeV2Dispatcher(sessionId: string) {
           roleId: a.roleId, toDay: a.toDay, hours: a.hours,
           fromDay: a.fromDay, targetCapacityHours: a.targetCapacityHours,
         }) };
+    }
+    if (a.type === "previewWeekCopy") {
+      return { requestId: command.requestId, ok: true, state: read(),
+        weekCopyPreview: state.previewWeekCopy(a.batch) };
     }
     if (a.type === "readDeletedTasks") {
       return { requestId: command.requestId, ok: true, state: read(),
@@ -424,6 +431,9 @@ export function createNativeV2Dispatcher(sessionId: string) {
           }
           case "stopRecurringPlan":
             if (!state.stopRecurringPlan(a.planId, a.fromWeek)) throw new Error("recurrence-stop-refused");
+            break;
+          case "copyWeekForward":
+            if (!state.copyWeekForward(a.batch)) throw new Error("week-copy-refused");
             break;
           case "transferPlanAhead":
             if (!state.transferPlanAhead({
@@ -550,7 +560,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
       };
       const lifeAction = ["setLifeCapacity", "setLifeBudget", "setLifePriority", "applyLifePriority",
         "editLifeRole", "removeLifeRole", "setTaskEstimate", "setTaskImportant", "transferPlanAhead",
-        "saveRecurringPlan", "stopRecurringPlan"].includes(a.type) ||
+        "saveRecurringPlan", "stopRecurringPlan", "copyWeekForward"].includes(a.type) ||
         ((a.type === "addTask" || a.type === "addTaskForDay") && a.life === true);
       if (lifeAction) {
         undoId = state.lifeUndoable(mutate);
