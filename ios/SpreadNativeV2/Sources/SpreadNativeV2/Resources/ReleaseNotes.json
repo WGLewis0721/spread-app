@@ -2,6 +2,18 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-0656e28caa52",
+      "version": "1.0",
+      "date": "2026-11-13",
+      "title": "Recent updates",
+      "changes": [
+        "Back up Spread saves a backup file and a plan file you can read and edit.",
+        "Add a backup or a plan file back as a new profile. Your current profiles are not changed.",
+        "A plan file can be merged into the open profile after you preview the changes. Nothing changes until you tap Merge.",
+        "Removing areas or tasks is off by default, and you turn it on in the preview."
+      ]
+    },
+    {
       "id": "notes-4dd8f3654a36",
       "version": "1.0",
       "date": "2026-11-13",
@@ -70,5 +82,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "4dd8f3654a36543d83bf34a129773be282d81416"
+  "lastProcessedCommit": "0656e28caa5232b2fe00ea8e3cb5da8202dfa0ba"
 }
