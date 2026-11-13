@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { assemble, boxItem, flatten, taskItem, weekItem } from "./sync-model.ts";
-import { defaultData, normalizeData, shiftWeek, type SpreadData } from "./model.ts";
+import { defaultData, normalizeData, planDayIso, shiftWeek, type SpreadData } from "./model.ts";
 import { canonical } from "./merge.ts";
 
 function sample(): SpreadData {
@@ -113,4 +113,28 @@ test("recurring schedules and generated-week provenance survive item sync roundt
   assert.deepEqual(actual.recurringPlans, data.recurringPlans);
   assert.deepEqual(actual.weeks[first].recurrenceSource, data.weeks[first].recurrenceSource);
   assert.equal(actual.weeks[first].boxes.find((b) => b.hatId === id)?.hours, 2);
+});
+test("set days and their generated placements survive item sync roundtrip", () => {
+  const data = sample();
+  const first = shiftWeek(data.currentWeek, 1);
+  const id = data.hats[0].id;
+  const monday = planDayIso(first, "mon"), wednesday = planDayIso(first, "wed");
+  data.recurringPlans = [{ id: "gym", roleId: id, startWeek: first, everyWeeks: 1, hours: 2, capacityHours: 40,
+    dayHours: [{ weekday: "mon", hours: 1 }, { weekday: "wed", hours: 1 }] }];
+  data.weeks[first] = {
+    boxes: data.hats.map((hat) => ({ hatId: hat.id, hours: hat.id === id ? 2 : 0, tasks: [] })),
+    allocations: [
+      { id: "a1", hatId: id, day: monday, hours: 1, order: 0 },
+      { id: "a2", hatId: id, day: wednesday, hours: 1, order: 0 },
+    ],
+    life: { version: 1, capacityHours: 40 },
+    recurrenceSource: { [id]: { planId: "gym", generatedHours: 2, generatedDays: [
+      { id: "a1", day: monday, hours: 1 }, { id: "a2", day: wednesday, hours: 1 },
+    ] } },
+  };
+  const actual = assemble(flatten(data, "My plan"), data.currentWeek).data;
+  assert.deepEqual(actual.recurringPlans, data.recurringPlans);
+  assert.deepEqual(actual.weeks[first].recurrenceSource, data.weeks[first].recurrenceSource);
+  assert.deepEqual(actual.weeks[first].allocations.map((a) => [a.id, a.day, a.hours]),
+    [["a1", monday, 1], ["a2", wednesday, 1]]);
 });

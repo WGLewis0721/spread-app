@@ -168,3 +168,54 @@ test("legacy wrong-role links render in To place without rewriting the original 
   assert.equal(rendered.snapshot.tasks[0].allocationId, null);
   assert.equal(JSON.stringify(data), original);
 });
+
+test("native v2 outlook shows the set days of a schedule for weeks not yet stored", () => {
+  const data = source();
+  data.recurringPlans = [{ id: "gym", roleId: "work", startWeek: "2026-11-09", everyWeeks: 1, hours: 2, capacityHours: 40,
+    dayHours: [{ weekday: "wed", hours: 1 }, { weekday: "mon", hours: 1 }] }];
+  const outlook = projectNativeV2(data, "p1", { outlookWeeks: 8 }).snapshot.outlook!;
+  assert.deepEqual(outlook[0].placed, [
+    { roleId: "work", day: "2026-11-09", hours: 1 },
+    { roleId: "work", day: "2026-11-11", hours: 1 },
+  ]);
+  assert.equal(outlook[0].kept, false);
+});
+
+test("native v2 outlook is opt-in and absent from the default contract", () => {
+  assert.equal(projectNativeV2(source(), "p1").snapshot.outlook, undefined);
+});
+
+test("native v2 outlook covers the eight weeks after the selected week without writing data", () => {
+  const data = source();
+  const before = structuredClone(data);
+  const outlook = projectNativeV2(data, "p1", { outlookWeeks: 8 }).snapshot.outlook!;
+  assert.equal(outlook.length, 8);
+  assert.equal(outlook[0].weekKey, "2026-11-09");
+  assert.equal(outlook[7].weekKey, shiftWeek("2026-11-02", 8));
+  assert.deepEqual(data, before);
+});
+
+test("native v2 outlook follows a repeat schedule, including a 12-week interval and a kept week", () => {
+  const data = source();
+  data.recurringPlans = [
+    { id: "gym", roleId: "work", startWeek: "2026-11-09", everyWeeks: 2, hours: 3, capacityHours: 40 },
+  ];
+  data.weeks["2026-11-16"] = {
+    boxes: [{ hatId: "work", hours: 5, tasks: [] }, { hatId: "home", hours: 4, tasks: [] }],
+    allocations: [{ id: "kept-alloc", hatId: "work", day: "2026-11-17", hours: 2, order: 0 }],
+  };
+  const outlook = projectNativeV2(data, "p1", { outlookWeeks: 8 }).snapshot.outlook!;
+  const workHours = outlook.map((week) => week.hours.find((h) => h.roleId === "work")!.hours);
+  assert.deepEqual(workHours, [3, 5, 3, 0, 3, 0, 3, 0]);
+  assert.equal(outlook[1].kept, true);
+  assert.equal(outlook[0].kept, false);
+  assert.deepEqual(outlook[1].placed, [{ roleId: "work", day: "2026-11-17", hours: 2 }]);
+
+  data.recurringPlans = [
+    { id: "twelve", roleId: "work", startWeek: "2026-11-09", everyWeeks: 12, hours: 2, capacityHours: 40 },
+  ];
+  const twelve = projectNativeV2(data, "p1", { outlookWeeks: 8 }).snapshot.outlook!;
+  assert.equal(twelve.find((week) => week.weekKey === "2026-11-16")!.kept, true);
+  assert.equal(twelve[0].hours.find((h) => h.roleId === "work")!.hours, 2);
+  assert.equal(twelve[2].hours.find((h) => h.roleId === "work")!.hours, 0);
+});

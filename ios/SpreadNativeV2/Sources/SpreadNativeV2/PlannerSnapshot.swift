@@ -13,6 +13,8 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
     public var life: LifeWeekSnapshot? = nil
     public var recurringPlans: [NativeRecurringPlan]? = nil
     public var recurrenceIssue: String? = nil
+    /// Read-only forecast of the weeks after this one. Absent unless the native host requests it.
+    public var outlook: [NativeOutlookWeek]? = nil
 
     public init(weekKey: String, roles: [Responsibility], allocations: [DayAllocation], tasks: [PlannerTask]) {
         self.weekKey = weekKey
@@ -49,16 +51,47 @@ public struct PlannerSnapshot: Codable, Equatable, Sendable {
     }
 }
 
+/// One future week in the Plan Ahead outlook. Mirrors projectOutlook in native-v2-projection.ts.
+/// View-only: nothing here is written back to the planner.
+public struct NativeOutlookWeek: Codable, Equatable, Identifiable, Sendable {
+    public let weekKey: String
+    /// True for a stored week that a schedule would not regenerate (edited, or made before it).
+    public let kept: Bool
+    public let hours: [NativeOutlookHours]
+    public let placed: [NativeOutlookPlacement]
+    public var id: String { weekKey }
+}
+
+public struct NativeOutlookHours: Codable, Equatable, Sendable {
+    public let roleId: String
+    public let hours: Double
+}
+
+public struct NativeOutlookPlacement: Codable, Equatable, Sendable {
+    public let roleId: String
+    public let day: String
+    public let hours: Double
+}
+
+/// One set day of a fixed-day schedule: a weekday code (mon...sun) and the hours planned on it.
+public struct NativeDayHours: Codable, Equatable, Sendable {
+    public let weekday: String
+    public let hours: Double
+}
+
 public struct NativeRecurringPlan: Codable, Equatable, Identifiable, Sendable {
     public let id: String
     public let roleId: String
     public let startWeek: String
     public let managedFromWeek: String?
     public let everyWeeks: Int
+    /// Weekly total. Equals the sum of dayHours when the schedule has set days.
     public let hours: Double
     public let endWeek: String?
     public let terminatedWeek: String?
     public let capacityHours: Double
+    /// Absent for weekly-only schedules, which the planner places without a set day.
+    public var dayHours: [NativeDayHours]? = nil
 }
 
 public struct LifeWeekSnapshot: Codable, Equatable, Sendable {
