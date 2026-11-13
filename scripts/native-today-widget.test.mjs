@@ -78,6 +78,8 @@ const focusControls = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/Sprea
 const focusSession = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusSession.swift");
 const focusLocalAlerts = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadLocalAlerts.swift");
 const timerWidgetSource = get("ios/App/SpreadWidget/SpreadTimerWidget.swift");
+const focusSheet = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimerSheet.swift");
+const dayPlan = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadDayPlan.swift");
 
 /** The widget extension's Sources build phase, as the list of file names it compiles. */
 function widgetSourceNames() {
@@ -95,7 +97,7 @@ test("the new widget files are compiled by the extension and listed in the bundl
   for (const name of ["SpreadTodayWidget.swift", "SpreadTimerWidget.swift", "SpreadLifeCardsWidget.swift",
     "SpreadWidgetShared.swift", "SpreadFocusActivityAttributes.swift", "SpreadFocusSession.swift",
     "SpreadFocusLiveActivityController.swift", "SpreadFocusIntents.swift", "SpreadLocalAlerts.swift",
-    "SpreadFocusWidgetPublisher.swift"]) {
+    "SpreadFocusWidgetPublisher.swift", "SpreadDayPlan.swift"]) {
     assert.ok(compiled.includes(name), `${name} must be in the widget Sources phase`);
   }
   assert.match(source, /SpreadTimerWidget\(\)/);
@@ -161,7 +163,7 @@ test("continuity: one timer, one write path, every surface opens the right place
   // The mirror is rebuilt from the saved session when the opt-in changes mid-session.
   assert.match(moreSheet, /SpreadFocusWidgetPublisher\.republishFromStore\(\)/);
   // The Dynamic Island, Lock Screen, Timer widget and Today panel all open the Focus Timer.
-  assert.match(source, /widgetURL\(URL\(string: "spread:\/\/focus"\)\)/);
+  assert.match(source, /context\.attributes\.day == nil \? "spread:\/\/focus" : "spread:\/\/today"/);
   assert.match(timerSource, /SpreadWidgetLink\.focus\.url/);
   // A Life card link goes to today's week first, then to that card, and ignores an unknown card.
   assert.match(sceneDelegate, /url\.host == "life"/);
@@ -237,4 +239,30 @@ test("Live Activity relevance puts a running stretch above one waiting for a tap
   assert.match(focusController, /case \.running, \.paused: return 1\.0/);
   assert.match(focusController, /case \.finished: return 0\.8/);
   assert.match(focusLocalAlerts, /Start your break when you're ready\./);
+});
+
+test("today's planned block is offered on the widget and started from the island and the app", () => {
+  // The Timer widget and the sheet start the block through the same intent and the same timer method.
+  assert.match(focusControls, /struct StartSpreadBlockIntent: LiveActivityIntent/);
+  assert.match(timerWidgetSource, /Button\(intent: StartSpreadBlockIntent\(\)\)/);
+  assert.match(focusTimer, /func startBlock\(_ offered: SpreadOfferedBlock, notify: Bool\) -> Bool/);
+  assert.match(focusSheet, /timer\.startBlock\(offered, notify: notifyWhenDone\)/);
+  assert.match(focusSheet, /accessibilityIdentifier\("focus-start-block"\)/);
+  // A block reads the planner only. The publisher never writes the plan, and it is cleared with the switch.
+  const publisher = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadDayPlanPublisher.swift");
+  assert.doesNotMatch(publisher, /planner\.send|updateRole|SpreadData|store\./);
+  assert.match(publisher, /guard UserDefaults\.standard\.bool\(forKey: SpreadWidgetShared\.todayEnabledKey\) else/);
+  assert.match(publisher, /snapshot\.weekKey == PlannerDates\.currentWeekKey\(\)/);
+  assert.match(liveRoot, /SpreadDayPlanPublisher\.clear\(\)/);
+});
+
+test("a finished block is recorded only on its final focus round", () => {
+  assert.match(dayPlan, /static func recordCompletion\(of session: SpreadFocusSession/);
+  assert.match(dayPlan, /session\.currentKind == \.focus, session\.roundNumber == session\.roundCount/);
+  assert.match(focusControls, /if let session \{ SpreadDayPlanStore\.recordCompletion\(of: session\) \}/);
+});
+
+test("the island opens the planned day, and a hand-started session still opens the timer", () => {
+  assert.match(source, /context\.attributes\.day == nil \? "spread:\/\/focus" : "spread:\/\/today"/);
+  assert.match(focusController, /day: session\.blockDay/);
 });

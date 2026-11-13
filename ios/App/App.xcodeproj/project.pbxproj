@@ -12,6 +12,7 @@
         FACA00000000000000000024 /* Shared Focus intents */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpreadFocusIntents.swift; path = ../SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusIntents.swift; sourceTree = SOURCE_ROOT; };
         FACA00000000000000000026 /* Shared local alerts */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpreadLocalAlerts.swift; path = ../SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadLocalAlerts.swift; sourceTree = SOURCE_ROOT; };
         FACA00000000000000000028 /* Shared Focus widget publisher */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpreadFocusWidgetPublisher.swift; path = ../SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadFocusWidgetPublisher.swift; sourceTree = SOURCE_ROOT; };
+        FACA0000000000000000002A /* Shared day plan */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpreadDayPlan.swift; path = ../SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadDayPlan.swift; sourceTree = SOURCE_ROOT; };
         FACA00000000000000000016 /* Timer Widget Swift */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadTimerWidget.swift; sourceTree = "<group>"; };
         FACA00000000000000000018 /* Life Cards Widget Swift */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadLifeCardsWidget.swift; sourceTree = "<group>"; };
         FACA00000000000000000013 /* Focus ActivityAttributes in Widget Sources */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000012; };
@@ -23,6 +24,7 @@
         FACA00000000000000000025 /* Shared Focus intents in Widget Sources */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000024; };
         FACA00000000000000000027 /* Shared local alerts in Widget Sources */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000026; };
         FACA00000000000000000029 /* Shared Focus widget publisher in Widget Sources */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000028; };
+        FACA0000000000000000002B /* Shared day plan in Widget Sources */ = { isa = PBXBuildFile; fileRef = FACA0000000000000000002A; };
 
 		FACA00000000000000000001 /* Widget Swift */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadTodayWidget.swift; sourceTree = "<group>"; };
 		FACA00000000000000000002 /* Widget Info */ = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -31,7 +33,7 @@
 		FACA00000000000000000005 /* Widget Swift in Sources */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000001; };
 		FACA0000000000000000000E /* Widget .appex in Embed */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000004; settings = { ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FACA00000000000000000006 /* Widget resources */ = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		FACA00000000000000000007 /* Widget sources */ = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (FACA00000000000000000005, FACA00000000000000000013, FACA00000000000000000015, FACA00000000000000000017, FACA00000000000000000019, FACA00000000000000000021, FACA00000000000000000023, FACA00000000000000000025, FACA00000000000000000027, FACA00000000000000000029, ); runOnlyForDeploymentPostprocessing = 0; };
+		FACA00000000000000000007 /* Widget sources */ = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (FACA00000000000000000005, FACA00000000000000000013, FACA00000000000000000015, FACA00000000000000000017, FACA00000000000000000019, FACA00000000000000000021, FACA00000000000000000023, FACA00000000000000000025, FACA00000000000000000027, FACA00000000000000000029, FACA0000000000000000002B, ); runOnlyForDeploymentPostprocessing = 0; };
 		FACA00000000000000000008 /* Widget frameworks */ = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		FACA00000000000000000009 /* Widget target */ = { isa = PBXNativeTarget; buildConfigurationList = FACA0000000000000000000A; buildPhases = (FACA00000000000000000007, FACA00000000000000000008, FACA00000000000000000006,); buildRules = (); dependencies = (); name = SpreadWidget; productName = SpreadWidget; productReference = FACA00000000000000000004; productType = "com.apple.product-type.app-extension"; };
 		FACA0000000000000000000A /* Widget configurations */ = { isa = XCConfigurationList; buildConfigurations = (FACA0000000000000000000B, FACA0000000000000000000C,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };

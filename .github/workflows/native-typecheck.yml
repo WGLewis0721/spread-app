@@ -49,6 +49,7 @@ jobs:
           ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusIntents.swift
           ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadLocalAlerts.swift
           ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadFocusWidgetPublisher.swift
+          ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadDayPlan.swift
 
       - name: Type-check the native Swift package
         # Reported even when the widget step fails, so one run shows every problem.

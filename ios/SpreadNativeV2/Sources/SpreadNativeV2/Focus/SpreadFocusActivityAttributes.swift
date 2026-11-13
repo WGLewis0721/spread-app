@@ -30,10 +30,13 @@ public struct SpreadFocusActivityAttributes: ActivityAttributes {
 
     public let sessionId: String
     public let title: String
+    /// The planned day this session works through, as YYYY-MM-DD. Nil for a session started by hand.
+    public let day: String?
 
-    public init(sessionId: String, title: String) {
+    public init(sessionId: String, title: String, day: String? = nil) {
         self.sessionId = sessionId
         self.title = title
+        self.day = day
     }
 }
 #endif

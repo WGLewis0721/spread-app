@@ -33,6 +33,34 @@ struct SpreadFocusTimerSheet: View {
         SpreadFocusPlan(focusMinutes: focusMinutes, breakMinutes: breakMinutes, rounds: rounds)
     }
 
+    /// Today's planned block: what it is, how it splits into rounds, and one start. Only the planner's hours are
+    /// used, and the plan is never changed.
+    @ViewBuilder private func todaysBlockRows(_ offered: SpreadOfferedBlock) -> some View {
+        let name = roles.first(where: { $0.id == offered.entry.roleId })?.name ?? offered.entry.label
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Today's block")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Spread.secondary)
+            Text("\(name) · \(SpreadBlockText.hours(offered.entry.hours)) planned")
+                .font(.headline)
+                .foregroundStyle(Spread.ink)
+            Text(SpreadBlockText.summary(offered.entry.plan))
+                .font(.subheadline)
+                .foregroundStyle(Spread.secondary)
+            Button("Start today's block") {
+                if timer.startBlock(offered, notify: notifyWhenDone) {
+                    message = nil
+                } else {
+                    message = "Finish your other active focus session before starting a new one."
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .accessibilityIdentifier("focus-start-block")
+        }
+        .padding(.vertical, 4)
+    }
+
     /// "Focus · round 2 of 4", "Break", or "Focus session" for a single stretch.
     private func stageText(_ session: SpreadFocusSession) -> String {
         let name = session.currentKind == .rest ? "Break" : "Focus"
@@ -101,6 +129,17 @@ struct SpreadFocusTimerSheet: View {
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .accessibilityIdentifier("focus-finish")
                     } else {
+                        if let offered = SpreadDayPlanStore.nextBlock(now: Date()) {
+                            todaysBlockRows(offered)
+                        } else if SpreadDayPlanStore.allDoneToday(now: Date()) {
+                            Text("Today's planned blocks are done. Nothing else is started for you.")
+                                .font(.subheadline)
+                                .foregroundStyle(Spread.secondary)
+                                .accessibilityIdentifier("focus-blocks-done")
+                        }
+                        Text("Or set your own")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Spread.secondary)
                         Picker("Life area", selection: $roleId) {
                             ForEach(roles) { role in
                                 Text(role.name).tag(role.id)

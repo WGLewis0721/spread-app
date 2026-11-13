@@ -46,7 +46,8 @@ enum SpreadFocusLiveActivityController {
                 await old.end(nil, dismissalPolicy: .immediate)
             }
             let title = UserDefaults.standard.bool(forKey: showNameKey) ? session.roleName : "Focus session"
-            let attributes = SpreadFocusActivityAttributes(sessionId: session.id, title: title)
+            let attributes = SpreadFocusActivityAttributes(sessionId: session.id, title: title,
+                                                           day: session.blockDay)
             _ = try? Activity.request(attributes: attributes, content: content(for: session), pushType: nil)
         }
     }

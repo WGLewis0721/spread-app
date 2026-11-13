@@ -24,6 +24,7 @@ enum SpreadFocusControls {
 
     /// Saves a change and brings the island, the widgets and the reminder into step with it.
     static func apply(_ session: SpreadFocusSession?, notify: Bool) {
+        if let session { SpreadDayPlanStore.recordCompletion(of: session) }
         SpreadFocusStore.save(session)
         SpreadFocusLiveActivityController.refresh(session)
         SpreadFocusWidgetPublisher.publish(session)
@@ -37,6 +38,31 @@ enum SpreadFocusControls {
     /// Whether the person chose to be told when a stretch ends.
     static var notifyWhenDone: Bool {
         UserDefaults.standard.bool(forKey: "native.focus.notifyWhenDone")
+    }
+}
+
+/// Starts today's planned block: its first focus round, sized to the hours planned for that Life area. Only when
+/// nothing is running, paused or waiting for a tap. The planner is only read; nothing is written back to it.
+struct StartSpreadBlockIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Start today's block"
+    static var description = IntentDescription("Start the focus rounds planned for today.")
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        guard let offered = SpreadDayPlanStore.nextBlock(now: Date()) else { return .result() }
+        if let existing = SpreadFocusControls.current(),
+           existing.phase != .finished || SpreadFocusMachine.nextLabel(after: existing) != nil {
+            return .result()
+        }
+        guard let session = SpreadFocusMachine.stretch(
+            id: UUID().uuidString, profileId: offered.record.profileId, roleId: offered.entry.roleId,
+            roleName: offered.entry.label, plan: offered.entry.plan, kind: .focus, round: 1, now: Date(),
+            blockDay: offered.record.day) else { return .result() }
+        SpreadFocusStore.saveChoice(SpreadFocusChoice(
+            profileId: offered.record.profileId, roleId: offered.entry.roleId,
+            roleName: offered.entry.label, plan: offered.entry.plan))
+        SpreadFocusControls.apply(session, notify: SpreadFocusControls.notifyWhenDone)
+        return .result()
     }
 }
 

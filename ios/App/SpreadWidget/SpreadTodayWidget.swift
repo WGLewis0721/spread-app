@@ -191,7 +191,8 @@ private struct SpreadFocusLiveView: View {
         .padding()
         .activityBackgroundTint(Color(uiColor: .systemBackground))
         .activitySystemActionForegroundColor(.primary)
-        .widgetURL(URL(string: "spread://focus"))
+        // A session for a planned day opens that day's Week view; a hand-started one opens the timer.
+        .widgetURL(URL(string: context.attributes.day == nil ? "spread://focus" : "spread://today"))
         .accessibilityElement(children: .contain)
     }
 }
@@ -236,7 +237,7 @@ struct SpreadFocusLiveActivityWidget: Widget {
                 SpreadFocusMinimal(status: SpreadFocusLiveActivityWidget.status(context),
                                    deadline: context.state.deadline)
             }
-            .widgetURL(URL(string: "spread://focus"))
+            .widgetURL(URL(string: context.attributes.day == nil ? "spread://focus" : "spread://today"))
         }
     }
 }

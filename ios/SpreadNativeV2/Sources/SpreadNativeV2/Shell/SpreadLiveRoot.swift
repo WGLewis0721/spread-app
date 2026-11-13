@@ -80,6 +80,9 @@ public struct SpreadLiveRoot: View {
             if let snapshot = planner.snapshot {
                 SpreadWidgetPublisher.publish(snapshot: snapshot)
                 SpreadLifeCardsPublisher.publish(snapshot: snapshot)
+                if let profile = planner.state?.envelope.profileId {
+                    SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
+                }
             }
         }
         .onChange(of: planner.state?.envelope.profileId) { old, new in
@@ -87,6 +90,7 @@ public struct SpreadLiveRoot: View {
                 // Never show a previous profile's counts or Life cards after switching profiles.
                 SpreadWidgetPublisher.revoke()
                 SpreadLifeCardsPublisher.revoke()
+                SpreadDayPlanPublisher.clear()
                 if let snapshot = planner.snapshot {
                     SpreadWidgetPublisher.publish(snapshot: snapshot)
                     SpreadLifeCardsPublisher.publish(snapshot: snapshot)

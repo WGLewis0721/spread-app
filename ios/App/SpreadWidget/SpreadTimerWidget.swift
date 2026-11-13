@@ -239,6 +239,10 @@ private struct SpreadTimerEntry: TimelineEntry {
     let canStart: Bool
     /// The focus length of the last plan, for the Start label.
     let startMinutes: Int?
+    /// Today's next planned block, when one is on offer.
+    let block: SpreadOfferedBlock?
+    /// True when today has planned blocks and every one of them is finished.
+    let allDone: Bool
 }
 
 private struct SpreadTimerProvider: TimelineProvider {
@@ -247,7 +251,9 @@ private struct SpreadTimerProvider: TimelineProvider {
     private func entry(at date: Date, state: SpreadFocusWidgetState?) -> Entry {
         Entry(date: date, state: state, today: SpreadTodayStore.load(),
               canStart: SpreadFocusStore.canStartFromWidget(now: date),
-              startMinutes: SpreadFocusStore.loadChoice()?.plan.focusMinutes)
+              startMinutes: SpreadFocusStore.loadChoice()?.plan.focusMinutes,
+              block: SpreadDayPlanStore.nextBlock(now: date),
+              allDone: SpreadDayPlanStore.allDoneToday(now: date))
     }
 
     func placeholder(in context: Context) -> Entry {
@@ -297,7 +303,7 @@ private struct SpreadTimerView: View {
                 .foregroundStyle(.secondary)
             Text("No timer running")
                 .font(.system(.title3, design: .rounded, weight: .semibold))
-            Text(entry.canStart ? "Start your last plan here." : "Choose a plan in Spread to start.")
+            Text(idleDetail)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -305,7 +311,14 @@ private struct SpreadTimerView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The one control. An idle timer starts the last plan from here when one exists, and otherwise opens Spread.
+    private var idleDetail: String {
+        if let offered = entry.block { return SpreadBlockText.summary(offered.entry.plan) }
+        if entry.allDone { return "Today's planned blocks are done." }
+        return entry.canStart ? "Start your last plan here." : "Choose a plan in Spread to start."
+    }
+
+    /// The one control. An idle timer starts today's planned block when there is one, then the last plan, and
+    /// otherwise opens Spread.
     @ViewBuilder private var control: some View {
         if let state = entry.state {
             let finished = state.isFinished(at: entry.date)
@@ -313,6 +326,11 @@ private struct SpreadTimerView: View {
                 running: !finished && state.phase == .running,
                 paused: state.phase == .paused,
                 nextLabel: finished ? state.nextLabel : nil)
+        } else if let offered = entry.block {
+            Button(intent: StartSpreadBlockIntent()) {
+                Label("Start \(offered.entry.label) · \(SpreadBlockText.hours(offered.entry.hours))",
+                      systemImage: "play.fill")
+            }
         } else if entry.canStart {
             Button(intent: StartSpreadFocusIntent()) {
                 Label(entry.startMinutes.map { "Start \($0) min focus" } ?? "Start focus", systemImage: "play.fill")

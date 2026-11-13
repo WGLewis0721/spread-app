@@ -522,7 +522,7 @@ struct LifeRoot: View {
                                 LifeFeedback.selection()
                             } label: {
                                 HStack(spacing: 5) {
-                                    Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
+                                    Circle().fill(chipColor(role)).frame(width: 10, height: 10)
                                     Text(role.name).lineLimit(1)
                                     Text(SpreadHours.text(role.hours) + "h")
                                         .monospacedDigit()
@@ -907,6 +907,11 @@ struct LifeRoot: View {
             .accessibilityAction(.escape) { closeNavigation() }
         }
     }
+    /// The Life area's own colour for its budget chip. Kept in a function so the chip stays quick to type-check.
+    private func chipColor(_ role: Responsibility) -> Color {
+        Color(hex: role.color)
+    }
+
     private func openFocusFromActivityIfNeeded() {
         guard UserDefaults.standard.bool(forKey: "native.widget.openFocus"),
               planner.snapshot != nil else { return }

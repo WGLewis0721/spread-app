@@ -53,10 +53,13 @@ struct SpreadFocusSession: Codable, Equatable {
     var rounds: Int?
     var focusSeconds: Int?
     var breakSeconds: Int?
+    /// The day of the planned block this session works through, as YYYY-MM-DD. Nil for a session started by hand.
+    var blockDay: String?
 
     init(id: String, profileId: String, roleId: String, roleName: String, durationSeconds: Int,
          pausedSeconds: Int, endAt: Date?, phase: Phase, kind: SpreadFocusKind? = nil,
-         round: Int? = nil, rounds: Int? = nil, focusSeconds: Int? = nil, breakSeconds: Int? = nil) {
+         round: Int? = nil, rounds: Int? = nil, focusSeconds: Int? = nil, breakSeconds: Int? = nil,
+         blockDay: String? = nil) {
         self.id = id
         self.profileId = profileId
         self.roleId = roleId
@@ -70,6 +73,7 @@ struct SpreadFocusSession: Codable, Equatable {
         self.rounds = rounds
         self.focusSeconds = focusSeconds
         self.breakSeconds = breakSeconds
+        self.blockDay = blockDay
     }
 
     var currentKind: SpreadFocusKind { kind ?? .focus }
@@ -103,7 +107,7 @@ enum SpreadFocusMachine {
     /// A stretch of the plan, starting now: focus round `round`, or the break that follows it.
     static func stretch(id: String, profileId: String, roleId: String, roleName: String,
                         plan: SpreadFocusPlan, kind: SpreadFocusKind, round: Int,
-                        now: Date) -> SpreadFocusSession? {
+                        now: Date, blockDay: String? = nil) -> SpreadFocusSession? {
         guard plan.isValid, (1...plan.rounds).contains(round), !profileId.isEmpty, !roleId.isEmpty else {
             return nil
         }
@@ -114,7 +118,8 @@ enum SpreadFocusMachine {
             id: id, profileId: profileId, roleId: roleId, roleName: roleName,
             durationSeconds: seconds, pausedSeconds: seconds,
             endAt: now.addingTimeInterval(TimeInterval(seconds)), phase: .running,
-            kind: kind, round: round, rounds: plan.rounds, focusSeconds: focus, breakSeconds: brk)
+            kind: kind, round: round, rounds: plan.rounds, focusSeconds: focus, breakSeconds: brk,
+            blockDay: blockDay)
     }
 
     /// A running stretch whose deadline has passed is finished, with no paused time left.
@@ -178,7 +183,7 @@ enum SpreadFocusMachine {
             breakMinutes: (ended.breakSeconds ?? SpreadFocusPlan.standard.breakMinutes * 60) / 60,
             rounds: ended.roundCount)
         return stretch(id: id, profileId: ended.profileId, roleId: ended.roleId, roleName: ended.roleName,
-                       plan: plan, kind: step.kind, round: step.round, now: now)
+                       plan: plan, kind: step.kind, round: step.round, now: now, blockDay: ended.blockDay)
     }
 
     /// Whether the session still matters on screen: running or paused, or finished with a next step.
@@ -235,12 +240,15 @@ enum SpreadFocusStore {
         defaults.set(profileId, forKey: profileKey)
     }
 
-    /// Whether a widget or the island may start round 1 of the last plan: that plan belongs to the profile on
-    /// screen, and no session is waiting or running.
+    /// Whether a widget or the island may start work now: nothing is running, paused or waiting for a tap, and
+    /// either today's planned block is available for the profile on screen, or the last plan belongs to it.
     static func canStartFromWidget(now: Date = Date(), _ defaults: UserDefaults = SpreadFocusStore.shared) -> Bool {
+        if let current = load(defaults) {
+            let ended = SpreadFocusMachine.reconciled(current, now: now)
+            guard ended.phase == .finished, SpreadFocusMachine.nextLabel(after: ended) == nil else { return false }
+        }
+        if SpreadDayPlanStore.nextBlock(now: now, defaults) != nil { return true }
         guard let choice = loadChoice(defaults), activeProfile(defaults) == choice.profileId else { return false }
-        guard let current = load(defaults) else { return true }
-        let ended = SpreadFocusMachine.reconciled(current, now: now)
-        return ended.phase == .finished && SpreadFocusMachine.nextLabel(after: ended) == nil
+        return true
     }
 }

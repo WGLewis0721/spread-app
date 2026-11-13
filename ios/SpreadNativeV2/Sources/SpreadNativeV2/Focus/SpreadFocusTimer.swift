@@ -60,6 +60,21 @@ final class SpreadFocusTimer: ObservableObject {
         return true
     }
 
+    /// Starts a planned block from the sheet. Same rules as the island's Start: nothing else running or waiting.
+    @discardableResult
+    func startBlock(_ offered: SpreadOfferedBlock, notify: Bool) -> Bool {
+        if let session, SpreadFocusMachine.reconciled(session, now: Date()).phase != .finished { return false }
+        guard let next = SpreadFocusMachine.stretch(
+            id: UUID().uuidString, profileId: offered.record.profileId, roleId: offered.entry.roleId,
+            roleName: offered.entry.label, plan: offered.entry.plan, kind: .focus, round: 1, now: Date(),
+            blockDay: offered.record.day) else { return false }
+        SpreadFocusStore.saveChoice(SpreadFocusChoice(
+            profileId: offered.record.profileId, roleId: offered.entry.roleId,
+            roleName: offered.entry.label, plan: offered.entry.plan))
+        commit(next, notify: notify)
+        return true
+    }
+
     /// Starts the break, or the next focus round, once the person asks for it.
     func continueFlow(profileId: String, notify: Bool) {
         guard let current = visibleSession(for: profileId),

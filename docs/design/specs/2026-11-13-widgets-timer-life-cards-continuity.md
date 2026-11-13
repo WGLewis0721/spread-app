@@ -182,3 +182,26 @@ Owed on a device: pause and resume from the island with the app open, closed and
 | --- | --- | --- | --- |
 | 2026-11-13 | Island scope: concepts 1, 2 and 7. Rounds with breaks that start only on a tap; pause and resume from the island, the Lock Screen and the Timer widget; the shared record in the App Group; concepts 3, 4, 5 and 6 left as wireframes. | Owner | This section; `DECISIONS.md`; `specs/README.md`; the wireframe board |
 
+## 13. Today's planned block (option 2)
+
+**Owner decision, 2026-11-13.** Build option 2: a planned block can start from the island, the Timer widget or the sheet, sized to the hours planned for that Life area today. The planner stays read only. Nothing automatic changes the plan.
+
+**What the person sees.** On the Timer widget, and at the top of the focus sheet, today's block: the Life area (or "Planned block" when names are off), its planned hours, and how it splits into rounds, such as "4 rounds of 45 min, 10 min breaks, 3 h focus". One button starts round 1. Each later round and each break still starts on a tap.
+
+**How hours become rounds.** The rule is that total focus time matches the planned time as closely as possible. Among equal fits it prefers a stretch nearest 45 minutes, then fewer rounds. Stretches are 15 to 90 minutes, so no single stretch runs longer than a deep-work session. Break is 5 minutes after a stretch of 30 minutes or less, and 10 minutes after anything longer. Examples: 1 hour is one 60-minute stretch; 2 hours is 3 x 40; 3 hours is 4 x 45; 2 hours 30 minutes is 3 x 50; 3 hours 10 minutes is 3 x 65 (5 minutes over, which is closer than 4 x 45). The confirmation shows the real total.
+
+**Which block is offered.** Today only, for the profile on screen. Largest first, ties keep the planner's Life area order. Only one block is offered at a time, so the island is never crowded with several.
+
+**Finishing.** A block counts as done when its final focus round is over, however that ended. Stopping during an earlier round does not count, so the block stays on offer. Finishing writes nothing to hours, budgets, tasks or the week. When a block is done, the next unfinished block for the day is offered. When every block is done, the widget says so and offers nothing more. This is the guard against spreading thin: nothing is suggested beyond what the person planned, and nothing starts without a tap.
+
+**Continuity.** The island and the Timer widget tie a session to its planned day. A tap on the island opens Today, the Week view on today's date. A session started by hand still opens the timer.
+
+**Privacy.** The Life area name appears on widgets only with the existing "Show Life area name outside Spread" switch. Without it the label is "Planned block".
+
+**Not built here.** Choosing a block for another day (only today is offered). Logging focus time against hours. The limited-width compact layout.
+
+**Owed on a device:** starting a block from the island with the app closed; the first and last round of a block; a block that is stopped early and then offered again; two blocks in one day finishing in order; the Today opening from a block's tap; names on and off.
+
+| Date | Decision | By | Documents updated |
+| --- | --- | --- | --- |
+| 2026-11-13 | Option 2: today's planned block starts from the island, the Timer widget and the sheet, sized to the planned hours. Read only. Largest first, one at a time, done when the final round ends, nothing starts without a tap. | Owner (direction), tool (rules) | This section; `DECISIONS.md`; `specs/README.md` |
