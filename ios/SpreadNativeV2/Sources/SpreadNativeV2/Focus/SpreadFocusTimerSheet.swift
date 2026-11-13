@@ -4,6 +4,9 @@ import SwiftUI
 /// One optional focus session at a time, independently of hour budgets and task status. The person starts each
 /// focus round, and each break, by tapping. Spread never starts one for them.
 struct SpreadFocusTimerSheet: View {
+    // The large clock digits scale with Dynamic Type (board: Dynamic Type supported), at the same 56 and 52 pt default.
+    @ScaledMetric(relativeTo: .largeTitle) private var countdownSize: CGFloat = 56
+    @ScaledMetric(relativeTo: .largeTitle) private var planSize: CGFloat = 52
     @ObservedObject var timer: SpreadFocusTimer
     let profileId: String
     let roles: [Responsibility]
@@ -88,7 +91,7 @@ struct SpreadFocusTimerSheet: View {
                             .accessibilityIdentifier("focus-stage")
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text(SpreadFocusClock.display(current.remaining(at: context.date)))
-                                .font(.system(size: 56, weight: .medium, design: .rounded))
+                                .font(.system(size: countdownSize, weight: .medium, design: .rounded))
                                 .monospacedDigit()
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
@@ -159,7 +162,7 @@ struct SpreadFocusTimerSheet: View {
                             .accessibilityIdentifier("focus-break-minutes")
                         }
                         Text(SpreadFocusClock.display(focusMinutes * 60))
-                            .font(.system(size: 52, weight: .medium, design: .rounded))
+                            .font(.system(size: planSize, weight: .medium, design: .rounded))
                             .monospacedDigit()
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)

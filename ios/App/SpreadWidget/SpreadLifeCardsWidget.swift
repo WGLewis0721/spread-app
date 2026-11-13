@@ -112,16 +112,18 @@ private struct SpreadLifeCardPalette {
 
     static func make(_ scheme: ColorScheme) -> SpreadLifeCardPalette {
         if scheme == .dark {
+            // The app's dark ink F7FAFF and secondary B0BCD1 (SpreadTheme), so the widget matches the app.
             return SpreadLifeCardPalette(
-                text: Color.white, secondary: Color.white.opacity(0.82),
+                text: Color(hex: "F7FAFF"), secondary: Color(hex: "B0BCD1"),
                 pillOn: Color.white.opacity(0.91), pillOnText: Color.black.opacity(0.9),
                 pillOff: Color.black.opacity(0.28), pillOffText: Color.white,
                 fill: Color.white, dotOn: Color.white.opacity(0.95), dotOff: Color.white.opacity(0.35))
         }
-        let ink = Color(red: 0.043, green: 0.071, blue: 0.125)
+        // The app's light ink 0E1A2E, secondary 4A5670 and cream canvas F4F1EA (SpreadTheme).
+        let ink = Color(hex: "0E1A2E")
         return SpreadLifeCardPalette(
-            text: ink, secondary: Color(red: 0.29, green: 0.33, blue: 0.40),
-            pillOn: ink.opacity(0.90), pillOnText: Color(red: 0.965, green: 0.949, blue: 0.914),
+            text: ink, secondary: Color(hex: "4A5670"),
+            pillOn: ink.opacity(0.90), pillOnText: Color(hex: "F4F1EA"),
             pillOff: ink.opacity(0.08), pillOffText: ink,
             fill: ink, dotOn: ink.opacity(0.9), dotOff: ink.opacity(0.25))
     }
@@ -160,7 +162,7 @@ private struct SpreadLifeCardBackground: View {
     }
 
     private var lightFace: some View {
-        Color(red: 0.965, green: 0.949, blue: 0.914)
+        Color(hex: "F4F1EA")
             .overlay(
                 LinearGradient(
                     colors: [Color(hex: colorHex).opacity(0.30), Color(hex: colorHex).opacity(0.06)],

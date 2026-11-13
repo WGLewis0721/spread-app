@@ -37,7 +37,7 @@ Someone starts a focus session. The Lock Screen and the Dynamic Island show it, 
 
 | Rule (document and section) | How this request touches it |
 | --- | --- |
-| RULES_CARD Boundaries: no second store, no data migration, task changes through `store.ts` | Every new record is a disposable projection written by the app into the App Group. The planner store is untouched. Widgets only show and open. |
+| RULES_CARD Boundaries: no second store, no data migration, task changes through `store.ts` | Every new record is a projection the app writes into the App Group, except block completion, which is state. See exception 4. The planner store is untouched. Widgets only show and open. |
 | RULES_CARD Boundaries: do not touch cloud, sync, backup, schema, `ios/App/App/Cloud/**`, `ios/App/SpreadCloudCore/**`, `server/` | None touched. |
 | RULES_CARD Look: targets at least 44 pt; status never color alone | The previous and next buttons are 44 by 44 pt. Timer states carry a label and a glyph, not only a color. |
 | RULES_CARD Behavior: nothing automatic changes the plan | The widgets and the island change only presentation state (which card shows). They never move hours or complete tasks. |
@@ -49,6 +49,7 @@ Someone starts a focus session. The Lock Screen and the Dynamic Island show it, 
 1. **Life area names on the Home Screen.** The Today widget spec says widgets show no responsibility names. A Life card is its name, so the Life cards widget breaks that line. It is off by default behind its own switch, "Show Life cards on widgets", with a footnote that anyone who can see the Home Screen can see them. The owner should confirm this.
 2. **A type-check job on GitHub.** `.github/workflows/native-typecheck.yml` asks the Swift compiler whether the native sources are valid against the iOS Simulator SDK. It does not build, archive, sign, upload or run a simulator, and it follows the existing `swift-cloudkit-typecheck` job. It does sit close to the line the owner drew on 2026-11-11 when retiring GitHub "SwiftUI native compile". It is a separate commit; delete the file to remove it.
 3. **No card artwork on widgets.** The widget draws the app's no-art gradient. Artwork would add images to the extension and entries to its Resources phase. Decide whether to add it.
+4. **Block completion outside the planner store.** Which planned blocks are done today is kept in the App Group (`spread.dayplan.done.v1`), not in `store.ts`. It records no task change and resets each day, but it is state rather than a projection. Keep it here, or move it into the planner store. The owner decides.
 
 ## 5. Options and the chosen concept
 
@@ -205,3 +206,28 @@ Owed on a device: pause and resume from the island with the app open, closed and
 | Date | Decision | By | Documents updated |
 | --- | --- | --- | --- |
 | 2026-11-13 | Option 2: today's planned block starts from the island, the Timer widget and the sheet, sized to the planned hours. Read only. Largest first, one at a time, done when the final round ends, nothing starts without a tap. | Owner (direction), tool (rules) | This section; `DECISIONS.md`; `specs/README.md` |
+
+## 14. Design review against the docs and the app-design library (2026-11-13)
+
+Checked against `RULES_CARD.md`, the native brand board (sections 3 to 5), the motion contract (sections 5 to 7), the iOS 27 audit, and the app-design library in `WGLewis0721/graymattertechllc-` (`IOS_PLAYBOOK`, `DESIGN_SYSTEM`, `OBJECT_FIRST_NATIVE_PATTERNS`, `TACTILE_MOTION_AND_DEVICE_QA`, `UI_AUTOMATION_AND_EVIDENCE`, `EDITORIAL_CARD_AND_ARTWORK`, `UX_REVIEW_AND_SPEC_PROTOCOL`).
+
+| Rule | Result | Evidence |
+| --- | --- | --- |
+| Solid navy and cream; no doodles, Liquid Glass or metal Crown | Pass | No material, glass or Crown in the new code. |
+| Touch targets at least 44 pt | Pass, with gaps | Widget previous and next are 44 by 44 pt. Focus sheet buttons use a 44 pt minimum height. The island's Pause and Resume are system-sized. Owed on a device. |
+| Status is never color alone | Pass | Timer states use text and a glyph: Paused, Done, Next. |
+| Dynamic Type supported (board section 3) | Fixed here; open in the widget | The focus sheet's clock digits now scale with `@ScaledMetric`, at the same 56 and 52 pt default. The Life cards widget keeps fixed 9 to 14 pt labels. Open; owed on a device. |
+| Widgets match the system light and dark appearance | Fixed here | The widget palette now uses the app's `SpreadTheme` values for ink, secondary text and cream canvas. It was close but not exact. |
+| Serif on Life cards | Pass | The app's own Life card draws its name in a serif (`LifeEditorialFace`), so the widget matches it. The board's no-serif rule covers functional screens. |
+| Reduce Motion removes movement; no decorative motion | Pass | No animation, transition or repeating effect in the new code. Countdowns are drawn by the system. The Life cards widget changes cards without animation. |
+| One light haptic, on completing a task (iPhone only) | Pass; not triggered | Focus rounds and blocks are not task completions, so nothing fires. No haptic was added. |
+| Editorial artwork on Life cards (`CLAUDE.md`, `EDITORIAL_CARD_AND_ARTWORK`) | Open: exception 3 | Widgets draw the no-art gradient, not the artwork in `Resources/Editorial/`. |
+| One authoritative record; no second store (`RULES_CARD`, `OBJECT_FIRST_NATIVE_PATTERNS`) | Open: exception 4 | Widgets and the island read projections. Block completion is state kept in the App Group. |
+| Plan Ahead is opened, previewed and confirmed; never auto-rolled | Pass | Not touched. |
+| Every drag has a tap path and Undo; destructive actions have Undo | Pass | No drag, delete or swipe was added. |
+| VoiceOver labels | Partial; owed | The clock has a label and value. The Life card buttons have labels. Island and widget VoiceOver is owed on a device. |
+| Evidence: compile-only is not a pass (`UI_AUTOMATION_AND_EVIDENCE`, `TACTILE_MOTION_AND_DEVICE_QA`) | Owed | Checked by reading, the contract tests and the GitHub Swift type-check. No simulator or device run. The checks in sections 9 and 13 are not done. |
+| Limited-width compact layout (board: no collisions at 390 pt and large text) | Open | Known gap; see "Not built here" in section 13. |
+| Do not claim shipped behavior (`UX_REVIEW_AND_SPEC_PROTOCOL`) | Pass | Concepts 3 to 6 and the option 2 wireframes are described as not built. |
+
+**Verified here:** the contract tests and docs check, and the GitHub Swift type-check for the widget and the package. **Not verified here:** any simulator or device run, screenshots at 390, 820 and 1024 pt, Dynamic Type at accessibility sizes, VoiceOver, the island with the app closed, and the widget in tinted mode.
