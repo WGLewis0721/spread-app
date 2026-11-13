@@ -24,3 +24,4 @@ jobs:
       - run: npm run lint
       - run: npm run test:spread
       - run: npm run test:scripts
+      - run: python3 -m unittest discover -s scripts -p test_release_notes_draft.py -v

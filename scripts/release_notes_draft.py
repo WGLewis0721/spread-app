@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Draft one What's New line for every merge to main, in one pending release-notes PR.
+"""Automatically bundle customer-facing What's New notes after merges to main.
 
-Runs from .github/workflows/release-notes-draft.yml on each push to main. It never publishes:
-the pending PR has to be merged, and the note only reaches users in the next signed build.
-Each line is drafted from the merged PR's first summary bullet, so the reviewer must rewrite
-it in plain English and check it against what was verified on a device before merging.
+Only an explicit "## What's New" section in a merged PR supplies customer copy.
+Never expose commit titles, engineering fixes, or unreviewed summaries in the app.
+This job changes only ReleaseNotes.json; an iOS build/release still requires approval.
 """
 
 from __future__ import annotations
@@ -19,189 +18,157 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent.parent
-# The owner's calendar day. The runner clock is UTC, which is a day ahead after 6 pm Central.
-NOTES_TIMEZONE = ZoneInfo("America/Chicago")
 NOTES = ROOT / "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/ReleaseNotes.json"
 PROJECT = ROOT / "ios/App/App.xcodeproj/project.pbxproj"
-PENDING_BRANCH = "release-notes/pending"
-PENDING_TITLE = "chore(release-notes): What's New draft for review"
-ENTRY_TITLE = "Recent updates"
+NOTES_TIMEZONE = ZoneInfo("America/Chicago")
 MAX_CHANGES = 8
 MAX_LENGTH = 200
-BODY_START = "<!-- included:start -->"
-BODY_END = "<!-- included:end -->"
-CONVENTIONAL = re.compile(
-    r"^(feat|fix|chore|docs|refactor|test|perf|ci|build|style)(\([^)]*\))?!?:\s*", re.IGNORECASE
-)
-PR_NUMBER_SUFFIX = re.compile(r"\s*\(#\d+\)\s*$")
-BULLET = re.compile(r"^[-*]\s+")
 VERSION = re.compile(r"\bMARKETING_VERSION\s*=\s*([0-9]+(?:\.[0-9]+){1,2})\s*;")
-
-
-def plain_text(text: str) -> str:
-    """Drop markdown emphasis and code ticks, which read badly in the app."""
-    return text.replace("`", "").replace("**", "").strip()
-
-
-def plain_title(title: str) -> str:
-    """Turn a commit or PR title such as 'feat(ios): plan ahead (#12)' into a sentence."""
-    text = PR_NUMBER_SUFFIX.sub("", CONVENTIONAL.sub("", title.strip())).strip()
-    text = plain_text(text)
-    if text:
-        text = text[0].upper() + text[1:]
-    return (text or "Updated Spread")[:MAX_LENGTH]
-
-
-def summary_bullet(body: str | None) -> str | None:
-    """The first bullet under a '## Summary' heading, or None when there is none."""
-    in_summary = False
-    for raw in (body or "").splitlines():
-        line = raw.strip()
-        if line.startswith("#"):
-            in_summary = line.lstrip("#").strip().lower() == "summary"
-            continue
-        if in_summary and BULLET.match(line):
-            text = plain_text(BULLET.sub("", line))
-            if text:
-                return text[:MAX_LENGTH]
-    return None
-
-
-def change_for(title: str, body: str | None) -> str:
-    """One line for a merge: the PR's summary bullet if it has one, otherwise its title."""
-    return summary_bullet(body) or plain_title(title)
-
-
-def is_notes_change(title: str, head_ref: str) -> bool:
-    """True for merges that are themselves the release-notes PR, so they never draft a note."""
-    return head_ref.startswith("release-notes/") or title.startswith("chore(release-notes)")
+HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*$")
+BULLET = re.compile(r"^[-*]\s+(.+?)\s*$")
+SHA = re.compile(r"^[a-f0-9]{40}$")
+INTERNAL = re.compile(
+    r"\b(?:SwiftUI|WidgetKit|ActivityKit|Codemagic|Xcode|"
+    r"CI|pipeline|provisioning|GitHub|App Group|compilation|compiler|"
+    r"regression tests?|unit tests?|bundle identifiers?|"
+    r"source code|pull requests?|PR\s*#\d+)\b",
+    re.IGNORECASE,
+)
 
 
 def marketing_version(project_text: str) -> str:
     versions = set(VERSION.findall(project_text))
     if len(versions) != 1:
-        raise SystemExit(f"Expected one Xcode marketing version, found {sorted(versions)}")
+        raise ValueError(f"Expected one Xcode marketing version; got {sorted(versions)}")
     return versions.pop()
 
 
-def add_change(catalog: dict, change: str, new_entry: dict | None = None) -> None:
-    """Append one line to the pending entry, which is the first release.
-
-    When new_entry is given, it is inserted first and starts with no lines. The caller starts
-    a new entry whenever the pending one is full, so no line is dropped and every entry stays
-    within the preflight limit of MAX_CHANGES lines.
-    """
-    releases = catalog["releases"]
-    if new_entry is not None:
-        releases.insert(0, {**new_entry, "changes": []})
-    pending = releases[0]
-    if len(pending["changes"]) >= MAX_CHANGES:
-        raise ValueError("The pending entry is full; start a new entry before adding a line")
-    pending["changes"] = pending["changes"] + [change]
-
-
-def included_items(body: str | None) -> list[str]:
-    """The merges already listed in the pending PR body, in order."""
-    if not body or BODY_START not in body or BODY_END not in body:
-        return []
-    block = body.split(BODY_START, 1)[1].split(BODY_END, 1)[0]
-    return [line[2:] for line in block.splitlines() if line.startswith("- ")]
-
-
-def render_body(included: list[str]) -> str:
-    lines = [
-        "Automatic draft: one What's New line per merge to `main`, taken from the merged PR's first summary bullet.",
-        "",
-        "Before merging this PR, rewrite each line in plain English, remove anything internal, and check every claim "
-        "against what was verified on a device. Merging publishes these lines with the next signed build.",
-    ]
-    lines += ["", "Merges included:", BODY_START, *(f"- {item}" for item in included), BODY_END]
-    return "\n".join(lines) + "\n"
-
-
 def local_date(now: datetime) -> str:
-    """The date in the owner's timezone, for the entry's date."""
     return now.astimezone(NOTES_TIMEZONE).date().isoformat()
 
 
-def git(*args: str) -> str:
-    return subprocess.run(["git", *args], cwd=ROOT, check=True, text=True, capture_output=True).stdout
+def plain_text(value: str) -> str:
+    value = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", value)
+    return " ".join(value.replace("**", "").replace("\x60", "").split()).strip()
 
 
-def gh_api(path: str, method: str = "GET", fields: dict[str, str] | None = None):
-    cmd = ["gh", "api", "-X", method, path]
-    for key, value in (fields or {}).items():
-        cmd += ["-f", f"{key}={value}"]
-    output = subprocess.run(cmd, cwd=ROOT, check=True, text=True, capture_output=True).stdout
-    return json.loads(output) if output.strip() else None
+def customer_changes(body: str | None) -> list[str]:
+    """Use intentional customer copy only. Missing/technical copy is never published."""
+    inside = False
+    changes: list[str] = []
+    for raw in (body or "").splitlines():
+        line = raw.strip()
+        heading = HEADING.match(line)
+        if heading:
+            inside = heading.group(1).strip().lower() in {"what's new", "whats new"}
+            continue
+        if not inside:
+            continue
+        bullet = BULLET.match(line)
+        if not bullet:
+            continue
+        change = plain_text(bullet.group(1))
+        if not change or INTERNAL.search(change):
+            print(f"Skipping non-customer release-note line: {change!r}")
+            continue
+        if len(change) > MAX_LENGTH:
+            raise ValueError(f"What's New line exceeds {MAX_LENGTH} characters")
+        if change not in changes:
+            changes.append(change)
+    if len(changes) > MAX_CHANGES:
+        raise ValueError(f"What's New may contain at most {MAX_CHANGES} items")
+    return changes
+
+
+def is_notes_change(title: str, head_ref: str) -> bool:
+    return head_ref.startswith("release-notes/") or title.lower().startswith("chore(release-notes)")
+
+
+def add_release(catalog: dict, commit: str, changes: list[str], version: str, day: str) -> bool:
+    """Every merge gets a distinct ID, so dismissed notes can reappear after an update."""
+    if not changes:
+        return False
+    note_id = "notes-" + commit[:12]
+    if any(entry["id"] == note_id for entry in catalog["releases"]):
+        return False
+    catalog["releases"].insert(0, {
+        "id": note_id,
+        "version": version,
+        "date": day,
+        "title": "Recent updates",
+        "changes": changes,
+    })
+    return True
+
+
+def git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args], cwd=ROOT, check=check, capture_output=True, text=True,
+    )
+
+
+def gh(path: str):
+    result = subprocess.run(
+        ["gh", "api", path], cwd=ROOT, check=True, capture_output=True, text=True,
+    )
+    return json.loads(result.stdout)
+
+
+def merged_pr_for(repo: str, commit: str):
+    merged = [
+        pr for pr in gh(f"repos/{repo}/commits/{commit}/pulls")
+        if pr.get("merged_at") and pr.get("base", {}).get("ref") == "main"
+    ]
+    return merged[0] if merged else None
 
 
 def main() -> int:
     repo = os.environ["REPO"]
-    sha = os.environ["SHA"]
-    owner = repo.split("/", 1)[0]
-
-    merged = [pr for pr in (gh_api(f"repos/{repo}/commits/{sha}/pulls") or [])
-              if pr.get("merged_at") and pr["base"]["ref"] == "main"]
-    if merged:
-        pr = merged[0]
-        if is_notes_change(pr["title"], pr["head"]["ref"]):
-            print(f"Skipping: {pr['title']} is a release-notes change.")
-            return 0
-        item = f"#{pr['number']} {pr['title']}"
-        change = change_for(pr["title"], pr.get("body"))
-    else:
-        message = gh_api(f"repos/{repo}/commits/{sha}")["commit"]["message"].splitlines()[0]
-        if is_notes_change(message, ""):
-            print(f"Skipping: {message} is a release-notes change.")
-            return 0
-        item = f"{sha[:7]} {message}"
-        change = plain_title(message)
-
-    open_pending = gh_api(f"repos/{repo}/pulls?state=open&head={owner}:{PENDING_BRANCH}") or []
-    pending = open_pending[0] if open_pending else None
-
     git("config", "user.name", "github-actions[bot]")
     git("config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
-    if pending:
-        git("fetch", "origin", PENDING_BRANCH)
-        git("checkout", "-B", PENDING_BRANCH, f"origin/{PENDING_BRANCH}")
-    else:
-        git("checkout", "-B", PENDING_BRANCH, sha)
 
-    catalog = json.loads(NOTES.read_text(encoding="utf-8"))
-    starts_entry = not pending or len(catalog["releases"][0]["changes"]) >= MAX_CHANGES
-    new_entry = None
-    if starts_entry:
-        new_entry = {
-            "id": f"notes-{sha[:7]}",
-            "version": marketing_version(PROJECT.read_text(encoding="utf-8")),
-            "date": local_date(datetime.now(timezone.utc)),
-            "title": ENTRY_TITLE,
-        }
-    add_change(catalog, change, new_entry)
-    NOTES.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # A rejected non-fast-forward push must never discard someone else's main changes.
+    for attempt in range(3):
+        git("fetch", "origin", "main")
+        git("checkout", "-B", "main", "origin/main")
+        catalog = json.loads(NOTES.read_text(encoding="utf-8"))
+        cursor = catalog.get("lastProcessedCommit")
+        if not isinstance(cursor, str) or not SHA.fullmatch(cursor):
+            raise ValueError("Missing/invalid release-notes lastProcessedCommit")
+        git("merge-base", "--is-ancestor", cursor, "HEAD")
+        commits = git("rev-list", "--first-parent", "--reverse", f"{cursor}..HEAD").stdout.splitlines()
+        version = marketing_version(PROJECT.read_text(encoding="utf-8"))
+        day = local_date(datetime.now(timezone.utc))
 
-    # Never push a note the preflight would reject, since the build would fail on it.
-    subprocess.run([sys.executable, "scripts/app-store-preflight.py"], cwd=ROOT, check=True)
+        additions = 0
+        for commit in commits:
+            pr = merged_pr_for(repo, commit)
+            if not pr or is_notes_change(pr["title"], pr["head"]["ref"]):
+                continue
+            changes = customer_changes(pr.get("body"))
+            if add_release(catalog, commit, changes, version, day):
+                additions += 1
 
-    included = included_items(pending.get("body") if pending else None) + [item]
-    git("add", str(NOTES.relative_to(ROOT)))
-    git("commit", "-m", f"chore(release-notes): draft What's New line for {sha[:7]}")
-    if pending:
-        git("push", "origin", PENDING_BRANCH)
-        gh_api(f"repos/{repo}/pulls/{pending['number']}", "PATCH", {"body": render_body(included)})
-        print(f"Updated pending PR #{pending['number']}.")
-    else:
-        git("push", "--force", "origin", PENDING_BRANCH)
-        created = gh_api(f"repos/{repo}/pulls", "POST", {
-            "title": PENDING_TITLE,
-            "head": PENDING_BRANCH,
-            "base": "main",
-            "body": render_body(included),
-        })
-        print(f"Opened pending PR #{created['number']}.")
-    return 0
+        if not additions:
+            print(f"No new customer-facing notes among {len(commits)} commits. No repository write.")
+            return 0
+
+        catalog["lastProcessedCommit"] = git("rev-parse", "HEAD").stdout.strip()
+        NOTES.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        # The bot must not push release metadata that fails the existing App Store gate.
+        subprocess.run([sys.executable, "scripts/app-store-preflight.py"], cwd=ROOT, check=True)
+        git("add", str(NOTES.relative_to(ROOT)))
+        git("commit", "-m", f"chore(release-notes): sync {additions} customer update(s) [skip ci]")
+        pushed = git("push", "origin", "HEAD:main", check=False)
+        if pushed.returncode == 0:
+            print(f"Committed {additions} user-facing note(s) directly to main.")
+            return 0
+        if "non-fast-forward" not in pushed.stderr and "fetch first" not in pushed.stderr:
+            raise RuntimeError(f"Release-notes push blocked: {pushed.stderr.strip()}")
+        print(f"main changed concurrently; retrying ({attempt + 1}/3)")
+
+    raise RuntimeError("main moved during all three release-notes push attempts")
 
 
 if __name__ == "__main__":

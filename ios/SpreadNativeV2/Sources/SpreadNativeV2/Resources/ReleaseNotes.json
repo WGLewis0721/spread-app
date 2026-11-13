@@ -2,6 +2,18 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-b6aa509",
+      "version": "1.0",
+      "date": "2026-11-12",
+      "title": "Recent updates",
+      "changes": [
+        "Move between Life and Week with smoother transitions, including Undo and Redo.",
+        "Use the new Focus Timer to start, pause, and resume sessions, with optional reminders.",
+        "See today's task progress and planned hours from optional Home Screen and Lock Screen widgets.",
+        "Follow an active Focus Timer on the Lock Screen or Dynamic Island, and tap to return to Spread."
+      ]
+    },
+    {
       "id": "notes-9ac32d4",
       "version": "1.0",
       "date": "2026-11-12",
@@ -23,5 +35,6 @@
         "Create areas with Add Life and find fewer duplicate controls in More."
       ]
     }
-  ]
+  ],
+  "lastProcessedCommit": "2fbfe9f56f585588f974d30ef071426fee05d63a"
 }
