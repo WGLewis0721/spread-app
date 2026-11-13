@@ -12,18 +12,20 @@
 - **Performance:** Scoped SwiftPM and Xcode compilation caches may accelerate **subsequent** Codemagic signed builds; measure actual results. The first build has a cold cache.
 - **Release gate:** Do not claim simulator or real-device acceptance from GitHub checks. Complete physical iPhone testing, accessibility/persistence checks, and release checklist review separately before approving a release.
 
-## In-app What's New release contract (November 11, 2026 onward)
+## In-app What's New and automatic patch notes (November 12, 2026 onward)
 
-The native app includes a read-only, offline **What's New** screen in **More**, available in both Life and Classic. After a release with a new note ID, every note newer than the last one dismissed appears once after the planner loads, as one list. Dismissing them stores only the last-seen release ID in local device preferences, independent of Life areas and profiles. App Store/Codemagic **build number** increments alone do not trigger repeat announcements.
+The native app includes a read-only, offline **What's New** screen in **More**, available in Life and Classic. After installing a signed build with a new note ID, the app presents unseen notes once after the planner loads. Dismissing them stores only the last-seen release ID in local preferences; changes to the Codemagic build number alone do not trigger another popup.
 
-**For every shipped user-facing update:**
+**Writing user-facing changes in a feature PR**
 
-1. Prepend a short, accurate, user-facing entry in `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/ReleaseNotes.json` with a unique `id`, the shipped Xcode `MARKETING_VERSION`, an ISO date, a title and 1–8 plain-English changes. Keep previous entries for the in-app history. **Even if the marketing version stays 1.0, use a fresh release ID for a newly released feature set.**
-2. Mention only features actually included and verified for that candidate. Do not paste Git commits, technical implementation details or unshipped plans into customer notes.
-3. Run existing `scripts/app-store-preflight.py` and `swift test --package-path ios/SpreadNativeV2`. The preflight fails closed when the latest entry is missing, malformed, duplicated or for a different marketing version.
-4. On an actual iPhone, verify first presentation after update, dismissal, no second popup on relaunch, **More → What's New** history, system appearances, Dynamic Type and VoiceOver. Check Classic and Life and ensure all planner data is unchanged.
+1. Add an optional `## What's New` heading to the PR description and **1–8 short, plain-English bullets** (maximum 200 characters each). Explain the user-visible benefit. Omit this heading for internal-only changes.
+2. Do **not** include source-code details, CI, provisioning, compiler fixes, future plans, or claims not supported by the implementation. The workflow does not infer copy from a PR title or a technical summary. If no safe note is present, it publishes nothing.
+3. After each merge to `main`, `.github/workflows/release-notes-draft.yml` reads all as-yet-unprocessed merged PRs and automatically commits eligible customer notes **directly to `main`**, updating `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/ReleaseNotes.json`. There is no pending notes PR to review or merge. Each eligible merge gets a unique release ID, so later changes appear after an app update even if previous notes were dismissed. The generator remembers the last processed commit for retries/rapid merges and runs the existing App Store source preflight before writing.
+4. Check that the **Sync customer What's New notes** workflow succeeded and the new JSON entry landed on `main` before starting a release build. Automation failures must be fixed; never manually bypass release controls. The bot writes release-note data only, not product code.
 
-This does **not** create an update feed, analytics, user accounts, background polling or automatic App Store submission. Manual Codemagic and release approvals remain mandatory.
+**Release gate:** Notes on `main` are *not* a live feed, automatic app update, App Store submission, or proof of device QA. They appear on customers' devices only after a new signed app version containing the notes is distributed and installed. Keep the manual Codemagic / App Store release authorization. For the exact candidate, run `scripts/app-store-preflight.py` and `swift test --package-path ios/SpreadNativeV2`; verify on a physical iPhone that first presentation, dismissal, no duplicate popup on relaunch, **More → What's New** history, accessibility, Classic/Life, and planner data are correct.
+
+This feature adds no accounts, analytics, remote polling, or planner writes.
 
 **Historical scope of the instructions below:** Original Capacitor/local-first iOS packaging and pre-Life smoke tests. Re-verify every command and native target against today's repository before running; use the actual compiled IPA for device family, iOS minimum, entitlements, permissions and cloud flags.
 
