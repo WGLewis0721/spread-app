@@ -2,6 +2,18 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-d69777aefa12",
+      "version": "1.0",
+      "date": "2026-11-13",
+      "title": "Recent updates",
+      "changes": [
+        "Plan Ahead now suggests plans based on this week. Tap one to review it, then confirm it or change it first.",
+        "A new Make a new plan button sits at the top of Plan Ahead.",
+        "A repeating plan now shows its hours and days on the week it starts, even if you looked at that week before the plan existed.",
+        "The Next 8 weeks list is gone from Plan Ahead, so it only shows plans you have made."
+      ]
+    },
+    {
       "id": "notes-b6aa509",
       "version": "1.0",
       "date": "2026-11-12",
@@ -36,5 +48,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "2fbfe9f56f585588f974d30ef071426fee05d63a"
+  "lastProcessedCommit": "d69777aefa12a1abfcd8f41a0dd84626987e485f"
 }
