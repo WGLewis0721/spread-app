@@ -30,6 +30,32 @@ enum PlannerDates {
         let offset = (calendar.component(.weekday, from: date) + 5) % 7
         return formatter.string(from: calendar.date(byAdding: .day, value: -offset, to: date) ?? date)
     }
+    /// The Monday of the week containing the device-local day of `date`.
+    static func weekKey(localDay date: Date, in zone: TimeZone = .current) -> String {
+        weekKey(for: PlannerDates.date(localISO(date, in: zone)))
+    }
+    /// The Monday a schedule starting on the device-local day of `date` begins with: the first Monday
+    /// on or after that day, so no set day lands before the chosen start.
+    static func planStartWeekKey(localDay date: Date, in zone: TimeZone = .current) -> String {
+        let day = localISO(date, in: zone)
+        let week = weekKey(for: PlannerDates.date(day))
+        return day == week ? week : weekISO(base: week, offset: 1)
+    }
+    /// The device-local midnight of a `YYYY-MM-DD` key, so a date picker shows the day the key names.
+    static func localDate(_ iso: String, in zone: TimeZone = .current) -> Date {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = zone
+        f.dateFormat = "yyyy-MM-dd"
+        return f.date(from: iso) ?? Date(timeIntervalSince1970: 0)
+    }
+    /// Gregorian on the device's own time zone, for date pickers that show local days.
+    static var deviceCalendar: Calendar {
+        var value = Calendar(identifier: .gregorian)
+        value.timeZone = .current
+        return value
+    }
     static let formatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = Calendar(identifier: .gregorian)
@@ -71,11 +97,11 @@ enum PlannerDates {
 
 extension PlannerDates {
     /// Today on the device's own calendar, as `YYYY-MM-DD`. The store keys days by the local date.
-    static func localISO(_ date: Date = Date()) -> String {
+    static func localISO(_ date: Date = Date(), in zone: TimeZone = .current) -> String {
         let f = DateFormatter()
         f.calendar = Calendar(identifier: .gregorian)
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = .current
+        f.timeZone = zone
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
     }

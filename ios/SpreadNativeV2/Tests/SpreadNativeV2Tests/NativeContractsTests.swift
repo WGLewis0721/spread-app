@@ -52,6 +52,29 @@ final class NativeContractsTests: XCTestCase {
             .contains("Weekly capacity not set"))
     }
 
+    func testPlanAheadReadsThePickedDayOnTheDeviceZone() {
+        // 22:14 on Sunday 17 January 2027 in Chicago is already Monday 18 January in UTC.
+        let chicago = TimeZone(identifier: "America/Chicago")!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = chicago
+        let evening = calendar.date(from: DateComponents(year: 2027, month: 1, day: 17, hour: 22, minute: 14))!
+        XCTAssertEqual(PlannerDates.localISO(evening, in: chicago), "2027-01-17")
+        XCTAssertEqual(PlannerDates.weekKey(localDay: evening, in: chicago), "2027-01-11")
+        // Sunday starts on Monday 18 January, so the first set day is Tuesday 19.
+        XCTAssertEqual(PlannerDates.planStartWeekKey(localDay: evening, in: chicago), "2027-01-18")
+        // Wednesday 20 January starts on Monday 25 January, never on a day before the chosen start.
+        let wednesday = calendar.date(from: DateComponents(year: 2027, month: 1, day: 20, hour: 9))!
+        XCTAssertEqual(PlannerDates.planStartWeekKey(localDay: wednesday, in: chicago), "2027-01-25")
+    }
+
+    func testPickerDaysRoundTripTheSameDeviceDayAcrossDaylightSaving() {
+        // 14 March 2027 is the US clock change, the day a shifted UTC date would most easily break.
+        let chicago = TimeZone(identifier: "America/Chicago")!
+        for key in ["2027-01-17", "2027-01-18", "2027-03-14", "2027-03-15"] {
+            XCTAssertEqual(PlannerDates.localISO(PlannerDates.localDate(key, in: chicago), in: chicago), key)
+        }
+    }
+
     func testHeldCalendarArrowsAccelerateWithBoundedCadence() {
         XCTAssertEqual(SpreadHoldPace.initialDelayMilliseconds, 440)
         XCTAssertEqual(SpreadHoldPace.repeatDelayMilliseconds(afterStep: 0), 270)

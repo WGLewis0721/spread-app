@@ -80,6 +80,8 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
     ...(draft.dayHours ? { dayHours: draft.dayHours } : {}),
   };
   const reject = (reason: string) => ({ ...result, reason });
+  if (!Number.isFinite(draft.capacityHours))
+    return reject("Set this week's total hours on your Life card first, then plan ahead.");
   if (!validRecurringPlan(draft) || !data.hats.some((h) => h.id === draft.roleId))
     return reject("Choose a Life area, positive half-hour amount, valid Monday and weekly total.");
   const original = data.recurringPlans?.find((p) => p.id === request.planId);
@@ -126,6 +128,7 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
   const preservedWeeks = Object.keys(data.weeks).filter((week) =>
     week >= (draft.managedFromWeek ?? draft.startWeek) && (!draft.endWeek || week <= draft.endWeek) &&
     !data.weeks[week].recurrenceSource?.[draft.roleId] &&
+    !untouchedWeek(data.weeks[week], data.hats) &&
     week !== data.currentWeek).sort();
   return {
     ...result, eligible: true, nextOccurrences, preservedWeeks,
@@ -133,6 +136,25 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
       occurrenceCount: Math.floor(recurrenceWeekOffset(draft.startWeek, draft.endWeek) / draft.everyWeeks) + 1,
     } : {}),
   };
+}
+
+/**
+ * A week the person has not changed: default hours, no tasks, no placements, no life total,
+ * and no rule has written to it. Opening a week stores it, so an untouched week must not
+ * block a schedule created later.
+ */
+function untouchedWeek(week: WeekData, hats: SpreadData["hats"]): boolean {
+  return Object.keys(week.recurrenceSource ?? {}).length === 0 && week.life === undefined &&
+    week.allocations.length === 0 &&
+    week.boxes.every((box) => box.tasks.length === 0 &&
+      box.hours === (hats.find((hat) => hat.id === box.hatId)?.defaultHours ?? box.hours));
+}
+
+/** Drops untouched weeks from the plan's occurrence range so they are seeded from the plan again. */
+function releaseUntouchedWeeks(data: SpreadData, plan: RecurringPlan): SpreadData["weeks"] {
+  return Object.fromEntries(Object.entries(data.weeks).filter(([key, week]) =>
+    !(key >= plan.startWeek && (!plan.endWeek || key <= plan.endWeek) && key !== data.currentWeek &&
+      untouchedWeek(week, data.hats))));
 }
 
 /**
@@ -210,7 +232,7 @@ export function applyRecurringPlan(data: SpreadData, request: RecurringRequest):
   if (original && request.editFromWeek)
     plans = [...plans, { ...original, endWeek: shiftWeek(request.editFromWeek, -1) }];
   plans = [...plans, draft];
-  const next = { ...data, recurringPlans: plans };
+  const next = { ...data, recurringPlans: plans, weeks: releaseUntouchedWeeks(data, draft) };
   return {
     data: original ? reconcileGenerated(next, new Set([original.id]), request.editFromWeek ?? draft.startWeek) : next,
     preview,

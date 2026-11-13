@@ -48,9 +48,9 @@ struct LifeRecurringPlanForm: View {
         }.joined(separator: " · ")
     }
 
+    /// The first Monday a new schedule can start, as a device-local day for the pickers.
     private var earliest: Date {
-        PlannerDates.calendar.date(byAdding: .weekOfYear, value: 1,
-            to: PlannerDates.date(snapshot.weekKey)) ?? Date()
+        PlannerDates.localDate(PlannerDates.weekISO(base: snapshot.weekKey, offset: 1))
     }
     private func load(_ plan: NativeRecurringPlan) {
         editingPlanId = plan.id
@@ -59,9 +59,9 @@ struct LifeRecurringPlanForm: View {
         dayHours = Dictionary((plan.dayHours ?? []).map { ($0.weekday, $0.hours) },
                               uniquingKeysWith: { first, _ in first })
         everyWeeks = plan.everyWeeks
-        startDate = PlannerDates.date(plan.startWeek)
+        startDate = PlannerDates.localDate(plan.startWeek)
         hasEnd = plan.endWeek != nil
-        if let end = plan.endWeek { endDate = PlannerDates.date(end) }
+        if let end = plan.endWeek { endDate = PlannerDates.localDate(end) }
         editScope = "all"
         editFromDate = earliest
         preview = nil
@@ -107,14 +107,14 @@ struct LifeRecurringPlanForm: View {
     private var payload: [String: Any] {
         var value: [String: Any] = [
             "roleId": roleId, "hours": weeklyHours, "everyWeeks": everyWeeks,
-            "startWeek": selectedRule?.startWeek ?? PlannerDates.weekKey(for: startDate),
+            "startWeek": selectedRule?.startWeek ?? PlannerDates.planStartWeekKey(localDay: startDate),
         ]
         if !dayHours.isEmpty { value["dayHours"] = dayPayload }
-        if hasEnd { value["endWeek"] = PlannerDates.weekKey(for: endDate) }
+        if hasEnd { value["endWeek"] = PlannerDates.weekKey(localDay: endDate) }
         if let selectedRule {
             value["planId"] = selectedRule.id
             if editScope == "following" {
-                value["editFromWeek"] = PlannerDates.weekKey(for: editFromDate)
+                value["editFromWeek"] = PlannerDates.weekKey(localDay: editFromDate)
             }
         }
         if selectedRule == nil, let capacity = snapshot.life?.capacityHours {
@@ -153,10 +153,10 @@ struct LifeRecurringPlanForm: View {
                     }
                 }
                 if selectedRule == nil {
-                    DatePicker("Starts week of", selection: $startDate, in: earliest...,
+                    DatePicker("Starts on", selection: $startDate, in: earliest...,
                                displayedComponents: .date)
-                        .environment(\.calendar, PlannerDates.calendar)
-                        .environment(\.timeZone, PlannerDates.calendar.timeZone)
+                        .environment(\.calendar, PlannerDates.deviceCalendar)
+                        .environment(\.timeZone, TimeZone.current)
                 } else {
                     HStack {
                         Text("Starts")
@@ -168,10 +168,10 @@ struct LifeRecurringPlanForm: View {
                 Toggle("End on a date", isOn: $hasEnd)
                 if hasEnd {
                     DatePicker("Ends week of", selection: $endDate,
-                               in: (selectedRule.map { PlannerDates.date($0.startWeek) } ?? startDate)...,
+                               in: (selectedRule.map { PlannerDates.localDate($0.startWeek) } ?? startDate)...,
                                displayedComponents: .date)
-                        .environment(\.calendar, PlannerDates.calendar)
-                        .environment(\.timeZone, PlannerDates.calendar.timeZone)
+                        .environment(\.calendar, PlannerDates.deviceCalendar)
+                        .environment(\.timeZone, TimeZone.current)
                 }
             } header: {
                 Text(editingPlanId == nil ? "Repeat weekly hours" : "Edit repeating schedule")
@@ -207,8 +207,8 @@ struct LifeRecurringPlanForm: View {
                     if editScope == "following" {
                         DatePicker("Starting week", selection: $editFromDate,
                                    in: earliest..., displayedComponents: .date)
-                            .environment(\.calendar, PlannerDates.calendar)
-                            .environment(\.timeZone, PlannerDates.calendar.timeZone)
+                            .environment(\.calendar, PlannerDates.deviceCalendar)
+                            .environment(\.timeZone, TimeZone.current)
                     }
                     Button("New schedule") {
                         editingPlanId = nil
@@ -291,7 +291,7 @@ struct LifeRecurringPlanForm: View {
             if roleId.isEmpty { roleId = snapshot.roles.first?.id ?? "" }
             startDate = earliest
             editFromDate = earliest
-            endDate = PlannerDates.calendar.date(byAdding: .month, value: 3, to: earliest) ?? earliest
+            endDate = PlannerDates.deviceCalendar.date(byAdding: .month, value: 3, to: earliest) ?? earliest
             if let id = initialPlanId,
                let plan = snapshot.recurringPlans?.first(where: { $0.id == id }) {
                 load(plan)
@@ -317,7 +317,7 @@ struct LifeRecurringPlanForm: View {
                 Button("Stop from next week", role: .destructive) {
                     Task {
                         guard let rule = stopCandidate else { return }
-                        let next = max(rule.startWeek, PlannerDates.weekKey(for: earliest))
+                        let next = max(rule.startWeek, PlannerDates.weekKey(localDay: earliest))
                         if await planner.send(["type": "stopRecurringPlan", "planId": rule.id, "fromWeek": next]) {
                             stopCandidate = nil
                             editingPlanId = nil
