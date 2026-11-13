@@ -22,6 +22,7 @@ private enum LifeLocalSheet: Identifiable {
 /// Life owns transient presentation only. Every edit is an awaited planner intent.
 struct LifeRoot: View {
     @ObservedObject var planner: LivePlanner
+    @ObservedObject var focusTimer: SpreadFocusTimer
     let onMore: () -> Void
     let onOpenRole: (String) -> Void
     let onOpenTask: (String, String) -> Void
@@ -51,6 +52,8 @@ struct LifeRoot: View {
     @State private var dockOpenerCenterY: CGFloat = 31
     @State private var weekTick = 0
     @State private var historyVisible = false
+    @State private var showFocusTimer = false
+    @State private var preferredFocusRoleId: String?
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
@@ -139,9 +142,12 @@ struct LifeRoot: View {
         }
         .foregroundStyle(LifePalette.ink).tint(LifePalette.accent)
         .task { await planner.refresh() }
+        // A deadline, not a background stopwatch, owns elapsed time across suspension.
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await planner.refresh() } }
-            else { navigationOpen = false }
+            if phase == .active {
+                focusTimer.reconcile()
+                Task { await planner.refresh() }
+            } else { navigationOpen = false }
         }
         // Reset transient UI only on a real profile or week change. The first load
         // (nil to loaded) is not a change, so a selection made before it survives.
@@ -149,6 +155,7 @@ struct LifeRoot: View {
             guard old != nil else { return }
             focusedRole = nil; tasksOpen = false; budgetExpanded = false; localSheet = nil; pendingTask = nil
             hoursSelectedRole = nil; weekSelectedRole = nil
+            if let id = planner.state?.envelope.profileId { focusTimer.pauseForProfileSwitch(to: id) }
         }
         .onChange(of: planner.snapshot?.weekKey) { old, _ in
             guard old != nil else { return }
@@ -165,6 +172,13 @@ struct LifeRoot: View {
             if !open { openerFocused = true }
         }
         .onChange(of: weekTick) { _, _ in SpreadHaptics.selection() }
+        .sheet(isPresented: $showFocusTimer) {
+            if let snapshot = planner.snapshot, let profileId = planner.state?.envelope.profileId {
+                SpreadFocusTimerSheet(timer: focusTimer, profileId: profileId,
+                                      roles: snapshot.roles, preferredRoleId: preferredFocusRoleId)
+                    .preferredColorScheme(colorScheme)
+            }
+        }
         .sheet(isPresented: $showPlanAhead) {
             if let snapshot = planner.snapshot {
                 LifePlanAheadSheet(planner: planner, snapshot: snapshot)
@@ -618,6 +632,17 @@ struct LifeRoot: View {
                     .accessibilityIdentifier("life-place-hours")
             }
             Button {
+                preferredFocusRoleId = role.id
+                showFocusTimer = true
+            } label: {
+                Label("Focus timer", systemImage: "timer")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }
+            .foregroundStyle(Spread.accent)
+            .buttonStyle(.spreadPress)
+            .accessibilityIdentifier("life-focus-timer")
+            Button {
                 openBudget(for: role.id)
             } label: {
                 Label("Adjust weekly hours", systemImage: "slider.horizontal.3")
@@ -681,6 +706,32 @@ struct LifeRoot: View {
     }
     private func bottom(_ snapshot: PlannerSnapshot, wide: Bool) -> some View {
         VStack(spacing: 6) {
+            if let profileId = planner.state?.envelope.profileId,
+               let session = focusTimer.visibleSession(for: profileId), session.phase != .finished {
+                Button {
+                    preferredFocusRoleId = session.roleId
+                    showFocusTimer = true
+                } label: {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        HStack(spacing: 8) {
+                            Image(systemName: "timer")
+                            Text(session.roleName).lineLimit(1)
+                            Spacer(minLength: 8)
+                            Text(SpreadFocusClock.display(session.remaining(at: context.date)))
+                                .monospacedDigit()
+                            Image(systemName: "chevron.up")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Spread.ink)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 44)
+                        .background(Spread.elevated, in: Capsule())
+                    }
+                }
+                .buttonStyle(.spreadPress)
+                .accessibilityLabel("Focus timer, " + session.roleName)
+                .accessibilityIdentifier("spread-focus-mini")
+            }
             // Shared anchored feedback: independent of Life/Week page content.
             if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             ViewThatFits(in: .horizontal) {

@@ -9,6 +9,7 @@ import SwiftUI
 /// The floating glass dock sits over the bottom edge and holds Done, the Week/Month morph, Edit, and Settings.
 public struct SpreadLiveRoot: View {
     @ObservedObject var planner: LivePlanner
+    @StateObject private var focusTimer = SpreadFocusTimer()
     let recovery: () -> Void
 
     @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false
@@ -58,6 +59,7 @@ public struct SpreadLiveRoot: View {
             if weekFocusEnabled {
                 LifeRoot(
                     planner: planner,
+                    focusTimer: focusTimer,
                     onMore: { sheet = .more },
                     onOpenRole: { sheet = .role($0) },
                     onOpenTask: { sheet = .task($0, $1) },
@@ -72,6 +74,13 @@ public struct SpreadLiveRoot: View {
                 } message: { Text(planner.error ?? "") }
             } else {
                 presented // Classic keeps its original destination and planner semantics.
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                if Task.isCancelled { break }
+                focusTimer.reconcile()
             }
         }
         .task(id: planner.snapshot != nil) {
@@ -159,7 +168,10 @@ public struct SpreadLiveRoot: View {
             // Edit gives a softer acknowledgement. Long press uses this same
             // binding, so there is exactly one impact per transition.
             .onChange(of: editing) { _, active in SpreadHaptics.editMode(entering: active) }
-            .onChange(of: planner.state?.envelope.profileId) { _, profile in openProfile(profile) }
+            .onChange(of: planner.state?.envelope.profileId) { _, profile in
+                openProfile(profile)
+                if let profile { focusTimer.pauseForProfileSwitch(to: profile) }
+            }
             .onChange(of: destination) { _, _ in
                 persistView()
                 SpreadHaptics.selection()
@@ -855,7 +867,7 @@ public struct SpreadLiveRoot: View {
         case .review:
             CarryOverSheet(planner: planner)
         case .more:
-            MoreSheet(planner: planner, recovery: recovery, showProfiles: { sheet = .profiles }, appearance: $appearance, weekFocusEnabled: $weekFocusEnabled)
+            MoreSheet(planner: planner, focusTimer: focusTimer, recovery: recovery, showProfiles: { sheet = .profiles }, appearance: $appearance, weekFocusEnabled: $weekFocusEnabled)
         case .profiles:
             ProfilesSheet(planner: planner)
         case .confirmRollover:
