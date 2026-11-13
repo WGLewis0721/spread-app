@@ -21,6 +21,7 @@
   <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
   <key>ITSAppUsesNonExemptEncryption</key><false/>
   <key>LSRequiresIPhoneOS</key><true/>
+  <key>NSSupportsLiveActivities</key><true/>
   <key>NSCameraUsageDescription</key><string>Spread uses the camera only when you choose Take Photo to attach a picture to a task. Photos stay on this device.</string>
   <key>NSUbiquitousContainers</key>
   <dict>
