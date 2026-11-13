@@ -76,6 +76,13 @@ public struct SpreadLiveRoot: View {
         .task(id: planner.state?.revision) {
             if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
         }
+        .onChange(of: planner.state?.envelope.profileId) { old, new in
+            if old != nil && old != new {
+                // Never show a previous profile's counts after switching profiles.
+                SpreadWidgetPublisher.revoke()
+                if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+            }
+        }
         .onAppear {
             if UserDefaults.standard.bool(forKey: "native.widget.openToday") ||
                 UserDefaults.standard.bool(forKey: "native.widget.openFocus") {
