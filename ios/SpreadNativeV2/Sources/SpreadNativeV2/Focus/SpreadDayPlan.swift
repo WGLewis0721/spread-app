@@ -30,6 +30,13 @@ struct SpreadOfferedBlock: Equatable {
     let entry: SpreadDayBlockEntry
 }
 
+/// How today's planned blocks are going, for the profile on screen. Counts only, never Life area names.
+struct SpreadDayProgress: Equatable {
+    let done: Int
+    let planned: Int
+    var allDone: Bool { planned > 0 && done == planned }
+}
+
 /// Fits planned hours into focus rounds. Rule: total focus time matches the planned time as closely as possible.
 /// Among equal fits, prefer a focus stretch nearest 45 minutes, then fewer rounds. Stretches are 15 to 90 minutes,
 /// so no single stretch runs longer than a deep-work session. A break is 5 minutes after a stretch of 30 minutes
@@ -71,6 +78,17 @@ enum SpreadBlockText {
     /// "3 h", or "1.5 h".
     static func hours(_ value: Double) -> String {
         value == value.rounded() ? "\(Int(value)) h" : String(format: "%.1f h", value)
+    }
+
+    /// "1 of 3 blocks done today.", "3 planned blocks today.", "All 3 blocks done today.". Counts only.
+    static func progress(_ progress: SpreadDayProgress) -> String {
+        if progress.allDone {
+            return progress.planned == 1 ? "Today's block is done." : "All \(progress.planned) blocks done today."
+        }
+        if progress.done == 0 {
+            return progress.planned == 1 ? "1 planned block today." : "\(progress.planned) planned blocks today."
+        }
+        return "\(progress.done) of \(progress.planned) blocks done today."
     }
 
     /// "4 rounds of 45 min, 10 min breaks, 3 h focus", or "One stretch of 60 min, no break".
@@ -132,6 +150,16 @@ enum SpreadDayPlanStore {
         let done = doneRoles(day: today, defaults)
         guard let entry = record.blocks.first(where: { !done.contains($0.roleId) }) else { return nil }
         return SpreadOfferedBlock(record: record, entry: entry)
+    }
+
+    /// How many of today's planned blocks are finished, for the profile on screen. Nil when today has no plan.
+    static func progress(now: Date, _ defaults: UserDefaults = SpreadFocusStore.shared) -> SpreadDayProgress? {
+        let today = SpreadWidgetDates.dayISO(now)
+        guard let record = load(defaults), record.day == today, !record.blocks.isEmpty,
+              SpreadFocusStore.activeProfile(defaults) == record.profileId else { return nil }
+        let done = doneRoles(day: today, defaults)
+        let finished = record.blocks.filter { done.contains($0.roleId) }.count
+        return SpreadDayProgress(done: finished, planned: record.blocks.count)
     }
 
     /// True when today has planned blocks and every one of them is finished.

@@ -212,4 +212,41 @@ final class SpreadDayPlanTests: XCTestCase {
         XCTAssertEqual(SpreadBlockText.summary(SpreadFocusPlan(focusMinutes: 60, breakMinutes: 5, rounds: 1)),
                        "One stretch of 60 min, no break")
     }
+
+    // MARK: Progress through today's blocks
+
+    func testProgressCountsFinishedBlocksForToday() {
+        let defaults = isolated()
+        SpreadFocusStore.setActiveProfile("profile-a", defaults)
+        SpreadDayPlanStore.save(record(blocks: [block("gym", hours: 3), block("study", hours: 1), block("home", hours: 2)]),
+                                defaults)
+        XCTAssertEqual(SpreadDayPlanStore.progress(now: now, defaults), SpreadDayProgress(done: 0, planned: 3))
+
+        SpreadDayPlanStore.markDone(roleId: "study", day: today, defaults)
+        let partial = SpreadDayPlanStore.progress(now: now, defaults)
+        XCTAssertEqual(partial, SpreadDayProgress(done: 1, planned: 3))
+        XCTAssertEqual(partial.map(SpreadBlockText.progress), "1 of 3 blocks done today.")
+        XCTAssertEqual(partial?.allDone, false)
+    }
+
+    func testProgressReadsEveryStateInPlainWords() {
+        XCTAssertEqual(SpreadBlockText.progress(SpreadDayProgress(done: 0, planned: 1)), "1 planned block today.")
+        XCTAssertEqual(SpreadBlockText.progress(SpreadDayProgress(done: 0, planned: 2)), "2 planned blocks today.")
+        XCTAssertEqual(SpreadBlockText.progress(SpreadDayProgress(done: 1, planned: 1)), "Today's block is done.")
+        XCTAssertEqual(SpreadBlockText.progress(SpreadDayProgress(done: 2, planned: 2)), "All 2 blocks done today.")
+        XCTAssertTrue(SpreadDayProgress(done: 2, planned: 2).allDone)
+        XCTAssertFalse(SpreadDayProgress(done: 0, planned: 0).allDone)
+    }
+
+    func testNoProgressWithoutAPlanForTodayOnThisProfile() {
+        let defaults = isolated()
+        SpreadFocusStore.setActiveProfile("profile-a", defaults)
+        XCTAssertNil(SpreadDayPlanStore.progress(now: now, defaults))
+
+        SpreadDayPlanStore.save(record(profile: "profile-b", blocks: [block("gym", hours: 3)]), defaults)
+        XCTAssertNil(SpreadDayPlanStore.progress(now: now, defaults))
+
+        SpreadDayPlanStore.save(record(day: "1999-01-01", blocks: [block("gym", hours: 3)]), defaults)
+        XCTAssertNil(SpreadDayPlanStore.progress(now: now, defaults))
+    }
 }
