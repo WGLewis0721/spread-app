@@ -517,19 +517,23 @@ struct LifeRoot: View {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
                         ForEach(snapshot.roles) { role in
+                            let isSelected: Bool = budgetRoleID == role.id
+                            let hoursText: String = SpreadHours.text(role.hours)
+                            let spokenName: String = role.name + ", " + hoursText + " hours"
+                            let traits: AccessibilityTraits = isSelected ? AccessibilityTraits.isSelected : []
                             Button {
                                 budgetRoleID = role.id
                                 LifeFeedback.selection()
                             } label: {
                                 LifeBudgetChip(
                                     name: role.name,
-                                    hours: SpreadHours.text(role.hours) + "h",
+                                    hours: hoursText + "h",
                                     color: chipColor(role),
-                                    selected: budgetRoleID == role.id)
+                                    selected: isSelected)
                             }
                             .buttonStyle(.spreadPress)
-                            .accessibilityLabel(role.name + ", " + SpreadHours.text(role.hours) + " hours")
-                            .accessibilityAddTraits(budgetRoleID == role.id ? .isSelected : [])
+                            .accessibilityLabel(spokenName)
+                            .accessibilityAddTraits(traits)
                         }
                     }
                 }
