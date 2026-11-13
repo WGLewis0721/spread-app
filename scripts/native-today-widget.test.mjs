@@ -56,7 +56,7 @@ test("one bounded Live Activity supports Lock Screen and Dynamic Island presenta
 
 test("widget text-style fonts use SwiftUI's design-before-weight argument order", () => {
   // Xcode 27.1 rejects .system(.title3, weight:, design:) as a CGFloat initializer.
-  assert.doesNotMatch(source, /\\.system\\(\\.(?:title|title2|title3|caption|caption2|body|headline|subheadline),\\s*weight:/);
-  assert.match(source, /\\.system\\(\\.title3,\\s*design:\\s*\\.rounded,\\s*weight:\\s*\\.semibold\\)/);
-  assert.match(source, /\\.system\\(\\.title2,\\s*design:\\s*\\.rounded,\\s*weight:\\s*\\.semibold\\)/);
+  assert.doesNotMatch(source, /\.system\(\.(?:title|title2|title3|caption|caption2|body|headline|subheadline),\s*weight:/);
+  assert.match(source, /\.system\(\.title3,\s*design:\s*\.rounded,\s*weight:\s*\.semibold\)/);
+  assert.match(source, /\.system\(\.title2,\s*design:\s*\.rounded,\s*weight:\s*\.semibold\)/);
 });
