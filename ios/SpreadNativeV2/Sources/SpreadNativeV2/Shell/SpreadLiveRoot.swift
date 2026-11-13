@@ -27,6 +27,8 @@ public struct SpreadLiveRoot: View {
     @State private var showWhatsNew = false
     @State private var presentedNotes: [SpreadReleaseNote] = []
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
+    /// The "Show Life area name outside Spread" switch in the focus sheet. Block labels are written with it.
+    @AppStorage("native.focus.showNameOutsideApp") private var showNamesOutsideApp = false
     @State private var editing = false
     @State private var gearTurn = false
     // Labels fold into their icons once after the planner first appears.
@@ -84,6 +86,12 @@ public struct SpreadLiveRoot: View {
                     SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
                 }
             }
+        }
+        .onChange(of: showNamesOutsideApp) { _, _ in
+            // Block labels and the focus title are written with the names setting, so write them again now.
+            guard let snapshot = planner.snapshot, let profile = planner.state?.envelope.profileId else { return }
+            SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
+            SpreadFocusWidgetPublisher.republishFromStore()
         }
         .onChange(of: planner.state?.envelope.profileId) { old, new in
             if old != nil && old != new {
@@ -266,7 +274,7 @@ public struct SpreadLiveRoot: View {
             Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
         }
         if planner.errorOffersBackup {
-            Button("Backup and restore") { recovery() }
+            Button("Backup and restore") { sheet = .backup }
         }
     }
 
@@ -641,7 +649,7 @@ public struct SpreadLiveRoot: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label(notice, systemImage: "exclamationmark.shield").foregroundStyle(Spread.caution)
                 HStack {
-                    Button { recovery() } label: { Text("Backup and restore").tapTarget() }
+                    Button { sheet = .backup } label: { Text("Backup and restore").tapTarget() }
                     Button { dismissedNotice = notice } label: { Text("Got it").tapTarget() }
                 }
             }
@@ -660,7 +668,7 @@ public struct SpreadLiveRoot: View {
                         Button { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } } label: { Text("Retry saving").tapTarget() }
                             .accessibilityIdentifier("retry-saving")
                     }
-                    Button { recovery() } label: { Text("Back up").tapTarget() }
+                    Button { sheet = .backup } label: { Text("Back up").tapTarget() }
                         .accessibilityIdentifier("back-up")
                 }
             }
@@ -722,7 +730,7 @@ public struct SpreadLiveRoot: View {
                         SettingsGears(turn: gearTurn, size: 30).frame(width: 44, height: 44).contentShape(Rectangle())
                     }
                     .buttonStyle(.spreadPress)
-                    .accessibilityLabel("Settings")
+                    .accessibilityLabel("More")
                     .accessibilityIdentifier("open-more")
                 }
             }
@@ -912,9 +920,11 @@ public struct SpreadLiveRoot: View {
         case .review:
             CarryOverSheet(planner: planner)
         case .more:
-            MoreSheet(planner: planner, focusTimer: focusTimer, recovery: recovery, showProfiles: { sheet = .profiles }, appearance: $appearance, weekFocusEnabled: $weekFocusEnabled)
+            MoreSheet(planner: planner, focusTimer: focusTimer, backup: { sheet = .backup }, showProfiles: { sheet = .profiles }, appearance: $appearance, weekFocusEnabled: $weekFocusEnabled)
         case .profiles:
             ProfilesSheet(planner: planner)
+        case .backup:
+            BackupRestoreSheet(planner: planner)
         case .confirmRollover:
             RolloverConfirm(planner: planner)
         case .confirmDeleteRole(let roleId):
@@ -932,7 +942,7 @@ private struct RolloverConfirm: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Replace next week?").font(Spread.sheetTitle)
-            Text("Next week already has tasks or days. Rollover will replace that week. This week stays as it is.")
+            Text("Next week already has tasks or days. Copying this week replaces them. This week stays as it is.")
                 .font(Spread.callout).foregroundStyle(Spread.secondary).multilineTextAlignment(.center)
             Button("Replace") {
                 Task {

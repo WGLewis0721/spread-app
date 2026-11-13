@@ -266,3 +266,82 @@ test("the island opens the planned day, and a hand-started session still opens t
   assert.match(source, /context\.attributes\.day == nil \? "spread:\/\/focus" : "spread:\/\/today"/);
   assert.match(focusController, /day: session\.blockDay/);
 });
+
+// The switches that go with the widgets, the island and the focus timer. Each one writes a key the code reads,
+// its change handler does what the switch says, and the surface it controls shows the on or off state.
+{
+  const manage = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift");
+  const liveRoot = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift");
+  const focusSheet = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimerSheet.swift");
+  const liveActivity = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusLiveActivityController.swift");
+  const intents = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusIntents.swift");
+  const alerts = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadLocalAlerts.swift");
+  const dayPlanPublisher = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadDayPlanPublisher.swift");
+  const focusPublisher = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadFocusWidgetPublisher.swift");
+  const lifeCardsPublisher = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadLifeCardsPublisher.swift");
+  const lifeCardsWidget = get("ios/App/SpreadWidget/SpreadLifeCardsWidget.swift");
+  const todayWidget = get("ios/App/SpreadWidget/SpreadTodayWidget.swift");
+
+  // The source from one marker onward, so each handler is checked on its own.
+  const handler = (text, marker, length = 700) => {
+    const at = text.indexOf(marker);
+    return at < 0 ? "" : text.slice(at, at + length);
+  };
+
+  test("Show Today on widgets: on publishes today's planned block, off clears it", () => {
+    assert.match(manage, /@AppStorage\(SpreadWidgetPublisher\.enabledKey\) private var todayWidgetsEnabled/);
+    const onChange = handler(manage, "onChange(of: todayWidgetsEnabled)", 1000);
+    assert.match(onChange, /SpreadDayPlanPublisher\.publish\(/);
+    assert.match(onChange, /SpreadWidgetPublisher\.revoke\(\)/);
+    assert.match(onChange, /SpreadDayPlanPublisher\.clear\(\)/);
+    assert.match(todayWidget, /Open Spread to enable Today widget/);
+  });
+
+  test("Show Life cards on widgets: on publishes the cards, off revokes them and the widget says how to turn it on", () => {
+    assert.match(manage, /@AppStorage\(SpreadLifeCardsPublisher\.enabledKey\) private var lifeCardsWidgetsEnabled/);
+    const onChange = handler(manage, "onChange(of: lifeCardsWidgetsEnabled)", 400);
+    assert.match(onChange, /SpreadLifeCardsPublisher\.publish\(/);
+    assert.match(onChange, /SpreadLifeCardsPublisher\.revoke\(\)/);
+    assert.match(lifeCardsPublisher, /guard UserDefaults\.standard\.bool\(forKey: enabledKey\) else \{\s*revoke\(\)/);
+    assert.match(lifeCardsWidget, /Turn on Life cards on widgets in More, then open Spread\./);
+  });
+
+  test("the names switch rewrites block labels and the focus title as soon as it changes", () => {
+    assert.match(liveRoot, /@AppStorage\("native\.focus\.showNameOutsideApp"\) private var showNamesOutsideApp/);
+    const onChange = handler(liveRoot, "onChange(of: showNamesOutsideApp)", 500);
+    assert.match(onChange, /SpreadDayPlanPublisher\.publish\(/);
+    assert.match(onChange, /SpreadFocusWidgetPublisher\.republishFromStore\(\)/);
+    for (const file of [focusSheet, liveActivity, focusPublisher, dayPlanPublisher]) {
+      assert.match(file, /native\.focus\.showNameOutsideApp/);
+    }
+    assert.match(focusSheet, /Life area names appear on the Lock Screen, the Dynamic Island and the timer widget only while the name switch is on/);
+  });
+
+  test("the notification switch asks for permission on, and cancels its alerts off", () => {
+    assert.match(focusSheet, /@AppStorage\("native\.focus\.notifyWhenDone"\)/);
+    assert.match(intents, /UserDefaults\.standard\.bool\(forKey: "native\.focus\.notifyWhenDone"\)/);
+    const onChange = handler(focusSheet, "onChange(of: notifyWhenDone)", 700);
+    assert.match(onChange, /SpreadLocalAlerts\.authorized\(\)/);
+    assert.match(onChange, /SpreadLocalAlerts\.cancelFocus\(\)/);
+    assert.match(alerts, /case \.notDetermined:\s*return \(try\? await center\.requestAuthorization/);
+  });
+
+  test("the Live Activity switch starts, refreshes and ends the island, and nothing starts while it is off", () => {
+    assert.match(focusSheet, /@AppStorage\("native\.focus\.liveActivityEnabled"\)/);
+    assert.match(liveActivity, /static let enabledKey = "native\.focus\.liveActivityEnabled"/);
+    assert.match(liveActivity, /static func start\(_ session: SpreadFocusSession\) \{\s*guard UserDefaults\.standard\.bool\(forKey: enabledKey\)/);
+    const onChange = handler(focusSheet, "onChange(of: showLiveTimer)", 400);
+    assert.match(onChange, /SpreadFocusLiveActivityController\.end\(\)/);
+    assert.match(onChange, /SpreadFocusLiveActivityController\.refresh\(/);
+  });
+
+  test("every switch has an accessibility identifier, so the UI tests can flip it and read its state", () => {
+    const controls = manage + focusSheet;
+    for (const id of [
+      "today-widget-enabled", "life-cards-widget-enabled", "focus-notification-toggle",
+      "focus-live-activity-toggle", "focus-live-activity-name",
+    ]) {
+      assert.match(controls, new RegExp(`accessibilityIdentifier\\("${id}"\\)`));
+    }
+  });
+}

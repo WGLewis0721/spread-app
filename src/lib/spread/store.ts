@@ -1233,12 +1233,17 @@ export const useSpread = create<Store>((set, get) => ({
  * Back up the whole planner: every profile, the roster and the settings. The active profile is
  * taken from memory, so a change that has not reached storage yet is still in the file.
  */
-export async function saveBackup(data: SpreadData): Promise<SaveResult> {
+/** The text of a full backup file for the open planner. Shared by the web save and the native sheet. */
+export async function buildBackupText(data: SpreadData): Promise<string> {
   flushSpread();
   const payload = collectFullPayload(localStorage, new Date(), null);
   const activeId = useSpread.getState().activeId;
   if (activeId) payload.stores[activeId] = JSON.stringify(data);
-  const blob = new Blob([await fullBackupText(payload)], { type: "application/octet-stream" });
+  return fullBackupText(payload);
+}
+
+export async function saveBackup(data: SpreadData): Promise<SaveResult> {
+  const blob = new Blob([await buildBackupText(data)], { type: "application/octet-stream" });
   return saveFile(blob, `Spread-${data.currentWeek}.spread`);
 }
 

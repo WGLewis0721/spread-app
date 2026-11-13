@@ -83,7 +83,7 @@ struct LifeRoot: View {
                                     Color.clear.frame(height: 0).id("life-top")
                                     if let notice = planner.recoveryNotice {
                                         Text(notice).font(.body)
-                                        Button("Backup and restore", action: onMore).frame(minHeight: 44)
+                                        Button("Open More", action: onMore).frame(minHeight: 44)
                                     }
                                     if planner.saveFailure != nil {
                                         Label("Changes are not saved. Open More to back up your plan.", systemImage: "exclamationmark.triangle")

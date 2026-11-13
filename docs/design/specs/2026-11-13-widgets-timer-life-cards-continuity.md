@@ -252,3 +252,139 @@ The owner asked for the open items to be decided, with the aim of a planning too
 **Not built.** Logging focus time against hours (it would write planner data, so it needs its own owner decision). The card spotlight (concept 4). A deadline countdown (concept 6), because tasks have no due time.
 
 **Verified here.** The Linux test slice runs 64 tests with no failures, including three new progress tests in `SpreadDayPlanTests`. The docs check and the script tests run in CI. The Swift compile runs on GitHub. Nothing has run on a simulator or a device, so the device checks in sections 9 and 13 are still owed.
+
+## 16. Switches checked (2026-11-13)
+
+Every switch that goes with the widgets, the island and the focus timer was traced from its control, through the key it writes, to the surface it controls. Two gaps were found and fixed. The contract tests in `scripts/native-today-widget.test.mjs` cover each row. The two fixed rows fail on the previous code.
+
+| Switch (where) | Stored key | On | Off | Status |
+| --- | --- | --- | --- | --- |
+| Show Today on widgets (More, Widgets) | `native.widget.enabled` | Publishes the Today counters, the focus mirror and today's planned block. Fixed: the block used to wait for the next planner change. | Revokes the counters and the focus mirror, and clears today's planned block. Fixed: the timer widget kept offering the block. The Today widget shows "Open Spread to enable Today widget." | Fixed and tested |
+| Show Life cards on widgets (More, Widgets) | `native.widget.lifeCardsEnabled` | Publishes the Life cards for this week. | Deletes the cards. The widget shows "Turn on Life cards on widgets in More, then open Spread." | Tested |
+| Show Life area name outside Spread (Focus timer, Outside Spread) | `native.focus.showNameOutsideApp` | Block labels and the island and widget titles show the Life area name. Fixed: the change now rewrites them at once. | Shows "Planned block" and "Focus session". Locked while a session runs, and the footer says so. | Fixed and tested |
+| Show active timer on Lock Screen and Dynamic Island (Focus timer, Outside Spread) | `native.focus.liveActivityEnabled` | Starts and refreshes the island. | Ends the island. Nothing starts while it is off. | Tested |
+| Notify when a stretch ends (Focus timer, Outside Spread) | `native.focus.notifyWhenDone` | Asks for permission the first time, then schedules each stretch's alert. | Cancels the scheduled alert. | Tested |
+
+**Not verified.** Nothing above has run on a device or a simulator. The visual state of each switch in the running app, the Life cards widget when it is off, and the island and notifications with the app closed are all still owed.
+
+**Not part of this change.** "Remind me to plan each day" and "Touch feedback" were not touched.
+
+## 17. Button audit (2026-11-13)
+
+Every button in the native app was read from source: the labels, the accessibility labels, the action each one runs, and the text around it. Three checks were run:
+- Every planner message a native button sends has a handler in the dispatcher, so no button is dead at the protocol level.
+- Every icon-only button has a visible label or an accessibility label.
+- The actions behind the non-obvious labels were traced to the store (carry-over, rollover, priority, export, photo and file import, allocate).
+
+**Wording changed so the label says what the button does.** Behaviour is unchanged. Accessibility identifiers are unchanged.
+
+| Where | Was | Now | Why |
+| --- | --- | --- | --- |
+| More, Data | Backup and restore | Open web planner | It only reveals the parked web planner. Nothing sends that view a backup command. |
+| Planner notice, save-failure notice, error alert | Backup and restore, Back up | Open web planner | Same as above. |
+| Life, planner notice | Backup and restore | Open More | It opens More, not a backup screen. |
+| Dock gear | Accessibility label "Settings" | "More" | The sheet it opens is titled More. |
+| Spread card | Rollover | Copy to next week and open it | It copies the whole current week to next week and moves to it. The confirmation now says "Copying this week replaces them." |
+| Spread card | Review open tasks | Move open tasks to next week | The sheet moves the picked open tasks to next week. |
+
+**Open for the owner.** Backup and restore cannot be reached from the native app, because the rules keep backup and restore out of this work. A native entry point would need a backup command sent to the web planner's backup screen, which is a backup change. Decide whether to build that.
+
+**Checked and left as written.**
+- "Return ½h": the help line says it returns half an hour to the weekly pool, which is what it does.
+- "Save weekly goal": it stores the goal only. "Apply" is the step that reserves time.
+- "Open existing planner": it opens the web planner with the saved plan.
+- The parked web planner has the same "Rollover" and "Review open tasks" wording. It was not changed.
+
+**Superseded in part by section 18.** The "Open web planner" labels above are back to "Backup and restore" and "Back up", and they now open the native backup sheet, not the web planner.
+
+**Not verified.** None of this has run on a device or a simulator.
+
+## 18. Modern backup and restore (2026-11-13)
+
+**Owner direction.** Backup and restore work from modern Spread without opening classic Spread or the web planner's screens. Classic Spread and the web planner are to be decommissioned later. That migration is a separate decision, with its own spec, and is not part of this section.
+
+**What it does.**
+- **Back up.** The existing "Backup and restore" entry (More, Data; the save notice; the error alert) opens one sheet. "Back up Spread" asks the planner for the same file the web planner's "Back Up Spread" makes, with the same function (`buildBackupText`). It is saved as `Spread-<week>.spread` and shared with the iPhone share sheet.
+- **Restore.** "Choose a backup file" reads a `.spread` file and lists its profiles. A damaged profile is listed and cannot be chosen. The chosen profiles are added as new profiles, through the same restore as the web planner (`applyRestore`), which takes a safety copy first. Current profiles are not changed.
+- **Older one-week files** are refused in modern Spread with a plain message. Modern restores full backups only.
+
+**How it reaches the planner.** Three requests (`backupFile`, `restorePreview`, `restoreApply`) are answered by the planner's host before the planner's dispatcher. Planner commands are unchanged. The requests do not depend on the open week or revision.
+
+**Existing code changed.** The rule that kept backup and restore out of this work is the owner's to lift, and this is that direction. Two moves, with no change in behaviour:
+- `store.ts`: `saveBackup` now calls `buildBackupText`, which holds the same steps.
+- `applyRestore` moved from the web restore screen to `restore-apply.ts`, so both use one copy.
+
+**Not in this change.**
+- Restore from a safety copy (classic only) is not in modern Spread.
+- iCloud backup stays off. Nothing says iCloud works.
+- Restoring a one-week file.
+
+**Verified here.** Web typecheck. `test:spread`: 525 passed. `test:scripts`: 242 passed, including the wiring tests in `scripts/native-backup.test.mjs`. Lint: 0 errors. The Swift compile runs on GitHub.
+
+**Owed on a device.** The share sheet from an iPhone. Choosing a file from Files or iCloud Drive. Restoring onto a fresh install and comparing the profiles. A damaged profile listed and left out. A file that is not a backup.
+
+## 19. Plan file: the editable schedule (2026-11-13)
+
+Security comes first. The `.spread` backup stays as it is: checksummed, and not editable. The plan file is a separate, locked-down file for one profile's schedule.
+
+**What the plan file holds.** The areas (name, weekly hours, colour, category), the weeks (a Monday start, each area's hour budget, an optional week capacity, tasks with an optional day, and hour allocations by day), and the current week. It holds at most 100 areas and the 104 most recent weeks. Areas, tasks and day hours carry identifiers so a merge can match them, and the file names its profile and the version it was made from (section 21).
+
+**What it leaves out.** Settings and accents, recovery copies, the licence, sync and cloud keys, attachments and photos, rich notes, recurring plans, the recycle bin, and the day-order presentation. Those stay in the `.spread` backup.
+
+**How "Back up Spread" makes it.** One action makes both files and shares both. The backup action is one button. The sheet's other actions are restore and merge (section 21). The sheet says plainly that the backup cannot be edited, that the plan file is plain text and can be edited or given to an AI tool, and that whatever is shared goes to whoever receives it.
+
+**How a file comes back.** "Choose a backup file" accepts either file. A `.spread` backup is read as before. A plan file is checked by `parsePlanDocument`. Every problem is listed (up to 20), and nothing changes unless the whole file is clean. A plan with `action` set to `create` is restored as a new profile, through the same restore as a backup: a safety copy first, all or nothing, and current profiles unchanged. A plan with `action` set to `merge` is previewed and merged into the open profile (section 21).
+
+**Security controls.**
+- A file over 5 MB is refused before it is read.
+- Only the listed fields are accepted. Any other field, at any level, is refused. Prototype keys are refused.
+- The importer builds every object and identifier itself. Nothing from the file is used as an identifier.
+- Dates must be real days. A week must start on a Monday. A day must be inside its week.
+- Hours are half-hour steps: 0 to 168 for areas and weeks, 0.5 to 24 for an allocation. Capacity is 0 to 168.
+- An area's placed hours must fit its budget, and the areas in a week must fit its capacity.
+- A task with a day needs hours for its area on that day.
+- Text must be non-empty, on one line, free of control characters, and at most 2000 characters. Categories, estimates and colours must be ones the planner uses.
+- Area names are unique, ignoring capitals. Week keys are unique.
+- `action` is required and must be `merge` or `create`. A merge needs the id of the open profile, so a file cannot change another profile, or add one by accident.
+
+**Limits of the protection.** Anyone can write a valid plan file. It is not a verified record of who wrote it. A checksum or signature would break every edit, so the file has neither. The importer checks structure and the planner's hour rules, not authorship. The app never acts on the guide, or on any instruction written in the file.
+
+**Owed on a device.** Sharing both files from an iPhone. Choosing a plan file from Files or iCloud Drive. A plan with problems showing every problem. A clean plan restored onto a fresh install. A merge, with its switches and its stale-version warning (section 21).
+
+## 20. iCloud backup and restore: saved for later (2026-11-13)
+
+**Status.** The code is merged and dormant. Both cloud switches (`VITE_SPREAD_CLOUD_BACKUP`, `VITE_SPREAD_CLOUD_SYNC`) default to off. The reinstall restore has not been proven on hardware, so Gate 3 in `docs/ICLOUD_PLAN.md` is not met.
+
+**What already exists.** `src/lib/spread/cloud-backup.ts`, `cloud-sync.ts`, `cloud-flags.ts` and the sync modules. The Swift files under `ios/App/App/Cloud/` and the `ios/App/SpreadCloudCore` package. The App entitlements already request an iCloud container and the CloudKit and CloudDocuments services.
+
+**Scaffold decision.** No further iCloud code was added. What is left is hardware gates, not code. More code would need changes to `ios/App/App/Cloud/**`, which the project rules keep out of this work, and signing changes that could break a deployment.
+
+**Deployment risk to check before the next signed build.** The App entitlements request iCloud and CloudKit. A signed build needs the App ID to carry those capabilities. This could not be checked from the repository.
+
+**What iOS does on reinstall.** Deleting an app removes its own data. A reinstall starts empty. Data comes back only through a whole-device restore from an iCloud or computer backup, or through the app's own cloud copy. CloudKit records in the user's iCloud can take a relaunch to appear. Keychain persistence is not a guarantee.
+
+**Turning it on later.** QA and TestFlight builds can set the flag at build time. The defaults change only after Gate 3 passes on hardware. The checklist is in `docs/ICLOUD_PLAN.md`.
+
+**Tests.** `scripts/native-backup.test.mjs` asserts that both flags default to off, and that the backup sheet has no iCloud action.
+
+## 21. Merging a plan into the open profile (2026-11-13)
+
+**What it does.** A plan file with `action` set to `merge`, and the id of the open profile, is merged into that profile on this device. The file is the desired state for the areas and weeks it lists, in the way a Terraform plan describes a desired state. The person previews the change, and nothing changes until they choose Merge.
+
+**The flow.** Back up Spread, or export the plan file. Edit it by hand or with an AI tool. Choose the file. The sheet reads it and shows a preview: a summary in count cards (only the counts that are not zero), a list of areas (added, changed, removed or kept, each with its label in words), the two removal switches, a warning if the profile changed after the plan was made, and a card of problems. Merge stays disabled while there are problems. Merge recomputes the change against the profile as it is at that moment, refuses if the profile changed since the preview, saves a `pre-merge` safety copy, and then replaces the profile once, through the planner's normal replace path.
+
+**Removals are a choice, and they are off by default.** "Remove areas the file leaves out" removes an area, with its tasks and hours in every week. "Remove tasks and day hours the file leaves out" removes tasks and day hours that a listed week does not mention. With either switch off, what the file leaves out stays.
+
+**What is kept.** Anything the file does not mention: weeks the file does not list; recurring plans, which stop only when their area is removed, and are counted; rich notes; the recycle bin; and the priority settings of a week, while the area they point at still exists. A plan never sets or clears settings, the licence, sync or cloud keys.
+
+**Matching.** An area matches by its id, and then by its name, ignoring capitals. A task or day hour matches by its id inside its week. A task moved to another area keeps its id and its rich notes, and appears once. An id Spread does not know is new.
+
+**What stops a merge.** Any problem the file check finds (section 19). A kept day hour that no longer fits its area's budget, with the choice to remove it. A plan for another profile. A profile that syncs. A profile that changed since the preview. A missing or unknown `action`.
+
+**Known behaviour.** The planner normalises a week as it loads a profile, and one rule there raises an area's hours to its weekly hours when those hours equal the day hours placed. The preview is taken from the normalised result, so it shows what will be saved. In that case the saved hours can differ from the file's figure.
+
+**Undo.** A merge saves a `pre-merge` safety copy first. The sheet does not yet offer a button to restore that copy, so an undo needs the owner's decision on that control.
+
+**Tests.** `src/lib/spread/plan-merge.test.ts` covers the merge rules, counts, removals, moves, budgets and the target check. `plan-file.test.ts` covers format version 2, the required action and the id a merge needs. `native-backup-bridge.test.ts` covers previews, refusals, the removal options and the revision. `scripts/native-backup.test.mjs` checks the wiring: the safety copy, the revision check, the Merge button's state, and that both switches default to off.
+
+**Owed on a device.** Previewing a merge on iPhone at 390 and 820 points, in light and dark, with reduced motion. The switches. The problem card. A stale profile. A merge followed by an undo from the safety copy, once that control exists.
