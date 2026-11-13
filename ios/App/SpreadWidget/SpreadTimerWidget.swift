@@ -9,9 +9,35 @@ import Foundation
 // ran out shows as waiting for a tap, and nothing starts on its own. Each size shows more of the same controls:
 // the small widget one, the medium two, and the large every control that applies right now.
 
-/// Reads the focus mirror the app writes into the shared App Group.
+/// The timer face for the widgets. It reads the same session record the Dynamic Island reads, so a timer that runs on
+/// the island shows here too. Nothing shows while "Show Today on widgets" is off. The app's mirror supplies the title
+/// the person allowed, but only while it is for the same session.
 enum SpreadFocusWidgetStore {
-    static func load() -> SpreadFocusWidgetState? {
+    static func load(now: Date = Date()) -> SpreadFocusWidgetState? {
+        guard timerEnabled(), let session = SpreadFocusStore.load() else { return nil }
+        let current = SpreadFocusMachine.reconciled(session, now: now)
+        guard SpreadFocusMachine.isOnScreen(current) else { return nil }
+        let mirror = mirrorState()
+        let title = mirror?.sessionId == current.id ? (mirror?.title ?? "Focus session") : "Focus session"
+        // A finished stretch with a next step is shown as running with no deadline, which reads as waiting for a tap.
+        let finished = current.phase == .finished
+        return SpreadFocusWidgetState(
+            sessionId: current.id,
+            phase: current.phase == .paused ? .paused : .running,
+            endAt: finished ? nil : current.endAt,
+            pausedSeconds: current.pausedSeconds,
+            durationSeconds: current.durationSeconds,
+            title: title,
+            writtenAt: now,
+            kind: current.currentKind.rawValue,
+            round: current.roundNumber,
+            rounds: current.roundCount,
+            nextLabel: SpreadFocusMachine.nextLabel(after: current),
+            stoppedEarly: current.stoppedEarly)
+    }
+
+    /// The mirror the app last wrote, if any. Only its title is used, and only for the same session.
+    private static func mirrorState() -> SpreadFocusWidgetState? {
         guard let data = UserDefaults(suiteName: SpreadWidgetShared.appGroup)?
             .data(forKey: SpreadWidgetShared.focusKey) else { return nil }
         return try? JSONDecoder().decode(SpreadFocusWidgetState.self, from: data)
