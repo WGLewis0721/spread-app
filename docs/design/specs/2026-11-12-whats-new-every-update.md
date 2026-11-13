@@ -1,5 +1,7 @@
 # Spec: What's New shows everything the last build changed
 
+> Part of the [design brain](../README.md).
+
 Status: built on `chore/release-notes-every-merge` (PR #188). Written after the code so the owner can review both together. Swift is not compiled in this environment; Codemagic's `swift test` is the first compile.
 
 ## 1. Problem
