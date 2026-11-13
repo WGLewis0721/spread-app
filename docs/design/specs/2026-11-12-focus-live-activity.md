@@ -1,5 +1,7 @@
 # Focus Live Activity and Dynamic Island
 
+> Part of the [Spread design brain](../README.md). Follow the current native design and release rules.
+
 **Status:** Implemented on unmerged stacked PR; depends on the Focus Timer and Today widget extension.
 
 ## Purpose and user journey
