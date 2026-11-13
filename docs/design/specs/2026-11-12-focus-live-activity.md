@@ -33,3 +33,9 @@ Live Activity is opt-in. By default its title is **Focus session**, not a Life a
 ## Rollback
 
 Remove ActivityConfiguration and ActivityKit controller, shared attributes source reference and `NSSupportsLiveActivities`. Keep the Today widget and Focus Timer independently functional. No planner data migration.
+
+## External interaction references (patterns only)
+
+- [Dribbble: Dynamic Island and Live Activities template](https://dribbble.com/shots/24024756-Dynamic-Island-Live-Activities): compact, expanded, minimal, Lock Screen proportions; do not copy artwork or branding.
+- [Apple: displaying Live Activities](https://developer.apple.com/documentation/activitykit/displaying-live-data-with-live-activities): foreground start, ActivityKit lifecycle and bounded duration.
+- [21st.dev: minimal toast patterns](https://21st.dev/%40lumesec/components/px-toaster): readable secondary feedback; do not port web effects into native iOS.
