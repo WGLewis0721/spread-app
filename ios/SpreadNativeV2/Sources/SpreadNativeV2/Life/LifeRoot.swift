@@ -54,6 +54,8 @@ struct LifeRoot: View {
     @State private var historyVisible = false
     @State private var showFocusTimer = false
     @State private var preferredFocusRoleId: String?
+    /// A Life card a widget asked to open. It waits for today's week to be on screen, then focuses.
+    @State private var pendingWidgetCard: String?
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
@@ -146,10 +148,14 @@ struct LifeRoot: View {
             if planner.snapshot != nil {
                 openTodayFromWidgetIfNeeded()
                 openFocusFromActivityIfNeeded()
+                openLifeCardFromWidgetIfNeeded()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenToday"))) { _ in
             openTodayFromWidgetIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenLifeCard"))) { _ in
+            openLifeCardFromWidgetIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenFocus"))) { _ in
             openFocusFromActivityIfNeeded()
@@ -172,6 +178,8 @@ struct LifeRoot: View {
         .onChange(of: planner.snapshot?.weekKey) { old, _ in
             guard old != nil else { return }
             focusedRole = nil; tasksOpen = false; budgetExpanded = false; localSheet = nil
+            // A widget card waits for this reset, then opens once today's week is on screen.
+            applyPendingWidgetCard()
         }
         .onChange(of: planner.snapshot?.roles.map(\.id)) { _, roleIDs in
             if let focusedRole, !(roleIDs ?? []).contains(focusedRole) {
@@ -509,28 +517,23 @@ struct LifeRoot: View {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
                         ForEach(snapshot.roles) { role in
+                            let isSelected: Bool = budgetRoleID == role.id
+                            let hoursText: String = SpreadHours.text(role.hours)
+                            let spokenName: String = role.name + ", " + hoursText + " hours"
+                            let traits: AccessibilityTraits = isSelected ? AccessibilityTraits.isSelected : []
                             Button {
                                 budgetRoleID = role.id
                                 LifeFeedback.selection()
                             } label: {
-                                HStack(spacing: 5) {
-                                    Circle().fill(Color(hex: role.color)).frame(width: 10, height: 10)
-                                    Text(role.name).lineLimit(1)
-                                    Text(SpreadHours.text(role.hours) + "h")
-                                        .monospacedDigit()
-                                }
-                                .font(.subheadline)
-                                .foregroundStyle(Spread.ink)
-                                .padding(.horizontal, 10)
-                                .frame(minHeight: 44)
-                                .background(budgetRoleID == role.id ? Spread.inset : Spread.elevated,
-                                            in: Capsule())
-                                .overlay(Capsule().strokeBorder(
-                                    budgetRoleID == role.id ? Spread.accent : Spread.line, lineWidth: 1.5))
+                                LifeBudgetChip(
+                                    name: role.name,
+                                    hours: hoursText + "h",
+                                    color: chipColor(role),
+                                    selected: isSelected)
                             }
                             .buttonStyle(.spreadPress)
-                            .accessibilityLabel(role.name + ", " + SpreadHours.text(role.hours) + " hours")
-                            .accessibilityAddTraits(budgetRoleID == role.id ? .isSelected : [])
+                            .accessibilityLabel(spokenName)
+                            .accessibilityAddTraits(traits)
                         }
                     }
                 }
@@ -719,17 +722,19 @@ struct LifeRoot: View {
     private func bottom(_ snapshot: PlannerSnapshot, wide: Bool) -> some View {
         VStack(spacing: 6) {
             if let profileId = planner.state?.envelope.profileId,
-               let session = focusTimer.visibleSession(for: profileId), session.phase != .finished {
+               let session = focusTimer.visibleSession(for: profileId), SpreadFocusMachine.isOnScreen(session) {
                 Button {
                     preferredFocusRoleId = session.roleId
                     showFocusTimer = true
                 } label: {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         HStack(spacing: 8) {
-                            Image(systemName: "timer")
+                            Image(systemName: session.currentKind == .rest ? "cup.and.saucer.fill" : "timer")
                             Text(session.roleName).lineLimit(1)
                             Spacer(minLength: 8)
-                            Text(SpreadFocusClock.display(session.remaining(at: context.date)))
+                            // A finished stretch with a next step waits for a tap, so it shows "Next", not 00:00.
+                            Text(session.phase == .finished ? "Next"
+                                 : SpreadFocusClock.display(session.remaining(at: context.date)))
                                 .monospacedDigit()
                             Image(systemName: "chevron.up")
                         }
@@ -897,12 +902,45 @@ struct LifeRoot: View {
             .accessibilityAction(.escape) { closeNavigation() }
         }
     }
+    /// The Life area's own colour for its budget chip. Kept in a function so the chip stays quick to type-check.
+    private func chipColor(_ role: Responsibility) -> Color {
+        Color(hex: role.color)
+    }
+
     private func openFocusFromActivityIfNeeded() {
         guard UserDefaults.standard.bool(forKey: "native.widget.openFocus"),
               planner.snapshot != nil else { return }
         UserDefaults.standard.removeObject(forKey: "native.widget.openFocus")
         preferredFocusRoleId = focusTimer.session?.roleId
         showFocusTimer = true
+    }
+
+    /// A Life card widget shows this week's cards, so a tap goes to today's week first, then to that card.
+    private func openLifeCardFromWidgetIfNeeded() {
+        guard let id = UserDefaults.standard.string(forKey: "native.widget.openLifeCard"),
+              let snapshot = planner.snapshot else { return }
+        UserDefaults.standard.removeObject(forKey: "native.widget.openLifeCard")
+        pendingWidgetCard = id
+        if snapshot.weekKey == PlannerDates.currentWeekKey() {
+            applyPendingWidgetCard()
+        } else {
+            // The week change clears any focused card, then applyPendingWidgetCard opens this one.
+            Task {
+                let opened = await planner.send(["type": "openWeek", "weekKey": PlannerDates.currentWeekKey()])
+                // If the week could not change, do not leave the card waiting for some later week change.
+                if !opened { pendingWidgetCard = nil }
+            }
+        }
+    }
+
+    private func applyPendingWidgetCard() {
+        guard let id = pendingWidgetCard, let snapshot = planner.snapshot,
+              snapshot.weekKey == PlannerDates.currentWeekKey() else { return }
+        pendingWidgetCard = nil
+        navigate(.life)
+        // A card that was deleted, or that belongs to another profile, simply opens Life.
+        guard snapshot.roles.contains(where: { $0.id == id }) else { return }
+        withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) { focusedRole = id }
     }
 
     private func openTodayFromWidgetIfNeeded() {
@@ -1040,6 +1078,28 @@ private struct LifeDockOpenerCenterKey: PreferenceKey {
 private struct LifeDockHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+/// One Life area's budget chip. Its own view with plain inputs, so the Swift type-checker finishes quickly.
+private struct LifeBudgetChip: View {
+    let name: String
+    let hours: String
+    let color: Color
+    let selected: Bool
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: 10, height: 10)
+            Text(name).lineLimit(1)
+            Text(hours).monospacedDigit()
+        }
+        .font(.subheadline)
+        .foregroundStyle(Spread.ink)
+        .padding(.horizontal, 10)
+        .frame(minHeight: 44)
+        .background(selected ? Spread.inset : Spread.elevated, in: Capsule())
+        .overlay(Capsule().strokeBorder(selected ? Spread.accent : Spread.line, lineWidth: 1.5))
+    }
 }
 
 private struct LifeGestureHelp: View {

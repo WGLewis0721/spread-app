@@ -1,8 +1,12 @@
 #if os(iOS)
 import SwiftUI
 
-/// One optional focus session at a time, independently of hour budgets and task status.
+/// One optional focus session at a time, independently of hour budgets and task status. The person starts each
+/// focus round, and each break, by tapping. Spread never starts one for them.
 struct SpreadFocusTimerSheet: View {
+    // The large clock digits scale with Dynamic Type (board: Dynamic Type supported), at the same 56 and 52 pt default.
+    @ScaledMetric(relativeTo: .largeTitle) private var countdownSize: CGFloat = 56
+    @ScaledMetric(relativeTo: .largeTitle) private var planSize: CGFloat = 52
     @ObservedObject var timer: SpreadFocusTimer
     let profileId: String
     let roles: [Responsibility]
@@ -11,7 +15,9 @@ struct SpreadFocusTimerSheet: View {
     @AppStorage("native.focus.liveActivityEnabled") private var showLiveTimer = false
     @AppStorage("native.focus.showNameOutsideApp") private var showNameOutsideApp = false
     @State private var roleId: String
-    @State private var minutes = 25
+    @State private var focusMinutes = SpreadFocusPlan.standard.focusMinutes
+    @State private var breakMinutes = SpreadFocusPlan.standard.breakMinutes
+    @State private var rounds = SpreadFocusPlan.standard.rounds
     @State private var message: String?
 
     init(timer: SpreadFocusTimer, profileId: String, roles: [Responsibility],
@@ -26,6 +32,48 @@ struct SpreadFocusTimerSheet: View {
     private var roleName: String {
         roles.first(where: { $0.id == roleId })?.name ?? "Life area"
     }
+    private var plan: SpreadFocusPlan {
+        SpreadFocusPlan(focusMinutes: focusMinutes, breakMinutes: breakMinutes, rounds: rounds)
+    }
+
+    /// Today's planned block: what it is, how it splits into rounds, and one start. Only the planner's hours are
+    /// used, and the plan is never changed.
+    @ViewBuilder private func todaysBlockRows(_ offered: SpreadOfferedBlock) -> some View {
+        let name = roles.first(where: { $0.id == offered.entry.roleId })?.name ?? offered.entry.label
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Today's block")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Spread.secondary)
+            Text("\(name) · \(SpreadBlockText.hours(offered.entry.hours)) planned")
+                .font(.headline)
+                .foregroundStyle(Spread.ink)
+            Text(SpreadBlockText.summary(offered.entry.plan))
+                .font(.subheadline)
+                .foregroundStyle(Spread.secondary)
+            Button("Start today's block") {
+                if timer.startBlock(offered, notify: notifyWhenDone) {
+                    message = nil
+                } else {
+                    message = "Finish your other active focus session before starting a new one."
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .accessibilityIdentifier("focus-start-block")
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// "Focus · round 2 of 4", "Break", or "Focus session" for a single stretch.
+    private func stageText(_ session: SpreadFocusSession) -> String {
+        let name = session.currentKind == .rest ? "Break" : "Focus"
+        return session.roundCount > 1 ? "\(name) · round \(session.roundNumber) of \(session.roundCount)" : "\(name) session"
+    }
+
+    /// True when a stretch ended and something may follow it once the person taps for it.
+    private func isWaiting(_ session: SpreadFocusSession) -> Bool {
+        session.phase == .finished && SpreadFocusMachine.nextLabel(after: session) != nil
+    }
 
     var body: some View {
         SpreadSheetStack {
@@ -37,13 +85,17 @@ struct SpreadFocusTimerSheet: View {
                             Spacer()
                             Text(current.roleName).foregroundStyle(Spread.secondary)
                         }
+                        Text(stageText(current))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Spread.secondary)
+                            .accessibilityIdentifier("focus-stage")
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text(SpreadFocusClock.display(current.remaining(at: context.date)))
-                                .font(.system(size: 56, weight: .medium, design: .rounded))
+                                .font(.system(size: countdownSize, weight: .medium, design: .rounded))
                                 .monospacedDigit()
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .accessibilityLabel("Focus time remaining")
+                                .accessibilityLabel("Time remaining")
                                 .accessibilityValue(SpreadFocusClock.display(current.remaining(at: context.date)))
                         }
                         .accessibilityIdentifier("focus-time-remaining")
@@ -62,24 +114,61 @@ struct SpreadFocusTimerSheet: View {
                             .foregroundStyle(Spread.danger)
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .accessibilityIdentifier("focus-finish")
+                    } else if let current, isWaiting(current) {
+                        Text(current.currentKind == .rest
+                             ? "Break is over. Start the next focus round when you're ready."
+                             : "Round \(current.roundNumber) is done. Start your break when you're ready.")
+                            .font(.subheadline)
+                            .foregroundStyle(Spread.secondary)
+                            .accessibilityIdentifier("focus-waiting")
+                        Button(SpreadFocusMachine.nextLabel(after: current) ?? "Continue") {
+                            timer.continueFlow(profileId: profileId, notify: notifyWhenDone)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .accessibilityIdentifier("focus-continue")
+                        Button("Finish session") { timer.finish(profileId: profileId) }
+                            .foregroundStyle(Spread.danger)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .accessibilityIdentifier("focus-finish")
                     } else {
+                        if let offered = SpreadDayPlanStore.nextBlock(now: Date()) {
+                            todaysBlockRows(offered)
+                        } else if SpreadDayPlanStore.allDoneToday(now: Date()) {
+                            Text("Today's planned blocks are done. Nothing else is started for you.")
+                                .font(.subheadline)
+                                .foregroundStyle(Spread.secondary)
+                                .accessibilityIdentifier("focus-blocks-done")
+                        }
+                        Text("Or set your own")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Spread.secondary)
                         Picker("Life area", selection: $roleId) {
                             ForEach(roles) { role in
                                 Text(role.name).tag(role.id)
                             }
                         }
-                        Stepper(value: $minutes, in: 5...240, step: 5) {
-                            Text("\(minutes) minutes")
+                        Stepper(value: $focusMinutes, in: 5...240, step: 5) {
+                            Text("Focus \(focusMinutes) minutes")
                         }
-                        Text(SpreadFocusClock.display(minutes * 60))
-                            .font(.system(size: 52, weight: .medium, design: .rounded))
+                        Stepper(value: $rounds, in: 1...8) {
+                            Text(rounds == 1 ? "One focus session, no break" : "\(rounds) focus rounds with breaks")
+                        }
+                        .accessibilityIdentifier("focus-rounds")
+                        if rounds > 1 {
+                            Stepper(value: $breakMinutes, in: 1...60) {
+                                Text("Break \(breakMinutes) minutes")
+                            }
+                            .accessibilityIdentifier("focus-break-minutes")
+                        }
+                        Text(SpreadFocusClock.display(focusMinutes * 60))
+                            .font(.system(size: planSize, weight: .medium, design: .rounded))
                             .monospacedDigit()
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                        Button("Start focus session") {
-                            if !timer.start(profileId: profileId, roleId: roleId,
-                                            roleName: roleName, minutes: minutes,
-                                            notify: notifyWhenDone) {
+                        Button(rounds > 1 ? "Start round 1" : "Start focus session") {
+                            if !timer.startPlan(profileId: profileId, roleId: roleId, roleName: roleName,
+                                                plan: plan, notify: notifyWhenDone) {
                                 message = "Finish your other active focus session before starting a new one."
                             } else {
                                 message = nil
@@ -87,17 +176,17 @@ struct SpreadFocusTimerSheet: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .frame(maxWidth: .infinity, minHeight: 50)
-                        .disabled(roleId.isEmpty)
+                        .disabled(roleId.isEmpty || !plan.isValid)
                         .accessibilityIdentifier("focus-start")
                     }
                 } header: {
                     Text("Focus timer")
                 } footer: {
-                    Text("Focus time is separate from scheduled hours. Finishing a session never checks off tasks or changes weekly budgets.")
+                    Text("Focus time is separate from scheduled hours. Breaks and rounds start when you tap, never on their own. Finishing never checks off tasks or changes weekly budgets.")
                 }
 
                 Section("Outside Spread") {
-                    Toggle("Notify when the timer finishes", isOn: $notifyWhenDone)
+                    Toggle("Notify when a stretch ends", isOn: $notifyWhenDone)
                         .accessibilityIdentifier("focus-notification-toggle")
                     Toggle("Show active timer on Lock Screen and Dynamic Island", isOn: $showLiveTimer)
                         .accessibilityIdentifier("focus-live-activity-toggle")
@@ -125,9 +214,8 @@ struct SpreadFocusTimerSheet: View {
         }
         .onChange(of: showLiveTimer) { _, enabled in
             if enabled {
-                if let current = timer.visibleSession(for: profileId),
-                   current.phase != .finished {
-                    SpreadFocusLiveActivityController.start(current)
+                if let current, SpreadFocusMachine.isOnScreen(current) {
+                    SpreadFocusLiveActivityController.refresh(current)
                 }
             } else {
                 SpreadFocusLiveActivityController.end()
@@ -137,7 +225,7 @@ struct SpreadFocusTimerSheet: View {
             if enabled {
                 Task {
                     if await SpreadLocalAlerts.authorized() {
-                        if let current = timer.visibleSession(for: profileId) {
+                        if let current, current.phase == .running {
                             await SpreadLocalAlerts.scheduleFocus(current)
                         }
                     } else {

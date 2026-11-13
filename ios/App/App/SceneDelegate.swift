@@ -23,6 +23,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         } else if url.host == "focus" {
             UserDefaults.standard.set(true, forKey: "native.widget.openFocus")
             NotificationCenter.default.post(name: Notification.Name("SpreadOpenFocus"), object: nil)
+        } else if url.host == "life" {
+            // spread://life?card=<id> opens that Life card. A missing or empty id is ignored.
+            let card = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "card" })?.value
+            guard let card, !card.isEmpty else { return }
+            UserDefaults.standard.set(card, forKey: "native.widget.openLifeCard")
+            NotificationCenter.default.post(name: Notification.Name("SpreadOpenLifeCard"), object: nil)
         }
     }
 
