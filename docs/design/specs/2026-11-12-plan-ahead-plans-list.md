@@ -9,7 +9,7 @@
 | Surface | Native iPhone, Plan Ahead sheet opened from the Life home and Week entries |
 | Size | L: a new first screen, a changed entry flow and a read-only outlook. Three options considered |
 | Author | Tool (Haiku 5.5), 2026-11-12 |
-| Status | Implemented on `feature/plan-ahead-plans-list`: plans list, form pre-fill, 1 to 12 week intervals, read-only 8-week outlook. Native compile and device checks owed. Life-card day prefill and monthly cadence are open owner decisions |
+| Status | Implemented on `feature/plan-ahead-plans-list`: plans list, form pre-fill, 1 to 12 week intervals, read-only 8-week outlook. Native compile and device checks owed. Life-card day prefill and monthly cadence are open owner decisions. Update 2026-11-13: the sheet no longer shows the 8-week outlook; it shows suggested plans instead, see [the 2026-11-13 spec](2026-11-13-plan-ahead-suggested-plans.md) |
 | Governing docs read | `RULES_CARD.md` (Behavior, Boundaries, Verify); `packs/planner-change.md` (rules 1–5, Moving without dragging); `planner/SPREAD_NATIVE_BRAND_BOARD.md` (native controls); `specs/2026-11-12-plan-ahead-recurrence.md` (sections 3, 5, 7, 8); `FOUNDATIONAL_UX_PRINCIPLES.md` (Hick, Progressive Disclosure) |
 
 ## 1. Problem

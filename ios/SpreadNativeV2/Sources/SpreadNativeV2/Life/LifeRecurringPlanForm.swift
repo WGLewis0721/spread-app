@@ -14,6 +14,9 @@ struct LifeRecurringPlanForm: View {
     let snapshot: PlannerSnapshot
     /// When set, the form opens pre-filled with this saved schedule (Edit series).
     var initialPlanId: String? = nil
+    /// When set (and no saved schedule is open), the form opens pre-filled from this suggestion and
+    /// already reviewed. Nothing is saved until the person confirms.
+    var initialPreset: PlanAheadPreset? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var roleId = ""
     @State private var hours = 2.0
@@ -26,6 +29,8 @@ struct LifeRecurringPlanForm: View {
     @State private var editFromDate = Date()
     @State private var preview: NativeRecurringPreview?
     @State private var previewRevision: Int?
+    /// The request the current review was run for. A change that leaves the request the same keeps the review.
+    @State private var previewedKey: String?
     @State private var checking = false
     @State private var saving = false
     @State private var stopCandidate: NativeRecurringPlan?
@@ -64,7 +69,7 @@ struct LifeRecurringPlanForm: View {
         if let end = plan.endWeek { endDate = PlannerDates.localDate(end) }
         editScope = "all"
         editFromDate = earliest
-        preview = nil
+        clearPreview()
     }
     private var selectedRule: NativeRecurringPlan? {
         snapshot.recurringPlans?.first(where: { $0.id == editingPlanId })
@@ -97,12 +102,21 @@ struct LifeRecurringPlanForm: View {
     /// The days this Life area already has this week, the same hours the Life card shows.
     /// They start a new schedule's set days. Nothing is saved until Confirm.
     private func cardDays(for roleId: String) -> [String: Double] {
-        let hours = LifeCardWeekDistribution.hours(for: roleId, snapshot: snapshot)
-        var result: [String: Double] = [:]
-        for (index, amount) in hours.enumerated() where index < Self.weekdays.count && amount >= 0.5 {
-            result[Self.weekdays[index].code] = min(24, SpreadHours.clamp(amount))
-        }
-        return result
+        // One shared definition with the suggestions, so a suggestion and this form always agree.
+        Dictionary(PlanAheadPreset.days(for: roleId, in: snapshot).map { ($0.weekday, $0.hours) },
+                   uniquingKeysWith: { first, _ in first })
+    }
+    /// Starts from a suggestion: its Life area, days or weekly hours, every week, no end date.
+    /// The review runs at once so the person lands on Confirm, and can still change anything first.
+    private func apply(_ preset: PlanAheadPreset) {
+        editingPlanId = nil
+        roleId = preset.roleId
+        everyWeeks = 1
+        hasEnd = false
+        dayHours = Dictionary(preset.days.map { ($0.weekday, $0.hours) }, uniquingKeysWith: { first, _ in first })
+        if preset.days.isEmpty { hours = preset.weeklyHours }
+        clearPreview()
+        Task { await review() }
     }
     private var payload: [String: Any] {
         var value: [String: Any] = [
@@ -131,6 +145,13 @@ struct LifeRecurringPlanForm: View {
                 Section {
                     Label(issue, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(Spread.danger)
+                }
+            }
+            if let preset = initialPreset, preset.roleId == roleId, editingPlanId == nil {
+                Section {
+                    Text("Pre-filled from this week. Change anything before you confirm.")
+                        .font(.subheadline)
+                        .foregroundStyle(Spread.secondary)
                 }
             }
             Section {
@@ -210,10 +231,10 @@ struct LifeRecurringPlanForm: View {
                             .environment(\.calendar, PlannerDates.deviceCalendar)
                             .environment(\.timeZone, TimeZone.current)
                     }
-                    Button("New schedule") {
+                    Button("Make a new plan") {
                         editingPlanId = nil
                         editScope = "all"
-                        preview = nil
+                        clearPreview()
                     }
                     Button("Stop repeating") {
                         stopCandidate = selectedRule
@@ -295,6 +316,8 @@ struct LifeRecurringPlanForm: View {
             if let id = initialPlanId,
                let plan = snapshot.recurringPlans?.first(where: { $0.id == id }) {
                 load(plan)
+            } else if let preset = initialPreset {
+                apply(preset)
             } else {
                 dayHours = cardDays(for: roleId)
             }
@@ -331,17 +354,34 @@ struct LifeRecurringPlanForm: View {
                 Text("Existing tasks and customized weeks are preserved. You can undo the change.")
             }
     }
+    /// A stable fingerprint of a request, so the form can tell whether a change altered what would be saved.
+    private static func requestKey(_ request: [String: Any]) -> String {
+        guard JSONSerialization.isValidJSONObject(request),
+              let data = try? JSONSerialization.data(withJSONObject: request, options: [.sortedKeys]),
+              let text = String(data: data, encoding: .utf8) else { return UUID().uuidString }
+        return text
+    }
+    /// Called whenever a field changes. The review stays only while the request is exactly the one reviewed.
     private func invalidate() {
+        if let key = previewedKey, key == Self.requestKey(payload) { return }
+        clearPreview()
+    }
+    /// Drops the review unconditionally, for example after a refused save or when a suggestion opens.
+    private func clearPreview() {
         preview = nil
         previewRevision = nil
+        previewedKey = nil
     }
     private func review() async {
         guard !checking && !saving && !roleId.isEmpty else { return }
         checking = true
         let revision = planner.state?.revision
-        let next = await planner.previewRecurringPlan(payload)
+        let request = payload
+        let key = Self.requestKey(request)
+        let next = await planner.previewRecurringPlan(request)
         preview = next
         previewRevision = next == nil ? nil : revision
+        previewedKey = next == nil ? nil : key
         checking = false
     }
     private func confirm() async {
@@ -352,7 +392,7 @@ struct LifeRecurringPlanForm: View {
         let success = await planner.send(request, expectedRevision: revision)
         saving = false
         if success { dismiss() }
-        else { invalidate() }
+        else { clearPreview() }
     }
 }
 #endif
