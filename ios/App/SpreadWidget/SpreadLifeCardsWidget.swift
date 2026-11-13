@@ -96,12 +96,53 @@ private struct SpreadLifeCardsProvider: TimelineProvider {
     }
 }
 
-/// The app's card face without artwork: the area's color fading to deep green-black, with the same
-/// legibility shading. The app draws exactly this when a category has no artwork.
+/// The card's colors in the system's light or dark appearance. Dark keeps the app's look: the area's
+/// color fading to deep green-black, with white text. Light uses the brand cream with a soft wash of
+/// the area's color and navy text. Text stays high contrast in both.
+private struct SpreadLifeCardPalette {
+    let text: Color
+    let secondary: Color
+    let pillOn: Color
+    let pillOnText: Color
+    let pillOff: Color
+    let pillOffText: Color
+    let fill: Color
+    let dotOn: Color
+    let dotOff: Color
+
+    static func make(_ scheme: ColorScheme) -> SpreadLifeCardPalette {
+        if scheme == .dark {
+            return SpreadLifeCardPalette(
+                text: Color.white, secondary: Color.white.opacity(0.82),
+                pillOn: Color.white.opacity(0.91), pillOnText: Color.black.opacity(0.9),
+                pillOff: Color.black.opacity(0.28), pillOffText: Color.white,
+                fill: Color.white, dotOn: Color.white.opacity(0.95), dotOff: Color.white.opacity(0.35))
+        }
+        let ink = Color(red: 0.043, green: 0.071, blue: 0.125)
+        return SpreadLifeCardPalette(
+            text: ink, secondary: Color(red: 0.29, green: 0.33, blue: 0.40),
+            pillOn: ink.opacity(0.90), pillOnText: Color(red: 0.965, green: 0.949, blue: 0.914),
+            pillOff: ink.opacity(0.08), pillOffText: ink,
+            fill: ink, dotOn: ink.opacity(0.9), dotOff: ink.opacity(0.25))
+    }
+}
+
+/// The card's background in the system's appearance. Dark is the app's card face without artwork, which
+/// the app draws exactly this way when a category has no artwork. Light is cream with a soft wash of
+/// the area's color.
 private struct SpreadLifeCardBackground: View {
     let colorHex: String
+    let scheme: ColorScheme
 
     var body: some View {
+        if scheme == .dark {
+            darkFace
+        } else {
+            lightFace
+        }
+    }
+
+    private var darkFace: some View {
         LinearGradient(
             colors: [Color(hex: colorHex).opacity(0.85), Color(red: 0.10, green: 0.13, blue: 0.15)],
             startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -117,12 +158,21 @@ private struct SpreadLifeCardBackground: View {
             LinearGradient(colors: [.clear, Color.black.opacity(0.40)],
                            startPoint: .center, endPoint: .bottom))
     }
+
+    private var lightFace: some View {
+        Color(red: 0.965, green: 0.949, blue: 0.914)
+            .overlay(
+                LinearGradient(
+                    colors: [Color(hex: colorHex).opacity(0.30), Color(hex: colorHex).opacity(0.06)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing))
+    }
 }
 
 private struct SpreadLifeCardFace: View {
     let card: SpreadLifeCardWidgetCard
     let position: (index: Int, count: Int)
     let large: Bool
+    let palette: SpreadLifeCardPalette
 
     private static let shortDays = ["M", "T", "W", "T", "F", "S", "S"]
     private static let longDays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
@@ -189,6 +239,7 @@ private struct SpreadLifeCardFace: View {
             Text("THIS WEEK")
                 .font(.system(size: 9, weight: .semibold))
                 .tracking(1.4)
+                .foregroundStyle(palette.secondary)
         }
     }
 
@@ -196,6 +247,7 @@ private struct SpreadLifeCardFace: View {
         if remaining >= 0 {
             Text(hoursText(card.placedHours) + " h assigned · " + hoursText(remaining) + " h unassigned")
                 .font(.caption2)
+                .foregroundStyle(palette.secondary)
         } else {
             Text(hoursText(-remaining) + " h over budget")
                 .font(.caption.weight(.bold))
@@ -215,9 +267,9 @@ private struct SpreadLifeCardFace: View {
         .minimumScaleFactor(0.6)
         .frame(maxWidth: .infinity)
         .padding(.vertical, large ? 7 : 4)
-        .background(value > 0 ? Color.white.opacity(0.91) : Color.black.opacity(0.28),
+        .background(value > 0 ? palette.pillOn : palette.pillOff,
                     in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        .foregroundStyle(value > 0 ? Color.black.opacity(0.9) : Color.white)
+        .foregroundStyle(value > 0 ? palette.pillOnText : palette.pillOffText)
     }
 
     private var strip: some View {
@@ -232,7 +284,7 @@ private struct SpreadLifeCardFace: View {
         HStack(spacing: 5) {
             ForEach(0..<min(position.count, 12), id: \.self) { index in
                 Circle()
-                    .fill(Color.white.opacity(index == position.index - 1 ? 0.95 : 0.35))
+                    .fill(index == position.index - 1 ? palette.dotOn : palette.dotOff)
                     .frame(width: 5, height: 5)
             }
         }
@@ -266,7 +318,7 @@ private struct SpreadLifeCardFace: View {
             summary
             ProgressView(value: min(card.placedHours, max(card.budgetHours, 0.5)),
                          total: max(card.budgetHours, 0.5))
-                .tint(.white)
+                .tint(palette.fill)
             strip
             dots
             Spacer(minLength: 0)
@@ -277,7 +329,7 @@ private struct SpreadLifeCardFace: View {
         Group {
             if large { largeBody } else { mediumBody }
         }
-        .foregroundStyle(Color.white)
+        .foregroundStyle(palette.text)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(spokenCard)
@@ -301,6 +353,7 @@ private struct SpreadLifeCardsOff: View {
 private struct SpreadLifeCardsView: View {
     let entry: SpreadLifeCardsEntry
     @Environment(\.widgetFamily) private var family
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         if let snapshot = entry.snapshot,
@@ -308,9 +361,10 @@ private struct SpreadLifeCardsView: View {
             SpreadLifeCardFace(
                 card: card,
                 position: SpreadLifeCardsNav.position(of: card.id, in: snapshot.cards),
-                large: family == .systemLarge)
+                large: family == .systemLarge,
+                palette: SpreadLifeCardPalette.make(scheme))
             .containerBackground(for: .widget) {
-                SpreadLifeCardBackground(colorHex: card.colorHex)
+                SpreadLifeCardBackground(colorHex: card.colorHex, scheme: scheme)
             }
             .widgetURL(SpreadWidgetLink.lifeCard(card.id).url)
         } else {

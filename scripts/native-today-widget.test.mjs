@@ -168,3 +168,18 @@ test("new widget files keep the font argument order Xcode 27.1 accepts", () => {
     assert.doesNotMatch(text, /\.system\(\.(?:largeTitle|title|title2|title3|caption|caption2|body|headline|subheadline),\s*weight:/);
   }
 });
+
+test("every widget follows the system's light or dark appearance", () => {
+  // The Timer and Today widgets use semantic colors only, so the system recolors them itself.
+  for (const text of [timerSource, source]) {
+    assert.doesNotMatch(text, /Color\.(white|black)|\.foregroundStyle\(\.(white|black)\)|Color\(red:/);
+    assert.match(text, /containerBackground\(\.background, for: \.widget\)/);
+  }
+  // The Life card reads the appearance and picks a palette. Dark keeps the app's look, light uses cream
+  // and navy text. No text or fill is fixed to white.
+  assert.match(lifeCardsSource, /@Environment\(\\\.colorScheme\) private var scheme/);
+  assert.match(lifeCardsSource, /SpreadLifeCardPalette\.make\(scheme\)/);
+  assert.match(lifeCardsSource, /SpreadLifeCardBackground\(colorHex: card\.colorHex, scheme: scheme\)/);
+  assert.match(lifeCardsSource, /if scheme == \.dark/);
+  assert.doesNotMatch(lifeCardsSource, /\.foregroundStyle\(Color\.white\)|\.tint\(\.white\)/);
+});

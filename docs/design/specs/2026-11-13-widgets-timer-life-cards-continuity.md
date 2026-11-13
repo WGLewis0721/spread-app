@@ -87,7 +87,7 @@ For the Life cards widget the options were a card picker in the widget's setting
 ## 6. Platform behavior
 
 - **Widths and orientation:** small, medium and large Home Screen sizes. Digits and names use minimum scale factors so long names and an hour-long timer fit.
-- **Appearance:** the timer and Today widgets use the system background and primary text. The Life card uses the app's fixed dark gradient with white text. Tinted and accented rendering modes are not tested.
+- **Appearance:** all three widgets follow the system's light or dark appearance. The timer and Today widgets use the system background and semantic text colors. The Life card keeps the app's look in dark (the area's color fading to deep green-black, white text) and uses the brand cream with a soft wash of the area's color and navy text in light. Tinted and accented Home Screen modes are not tested.
 - **Accessibility:** the card is one element with a full spoken summary (name, budget, assigned, unassigned, each day). The previous and next buttons are separate elements with labels. Paused, idle and finished timer states have text. A running countdown relies on the system's own timer text.
 - **Input:** tap and the two buttons. No drag is involved.
 - **Haptics and motion:** none added. WidgetKit supplies the transitions.
