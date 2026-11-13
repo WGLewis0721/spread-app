@@ -77,20 +77,31 @@ public struct SpreadLiveRoot: View {
             }
         }
         .task(id: planner.state?.revision) {
-            if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+            if let snapshot = planner.snapshot {
+                SpreadWidgetPublisher.publish(snapshot: snapshot)
+                SpreadLifeCardsPublisher.publish(snapshot: snapshot)
+            }
         }
         .onChange(of: planner.state?.envelope.profileId) { old, new in
             if old != nil && old != new {
-                // Never show a previous profile's counts after switching profiles.
+                // Never show a previous profile's counts or Life cards after switching profiles.
                 SpreadWidgetPublisher.revoke()
-                if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+                SpreadLifeCardsPublisher.revoke()
+                if let snapshot = planner.snapshot {
+                    SpreadWidgetPublisher.publish(snapshot: snapshot)
+                    SpreadLifeCardsPublisher.publish(snapshot: snapshot)
+                }
             }
         }
         .onAppear {
             if UserDefaults.standard.bool(forKey: "native.widget.openToday") ||
-                UserDefaults.standard.bool(forKey: "native.widget.openFocus") {
+                UserDefaults.standard.bool(forKey: "native.widget.openFocus") ||
+                UserDefaults.standard.string(forKey: "native.widget.openLifeCard") != nil {
                 weekFocusEnabled = true
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenLifeCard"))) { _ in
+            weekFocusEnabled = true
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenToday"))) { _ in
             weekFocusEnabled = true

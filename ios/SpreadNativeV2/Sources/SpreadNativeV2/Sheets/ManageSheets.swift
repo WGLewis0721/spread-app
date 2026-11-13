@@ -482,6 +482,7 @@ struct MoreSheet: View {
     @State private var showReminders = false
     @State private var showFocusTimer = false
     @AppStorage(SpreadWidgetPublisher.enabledKey) private var todayWidgetsEnabled = false
+    @AppStorage(SpreadLifeCardsPublisher.enabledKey) private var lifeCardsWidgetsEnabled = false
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
 
     private var activeProfileName: String {
@@ -636,7 +637,16 @@ struct MoreSheet: View {
                                 .frame(minHeight: 48)
                                 .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                                 .accessibilityIdentifier("today-widget-enabled")
-                            Text("Only task counts and hours placed today are shared locally. No task names or accounts.")
+                            Text("Only task counts, hours placed today and a running focus timer are shared locally. No task names or accounts.")
+                                .font(.footnote)
+                                .foregroundStyle(Spread.secondary)
+                            Toggle("Show Life cards on widgets", isOn: $lifeCardsWidgetsEnabled)
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 12)
+                                .frame(minHeight: 48)
+                                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                                .accessibilityIdentifier("life-cards-widget-enabled")
+                            Text("Life area names, colors and this week's hours appear on your Home Screen. Anyone who can see it can see them. Stays on this device.")
                                 .font(.footnote)
                                 .foregroundStyle(Spread.secondary)
                         }
@@ -799,8 +809,18 @@ struct MoreSheet: View {
         .onChange(of: todayWidgetsEnabled) { _, enabled in
             if enabled {
                 if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+                // A session that is already running should appear on the widgets right away.
+                SpreadFocusWidgetPublisher.republishFromStore()
             } else {
                 SpreadWidgetPublisher.revoke()
+                SpreadFocusWidgetPublisher.revoke()
+            }
+        }
+        .onChange(of: lifeCardsWidgetsEnabled) { _, enabled in
+            if enabled {
+                if let snapshot = planner.snapshot { SpreadLifeCardsPublisher.publish(snapshot: snapshot) }
+            } else {
+                SpreadLifeCardsPublisher.revoke()
             }
         }
     }

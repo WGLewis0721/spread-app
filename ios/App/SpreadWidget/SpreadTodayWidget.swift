@@ -3,7 +3,8 @@ import SwiftUI
 import Foundation
 import ActivityKit
 
-private struct SpreadToday: Decodable {
+/// Internal, not private, so the Timer widget's large size can show the same counters.
+struct SpreadToday: Decodable {
     let day: String
     let doneTasks: Int
     let totalTasks: Int
@@ -11,32 +12,9 @@ private struct SpreadToday: Decodable {
     let writtenAt: Date
 }
 
-private struct SpreadTodayEntry: TimelineEntry {
-    let date: Date
-    let plan: SpreadToday?
-}
-
-private struct SpreadTodayProvider: TimelineProvider {
-    typealias Entry = SpreadTodayEntry
-
-    func placeholder(in context: Context) -> Entry {
-        Entry(date: .now, plan: SpreadToday(
-            day: Self.dayKey(Date()), doneTasks: 2, totalTasks: 4,
-            hoursPlaced: 3, writtenAt: .now))
-    }
-
-    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
-        completion(Entry(date: .now, plan: Self.load()))
-    }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
-        let now = Date()
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1,
-            to: Calendar.current.startOfDay(for: now)) ?? now.addingTimeInterval(86400)
-        completion(Timeline(entries: [Entry(date: now, plan: Self.load())], policy: .after(tomorrow)))
-    }
-
-    private static func load() -> SpreadToday? {
+/// Reads today's counters from the shared App Group. Anything from an earlier day is ignored.
+enum SpreadTodayStore {
+    static func load() -> SpreadToday? {
         guard let data = UserDefaults(suiteName: "group.com.graymatter.spread")?
             .data(forKey: "spread.widget.today.v1"),
               let value = try? JSONDecoder().decode(SpreadToday.self, from: data),
@@ -44,13 +22,47 @@ private struct SpreadTodayProvider: TimelineProvider {
         return value
     }
 
-    private static func dayKey(_ date: Date) -> String {
+    static func dayKey(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.timeZone = .current
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+}
+
+private struct SpreadTodayEntry: TimelineEntry {
+    let date: Date
+    let plan: SpreadToday?
+    /// The running or paused focus session, shown beside the counters on the medium widget.
+    let focus: SpreadFocusWidgetState?
+}
+
+private struct SpreadTodayProvider: TimelineProvider {
+    typealias Entry = SpreadTodayEntry
+
+    func placeholder(in context: Context) -> Entry {
+        Entry(date: .now, plan: SpreadToday(
+            day: SpreadTodayStore.dayKey(Date()), doneTasks: 2, totalTasks: 4,
+            hoursPlaced: 3, writtenAt: .now), focus: nil)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
+        completion(Entry(date: .now, plan: SpreadTodayStore.load(), focus: SpreadFocusWidgetStore.load()))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
+        let now = Date()
+        let plan = SpreadTodayStore.load()
+        let focus = SpreadFocusWidgetStore.load()
+        // With a running timer, add an entry at its deadline so the panel flips to "Finished" by itself.
+        let entries = (focus?.timelineDates(from: now) ?? [now]).map { (date: Date) -> Entry in
+            Entry(date: date, plan: plan, focus: focus)
+        }
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1,
+            to: Calendar.current.startOfDay(for: now)) ?? now.addingTimeInterval(86400)
+        completion(Timeline(entries: entries, policy: .after(tomorrow)))
     }
 }
 
@@ -90,34 +102,55 @@ private struct SpreadTodayView: View {
                     }
                 }
             } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "calendar")
-                        Text("Today").font(.headline)
-                    }
-                    if let plan {
-                        Text("\(plan.doneTasks) of \(plan.totalTasks)")
-                            .font(.system(.title2, design: .rounded, weight: .semibold))
-                            .minimumScaleFactor(0.75)
-                        Text("tasks done").font(.caption)
-                        Text("\(plan.hoursPlaced, specifier: "%.1f") hours placed today")
-                            .font(.subheadline)
-                            .lineLimit(2)
-                    } else {
-                        Text("Open Spread")
-                            .font(.subheadline.weight(.semibold))
-                        Text("Enable Today's widget in More.")
-                            .font(.caption)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .accessibilityElement(children: .combine)
+                homeBody
             }
         }
         .containerBackground(.background, for: .widget)
         .widgetURL(URL(string: "spread://today"))
+    }
+
+    /// The counters, with the focus timer beside them on the medium widget while a session exists.
+    /// The timer panel opens the Focus Timer; the rest of the widget opens Today.
+    @ViewBuilder private var homeBody: some View {
+        if family == .systemMedium, let focus = entry.focus {
+            HStack(alignment: .top, spacing: 14) {
+                todayColumn
+                Divider()
+                Link(destination: SpreadWidgetLink.focus.url) {
+                    SpreadFocusPanel(state: focus, date: entry.date, compact: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            todayColumn
+        }
+    }
+
+    private var todayColumn: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "calendar")
+                Text("Today").font(.headline)
+            }
+            if let plan {
+                Text("\(plan.doneTasks) of \(plan.totalTasks)")
+                    .font(.system(.title2, design: .rounded, weight: .semibold))
+                    .minimumScaleFactor(0.75)
+                Text("tasks done").font(.caption)
+                Text("\(plan.hoursPlaced, specifier: "%.1f") hours placed today")
+                    .font(.subheadline)
+                    .lineLimit(2)
+            } else {
+                Text("Open Spread")
+                    .font(.subheadline.weight(.semibold))
+                Text("Enable Today's widget in More.")
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -211,6 +244,8 @@ struct SpreadFocusLiveActivityWidget: Widget {
 struct SpreadWidgetBundle: WidgetBundle {
     var body: some Widget {
         SpreadTodayWidget()
+        SpreadTimerWidget()
+        SpreadLifeCardsWidget()
         SpreadFocusLiveActivityWidget()
     }
 }

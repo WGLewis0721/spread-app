@@ -48,6 +48,8 @@ final class SpreadFocusTimer: ObservableObject {
         if let current = session, current.phase != .finished {
             SpreadFocusLiveActivityController.update(current)
         }
+        // Bring the widgets in step at launch, for example after an update or a relaunch.
+        SpreadFocusWidgetPublisher.publish(session)
     }
 
     func visibleSession(for profileId: String) -> SpreadFocusSession? {
@@ -131,6 +133,9 @@ final class SpreadFocusTimer: ObservableObject {
         } else {
             UserDefaults.standard.removeObject(forKey: key)
         }
+        // Every start, pause, resume, finish and expiry passes through here, so the widgets and the
+        // Live Activity always follow the same single session.
+        SpreadFocusWidgetPublisher.publish(session)
     }
 }
 

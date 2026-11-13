@@ -54,6 +54,8 @@ struct LifeRoot: View {
     @State private var historyVisible = false
     @State private var showFocusTimer = false
     @State private var preferredFocusRoleId: String?
+    /// A Life card a widget asked to open. It waits for today's week to be on screen, then focuses.
+    @State private var pendingWidgetCard: String?
     @State private var pendingTask: (role: String, task: String)?
     @AppStorage("native.life.crownRight") private var crownRight = true
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
@@ -146,10 +148,14 @@ struct LifeRoot: View {
             if planner.snapshot != nil {
                 openTodayFromWidgetIfNeeded()
                 openFocusFromActivityIfNeeded()
+                openLifeCardFromWidgetIfNeeded()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenToday"))) { _ in
             openTodayFromWidgetIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenLifeCard"))) { _ in
+            openLifeCardFromWidgetIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenFocus"))) { _ in
             openFocusFromActivityIfNeeded()
@@ -172,6 +178,8 @@ struct LifeRoot: View {
         .onChange(of: planner.snapshot?.weekKey) { old, _ in
             guard old != nil else { return }
             focusedRole = nil; tasksOpen = false; budgetExpanded = false; localSheet = nil
+            // A widget card waits for this reset, then opens once today's week is on screen.
+            applyPendingWidgetCard()
         }
         .onChange(of: planner.snapshot?.roles.map(\.id)) { _, roleIDs in
             if let focusedRole, !(roleIDs ?? []).contains(focusedRole) {
@@ -903,6 +911,34 @@ struct LifeRoot: View {
         UserDefaults.standard.removeObject(forKey: "native.widget.openFocus")
         preferredFocusRoleId = focusTimer.session?.roleId
         showFocusTimer = true
+    }
+
+    /// A Life card widget shows this week's cards, so a tap goes to today's week first, then to that card.
+    private func openLifeCardFromWidgetIfNeeded() {
+        guard let id = UserDefaults.standard.string(forKey: "native.widget.openLifeCard"),
+              let snapshot = planner.snapshot else { return }
+        UserDefaults.standard.removeObject(forKey: "native.widget.openLifeCard")
+        pendingWidgetCard = id
+        if snapshot.weekKey == PlannerDates.currentWeekKey() {
+            applyPendingWidgetCard()
+        } else {
+            // The week change clears any focused card, then applyPendingWidgetCard opens this one.
+            Task {
+                let opened = await planner.send(["type": "openWeek", "weekKey": PlannerDates.currentWeekKey()])
+                // If the week could not change, do not leave the card waiting for some later week change.
+                if !opened { pendingWidgetCard = nil }
+            }
+        }
+    }
+
+    private func applyPendingWidgetCard() {
+        guard let id = pendingWidgetCard, let snapshot = planner.snapshot,
+              snapshot.weekKey == PlannerDates.currentWeekKey() else { return }
+        pendingWidgetCard = nil
+        navigate(.life)
+        // A card that was deleted, or that belongs to another profile, simply opens Life.
+        guard snapshot.roles.contains(where: { $0.id == id }) else { return }
+        withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) { focusedRole = id }
     }
 
     private func openTodayFromWidgetIfNeeded() {
