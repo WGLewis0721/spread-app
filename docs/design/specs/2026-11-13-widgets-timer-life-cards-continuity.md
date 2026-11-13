@@ -9,7 +9,7 @@
 | Surface | Native iPhone: Home Screen widgets, Live Activity (Dynamic Island, Lock Screen) |
 | Size | L: several surfaces, a new widget, a new shared data path and a new privacy switch |
 | Author | Tool (Sonnet 5.5), 2026-11-13 |
-| Status | Draft. Implemented on the session branch. The shared logic is compiled and tested off iOS. The WidgetKit, AppIntents and SwiftUI code is syntax-parsed only and is not compiled. Device checks are owed |
+| Status | Draft. Implemented on the session branch. The owner chose Dynamic Island concepts 1, 2 and 7 (section 12). The round and break rules are compiled and tested on Linux. The WidgetKit, AppIntents and SwiftUI code is syntax-parsed only and is not compiled. Device checks are owed |
 | Governing docs read | `CLAUDE.md` rules block (Behavior, Boundaries, Verify); `PLAN_SPEC_PROTOCOL.md`; `specs/TEMPLATE.md`; `specs/2026-11-12-today-widget.md`; `specs/2026-11-12-focus-live-activity.md`; `docs/IOS_RELEASE.md` (build ownership); Apple's Live Activities guidance and the ActivityKit article (external) |
 
 ## 1. Problem
@@ -30,7 +30,7 @@ Someone starts a focus session. The Lock Screen and the Dynamic Island show it, 
 ## 3. Goals, non-goals and budget
 
 - **Goals:** a Focus timer widget in small and large; a timer panel on the Today widget's medium size; one write path so the app, the Live Activity and every widget show the same session; a Life cards widget in the app's card look that flips with previous and next and opens the tapped card; links that land in the right place; a separate off-by-default switch for Life cards on widgets; seven Dynamic Island wireframes grounded in the research.
-- **Non-goals / no-gos:** no change to planner data, schema, sync or backup; no change to the Dynamic Island itself (wireframes only); no pause or resume from a widget or the island yet; no card artwork on widgets; no server or push; no Lock Screen Life cards; no countdown to a deadline, because tasks have none.
+- **Non-goals / no-gos:** no change to planner data, schema, sync or backup; no card artwork on widgets; no server or push; no Lock Screen Life cards; no countdown to a deadline, because tasks have none; no scheduled start of any round or break. Island concepts 3, 4, 5 and 6 stay wireframes (section 12).
 - **Appetite:** one pull request. If the type-check keeps failing on the same code, split the Life cards widget out.
 
 ## 4. Rules that apply and exceptions needed
@@ -154,4 +154,31 @@ A draft pull request. The widget work, the type-check job and the wireframes are
 
 | Date | Decision | By | Documents updated |
 | --- | --- | --- | --- |
+| 2026-11-13 | Owner chose Dynamic Island concepts 1 (pause and resume), 2 (focus and break rounds) and 7 (sharing the island). The principle: the person decides when work happens, so the app never starts a round or a break on its own. Section 12 records the scope. | Owner | This spec; `DECISIONS.md`; `specs/README.md` |
 | 2026-11-13 | Add a Focus timer widget (small, large), a timer panel on the Today widget's medium size, and a Life cards widget with previous and next and a tap-to-open link. One timer mirror in the App Group feeds the widgets and the island. Life area names on the Home Screen sit behind a new off-by-default switch. Seven Dynamic Island wireframes are proposed, not built. | Owner (request), tool (design) | This spec; `DECISIONS.md`; `specs/README.md` |
+
+## 12. Island scope: concepts 1, 2 and 7
+
+**Owner decision, 2026-11-13.** "The app implicitly puts the user in the driver seat of WHEN they do something during the day. The app just lets them see how much time they have to spend throughout the week. Therefore it's no way for the app to know or decide when a task would start. A pomodoro-like timer started from the app or widget works well enough."
+
+What this builds:
+- **Rounds (concept 2).** A plan is focus minutes, break minutes and a round count (1 to 8). One round is a single focus session with no break, the same as before. Several rounds run focus, then a break, then focus, and so on. The last round has no break after it.
+- **Nothing starts on its own.** When a stretch reaches its deadline, the island, the widgets and the app show it as waiting, and a local notification says so. The break or the next round starts only when the person taps Start break or Start focus round N. The record shows a waiting stretch from its deadline even when the app is not running, because the Live Activity goes stale at that moment.
+- **Pause and resume from the island (concept 1).** Pause or Resume is the one control on the island's expanded view, the Lock Screen banner and the Timer widget. It changes the same record the app's timer reads, so the app catches up when it next runs.
+- **Start from a widget.** The Timer widget can start round 1 of the last plan when the profile on screen has one and nothing is running. Otherwise it opens Spread.
+- **Sharing the island (concept 7).** The running stretch outranks a stretch waiting for a tap (relevance 1.0 and 0.8). The compact view shows a glyph and a short countdown, and the minimal view keeps the glyph and the countdown. Compact has no control.
+- **The record moves to the shared App Group.** The timer's record used to live in the app's private defaults, where no widget or intent could read it. An earlier build's record is moved across once, on launch.
+- **Only the profile on screen acts.** The widgets, the island and the intents do nothing for another profile's session, and the mirror is removed on a profile switch.
+
+What this does not build:
+- **Concepts 3, 4, 5 and 6 stay wireframes.** Today progress (3) and the card spotlight (4) are not built here. A scheduled prompt (5) would have the app pick a time, which the principle rules out. A deadline countdown (6) needs a due time that tasks do not have.
+- **Limited-width layout.** The compact view is not yet fitted to the 28 pt limited-width circle. The environment value that reports it may need a newer iOS than the app's iOS 17 floor, and this container cannot check the SDK. It is owed to the type-check job and a device.
+- **An expired last round stays on the island until the person ends it.** Without a server nothing removes it at its deadline. The system removes it after eight hours.
+- **Break alerts from the island** use the notification setting that is stored in the app's defaults. This is read in the app's process, which is where the intents run. Device check owed.
+
+Owed on a device: pause and resume from the island with the app open, closed and killed; a round ending while the phone is locked; the waiting state at a deadline with the app not running; the Start from a widget with a plan chosen; a profile switch mid-round; the compact view in landscape.
+
+| Date | Decision | By | Documents updated |
+| --- | --- | --- | --- |
+| 2026-11-13 | Island scope: concepts 1, 2 and 7. Rounds with breaks that start only on a tap; pause and resume from the island, the Lock Screen and the Timer widget; the shared record in the App Group; concepts 3, 4, 5 and 6 left as wireframes. | Owner | This section; `DECISIONS.md`; `specs/README.md`; the wireframe board |
+

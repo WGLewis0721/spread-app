@@ -10,6 +10,8 @@ public enum SpreadWidgetShared {
     public static let focusKey = "spread.widget.focus.v1"
     public static let lifeCardsKey = "spread.widget.lifecards.v1"
     public static let lifeCardSelectedKey = "spread.widget.lifecards.selected.v1"
+    /// The switch in More that turns on Today and the focus timer on widgets. Read by the app and the intents.
+    public static let todayEnabledKey = "native.widget.enabled"
     public static let todayKind = "SpreadToday"
     public static let timerKind = "SpreadTimer"
     public static let lifeCardsKind = "SpreadLifeCards"
@@ -33,9 +35,16 @@ public struct SpreadFocusWidgetState: Codable, Equatable {
     /// "Focus session", unless the person allowed the Life area name outside the app.
     public let title: String
     public let writtenAt: Date
+    /// "focus" or "rest". Nil for a session saved before rounds existed, which is one focus stretch.
+    public let kind: String?
+    public let round: Int?
+    public let rounds: Int?
+    /// What the Continue control starts once this stretch ends, such as "Start break". Nil when nothing follows.
+    public let nextLabel: String?
 
     public init(sessionId: String, phase: Phase, endAt: Date?, pausedSeconds: Int,
-                durationSeconds: Int, title: String, writtenAt: Date) {
+                durationSeconds: Int, title: String, writtenAt: Date,
+                kind: String? = nil, round: Int? = nil, rounds: Int? = nil, nextLabel: String? = nil) {
         self.sessionId = sessionId
         self.phase = phase
         self.endAt = endAt
@@ -43,6 +52,10 @@ public struct SpreadFocusWidgetState: Codable, Equatable {
         self.durationSeconds = durationSeconds
         self.title = title
         self.writtenAt = writtenAt
+        self.kind = kind
+        self.round = round
+        self.rounds = rounds
+        self.nextLabel = nextLabel
     }
 
     /// Whole seconds left at `now`. A running session counts down to its deadline; a paused one is frozen.

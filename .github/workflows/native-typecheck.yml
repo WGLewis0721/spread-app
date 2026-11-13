@@ -44,6 +44,11 @@ jobs:
           ios/App/SpreadWidget/SpreadLifeCardsWidget.swift
           ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusActivityAttributes.swift
           ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadWidgetShared.swift
+          ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusSession.swift
+          ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusLiveActivityController.swift
+          ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusIntents.swift
+          ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadLocalAlerts.swift
+          ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadFocusWidgetPublisher.swift
 
       - name: Type-check the native Swift package
         # Reported even when the widget step fails, so one run shows every problem.

@@ -49,9 +49,9 @@ test("one bounded Live Activity supports Lock Screen and Dynamic Island presenta
   assert.match(info, /NSSupportsLiveActivities/);
   assert.match(controller, /ActivityAuthorizationInfo/);
   assert.match(controller, /dismissalPolicy: \.immediate/);
-  assert.match(timer, /SpreadFocusLiveActivityController\.start/);
-  assert.match(timer, /SpreadFocusLiveActivityController\.update/);
+  assert.match(timer, /SpreadFocusControls\.apply/);
   assert.match(timer, /SpreadFocusLiveActivityController\.end/);
+  assert.match(focusController, /static func refresh/);
 });
 
 test("widget text-style fonts use SwiftUI's design-before-weight argument order", () => {
@@ -73,6 +73,11 @@ const liveRoot = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLive
 const lifeRoot = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift");
 const moreSheet = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift");
 const sceneDelegate = get("ios/App/App/SceneDelegate.swift");
+const focusController = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusLiveActivityController.swift");
+const focusControls = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusIntents.swift");
+const focusSession = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusSession.swift");
+const focusLocalAlerts = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadLocalAlerts.swift");
+const timerWidgetSource = get("ios/App/SpreadWidget/SpreadTimerWidget.swift");
 
 /** The widget extension's Sources build phase, as the list of file names it compiles. */
 function widgetSourceNames() {
@@ -88,7 +93,9 @@ function widgetSourceNames() {
 test("the new widget files are compiled by the extension and listed in the bundle", () => {
   const compiled = widgetSourceNames().map((path) => path.split("/").pop());
   for (const name of ["SpreadTodayWidget.swift", "SpreadTimerWidget.swift", "SpreadLifeCardsWidget.swift",
-    "SpreadWidgetShared.swift", "SpreadFocusActivityAttributes.swift"]) {
+    "SpreadWidgetShared.swift", "SpreadFocusActivityAttributes.swift", "SpreadFocusSession.swift",
+    "SpreadFocusLiveActivityController.swift", "SpreadFocusIntents.swift", "SpreadLocalAlerts.swift",
+    "SpreadFocusWidgetPublisher.swift"]) {
     assert.ok(compiled.includes(name), `${name} must be in the widget Sources phase`);
   }
   assert.match(source, /SpreadTimerWidget\(\)/);
@@ -133,7 +140,7 @@ test("the shared widget file is plain Foundation and carries no task text", () =
 });
 
 test("widget privacy: names appear only on opt-in, Life cards have their own switch", () => {
-  assert.match(focusPublisher, /bool\(forKey: SpreadWidgetPublisher\.enabledKey\)/);
+  assert.match(focusPublisher, /bool\(forKey: SpreadWidgetShared\.todayEnabledKey\)/);
   assert.match(focusPublisher, /bool\(forKey: showNameKey\) \? session\.roleName : "Focus session"/);
   assert.match(lifeCardsPublisher, /static let enabledKey = "native\.widget\.lifeCardsEnabled"/);
   assert.match(lifeCardsPublisher, /guard UserDefaults\.standard\.bool\(forKey: enabledKey\) else/);
@@ -148,8 +155,9 @@ test("widget privacy: names appear only on opt-in, Life cards have their own swi
 
 test("continuity: one timer, one write path, every surface opens the right place", () => {
   // Every start, pause, resume, finish and expiry passes through persist(), which feeds the widgets.
-  assert.match(focusTimer, /private func persist\(\) \{[\s\S]*SpreadFocusWidgetPublisher\.publish\(session\)[\s\S]*\}/);
-  assert.match(focusTimer, /SpreadFocusLiveActivityController\.update/);
+  assert.match(focusTimer, /private func commit\(_ next: SpreadFocusSession\?, notify: Bool\) \{[\s\S]*SpreadFocusControls\.apply\(next, notify: notify\)[\s\S]*\}/);
+  assert.match(focusControls, /SpreadFocusWidgetPublisher\.publish\(session\)/);
+  assert.match(focusControls, /SpreadFocusLiveActivityController\.refresh\(session\)/);
   // The mirror is rebuilt from the saved session when the opt-in changes mid-session.
   assert.match(moreSheet, /SpreadFocusWidgetPublisher\.republishFromStore\(\)/);
   // The Dynamic Island, Lock Screen, Timer widget and Today panel all open the Focus Timer.
@@ -182,4 +190,51 @@ test("every widget follows the system's light or dark appearance", () => {
   assert.match(lifeCardsSource, /SpreadLifeCardBackground\(colorHex: card\.colorHex, scheme: scheme\)/);
   assert.match(lifeCardsSource, /if scheme == \.dark/);
   assert.doesNotMatch(lifeCardsSource, /\.foregroundStyle\(Color\.white\)|\.tint\(\.white\)/);
+});
+
+test("the type-check job compiles the same widget files as the widget target", () => {
+  const workflow = get(".github/workflows/native-typecheck.yml");
+  const widgetStep = workflow.slice(workflow.indexOf("swiftc -typecheck -parse-as-library"),
+    workflow.indexOf("Type-check the native Swift package"));
+  const listed = [...widgetStep.matchAll(/ios\/[^\s]+\.swift/g)].map(([path]) => path.split("/").pop()).sort();
+  const compiled = widgetSourceNames().map((path) => path.split("/").pop()).sort();
+  assert.deepEqual(listed, compiled);
+});
+
+test("every surface uses the same four focus intents", () => {
+  for (const name of ["StartSpreadFocusIntent", "PauseSpreadFocusIntent", "ResumeSpreadFocusIntent",
+    "ContinueSpreadFocusIntent"]) {
+    assert.match(focusControls, new RegExp(`struct ${name}: LiveActivityIntent`));
+  }
+  // The Timer widget and the island share one control, so they cannot drift apart.
+  assert.match(timerWidgetSource, /SpreadFocusActionButton\(/);
+  assert.match(timerWidgetSource, /Button\(intent: PauseSpreadFocusIntent\(\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: ResumeSpreadFocusIntent\(\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: ContinueSpreadFocusIntent\(\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: StartSpreadFocusIntent\(\)\)/);
+  assert.match(source, /SpreadFocusActionButton\(/);
+});
+
+test("a break or the next round never starts on its own", () => {
+  // Only the person's taps start a stretch: the intents and the timer's continue action.
+  const callers = [focusControls, focusTimer].map((text) => (text.match(/followUp\(|startPlan\(|\.stretch\(/g) || []).length);
+  assert.ok(callers[0] >= 1 && callers[1] >= 1);
+  const reconcileBody = focusTimer.slice(focusTimer.indexOf("func reconcile()"), focusTimer.indexOf("private func commit"));
+  assert.doesNotMatch(reconcileBody, /followUp|startPlan|stretch/);
+  // The island's ended stretch is shown as waiting from the stale date, without the app running.
+  assert.match(timerWidgetSource, /isStale/);
+  assert.match(focusController, /staleDate: session\.phase == \.running \? session\.endAt : nil/);
+});
+
+test("the focus timer's record lives in the shared App Group, not the app's private defaults", () => {
+  assert.match(focusSession, /static let appGroup = "group\.com\.graymatter\.spread"/);
+  assert.match(focusSession, /static func load\(_ defaults: UserDefaults = SpreadFocusStore\.shared\)/);
+  assert.doesNotMatch(focusTimer, /UserDefaults\.standard\.(data|set|removeObject)\(forKey: key\)/);
+  assert.match(focusSession, /static func migrate\(from legacy: UserDefaults = \.standard/);
+});
+
+test("Live Activity relevance puts a running stretch above one waiting for a tap", () => {
+  assert.match(focusController, /case \.running, \.paused: return 1\.0/);
+  assert.match(focusController, /case \.finished: return 0\.8/);
+  assert.match(focusLocalAlerts, /Start your break when you're ready\./);
 });

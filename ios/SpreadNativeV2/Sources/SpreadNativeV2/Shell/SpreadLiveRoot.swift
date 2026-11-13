@@ -113,7 +113,8 @@ public struct SpreadLiveRoot: View {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 if Task.isCancelled { break }
-                focusTimer.reconcile()
+                // The island and the widgets may have changed the session while the app was not running.
+                focusTimer.reloadFromStore()
             }
         }
         .task(id: planner.snapshot != nil) {
@@ -203,7 +204,14 @@ public struct SpreadLiveRoot: View {
             .onChange(of: editing) { _, active in SpreadHaptics.editMode(entering: active) }
             .onChange(of: planner.state?.envelope.profileId) { _, profile in
                 openProfile(profile)
-                if let profile { focusTimer.pauseForProfileSwitch(to: profile) }
+                if let profile {
+                    focusTimer.noteActiveProfile(profile)
+                    focusTimer.pauseForProfileSwitch(to: profile)
+                }
+            }
+            .task(id: planner.state?.envelope.profileId) {
+                // The first profile loads after launch, which onChange does not see. Record it here too.
+                if let profile = planner.state?.envelope.profileId { focusTimer.noteActiveProfile(profile) }
             }
             .onChange(of: destination) { _, _ in
                 persistView()

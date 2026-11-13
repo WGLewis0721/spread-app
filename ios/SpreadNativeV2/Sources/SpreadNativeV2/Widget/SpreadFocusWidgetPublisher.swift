@@ -2,19 +2,17 @@
 import Foundation
 import WidgetKit
 
-/// Mirrors the one local focus session into the shared App Group so widgets can show it. The timer
-/// stays the only authority: this is rewritten on every change and deleted when the session ends.
-/// It needs the same opt-in as the Today widget, and it carries the Life area name only when the
-/// person allowed that outside the app. Nothing here changes a budget, allocation or task.
+/// Mirrors the one local focus session into the shared App Group so the Timer and Today widgets can show it.
+/// Only the profile on screen is mirrored. The mirror is removed when a session ends with nothing after it.
+/// Life area names appear only when the person allowed them outside the app. Nothing here changes a budget,
+/// an allocation or a task.
 enum SpreadFocusWidgetPublisher {
-    // The keys the timer and the Live Activity already use, kept as literals so this file does not
-    // depend on their actor isolation.
-    private static let sessionKey = "native.focus.session.v1"
     private static let showNameKey = "native.focus.showNameOutsideApp"
 
     static func publish(_ session: SpreadFocusSession?) {
-        guard UserDefaults.standard.bool(forKey: SpreadWidgetPublisher.enabledKey),
-              let session, session.phase != .finished,
+        guard UserDefaults.standard.bool(forKey: SpreadWidgetShared.todayEnabledKey),
+              let session, SpreadFocusMachine.isOnScreen(session),
+              SpreadFocusStore.activeProfile() == session.profileId,
               let shared = UserDefaults(suiteName: SpreadWidgetShared.appGroup) else {
             revoke()
             return
@@ -22,25 +20,26 @@ enum SpreadFocusWidgetPublisher {
         let title = UserDefaults.standard.bool(forKey: showNameKey) ? session.roleName : "Focus session"
         let state = SpreadFocusWidgetState(
             sessionId: session.id,
-            phase: session.phase == .running ? .running : .paused,
+            // A finished stretch with a next step is shown as running with no deadline, which the widget reads
+            // as "done, waiting for a tap".
+            phase: session.phase == .paused ? .paused : .running,
             endAt: session.endAt,
             pausedSeconds: session.pausedSeconds,
             durationSeconds: session.durationSeconds,
             title: title,
-            writtenAt: Date())
+            writtenAt: Date(),
+            kind: session.currentKind.rawValue,
+            round: session.roundNumber,
+            rounds: session.roundCount,
+            nextLabel: SpreadFocusMachine.nextLabel(after: session))
         guard let data = try? JSONEncoder().encode(state) else { return }
         shared.set(data, forKey: SpreadWidgetShared.focusKey)
         reload()
     }
 
-    /// Re-reads the saved session, for when the opt-in changes while a session is already running.
+    /// Re-reads the saved session, for when the widget switch changes during a session.
     static func republishFromStore() {
-        guard let data = UserDefaults.standard.data(forKey: sessionKey),
-              let session = try? JSONDecoder().decode(SpreadFocusSession.self, from: data) else {
-            revoke()
-            return
-        }
-        publish(session)
+        publish(SpreadFocusStore.load())
     }
 
     static func revoke() {

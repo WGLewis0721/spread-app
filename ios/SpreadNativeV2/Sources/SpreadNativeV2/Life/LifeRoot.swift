@@ -727,17 +727,19 @@ struct LifeRoot: View {
     private func bottom(_ snapshot: PlannerSnapshot, wide: Bool) -> some View {
         VStack(spacing: 6) {
             if let profileId = planner.state?.envelope.profileId,
-               let session = focusTimer.visibleSession(for: profileId), session.phase != .finished {
+               let session = focusTimer.visibleSession(for: profileId), SpreadFocusMachine.isOnScreen(session) {
                 Button {
                     preferredFocusRoleId = session.roleId
                     showFocusTimer = true
                 } label: {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         HStack(spacing: 8) {
-                            Image(systemName: "timer")
+                            Image(systemName: session.currentKind == .rest ? "cup.and.saucer.fill" : "timer")
                             Text(session.roleName).lineLimit(1)
                             Spacer(minLength: 8)
-                            Text(SpreadFocusClock.display(session.remaining(at: context.date)))
+                            // A finished stretch with a next step waits for a tap, so it shows "Next", not 00:00.
+                            Text(session.phase == .finished ? "Next"
+                                 : SpreadFocusClock.display(session.remaining(at: context.date)))
                                 .monospacedDigit()
                             Image(systemName: "chevron.up")
                         }
