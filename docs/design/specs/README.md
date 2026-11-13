@@ -33,3 +33,5 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 - [Life recording specification](2026-11-06-life-video-spec.md) — timestamped findings, corrections and candidate acceptance.
 
 - [Annotated iPhone precision](2026-11-06-annotated-iphone-precision.md): owner corrections for Life, Hours and Week; implementation and native evidence pending.
+
+- [What's New shows everything the last build changed](2026-11-12-whats-new-every-update.md): every unseen note opens as one list; Swift compile and device checks owed.

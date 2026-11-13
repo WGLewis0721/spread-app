@@ -37,4 +37,30 @@ final class ReleaseNotesTests: XCTestCase {
         XCTAssertTrue(SpreadReleaseNotes.shouldPresent(version: "1.0", lastSeenID: old.id, entries: entries))
         XCTAssertFalse(SpreadReleaseNotes.shouldPresent(version: "1.0", lastSeenID: newest.id, entries: entries))
     }
+
+    func testEveryEntryNewerThanTheLastSeenOpensTogetherNewestFirst() {
+        let a = SpreadReleaseNote(id: "a", version: "1.0", date: "2026-11-11", title: "T", changes: ["A"])
+        let b = SpreadReleaseNote(id: "b", version: "1.0", date: "2026-11-12", title: "T", changes: ["B"])
+        let c = SpreadReleaseNote(id: "c", version: "1.0", date: "2026-11-12", title: "T", changes: ["C"])
+        let entries = [c, b, a]
+        XCTAssertEqual(SpreadReleaseNotes.unseen(for: "1.0", lastSeenID: "a", in: entries), [c, b])
+        XCTAssertEqual(SpreadReleaseNotes.unseen(for: "1.0", lastSeenID: "b", in: entries), [c])
+        XCTAssertEqual(SpreadReleaseNotes.unseen(for: "1.0", lastSeenID: "c", in: entries), [])
+    }
+
+    func testFirstLaunchShowsOnlyTheNewestDaysNotes() {
+        let a = SpreadReleaseNote(id: "a", version: "1.0", date: "2026-11-11", title: "T", changes: ["A"])
+        let b = SpreadReleaseNote(id: "b", version: "1.0", date: "2026-11-12", title: "T", changes: ["B"])
+        let c = SpreadReleaseNote(id: "c", version: "1.0", date: "2026-11-12", title: "T", changes: ["C"])
+        XCTAssertEqual(SpreadReleaseNotes.unseen(for: "1.0", lastSeenID: "", in: [c, b, a]), [c, b])
+    }
+
+    func testUnseenNotesReadAsOneListInOrder() {
+        let b = SpreadReleaseNote(id: "b", version: "1.0", date: "2026-11-12", title: "T", changes: ["B1", "B2"])
+        let c = SpreadReleaseNote(id: "c", version: "1.0", date: "2026-11-12", title: "T", changes: ["C1"])
+        let merged = SpreadReleaseNotes.combined([c, b])
+        XCTAssertEqual(merged?.changes, ["C1", "B1", "B2"])
+        XCTAssertEqual(merged?.id, "c")
+        XCTAssertNil(SpreadReleaseNotes.combined([]))
+    }
 }

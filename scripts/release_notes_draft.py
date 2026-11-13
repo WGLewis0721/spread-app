@@ -16,8 +16,11 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent.parent
+# The owner's calendar day. The runner clock is UTC, which is a day ahead after 6 pm Central.
+NOTES_TIMEZONE = ZoneInfo("America/Chicago")
 NOTES = ROOT / "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/ReleaseNotes.json"
 PROJECT = ROOT / "ios/App/App.xcodeproj/project.pbxproj"
 PENDING_BRANCH = "release-notes/pending"
@@ -84,15 +87,17 @@ def marketing_version(project_text: str) -> str:
 def add_change(catalog: dict, change: str, new_entry: dict | None = None) -> None:
     """Append one line to the pending entry, which is the first release.
 
-    When new_entry is given, it is inserted first and starts with no lines. Once the entry
-    holds MAX_CHANGES lines, the oldest line is dropped so the note stays within the
-    preflight limit.
+    When new_entry is given, it is inserted first and starts with no lines. The caller starts
+    a new entry whenever the pending one is full, so no line is dropped and every entry stays
+    within the preflight limit of MAX_CHANGES lines.
     """
     releases = catalog["releases"]
     if new_entry is not None:
         releases.insert(0, {**new_entry, "changes": []})
     pending = releases[0]
-    pending["changes"] = (pending["changes"] + [change])[-MAX_CHANGES:]
+    if len(pending["changes"]) >= MAX_CHANGES:
+        raise ValueError("The pending entry is full; start a new entry before adding a line")
+    pending["changes"] = pending["changes"] + [change]
 
 
 def included_items(body: str | None) -> list[str]:
@@ -110,15 +115,13 @@ def render_body(included: list[str]) -> str:
         "Before merging this PR, rewrite each line in plain English, remove anything internal, and check every claim "
         "against what was verified on a device. Merging publishes these lines with the next signed build.",
     ]
-    dropped = len(included) - MAX_CHANGES
-    if dropped > 0:
-        lines += ["", f"The note holds {MAX_CHANGES} lines, so the {dropped} oldest merge(s) are no longer in it."]
     lines += ["", "Merges included:", BODY_START, *(f"- {item}" for item in included), BODY_END]
     return "\n".join(lines) + "\n"
 
 
-def today_utc() -> str:
-    return datetime.now(timezone.utc).date().isoformat()
+def local_date(now: datetime) -> str:
+    """The date in the owner's timezone, for the entry's date."""
+    return now.astimezone(NOTES_TIMEZONE).date().isoformat()
 
 
 def git(*args: str) -> str:
@@ -167,12 +170,13 @@ def main() -> int:
         git("checkout", "-B", PENDING_BRANCH, sha)
 
     catalog = json.loads(NOTES.read_text(encoding="utf-8"))
+    starts_entry = not pending or len(catalog["releases"][0]["changes"]) >= MAX_CHANGES
     new_entry = None
-    if not pending:
+    if starts_entry:
         new_entry = {
             "id": f"notes-{sha[:7]}",
             "version": marketing_version(PROJECT.read_text(encoding="utf-8")),
-            "date": today_utc(),
+            "date": local_date(datetime.now(timezone.utc)),
             "title": ENTRY_TITLE,
         }
     add_change(catalog, change, new_entry)

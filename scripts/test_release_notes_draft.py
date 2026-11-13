@@ -1,5 +1,6 @@
 """No-network tests for the per-merge What's New draft. The GitHub and git calls are not exercised here."""
 import unittest
+from datetime import datetime, timezone
 
 from release_notes_draft import (
     BODY_END,
@@ -9,6 +10,7 @@ from release_notes_draft import (
     change_for,
     included_items,
     is_notes_change,
+    local_date,
     marketing_version,
     plain_title,
     render_body,
@@ -83,16 +85,38 @@ class AddChangeTests(unittest.TestCase):
         self.assertEqual(data["releases"][0]["changes"], ["First line", "Second line"])
         self.assertEqual(len(data["releases"]), 2)
 
-    def test_lines_are_capped_and_the_oldest_is_dropped(self):
+    def test_full_entry_refuses_a_line_so_none_is_dropped(self):
         data = catalog()
         new = {"id": "notes-abc1234", "version": "1.0", "date": "2026-11-12", "title": "Recent updates"}
         add_change(data, "line 0", new)
-        for index in range(1, MAX_CHANGES + 3):
+        for index in range(1, MAX_CHANGES):
             add_change(data, f"line {index}")
-        changes = data["releases"][0]["changes"]
-        self.assertEqual(len(changes), MAX_CHANGES)
-        self.assertEqual(changes[0], "line 3")
-        self.assertEqual(changes[-1], f"line {MAX_CHANGES + 2}")
+        self.assertEqual(len(data["releases"][0]["changes"]), MAX_CHANGES)
+        with self.assertRaises(ValueError):
+            add_change(data, "one too many")
+        self.assertEqual(data["releases"][0]["changes"][0], "line 0")
+
+    def test_a_new_entry_takes_the_next_line_after_a_full_one(self):
+        data = catalog()
+        first = {"id": "notes-abc1234", "version": "1.0", "date": "2026-11-12", "title": "Recent updates"}
+        add_change(data, "line 0", first)
+        for index in range(1, MAX_CHANGES):
+            add_change(data, f"line {index}")
+        second = {"id": "notes-def5678", "version": "1.0", "date": "2026-11-12", "title": "Recent updates"}
+        add_change(data, "overflow line", second)
+        self.assertEqual(data["releases"][0]["id"], "notes-def5678")
+        self.assertEqual(data["releases"][0]["changes"], ["overflow line"])
+        self.assertEqual(len(data["releases"][1]["changes"]), MAX_CHANGES)
+        self.assertEqual(data["releases"][1]["changes"][0], "line 0")
+
+
+class DateTests(unittest.TestCase):
+    def test_entry_date_is_the_owners_calendar_day_not_utc(self):
+        # 00:05 UTC on Nov 13 is 6:05 pm on Nov 12 in Chicago (Central Standard Time).
+        self.assertEqual(local_date(datetime(2026, 11, 13, 0, 5, tzinfo=timezone.utc)), "2026-11-12")
+
+    def test_morning_utc_is_the_same_day_in_chicago(self):
+        self.assertEqual(local_date(datetime(2026, 11, 12, 15, 0, tzinfo=timezone.utc)), "2026-11-12")
 
 
 class PendingBodyTests(unittest.TestCase):
@@ -100,10 +124,11 @@ class PendingBodyTests(unittest.TestCase):
         items = ["#184 Plan Ahead fixed days", "abc1234 Fix week spacing"]
         self.assertEqual(included_items(render_body(items)), items)
 
-    def test_body_notes_when_older_merges_left_the_note(self):
+    def test_body_lists_every_merge_even_past_the_entry_limit(self):
         items = [f"#{n} merge {n}" for n in range(MAX_CHANGES + 2)]
         body = render_body(items)
-        self.assertIn("the 2 oldest merge(s) are no longer in it", body)
+        self.assertNotIn("no longer in it", body)
+        self.assertEqual(included_items(body), items)
         self.assertIn(BODY_START, body)
         self.assertIn(BODY_END, body)
 
