@@ -16,9 +16,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func handleWidgetURL(_ url: URL) {
-        guard url.scheme == "spread", url.host == "today" else { return }
-        UserDefaults.standard.set(true, forKey: "native.widget.openToday")
-        NotificationCenter.default.post(name: Notification.Name("SpreadOpenToday"), object: nil)
+        guard url.scheme == "spread" else { return }
+        if url.host == "today" {
+            UserDefaults.standard.set(true, forKey: "native.widget.openToday")
+            NotificationCenter.default.post(name: Notification.Name("SpreadOpenToday"), object: nil)
+        } else if url.host == "focus" {
+            UserDefaults.standard.set(true, forKey: "native.widget.openFocus")
+            NotificationCenter.default.post(name: Notification.Name("SpreadOpenFocus"), object: nil)
+        }
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
