@@ -141,6 +141,15 @@ enum SpreadLocalAlerts {
     static func scheduleFocus(_ session: SpreadFocusSession) async {
         guard session.phase == .running, let endAt = session.endAt,
               endAt > Date(), await authorized() else { return }
+        // Permission may have taken seconds. Recheck persistent state so a pause,
+        // finish, profile change or immediate restart cannot resurrect a stale alert.
+        func stillCurrent() -> Bool {
+            guard let data = UserDefaults.standard.data(forKey: "native.focus.session.v1"),
+                  let saved = try? JSONDecoder().decode(SpreadFocusSession.self, from: data)
+            else { return false }
+            return saved.id == session.id && saved.phase == .running && saved.endAt == endAt
+        }
+        guard stillCurrent() else { return }
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [focusId])
         let content = UNMutableNotificationContent()
@@ -151,6 +160,7 @@ enum SpreadLocalAlerts {
         let request = UNNotificationRequest(identifier: focusId, content: content,
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false))
         try? await center.add(request)
+        if !stillCurrent() { center.removePendingNotificationRequests(withIdentifiers: [focusId]) }
     }
 
     static func cancelFocus() {
