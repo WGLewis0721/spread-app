@@ -1,0 +1,140 @@
+import WidgetKit
+import SwiftUI
+import Foundation
+
+private struct SpreadToday: Decodable {
+    let day: String
+    let doneTasks: Int
+    let totalTasks: Int
+    let hoursPlaced: Double
+    let writtenAt: Date
+}
+
+private struct SpreadTodayEntry: TimelineEntry {
+    let date: Date
+    let plan: SpreadToday?
+}
+
+private struct SpreadTodayProvider: TimelineProvider {
+    typealias Entry = SpreadTodayEntry
+
+    func placeholder(in context: Context) -> Entry {
+        Entry(date: .now, plan: SpreadToday(
+            day: Self.dayKey(Date()), doneTasks: 2, totalTasks: 4,
+            hoursPlaced: 3, writtenAt: .now))
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
+        completion(Entry(date: .now, plan: Self.load()))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
+        let now = Date()
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1,
+            to: Calendar.current.startOfDay(for: now)) ?? now.addingTimeInterval(86400)
+        completion(Timeline(entries: [Entry(date: now, plan: Self.load())], policy: .after(tomorrow)))
+    }
+
+    private static func load() -> SpreadToday? {
+        guard let data = UserDefaults(suiteName: "group.com.graymatter.spread")?
+            .data(forKey: "spread.widget.today.v1"),
+              let value = try? JSONDecoder().decode(SpreadToday.self, from: data),
+              value.day == dayKey(Date()) else { return nil }
+        return value
+    }
+
+    private static func dayKey(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+}
+
+private struct SpreadTodayView: View {
+    let entry: SpreadTodayEntry
+    @Environment(\.widgetFamily) private var family
+    private var plan: SpreadToday? { entry.plan }
+
+    var body: some View {
+        Group {
+            if family == .accessoryCircular {
+                if let plan {
+                    VStack(spacing: 0) {
+                        Text("\(plan.doneTasks)")
+                            .font(.system(.title3, weight: .semibold, design: .rounded))
+                        Text("/ \(plan.totalTasks)")
+                            .font(.system(.caption2))
+                    }
+                    .accessibilityLabel("\(plan.doneTasks) of \(plan.totalTasks) tasks completed")
+                } else {
+                    Image(systemName: "calendar")
+                        .accessibilityLabel("Open Spread to enable Today widget")
+                }
+            } else if family == .accessoryRectangular {
+                if let plan {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Spread · Today").font(.headline)
+                        Text("\(plan.doneTasks) of \(plan.totalTasks) done · \(plan.hoursPlaced, specifier: "%.1f")h planned")
+                            .font(.caption)
+                            .lineLimit(1)
+                    }
+                    .accessibilityElement(children: .combine)
+                } else {
+                    VStack(alignment: .leading) {
+                        Text("Spread").font(.headline)
+                        Text("Enable widget in More").font(.caption)
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "calendar")
+                        Text("Today").font(.headline)
+                    }
+                    if let plan {
+                        Text("\(plan.doneTasks) of \(plan.totalTasks)")
+                            .font(.system(.title2, weight: .semibold, design: .rounded))
+                            .minimumScaleFactor(0.75)
+                        Text("tasks done").font(.caption)
+                        Text("\(plan.hoursPlaced, specifier: "%.1f") hours placed today")
+                            .font(.subheadline)
+                            .lineLimit(2)
+                    } else {
+                        Text("Open Spread")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Enable Today's widget in More.")
+                            .font(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .containerBackground(.background, for: .widget)
+        .widgetURL(URL(string: "spread://today"))
+    }
+}
+
+struct SpreadTodayWidget: Widget {
+    let kind = "SpreadToday"
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: SpreadTodayProvider()) { entry in
+            SpreadTodayView(entry: entry)
+        }
+        .configurationDisplayName("Today in Spread")
+        .description("See your planned hours and task progress without opening the app.")
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular, .accessoryCircular])
+    }
+}
+
+@main
+struct SpreadWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        SpreadTodayWidget()
+    }
+}

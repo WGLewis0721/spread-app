@@ -5,6 +5,24 @@
 	};
 	objectVersion = 60;
 	objects = {
+		FACA00000000000000000001 /* Widget Swift */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadTodayWidget.swift; sourceTree = "<group>"; };
+		FACA00000000000000000002 /* Widget Info */ = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FACA00000000000000000003 /* Widget Entitlements */ = { isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SpreadWidget.entitlements; sourceTree = "<group>"; };
+		FACA00000000000000000004 /* Widget .appex */ = { isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SpreadWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		FACA00000000000000000005 /* Widget Swift in Sources */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000001; };
+		FACA0000000000000000000E /* Widget .appex in Embed */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000004; settings = { ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FACA00000000000000000006 /* Widget resources */ = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		FACA00000000000000000007 /* Widget sources */ = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (FACA00000000000000000005,); runOnlyForDeploymentPostprocessing = 0; };
+		FACA00000000000000000008 /* Widget frameworks */ = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		FACA00000000000000000009 /* Widget target */ = { isa = PBXNativeTarget; buildConfigurationList = FACA0000000000000000000A; buildPhases = (FACA00000000000000000007, FACA00000000000000000008, FACA00000000000000000006,); buildRules = (); dependencies = (); name = SpreadWidget; productName = SpreadWidget; productReference = FACA00000000000000000004; productType = "com.apple.product-type.app-extension"; };
+		FACA0000000000000000000A /* Widget configurations */ = { isa = XCConfigurationList; buildConfigurations = (FACA0000000000000000000B, FACA0000000000000000000C,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		FACA0000000000000000000B /* Widget Debug */ = { isa = XCBuildConfiguration; name = Debug; buildSettings = { APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = SpreadWidget/SpreadWidget.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; INFOPLIST_FILE = SpreadWidget/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",); PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread.widget; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; };
+		FACA0000000000000000000C /* Widget Release */ = { isa = XCBuildConfiguration; name = Release; buildSettings = { APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = SpreadWidget/SpreadWidget.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; INFOPLIST_FILE = SpreadWidget/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks",); PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread.widget; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; };
+		FACA0000000000000000000D /* Embed App Extensions */ = { isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (FACA0000000000000000000E,); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0; };
+		FACA0000000000000000000F /* Widget group */ = { isa = PBXGroup; children = (FACA00000000000000000001, FACA00000000000000000002, FACA00000000000000000003,); path = SpreadWidget; sourceTree = "<group>"; };
+		FACA00000000000000000010 /* Widget dependency proxy */ = { isa = PBXContainerItemProxy; containerPortal = 504EC2FC1FED79650016851F; proxyType = 1; remoteGlobalIDString = FACA00000000000000000009; remoteInfo = SpreadWidget; };
+		FACA00000000000000000011 /* Widget target dependency */ = { isa = PBXTargetDependency; target = FACA00000000000000000009; targetProxy = FACA00000000000000000010; };
+
 
         AC1130000000000000000001 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadNativeUITests/PlannerUITests.swift; sourceTree = SOURCE_ROOT; };
         AC1130000000000000000002 = { isa = PBXBuildFile; fileRef = AC1130000000000000000001; };
@@ -89,6 +107,7 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				FACA0000000000000000000F /* SpreadWidget */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -97,6 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				FACA00000000000000000004 /* SpreadWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -144,10 +164,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				FACA0000000000000000000D /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				FACA00000000000000000011 /* SpreadWidget */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -173,6 +195,7 @@
 						LastSwiftMigration = 1100;
 						ProvisioningStyle = Automatic;
 					};
+					FACA00000000000000000009 = { CreatedOnToolsVersion = 27.0; ProvisioningStyle = Automatic; };
 				};
 			};
 			buildConfigurationList = 504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */;
@@ -195,6 +218,7 @@
 			targets = (
                 AC1130000000000000000006,
 				504EC3031FED79650016851F /* App */,
+				FACA00000000000000000009 /* SpreadWidget */,
 			);
 		};
 /* End PBXProject section */

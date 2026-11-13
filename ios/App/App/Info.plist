@@ -3,6 +3,13 @@
 <plist version="1.0">
 <dict>
   <key>CAPACITOR_DEBUG</key><string>$(CAPACITOR_DEBUG)</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>com.graymatter.spread.today</string>
+      <key>CFBundleURLSchemes</key><array><string>spread</string></array>
+    </dict>
+  </array>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleDisplayName</key><string>Spread</string>
   <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>

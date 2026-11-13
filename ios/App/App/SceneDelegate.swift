@@ -12,9 +12,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
+        for context in connectionOptions.urlContexts { handleWidgetURL(context.url) }
+    }
+
+    private func handleWidgetURL(_ url: URL) {
+        guard url.scheme == "spread", url.host == "today" else { return }
+        UserDefaults.standard.set(true, forKey: "native.widget.openToday")
+        NotificationCenter.default.post(name: Notification.Name("SpreadOpenToday"), object: nil)
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        for context in URLContexts { handleWidgetURL(context.url) }
         SceneDelegateProxy.shared.scene(scene, openURLContexts: URLContexts)
     }
 

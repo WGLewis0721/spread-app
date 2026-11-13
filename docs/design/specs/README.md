@@ -10,6 +10,7 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 
 | Date | Spec | Status |
 | --- | --- | --- |
+| 2026-11-12 | [Read-only Today widget](2026-11-12-today-widget.md) | Implemented in stacked PR #187; App Group signing and device verification pending. |
 | 2026-11-12 | [Focus Timer and local notifications](2026-11-12-focus-timer-local-notifications.md) | Implemented in stacked PR #186; native and device verification pending. |
 | 2026-11-12 | [Plan Ahead opens to your plans](2026-11-12-plan-ahead-plans-list.md) | Built and in review. Branch `feature/plan-ahead-plans-list`: 1 to 12 week intervals, a read-only 8-week outlook, set days saved with each schedule, and the Life-card day prefill. Owner decisions are in section 4. Monthly cadence is not built. Native compile (Codemagic) and device checks pending. |
 | 2026-11-12 | [Plan Ahead recurring weekly budgets](2026-11-12-plan-ahead-recurrence.md) | Owner-approved interaction; implementation proposed in draft PR #181; native build and real-device QA pending. |

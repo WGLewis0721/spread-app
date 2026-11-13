@@ -142,6 +142,12 @@ struct LifeRoot: View {
         }
         .foregroundStyle(LifePalette.ink).tint(LifePalette.accent)
         .task { await planner.refresh() }
+        .task(id: planner.snapshot != nil) {
+            if planner.snapshot != nil { openTodayFromWidgetIfNeeded() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenToday"))) { _ in
+            openTodayFromWidgetIfNeeded()
+        }
         // A deadline, not a background stopwatch, owns elapsed time across suspension.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
@@ -885,6 +891,14 @@ struct LifeRoot: View {
             .accessibilityAction(.escape) { closeNavigation() }
         }
     }
+    private func openTodayFromWidgetIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: "native.widget.openToday"),
+              planner.snapshot != nil else { return }
+        UserDefaults.standard.removeObject(forKey: "native.widget.openToday")
+        navigate(.week)
+        Task { _ = await planner.send(["type": "openWeek", "weekKey": PlannerDates.currentWeekKey()]) }
+    }
+
     private func navigate(_ value: LifeDestination) {
         if destination != value {
             LifeFeedback.selection()

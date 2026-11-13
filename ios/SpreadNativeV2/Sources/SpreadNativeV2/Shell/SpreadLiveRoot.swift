@@ -76,6 +76,24 @@ public struct SpreadLiveRoot: View {
                 presented // Classic keeps its original destination and planner semantics.
             }
         }
+        .task(id: planner.state?.revision) {
+            if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+        }
+        .onChange(of: planner.state?.envelope.profileId) { old, new in
+            if old != nil && old != new {
+                // Never show a previous profile's counts after switching profiles.
+                SpreadWidgetPublisher.revoke()
+                if let snapshot = planner.snapshot { SpreadWidgetPublisher.publish(snapshot: snapshot) }
+            }
+        }
+        .onAppear {
+            if UserDefaults.standard.bool(forKey: "native.widget.openToday") {
+                weekFocusEnabled = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenToday"))) { _ in
+            weekFocusEnabled = true
+        }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
