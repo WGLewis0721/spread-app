@@ -268,3 +268,31 @@ Every switch that goes with the widgets, the island and the focus timer was trac
 **Not verified.** Nothing above has run on a device or a simulator. The visual state of each switch in the running app, the Life cards widget when it is off, and the island and notifications with the app closed are all still owed.
 
 **Not part of this change.** "Remind me to plan each day" and "Touch feedback" were not touched.
+
+## 17. Button audit (2026-11-13)
+
+Every button in the native app was read from source: the labels, the accessibility labels, the action each one runs, and the text around it. Three checks were run:
+- Every planner message a native button sends has a handler in the dispatcher, so no button is dead at the protocol level.
+- Every icon-only button has a visible label or an accessibility label.
+- The actions behind the non-obvious labels were traced to the store (carry-over, rollover, priority, export, photo and file import, allocate).
+
+**Wording changed so the label says what the button does.** Behaviour is unchanged. Accessibility identifiers are unchanged.
+
+| Where | Was | Now | Why |
+| --- | --- | --- | --- |
+| More, Data | Backup and restore | Open web planner | It only reveals the parked web planner. Nothing sends that view a backup command. |
+| Planner notice, save-failure notice, error alert | Backup and restore, Back up | Open web planner | Same as above. |
+| Life, planner notice | Backup and restore | Open More | It opens More, not a backup screen. |
+| Dock gear | Accessibility label "Settings" | "More" | The sheet it opens is titled More. |
+| Spread card | Rollover | Copy to next week and open it | It copies the whole current week to next week and moves to it. The confirmation now says "Copying this week replaces them." |
+| Spread card | Review open tasks | Move open tasks to next week | The sheet moves the picked open tasks to next week. |
+
+**Open for the owner.** Backup and restore cannot be reached from the native app, because the rules keep backup and restore out of this work. A native entry point would need a backup command sent to the web planner's backup screen, which is a backup change. Decide whether to build that.
+
+**Checked and left as written.**
+- "Return ½h": the help line says it returns half an hour to the weekly pool, which is what it does.
+- "Save weekly goal": it stores the goal only. "Apply" is the step that reserves time.
+- "Open existing planner": it opens the web planner with the saved plan.
+- The parked web planner has the same "Rollover" and "Review open tasks" wording. It was not changed.
+
+**Not verified.** None of this has run on a device or a simulator.

@@ -274,7 +274,7 @@ public struct SpreadLiveRoot: View {
             Button("Retry saving") { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } }
         }
         if planner.errorOffersBackup {
-            Button("Backup and restore") { recovery() }
+            Button("Open web planner") { recovery() }
         }
     }
 
@@ -649,7 +649,7 @@ public struct SpreadLiveRoot: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label(notice, systemImage: "exclamationmark.shield").foregroundStyle(Spread.caution)
                 HStack {
-                    Button { recovery() } label: { Text("Backup and restore").tapTarget() }
+                    Button { recovery() } label: { Text("Open web planner").tapTarget() }
                     Button { dismissedNotice = notice } label: { Text("Got it").tapTarget() }
                 }
             }
@@ -668,7 +668,7 @@ public struct SpreadLiveRoot: View {
                         Button { Task { planner.error = nil; await planner.send(["type": "retrySave"]) } } label: { Text("Retry saving").tapTarget() }
                             .accessibilityIdentifier("retry-saving")
                     }
-                    Button { recovery() } label: { Text("Back up").tapTarget() }
+                    Button { recovery() } label: { Text("Open web planner").tapTarget() }
                         .accessibilityIdentifier("back-up")
                 }
             }
@@ -730,7 +730,7 @@ public struct SpreadLiveRoot: View {
                         SettingsGears(turn: gearTurn, size: 30).frame(width: 44, height: 44).contentShape(Rectangle())
                     }
                     .buttonStyle(.spreadPress)
-                    .accessibilityLabel("Settings")
+                    .accessibilityLabel("More")
                     .accessibilityIdentifier("open-more")
                 }
             }
@@ -940,7 +940,7 @@ private struct RolloverConfirm: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Replace next week?").font(Spread.sheetTitle)
-            Text("Next week already has tasks or days. Rollover will replace that week. This week stays as it is.")
+            Text("Next week already has tasks or days. Copying this week replaces them. This week stays as it is.")
                 .font(Spread.callout).foregroundStyle(Spread.secondary).multilineTextAlignment(.center)
             Button("Replace") {
                 Task {

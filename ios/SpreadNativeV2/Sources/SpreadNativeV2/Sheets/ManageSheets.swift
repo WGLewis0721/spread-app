@@ -700,7 +700,7 @@ struct MoreSheet: View {
                                     dismiss()
                                     recovery()
                                 } label: {
-                                    Label("Backup and restore", systemImage: "externaldrive")
+                                    Label("Open web planner", systemImage: "externaldrive")
                                         .font(.system(.subheadline, weight: .semibold))
                                         .foregroundStyle(Spread.ink)
                                         .lineLimit(2)

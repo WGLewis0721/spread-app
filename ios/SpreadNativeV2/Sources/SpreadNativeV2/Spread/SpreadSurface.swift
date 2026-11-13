@@ -257,7 +257,7 @@ struct SpreadSurface: View {
                 Button(action: onRollover) {
                     HStack(spacing: 6) {
                         SpreadIcon(name: "icon-rollover", size: 20)
-                        Text("Rollover").font(.system(.subheadline, weight: .semibold))
+                        Text("Copy to next week and open it").font(.system(.subheadline, weight: .semibold))
                     }
                     .foregroundStyle(Spread.accent)
                     .padding(.horizontal, 14).frame(minHeight: 44)
@@ -268,7 +268,7 @@ struct SpreadSurface: View {
 
                 if snapshot.tasks.contains(where: { !$0.done }) {
                     Button(action: onReview) {
-                        Text("Review open tasks")
+                        Text("Move open tasks to next week")
                             .font(.system(.subheadline, weight: .semibold))
                             .foregroundStyle(Spread.accent)
                             .padding(.horizontal, 14).frame(minHeight: 44)
