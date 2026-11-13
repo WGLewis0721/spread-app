@@ -142,6 +142,46 @@ class BuildNumberTests(unittest.TestCase):
             self.assertEqual(project.read_text().count("CURRENT_PROJECT_VERSION = 13;"), 2)
             self.assertIn("OTHER_SETTING = YES;", project.read_text())
 
+    def test_widget_extension_uses_same_build_number_as_app(self):
+        # Use the committed Xcode project: two App and two WidgetKit configurations.
+        source = Path(__file__).resolve().parent.parent / "ios/App/App.xcodeproj/project.pbxproj"
+        original = source.read_text(encoding="utf-8")
+        self.assertEqual(original.count("CURRENT_PROJECT_VERSION = "), 4)
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "project.pbxproj"
+            project.write_text(original, encoding="utf-8")
+            versioner.patch_project(project, 57)
+            updated = project.read_text(encoding="utf-8")
+            self.assertEqual(updated.count("CURRENT_PROJECT_VERSION = 57;"), 4)
+            self.assertEqual(updated.count("PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread;"), 2)
+            self.assertEqual(updated.count("PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread.widget;"), 2)
+            self.assertEqual(
+                updated,
+                __import__("re").sub(r"CURRENT_PROJECT_VERSION = [0-9]+;",
+                                     "CURRENT_PROJECT_VERSION = 57;", original),
+            )
+
+    def test_malformed_widget_versions_fail_without_writing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "project.pbxproj"
+            base = (
+                "PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread;\\n"
+                "CURRENT_PROJECT_VERSION = 1;\\n"
+            ) * 2 + (
+                "PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread.widget;\\n"
+                "CURRENT_PROJECT_VERSION = 1;\\n"
+            ) * 2
+            for malformed in (
+                base + "CURRENT_PROJECT_VERSION = 1;\\n",
+                base.replace("CURRENT_PROJECT_VERSION = 1;\\n", "", 1),
+                base.replace("PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread.widget;\\n", "", 1),
+            ):
+                with self.subTest(malformed=malformed):
+                    project.write_text(malformed, encoding="utf-8")
+                    with self.assertRaises(ValueError):
+                        versioner.patch_project(project, 57)
+                    self.assertEqual(project.read_text(encoding="utf-8"), malformed)
+
     def test_unexpected_project_shape_is_not_partially_written(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp) / "project.pbxproj"
