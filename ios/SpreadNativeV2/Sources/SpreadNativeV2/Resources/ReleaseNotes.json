@@ -7,13 +7,10 @@
       "date": "2026-11-12",
       "title": "Recent updates",
       "changes": [
-        "Directional Life/Week motion and Undo/Redo transitions",
-        "Local-first Focus Timer and notification settings",
-        "Privacy-first Today widgets and App Group bridge",
-        "Focus Timer Live Activity and Dynamic Island",
-        "Select build number for app and WidgetKit extension",
-        "Correct widget font initializer compile errors",
-        "Restore WidgetKit extension bundle metadata for archive validation"
+        "Move between Life and Week with smoother transitions, including Undo and Redo.",
+        "Use the new Focus Timer to start, pause, and resume sessions, with optional reminders.",
+        "See today's task progress and planned hours from optional Home Screen and Lock Screen widgets.",
+        "Follow an active Focus Timer on the Lock Screen or Dynamic Island, and tap to return to Spread."
       ]
     },
     {
@@ -38,5 +35,6 @@
         "Create areas with Add Life and find fewer duplicate controls in More."
       ]
     }
-  ]
+  ],
+  "lastProcessedCommit": "2fbfe9f56f585588f974d30ef071426fee05d63a"
 }
