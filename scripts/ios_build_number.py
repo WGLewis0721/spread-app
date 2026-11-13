@@ -39,11 +39,11 @@ def patch_project(path: Path, selected: int) -> None:
     # The app has Debug/Release versions. A WidgetKit extension adds two more.
     # All bundled executables must use the same selected App Store build number.
     widget_targets = len(re.findall(
-        r"\\bPRODUCT_BUNDLE_IDENTIFIER = com\\.graymatter\\.spread\\.widget;",
+        r"\bPRODUCT_BUNDLE_IDENTIFIER = com\.graymatter\.spread\.widget;",
         before,
     ))
     app_targets = len(re.findall(
-        r"\\bPRODUCT_BUNDLE_IDENTIFIER = com\\.graymatter\\.spread;",
+        r"\bPRODUCT_BUNDLE_IDENTIFIER = com\.graymatter\.spread;",
         before,
     ))
     if widget_targets:
