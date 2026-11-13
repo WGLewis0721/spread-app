@@ -10,7 +10,8 @@
         "Directional Life/Week motion and Undo/Redo transitions",
         "Local-first Focus Timer and notification settings",
         "Privacy-first Today widgets and App Group bridge",
-        "Focus Timer Live Activity and Dynamic Island"
+        "Focus Timer Live Activity and Dynamic Island",
+        "Select build number for app and WidgetKit extension"
       ]
     },
     {
