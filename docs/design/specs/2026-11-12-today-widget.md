@@ -1,5 +1,7 @@
 # Today widget: local-only read model
 
+> Part of the [Spread design brain](../README.md). Follow the current native design and release rules.
+
 **Status:** Implementation PR (unmerged, dependent on native Focus Timer PR). This extends the [October 28 widget draft](2026-10-28-widget-live-activity.md); all release gates remain.
 
 ## UX
