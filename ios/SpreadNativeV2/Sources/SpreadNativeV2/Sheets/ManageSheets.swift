@@ -468,6 +468,7 @@ struct ProfilesSheet: View {
 /// keep a scroll fallback instead of clipping or shrinking hit targets.
 struct MoreSheet: View {
     @ObservedObject var planner: LivePlanner
+    @ObservedObject var focusTimer: SpreadFocusTimer
     let recovery: () -> Void
     let showProfiles: () -> Void
     @Binding var appearance: SpreadAppearance
@@ -479,6 +480,7 @@ struct MoreSheet: View {
     @State private var showRecentlyDeleted = false
     @State private var showWhatsNew = false
     @State private var showReminders = false
+    @State private var showFocusTimer = false
     @AppStorage(SpreadWidgetPublisher.enabledKey) private var todayWidgetsEnabled = false
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
 
@@ -606,6 +608,15 @@ struct MoreSheet: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Notifications")
+                            Button { showFocusTimer = true } label: {
+                                Label("Focus timer", systemImage: "timer")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                            }
+                            .buttonStyle(.spreadPress)
+                            .accessibilityIdentifier("more-focus-timer")
                             Button { showReminders = true } label: {
                                 Label("Daily planning reminder", systemImage: "bell")
                                     .font(.subheadline.weight(.semibold))
@@ -766,6 +777,13 @@ struct MoreSheet: View {
             }
             .sheet(isPresented: $showRecentlyDeleted) { RecentlyDeletedSheet(planner: planner) }
             .sheet(isPresented: $showReminders) { SpreadReminderSettingsSheet() }
+            .sheet(isPresented: $showFocusTimer) {
+                if let snapshot = planner.snapshot,
+                   let profileId = planner.state?.envelope.profileId {
+                    SpreadFocusTimerSheet(timer: focusTimer, profileId: profileId,
+                                          roles: snapshot.roles, preferredRoleId: nil)
+                }
+            }
             .sheet(isPresented: $showWhatsNew, onDismiss: {
                 if let latest = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion) {
                     lastSeenReleaseID = latest.id
