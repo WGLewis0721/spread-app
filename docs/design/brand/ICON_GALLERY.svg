@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="820" viewBox="0 0 1120 820" role="img" aria-labelledby="title desc">
+<title id="title">Spread Utility Icon Gallery</title>
+<desc id="desc">Sixteen standardized 24-by-24 Lucide outline icons displayed on light and dark Spread surfaces. This is an asset reference, not a running app screenshot.</desc>
+<rect width="1120" height="820" fill="#F4F1EA"/>
+<text x="30" y="56" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#0E1A2E">SPREAD / UTILITY ICONS</text>
+<text x="30" y="89" font-family="Arial, sans-serif" font-size="16" fill="#526176">Lucide · 24 × 24 grid · 2pt rounded outlines · web / SwiftUI parity</text>
+<g><rect x="26" y="144" width="250" height="147" rx="18" fill="#FFFFFF" stroke="#D7DBE2"/><g transform="translate(127 171) scale(2)" fill="none" stroke="#0860C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" />
+    <path d="M12 5v14" /></g><text x="151" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#0E1A2E">add</text></g>
+<g><rect x="301" y="144" width="250" height="147" rx="18" fill="#FFFFFF" stroke="#D7DBE2"/><g transform="translate(402 171) scale(2)" fill="none" stroke="#0860C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6-4-4-4 4" />
+    <path d="M12 2v8" />
+    <rect width="20" height="8" x="2" y="14" rx="2" />
+    <path d="M6 18h.01" />
+    <path d="M10 18h.01" /></g><text x="426" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#0E1A2E">backup</text></g>
+<g><rect x="576" y="144" width="250" height="147" rx="18" fill="#FFFFFF" stroke="#D7DBE2"/><g transform="translate(677 171) scale(2)" fill="none" stroke="#0860C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></g><text x="701" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#0E1A2E">check</text></g>
+<g><rect x="851" y="144" width="250" height="147" rx="18" fill="#FFFFFF" stroke="#D7DBE2"/><g transform="translate(952 171) scale(2)" fill="none" stroke="#0860C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1" />
+    <circle cx="9" cy="5" r="1" />
+    <circle cx="9" cy="19" r="1" />
+    <circle cx="15" cy="12" r="1" />
+    <circle cx="15" cy="5" r="1" />
+    <circle cx="15" cy="19" r="1" /></g><text x="976" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#0E1A2E">drag</text></g>
+<g><rect x="26" y="309" width="250" height="147" rx="18" fill="#101C32" stroke="#263751"/><g transform="translate(127 336) scale(2)" fill="none" stroke="#A7D2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+    <path d="m15 5 4 4" /></g><text x="151" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#F7FAFF">edit</text></g>
+<g><rect x="301" y="309" width="250" height="147" rx="18" fill="#101C32" stroke="#263751"/><g transform="translate(402 336) scale(2)" fill="none" stroke="#A7D2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+    <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+    <path d="M12 18v-6" />
+    <path d="m9 15 3 3 3-3" /></g><text x="426" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#F7FAFF">export</text></g>
+<g><rect x="576" y="309" width="250" height="147" rx="18" fill="#101C32" stroke="#263751"/><g transform="translate(677 336) scale(2)" fill="none" stroke="#A7D2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4" />
+    <path d="M2 6h4" />
+    <path d="M2 10h4" />
+    <path d="M2 14h4" />
+    <path d="M2 18h4" />
+    <path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /></g><text x="701" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#F7FAFF">notes</text></g>
+<g><rect x="851" y="309" width="250" height="147" rx="18" fill="#101C32" stroke="#263751"/><g transform="translate(952 336) scale(2)" fill="none" stroke="#A7D2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h13" />
+    <path d="M13 12h8" />
+    <path d="M13 19h8" />
+    <path d="M3 10a2 2 0 0 0 2 2h3" />
+    <path d="M3 5v12a2 2 0 0 0 2 2h3" /></g><text x="976" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#F7FAFF">outline</text></g>
+<g><rect x="26" y="474" width="250" height="147" rx="18" fill="#FFFFFF" stroke="#D7DBE2"/><g transform="translate(127 501) scale(2)" fill="none" stroke="#0860C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+    <circle cx="13.5" cy="6.5" r=".5" fill="#007AFF" />
+    <circle cx="17.5" cy="10.5" r=".5" fill="#007AFF" />
+    <circle cx="6.5" cy="12.5" r=".5" fill="#007AFF" />
+    <circle cx="8.5" cy="7.5" r=".5" fill="#007AFF" /></g><text x="151" y="590" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#0E1A2E">palette</text></g>
+<g><rect x="301" y="474" width="250" height="147" rx="18" fill="#FFFFFF" stroke="#D7DBE2"/><g transform="translate(402 501) scale(2)" fill="none" stroke="#0860C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></g><text x="426" y="590" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#0E1A2E">photo</text></g>
+<g><rect x="576" y="474" width="250" height="147" rx="18" fill="#FFFFFF" stroke="#D7DBE2"/><g transform="translate(677 501) scale(2)" fill="none" stroke="#0860C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+    <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" />
+    <rect x="6" y="14" width="12" height="8" rx="1" /></g><text x="701" y="590" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#0E1A2E">print</text></g>
+<g><rect x="851" y="474" width="250" height="147" rx="18" fill="#FFFFFF" stroke="#D7DBE2"/><g transform="translate(952 501) scale(2)" fill="none" stroke="#0860C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" /></g><text x="976" y="590" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#0E1A2E">restore</text></g>
+<g><rect x="26" y="639" width="250" height="147" rx="18" fill="#101C32" stroke="#263751"/><g transform="translate(127 666) scale(2)" fill="none" stroke="#A7D2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+    <circle cx="12" cy="12" r="3" /></g><text x="151" y="755" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#F7FAFF">settings</text></g>
+<g><rect x="301" y="639" width="250" height="147" rx="18" fill="#101C32" stroke="#263751"/><g transform="translate(402 666) scale(2)" fill="none" stroke="#A7D2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3" />
+    <circle cx="6" cy="12" r="3" />
+    <circle cx="18" cy="19" r="3" />
+    <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+    <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></g><text x="426" y="755" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#F7FAFF">share</text></g>
+<g><rect x="576" y="639" width="250" height="147" rx="18" fill="#101C32" stroke="#263751"/><g transform="translate(677 666) scale(2)" fill="none" stroke="#A7D2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18" />
+    <path d="M9 3v18" />
+    <rect x="3" y="3" width="18" height="18" rx="2" /></g><text x="701" y="755" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#F7FAFF">table</text></g>
+<g><rect x="851" y="639" width="250" height="147" rx="18" fill="#101C32" stroke="#263751"/><g transform="translate(952 666) scale(2)" fill="none" stroke="#FF3B30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6" />
+    <path d="M14 11v6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    <path d="M3 6h18" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></g><text x="976" y="755" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#F7FAFF">trash</text></g>
+<text x="30" y="808" font-family="Arial, sans-serif" font-size="13" fill="#526176">Source: Lucide (ISC). Gallery is an illustrative asset sheet; device render verification is still required.</text>
+</svg>

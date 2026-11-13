@@ -74,3 +74,44 @@ test("bright role colours use contrast-aware glyph ink in native and web", () =>
   assert.match(native, /luminance > 0\.30/);
   assert.match(native, /foregroundStyle\(glyphInk\)/);
 });
+
+const utilityIconMap = {
+  add: "plus",
+  backup: "hard-drive-upload",
+  check: "check",
+  drag: "grip-vertical",
+  edit: "pencil",
+  export: "file-down",
+  notes: "notebook-pen",
+  outline: "list-tree",
+  palette: "palette",
+  photo: "image",
+  print: "printer",
+  restore: "rotate-ccw",
+  settings: "settings",
+  share: "share-2",
+  table: "table-2",
+  trash: "trash",
+};
+
+for (const [name, lucideSource] of Object.entries(utilityIconMap)) {
+  test(`utility ${name}: matched web/iOS Lucide ${lucideSource} geometry and asset intent`, () => {
+    const path = `icon-${name}.svg`;
+    const web = read(`public/icons/${path}`);
+    const base = `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets/icon-${name}.imageset/`;
+    const native = read(base + path);
+    const meta = JSON.parse(read(base + "Contents.json"));
+    assert.equal(native, web, "native and web must ship byte-identical SVGs");
+    assert.match(web, /viewBox="0 0 24 24"/);
+    assert.match(web, /stroke-width="2"/);
+    assert.match(web, /stroke-linecap="round"/);
+    assert.match(web, /stroke-linejoin="round"/);
+    assert.match(web, /fill="none"/);
+    assert.match(web, /<path|<circle|<rect|<line|<polyline/);
+    assert.doesNotMatch(web, /<script|<image|<foreignObject|href=|currentColor/);
+    assert.match(web, name === "trash" ? /stroke="#FF3B30"/ : /stroke="#007AFF"/);
+    assert.equal(meta.images[0].filename, path);
+    assert.equal(meta.properties["preserves-vector-representation"], true);
+    assert.equal(meta.properties["template-rendering-intent"] === "template", name !== "trash");
+  });
+}
