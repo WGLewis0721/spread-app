@@ -20,6 +20,7 @@ import { carryOpenTasks, type CarryPick } from "@/lib/spread/task-rollover";
 import { planAheadTransfer, type PlanAheadRequest, type PlanAheadPreview } from "@/lib/spread/plan-ahead";
 import { applyRecurringPlan, previewRecurringPlan, stopRecurringPlan,
   type RecurringRequest, type RecurringPreview } from "@/lib/spread/recurring-plan.ts";
+import { planWeekCopy, type WeekCopyPreview } from "@/lib/spread/week-copy.ts";
 import { noteSaved, noteSaveFailed } from "@/lib/spread/local-status";
 import { applyUndo, canUndo, makeEdit, pushEdit, type WeekEdit } from "@/lib/spread/week-edit";
 import { assignTaskTo, repointTasks, type AssignFailure } from "@/lib/spread/task-schedule";
@@ -153,6 +154,8 @@ type Store = {
   saveRecurringPlan: (request: RecurringRequest) => boolean;
   stopRecurringPlan: (planId: string, fromWeek: string) => boolean;
   transferPlanAhead: (request: PlanAheadRequest) => boolean;
+  previewWeekCopy: (batch: number) => WeekCopyPreview;
+  copyWeekForward: (batch: number) => boolean;
   setHatColor: (hatId: string, color: string) => void;
   setHatCategory: (hatId: string, category: SpreadCategory) => void;
   addAllocation: (hatId: string, day: string, hours?: number) => void;
@@ -879,6 +882,13 @@ export const useSpread = create<Store>((set, get) => ({
   transferPlanAhead: (request) => {
     const result = planAheadTransfer(get().data, request);
     if (!result.preview.eligible) return false;
+    commit(set, result.data);
+    return true;
+  },
+  previewWeekCopy: (batch) => planWeekCopy(get().data, batch).preview,
+  copyWeekForward: (batch) => {
+    const result = planWeekCopy(get().data, batch);
+    if (!result.preview.eligible || !result.data) return false;
     commit(set, result.data);
     return true;
   },

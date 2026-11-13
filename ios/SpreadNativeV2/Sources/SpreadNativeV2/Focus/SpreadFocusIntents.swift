@@ -111,6 +111,20 @@ struct ResumeSpreadFocusIntent: LiveActivityIntent {
     }
 }
 
+/// Ends the whole focus flow: the current stretch and anything that would have followed it. Nothing starts, and
+/// the widgets and the island clear. Hours, tasks and the week are not changed.
+struct FinishSpreadFocusIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Finish focus"
+    static var description = IntentDescription("End the focus session. Nothing starts after it.")
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        guard let session = SpreadFocusControls.current() else { return .result() }
+        SpreadFocusControls.apply(SpreadFocusMachine.finished(session), notify: false)
+        return .result()
+    }
+}
+
 /// Starts the break, or the next focus round, once the previous stretch has ended. The label says which.
 struct ContinueSpreadFocusIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Start next step"

@@ -4,13 +4,15 @@ import WidgetKit
 
 /// Mirrors the one local focus session into the shared App Group so the Timer and Today widgets can show it.
 /// Only the profile on screen is mirrored. The mirror is removed when a session ends with nothing after it.
-/// Life area names appear only when the person allowed them outside the app. Nothing here changes a budget,
-/// an allocation or a task.
+/// The mirror is written only while "Show Today on widgets" is on, and the switch's value is kept beside it, so a
+/// widget can say why it shows no timer. Life area names appear only when the person allowed them outside the app.
+/// Nothing here changes a budget, an allocation or a task.
 enum SpreadFocusWidgetPublisher {
     private static let showNameKey = "native.focus.showNameOutsideApp"
 
     static func publish(_ session: SpreadFocusSession?) {
-        guard UserDefaults.standard.bool(forKey: SpreadWidgetShared.todayEnabledKey),
+        let enabled = UserDefaults.standard.bool(forKey: SpreadWidgetShared.todayEnabledKey)
+        guard enabled,
               let session, SpreadFocusMachine.isOnScreen(session),
               SpreadFocusStore.activeProfile() == session.profileId,
               let shared = UserDefaults(suiteName: SpreadWidgetShared.appGroup) else {
@@ -33,6 +35,7 @@ enum SpreadFocusWidgetPublisher {
             rounds: session.roundCount,
             nextLabel: SpreadFocusMachine.nextLabel(after: session))
         guard let data = try? JSONEncoder().encode(state) else { return }
+        shared.set(true, forKey: SpreadWidgetShared.timerEnabledMirrorKey)
         shared.set(data, forKey: SpreadWidgetShared.focusKey)
         reload()
     }
@@ -42,10 +45,15 @@ enum SpreadFocusWidgetPublisher {
         publish(SpreadFocusStore.load())
     }
 
+    /// Removes the session mirror and records the switch's value. The switch decides what the widget says when
+    /// there is no timer to show.
     static func revoke() {
-        guard let shared = UserDefaults(suiteName: SpreadWidgetShared.appGroup),
-              shared.object(forKey: SpreadWidgetShared.focusKey) != nil else { return }
-        shared.removeObject(forKey: SpreadWidgetShared.focusKey)
+        guard let shared = UserDefaults(suiteName: SpreadWidgetShared.appGroup) else { return }
+        let enabled = UserDefaults.standard.bool(forKey: SpreadWidgetShared.todayEnabledKey)
+        shared.set(enabled, forKey: SpreadWidgetShared.timerEnabledMirrorKey)
+        if shared.object(forKey: SpreadWidgetShared.focusKey) != nil {
+            shared.removeObject(forKey: SpreadWidgetShared.focusKey)
+        }
         reload()
     }
 

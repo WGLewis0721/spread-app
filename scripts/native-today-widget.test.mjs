@@ -106,7 +106,7 @@ test("the new widget files are compiled by the extension and listed in the bundl
 });
 
 test("the Timer widget has small and large sizes and counts down by itself", () => {
-  assert.match(timerSource, /supportedFamilies\(\[\.systemSmall, \.systemLarge\]\)/);
+  assert.match(timerSource, /supportedFamilies\(\[\.systemSmall, \.systemMedium, \.systemLarge\]\)/);
   // A running session carries an absolute deadline, so the digits tick with no refresh.
   assert.match(timerSource, /Text\(timerInterval:/);
   // And the timeline has an entry at the deadline, so the face flips to Finished by itself.
@@ -203,17 +203,23 @@ test("the type-check job compiles the same widget files as the widget target", (
   assert.deepEqual(listed, compiled);
 });
 
-test("every surface uses the same four focus intents", () => {
+test("every surface uses the same focus intents, and the timer's sizes share one rule set", () => {
   for (const name of ["StartSpreadFocusIntent", "PauseSpreadFocusIntent", "ResumeSpreadFocusIntent",
-    "ContinueSpreadFocusIntent"]) {
+    "ContinueSpreadFocusIntent", "FinishSpreadFocusIntent"]) {
     assert.match(focusControls, new RegExp(`struct ${name}: LiveActivityIntent`));
   }
-  // The Timer widget and the island share one control, so they cannot drift apart.
-  assert.match(timerWidgetSource, /SpreadFocusActionButton\(/);
+  // The Timer widget picks its controls from the shared rules, so small, medium and large cannot drift apart.
+  assert.match(timerWidgetSource, /SpreadFocusControlRules\.all\(/);
+  assert.match(timerWidgetSource, /SpreadFocusControlRules\.shown\(/);
   assert.match(timerWidgetSource, /Button\(intent: PauseSpreadFocusIntent\(\)\)/);
   assert.match(timerWidgetSource, /Button\(intent: ResumeSpreadFocusIntent\(\)\)/);
   assert.match(timerWidgetSource, /Button\(intent: ContinueSpreadFocusIntent\(\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: FinishSpreadFocusIntent\(\)\)/);
   assert.match(timerWidgetSource, /Button\(intent: StartSpreadFocusIntent\(\)\)/);
+  // With the switch off, the widget says so, and the app records the switch for it.
+  assert.match(timerWidgetSource, /Turn on Show Today on widgets in More to see your timer here/);
+  assert.match(focusPublisher, /shared\.set\(true, forKey: SpreadWidgetShared\.timerEnabledMirrorKey\)/);
+  assert.match(focusPublisher, /shared\.set\(enabled, forKey: SpreadWidgetShared\.timerEnabledMirrorKey\)/);
   assert.match(source, /SpreadFocusActionButton\(/);
 });
 

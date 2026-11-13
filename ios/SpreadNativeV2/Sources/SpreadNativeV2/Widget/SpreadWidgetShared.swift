@@ -12,6 +12,8 @@ public enum SpreadWidgetShared {
     public static let lifeCardSelectedKey = "spread.widget.lifecards.selected.v1"
     /// The switch in More that turns on Today and the focus timer on widgets. Read by the app and the intents.
     public static let todayEnabledKey = "native.widget.enabled"
+    /// The switch's value as the app last wrote it, so a timer widget can say why it shows no timer.
+    public static let timerEnabledMirrorKey = "spread.widget.timerEnabled.v1"
     public static let todayKind = "SpreadToday"
     public static let timerKind = "SpreadTimer"
     public static let lifeCardsKind = "SpreadLifeCards"
@@ -109,6 +111,40 @@ public struct SpreadFocusWidgetState: Codable, Equatable {
         if minutes > 0 { parts.append("\(minutes) \(minutes == 1 ? "minute" : "minutes")") }
         if hours == 0 && (secs > 0 || parts.isEmpty) { parts.append("\(secs) \(secs == 1 ? "second" : "seconds")") }
         return parts.joined(separator: " ")
+    }
+}
+
+// MARK: - Focus controls
+
+/// One control on a focus surface. Each one changes the same record as the Dynamic Island.
+public enum SpreadFocusControl: Equatable {
+    case pause, resume, next, finish, startBlock, startFocus, openSpread
+}
+
+/// Which controls a focus widget shows. The small size shows one, the medium shows two, and the large shows
+/// every control that applies right now. Each size takes the most important controls first, and the link to
+/// Spread comes last. Nothing starts without a tap.
+public enum SpreadFocusControlRules {
+    public enum Size: Equatable { case small, medium, large }
+
+    /// Every control that applies right now, most important first, ending with the link to Spread.
+    public static func all(running: Bool, paused: Bool, waitingNext: Bool,
+                           hasBlock: Bool, canStart: Bool) -> [SpreadFocusControl] {
+        if running { return [.pause, .finish, .openSpread] }
+        if paused { return [.resume, .finish, .openSpread] }
+        if waitingNext { return [.next, .finish, .openSpread] }
+        if hasBlock { return [.startBlock, .openSpread] }
+        if canStart { return [.startFocus, .openSpread] }
+        return [.openSpread]
+    }
+
+    /// The controls a widget of this size shows, from the list `all` gives.
+    public static func shown(_ controls: [SpreadFocusControl], size: Size) -> [SpreadFocusControl] {
+        switch size {
+        case .small: return Array(controls.prefix(1))
+        case .medium: return Array(controls.prefix(2))
+        case .large: return controls
+        }
     }
 }
 

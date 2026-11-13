@@ -81,9 +81,27 @@ struct NativeRecurringPreview: Decodable {
     /// Set days the schedule would place, when the preview has them.
     let dayHours: [NativeDayHours]?
 }
+/// One week a copy would write, and whether it already holds a plan ("fill" or "filled").
+struct NativeWeekCopyTarget: Decodable, Equatable {
+    let key: String
+    let status: String
+}
+/// What copying the week on screen into one batch of eight weeks would do. Read only.
+struct NativeWeekCopyPreview: Decodable {
+    let eligible: Bool
+    let reason: String?
+    let sourceKey: String
+    let batch: Int
+    let targets: [NativeWeekCopyTarget]
+    let fillCount: Int
+    let skipCount: Int
+    let hours: Double
+    let tasks: Int
+}
 struct LiveReply: Decodable {
     let planAheadPreview: NativePlanAheadPreview?
     let recurringPreview: NativeRecurringPreview?
+    let weekCopyPreview: NativeWeekCopyPreview?
     let priorityPreview: NativeLifePriorityPreview?
     let ok: Bool
     let taskDetail: NativeTaskDetail?
@@ -331,6 +349,18 @@ struct HoursShortage: Equatable {
               state?.envelope.profileId == origin?.envelope.profileId,
               state?.envelope.snapshot.weekKey == origin?.envelope.snapshot.weekKey else { return nil }
         return reply?.recurringPreview
+    }
+
+    /// Previews copying the week on screen into one batch of eight weeks. Changes nothing. The copy itself is sent
+    /// with `send`, after the person confirms, and the planner refuses it if the week has changed since.
+    func previewWeekCopy(batch: Int) async -> NativeWeekCopyPreview? {
+        let origin = state
+        let reply = await readWeekFeature(["type": "previewWeekCopy", "batch": batch])
+        guard state?.sessionId == origin?.sessionId,
+              state?.revision == origin?.revision,
+              state?.envelope.profileId == origin?.envelope.profileId,
+              state?.envelope.snapshot.weekKey == origin?.envelope.snapshot.weekKey else { return nil }
+        return reply?.weekCopyPreview
     }
 
     func previewPlanAhead(roleId: String, toDay: String, hours: Double,
