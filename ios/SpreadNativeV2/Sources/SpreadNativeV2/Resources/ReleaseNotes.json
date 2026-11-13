@@ -2,6 +2,15 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-b6aa509",
+      "version": "1.0",
+      "date": "2026-11-12",
+      "title": "Recent updates",
+      "changes": [
+        "Directional Life/Week motion and Undo/Redo transitions"
+      ]
+    },
+    {
       "id": "notes-9ac32d4",
       "version": "1.0",
       "date": "2026-11-12",
