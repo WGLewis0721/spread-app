@@ -327,13 +327,13 @@ Every button in the native app was read from source: the labels, the accessibili
 
 Security comes first. The `.spread` backup stays as it is: checksummed, and not editable. The plan file is a separate, locked-down file for one profile's schedule.
 
-**What the plan file holds.** The areas (name, weekly hours, colour, category), the weeks (a Monday start, each area's hour budget, an optional week capacity, tasks with an optional day, and hour allocations by day), and the current week. It holds at most 100 areas and the 104 most recent weeks.
+**What the plan file holds.** The areas (name, weekly hours, colour, category), the weeks (a Monday start, each area's hour budget, an optional week capacity, tasks with an optional day, and hour allocations by day), and the current week. It holds at most 100 areas and the 104 most recent weeks. Areas, tasks and day hours carry identifiers so a merge can match them, and the file names its profile and the version it was made from (section 21).
 
 **What it leaves out.** Settings and accents, recovery copies, the licence, sync and cloud keys, attachments and photos, rich notes, recurring plans, the recycle bin, and the day-order presentation. Those stay in the `.spread` backup.
 
-**How "Back up Spread" makes it.** One action makes both files and shares both. No button is added: the Backup sheet keeps its three actions. The sheet says plainly that the backup cannot be edited, that the plan file is plain text and can be edited or given to an AI tool, and that whatever is shared goes to whoever receives it.
+**How "Back up Spread" makes it.** One action makes both files and shares both. The backup action is one button. The sheet's other actions are restore and merge (section 21). The sheet says plainly that the backup cannot be edited, that the plan file is plain text and can be edited or given to an AI tool, and that whatever is shared goes to whoever receives it.
 
-**How a file comes back.** "Choose a backup file" accepts either file. A `.spread` backup is read as before. A plan file is checked by `parsePlanFile`. Every problem is listed (up to 20), and nothing is restored unless the whole file is clean. A clean plan file is restored as a new profile through the same restore as a backup: a safety copy first, all or nothing, and current profiles unchanged.
+**How a file comes back.** "Choose a backup file" accepts either file. A `.spread` backup is read as before. A plan file is checked by `parsePlanDocument`. Every problem is listed (up to 20), and nothing changes unless the whole file is clean. A plan with `action` set to `create` is restored as a new profile, through the same restore as a backup: a safety copy first, all or nothing, and current profiles unchanged. A plan with `action` set to `merge` is previewed and merged into the open profile (section 21).
 
 **Security controls.**
 - A file over 5 MB is refused before it is read.
@@ -345,10 +345,11 @@ Security comes first. The `.spread` backup stays as it is: checksummed, and not 
 - A task with a day needs hours for its area on that day.
 - Text must be non-empty, on one line, free of control characters, and at most 2000 characters. Categories, estimates and colours must be ones the planner uses.
 - Area names are unique, ignoring capitals. Week keys are unique.
+- `action` is required and must be `merge` or `create`. A merge needs the id of the open profile, so a file cannot change another profile, or add one by accident.
 
 **Limits of the protection.** Anyone can write a valid plan file. It is not a verified record of who wrote it. A checksum or signature would break every edit, so the file has neither. The importer checks structure and the planner's hour rules, not authorship. The app never acts on the guide, or on any instruction written in the file.
 
-**Owed on a device.** Sharing both files from an iPhone. Choosing a plan file from Files or iCloud Drive. A plan with problems showing every problem. A clean plan restored onto a fresh install.
+**Owed on a device.** Sharing both files from an iPhone. Choosing a plan file from Files or iCloud Drive. A plan with problems showing every problem. A clean plan restored onto a fresh install. A merge, with its switches and its stale-version warning (section 21).
 
 ## 20. iCloud backup and restore: saved for later (2026-11-13)
 
@@ -365,3 +366,25 @@ Security comes first. The `.spread` backup stays as it is: checksummed, and not 
 **Turning it on later.** QA and TestFlight builds can set the flag at build time. The defaults change only after Gate 3 passes on hardware. The checklist is in `docs/ICLOUD_PLAN.md`.
 
 **Tests.** `scripts/native-backup.test.mjs` asserts that both flags default to off, and that the backup sheet has no iCloud action.
+
+## 21. Merging a plan into the open profile (2026-11-13)
+
+**What it does.** A plan file with `action` set to `merge`, and the id of the open profile, is merged into that profile on this device. The file is the desired state for the areas and weeks it lists, in the way a Terraform plan describes a desired state. The person previews the change, and nothing changes until they choose Merge.
+
+**The flow.** Back up Spread, or export the plan file. Edit it by hand or with an AI tool. Choose the file. The sheet reads it and shows a preview: a summary in count cards (only the counts that are not zero), a list of areas (added, changed, removed or kept, each with its label in words), the two removal switches, a warning if the profile changed after the plan was made, and a card of problems. Merge stays disabled while there are problems. Merge recomputes the change against the profile as it is at that moment, refuses if the profile changed since the preview, saves a `pre-merge` safety copy, and then replaces the profile once, through the planner's normal replace path.
+
+**Removals are a choice, and they are off by default.** "Remove areas the file leaves out" removes an area, with its tasks and hours in every week. "Remove tasks and day hours the file leaves out" removes tasks and day hours that a listed week does not mention. With either switch off, what the file leaves out stays.
+
+**What is kept.** Anything the file does not mention: weeks the file does not list; recurring plans, which stop only when their area is removed, and are counted; rich notes; the recycle bin; and the priority settings of a week, while the area they point at still exists. A plan never sets or clears settings, the licence, sync or cloud keys.
+
+**Matching.** An area matches by its id, and then by its name, ignoring capitals. A task or day hour matches by its id inside its week. A task moved to another area keeps its id and its rich notes, and appears once. An id Spread does not know is new.
+
+**What stops a merge.** Any problem the file check finds (section 19). A kept day hour that no longer fits its area's budget, with the choice to remove it. A plan for another profile. A profile that syncs. A profile that changed since the preview. A missing or unknown `action`.
+
+**Known behaviour.** The planner normalises a week as it loads a profile, and one rule there raises an area's hours to its weekly hours when those hours equal the day hours placed. The preview is taken from the normalised result, so it shows what will be saved. In that case the saved hours can differ from the file's figure.
+
+**Undo.** A merge saves a `pre-merge` safety copy first. The sheet does not yet offer a button to restore that copy, so an undo needs the owner's decision on that control.
+
+**Tests.** `src/lib/spread/plan-merge.test.ts` covers the merge rules, counts, removals, moves, budgets and the target check. `plan-file.test.ts` covers format version 2, the required action and the id a merge needs. `native-backup-bridge.test.ts` covers previews, refusals, the removal options and the revision. `scripts/native-backup.test.mjs` checks the wiring: the safety copy, the revision check, the Merge button's state, and that both switches default to off.
+
+**Owed on a device.** Previewing a merge on iPhone at 390 and 820 points, in light and dark, with reduced motion. The switches. The problem card. A stale profile. A merge followed by an undo from the safety copy, once that control exists.

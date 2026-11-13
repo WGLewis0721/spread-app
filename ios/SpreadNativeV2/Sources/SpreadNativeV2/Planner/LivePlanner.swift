@@ -236,16 +236,40 @@ struct HoursShortage: Equatable {
         return .success(BackupFile(name: name, text: text, planName: reply.planName, planText: reply.planText))
     }
 
-    /// Reads a backup file and lists its profiles. Changes nothing.
-    func previewBackup(_ text: String) async -> Result<BackupPreview, BackupFailure> {
+    /// Reads a backup or plan file and says what it would do. Changes nothing. A plan that changes the open profile
+    /// comes back as a merge preview, made with the removal choices the person has picked.
+    func previewBackup(_ text: String, removeAreas: Bool = false, removeItems: Bool = false) async -> Result<BackupPreview, BackupFailure> {
         let unreadable = "That backup could not be read. Nothing was changed."
-        guard let reply = await backupRequest(["type": "restorePreview", "text": text]) else {
+        guard let reply = await backupRequest([
+            "type": "restorePreview", "text": text, "removeAreas": removeAreas, "removeItems": removeItems,
+        ]) else {
             return .failure(BackupFailure(message: unreadable))
         }
-        guard reply.ok, let profiles = reply.profiles else {
+        guard reply.ok else {
+            return .failure(BackupFailure(message: reply.message ?? unreadable, issues: reply.issues ?? []))
+        }
+        if let merge = reply.merge {
+            return .success(BackupPreview(profiles: [], weeks: 0, tasks: 0, merge: merge))
+        }
+        guard let profiles = reply.profiles else {
             return .failure(BackupFailure(message: reply.message ?? unreadable))
         }
         return .success(BackupPreview(profiles: profiles, weeks: reply.weeks ?? 0, tasks: reply.tasks ?? 0))
+    }
+
+    /// Merges a checked plan into the open profile. `revision` is the version the preview was made against: if the
+    /// profile has changed since, nothing is merged. A safety copy is saved first. Returns the message to show.
+    func mergeBackup(_ text: String, removeAreas: Bool, removeItems: Bool, revision: String) async -> Result<String, BackupFailure> {
+        let unchanged = "The plan could not be merged. Nothing was changed."
+        guard let reply = await backupRequest([
+            "type": "mergeApply", "text": text, "removeAreas": removeAreas, "removeItems": removeItems, "revision": revision,
+        ]) else {
+            return .failure(BackupFailure(message: unchanged))
+        }
+        guard reply.ok, let message = reply.message else {
+            return .failure(BackupFailure(message: reply.message ?? unchanged, issues: reply.issues ?? []))
+        }
+        return .success(message)
     }
 
     /// Adds the chosen profiles from a backup file as new profiles. Returns the message to show.

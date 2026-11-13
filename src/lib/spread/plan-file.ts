@@ -17,16 +17,17 @@ import { profileStore, type Profile } from "./profiles.ts";
 import { CURRENT_SCHEMA } from "./schema.ts";
 
 /**
- * A plan file: one profile's schedule as plain, readable JSON that a person or an AI tool can edit. It is a
- * separate file from the `.spread` backup, which stays exactly as it is (checksummed, not editable).
+ * A plan file: one profile's schedule as plain, readable JSON that a person or an AI tool can edit, then upload to
+ * merge into the profile on this device. Like a Terraform plan or a Git change: the file is the desired state,
+ * Spread shows the difference first, and nothing changes until the person confirms.
  *
- * Security comes first. The importer copies only the fields it knows into fresh objects, rejects anything else,
- * refuses prototype keys, caps size and counts, and lists every problem before anything is written. The file
- * carries no settings, recovery copies, licence or sync keys, attachments, rich notes, recurring plans or bin.
+ * Security comes first. The importer copies only the fields it knows, refuses anything else, refuses prototype keys,
+ * caps size and counts, and lists every problem before anything is written. Identifiers in the file are only ever
+ * used to match existing items; an unknown identifier makes a new item with a fresh identifier.
  */
 
 export const PLAN_KIND = "spread-plan";
-export const PLAN_FORMAT_VERSION = 1;
+export const PLAN_FORMAT_VERSION = 2;
 export const PLAN_MAX_CHARS = 5_000_000;
 export const PLAN_LIMITS = {
   areas: 100,
@@ -35,53 +36,59 @@ export const PLAN_LIMITS = {
   allocationsPerWeek: 500,
   nameChars: 60,
   textChars: 2000,
+  idChars: 40,
   issues: 20,
 } as const;
 
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-const ROOT_KEYS = ["kind", "formatVersion", "guide", "profile"];
-const PROFILE_KEYS = ["name", "currentWeek", "areas", "weeks"];
-const AREA_KEYS = ["name", "weeklyHours", "color", "category"];
+const ROOT_KEYS = ["kind", "formatVersion", "guide", "exported", "profile"];
+const EXPORTED_KEYS = ["at", "basedOn"];
+const PROFILE_KEYS = ["id", "action", "name", "currentWeek", "areas", "weeks"];
+const AREA_KEYS = ["id", "name", "weeklyHours", "color", "category"];
 const WEEK_KEYS = ["weekStart", "capacityHours", "areas", "allocations"];
-const WEEK_AREA_KEYS = ["name", "hours", "tasks"];
-const TASK_KEYS = ["text", "done", "day", "estimateMinutes", "important"];
-const ALLOCATION_KEYS = ["area", "day", "hours"];
+const WEEK_AREA_KEYS = ["id", "name", "hours", "tasks"];
+const TASK_KEYS = ["id", "text", "done", "day", "estimateMinutes", "important"];
+const ALLOCATION_KEYS = ["id", "area", "day", "hours"];
 const FALLBACK_COLOR = "#8E8E93";
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-/** True when the text has a control character (any code below 0x20, or 0x7F). Checked by code, not by regex. */
-function hasControl(value: string): boolean {
-  for (let i = 0; i < value.length; i++) {
-    const code = value.charCodeAt(i);
-    if (code < 0x20 || code === 0x7f) return true;
-  }
-  return false;
-}
+const ID = /^[A-Za-z0-9_-]+$/;
 
-/** The guide written at the top of every plan file. It is data for the reader; the importer never acts on it. */
+/** The guide at the top of every plan file. It is data for the reader; the importer never acts on it. */
 export const PLAN_GUIDE: string[] = [
-  "This file is one profile's Spread schedule in plain text. Spread reads it only when you restore it.",
-  "Edit only the 'profile' section. Keep 'kind' and 'formatVersion' exactly as they are.",
-  "Dates are YYYY-MM-DD and must be real dates. Every weekStart must be a Monday. A day must fall inside its week.",
-  "Hours are numbers in half-hour steps (0.5, 1, 1.5 ...). An area's weeklyHours is 0 to 168. A week's area hours are 0 to 168. An allocation is 0.5 to 24 hours.",
-  "An area's hours in a week are its budget. Its allocations in that week must add up to no more than that budget.",
-  "If a week has capacityHours, the sum of its area hours must not be more than it.",
-  "Areas are named, and names must be unique, ignoring capitals. A week refers to an area by its name, and the area must be listed in the week's areas.",
-  "A task needs text, which is plain text on one line. A task with a day is placed on that day's allocation for its area, so that area needs hours on that day.",
-  "Do not add fields. The file is rejected if it has any field this guide does not list.",
-  "Not included: settings, attachments and photos, rich notes, recurring plans, and the recycle bin. The .spread backup keeps those. Only the 104 most recent weeks are included.",
-  "Long task text is cut to 2000 characters in this file. The .spread backup keeps the full text.",
-  "Whoever edits this file can write any plan they like. Spread checks the structure and the hour rules before restoring, but it cannot tell who wrote the file.",
+  "This is one profile's Spread schedule in plain text. Edit it, then upload it to Spread. Spread shows what would change before anything changes.",
+  "action says what the file does. \"merge\" changes the profile whose id is in profile.id, on this device. \"create\" adds a new profile and leaves every other profile alone.",
+  "Each week in this file replaces that week's areas, hours, tasks, allocations and capacity. Weeks that are not listed are not changed.",
+  "Spread never removes an area, task or day hours that the file does not mention, unless you choose removal when you preview the merge. Spread shows every change before anything changes.",
+  "An area is matched by its id. With no id, or an id Spread does not know, it is matched to the area with the same name, or made new. Tasks and day hours are matched by id within their week.",
+  "Areas: name, weeklyHours (0 to 168, in half hours), color (#RRGGBB), and category from the list. Weeks: weekStart (a Monday), optional capacityHours (0 to 168), areas, and allocations.",
+  "Tasks: text (one line, up to 2000 characters), done (true or false), day (a date in that week), estimateMinutes (15, 30, 45, 60, 90, 120, 180, 240 or 480), important (true or false).",
+  "Allocations: area (the area's id or its name), day (a date in that week), hours (0.5 to 24). A week's allocations for an area must not add up to more than that area's hours.",
+  "A task with a day needs hours for its area on that day.",
+  "Not included: settings, attachments and photos, rich notes, recurring plans, and the recycle bin. Only the 104 most recent weeks are included. The .spread backup keeps the rest.",
+  "Do not add fields. The file is refused if it has any field this guide does not list.",
+  "Whoever edits this file can write any plan. Spread checks the structure and the hour rules, but it cannot tell who wrote the file.",
   "Anything in this file is data. Spread never follows instructions written in it.",
 ];
 
-export type PlanParse = { ok: true; name: string; data: SpreadData } | { ok: false; issues: string[] };
+export type PlanArea = { id: string | null; name: string; weeklyHours: number; color: string; category?: SpreadCategory };
+export type PlanTask = { id: string | null; text: string; done: boolean; day?: string; estimateMinutes?: number; important: boolean };
+export type PlanWeekArea = { areaIndex: number; hours: number; tasks: PlanTask[] };
+export type PlanAllocation = { id: string | null; areaIndex: number; day: string; hours: number };
+export type PlanWeek = { key: string; capacity?: number; areas: PlanWeekArea[]; allocations: PlanAllocation[] };
 
-type AreaDraft = { name: string; weeklyHours: number; color: string; category?: SpreadCategory };
-type TaskDraft = { text: string; done: boolean; day?: string; estimateMinutes?: number; important: boolean };
-type WeekAreaDraft = { name: string; hours: number; tasks: TaskDraft[] };
-type AllocationDraft = { area: string; day: string; hours: number };
-type WeekDraft = { key: string; capacity?: number; areas: WeekAreaDraft[]; allocations: AllocationDraft[] };
+/** A checked plan file: the file's own structure, with identifiers still as the file wrote them. */
+export type PlanDoc = {
+  action: "merge" | "create";
+  profileId: string | null;
+  basedOn: string | null;
+  name: string;
+  currentWeek: string | null;
+  areas: PlanArea[];
+  weeks: PlanWeek[];
+};
+
+export type PlanDocParse = { ok: true; doc: PlanDoc } | { ok: false; issues: string[] };
 
 function record(value: unknown, where: string, allowed: string[], issues: string[]): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -93,6 +100,15 @@ function record(value: unknown, where: string, allowed: string[], issues: string
     else if (!allowed.includes(key)) issues.push(`${where} has an unknown field "${key.slice(0, 40)}".`);
   }
   return value as Record<string, unknown>;
+}
+
+/** True when the text has a control character (any code below 0x20, or 0x7F). Checked by code, not by regex. */
+function hasControl(value: string): boolean {
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code < 0x20 || code === 0x7f) return true;
+  }
+  return false;
 }
 
 function plainText(value: unknown, where: string, max: number, issues: string[]): string | null {
@@ -114,6 +130,15 @@ function plainText(value: unknown, where: string, max: number, issues: string[])
     return null;
   }
   return trimmed;
+}
+
+function idValue(value: unknown, where: string, issues: string[]): string | null {
+  if (value === undefined) return null;
+  if (typeof value !== "string" || !ID.test(value) || value.length > PLAN_LIMITS.idChars) {
+    issues.push(`${where} must be letters, digits, dashes or underscores, up to ${PLAN_LIMITS.idChars} characters.`);
+    return null;
+  }
+  return value;
 }
 
 function hoursValue(value: unknown, where: string, min: number, max: number, issues: string[]): number | null {
@@ -159,8 +184,8 @@ function isGuide(value: unknown): boolean {
   return Array.isArray(value) && value.every((line) => typeof line === "string");
 }
 
-/** Reads and checks a plan file. Returns every problem found (up to 20), or the schedule when the file is clean. */
-export function parsePlanFile(text: string): PlanParse {
+/** Reads and checks a plan file. Returns every problem found (up to 20), or the document when the file is clean. */
+export function parsePlanDocument(text: string): PlanDocParse {
   if (text.length > PLAN_MAX_CHARS) return { ok: false, issues: ["This file is larger than 5 MB, so it was not read."] };
   let raw: unknown;
   try {
@@ -174,14 +199,32 @@ export function parsePlanFile(text: string): PlanParse {
   if (root.kind !== PLAN_KIND) issues.push(`"kind" must be "${PLAN_KIND}".`);
   if (root.formatVersion !== PLAN_FORMAT_VERSION) issues.push(`"formatVersion" must be ${PLAN_FORMAT_VERSION}.`);
   if (root.guide !== undefined && !isGuide(root.guide)) issues.push('"guide" must be text or a list of text lines.');
+  let basedOn: string | null = null;
+  if (root.exported !== undefined) {
+    const exported = record(root.exported, '"exported"', EXPORTED_KEYS, issues);
+    if (exported) {
+      if (exported.basedOn !== undefined) {
+        if (typeof exported.basedOn !== "string" || !ID.test(exported.basedOn)) issues.push('"exported.basedOn" must be a version code.');
+        else basedOn = exported.basedOn;
+      }
+    }
+  }
   const profile = record(root.profile, '"profile"', PROFILE_KEYS, issues);
   if (!profile) return { ok: false, issues };
 
-  const name = plainText(profile.name, '"profile.name"', PLAN_LIMITS.nameChars, issues) ?? "";
+  const profileId = idValue(profile.id, '"profile.id"', issues);
+  // The action is required, so a file never adds or changes a profile by accident.
+  let action: "merge" | "create" = "create";
+  if (profile.action === "merge" || profile.action === "create") action = profile.action;
+  else issues.push('"profile.action" is required: "merge" changes the open profile, "create" adds a new profile.');
+  if (action === "merge" && !profileId) issues.push('"profile.id" is needed to merge. Set action to "create" to make a new profile.');
 
-  // Areas: the planner's Life areas, with their weekly hours.
-  const areas: AreaDraft[] = [];
-  const areaByName = new Map<string, AreaDraft>();
+  const name = plainText(profile.name, '"profile.name"', PLAN_LIMITS.nameChars, issues) ?? "Spread plan";
+
+  // Areas: the planner's Life cards, with their weekly hours. Ids are used only to match; they are checked here.
+  const areas: PlanArea[] = [];
+  const areaById = new Map<string, number>();
+  const areaByName = new Map<string, number>();
   if (!Array.isArray(profile.areas)) {
     issues.push('"profile.areas" must be a list.');
   } else if (profile.areas.length > PLAN_LIMITS.areas) {
@@ -191,6 +234,7 @@ export function parsePlanFile(text: string): PlanParse {
       const where = `Area ${index + 1}`;
       const fields = record(item, where, AREA_KEYS, issues);
       if (!fields) return;
+      const id = idValue(fields.id, `${where} id`, issues);
       const areaName = plainText(fields.name, `${where} name`, PLAN_LIMITS.nameChars, issues);
       const weekly = fields.weeklyHours === undefined ? 0 : hoursValue(fields.weeklyHours, `${where} weeklyHours`, 0, 168, issues);
       if (fields.color !== undefined && (typeof fields.color !== "string" || !HEX.test(fields.color))) {
@@ -200,6 +244,10 @@ export function parsePlanFile(text: string): PlanParse {
         issues.push(`${where} category must be one of: ${SPREAD_CATEGORIES.map((c) => c.id).join(", ")}.`);
       }
       if (!areaName || weekly === null) return;
+      if (id && areaById.has(id)) {
+        issues.push(`${where}: id "${id}" is used by two areas.`);
+        return;
+      }
       const key = areaName.toLowerCase();
       if (areaByName.has(key)) {
         issues.push(`Area "${areaName}" is listed twice. Area names must be unique.`);
@@ -209,15 +257,26 @@ export function parsePlanFile(text: string): PlanParse {
       const color = typeof fields.color === "string" && HEX.test(fields.color)
         ? fields.color
         : (SPREAD_CATEGORIES.find((c) => c.id === category)?.color ?? FALLBACK_COLOR);
-      const area: AreaDraft = { name: areaName, weeklyHours: weekly, color, ...(category ? { category } : {}) };
-      areas.push(area);
-      areaByName.set(key, area);
+      areas.push({ id, name: areaName, weeklyHours: weekly, color, ...(category ? { category } : {}) });
+      if (id) areaById.set(id, areas.length - 1);
+      areaByName.set(key, areas.length - 1);
     });
   }
 
+  /** A week's area or an allocation's area, by id first and then by name. */
+  const resolveArea = (id: string | null, name: string | null, where: string): number | null => {
+    if (id && areaById.has(id)) return areaById.get(id) ?? null;
+    const byName = name ? areaByName.get(name.toLowerCase()) : undefined;
+    if (byName !== undefined) return byName;
+    issues.push(`${where}: "${name ?? id}" is not in the areas list.`);
+    return null;
+  };
+
   // Weeks: budgets, tasks and allocations, each checked against the planner's rules.
-  const weeks: WeekDraft[] = [];
+  const weeks: PlanWeek[] = [];
   const weekKeys = new Set<string>();
+  const taskIds = new Set<string>();
+  const allocationIds = new Set<string>();
   if (profile.weeks === undefined) {
     // An empty plan is allowed: the profile has areas and no weeks yet.
   } else if (!Array.isArray(profile.weeks)) {
@@ -239,8 +298,8 @@ export function parsePlanFile(text: string): PlanParse {
       }
       weekKeys.add(key);
       const capacity = fields.capacityHours === undefined ? undefined : hoursValue(fields.capacityHours, `${where} capacityHours`, 0, 168, issues) ?? undefined;
-      const week: WeekDraft = { key, ...(capacity !== undefined ? { capacity } : {}), areas: [], allocations: [] };
-      const listed = new Set<string>();
+      const week: PlanWeek = { key, ...(capacity !== undefined ? { capacity } : {}), areas: [], allocations: [] };
+      const listed = new Set<number>();
 
       if (fields.areas !== undefined) {
         if (!Array.isArray(fields.areas)) issues.push(`${where} areas must be a list.`);
@@ -248,20 +307,19 @@ export function parsePlanFile(text: string): PlanParse {
           fields.areas.forEach((entry) => {
             const row = record(entry, `${where} area`, WEEK_AREA_KEYS, issues);
             if (!row) return;
+            const id = idValue(row.id, `${where} area id`, issues);
             const areaName = plainText(row.name, `${where} area name`, PLAN_LIMITS.nameChars, issues);
-            if (!areaName) return;
-            const known = areaByName.get(areaName.toLowerCase());
-            if (!known) {
-              issues.push(`${where}: area "${areaName}" is not in the areas list.`);
-              return;
-            }
-            if (listed.has(known.name)) {
+            if (!areaName && !id) return;
+            const areaIndex = resolveArea(id, areaName, where);
+            if (areaIndex === null) return;
+            const known = areas[areaIndex];
+            if (listed.has(areaIndex)) {
               issues.push(`${where}: area "${known.name}" is listed twice.`);
               return;
             }
-            listed.add(known.name);
+            listed.add(areaIndex);
             const hours = row.hours === undefined ? 0 : hoursValue(row.hours, `${where} "${known.name}" hours`, 0, 168, issues);
-            const tasks: TaskDraft[] = [];
+            const tasks: PlanTask[] = [];
             if (row.tasks !== undefined) {
               if (!Array.isArray(row.tasks)) issues.push(`${where} "${known.name}" tasks must be a list.`);
               else if (row.tasks.length > PLAN_LIMITS.tasksPerWeek) issues.push(`${where} has more than ${PLAN_LIMITS.tasksPerWeek} tasks.`);
@@ -269,6 +327,11 @@ export function parsePlanFile(text: string): PlanParse {
                 row.tasks.forEach((taskEntry) => {
                   const task = record(taskEntry, `${where} "${known.name}" task`, TASK_KEYS, issues);
                   if (!task) return;
+                  const taskId = idValue(task.id, `${where} "${known.name}" task id`, issues);
+                  if (taskId) {
+                    if (taskIds.has(taskId)) issues.push(`${where} "${known.name}": task id "${taskId}" is used twice.`);
+                    taskIds.add(taskId);
+                  }
                   const text = plainText(task.text, `${where} "${known.name}" task text`, PLAN_LIMITS.textChars, issues);
                   const done = task.done === undefined ? false : task.done;
                   const important = task.important === undefined ? false : task.important;
@@ -282,11 +345,20 @@ export function parsePlanFile(text: string): PlanParse {
                       issues.push(`${where} "${known.name}" task estimateMinutes must be one of ${TASK_ESTIMATE_CHOICES.join(", ")}.`);
                     } else estimate = task.estimateMinutes as number;
                   }
-                  if (text) tasks.push({ text, done: done === true, ...(day ? { day } : {}), ...(estimate ? { estimateMinutes: estimate } : {}), important: important === true });
+                  if (text) {
+                    tasks.push({
+                      id: taskId,
+                      text,
+                      done: done === true,
+                      ...(day ? { day } : {}),
+                      ...(estimate ? { estimateMinutes: estimate } : {}),
+                      important: important === true,
+                    });
+                  }
                 });
               }
             }
-            if (hours !== null) week.areas.push({ name: known.name, hours, tasks });
+            if (hours !== null) week.areas.push({ areaIndex, hours, tasks });
           });
         }
       }
@@ -298,16 +370,24 @@ export function parsePlanFile(text: string): PlanParse {
           fields.allocations.forEach((entry) => {
             const row = record(entry, `${where} allocation`, ALLOCATION_KEYS, issues);
             if (!row) return;
-            const area = plainText(row.area, `${where} allocation area`, PLAN_LIMITS.nameChars, issues);
+            const id = idValue(row.id, `${where} allocation id`, issues);
+            if (id) {
+              if (allocationIds.has(id)) issues.push(`${where}: allocation id "${id}" is used twice.`);
+              allocationIds.add(id);
+            }
+            const ref = typeof row.area === "string" ? row.area.trim() : null;
+            if (!ref) issues.push(`${where} allocation area must be the area's id or name.`);
             const day = dateValue(row.day, `${where} allocation day`, issues);
             const hours = hoursValue(row.hours, `${where} allocation hours`, 0.5, 24, issues);
-            if (!area || !day || hours === null) return;
+            if (!ref || !day || hours === null) return;
             if (day < key || day > addDays(key, 6)) issues.push(`${where}: allocation day ${day} is outside its week.`);
-            if (!listed.has(areaByName.get(area.toLowerCase())?.name ?? "")) {
-              issues.push(`${where}: allocation for "${area}" needs that area in this week's areas list.`);
+            const areaIndex = resolveArea(ref && areaById.has(ref) ? ref : null, ref, where);
+            if (areaIndex === null) return;
+            if (!listed.has(areaIndex)) {
+              issues.push(`${where}: allocation for "${areas[areaIndex].name}" needs that area in this week's areas list.`);
               return;
             }
-            week.allocations.push({ area: areaByName.get(area.toLowerCase())?.name ?? area, day, hours });
+            week.allocations.push({ id, areaIndex, day, hours });
           });
         }
       }
@@ -318,11 +398,12 @@ export function parsePlanFile(text: string): PlanParse {
         issues.push(`${where}: the areas add up to ${budgetTotal} hours, more than its capacity of ${week.capacity}.`);
       }
       for (const area of week.areas) {
-        const placed = week.allocations.filter((a) => a.area === area.name).reduce((sum, a) => sum + a.hours, 0);
-        if (placed > area.hours) issues.push(`${where}: "${area.name}" has ${placed} hours placed, more than its ${area.hours}-hour budget.`);
+        const name = areas[area.areaIndex].name;
+        const placed = week.allocations.filter((a) => a.areaIndex === area.areaIndex).reduce((sum, a) => sum + a.hours, 0);
+        if (placed > area.hours) issues.push(`${where}: "${name}" has ${placed} hours placed, more than its ${area.hours}-hour budget.`);
         for (const task of area.tasks) {
-          if (task.day && !week.allocations.some((a) => a.area === area.name && a.day === task.day)) {
-            issues.push(`${where}: task "${task.text.slice(0, 40)}" is on ${task.day}, but "${area.name}" has no hours that day.`);
+          if (task.day && !week.allocations.some((a) => a.areaIndex === area.areaIndex && a.day === task.day)) {
+            issues.push(`${where}: task "${task.text.slice(0, 40)}" is on ${task.day}, but "${name}" has no hours that day.`);
           }
         }
       }
@@ -330,7 +411,7 @@ export function parsePlanFile(text: string): PlanParse {
     });
   }
 
-  let currentWeek: string | undefined;
+  let currentWeek: string | null = null;
   if (profile.currentWeek !== undefined) {
     const key = dateValue(profile.currentWeek, '"profile.currentWeek"', issues);
     if (key && !weekKeys.has(key)) issues.push('"profile.currentWeek" must be one of the weeks in the file.');
@@ -338,26 +419,33 @@ export function parsePlanFile(text: string): PlanParse {
   }
 
   if (issues.length > 0) return { ok: false, issues: issues.slice(0, PLAN_LIMITS.issues) };
+  return {
+    ok: true,
+    doc: { action, profileId, basedOn, name, currentWeek, areas, weeks },
+  };
+}
 
-  // Build the schedule from fresh objects only. Every identifier is generated here, never read from the file.
+/** The create path: a new profile from a checked document. Every identifier is made here, never taken from the file. */
+export function buildSchedule(doc: PlanDoc): SpreadData {
   const usedIds = new Set<string>();
-  const hats: Hat[] = areas.map((area) => ({
+  const hats: Hat[] = doc.areas.map((area) => ({
     id: freshId(usedIds),
     name: area.name,
     defaultHours: area.weeklyHours,
     color: area.color,
     ...(area.category ? { category: area.category } : {}),
   }));
-  const hatByName = new Map(hats.map((hat) => [hat.name.toLowerCase(), hat]));
-  const weekData: Record<string, WeekData> = {};
-  for (const week of weeks) {
-    const allocations: Allocation[] = week.allocations.map((item) => {
-      const hat = hatByName.get(item.area.toLowerCase());
-      const order = week.allocations.filter((other) => other.area === item.area && other.day === item.day).indexOf(item);
-      return { id: freshId(usedIds), hatId: hat?.id ?? "", day: item.day, hours: item.hours, order };
-    });
-    const boxes: Box[] = hats.map((hat) => {
-      const listed = week.areas.find((area) => area.name === hat.name);
+  const weeks: Record<string, WeekData> = {};
+  for (const week of doc.weeks) {
+    const allocations: Allocation[] = week.allocations.map((item, index) => ({
+      id: freshId(usedIds),
+      hatId: hats[item.areaIndex].id,
+      day: item.day,
+      hours: item.hours,
+      order: week.allocations.slice(0, index).filter((other) => other.areaIndex === item.areaIndex && other.day === item.day).length,
+    }));
+    const boxes: Box[] = hats.map((hat, areaIndex) => {
+      const listed = week.areas.find((row) => row.areaIndex === areaIndex);
       const tasks: Task[] = (listed?.tasks ?? []).map((task) => {
         const link = task.day ? allocations.find((a) => a.hatId === hat.id && a.day === task.day) : undefined;
         return {
@@ -371,23 +459,41 @@ export function parsePlanFile(text: string): PlanParse {
       });
       return { hatId: hat.id, hours: listed?.hours ?? 0, tasks };
     });
-    weekData[week.key] = {
+    weeks[week.key] = {
       boxes,
-      allocations: allocations.filter((a) => a.hatId !== ""),
+      allocations,
       ...(week.capacity !== undefined ? { life: { version: 1 as const, capacityHours: week.capacity } } : {}),
     };
   }
-  const keys = Object.keys(weekData).sort();
-  const data: SpreadData = {
+  const keys = Object.keys(weeks).sort();
+  return {
     hats,
-    weeks: weekData,
-    currentWeek: currentWeek ?? keys[keys.length - 1] ?? weekKey(),
+    weeks,
+    currentWeek: doc.currentWeek ?? keys[keys.length - 1] ?? weekKey(),
   };
-  return { ok: true, name: name || "Plan", data };
 }
 
-/** The plan file for one profile's schedule. Throws only when the schedule cannot be written as a valid file. */
-export function buildPlanText(data: SpreadData, profileName: string): string {
+/** A checked file read as a new profile. Kept for the create path and for tests that read a file in one step. */
+export function parsePlanFile(text: string): { ok: true; name: string; data: SpreadData } | { ok: false; issues: string[] } {
+  const parsed = parsePlanDocument(text);
+  if (!parsed.ok) return parsed;
+  return { ok: true, name: parsed.doc.name, data: buildSchedule(parsed.doc) };
+}
+
+/** A short version code for a profile's schedule: a SHA-256 of its stored form, first 16 hex characters. */
+export async function revisionOf(data: SpreadData): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+
+export type PlanMeta = { profileId: string; basedOn: string; exportedAt: string };
+
+/**
+ * The plan file for one profile's schedule. Identifiers are written so a later merge can match what is unchanged.
+ * Throws only when the schedule cannot be written as a valid file.
+ */
+export function buildPlanText(data: SpreadData, profileName: string, meta?: PlanMeta): string {
   if (data.hats.length > PLAN_LIMITS.areas) throw new Error("There are too many areas for a plan file.");
   const names = new Set<string>();
   for (const hat of data.hats) {
@@ -396,18 +502,19 @@ export function buildPlanText(data: SpreadData, profileName: string): string {
     names.add(key);
   }
   const keys = Object.keys(data.weeks).sort().slice(-PLAN_LIMITS.weeks);
-  const areaOf = (hatId: string) => data.hats.find((hat) => hat.id === hatId);
+  const hatById = new Map(data.hats.map((hat) => [hat.id, hat]));
   const weeks = keys.map((key) => {
     const week = data.weeks[key];
     const dayOf = new Map<string, string>();
     for (const item of week.allocations) dayOf.set(item.id, item.day);
     const areas = week.boxes
       .map((box) => {
-        const hat = areaOf(box.hatId);
+        const hat = hatById.get(box.hatId);
         if (!hat) return null;
         const tasks = box.tasks.slice(0, PLAN_LIMITS.tasksPerWeek).map((task) => {
           const day = task.allocationId ? dayOf.get(task.allocationId) : undefined;
           return {
+            id: task.id,
             text: task.text.slice(0, PLAN_LIMITS.textChars),
             done: task.done,
             ...(day ? { day } : {}),
@@ -416,13 +523,13 @@ export function buildPlanText(data: SpreadData, profileName: string): string {
           };
         });
         if (box.hours <= 0 && tasks.length === 0) return null;
-        return { name: hat.name, hours: box.hours, ...(tasks.length ? { tasks } : {}) };
+        return { id: hat.id, name: hat.name, hours: box.hours, ...(tasks.length ? { tasks } : {}) };
       })
       .filter((row): row is NonNullable<typeof row> => row !== null);
     const allocations = week.allocations
       .map((item) => {
-        const hat = areaOf(item.hatId);
-        return hat ? { area: hat.name, day: item.day, hours: item.hours } : null;
+        const hat = hatById.get(item.hatId);
+        return hat ? { id: item.id, area: hat.id, day: item.day, hours: item.hours } : null;
       })
       .filter((row): row is NonNullable<typeof row> => row !== null);
     const capacity = week.life?.capacityHours;
@@ -433,14 +540,18 @@ export function buildPlanText(data: SpreadData, profileName: string): string {
       allocations,
     };
   });
+  const currentWeek = keys.includes(data.currentWeek) ? data.currentWeek : keys[keys.length - 1];
   const plan = {
     kind: PLAN_KIND,
     formatVersion: PLAN_FORMAT_VERSION,
     guide: PLAN_GUIDE,
+    ...(meta ? { exported: { at: meta.exportedAt, basedOn: meta.basedOn } } : {}),
     profile: {
+      ...(meta ? { id: meta.profileId, action: "merge" } : { action: "create" }),
       name: profileName.trim().slice(0, PLAN_LIMITS.nameChars) || "Spread plan",
-      ...(keys.length && keys.includes(data.currentWeek) ? { currentWeek: data.currentWeek } : keys.length ? { currentWeek: keys[keys.length - 1] } : {}),
+      ...(currentWeek ? { currentWeek } : {}),
       areas: data.hats.map((hat) => ({
+        id: hat.id,
         name: hat.name,
         weeklyHours: hat.defaultHours,
         color: hat.color,
@@ -466,7 +577,7 @@ export function planPayload(data: SpreadData, name: string, now = new Date()): F
   };
 }
 
-/** A plan file read and shaped like any other backup, so the existing restore and preview run on it unchanged. */
+/** A plan file that creates a profile, shaped like any backup, so the existing preview and restore run on it unchanged. */
 export function planParsedBackup(data: SpreadData, name: string): ParsedBackup {
   const payload = planPayload(data, name);
   return { kind: "full", payload, summary: summarizeFull(payload) };

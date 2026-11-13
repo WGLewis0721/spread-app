@@ -6,6 +6,8 @@ const get = (path) => readFileSync(path, "utf8");
 
 const bridge = get("src/lib/spread/native-backup-bridge.ts");
 const host = get("src/lib/spread/native-v2-host.ts");
+const intake = get("src/lib/spread/backup-intake.ts");
+const merge = get("src/lib/spread/plan-merge.ts");
 const store = get("src/lib/spread/store.ts");
 const restoreApply = get("src/lib/spread/restore-apply.ts");
 const webScreen = get("src/spread/screens/spread-app.tsx");
@@ -24,12 +26,12 @@ test("the file is built, read and restored by the existing functions, not by new
   assert.match(webScreen, /import \{ applyRestore \} from "@\/lib\/spread\/restore-apply"/);
   assert.doesNotMatch(webScreen, /async function applyRestore\(/);
   assert.match(bridge, /import type \{ ParsedBackup \} from "\.\/backup\.ts"/);
-  assert.match(host, /parseAnyBackup/);
+  assert.match(intake, /parseAnyBackup/);
   assert.match(host, /applyRestore/);
 });
 
-test("the bridge takes exactly the three backup requests, and the native side sends the same three", () => {
-  for (const type of ["backupFile", "restorePreview", "restoreApply"]) {
+test("the bridge takes exactly the four backup requests, and the native side sends the same four", () => {
+  for (const type of ["backupFile", "restorePreview", "restoreApply", "mergeApply"]) {
     assert.match(bridge, new RegExp(`"${type}"`));
     assert.match(backupTypes + livePlanner, new RegExp(`"type": "${type}"`));
   }
@@ -52,21 +54,25 @@ test("the native sheet has one place for backup and restore, reached from the ex
   assert.doesNotMatch(liveRoot + manage, /Open web planner/);
 });
 
-test("the backup sheet has the two actions, a preview, and identifiers the UI tests can use", () => {
-  for (const id of ["backup-make", "backup-choose", "backup-restore", "backup-message"]) {
+test("the backup sheet has its actions, a preview, and identifiers the UI tests can use", () => {
+  for (const id of [
+    "backup-make", "backup-choose", "backup-restore", "backup-merge", "backup-message",
+    "backup-remove-areas", "backup-remove-items",
+  ]) {
     assert.match(sheet, new RegExp(`accessibilityIdentifier\\("${id}"\\)`));
   }
   assert.match(sheet, /Button \{ makeBackup\(\) \}/);
   assert.match(sheet, /\.fileImporter\(isPresented: \$importing/);
   assert.match(sheet, /WeekExport\.share\(items\)/);
-  // Restore only adds profiles: the sheet never calls the replace-the-open-plan path.
+  // The sheet never replaces the open plan directly: that happens only through the merge in the intake module.
   assert.doesNotMatch(sheet, /replaceData|rollback|Replace/);
 });
 
-test("the native planner exposes the three calls and a failure says why, in plain words", () => {
+test("the native planner exposes the four calls and a failure says why, in plain words", () => {
   assert.match(livePlanner, /func makeBackupFile\(\) async -> Result<BackupFile, BackupFailure>/);
-  assert.match(livePlanner, /func previewBackup\(_ text: String\) async -> Result<BackupPreview, BackupFailure>/);
+  assert.match(livePlanner, /func previewBackup\(_ text: String, removeAreas: Bool = false, removeItems: Bool = false\) async -> Result<BackupPreview, BackupFailure>/);
   assert.match(livePlanner, /func restoreBackup\(_ text: String, select: \[String\]\) async -> Result<String, BackupFailure>/);
+  assert.match(livePlanner, /func mergeBackup\(_ text: String, removeAreas: Bool, removeItems: Bool, revision: String\) async -> Result<String, BackupFailure>/);
   assert.match(livePlanner, /Your plan is unchanged\./);
 });
 
@@ -75,11 +81,38 @@ const cloudFlags = get("src/lib/spread/cloud-flags.ts");
 
 test("the plan file is built and read by one module, and the backup reply carries it", () => {
   assert.match(planFile, /export function buildPlanText\(/);
-  assert.match(planFile, /export function parsePlanFile\(/);
-  assert.match(host, /buildPlanText\(state\.data, name\)/);
-  assert.match(host, /parsePlanFile\(text\)/);
+  assert.match(planFile, /export function parsePlanDocument\(/);
+  assert.match(host, /buildPlanFile/);
+  assert.match(intake, /buildPlanText\(state\.data/);
+  assert.match(intake, /basedOn: await revisionOf\(state\.data\)/);
+  assert.match(intake, /parsePlanDocument\(text\)/);
   assert.match(bridge, /planName: plan\.name/);
   assert.match(backupTypes, /let planText: String\?/);
+});
+
+test("a merge is previewed first, removals default to off, and Merge stays off while the plan has problems", () => {
+  assert.match(sheet, /@State private var removeAreas = false/);
+  assert.match(sheet, /@State private var removeItems = false/);
+  assert.match(sheet, /\.disabled\(!merge\.issues\.isEmpty \|\| busy\)/);
+  assert.match(sheet, /planner\.mergeBackup\(text, removeAreas: removeAreas, removeItems: removeItems, revision: merge\.revision\)/);
+  assert.match(sheet, /Toggle\(isOn: Binding\(get: \{ removeAreas \}/);
+  assert.match(sheet, /Toggle\(isOn: Binding\(get: \{ removeItems \}/);
+});
+
+test("a merge keeps a safety copy first, refuses a changed profile, and never creates a profile", () => {
+  assert.match(intake, /ensureSafetyCopy\("pre-merge"\)/);
+  assert.match(intake, /useSpread\.getState\(\)\.replaceData\(merged\.data\)/);
+  assert.match(intake, /\(await revisionOf\(before\.data\)\) !== expectedRevision/);
+  assert.match(intake, /planTargetIssues\(doc, before\.activeId/);
+  assert.match(intake, /if \(doc\.action !== "merge"\) return refused/);
+  assert.match(host, /mergeApply: applyPlanMerge/);
+});
+
+test("the merge logic is one pure module, and it recomputes the summary from the normalised result", () => {
+  assert.match(merge, /export function mergeSchedule\(/);
+  assert.match(merge, /normalizeData\(\{/);
+  assert.match(merge, /export const NO_REMOVALS/);
+  assert.doesNotMatch(merge, /from "\.\/store\.ts"/);
 });
 
 test("both files are written before the share sheet opens, and a large file is refused before it is read", () => {
@@ -93,8 +126,9 @@ test("the sheet says there are two files, that the backup cannot be edited, and 
   assert.match(sheet, /leaves out settings, attachments, rich notes, recurring plans and the recycle bin/);
 });
 
-test("the sheet adds no buttons: its three actions are the only Button blocks, plus the sheet's Done", () => {
-  assert.equal((sheet.match(/\bButton \{/g) ?? []).length, 3);
+test("the sheet's actions are four buttons, plus the sheet's Done", () => {
+  // Make a backup, choose a file, restore the chosen profiles, and merge the previewed plan.
+  assert.equal((sheet.match(/\bButton \{/g) ?? []).length, 4);
   assert.equal((sheet.match(/Button\("Done"\)/g) ?? []).length, 1);
 });
 

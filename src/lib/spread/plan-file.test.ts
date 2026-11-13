@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SpreadData } from "./model.ts";
-import { PLAN_KIND, PLAN_LIMITS, PLAN_MAX_CHARS, buildPlanText, parsePlanFile, planParsedBackup } from "./plan-file.ts";
+import { PLAN_KIND, PLAN_LIMITS, PLAN_MAX_CHARS, buildPlanText, parsePlanDocument, parsePlanFile, planParsedBackup } from "./plan-file.ts";
 
 // 2026-11-09 is a Monday. The tests check that, so a wrong date fails here and not in a later assertion.
 const MON = "2026-11-09";
@@ -14,13 +14,14 @@ test("the test dates are right: MON is a Monday and TUE/WED are the days after i
   assert.equal(new Date(`${WED}T00:00:00Z`).getUTCDay(), 3);
 });
 
-/** An edited plan the way a person or an AI tool would write it: the guide is kept, the fields are the listed ones. */
+/** An edited plan the way a person or an AI tool would write it: a new profile, with the listed fields only. */
 function example(): Record<string, unknown> {
   return {
     kind: PLAN_KIND,
-    formatVersion: 1,
+    formatVersion: 2,
     guide: "Edit only the profile.",
     profile: {
+      action: "create",
       name: "My week",
       currentWeek: MON,
       areas: [
@@ -144,6 +145,41 @@ test("the plan file holds only the schedule: no settings, keys, recovery copies,
   assert.equal(JSON.parse(text).kind, PLAN_KIND);
 });
 
+test("an export for the open profile names it and carries the version it was made from", () => {
+  const data: SpreadData = { hats: [], weeks: {}, currentWeek: MON };
+  const text = buildPlanText(data, "My week", { profileId: "p-1", basedOn: "abc123def456", exportedAt: "2026-11-13T09:00:00.000Z" });
+  const read = parsePlanDocument(text);
+  assert.equal(read.ok, true);
+  if (!read.ok) return;
+  assert.equal(read.doc.action, "merge");
+  assert.equal(read.doc.profileId, "p-1");
+  assert.equal(read.doc.basedOn, "abc123def456");
+});
+
+test("the action is required: a file never adds or changes a profile by default", () => {
+  assert.match(issuesOf(edited((p) => { delete p.profile.action; })).join(" "), /"profile.action" is required/);
+  assert.match(issuesOf(edited((p) => { p.profile.action = "replace"; })).join(" "), /"profile.action" is required/);
+});
+
+test("a merge needs the profile id it changes, and reads with its version code", () => {
+  assert.match(issuesOf(edited((p) => { p.profile.action = "merge"; })).join(" "), /"profile.id" is needed to merge/);
+  const read = parsePlanDocument(edited((p) => {
+    p.profile.action = "merge";
+    p.profile.id = "p-1";
+    p.exported = { at: "2026-11-13T09:00:00.000Z", basedOn: "abc123def456" };
+  }));
+  assert.equal(read.ok, true);
+  if (!read.ok) return;
+  assert.equal(read.doc.action, "merge");
+  assert.equal(read.doc.profileId, "p-1");
+  assert.equal(read.doc.basedOn, "abc123def456");
+});
+
+test("the export's exported block takes only its two listed fields", () => {
+  assert.match(issuesOf(edited((p) => { p.exported = { at: "x", extra: 1 }; })).join(" "), /unknown field "extra"/);
+  assert.match(issuesOf(edited((p) => { p.exported = { basedOn: "not a code!" }; })).join(" "), /version code/);
+});
+
 test("a field the guide does not list is refused, at the top, in an area and in a task", () => {
   assert.match(issuesOf(edited((p) => { p.extra = 1; })).join(" "), /unknown field "extra"/);
   assert.match(issuesOf(edited((p) => { p.profile.areas[0].secret = "x"; })).join(" "), /unknown field "secret"/);
@@ -206,7 +242,7 @@ test("a file over the size limit is not read", () => {
 test("text that is not JSON, or is not a plan, is refused with a plain reason", () => {
   assert.match(issuesOf("not json").join(" "), /not valid JSON/);
   assert.match(issuesOf(edited((p) => { p.kind = "something-else"; })).join(" "), /"kind" must be/);
-  assert.match(issuesOf(edited((p) => { p.formatVersion = 2; })).join(" "), /"formatVersion" must be 1/);
+  assert.match(issuesOf(edited((p) => { p.formatVersion = 1; })).join(" "), /"formatVersion" must be 2/);
 });
 
 test("every problem is listed, up to the cap, so the person can fix them in one pass", () => {
@@ -217,7 +253,7 @@ test("every problem is listed, up to the cap, so the person can fix them in one 
   assert.ok(issues.length <= PLAN_LIMITS.issues);
 });
 
-test("a plan file that reads cleanly is shaped like any backup, so the same preview and restore apply", () => {
+test("a plan file that creates a profile is shaped like any backup, so the same preview and restore apply", () => {
   const parsed = parsePlanFile(JSON.stringify(example()));
   assert.equal(parsed.ok, true);
   if (!parsed.ok) return;
@@ -233,8 +269,8 @@ test("a plan file that reads cleanly is shaped like any backup, so the same prev
 
 test("an empty plan is allowed: areas with no weeks yet", () => {
   const parsed = parsePlanFile(JSON.stringify({
-    kind: PLAN_KIND, formatVersion: 1,
-    profile: { name: "Fresh", areas: [{ name: "Work", weeklyHours: 5 }] },
+    kind: PLAN_KIND, formatVersion: 2,
+    profile: { action: "create", name: "Fresh", areas: [{ name: "Work", weeklyHours: 5 }] },
   }));
   assert.equal(parsed.ok, true);
   if (!parsed.ok) return;
