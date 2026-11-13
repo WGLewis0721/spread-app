@@ -55,7 +55,10 @@ final class SpreadFocusTimer: ObservableObject {
     func start(profileId: String, roleId: String, roleName: String,
                minutes: Int, notify: Bool) -> Bool {
         guard (5...240).contains(minutes), !profileId.isEmpty, !roleId.isEmpty else { return false }
-        if let current = session, current.phase == .running && current.remaining() > 0 { return false }
+        // One session globally, including a paused session from another profile.
+        // Never overwrite a paused person's work during a profile switch.
+        if let current = session, current.phase != .finished &&
+            (current.phase == .paused || current.remaining() > 0) { return false }
         let duration = minutes * 60
         let next = SpreadFocusSession(
             id: UUID().uuidString, profileId: profileId, roleId: roleId, roleName: roleName,
