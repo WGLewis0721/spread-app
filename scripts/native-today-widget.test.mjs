@@ -225,7 +225,7 @@ test("every surface uses the same focus intents, and the timer's sizes share one
   assert.match(source, /SpreadFocusControlButton\(control: kind/);
   // On the Lock Screen and the island the controls are icon only: a text label wrapped mid-word there.
   assert.match(source, /SpreadFocusControlButton\(control: kind, nextLabel: status\.state\.nextLabel, iconOnly: true\)/);
-  assert.match(timerWidgetSource, /if iconOnly \{\s*controlButton\.labelStyle\(\.iconOnly\)/);
+  assert.match(timerWidgetSource, /if iconOnly \{\s*controlButton\s*\.labelStyle\(\.iconOnly\)/);
   // With the switch off, the widget says so, and the app records the switch for it.
   assert.match(timerWidgetSource, /Turn on Show Today on widgets in More to see your timer here/);
   assert.match(focusPublisher, /shared\.set\(true, forKey: SpreadWidgetShared\.timerEnabledMirrorKey\)/);
