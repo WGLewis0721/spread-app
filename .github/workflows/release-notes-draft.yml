@@ -1,31 +1,35 @@
-name: Draft What's New line for each merge
+name: Sync customer What's New notes
 
-# Every merge to main adds one draft line to the single pending release-notes PR.
-# Nothing is published here. Merging the pending PR publishes its lines with the next signed build.
+# After any merge to main, capture only explicit customer-facing notes from its PR.
+# This bot updates ReleaseNotes.json on main; no pending notes PR or manual merge.
+# GITHUB_TOKEN commits do not trigger another Actions workflow run.
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: write
-  pull-requests: write
+  pull-requests: read
 
-# Merges can land in quick succession. Run them one at a time so they update the same pending branch.
+# The script scans all commits since the last published notes marker, so adjacent
+# merges are covered even if GitHub replaces a queued run with a newer push.
 concurrency:
-  group: release-notes-draft
+  group: release-notes-sync
   cancel-in-progress: false
 
 jobs:
-  draft:
-    name: Draft the What's New line
+  sync:
+    name: Sync customer What's New notes
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Add one draft line to the pending release-notes PR
+        with:
+          fetch-depth: 0
+      - name: Check release-note automation
+        run: python3 -m unittest discover -s scripts -p test_release_notes_draft.py -v
+      - name: Commit customer-facing release notes to main
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
         run: python3 scripts/release_notes_draft.py
