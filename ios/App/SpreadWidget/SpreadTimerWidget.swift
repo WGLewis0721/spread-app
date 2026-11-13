@@ -137,7 +137,9 @@ struct SpreadFocusControlButton: View {
     var body: some View {
         Group {
             if iconOnly {
-                controlButton.labelStyle(.iconOnly)
+                controlButton
+                    .labelStyle(.iconOnly)
+                    .font(.title3.weight(.semibold))
             } else {
                 controlButton
             }
@@ -164,7 +166,7 @@ struct SpreadFocusControlButton: View {
             }
         case .cancel:
             Button(intent: CancelSpreadFocusIntent()) {
-                Label("Cancel", systemImage: "xmark.circle")
+                Label("Cancel", systemImage: "xmark")
             }
         case .startBlock, .startFocus, .openSpread:
             EmptyView()

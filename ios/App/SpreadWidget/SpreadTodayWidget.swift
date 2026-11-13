@@ -190,6 +190,7 @@ private struct SpreadFocusIslandControls: View {
             }
         }
         .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
         .controlSize(.regular)
         .frame(maxWidth: .infinity)
     }
