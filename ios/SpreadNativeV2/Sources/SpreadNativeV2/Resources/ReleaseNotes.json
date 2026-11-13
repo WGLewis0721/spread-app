@@ -2,6 +2,18 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-69a0397be63b",
+      "version": "1.0",
+      "date": "2026-11-13",
+      "title": "Recent updates",
+      "changes": [
+        "Start today's planned time from the Timer widget, the Dynamic Island or the focus timer. Focus rounds are sized to the hours you planned.",
+        "Each round and each break starts only when you tap. Nothing starts on its own.",
+        "A finished block is remembered for the day, so it is not offered again. The next planned block comes up.",
+        "A planned block on the Dynamic Island opens Today."
+      ]
+    },
+    {
       "id": "notes-d69777aefa12",
       "version": "1.0",
       "date": "2026-11-13",
@@ -48,5 +60,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "d69777aefa12a1abfcd8f41a0dd84626987e485f"
+  "lastProcessedCommit": "69a0397be63baaf4e8a04afed2fff3ed65fb66ce"
 }
