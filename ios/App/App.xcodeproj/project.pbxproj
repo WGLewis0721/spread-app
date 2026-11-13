@@ -5,6 +5,9 @@
 	};
 	objectVersion = 60;
 	objects = {
+        FACA00000000000000000012 /* Shared Focus ActivityAttributes */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpreadFocusActivityAttributes.swift; path = ../SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
+        FACA00000000000000000013 /* Focus ActivityAttributes in Widget Sources */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000012; };
+
 		FACA00000000000000000001 /* Widget Swift */ = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadTodayWidget.swift; sourceTree = "<group>"; };
 		FACA00000000000000000002 /* Widget Info */ = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FACA00000000000000000003 /* Widget Entitlements */ = { isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SpreadWidget.entitlements; sourceTree = "<group>"; };
@@ -12,7 +15,7 @@
 		FACA00000000000000000005 /* Widget Swift in Sources */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000001; };
 		FACA0000000000000000000E /* Widget .appex in Embed */ = { isa = PBXBuildFile; fileRef = FACA00000000000000000004; settings = { ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FACA00000000000000000006 /* Widget resources */ = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		FACA00000000000000000007 /* Widget sources */ = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (FACA00000000000000000005,); runOnlyForDeploymentPostprocessing = 0; };
+		FACA00000000000000000007 /* Widget sources */ = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (FACA00000000000000000005, FACA00000000000000000013,); runOnlyForDeploymentPostprocessing = 0; };
 		FACA00000000000000000008 /* Widget frameworks */ = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		FACA00000000000000000009 /* Widget target */ = { isa = PBXNativeTarget; buildConfigurationList = FACA0000000000000000000A; buildPhases = (FACA00000000000000000007, FACA00000000000000000008, FACA00000000000000000006,); buildRules = (); dependencies = (); name = SpreadWidget; productName = SpreadWidget; productReference = FACA00000000000000000004; productType = "com.apple.product-type.app-extension"; };
 		FACA0000000000000000000A /* Widget configurations */ = { isa = XCConfigurationList; buildConfigurations = (FACA0000000000000000000B, FACA0000000000000000000C,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
