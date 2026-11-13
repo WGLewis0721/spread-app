@@ -24,8 +24,13 @@ public struct SpreadLiveRoot: View {
     @State private var selectedRole: String?
     @State private var focusDay: String?
     @State private var sheet: LiveSheet?
-    @State private var showWhatsNew = false
-    @State private var presentedNotes: [SpreadReleaseNote] = []
+    /// The launch What's New splash. It carries its own notes, so the sheet is built from exactly the notes that
+    /// caused it to open, rather than from a separate value that may not have been set yet.
+    @State private var whatsNew: WhatsNewPresentation?
+    private struct WhatsNewPresentation: Identifiable {
+        let id = UUID()
+        let notes: [SpreadReleaseNote]
+    }
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
     /// The "Show Life area name outside Spread" switch in the focus sheet. Block labels are written with it.
     @AppStorage("native.focus.showNameOutsideApp") private var showNamesOutsideApp = false
@@ -131,18 +136,18 @@ public struct SpreadLiveRoot: View {
         }
         .task(id: planner.snapshot != nil) {
             // Show only when the real planner is ready, not over its launch screen.
-            guard planner.snapshot != nil, sheet == nil, !showWhatsNew else { return }
+            guard planner.snapshot != nil, sheet == nil, whatsNew == nil else { return }
             let unseen = SpreadReleaseNotes.unseen(
                 for: SpreadReleaseNotes.appVersion, lastSeenID: lastSeenReleaseID)
-            presentedNotes = unseen
-            showWhatsNew = !unseen.isEmpty
+            // One assignment: the item carries the notes, so the sheet cannot open with an empty list.
+            if !unseen.isEmpty { whatsNew = WhatsNewPresentation(notes: unseen) }
         }
-        .sheet(isPresented: $showWhatsNew, onDismiss: {
+        .sheet(item: $whatsNew, onDismiss: {
             if let latest = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion) {
                 lastSeenReleaseID = latest.id
             }
-        }) {
-            WhatsNewSheet(current: presentedNotes)
+        }) { presentation in
+            WhatsNewSheet(current: presentation.notes)
         }
     }
 
