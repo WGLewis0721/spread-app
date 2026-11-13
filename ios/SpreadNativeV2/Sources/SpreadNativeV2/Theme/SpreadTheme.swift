@@ -171,6 +171,10 @@ public enum SpreadMotion {
     public static let morph = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.42)
     public static let press = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.16)
     public static let fade = Animation.easeInOut(duration: 0.28)
+    /// Directional continuity without moving persistent navigation chrome.
+    public static let lifeWeekPage = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.26)
+    public static let historyEntrance = Animation.timingCurve(0.16, 1, 0.3, 1, duration: 0.20)
+    public static let historyExit = Animation.easeIn(duration: 0.16)
 
     /// Reduced Motion removes movement: transitions become instant. Opacity-only feedback is kept where
     /// the original used it, so state changes stay visible without sliding or scaling.

@@ -30,6 +30,7 @@ struct LifeRoot: View {
     @AccessibilityFocusState private var navigationFocused: Bool
     @AccessibilityFocusState private var openerFocused: Bool
     @State private var destination: LifeDestination = .life
+    @State private var pageDirection: CGFloat = 1
     @State private var focusedRole: String?
     @State private var hoursSelectedRole: String?
     @State private var weekSelectedRole: String?
@@ -84,8 +85,14 @@ struct LifeRoot: View {
                                             .font(.body).foregroundStyle(Spread.danger)
                                         Button("More", action: onMore).frame(minHeight: 44)
                                     }
-                                    surface(snapshot, viewportHeight: geometry.size.height,
-                                            viewportWidth: geometry.size.width)
+                                    // Animate the page body only. Header, dock and week selector stay fixed.
+                                    ZStack(alignment: .topLeading) {
+                                        surface(snapshot, viewportHeight: geometry.size.height,
+                                                viewportWidth: geometry.size.width)
+                                            .id(destination)
+                                            .transition(pageTransition)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                                 .frame(maxWidth: 700).frame(maxWidth: .infinity)
                                 .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 28)
@@ -172,10 +179,19 @@ struct LifeRoot: View {
             }
         }, content: sheetContent)
         .task(id: planner.state?.revision) {
-            guard planner.undoId != nil || planner.redoId != nil else { historyVisible = false; return }
-            historyVisible = true
+            guard planner.undoId != nil || planner.redoId != nil else {
+                withAnimation(reduceMotion ? .easeOut(duration: 0.12) : SpreadMotion.historyExit) {
+                    historyVisible = false
+                }
+                return
+            }
+            withAnimation(reduceMotion ? .easeOut(duration: 0.12) : SpreadMotion.historyEntrance) {
+                historyVisible = true
+            }
             do { try await Task.sleep(for: .seconds(5)) } catch { return }
-            historyVisible = false
+            withAnimation(reduceMotion ? .easeOut(duration: 0.12) : SpreadMotion.historyExit) {
+                historyVisible = false
+            }
         }
         // A container identifier on a non-element view is pushed onto every
         // descendant element, replacing ids such as life-navigation and
@@ -186,6 +202,13 @@ struct LifeRoot: View {
         #if DEBUG
         .modifier(LifeDebugDynamicTypeOverride())
         #endif
+    }
+    private var pageTransition: AnyTransition {
+        if reduceMotion { return .opacity }
+        return .asymmetric(
+            insertion: .offset(x: pageDirection * 28).combined(with: .opacity),
+            removal: .offset(x: -pageDirection * 28).combined(with: .opacity)
+        )
     }
     /// True while one Life card is in the Wallet-style focus state.
     private var lifeFocused: Bool { destination == .life && focusedRole != nil }
@@ -253,7 +276,6 @@ struct LifeRoot: View {
                 lifeOverview(snapshot)
                     .transition(.opacity)
             }
-            if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             if snapshot.roles.isEmpty {
                 Text("Name the responsibilities you want to plan for.").font(.body)
                 newLifeArea
@@ -652,10 +674,15 @@ struct LifeRoot: View {
         .background(LifePalette.surface, in: Capsule())
         .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 0.5))
         .shadow(color: Spread.shadow, radius: 8, y: 4)
+        .transition(reduceMotion ? .opacity : .asymmetric(
+            insertion: .offset(y: 16).combined(with: .opacity),
+            removal: .offset(y: 12).combined(with: .opacity)
+        ))
     }
     private func bottom(_ snapshot: PlannerSnapshot, wide: Bool) -> some View {
         VStack(spacing: 6) {
-            if destination != .life && historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
+            // Shared anchored feedback: independent of Life/Week page content.
+            if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
                     lifeWeekToggle
@@ -808,8 +835,11 @@ struct LifeRoot: View {
         }
     }
     private func navigate(_ value: LifeDestination) {
-        if destination != value { LifeFeedback.selection() }
-        withAnimation(reduceMotion ? nil : SpreadTactile.glide) {
+        if destination != value {
+            LifeFeedback.selection()
+            pageDirection = value == .week ? 1 : -1
+        }
+        withAnimation(reduceMotion ? nil : SpreadMotion.lifeWeekPage) {
             destination = value
         }
         withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) {
