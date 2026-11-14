@@ -21,9 +21,9 @@ struct WhatsNewSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 10) {
                         Image(systemName: "sparkles")
-                            .font(.system(size: 28, weight: .medium))
+                            .font(.system(.title, weight: .medium))
                             .foregroundStyle(Spread.accent)
-                            .frame(width: 54, height: 54)
+                            .frame(minWidth: 54, minHeight: 54)
                             .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                             .accessibilityHidden(true)
                         Text("What's New")
@@ -97,7 +97,7 @@ struct WhatsNewSheet: View {
                     Text(String(format: "%02d", index + 1))
                         .font(.caption.monospacedDigit().weight(.semibold))
                         .foregroundStyle(Spread.accent)
-                        .frame(width: 28, alignment: .leading)
+                        .fixedSize()
                         .accessibilityHidden(true)
                     Text(change)
                         .font(.body)
