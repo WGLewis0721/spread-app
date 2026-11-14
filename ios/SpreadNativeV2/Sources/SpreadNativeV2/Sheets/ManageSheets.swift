@@ -58,8 +58,10 @@ struct NewSpreadSheet: View {
             .navigationTitle("Add Life")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Creating drafts discards them on Cancel, so the leading control is Cancel, not Close.
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: { Text("Close").tapTarget() }
+                    Button { dismiss() } label: { Text("Cancel").tapTarget() }
+                        .accessibilityIdentifier("add-life-cancel")
                 }
             }
         }
@@ -81,8 +83,8 @@ struct NewSpreadSheet: View {
                     TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }), prompt: Spread.fieldPrompt("Parent, shop, study"))
                         .font(.system(.body))
                         .padding(.horizontal, 12).frame(minHeight: 44)
-                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Spread.inset))
-                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
+                        .background(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).fill(Spread.inset))
+                        .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
                         .accessibilityLabel("Spread \(index + 1) name")
                         .accessibilityIdentifier("role-name-field")
                 }
@@ -239,7 +241,7 @@ struct RoleSheet: View {
                 .navigationTitle("Responsibility")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
+                    ToolbarItem(placement: .confirmationAction) {
                         Button { dismiss() } label: { Text("Done").tapTarget() }
                     }
                 }
@@ -249,7 +251,7 @@ struct RoleSheet: View {
                 }
             } else {
                 ContentUnavailableView("This responsibility is no longer in the plan.", systemImage: "square.stack")
-                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             }
         }
         .presentationDetents([.large])
@@ -330,7 +332,7 @@ struct CarryOverSheet: View {
                     Button("Not now") { dismiss() }.frame(minHeight: 44)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Move \(chosen.count)") { move() }
+                    Button(chosen.isEmpty ? "Move" : "Move \(chosen.count)") { move() }
                         .disabled(chosen.isEmpty)
                         .accessibilityIdentifier("carry-selected")
                 }
@@ -421,6 +423,12 @@ struct ProfilesSheet: View {
                         .accessibilityIdentifier("create-profile")
                 } header: {
                     Text("New profile").fixedSize(horizontal: false, vertical: true)
+                } footer: {
+                    // A disabled Create button needs its reason on screen, not only in the disabled state.
+                    if planner.profiles.count >= Self.limit {
+                        Text("Spread keeps up to \(Self.limit) profiles. Remove one to add another.")
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                     .listRowBackground(Spread.elevated)
             }
@@ -428,7 +436,7 @@ struct ProfilesSheet: View {
             .navigationTitle("Profiles")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done").tapTarget() }
                 }
             }
@@ -779,7 +787,7 @@ struct MoreSheet: View {
             .navigationTitle("More")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done").tapTarget() }
                         .accessibilityIdentifier("close-more")
                 }

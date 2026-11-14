@@ -42,7 +42,8 @@ struct RecentlyDeletedSheet: View {
                             Text("\(rows.count) \(rows.count == 1 ? "task" : "tasks")")
                                 .font(Spread.caption).foregroundStyle(Spread.secondary)
                             Spacer()
-                            Button(selecting ? "Done" : "Select") {
+                            // While selecting, the control that leaves selection mode is Cancel, not a second Done.
+                            Button(selecting ? "Cancel" : "Select") {
                                 selecting.toggle()
                                 if !selecting { selected.removeAll() }
                             }
@@ -64,7 +65,7 @@ struct RecentlyDeletedSheet: View {
                             .frame(minHeight: 44)
                             .accessibilityIdentifier("deleted-select-all")
                             HStack(spacing: 12) {
-                                Button("Restore \(selected.count)") { Task { await restoreSelected() } }
+                                Button(selected.isEmpty ? "Restore" : "Restore \(selected.count)") { Task { await restoreSelected() } }
                                     .disabled(selected.isEmpty || busy)
                                     .frame(maxWidth: .infinity, minHeight: 48)
                                     .spreadChip(selected: !selected.isEmpty)
@@ -73,7 +74,7 @@ struct RecentlyDeletedSheet: View {
                                     confirmingDelete = true
                                 }
                                 .disabled(selected.isEmpty || busy)
-                                .font(.system(.footnote, weight: .semibold))
+                                .font(.system(.subheadline, weight: .semibold))
                                 .frame(maxWidth: .infinity, minHeight: 48)
                                 .accessibilityIdentifier("deleted-delete-selected")
                             }
@@ -95,8 +96,10 @@ struct RecentlyDeletedSheet: View {
             .navigationTitle("Recently Deleted")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                // Dismiss-only sheet: Done sits trailing, as on every other informational sheet.
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                        .accessibilityIdentifier("deleted-done")
                 }
             }
             .confirmationDialog("Permanently delete \(selected.count) \(selected.count == 1 ? "task" : "tasks")?",
@@ -104,7 +107,7 @@ struct RecentlyDeletedSheet: View {
                 Button("Delete permanently", role: .destructive) { Task { await deleteSelected() } }
                 Button("Cancel", role: .cancel) { if !selecting { selected.removeAll() } }
             } message: {
-                Text("This cannot be undone. These tasks will be removed from this device's planner data and backups made afterward.")
+                Text("This can't be undone. The tasks are removed from this iPhone and from any backup you make afterward.")
             }
         }
         .presentationDetents([.large])
@@ -135,7 +138,7 @@ struct RecentlyDeletedSheet: View {
                 Text(row.task.text.isEmpty ? "Untitled task" : row.task.text)
                     .font(.system(.subheadline, weight: .medium))
                     .foregroundStyle(Spread.ink).lineLimit(3)
-                Text("\(roleName) · \(row.weekKey) · \(remain)d left")
+                Text("\(roleName) · Week of \(PlannerDates.label(PlannerDates.date(row.weekKey), pattern: "MMM d")) · \(daysLeftText(remain))")
                     .font(Spread.caption).foregroundStyle(Spread.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -151,6 +154,12 @@ struct RecentlyDeletedSheet: View {
         .frame(minHeight: 64)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("deleted-item-\(row.id)")
+    }
+
+    /// Spoken and read as words, not as "7d", which VoiceOver reads letter by letter.
+    private func daysLeftText(_ days: Int) -> String {
+        if days == 0 { return "less than a day left" }
+        return "\(days) \(days == 1 ? "day" : "days") left"
     }
 
     private func reload() async {
