@@ -67,10 +67,8 @@ public struct SpreadLiveRoot: View {
                     planner: planner,
                     focusTimer: focusTimer,
                     onMore: { sheet = .more },
-                    onOpenRole: { sheet = .role($0) },
                     onOpenTask: { sheet = .task($0, $1) },
-                    onNewRole: { sheet = .newRole },
-                    onDeleteRole: { sheet = .confirmDeleteRole($0) }
+                    onNewRole: { sheet = .newRole }
                 )
                 .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
                 // Reuse the exact existing More, profile, editor and confirmation sheets.
@@ -868,8 +866,6 @@ public struct SpreadLiveRoot: View {
             BackupRestoreSheet(planner: planner)
         case .confirmRollover:
             RolloverConfirm(planner: planner)
-        case .confirmDeleteRole(let roleId):
-            RoleDeleteConfirm(planner: planner, roleId: roleId)
         }
     }
 }
@@ -901,30 +897,6 @@ private struct RolloverConfirm: View {
     }
 }
 
-private struct RoleDeleteConfirm: View {
-    @ObservedObject var planner: LivePlanner
-    let roleId: String
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: Spread.space4) {
-            Text("Remove \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "this responsibility")?").font(Spread.sheetTitle)
-            Text("The hours and tasks for this responsibility leave every week.").font(Spread.callout).foregroundStyle(Spread.secondary)
-            Button("Remove", role: .destructive) {
-                Task {
-                    _ = await planner.send(["type": "removeRole", "roleId": roleId])
-                    dismiss()
-                }
-            }
-            .accessibilityIdentifier("confirm-delete-role")
-            .frame(minHeight: Spread.minimumTarget)
-            Button("Cancel") { dismiss() }.frame(minHeight: Spread.minimumTarget)
-        }
-        .padding(Spread.space6)
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
-}
 /// Reports the environment inside the appearance override, so acceptance tests verify what rendered.
 private struct PlannerAccessibilityState: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
