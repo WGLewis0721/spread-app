@@ -49,6 +49,17 @@ Not yet available. Native changes need a physical iPhone run from a candidate SH
 - Widget deep links (`SpreadOpenToday`, `SpreadOpenFocus`, `SpreadOpenLifeCard`) still open the Life root and the correct card.
 - Responsibility removal shows the decided behavior in both roots.
 
+## Added by the cross-surface review (base `6f53a60`, 2026-11-14)
+
+Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), findings X2, X3 and X7. Device check: [../DEVICE_TEST_SCRIPT.md](../DEVICE_TEST_SCRIPT.md) step B4.
+
+- **Two Undo surfaces in Life (X2, high).** After a change, Life can show the shell notice (`Shell/SpreadLiveRoot.swift:696-697`, "Undo last change" at `:800`) and the five-second Undo and Redo pair in `Life/LifeRoot.swift:208-230, 707-714` (ids `life-undo`, `life-redo`). The Nov 11 brand board asks for "a single context-appropriate Undo/Redo row, not two". Fix: one Undo row in Life. The owner decides whether Redo appears outside the notes editor.
+- **Two Classic removal verbs (X3, medium).** "Delete responsibility" (`Spread/SpreadSurface.swift:955-975`) and "Remove responsibility" (`Sheets/ManageSheets.swift:234, 260`) both confirm the same act. Fix: one verb, "Remove responsibility". Life keeps its undoable Details delete (OD24).
+- **Unreachable and unused code (X3, X7, low).** `RoleDeleteConfirm` (`Shell/SpreadLiveRoot.swift:936-937, 969`) is reached only through `LifeRoot.swift:30` `onDeleteRole`, which nothing calls. `CrownTravel.swift` and `DialGeometry.swift` are referenced only by each other. Fix: delete all three after a reference check (lane A).
+- **Update to Observed item 4.** The Classic removal path is no longer a single confirmation: the dialogs above are the live ones, and `RoleDeleteConfirm` is dead.
+
+Regression scenario added: after a Life change, exactly one Undo row shows, and it restores the change.
+
 ## Reviewer approval
 
 Empty. Not closed.

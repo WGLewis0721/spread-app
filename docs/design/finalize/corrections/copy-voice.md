@@ -19,7 +19,7 @@
 - **Create sheet title.** `Sheets/ManageSheets.swift:58` titles the shared create sheet "Add Life", and Classic reaches the same sheet. The title has to follow the root that opened it: "Add Life" from Life, "Add responsibility" from Classic (lane D).
 - **Recently Deleted copy.** `Sheets/RecentlyDeletedSheet.swift:21` says "return to To Place". It should read "To place" (lane D).
 - **Casing.** "To place" is the board's form. Any other capitalization in user-visible text must follow it (lanes C and D).
-- **Empty states.** OD22 asks for a short heading, one plain sentence, then the action. Life's "Nothing to do here yet." (`Life/LifeWalletStack.swift`) has no heading and no action (lane B).
+- **Empty states.** Corrected 2026-11-14: Life's empty state now has a heading, one sentence and an action ("No Life areas yet", `Life/LifeRoot.swift:314-322`). "Nothing to do here yet." is no longer in Sources. The two title-only empties are listed below.
 
 ## Expected
 
@@ -48,6 +48,19 @@ Not available for native copy: no device run. The landing copy is unchanged.
 - The Details sheet title is "Details", and the UI tests pass with it.
 - Restoring a deleted task says "return to To place".
 - VoiceOver reads the same label as the visible text.
+
+## Added by the cross-surface review (base `6f53a60`, 2026-11-14)
+
+Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), findings X3, X5 and X8 to X11. Line numbers in the "Applied on main" section have moved: Life's creation button is `Life/LifeRoot.swift:377` and `:1037`.
+
+- **Over capacity has two words (X5, medium, owner decision).** Classic says "overbooked" (`Spread/SpreadSurface.swift:137-138, 166-167`) and explains it with the OD12 sentence (`:251`). Life says "Over budget" (`Life/LifeWeeklyTimeBudget.swift:69, 126, 273`; `Life/LifeEditorialCard.swift:155, 205`) and does not show the sentence. Recommended: "overbooked" for the week state in both roots, keep "budget" as the Weekly Time section name, and show the OD12 sentence in Life.
+- **Two verbs for removing a responsibility (X3, medium, owner decision).** "Delete responsibility" (`Spread/SpreadSurface.swift:955-975`) and "Remove responsibility" (`Sheets/ManageSheets.swift:234, 260`). Recommended: "Remove responsibility".
+- **Open tasks dismissal (X8, low, lane D).** `Sheets/ManageSheets.swift:330-331` reads "Not now". Use "Cancel", as the other leading dismissals do.
+- **Focus and widget wording (X10, low, lane D).** "Cancel session" (`Focus/SpreadFocusTimerSheet.swift:100, 168`) against "Cancel" in the Live Activity (`ios/App/SpreadWidget/SpreadTimerWidget.swift:226`). Use "Cancel session" in both.
+- **Title-only empties (X11, low, lane D).** `Sheets/RecentlyDeletedSheet.swift:37` ("Nothing recently deleted") and `Sheets/WhatsNewSheet.swift:40` ("No release notes yet") have no sentence. Add one plain sentence each (OD22).
+- **Still open from above (X9).** "return to To Place" at `Sheets/RecentlyDeletedSheet.swift:21`. It is not in W2-1 to W2-4, so lane D owns it.
+
+Regression scenarios added: each destructive act on a responsibility uses one verb in every place it appears, and the Over-capacity state reads the same word in both roots.
 
 ## Reviewer approval
 

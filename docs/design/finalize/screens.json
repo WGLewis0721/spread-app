@@ -64,7 +64,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "C (Spread/)",
-      "notes": "Empty-state CTA uses Spread.accentGradient and ChalkMotionArt (Classic keeps Chalk per its own rules). Copy vocabulary differs from Life; see corrections/copy-voice.md. OD7: Classic uses \"responsibility\"; the entry label and empty-state CTA still differ on main (see corrections/copy-voice.md)."
+      "notes": "Empty-state CTA uses Spread.accentGradient and ChalkMotionArt (Classic keeps Chalk per its own rules). Entry, empty-state CTA and sidebar all say 'Add responsibility' (OD22, applied). Classic has two removal dialogs with different verbs; see N20 and corrections/life-routing.md (X3)."
     },
     {
       "id": "N03",
@@ -93,7 +93,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "C (Week/)",
-      "notes": "To place casing is inconsistent across user-visible strings (To place and To Place); see corrections/copy-voice.md."
+      "notes": "To place casing is 'To place' on the Week tray and rows. The one remaining 'To Place' is in Recently Deleted (N26; corrections/copy-voice.md, X9)."
     },
     {
       "id": "N04",
@@ -199,7 +199,7 @@
         "ios/App/SpreadNativeUITests/LifeUITests.swift (XCUITest source; no run record inspected)"
       ],
       "owner_lane": "B (Life/)",
-      "notes": "Life is opt-in: weekFocusEnabled defaults to false via @AppStorage native.weekMonth.previewEnabled. OD18 makes Life the default root (lane A applies it; the flag key stays). See corrections/life-routing.md."
+      "notes": "Life is the default root (OD18, applied: SpreadLiveRoot.swift:16 defaults the flag to true). The flag key keeps its old name so a stored choice survives. Cross-surface review: after a change, two Undo rows can show (X2, corrections/life-routing.md)."
     },
     {
       "id": "N08",
@@ -257,7 +257,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "B (Life/)",
-      "notes": "Current title on main is 'Manage Life area' (LifeManagementSheets.swift:96). OD8 sets the title to 'Details'; the two UI tests that assert 'Manage Life area' change with it (lane B). Delete is undoable without a confirmation prompt, per the Nov 11 amendment."
+      "notes": "Title on main is 'Details' (LifeManagementSheets.swift:96, OD8 applied). Delete is undoable without a confirmation prompt, per the Nov 11 amendment and OD24. Device step B2 and B3 in DEVICE_TEST_SCRIPT.md check it."
     },
     {
       "id": "N10",
@@ -335,7 +335,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "B (Life/)",
-      "notes": ""
+      "notes": "Over-budget wording reads 'Over budget' here and in the card (LifeWeeklyTimeBudget.swift:69, 126, 273; LifeEditorialCard.swift:155, 205). Classic says 'overbooked' (X5, owner decision; corrections/copy-voice.md)."
     },
     {
       "id": "N13",
@@ -529,7 +529,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Sheets/)",
-      "notes": ""
+      "notes": "Removing a responsibility from Classic: 'Remove responsibility' dialog here (ManageSheets.swift:234, 260). The edit-mode row uses 'Delete responsibility' (SpreadSurface.swift:955-975). One verb is an owner decision (X3; corrections/life-routing.md)."
     },
     {
       "id": "N21",
@@ -551,7 +551,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Sheets/)",
-      "notes": "Title on main is 'Add Life' (ManageSheets.swift:58); the Classic entry says 'New Spread'. OD7 makes this a Classic 'responsibility' sheet; the exact label is set by lane D (see corrections/copy-voice.md)."
+      "notes": "Title on main is 'Add Life' (ManageSheets.swift:58) for both roots. The Classic entry says 'Add responsibility' (OD22, applied). The title must follow the root that opened it (lane W2-4, corrections/copy-voice.md)."
     },
     {
       "id": "N22",
@@ -666,7 +666,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Sheets/)",
-      "notes": ""
+      "notes": "Copy says 'return to To Place' (RecentlyDeletedSheet.swift:21). It should read 'To place' (X9; corrections/copy-voice.md, lane D)."
     },
     {
       "id": "N27",
@@ -844,7 +844,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "A (Shell/)",
-      "notes": "Position above the home indicator is required by the Spread motion contract; not device-verified."
+      "notes": "Position above the home indicator is required by the Spread motion contract; not device-verified (device step B5). On Life, a second Undo row (the Undo and Redo pair in LifeRoot.swift:707-714) can show with it (X2)."
     },
     {
       "id": "N35",
@@ -870,7 +870,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Focus/)",
-      "notes": "Presented from LifeRoot and from More. Icon and token work is tracked in corrections/wave2-tokens-icons.md."
+      "notes": "Presented from LifeRoot and from More. Done is trailing (OD6). Transport controls are 44 pt and grow with Dynamic Type (OD10). Icon and token work is tracked in corrections/wave2-tokens-icons.md."
     },
     {
       "id": "N36",
@@ -895,7 +895,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Focus/, Widget/)",
-      "notes": "ActivityConfiguration is declared in SpreadTodayWidget.swift; presentations not device-verified."
+      "notes": "ActivityConfiguration is declared in SpreadTodayWidget.swift. The Live Activity's cancel action reads 'Cancel' (SpreadTimerWidget.swift:226), while the Focus sheet reads 'Cancel session' (X10; corrections/copy-voice.md). Presentations not device-verified (device step H3)."
     },
     {
       "id": "N37",
@@ -917,7 +917,7 @@
       "test_sources": [],
       "owner_lane": "C (Week/)",
       "reachable": false,
-      "notes": "Dead-path candidate: the only construction site is SpreadLiveRoot.swift content(), which runs only when weekFocusEnabled is false. Removal is an owner decision. See corrections/life-routing.md. OD19: delete this code in wave 2."
+      "notes": "Dead-path candidate: the only construction site is SpreadLiveRoot.swift content(), which runs only when weekFocusEnabled is false. OD19 decides deletion in wave 2 (lane W2-1). Not yet removed on main."
     },
     {
       "id": "W01",
@@ -1242,5 +1242,10 @@
       "name": "Docs evidence folder (docs/evidence)",
       "reason": "Bash access was denied for this path in this session; not read."
     }
-  ]
+  ],
+  "_review_2026_11_14": {
+    "base": "6f53a60",
+    "lane": "W2-5 cross-surface review (docs/design/finalize/CROSS_SURFACE_REVIEW.md)",
+    "change": "Notes updated where they described main before OD18, OD8, OD22 or OD19 were applied, and where the review found new behaviour. No status changed. verified_count stays 0: nothing here is device-verified."
+  }
 }
