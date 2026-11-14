@@ -81,7 +81,7 @@ export function previewRecurringPlan(data: Readonly<SpreadData>, request: Recurr
   };
   const reject = (reason: string) => ({ ...result, reason });
   if (!Number.isFinite(draft.capacityHours))
-    return reject("Set this week's total hours on your Life card first, then plan ahead.");
+    return reject("Set this week's weekly hours in Life first, then plan ahead.");
   if (!validRecurringPlan(draft) || !data.hats.some((h) => h.id === draft.roleId))
     return reject("Choose a Life area, positive half-hour amount, valid Monday and weekly total.");
   const original = data.recurringPlans?.find((p) => p.id === request.planId);

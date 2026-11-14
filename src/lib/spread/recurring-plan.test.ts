@@ -298,13 +298,13 @@ test("a week the person changed keeps its contents when a schedule is created", 
   assert.equal(preview.preservedWeeks.includes(first), true);
   assert.equal(saved.weeks[first].boxes.find((b) => b.hatId === gym)?.hours, 5);
 });
-test("a schedule without a weekly life total says where to set one", () => {
+test("a schedule without a weekly life total says where to set one, on the Life screen", () => {
   const data = defaultData();
   const gym = data.hats[0].id;
   delete data.weeks[data.currentWeek].life;
   const preview = previewRecurringPlan(data, { roleId: gym, startWeek: shiftWeek(data.currentWeek, 1), everyWeeks: 1, hours: 2 });
   assert.equal(preview.eligible, false);
-  assert.match(preview.reason ?? "", /Life card/);
+  assert.equal(preview.reason, "Set this week's weekly hours in Life first, then plan ahead.");
 });
 
 // A week opened before its schedule existed is stored empty. An earlier build left such weeks behind.

@@ -477,6 +477,12 @@ struct LifeRoot: View {
                 }
             )
             .accessibilityIdentifier("life-budget-capacity-controls")
+            if capacity == nil {
+                Text("Set your weekly total first. Area hours unlock after that.")
+                    .font(.caption)
+                    .foregroundStyle(Spread.secondary)
+                    .accessibilityIdentifier("life-budget-capacity-required")
+            }
             if capacityEntryVisible {
                 HStack(spacing: 10) {
                     TextField("Weekly hours", text: $budgetCapacityText)
@@ -523,7 +529,7 @@ struct LifeRoot: View {
                         ForEach(snapshot.roles) { role in
                             let isSelected: Bool = budgetRoleID == role.id
                             let hoursText: String = SpreadHours.text(role.hours)
-                            let spokenName: String = role.name + ", " + hoursText + " hours"
+                            let spokenName: String = role.name + ", " + SpreadHours.spoken(role.hours)
                             let traits: AccessibilityTraits = isSelected ? AccessibilityTraits.isSelected : []
                             Button {
                                 budgetRoleID = role.id

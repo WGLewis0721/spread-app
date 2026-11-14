@@ -32,10 +32,18 @@ export type WeekCopyPreview = {
 /** `data` is null when the copy is refused. Nothing is written in that case. */
 export type WeekCopyResult = { data: SpreadData | null; preview: WeekCopyPreview };
 
-/** A week holds something the person planned: hours, a task, or day hours. */
-function holdsPlan(week: WeekData | undefined): boolean {
+/** A week holds hours, a task or day hours. This is what the copy would carry forward. */
+function holdsHoursOrTasks(week: WeekData | undefined): boolean {
   if (!week) return false;
   return week.boxes.some((box) => box.hours > 0 || box.tasks.length > 0) || week.allocations.length > 0;
+}
+
+/**
+ * A target week is kept, never overwritten, when it holds hours or tasks, or a weekly total the person set.
+ * Replacing a week would silently drop that total, so a week with only a total is kept too.
+ */
+function holdsPlan(week: WeekData | undefined): boolean {
+  return holdsHoursOrTasks(week) || week?.life?.capacityHours !== undefined;
 }
 
 function batchTargets(sourceKey: string, batch: number, data: SpreadData): WeekCopyTarget[] {
@@ -100,7 +108,7 @@ export function planWeekCopy(data: SpreadData, batch: number): WeekCopyResult {
   }
   const targets = batchTargets(sourceKey, batch, data);
   const source = data.weeks[sourceKey];
-  if (!holdsPlan(source)) {
+  if (!holdsHoursOrTasks(source)) {
     return refused(sourceKey, batch, "This week has no hours or tasks to copy.", targets);
   }
   const toFill = targets.filter((target) => target.status === "fill");
