@@ -43,3 +43,5 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 - [Annotated iPhone precision](2026-11-06-annotated-iphone-precision.md): owner corrections for Life, Hours and Week; implementation and native evidence pending.
 
 - [What's New shows everything the last build changed](2026-11-12-whats-new-every-update.md): every unseen note opens as one list; Swift compile and device checks owed.
+
+- [Life and Plan Ahead finalize audit (W2)](2026-11-14-life-plan-ahead-finalize.md): owner defects fixed (plural hours, Life area row, copy-forward keeps a set weekly total, wording); device and Swift compile checks owed.
