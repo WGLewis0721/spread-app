@@ -234,6 +234,19 @@ test("every surface uses the same focus intents, and the timer's sizes share one
   assert.doesNotMatch(source, /SpreadFocusActionButton\(/);
 });
 
+test("the Timer widget's controls are icons in 44 pt targets, and each size has room for its face", () => {
+  // Icons only: a text label wrapped inside the circles on the Home Screen. The names stay as accessibility labels.
+  assert.match(timerWidgetSource, /func spreadFocusControls\(\) -> some View \{[\s\S]*\.labelStyle\(\.iconOnly\)[\s\S]*\}/);
+  assert.match(timerWidgetSource, /\.frame\(width: 44, height: 44\)/);
+  assert.match(timerWidgetSource, /SpreadFocusControlButton\(control: kind, nextLabel: entry\.state\?\.nextLabel, iconOnly: true\)/);
+  // The medium size puts its controls in a column beside the face: a row under the face does not fit its height.
+  assert.match(timerWidgetSource, /HStack\(alignment: \.center, spacing: 14\) \{[\s\S]*face\(\.medium\)[\s\S]*controlColumn\s*\}/);
+  // The small size shows one control under its face, and the large size shows every control in one row.
+  assert.match(timerWidgetSource, /var smallBody: some View \{[\s\S]*face\(\.small\)[\s\S]*controlRow[\s\S]*\}\n\n/);
+  assert.match(timerWidgetSource, /var largeBody: some View \{[\s\S]*face\(\.large\)[\s\S]*controlRow[\s\S]*Divider\(\)/);
+  assert.doesNotMatch(timerWidgetSource, /\.controlSize\(\.small\)/);
+});
+
 test("a break or the next round never starts on its own", () => {
   // Only the person's taps start a stretch: the intents and the timer's continue action.
   const callers = [focusControls, focusTimer].map((text) => (text.match(/followUp\(|startPlan\(|\.stretch\(/g) || []).length);
