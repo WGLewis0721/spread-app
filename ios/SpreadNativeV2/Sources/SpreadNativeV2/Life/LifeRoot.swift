@@ -57,7 +57,8 @@ struct LifeRoot: View {
     /// A Life card a widget asked to open. It waits for today's week to be on screen, then focuses.
     @State private var pendingWidgetCard: String?
     @State private var pendingTask: (role: String, task: String)?
-    @AppStorage("native.life.crownRight") private var crownRight = true
+    // The Crown position setting is retired (owner decision, 2026-11-11): the tray always opens from the leading edge.
+    private let crownRight = true
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -88,7 +89,7 @@ struct LifeRoot: View {
                                     if planner.saveFailure != nil {
                                         Label("Changes are not saved. Open More to back up your plan.", systemImage: "exclamationmark.triangle")
                                             .font(.body).foregroundStyle(Spread.danger)
-                                        Button("More", action: onMore).frame(minHeight: 44)
+                                        Button("Open More", action: onMore).frame(minHeight: 44)
                                     }
                                     // Animate the page body only. Header, dock and week selector stay fixed.
                                     ZStack(alignment: .topLeading) {
@@ -311,7 +312,13 @@ struct LifeRoot: View {
                     .transition(.opacity)
             }
             if snapshot.roles.isEmpty {
-                Text("Name the responsibilities you want to plan for.").font(.body)
+                // Designed empty state: a heading, one plain sentence and the single creation action.
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("No Life areas yet").font(.title3.bold()).foregroundStyle(LifePalette.ink)
+                        .accessibilityAddTraits(.isHeader)
+                    Text("Add one for each Life area you want to plan, such as Work, Family or Health.")
+                        .font(.body).foregroundStyle(LifePalette.secondary)
+                }
                 newLifeArea
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
@@ -331,6 +338,7 @@ struct LifeRoot: View {
                     .foregroundStyle(Spread.ink)
                     .background(Spread.elevated, in: Capsule())
                     .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+                    .accessibilityHint("Edit the name, weekly hours, symbol and color, or delete this Life area")
                     .accessibilityIdentifier("life-details-button")
                     Button {
                         withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
@@ -345,6 +353,7 @@ struct LifeRoot: View {
                     .background(tasksOpen ? Spread.inset : Spread.elevated, in: Capsule())
                     .overlay(Capsule().strokeBorder(tasksOpen ? Spread.accent : Spread.line, lineWidth: 1))
                     .accessibilityValue(tasksOpen ? "Open" : "Closed")
+                    .accessibilityHint("Show or hide this area's tasks")
                     .accessibilityIdentifier("life-tasks-button")
                 }
                 .padding(.horizontal, 4)
@@ -441,7 +450,7 @@ struct LifeRoot: View {
         let capacity = snapshot.life?.capacityHours
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("Your weekly hours").font(.headline)
+                Text("Your weekly hours").font(.headline).accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button("Done") {
                     withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
@@ -507,7 +516,7 @@ struct LifeRoot: View {
                 Text(SpreadHours.text(assigned) + "h budgeted")
                 Spacer()
                 Text(capacity.map { SpreadHours.text(max(0, $0 - assigned)) + "h available" }
-                     ?? "Set your weekly hours")
+                     ?? "Set weekly hours")
             }
             .font(.subheadline)
             .foregroundStyle(Spread.secondary)
@@ -581,9 +590,7 @@ struct LifeRoot: View {
         }
         budgetError = nil
         Task {
-            if await planner.send(["type": "setLifeCapacity", "hours": value]) {
-                LifeFeedback.accepted()
-            }
+            _ = await planner.send(["type": "setLifeCapacity", "hours": value])
         }
     }
 
@@ -606,9 +613,7 @@ struct LifeRoot: View {
               LifeBudgetBarMath.assigned(snapshot.roles) + delta <= capacity else { return }
         budgetError = nil
         Task {
-            if await planner.send(["type": "setLifeBudget", "roleId": role.id, "hours": next]) {
-                LifeFeedback.accepted()
-            }
+            _ = await planner.send(["type": "setLifeBudget", "roleId": role.id, "hours": next])
         }
     }
 
@@ -701,11 +706,11 @@ struct LifeRoot: View {
         HStack {
             Button("Undo") {
                 guard let id = planner.undoId else { return }
-                Task { if await planner.send(["type": "undo", "editId": id]) { LifeFeedback.accepted() } }
+                Task { _ = await planner.send(["type": "undo", "editId": id]) }
             }.disabled(planner.undoId == nil || planner.busy).accessibilityIdentifier("life-undo")
             Button("Redo") {
                 guard let id = planner.redoId else { return }
-                Task { if await planner.send(["type": "redo", "editId": id]) { LifeFeedback.accepted() } }
+                Task { _ = await planner.send(["type": "redo", "editId": id]) }
             }.disabled(planner.redoId == nil || planner.busy).accessibilityIdentifier("life-redo")
         }
         .buttonStyle(.bordered)
@@ -729,7 +734,7 @@ struct LifeRoot: View {
                 } label: {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         HStack(spacing: 8) {
-                            Image(systemName: session.currentKind == .rest ? "cup.and.saucer.fill" : "timer")
+                            SpreadIcon(name: session.currentKind == .rest ? "lucide-clock" : "lucide-timer", size: 18)
                             Text(session.roleName).lineLimit(1)
                             Spacer(minLength: 8)
                             // A finished stretch with a next step waits for a tap, so it shows "Next", not 00:00.
@@ -791,7 +796,8 @@ struct LifeRoot: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.spreadPress)
-                .accessibilityLabel(item == .life ? "Life" : "Calendar week")
+                .accessibilityLabel(item == .life ? "Life" : "Week")
+                .accessibilityHint(item == .life ? "Show Life areas" : "Show the calendar week")
                 .accessibilityAddTraits(destination == item ? .isSelected : [])
                 .accessibilityIdentifier("life-nav-" + item.rawValue.lowercased())
             }
@@ -802,32 +808,6 @@ struct LifeRoot: View {
             .strokeBorder(Spread.line, lineWidth: 1))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-week-toggle")
-    }
-    private var trayButton: some View {
-        Button {
-            LifeFeedback.selection()
-            navigationDrag = 0
-            withAnimation(reduceMotion ? nil : SpreadTactile.traySlide) { navigationOpen = true }
-        } label: {
-            VStack(spacing: 2) {
-                SpreadIcon(name: destination.icon, size: 22)
-                Text(destination.rawValue).font(.caption)
-            }.frame(minWidth: 44, minHeight: 44)
-        }.accessibilityLabel("Open navigation").accessibilityIdentifier("life-navigation")
-            .accessibilityFocused($openerFocused)
-            .background {
-                GeometryReader { geometry in
-                    Color.clear.preference(key: LifeDockOpenerCenterKey.self,
-                        value: geometry.frame(in: .named("life-dock-controls")).midY)
-                }
-            }
-    }
-    private var addTaskButton: some View {
-        Button { localSheet = .addTask } label: {
-            SpreadIcon(name: "icon-new-life", size: 28, original: true)
-                .frame(width: 44, height: 44)
-                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 14))
-        }.accessibilityLabel("Add task")
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
         WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
@@ -851,7 +831,8 @@ struct LifeRoot: View {
                     ForEach(LifeDestination.allCases) { item in
                         Button { navigate(item) } label: {
                             HStack {
-                                SpreadIcon(name: item.icon)
+                                // Life carries the Spread logo everywhere it appears (toggle, header, tray).
+                                if item == .life { SpreadBrandMark(size: 24) } else { SpreadIcon(name: item.icon) }
                                 Text(item.rawValue).font(.headline)
                                 Spacer()
                                 SpreadIcon(name: destination == item ? "lucide-circle-check" : "lucide-chevron-right", size: 19)
@@ -863,11 +844,6 @@ struct LifeRoot: View {
                             .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
-                    history
-                    Menu("Crown position") {
-                        Button("Move Crown left") { crownRight = false }
-                        Button("Move Crown right") { crownRight = true }
-                    }.frame(minHeight: 44)
                     Button("Gesture help") { closeNavigation(); localSheet = .help }.frame(minHeight: 44)
                     Button("More") { closeNavigation(); onMore() }.frame(minHeight: 44)
                 }.padding(20)

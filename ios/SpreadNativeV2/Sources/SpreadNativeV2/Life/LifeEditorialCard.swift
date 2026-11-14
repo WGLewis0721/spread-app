@@ -60,6 +60,7 @@ struct LifeEditorialArtwork: View {
 
     var body: some View {
         LinearGradient(
+            // A fixed dark ground keeps white labels legible in light and dark mode. Art legibility, not a theme token.
             colors: [roleColor.opacity(0.85), Color(red: 0.10, green: 0.13, blue: 0.15)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -102,6 +103,12 @@ struct LifeEditorialFace: View {
     let titleSafeWidth: CGFloat
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat = 37
+    // Every text size on the face scales with Dynamic Type (defaults match the original fixed sizes).
+    @ScaledMetric(relativeTo: .caption2) private var brandSize: CGFloat = 11
+    @ScaledMetric(relativeTo: .largeTitle) private var budgetSize: CGFloat = 34
+    @ScaledMetric(relativeTo: .caption2) private var labelSize: CGFloat = 10
+    @ScaledMetric(relativeTo: .caption2) private var dayLabelSize: CGFloat = 9
+    @ScaledMetric(relativeTo: .caption2) private var dayValueSize: CGFloat = 10
 
     private var days: [Double] {
         LifeCardWeekDistribution.hours(for: role.id, snapshot: snapshot)
@@ -155,13 +162,11 @@ struct LifeEditorialFace: View {
         HStack(spacing: 7) {
             SpreadBrandMark(size: 16)
             Text("SPREAD")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: brandSize, weight: .bold, design: .rounded))
                 .tracking(2.2)
             Spacer(minLength: 8)
-            Image(systemName: "chevron.down")
-                .font(.subheadline.weight(.semibold))
+            SpreadIcon(name: "lucide-chevron-down", size: 16)
                 .rotationEffect(.degrees(selected ? 180 : 0))
-                .accessibilityHidden(true)
         }
     }
 
@@ -177,11 +182,12 @@ struct LifeEditorialFace: View {
     private var weeklyBudget: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(SpreadHours.text(role.hours) + " h")
-                .font(.system(size: typeSize.isAccessibilitySize ? 30 : 34,
-                              weight: .semibold, design: .serif))
+                .font(.system(size: budgetSize, weight: .semibold, design: .serif))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
                 .monospacedDigit()
             Text("THIS WEEK")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: labelSize, weight: .semibold))
                 .tracking(1.6)
         }
         .frame(maxWidth: titleSafeWidth, alignment: .leading)
@@ -218,11 +224,11 @@ struct LifeEditorialFace: View {
                 let value = days[index]
                 VStack(spacing: 4) {
                     Text(PlannerDates.weekday(weekKey: snapshot.weekKey, index: index).uppercased())
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: dayLabelSize, weight: .semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                     Text(SpreadHours.text(value) + "h")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: dayValueSize, weight: .bold))
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
@@ -230,7 +236,9 @@ struct LifeEditorialFace: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
                 .background(
-                    value > 0 ? Color.white.opacity(0.91) : Color.black.opacity(0.28),
+                    // OD3: zero-hour days use a 0.6 black well. The owner's spec gives about 5.7:1 for white
+                    // labels over bright art (WCAG 1.4.3). Not re-measured on device.
+                    value > 0 ? Color.white.opacity(0.91) : Color.black.opacity(0.6),
                     in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                 )
                 .foregroundStyle(value > 0 ? Color.black.opacity(0.9) : Color.white)

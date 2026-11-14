@@ -180,7 +180,8 @@ struct LifePlanAheadSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }.disabled(saving || copySaving)
+                    // Closing discards an unconfirmed preview, so this is Cancel, leading (OD6).
+                    Button("Cancel") { dismiss() }.disabled(saving || copySaving)
                 }
             }
         }
@@ -491,7 +492,6 @@ struct LifePlanAheadSheet: View {
         let ok = await planner.send(["type": "copyWeekForward", "batch": copyBatch])
         copySaving = false
         if ok {
-            LifeFeedback.accepted()
             dismiss()
         } else {
             copyPreview = nil
@@ -515,7 +515,6 @@ struct LifePlanAheadSheet: View {
         let ok = await planner.send(payload)
         saving = false
         if ok {
-            LifeFeedback.accepted()
             dismiss()
         } else {
             preview = nil
