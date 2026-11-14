@@ -56,8 +56,22 @@
         "docs/design/finalize/TOKEN_AUDIT.md (Lane A, pending)",
         "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X12, C2, C4)"
       ],
-      "changed_files": [],
-      "regression_evidence": [],
+      "changed_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadWidgetShared.swift",
+        "ios/App/SpreadWidget/SpreadLifeCardsWidget.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/TaskSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/RecentlyDeletedSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/WhatsNewSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimerSheet.swift",
+        "scripts/native-today-widget.test.mjs",
+        "scripts/native-menu-polish.test.mjs"
+      ],
+      "regression_evidence": [
+        "X12: scripts/native-today-widget.test.mjs 'Life cards widget colours come from one shared set that matches the app's tokens'. The five values equal Spread.ink, Spread.secondary and Spread.canvas in Theme/SpreadTheme.swift, and the Life cards widget has no Color(hex: \"...\") literal.",
+        "Spacing and touch-target literals (not colour): 100 exact-value replacements in the owned sheet and focus files, each a token with the same value (TOKEN_AUDIT.md section 7). Snap and Decide literals are unchanged.",
+        "scripts/native-menu-polish.test.mjs: the Focus transport frame pin accepts Spread.minimumTarget as well as 44."
+      ],
       "reviewer_approval": ""
     },
     {
@@ -92,8 +106,18 @@
         "ios/App/SpreadWidget/SpreadTimerWidget.swift:226",
         "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X3, X5, X8 to X11)"
       ],
-      "changed_files": [],
-      "regression_evidence": [],
+      "changed_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift",
+        "ios/App/SpreadWidget/SpreadTimerWidget.swift",
+        "scripts/native-menu-polish.test.mjs",
+        "scripts/native-today-widget.test.mjs"
+      ],
+      "regression_evidence": [
+        "X8: scripts/native-menu-polish.test.mjs 'Open tasks dismisses with Cancel ... and keeps Move' (no 'Not now' in ManageSheets; Cancel is the leading toolbar item).",
+        "X10: scripts/native-today-widget.test.mjs 'Timer widget Cancel reads Cancel session and stays icon only' (title and icon-only control pinned; the Focus sheet label checked).",
+        "X11: no code change. At base 6f53a60 both empty states already have one sentence (WhatsNewSheet 'Future updates will appear here.', RecentlyDeletedSheet 'Tasks you delete will appear here for 30 days.'). The review's 'title only' finding was wrong.",
+        "X3 (ManageSheets side): already correct on main. 'Remove Life area' and 'Remove responsibility' at ManageSheets.swift:241, 268. 'Delete responsibility' in SpreadSurface.swift stays open in lane C."
+      ],
       "reviewer_approval": ""
     },
     {
@@ -105,7 +129,7 @@
       ],
       "problem": "CLAUDE.md and the release plan disagreed about device scope. OD20 makes Spread 1.0 iPhone only, and the superseding note is on main. OD25 keeps the TestFlight invitation and adds no App Store link until the listing exists. Found on 2026-11-14: the Xcode build settings still declare iPhone and iPad (TARGETED_DEVICE_FAMILY 1,2 in six places), and the App Store review checklist still says iPhone/iPad. OD20 therefore applies to the docs and copy, not yet to the build. Finding X1, blocks release until the owner confirms and the native config changes.",
       "severity": "high",
-      "decision_owner": "decided: OD20 applied in the docs and copy; OD28 (iPhone only; wave 3 sets the device family to 1 and aligns the checklist and preflight). OD25 keeps the TestFlight invitation. Open until wave 3 lands.",
+      "decision_owner": "decided: OD20 applied in the docs and copy; OD28 resolved in code by #223 (2026-11-14): every target TARGETED_DEVICE_FAMILY = 1; checklist, preflight and release plan say iPhone only. OD25 keeps the TestFlight invitation. Status stays open until the owner fills reviewer_approval at merge, then closed.",
       "spec": "docs/design/finalize/corrections/release-scope.md",
       "status": "open",
       "observed_evidence": [
@@ -117,8 +141,19 @@
         "docs/APP_STORE_REVIEW_CHECKLIST.md:12,28 (iPhone/iPad wording)",
         "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X1)"
       ],
-      "changed_files": [],
-      "regression_evidence": [],
+      "changed_files": [
+        "ios/App/App.xcodeproj/project.pbxproj",
+        "ios/App/App/Info.plist",
+        "ios/App/SpreadNativeUITests/PlannerUITests.swift",
+        "docs/APP_STORE_REVIEW_CHECKLIST.md",
+        "APP_STORE_RELEASE_PLAN.md",
+        "scripts/app-store-preflight.py",
+        "scripts/test_app_store_preflight.py"
+      ],
+      "regression_evidence": [
+        "python3 scripts/test_app_store_preflight.py: 20 tests OK on the merged branch (iPhone-only device scope).",
+        "grep on the merged tree: six TARGETED_DEVICE_FAMILY = 1 entries in ios/App/App.xcodeproj/project.pbxproj; docs/APP_STORE_REVIEW_CHECKLIST.md line 18 states the iPhone-only scope."
+      ],
       "reviewer_approval": ""
     },
     {
@@ -137,7 +172,7 @@
       "observed_evidence": [
         "docs/design/specs/2026-11-14-publish-finalize-plan.md section 8",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets: eight Lucide assets present since PR #217",
-        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:143 (disabledOpacity, #220) and :54 (sidebarScrim, #220)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:143 (disabledOpacity, #220); sidebarScrim (#220) was removed in #225 (OD33)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/PlannerNavigationRail.swift:57 (SF sidebar glyphs)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:552,799 (Lucide panel-left and SF undo glyph)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:969 (success haptic after removal, dropped by OD31)",
@@ -155,7 +190,7 @@
       ],
       "problem": "Bulk reschedule of overdue tasks (OverdueSelectionTray) was reachable only from the Week Focus surface, which cannot run. Life has no overdue path. OD19, as refined on 2026-11-14, keeps the tray and records this gap instead of deleting it.",
       "severity": "low",
-      "decision_owner": "owner: wave 3. Open decision: whether Life offers overdue bulk reschedule. Kept, not wired.",
+      "decision_owner": "owner (coordinator, 2026-11-14): build Option A, approved. Overdue is explicit, previewed, validated and confirmed; nothing auto-moves.",
       "spec": "docs/design/finalize/corrections/README.md#overdue-bulk-reschedule",
       "status": "open",
       "observed_evidence": [
@@ -163,9 +198,18 @@
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/LivePlanner.swift:395-402 (allOverdueTasks has no caller)",
         "Week/WeekFocusSurface.swift at 6f53a60, lines 435-477 (the focus-overdue entry point, deleted in this PR)"
       ],
-      "changed_files": [],
+      "changed_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeOverdueSheet.swift (new)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/OverdueSelectionTray.swift",
+        "docs/design/specs/2026-11-14-life-overdue-and-quick-add.md (new)",
+        "docs/design/specs/README.md",
+        "docs/design/finalize/corrections.json",
+        "docs/design/finalize/corrections/README.md"
+      ],
       "regression_evidence": [],
-      "reviewer_approval": ""
+      "reviewer_approval": "",
+      "resolution": "Built on the lane branch (PR #227), Option A. An Overdue count capsule beside To place in Life (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift:249) opens a sheet (Life/LifeOverdueSheet.swift) that hosts the existing OverdueSelectionTray. Confirmed moves use the existing bulkMoveOverdue action, pinned to the revision reviewed, and the planner's existing Life undo notice is the only Undo. Nothing shows as Nothing overdue unless the read succeeded. Spec: docs/design/specs/2026-11-14-life-overdue-and-quick-add.md. CI native-typecheck and checks passed on e221bdb (PR #227). Open: device checks (owed) and reviewer approval."
     },
     {
       "id": "parity-month-long-press-add",
@@ -175,7 +219,7 @@
       ],
       "problem": "A one-gesture add from the Month grid (long press a date, then add a task for the active responsibility) was reachable only from the Week Focus surface, which cannot run. Life's Month selects a date on a tap and adds in further steps. Classic Month has no gesture. OD19, as refined on 2026-11-14, keeps MonthQuickAddSheet and the MonthSurface hook and records this gap.",
       "severity": "low",
-      "decision_owner": "owner: wave 3. Open decision: whether Month gets a one-gesture add, and in which root. Kept, not wired.",
+      "decision_owner": "owner (coordinator, 2026-11-14): covered, not built, approved. The Month long-press add is not built; the Life day panel is the one quick add.",
       "spec": "docs/design/finalize/corrections/README.md#one-gesture-add-from-month",
       "status": "open",
       "observed_evidence": [
@@ -183,9 +227,15 @@
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthSurface.swift (onLongPressAdd and MonthDayAddGesture, no caller)",
         "Week/WeekFocusSurface.swift at 6f53a60, lines 152-155 (the long-press entry point, deleted in this PR)"
       ],
-      "changed_files": [],
+      "changed_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthQuickAddSheet.swift (deleted)",
+        "docs/design/specs/2026-11-14-life-overdue-and-quick-add.md (new)",
+        "docs/design/finalize/corrections.json",
+        "docs/design/finalize/corrections/README.md"
+      ],
       "regression_evidence": [],
-      "reviewer_approval": ""
+      "reviewer_approval": "",
+      "resolution": "Covered by an existing Life capability; nothing built. The Life day panel quick add (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift:68, LifeQuickAdd with a day) calls addTaskForDay (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift:479), the same action the sheet used. The unused Week/MonthQuickAddSheet.swift is deleted. A repo-wide grep of Swift, UI tests, scripts and src finds no caller. The dead onLongPressAdd hook and MonthDayAddGesture in Week/MonthSurface.swift were removed on main by #225. Reviewer approval is empty; the coordinator is the named reviewer."
     }
   ]
 }

@@ -17,7 +17,7 @@ final class SpreadFocusTimer: ObservableObject {
         session = SpreadFocusStore.load()
         reconcile()
         SpreadFocusLiveActivityController.refresh(session)
-        SpreadFocusWidgetPublisher.publish(session)
+        SpreadFocusWidgetPublisher.publish()
     }
 
     /// Records which profile is on screen. The widgets and the island act only for that profile.

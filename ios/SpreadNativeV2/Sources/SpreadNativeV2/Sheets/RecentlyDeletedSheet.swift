@@ -31,7 +31,7 @@ struct RecentlyDeletedSheet: View {
                                 .font(Spread.callout).foregroundStyle(Spread.secondary)
                                 .multilineTextAlignment(.center)
                             Button("Try again") { Task { await reload() } }
-                                .frame(minHeight: 44)
+                                .frame(minHeight: Spread.minimumTarget)
                                 .accessibilityIdentifier("deleted-retry")
                         }
                         .frame(maxWidth: .infinity, minHeight: 160)
@@ -49,13 +49,13 @@ struct RecentlyDeletedSheet: View {
                                 selecting.toggle()
                                 if !selecting { selected.removeAll() }
                             }
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Spread.minimumTarget)
                             .accessibilityIdentifier("deleted-select")
                         }
                         VStack(spacing: 0) {
                             ForEach(rows) { row in
                                 rowView(row)
-                                if row.id != rows.last?.id { Divider().padding(.leading, 12) }
+                                if row.id != rows.last?.id { Divider().padding(.leading, Spread.space3) }
                             }
                         }
                         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
@@ -64,9 +64,9 @@ struct RecentlyDeletedSheet: View {
                                 if selected.count == rows.count { selected.removeAll() }
                                 else { selected = Set(rows.map(\.id)) }
                             }
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Spread.minimumTarget)
                             .accessibilityIdentifier("deleted-select-all")
-                            HStack(spacing: 12) {
+                            HStack(spacing: Spread.space3) {
                                 Button(selected.isEmpty ? "Restore" : "Restore \(selected.count)") { Task { await restoreSelected() } }
                                     .disabled(selected.isEmpty || busy)
                                     .frame(maxWidth: .infinity, minHeight: 48)
@@ -91,7 +91,7 @@ struct RecentlyDeletedSheet: View {
                     }
                 }
                 .frame(maxWidth: 620)
-                .padding(16)
+                .padding(Spread.space4)
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.hidden)
@@ -131,7 +131,7 @@ struct RecentlyDeletedSheet: View {
                 } label: {
                     Image(systemName: selected.contains(row.id) ? "checkmark.circle.fill" : "circle")
                         .font(.system(.title3))
-                        .frame(width: 44, height: 44)
+                        .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(selected.contains(row.id) ? "Deselect \(row.task.text)" : "Select \(row.task.text)")
@@ -148,11 +148,11 @@ struct RecentlyDeletedSheet: View {
                 Button("Restore") { Task { await restore([row.id]) } }
                     .font(.system(.subheadline, weight: .semibold))
                     .disabled(busy)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                     .accessibilityIdentifier("deleted-restore-\(row.id)")
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Spread.space3)
         .frame(minHeight: 64)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("deleted-item-\(row.id)")

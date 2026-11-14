@@ -2,6 +2,16 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-e18ff9867546",
+      "version": "1.0",
+      "date": "2026-11-14",
+      "title": "Recent updates",
+      "changes": [
+        "The Open tasks sheet's leading button now says \"Cancel\".",
+        "The timer widget's cancel control is labelled \"Cancel session\" for VoiceOver, and the Shortcuts action is \"Cancel session\"."
+      ]
+    },
+    {
       "id": "notes-b3e37d9c22ba",
       "version": "1.0",
       "date": "2026-11-13",
@@ -104,5 +114,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "99a4710c5052022f65a7efaa543adb0a2f158243"
+  "lastProcessedCommit": "e18ff9867546e68193b5469dbdc56b0466d21742"
 }
