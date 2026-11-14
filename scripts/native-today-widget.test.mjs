@@ -460,3 +460,12 @@ test("ActivityKit refreshes finish before app-process widget intents return", ()
   const writes = [...focusControls.matchAll(/SpreadFocusControls\.apply\([^\n]+\)\s+await SpreadFocusLiveActivityController\.awaitSettled\(\)/g)];
   assert.equal(writes.length, 9, "all focus intent transitions must await their queued ActivityKit update");
 });
+
+
+test("a widget action updates the visible in-app timer without waiting for the polling fallback", () => {
+  assert.match(focusControls, /static let didChange = Notification\.Name\("SpreadFocusSessionChanged"\)/);
+  assert.match(focusControls, /SpreadFocusStore\.save\(session\)\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*NotificationCenter\.default\.post\(name: didChange, object: nil\)/);
+  assert.match(liveRoot, /NotificationCenter\.default\.publisher\(for: SpreadFocusControls\.didChange\)/);
+  assert.match(liveRoot, /publisher\(for: SpreadFocusControls\.didChange\)\) \{ _ in\s*focusTimer\.reloadFromStore\(\)/);
+  assert.match(liveRoot, /try\? await Task\.sleep\(for: \.seconds\(1\)\)/);
+});
