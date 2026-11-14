@@ -34,6 +34,8 @@ struct ToPlaceTray: View {
                 if tasks.isEmpty {
                     Text("Drop a task here to take it off its day.")
                         .font(Spread.caption).foregroundStyle(Spread.secondary).multilineTextAlignment(.trailing)
+                        // Wrap at large text sizes rather than being squeezed into a sliver beside "To place".
+                        .fixedSize(horizontal: false, vertical: true)
                 } else {
                     Text("\(tasks.count)")
                         .font(.system(.caption, weight: .semibold)).monospacedDigit()
@@ -146,6 +148,8 @@ struct TaskLine: View {
         return LifeCalendarRules.dailyTasks(snapshot, day: currentAllocation.day, roleId: task.roleId)
     }
     private var index: Int? { dayTasks.firstIndex(where: { $0.id == task.id }) }
+    private var moveVerb: String { currentAllocation == nil ? "Place" : "Move to" }
+    private var displayName: String { task.text.isEmpty ? "Untitled task" : task.text }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -176,12 +180,14 @@ struct TaskLine: View {
 
                 if !task.done {
                     Button { showMove = true } label: {
-                        Text(currentAllocation == nil ? "Place" : "Move to")
+                        Text(moveVerb)
                             .font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.accent)
                             .padding(.horizontal, 12).frame(minHeight: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    // Name the task too: the visible "Place" alone does not say which task it places.
+                    .accessibilityLabel("\(moveVerb) \(displayName)")
                     .accessibilityIdentifier("task-move-\(task.id)")
                 }
             }
