@@ -174,7 +174,7 @@
       ],
       "regression_evidence": [],
       "reviewer_approval": "",
-      "resolution": "Built on the lane branch (PR #227), Option A. An Overdue count capsule beside To place in Life (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift:249) opens a sheet (Life/LifeOverdueSheet.swift) that hosts the existing OverdueSelectionTray. Confirmed moves use the existing bulkMoveOverdue action, pinned to the revision reviewed, and the planner's existing Life undo notice is the only Undo. Nothing shows as Nothing overdue unless the read succeeded. Spec: docs/design/specs/2026-11-14-life-overdue-and-quick-add.md. Open: CI native-typecheck and checks, device checks (owed), reviewer approval."
+      "resolution": "Built on the lane branch (PR #227), Option A. An Overdue count capsule beside To place in Life (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift:249) opens a sheet (Life/LifeOverdueSheet.swift) that hosts the existing OverdueSelectionTray. Confirmed moves use the existing bulkMoveOverdue action, pinned to the revision reviewed, and the planner's existing Life undo notice is the only Undo. Nothing shows as Nothing overdue unless the read succeeded. Spec: docs/design/specs/2026-11-14-life-overdue-and-quick-add.md. CI native-typecheck and checks passed on e221bdb (PR #227). Open: device checks (owed) and reviewer approval."
     },
     {
       "id": "parity-month-long-press-add",
@@ -200,7 +200,7 @@
       ],
       "regression_evidence": [],
       "reviewer_approval": "",
-      "resolution": "Covered by an existing Life capability; nothing built. The Life day panel quick add (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift:68, LifeQuickAdd with a day) calls addTaskForDay (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift:479), the same action the sheet used. The unused Week/MonthQuickAddSheet.swift is deleted. A repo-wide grep of Swift, UI tests, scripts and src finds no caller. Still open: the dead onLongPressAdd hook and MonthDayAddGesture in Week/MonthSurface.swift (lane W3-2). Reviewer approval is empty; the coordinator is the named reviewer."
+      "resolution": "Covered by an existing Life capability; nothing built. The Life day panel quick add (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift:68, LifeQuickAdd with a day) calls addTaskForDay (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift:479), the same action the sheet used. The unused Week/MonthQuickAddSheet.swift is deleted. A repo-wide grep of Swift, UI tests, scripts and src finds no caller. The dead onLongPressAdd hook and MonthDayAddGesture in Week/MonthSurface.swift were removed on main by #225. Reviewer approval is empty; the coordinator is the named reviewer."
     }
   ]
 }
