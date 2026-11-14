@@ -34,7 +34,7 @@ struct NewSpreadSheet: View {
                         nextId += 1
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "plus").font(.system(.subheadline, weight: .bold))
+                            SpreadIcon(name: "icon-add", size: 19).font(.system(.subheadline, weight: .bold))
                             Text("Add another Life area").font(.system(.subheadline, weight: .semibold))
                         }
                         .foregroundStyle(Spread.accent)
@@ -191,7 +191,7 @@ struct RoleSheet: View {
                                 }
                                 Button(role: .destructive) {
                                     Task { await planner.send(["type": "removeAllocation", "allocationId": item.id]) }
-                                } label: { Image(systemName: "trash").tapTarget() }
+                                } label: { SpreadIcon(name: "icon-trash", size: 20).tapTarget() }
                                 .accessibilityLabel("Remove hours from \(PlannerDates.label(PlannerDates.date(item.day), pattern: "EEEE"))")
                             }
                         }
@@ -584,7 +584,7 @@ struct MoreSheet: View {
                                     .accessibilityIdentifier("appearance-" + item.rawValue)
                                 }
                                 Button { showCalendarPicker = true } label: {
-                                    Image(systemName: "calendar")
+                                    SpreadIcon(name: "lucide-calendar-days", size: 20)
                                         .font(.system(.body, weight: .semibold))
                                         .foregroundStyle(Spread.accent)
                                         .frame(width: 44, height: 44)
@@ -610,7 +610,7 @@ struct MoreSheet: View {
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Notifications")
                             Button { showFocusTimer = true } label: {
-                                Label("Focus timer", systemImage: "timer")
+                                Label { Text("Focus timer") } icon: { SpreadIcon(name: "lucide-timer", size: 18) }
                                     .font(.subheadline.weight(.semibold))
                                     .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                                     .padding(.horizontal, 12)
@@ -619,7 +619,7 @@ struct MoreSheet: View {
                             .buttonStyle(.spreadPress)
                             .accessibilityIdentifier("more-focus-timer")
                             Button { showReminders = true } label: {
-                                Label("Daily planning reminder", systemImage: "bell")
+                                Label { Text("Daily planning reminder") } icon: { SpreadIcon(name: "lucide-bell", size: 18) }
                                     .font(.subheadline.weight(.semibold))
                                     .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                                     .padding(.horizontal, 12)
@@ -699,7 +699,7 @@ struct MoreSheet: View {
                                 Button {
                                     backup()
                                 } label: {
-                                    Label("Backup and restore", systemImage: "externaldrive")
+                                    Label { Text("Backup and restore") } icon: { SpreadIcon(name: "icon-backup", size: 18) }
                                         .font(.system(.subheadline, weight: .semibold))
                                         .foregroundStyle(Spread.ink)
                                         .lineLimit(2)
@@ -710,7 +710,7 @@ struct MoreSheet: View {
                                 .buttonStyle(.spreadPress)
                                 .accessibilityIdentifier("backup-and-restore")
                                 Button { showRecentlyDeleted = true } label: {
-                                    Label("Recently Deleted", systemImage: "trash")
+                                    Label { Text("Recently Deleted") } icon: { SpreadIcon(name: "icon-trash", size: 18) }
                                         .font(.system(.subheadline, weight: .semibold))
                                         .foregroundStyle(Spread.ink)
                                         .lineLimit(2)
@@ -749,7 +749,7 @@ struct MoreSheet: View {
                                             .font(.caption.weight(.semibold))
                                             .foregroundStyle(Spread.accent)
                                     }
-                                    Image(systemName: "chevron.right")
+                                    SpreadIcon(name: "lucide-chevron-right", size: 18)
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(Spread.secondary)
                                         .accessibilityHidden(true)
