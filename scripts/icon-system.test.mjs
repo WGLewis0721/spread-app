@@ -115,3 +115,44 @@ for (const [name, lucideSource] of Object.entries(utilityIconMap)) {
     assert.equal(meta.properties["template-rendering-intent"] === "template", name !== "trash");
   });
 }
+
+
+const nativeLucideIcons = [
+  "x", "ellipsis", "chevron-left", "chevron-right", "chevron-up", "chevron-down",
+  "calendar-days", "calendar-clock", "calendar-plus", "calendar-range", "sliders-horizontal",
+  "list-todo", "circle-plus", "circle-check", "circle", "flag", "inbox",
+  "timer", "clock", "minus", "panel-left", "bell"
+];
+
+test("native action glyphs are canonical 24-point Lucide templates with one license", () => {
+  for (const icon of nativeLucideIcons) {
+    const root = `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets/lucide-${icon}.imageset`;
+    const svg = read(`${root}/lucide-${icon}.svg`);
+    const meta = JSON.parse(read(`${root}/Contents.json`));
+    assert.match(svg, /viewBox="0 0 24 24"/, `${icon}: 24-point grid`);
+    assert.match(svg, /stroke-width="2"/, `${icon}: consistent stroke`);
+    assert.match(svg, /stroke-linecap="round"/);
+    assert.equal(meta.images[0].filename, `lucide-${icon}.svg`);
+    assert.equal(meta.properties["template-rendering-intent"], "template");
+    assert.equal(meta.properties["preserves-vector-representation"], true);
+  }
+});
+
+test("core native controls use Lucide without touching branded launcher or task semantics", () => {
+  const root = "ios/SpreadNativeV2/Sources/SpreadNativeV2/";
+  for (const file of [
+    "Life/LifeRoot.swift", "Life/LifeWalletStack.swift", "Life/LifeWeekView.swift",
+    "Life/LifeWeeklyTimeBudget.swift", "Life/LifePlanAheadSheet.swift",
+    "Week/WeekSurface.swift", "Week/WeekFocusSurface.swift", "Week/WeekFocusComponents.swift",
+    "Spread/SpreadSurface.swift", "Sheets/TaskSheet.swift", "Sheets/ManageSheets.swift",
+    "Shell/SpreadArrowControl.swift", "Shell/SpreadLiveRoot.swift",
+    "Spread/ResponsibilitySidebar.swift"
+  ]) {
+    const content = read(root + file);
+    assert.match(content, /SpreadIcon\\(name:/, `${file} should use one icon renderer`);
+  }
+  const icons = read(root + "Theme/SpreadIcons.swift");
+  assert.match(icons, /Image\\("app-icon-spread-cards"/);
+  assert.match(icons, /struct SpreadBrandMark:/);
+  assert.match(icons, /accessibilityHidden\\(true\\)/);
+});
