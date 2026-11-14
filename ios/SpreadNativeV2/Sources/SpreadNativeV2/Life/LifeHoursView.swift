@@ -455,7 +455,7 @@ struct LifeHoursView: View {
         let maxBudget = max(role.hours, max(reserved, capacity - (storedAssigned - role.hours)))
         let next = role.hours + delta
         guard next >= reserved && next <= maxBudget else {
-            warn(delta < 0 ? "\(SpreadHours.text(reserved)) h are already reserved. Return time from a day first." : "All hours are assigned. Add weekly hours to assign more.")
+            warn(delta < 0 ? "\(SpreadHours.text(reserved))h is already placed on days. Return time from a day first." : "All hours are assigned. Add weekly hours to assign more.")
             return
         }
         commitBudget(role.id, hours: next)

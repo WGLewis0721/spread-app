@@ -91,11 +91,7 @@ struct LifePlanAheadSheet: View {
                                 Text("Move time to another week. Nothing moves until you preview and confirm.")
                                     .font(.subheadline)
                                     .foregroundStyle(Spread.secondary)
-                                Picker("Life area", selection: $roleId) {
-                                    ForEach(snapshot.roles) { role in
-                                        Text(role.name).tag(role.id)
-                                    }
-                                }
+                                LifeAreaMenuRow(title: "Life area", selection: $roleId, roles: snapshot.roles)
                                 Picker("Move", selection: $dailyTransfer) {
                                     Text("Weekly hours").tag(false)
                                     Text("Hours on a day").tag(true)
@@ -122,7 +118,7 @@ struct LifePlanAheadSheet: View {
                                     .environment(\.calendar, PlannerDates.deviceCalendar)
                                     .environment(\.timeZone, TimeZone.current)
                                 Stepper(value: $amount, in: 0.5...168, step: 0.5) {
-                                    Text(SpreadHours.text(amount) + " hours")
+                                    Text(SpreadHours.spoken(amount))
                                         .font(.headline).monospacedDigit()
                                 }
                                 TextField("Target weekly hours (if not set)", text: $targetCapacityText)
@@ -165,7 +161,7 @@ struct LifePlanAheadSheet: View {
                                         .font(.subheadline)
                                         .foregroundStyle(Spread.secondary)
                                 }
-                            } header: { Text("Review before moving") }
+                            } header: { Text("Preview before moving") }
                         }
                     }
                     .spreadListSurface()
@@ -324,7 +320,7 @@ struct LifePlanAheadSheet: View {
             } header: {
                 Text("Suggested plans")
             } footer: {
-                Text("Based on this week. Review or edit before confirming.")
+                Text("Based on this week. Open one to preview or change it before you confirm.")
             }
         }
     }
@@ -461,7 +457,7 @@ struct LifePlanAheadSheet: View {
                     .foregroundStyle(Spread.secondary)
             }
         } header: {
-            Text("Review before copying")
+            Text("Preview before copying")
         }
     }
 
@@ -477,7 +473,7 @@ struct LifePlanAheadSheet: View {
                 ForEach(preview.targets, id: \.key) { target in
                     PlanAheadDetailRow(
                         title: "Week of " + PlannerDates.label(PlannerDates.date(target.key), pattern: "MMM d"),
-                        detail: target.status == "fill" ? "Will be filled" : "Already planned, kept")
+                        detail: target.status == "fill" ? "Will be filled" : "Kept, already planned or set")
                 }
             }
             .foregroundStyle(Spread.ink)
