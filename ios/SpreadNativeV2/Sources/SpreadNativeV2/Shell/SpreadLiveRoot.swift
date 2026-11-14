@@ -93,6 +93,7 @@ public struct SpreadLiveRoot: View {
             }
         }
         .onChange(of: showNamesOutsideApp) { _, _ in
+            SpreadFocusPreferences.publishFromApp()
             // Block labels and the focus title are written with the names setting, so write them again now.
             guard let snapshot = planner.snapshot, let profile = planner.state?.envelope.profileId else { return }
             SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
