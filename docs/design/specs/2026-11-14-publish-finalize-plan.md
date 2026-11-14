@@ -144,3 +144,17 @@ Wave 1 merged as #209, #211, #212, #213, #214 and #215; CI on `main` is green. W
 | W2-3 Tokens and Life | `SpreadTheme.swift`, the UI kit tokens section, `TOKEN_AUDIT.md`, the other Life files | OD1 in Life, OD16, OD17, art tokens, exact token adoption |
 | W2-4 Health and copy | `model.ts` defaults, `Sheets/`, string-pinning UI tests (not `PlannerUITests`) | OD21 default, OD22 create-sheet title, "To place" |
 | W2-5 Review and device script | `finalize/` docs only | Cross-surface review, iPhone device test script, release checklist |
+
+## 10. Wave 3 (started 2026-11-14)
+
+Wave 2 merged as #216 to #221, and `main` passes CI and the combined Swift type-check. Wave 3 implements OD28 to OD33 and the two features Life lacks (OD26). Five Haiku sessions at xhigh effort run in parallel, each owning separate files. Merge order: W3-1 first (release blocker), then W3-2, W3-3 and W3-5, and W3-4 last because it is the only new behaviour.
+
+| Lane | Owns | Does | Decisions |
+| --- | --- | --- | --- |
+| W3-1 iPhone-only build | `ios/App/App.xcodeproj/project.pbxproj`, `ios/App/App/Info.plist`, `scripts/app-store-preflight.py` and its tests, `docs/APP_STORE_REVIEW_CHECKLIST.md`, `APP_STORE_RELEASE_PLAN.md` | `TARGETED_DEVICE_FAMILY` becomes `1` in every target. iPad orientation keys go. The preflight and checklist change in the same PR and their tests stay green. If a signing or Codemagic assumption needs iPad, stop and report. | OD20, OD28 |
+| W3-2 Classic and Shell | `Spread/`, the live `Week/` files except `OverdueSelectionTray` and `MonthQuickAddSheet`, `Shell/`, `Theme/SpreadTheme.swift`, the dead Crown files | Haptic policy (`SpreadHaptics`). "Over budget" and "Remove responsibility" in Classic. Delete the unreachable `RoleDeleteConfirm`, `CrownTravel.swift`, `DialGeometry.swift`, the Crown-metal tokens and the unused `sidebarScrim`. Lucide `panel-left` for the rail toggle and `rotate-ccw` for the Undo notice. | OD30 to OD33 |
+| W3-3 Life polish | `LifeRoot`, `LifeWeeklyTimeBudget`, `LifeEditorialCard`, `LifeHoursView`, `LifeManagementSheets`, `LifePalette`, `LifeWalletStack` | Life shows the OD12 sentence and says "over budget". Life haptics follow OD31 (`LifeFeedback`). Delete the unused `onDeleteRole`, `onOpenRole` and `LifeDeleteSheet`. | OD29, OD31, OD32 |
+| W3-4 Features Life lacks | `LifeWeekView`, new Life files, `OverdueSelectionTray`, `MonthQuickAddSheet`, a new spec under `docs/design/specs/` | Spec first (two options, per the plan and spec protocol), then bulk overdue reschedule and a quick add path in Life, with a tap path and Undo. Life has no Month view, so the spec decides what "quick add" means in Life. | OD26 |
+| W3-5 Sheets, widgets, docs | `Sheets/`, `Focus/`, `Widget/`, `ios/App/SpreadWidget/`, `docs/design/finalize/` | "Cancel" on Open tasks. "Cancel session" on the timer widget. One sentence on title-only empty lists. Widgets read shared colour tokens. Close correction records as items land. | OD33 |
+
+After wave 3: a Codemagic TestFlight build of `main`, the device script (`finalize/DEVICE_TEST_SCRIPT.md`) on a physical iPhone, a correction record and a targeted fix for anything that fails, and only then a GO.
