@@ -235,7 +235,7 @@ Browser checks (Chromium, Playwright): 390 wide, light and dark, reduced motion,
 - Haptic pattern: decided 2026-11-14. Keep the light impact, fired only when a task is completed ([finalize plan](../specs/2026-11-14-publish-finalize-plan.md), OD2). An in-app haptics switch is still open.
 - Privacy manifest audit not done.
 - Dynamic Type: decided 2026-11-14. Native SwiftUI honours the system text size ([finalize plan](../specs/2026-11-14-publish-finalize-plan.md), OD10).
-- Health role color across app, site, and film.
+- Health role color: decided 2026-11-14. Teal `#30B0C7` everywhere ([finalize plan](../specs/2026-11-14-publish-finalize-plan.md), OD21).
 - Xcode 27.1 final or beta status.
 
 ---
