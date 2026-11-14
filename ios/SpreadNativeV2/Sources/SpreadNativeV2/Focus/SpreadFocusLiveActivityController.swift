@@ -10,8 +10,8 @@ import Foundation
 /// activity so Continue stays on the island.
 @MainActor
 enum SpreadFocusLiveActivityController {
-    static let enabledKey = "native.focus.liveActivityEnabled"
-    static let showNameKey = "native.focus.showNameOutsideApp"
+    static let enabledKey = SpreadFocusPreferences.liveActivityKey
+    static let showNameKey = SpreadFocusPreferences.showNameKey
 
     /// Where the activity sits when several Spread activities exist. A running or paused stretch outranks a
     /// stretch waiting for a tap.
@@ -40,13 +40,13 @@ enum SpreadFocusLiveActivityController {
     }
 
     static func start(_ session: SpreadFocusSession) {
-        guard UserDefaults.standard.bool(forKey: enabledKey),
+        guard SpreadFocusPreferences.liveActivityEnabled(),
               ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         Task {
             for old in Activity<SpreadFocusActivityAttributes>.activities {
                 await old.end(nil, dismissalPolicy: .immediate)
             }
-            let title = UserDefaults.standard.bool(forKey: showNameKey) ? session.roleName : "Focus session"
+            let title = SpreadFocusPreferences.showName() ? session.roleName : "Focus session"
             let attributes = SpreadFocusActivityAttributes(sessionId: session.id, title: title,
                                                            day: session.blockDay)
             _ = try? Activity.request(attributes: attributes, content: content(for: session), pushType: nil)
@@ -55,7 +55,7 @@ enum SpreadFocusLiveActivityController {
 
     /// Brings the island in step with the session. Nil, or a finished stretch with nothing after it, ends it.
     static func refresh(_ session: SpreadFocusSession?) {
-        guard UserDefaults.standard.bool(forKey: enabledKey), let session else {
+        guard SpreadFocusPreferences.liveActivityEnabled(), let session else {
             end()
             return
         }
@@ -67,7 +67,7 @@ enum SpreadFocusLiveActivityController {
     }
 
     static func update(_ session: SpreadFocusSession) {
-        guard UserDefaults.standard.bool(forKey: enabledKey) else {
+        guard SpreadFocusPreferences.liveActivityEnabled() else {
             end()
             return
         }
