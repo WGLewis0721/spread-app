@@ -19,13 +19,13 @@ struct PlannerNavigationRail: View {
     private var labelsVisible: Bool { expanded || typeSize.isAccessibilitySize }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Spread.space2) {
             ScrollView {
-                VStack(spacing: 8) {
+                VStack(spacing: Spread.space2) {
                     ForEach(items) { item in
                         Button { if selected != item.id { onSelect(item.id) } } label: {
                             VStack(spacing: 5) {
-                                HStack(spacing: 4) {
+                                HStack(spacing: Spread.space1) {
                                     SpreadIcon(name: item.icon, size: 22)
                                     if selected == item.id {
                                         Image(systemName: "checkmark").font(.caption.bold())
@@ -37,10 +37,10 @@ struct PlannerNavigationRail: View {
                                 }
                             }
                             .frame(maxWidth: .infinity, minHeight: 52)
-                            .padding(.vertical, 4)
+                            .padding(.vertical, Spread.space1)
                             .foregroundStyle(selected == item.id ? Spread.ink : Spread.secondary)
                             .background(selected == item.id ? Spread.fill : .clear,
-                                        in: RoundedRectangle(cornerRadius: 14))
+                                        in: RoundedRectangle(cornerRadius: Spread.radiusControl))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.spreadPress)
@@ -55,13 +55,13 @@ struct PlannerNavigationRail: View {
                 withAnimation(reduceMotion ? nil : SpreadTactile.glide) { expanded.toggle() }
             } label: {
                 Image(systemName: expanded ? "sidebar.left" : "sidebar.right")
-                    .frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                    .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget).contentShape(Rectangle())
             }
             .buttonStyle(.spreadPress)
             .accessibilityLabel(expanded ? "Condense navigation" : "Expand navigation")
             .accessibilityIdentifier("planner-navigation-toggle")
         }
-        .padding(8)
+        .padding(Spread.space2)
         .frame(width: labelsVisible ? 144 : 72)
         .background(Spread.elevated)
         .accessibilityElement(children: .contain)

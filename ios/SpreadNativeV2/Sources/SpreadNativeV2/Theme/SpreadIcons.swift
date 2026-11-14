@@ -48,7 +48,7 @@ struct RoleBadge: View {
     /// yellow/orange/bright green without changing the role's stored colour.
     private var glyphInk: Color {
         let hex = color.hasPrefix("#") ? String(color.dropFirst()) : color
-        guard hex.count == 6, let rgb = Int(hex, radix: 16) else { return .white }
+        guard hex.count == 6, let rgb = Int(hex, radix: 16) else { return Spread.tileGlyph }
         func linear(_ channel: Int) -> Double {
             let value = Double(channel) / 255
             return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
@@ -57,8 +57,8 @@ struct RoleBadge: View {
             + 0.7152 * linear((rgb >> 8) & 255)
             + 0.0722 * linear(rgb & 255)
         return luminance > 0.30
-            ? Color(red: 22.0 / 255.0, green: 33.0 / 255.0, blue: 42.0 / 255.0)
-            : .white
+            ? Spread.tileGlyphOnBright
+            : Spread.tileGlyph
     }
 
     var body: some View {
@@ -67,7 +67,7 @@ struct RoleBadge: View {
         ZStack {
             shape.fill(LinearGradient(colors: [tint, tint.opacity(0.78)], startPoint: .top, endPoint: .bottom))
             // A thin top light, so the tile reads as a lit surface and not a flat swatch.
-            shape.strokeBorder(LinearGradient(colors: [Color.white.opacity(0.45), Color.white.opacity(0.04)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
+            shape.strokeBorder(LinearGradient(colors: [Spread.highlight.opacity(0.45), Spread.highlight.opacity(0.04)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
             if let category, ChalkArtwork.categoryGlyphNames.contains(category) {
                 Image("category-glyph-\(category)", bundle: .module)
                     .renderingMode(.template)

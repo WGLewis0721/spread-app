@@ -75,6 +75,18 @@ This kit consolidates Spread's existing visual language. It does not override th
 - Reduce Motion: all motion disabled
 - Haptics: light tap only when native and meaningful
 
+### Native tokens
+
+SwiftUI tokens live in `ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift`, which is the only place their values are written. Use the names below and do not copy values into this page.
+
+- **Colour** (`Spread.*`, one set for light and dark, with Increase Contrast inside each token). Gray Matter role names map to Spread's: canvas → `canvas`, surface → `inset`, elevated → `elevated`, primary → `accent`, text → `ink`, secondaryText → `secondary`, outline → `line`, destructive → `danger`, warning → `caution`, success → `success`. Spread's names are the only names in code.
+- **Type ramp** (Dynamic Type): `title`, `sheetTitle`, `body`, `headline`, `callout`, `footnote`, `caption`, and `numeric` for figures that must align.
+- **Spacing** (4-point grid): `space1` to `space12`. Touch targets use `minimumTarget` (44 pt), not a spacing step.
+- **Shape**: `radiusControl`, `radiusRow`, `radiusCard`, `radiusSheet`.
+- **Motion** (`SpreadMotion`): `fastSeconds`, `normalSeconds`, `deliberateSeconds`, `timing(_:)`, and `seconds(_:reduceMotion:)`, which returns zero under Reduce Motion. Gestures use `SpreadTactile`.
+- **Role colours** are data (`Responsibility.color`), never tokens. Illustration colours are authored artwork.
+- Remaining hardcoded native values, with the token that should replace each: `docs/design/finalize/TOKEN_AUDIT.md`.
+
 ---
 
 ## 2. Components

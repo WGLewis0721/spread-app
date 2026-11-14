@@ -12,7 +12,8 @@ public struct SpreadLiveRoot: View {
     @StateObject private var focusTimer = SpreadFocusTimer()
     let recovery: () -> Void
 
-    @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false
+    // OD18: Life is the default root for new installs. The key is unchanged, so a stored choice still wins.
+    @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = true
     @State private var focusSelectedDay: String?
     @State private var spreadSidebarExpanded = true
     @State private var destination: SpreadDestination = .spread
@@ -175,9 +176,9 @@ public struct SpreadLiveRoot: View {
                         HStack {
                             Text("Spread").font(.headline); Spacer()
                             Button(action: closeClassicNavigation) {
-                                SpreadIcon(name: "lucide-x", size: 20).frame(width: 44, height: 44)
+                                SpreadIcon(name: "lucide-x", size: 20).frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                             }.accessibilityLabel("Close navigation")
-                        }.padding(.horizontal, 12)
+                        }.padding(.horizontal, Spread.space3)
                         classicNavigation
                     }
                     .frame(width: min(300, max(0, geometry.size.width - 32)))
@@ -209,7 +210,7 @@ public struct SpreadLiveRoot: View {
                 guard planner.snapshot != nil, !headerLabelsCollapsed else { return }
                 do { try await Task.sleep(nanoseconds: 2_500_000_000) }
                 catch { return }
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.38)) {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: SpreadMotion.normalSeconds)) {
                     headerLabelsCollapsed = true
                 }
             }
@@ -313,7 +314,7 @@ public struct SpreadLiveRoot: View {
     // MARK: Opening and engine state
 
     private var opening: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spread.space4) {
             SpreadBrandMark(size: 56)
             ProgressView("Opening your plan…")
             Button { Task { await planner.refresh() } } label: { Text("Try again").tapTarget() }
@@ -346,7 +347,7 @@ public struct SpreadLiveRoot: View {
                 // surface on a switch so it restores that profile's own saved day/groups.
                 .id(planner.state?.envelope.profileId)
             } else if weekFocusEnabled && destination == .spread {
-                HStack(alignment: .top, spacing: 8) {
+                HStack(alignment: .top, spacing: Spread.space2) {
                     ResponsibilitySidebar(
                         snapshot: snapshot,
                         selectedRole: $selectedRole,
@@ -360,7 +361,7 @@ public struct SpreadLiveRoot: View {
                     )
                     .frame(width: spreadSidebarExpanded ? 86 : 56)
                     ScrollView {
-                        notices.padding(.horizontal, 4)
+                        notices.padding(.horizontal, Spread.space1)
                         if snapshot.roles.isEmpty {
                             emptyPlan
                         } else {
@@ -383,7 +384,7 @@ public struct SpreadLiveRoot: View {
                     .scrollDismissesKeyboard(.interactively)
                     .scrollIndicators(.hidden)
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, Spread.space2)
             } else {
             ScrollViewReader { proxy in
             ScrollView {
@@ -392,7 +393,7 @@ public struct SpreadLiveRoot: View {
                 // the entire viewport in a sticky header.
                 if typeSize.isAccessibilitySize { header(snapshot, isMonth: isMonth) }
                 notices
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Spread.space4)
                 if snapshot.roles.isEmpty {
                     emptyPlan
                 } else if destination == .week {
@@ -462,7 +463,7 @@ public struct SpreadLiveRoot: View {
             Text("Name a responsibility, give it hours, then place those hours in your week.")
                 .font(.system(.subheadline)).foregroundStyle(Spread.secondary).multilineTextAlignment(.center)
             Button { sheet = .newRole } label: {
-                Text("Create responsibility")
+                Text("Add responsibility")
                     .font(.system(.headline, weight: .semibold)).foregroundStyle(Spread.onAccent)
                     .padding(.horizontal, 28).frame(minHeight: 50)
                     .background(Capsule().fill(Spread.accentGradient))
@@ -471,7 +472,7 @@ public struct SpreadLiveRoot: View {
             .padding(.top, 6)
             .accessibilityIdentifier("create-first-spread")
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, Spread.space8)
         .padding(.top, 28)
         .frame(maxWidth: .infinity)
     }
@@ -515,20 +516,20 @@ public struct SpreadLiveRoot: View {
         }
         return VStack(spacing: 10) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
+                HStack(spacing: Spread.space3) {
                     navigationButton
                     brandButton
                     Spacer(minLength: 8)
                     destinationRail
                 }
-                VStack(spacing: 8) {
+                VStack(spacing: Spread.space2) {
                     HStack { navigationButton; brandButton; Spacer(minLength: 0) }
                     destinationRail
                 }
             }
             WeekCrownView(title: title, detail: detail, onDetail: detailAction, onMove: move, isMonth: isMonth)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, Spread.space4)
         .padding(.top, 6)
         .padding(.bottom, 6)
         .background(reduceTransparency ? Spread.canvas : Spread.canvas.opacity(0.94))
@@ -548,7 +549,7 @@ public struct SpreadLiveRoot: View {
                 if usableWidth >= 820 { navigationExpanded.toggle() }
                 else { classicNavigationOpen.toggle() }
             }
-        } label: { SpreadIcon(name: "lucide-panel-left", size: 20).frame(width: 44, height: 44) }
+        } label: { SpreadIcon(name: "lucide-panel-left", size: 20).frame(width: Spread.minimumTarget, height: Spread.minimumTarget) }
         .buttonStyle(.spreadPress)
         .accessibilityLabel("Open navigation")
         .accessibilityIdentifier("classic-navigation")
@@ -596,7 +597,7 @@ public struct SpreadLiveRoot: View {
                     .transition(headerTextExit)
                 }
             }
-            .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+            .frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.spreadPress)
@@ -629,7 +630,7 @@ public struct SpreadLiveRoot: View {
                     }
                     .foregroundStyle(selected ? Spread.onAccent : Spread.secondary)
                     .padding(.horizontal, 14)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                     .background {
                         if selected { Capsule().fill(Spread.accentGradient) }
                     }
@@ -651,20 +652,20 @@ public struct SpreadLiveRoot: View {
 
     @ViewBuilder private var notices: some View {
         if let notice = planner.recoveryNotice, dismissedNotice != notice {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spread.space2) {
                 Label(notice, systemImage: "exclamationmark.shield").foregroundStyle(Spread.caution)
                 HStack {
                     Button { sheet = .backup } label: { Text("Backup and restore").tapTarget() }
                     Button { dismissedNotice = notice } label: { Text("Got it").tapTarget() }
                 }
             }
-            .padding(12)
+            .padding(Spread.space3)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
-            .padding(.top, 8)
+            .padding(.top, Spread.space2)
         }
         if let failure = planner.saveFailure {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spread.space2) {
                 Label(failure == "newer" ? "Update Spread to edit this plan" : "Changes are not saved on this device",
                       systemImage: "exclamationmark.triangle")
                     .font(.headline).foregroundStyle(Spread.danger)
@@ -677,10 +678,10 @@ public struct SpreadLiveRoot: View {
                         .accessibilityIdentifier("back-up")
                 }
             }
-            .padding(12)
+            .padding(Spread.space3)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
-            .padding(.top, 8)
+            .padding(.top, Spread.space2)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("save-failure-banner")
         }
@@ -691,21 +692,21 @@ public struct SpreadLiveRoot: View {
     /// The floating chrome: one capsule holding Done / Edit, the Week-Month morph and Settings. It never carries a
     /// second copy of a command that is already on screen, and Done is the only lit control in it.
     private var dock: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Spread.space2) {
             if let undo = planner.undoId {
                 undoNotice(undo)
             }
             HStack(spacing: 0) {
                 if destination == .week && !monthPlane && selectedRole != nil {
                     doneButton { selectedRole = nil }
-                        .padding(.trailing, 4)
+                        .padding(.trailing, Spread.space1)
                     dockDivider
                 }
                 if destination == .week && !weekFocusEnabled {
                     Button {
                         if monthPlane { closeMonth() } else { openMonth() }
                     } label: {
-                        ViewMorphIcon(boxes: !monthPlane, size: 24).frame(width: 44, height: 44).contentShape(Rectangle())
+                        ViewMorphIcon(boxes: !monthPlane, size: 24).frame(width: Spread.minimumTarget, height: Spread.minimumTarget).contentShape(Rectangle())
                     }
                     .buttonStyle(.spreadPress)
                     .accessibilityLabel(monthPlane ? "Week" : "Month")
@@ -723,7 +724,7 @@ public struct SpreadLiveRoot: View {
                                 Text("Edit").font(.system(.subheadline, weight: .semibold))
                             }
                             .foregroundStyle(Spread.accent)
-                            .padding(.horizontal, 14).frame(minHeight: 44)
+                            .padding(.horizontal, 14).frame(minHeight: Spread.minimumTarget)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.spreadPress)
@@ -732,7 +733,7 @@ public struct SpreadLiveRoot: View {
                 }
                 if !(destination == .spread && editing) {
                     Button { openSettingsFromDock() } label: {
-                        SettingsGears(turn: gearTurn, size: 30).frame(width: 44, height: 44).contentShape(Rectangle())
+                        SettingsGears(turn: gearTurn, size: 30).frame(width: Spread.minimumTarget, height: Spread.minimumTarget).contentShape(Rectangle())
                     }
                     .buttonStyle(.spreadPress)
                     .accessibilityLabel("More")
@@ -772,15 +773,15 @@ public struct SpreadLiveRoot: View {
             }
             .shadow(color: Spread.shadow, radius: 14, y: 6)
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
+        .padding(.horizontal, Spread.space4)
+        .padding(.bottom, Spread.space2)
     }
 
     /// The one lit control in the dock.
     private func doneButton(_ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text("Done").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.onAccent)
-                .padding(.horizontal, 20).frame(minHeight: 44)
+                .padding(.horizontal, Spread.space5).frame(minHeight: Spread.minimumTarget)
                 .background(Capsule().fill(Spread.accentGradient))
         }
         .buttonStyle(.spreadPress)
@@ -788,18 +789,18 @@ public struct SpreadLiveRoot: View {
     }
 
     private var dockDivider: some View {
-        Rectangle().fill(Spread.glassLine).frame(width: 1, height: 24).padding(.horizontal, 4)
+        Rectangle().fill(Spread.glassLine).frame(width: 1, height: 24).padding(.horizontal, Spread.space1)
     }
 
     /// Quiet Undo: one line, the last change, dismissed after six seconds.
     private func undoNotice(_ editId: String) -> some View {
         Button { Task { await planner.send(["type": "undo", "editId": editId]) } } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: Spread.space2) {
                 Image(systemName: "arrow.uturn.backward").font(.system(.footnote, weight: .bold))
                 Text("Undo last change").font(.system(.subheadline, weight: .semibold))
             }
             .foregroundStyle(Spread.accent)
-            .padding(.horizontal, 18).frame(minHeight: 44)
+            .padding(.horizontal, 18).frame(minHeight: Spread.minimumTarget)
             .background(Capsule().fill(Spread.elevated))
             .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 0.5))
             .shadow(color: Spread.shadow, radius: 10, y: 4)
@@ -945,7 +946,7 @@ private struct RolloverConfirm: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spread.space4) {
             Text("Replace next week?").font(Spread.sheetTitle)
             Text("Next week already has tasks or days. Copying this week replaces them. This week stays as it is.")
                 .font(Spread.callout).foregroundStyle(Spread.secondary).multilineTextAlignment(.center)
@@ -956,10 +957,10 @@ private struct RolloverConfirm: View {
                 }
             }
             .buttonStyle(.borderedProminent).tint(Spread.danger)
-            .frame(minHeight: 44)
-            Button("Cancel") { dismiss() }.frame(minHeight: 44)
+            .frame(minHeight: Spread.minimumTarget)
+            Button("Cancel") { dismiss() }.frame(minHeight: Spread.minimumTarget)
         }
-        .padding(24)
+        .padding(Spread.space6)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
     }
@@ -971,9 +972,9 @@ private struct RoleDeleteConfirm: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Remove \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "this spread")?").font(Spread.sheetTitle)
-            Text("The hours and tasks for this spread leave every week.").font(Spread.callout).foregroundStyle(Spread.secondary)
+        VStack(spacing: Spread.space4) {
+            Text("Remove \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "this responsibility")?").font(Spread.sheetTitle)
+            Text("The hours and tasks for this responsibility leave every week.").font(Spread.callout).foregroundStyle(Spread.secondary)
             Button("Remove", role: .destructive) {
                 Task {
                     _ = await planner.send(["type": "removeRole", "roleId": roleId])
@@ -981,10 +982,10 @@ private struct RoleDeleteConfirm: View {
                 }
             }
             .accessibilityIdentifier("confirm-delete-role")
-            .frame(minHeight: 44)
-            Button("Cancel") { dismiss() }.frame(minHeight: 44)
+            .frame(minHeight: Spread.minimumTarget)
+            Button("Cancel") { dismiss() }.frame(minHeight: Spread.minimumTarget)
         }
-        .padding(24)
+        .padding(Spread.space6)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
     }

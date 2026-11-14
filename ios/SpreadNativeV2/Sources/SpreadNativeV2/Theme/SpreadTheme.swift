@@ -55,6 +55,30 @@ public enum Spread {
     public static let accentGradient = LinearGradient(
         colors: [Color(hex6: 0x0A6FE8), Color(hex6: 0x0559C7)], startPoint: .topLeading, endPoint: .bottomTrailing)
 
+    // MARK: Success (the one new hue). Spread's own names are the only names in code; the UI kit maps Gray Matter's.
+
+    /// Calm green with at least 4.5:1 text contrast on the cream and navy canvases. Status is always paired with a
+    /// word or an icon, never colour alone.
+    public static let success = dynamic(light: 0x17743A, dark: 0x30D158)
+
+    // MARK: Illustration and tile ink (artwork and role tiles, not UI roles)
+
+    /// Specular highlights: role-tile top light and Chalkboard glints.
+    public static let highlight = Color.white
+    /// Glyph ink on a saturated role tile. White reads on dark and mid tints.
+    public static let tileGlyph = Color.white
+    /// Glyph ink on a bright role tile (yellow, orange, bright green), where white would not read.
+    public static let tileGlyphOnBright = Color(hex6: 0x16212A)
+    /// Chalk strokes: bright on night; on cream, the secondary ink with its Increase Contrast variant (OD15). The light
+    /// values equal `secondary`'s. They are repeated here because the contrast test reads `secondary` as a literal.
+    public static let chalkInk = adaptive(
+        light: (74, 86, 112, 1), dark: (244, 247, 255, 1),
+        highLight: (14, 26, 46, 0.92))
+    /// The sparkle in the Chalkboard artwork.
+    public static let chalkSpark = Color(hex6: 0xFFE066)
+    /// Neutral grey for a responsibility without a usable colour. Matches the fallback in `Color(hex:)`.
+    public static let roleFallback = Color(hex6: 0x8E8E93)
+
     // MARK: Card surface (specimen `navyCard`)
 
     private static let cardTop = dynamic(light: 0xFFFFFF, dark: 0x152845)
@@ -99,6 +123,18 @@ public enum Spread {
     /// Interactive targets are never smaller than 44 pt (HIG and the planner's own rule).
     public static let minimumTarget: CGFloat = 44
 
+    // MARK: Spacing (4-point grid from UI_KIT.md). Use the nearest step; hit targets and icon frames are not spacing.
+
+    public static let space1: CGFloat = 4
+    public static let space2: CGFloat = 8
+    public static let space3: CGFloat = 12
+    public static let space4: CGFloat = 16
+    public static let space5: CGFloat = 20
+    public static let space6: CGFloat = 24
+    public static let space8: CGFloat = 32
+    public static let space10: CGFloat = 40
+    public static let space12: CGFloat = 48
+
     /// The signed-width Week/Spread destination rail corresponds to the planner's `bg-fill rounded-full p-1`.
     public static let railPadding: CGFloat = 4
 
@@ -111,6 +147,8 @@ public enum Spread {
     public static let callout = Font.system(.subheadline, weight: .regular)
     public static let footnote = Font.system(.footnote, weight: .regular)
     public static let caption = Font.system(.caption, weight: .regular)
+    /// Figures that must line up (hour totals, counters, the week readout): tabular digits at body size, scaled.
+    public static let numeric = Font.system(.body, weight: .semibold).monospacedDigit()
 
     /// Instructions in an empty editable field must stay readable on the native inset surfaces.
     public static func fieldPrompt(_ label: String) -> Text { Text(label).foregroundStyle(secondary) }
@@ -175,6 +213,19 @@ public enum SpreadMotion {
     public static let lifeWeekPage = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.26)
     public static let historyEntrance = Animation.timingCurve(0.16, 1, 0.3, 1, duration: 0.20)
     public static let historyExit = Animation.easeIn(duration: 0.16)
+
+    /// Named durations in seconds. Components use these instead of a literal duration.
+    public static let fastSeconds: Double = 0.16
+    public static let normalSeconds: Double = 0.38
+    public static let deliberateSeconds: Double = 0.56
+    /// The planner's motion curve at a named duration.
+    public static func timing(_ seconds: Double) -> Animation {
+        .timingCurve(0.32, 0.72, 0, 1, duration: seconds)
+    }
+    /// Reduced Motion fallback for any duration, including delays and timers: zero removes the movement.
+    public static func seconds(_ value: Double, reduceMotion: Bool) -> Double {
+        reduceMotion ? 0 : value
+    }
 
     /// Reduced Motion removes movement: transitions become instant. Opacity-only feedback is kept where
     /// the original used it, so state changes stay visible without sliding or scaling.
@@ -332,7 +383,7 @@ extension Color {
         let cleaned = string.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
         var value: UInt64 = 0
         guard cleaned.count == 6, Scanner(string: cleaned).scanHexInt64(&value) else {
-            self = Color(hex6: 0x8E8E93)
+            self = Spread.roleFallback
             return
         }
         self = Color(hex6: UInt32(value))
