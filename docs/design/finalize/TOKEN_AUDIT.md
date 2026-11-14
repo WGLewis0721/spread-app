@@ -984,6 +984,6 @@ Recorded 2026-11-14 on branch `claude/finalize-w2-tokens-life`, from origin/main
 
 **Decide rows left (no token yet).** Radius 7, 12, 18, 23; black and white literals with no exact token; the luminance contrast chooser in `LifeWeeklyTimeBudget` (`ink(for:)`, an algorithm, kept on purpose); durations; the out-of-month day dim at 0.4 in `LifeWeekView` (its value equals `disabledOpacity`, but it is not a disabled state, so it keeps its literal).
 
-**Pending adoption.** `sidebarScrim`: the Week sidebar's tap-to-dismiss overlay, `Color.black.opacity(0.12)`, at `Week/WeekFocusSurface.swift` line 194 on origin/main. Adopt it when lane W2-1 confirms the overlay survives OD19 (the file may be deleted). No value changes.
+**Removed in wave 3 (lane W3-2, OD33).** `sidebarScrim` (`Color.black.opacity(0.12)`) is deleted from `Theme/SpreadTheme.swift`. Its only consumer, the Week sidebar overlay, went with the Week Focus surface (OD19, #219), so the token was never adopted. The Crown-metal tokens (`crownLight`, `crownDark`, `crownRecess`, `crownRecessStroke` and the eight `tooth*` values) are deleted too; no file outside `SpreadTheme.swift` read them.
 
 **Outside this lane.** The Focus mini-bar in `LifeRoot.swift`: the rest-icon line 737 and its neighbour 736 belong to lane W2-2 and are not edited here. `Life/LifeHoursView.swift` and `Life/LifePlanAheadSheet.swift` are not in this lane.

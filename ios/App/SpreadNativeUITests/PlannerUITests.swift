@@ -969,12 +969,12 @@ final class PlannerUITests: NativeUITestCase {
         tapID("edit-spreads")
         el("role-block-" + roleId).swipeRight()
         tapID("remove-role-" + roleId)
-        XCTAssertTrue(app.buttons["Delete responsibility"].waitForExistence(timeout: 10),
+        XCTAssertTrue(app.buttons["Remove responsibility"].waitForExistence(timeout: 10),
                       "Quick delete bypassed confirmation")
         tapButton("Cancel")
         XCTAssertTrue(el("role-block-" + roleId).exists, "Cancel deleted the card")
         tapID("remove-role-" + roleId)
-        tapButton("Delete responsibility")
+        tapButton("Remove responsibility")
         XCTAssertTrue(eventually { !self.el("role-block-" + roleId).exists }, "Confirmed removal failed")
         tapID("dock-done")
         XCTAssertTrue(el("stack-cards").exists)
