@@ -9,16 +9,15 @@ import Foundation
 // ran out shows as waiting for a tap, and nothing starts on its own. Each size shows more of the same controls:
 // the small widget one, the medium two, and the large every control that applies right now.
 
-/// The timer face for the widgets. It reads the same session record the Dynamic Island reads, so a timer that runs on
-/// the island shows here too. Nothing shows while "Show Today on widgets" is off. The app's mirror supplies the title
-/// the person allowed, but only while it is for the same session.
+/// The widget renders the authoritative App Group timer directly; it must enforce the same
+/// active-profile guard as the App Intents so visible buttons always target an actionable timer.
 enum SpreadFocusWidgetStore {
     static func load(now: Date = Date()) -> SpreadFocusWidgetState? {
-        guard timerEnabled(), let session = SpreadFocusStore.load() else { return nil }
+        guard timerEnabled(), let session = SpreadFocusStore.load(),
+              SpreadFocusStore.activeProfile() == session.profileId else { return nil }
         let current = SpreadFocusMachine.reconciled(session, now: now)
         guard SpreadFocusMachine.isOnScreen(current) else { return nil }
-        let mirror = mirrorState()
-        let title = mirror?.sessionId == current.id ? (mirror?.title ?? "Focus session") : "Focus session"
+        let title = SpreadFocusPreferences.showName() ? current.roleName : "Focus session"
         // A finished stretch with a next step is shown as running with no deadline, which reads as waiting for a tap.
         let finished = current.phase == .finished
         return SpreadFocusWidgetState(
@@ -34,13 +33,6 @@ enum SpreadFocusWidgetStore {
             rounds: current.roundCount,
             nextLabel: SpreadFocusMachine.nextLabel(after: current),
             stoppedEarly: current.stoppedEarly)
-    }
-
-    /// The mirror the app last wrote, if any. Only its title is used, and only for the same session.
-    private static func mirrorState() -> SpreadFocusWidgetState? {
-        guard let data = UserDefaults(suiteName: SpreadWidgetShared.appGroup)?
-            .data(forKey: SpreadWidgetShared.focusKey) else { return nil }
-        return try? JSONDecoder().decode(SpreadFocusWidgetState.self, from: data)
     }
 
     /// The "Show Today on widgets" switch as the app last wrote it. False until the app has written it.
