@@ -50,7 +50,7 @@ Landing before and after captures are in `evidence/landing/`. Native evidence is
 
 Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), finding X12 and covered findings C2 and C4.
 
-- **Widget literals (X12, low).** `ios/App/SpreadWidget/SpreadLifeCardsWidget.swift:141-185` hard-codes `F7FAFF`, `B0BCD1`, `0E1A2E`, `4A5670` and `F4F1EA`. The first two duplicate the ink and secondary tokens. Fix: read tokens through a shared widget file or a widget colour set (lane D with lane A).
+- **Widget literals (X12, low, decided by OD33: widget colours read the shared tokens, wave 3).** `ios/App/SpreadWidget/SpreadLifeCardsWidget.swift:141-185` hard-codes `F7FAFF`, `B0BCD1`, `0E1A2E`, `4A5670` and `F4F1EA`. The first two duplicate the ink and secondary tokens. Fix: read tokens through a shared widget file or a widget colour set (lane D with lane A).
 - **Health default (C4, closed).** `src/lib/spread/model.ts:117` is `#30B0C7` after PR #218 (2026-11-14). The native category colour (`Spread/SpreadSurface.swift:694`) already matched.
 - **Native hardcoding, re-counted.** Outside `Theme/`, grep on 2026-11-14 finds 41 `Color(hex:)` or `Color(red:)` calls and 11 `.font(.system(size:))` calls. The earlier figures above came from an earlier pass. Lane W2-3 adopts tokens.
 

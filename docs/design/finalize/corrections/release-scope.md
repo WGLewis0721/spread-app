@@ -59,7 +59,7 @@ Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), finding X1 (hi
 - **Fix, owner first.** Confirm that 1.0 is iPhone only. Then set the family to `1` in every target, and align the checklist and the release plan in one change. The native config change sits outside the docs lane and was not made in this review.
 - **Device evidence.** The device script records the device family result in its notes. Testing iPad is out of scope under OD20.
 
-Reviewer approval for this record also needs the owner's written decision on X1.
+**OD28 (2026-11-14) decides X1:** 1.0 ships iPhone only. Wave 3 sets every target's family to `1`, and the checklist and preflight change in the same PR. The record stays open until that lands.
 
 ## Reviewer approval
 

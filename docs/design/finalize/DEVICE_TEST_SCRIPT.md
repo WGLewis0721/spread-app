@@ -86,10 +86,10 @@ A run without this record is not evidence.
 - **Then** no confirmation appears (OD24). The area is removed, and the "Undo last change" control appears. Tap it, and the area returns with its tasks.
 - Notes:
 
-**B4. One Undo row.** Expected fail until fix X2. [Pass ☐] [Fail ☐]
+**B4. One Undo row.** Expected pass (OD29). [Pass ☐] [Fail ☐]
 - **Given** a change has just been made in Life (for example, a rename).
 - **When** the change is visible.
-- **Then** exactly one Undo row shows. The brand board requires "a single context-appropriate Undo/Redo row, not two" (X2, `corrections/life-routing.md`).
+- **Then** exactly one Undo row shows: the Undo/Redo row in Life. The brand board requires "a single context-appropriate Undo/Redo row, not two". The first draft of the review claimed two rows; that claim is withdrawn (`corrections/life-routing.md`). If two show, record it: wave 3 removes the duplicate (OD29).
 - Count the Undo controls on screen and note their labels: ______
 - Notes:
 
@@ -107,7 +107,7 @@ A run without this record is not evidence.
 - **Then** the task appears under the responsibility on that day only.
 - Notes:
 
-**C2. High priority is a red !.** Expected fail until fix C1 (W2-3). Today Life shows a red flag. [Pass ☐] [Fail ☐]
+**C2. High priority is a red !.** Expected pass (PR #220 shows the shared mark in Life). [Pass ☐] [Fail ☐]
 - **Given** the task "Pay rent".
 - **When** you mark it high priority from its priority control.
 - **Then** a red **!** appears beside the task text, and VoiceOver speaks "High priority" (OD1). Turning it off removes both.
@@ -139,10 +139,10 @@ A run without this record is not evidence.
 - **Then** one tap adds one hour. Holding accelerates. The number on screen after release equals the saved total.
 - Notes:
 
-**D2. Over capacity wording.** Pending decision X5. [Pass ☐] [Fail ☐]
+**D2. Over capacity wording.** Expected fail until wave 3 (OD32). [Pass ☐] [Fail ☐]
 - **Given** the weekly total is lower than the hours assigned.
 - **When** the strip shows.
-- **Then** the state is truthful and readable. Record the exact word shown: ______ (X5 asks for one word across roots).
+- **Then** the state is truthful and readable. Record the exact word shown: ______ (OD32: "over budget" in both roots).
 - Notes:
 
 **D3. Nothing moves until confirmed.** [Pass ☐] [Fail ☐]
@@ -241,13 +241,13 @@ A run without this record is not evidence.
 
 ## G. Sheets (3 min)
 
-**G1. One verb for removing a responsibility.** Expected fail until fix X3. [Pass ☐] [Fail ☐]
+**G1. One verb for removing a responsibility.** Expected fail until wave 3 (OD30). [Pass ☐] [Fail ☐]
 - **Given** a Classic responsibility.
 - **When** you remove it from its sheet and, separately, from the edit-mode row delete.
 - **Then** the same words are used in both places. Today the sheet says "Remove responsibility" and the row says "Delete responsibility". Record both: ______
 - Notes:
 
-**G2. Dismiss an open-tasks sheet.** Expected fail until fix X8. [Pass ☐] [Fail ☐]
+**G2. Dismiss an open-tasks sheet.** Expected fail until wave 3 (OD33). [Pass ☐] [Fail ☐]
 - **Given** the open-tasks sheet is open from a carry-over.
 - **When** you look at the leading control.
 - **Then** it reads "Cancel". Today it reads "Not now".
@@ -297,7 +297,7 @@ A run without this record is not evidence.
 - **Then** Spread opens on Life with that card focused.
 - Notes:
 
-**H6. Live Activity label.** Expected fail until fix X10. [Pass ☐] [Fail ☐]
+**H6. Live Activity label.** Expected fail until wave 3 (OD33). [Pass ☐] [Fail ☐]
 - **Given** the Live Activity shows its cancel control.
 - **When** you read its label with VoiceOver.
 - **Then** it matches the Focus sheet: "Cancel session". Today the widget says "Cancel".
@@ -335,10 +335,10 @@ A run without this record is not evidence.
 - **Then** each responds. Each target is at least 44 pt.
 - Notes:
 
-**I6. Haptic count while stepping.** Decision X4. [Pass ☐] [Fail ☐]
+**I6. Haptic count.** Expected fail until wave 3 (OD31). [Pass ☐] [Fail ☐]
 - **Given** the Weekly Time arrows and the week arrows.
 - **When** you step several times.
-- **Then** record how many taps you feel, and whether they feel right: ______ The owner decides on the policy (X4). This step records evidence, not a verdict.
+- **Then** one light tap on completing a task, and none after removing a responsibility (OD31). Detent ticks on steppers are expected. Record what you feel: ______
 - Notes:
 
 ## J. Offline and persistence (3 min)
@@ -369,18 +369,16 @@ A run without this record is not evidence.
 
 ## 2. Expected fails on the current `main`
 
-These are real findings. Each step fails until its fix lands, and the verdict stays NO-GO until the owner decides or the fix is merged.
+These are real findings. Each step fails until its wave-3 change lands. OD28 to OD33 decide the policy for each, so none needs a new decision. The verdict stays NO-GO until wave 3 lands and the script passes on a candidate build.
 
 | Step | Finding | Fixed by |
 | --- | --- | --- |
-| B4 one Undo row | X2 | Owner decision, then Life lane |
-| C2 red ! in Life | C1 (OD1) | W2-3 |
-| D2 over-capacity word | X5 | Owner decision |
-| G1 one removal verb | X3 | Owner decision, then Classic lane |
-| G2 "Cancel" | X8 | Lane D |
-| H6 "Cancel session" | X10 | Lane D |
-| I6 haptic policy | X4 | Owner decision |
-| (all) build family | X1 | Owner decision, then native config |
+| D2 over-capacity word | X5 (OD32) | Wave 3, lanes B and C |
+| G1 one removal verb | X3 (OD30) | Wave 3, lanes A, C and D |
+| G2 "Cancel" | X8 (OD33) | Wave 3, lane D |
+| H6 "Cancel session" | X10 (OD33) | Wave 3, lane D |
+| I6 success tap after removal | X4 (OD31) | Wave 3, lanes A, C and D |
+| (all) build family | X1 (OD28) | Wave 3, native config |
 
 ## 3. Not covered by this script
 

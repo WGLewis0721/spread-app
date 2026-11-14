@@ -2,7 +2,7 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md). Folder index: [README.md](README.md).
 
-> Summary: the Gray Matter release template, filled for Spread at base `6f53a60`. Verdict **NO-GO**. Web checks pass. Native, device and store checks are unverified. Source review (2026-11-14) finds the core decisions in code, a release blocker in the Xcode device-family setting (X1), and four owner decisions before code (X2 to X5). The proof still owed is the iPhone script in [DEVICE_TEST_SCRIPT.md](DEVICE_TEST_SCRIPT.md), run on a Codemagic TestFlight build. Build green does not mean the app is complete or approved.
+> Summary: the Gray Matter release template, filled for Spread at base `6f53a60`. Verdict **NO-GO**. Web checks pass. Native, device and store checks are unverified. Source review (2026-11-14) finds the core decisions in code, a release blocker in the Xcode device-family setting (X1), and six owner decisions (OD28 to OD33), now decided and awaiting wave-3 code. The proof still owed is the iPhone script in [DEVICE_TEST_SCRIPT.md](DEVICE_TEST_SCRIPT.md), run on a Codemagic TestFlight build. Build green does not mean the app is complete or approved.
 
 Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gate is the authority for App Review: [docs/APP_STORE_REVIEW_CHECKLIST.md](../../APP_STORE_REVIEW_CHECKLIST.md). This file does not repeat it.
 
@@ -17,9 +17,9 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 
 - [ ] First core journey with real data: **not verified** on device. Life is the default root (OD18, applied in source). Device script steps A1 to A3, C1 and D1 to D7 cover it.
 - [ ] Empty/loading/error/offline/permission states: **source review only**. Life and Classic empty states now have a heading, one sentence and an action (OD22, [CROSS_SURFACE_REVIEW.md](CROSS_SURFACE_REVIEW.md) section 3). Two title-only empties remain (X11). No screen has device evidence.
-- [ ] Consistent brand/art/type and app icon: **open**. Applied in source: OD1 (Classic and Week), OD3, OD10, OD11, OD12, OD13, OD14, OD18, OD22 (most creation copy). Still open: Life's priority mark (C1, W2-3), the over-capacity word (X5, owner), the removal verb (X3, owner), "Not now" (X8). Closed by PR #218: the create-sheet title, field labels and Recently Deleted casing. See [corrections/copy-voice.md](corrections/copy-voice.md), [corrections/color-drift.md](corrections/color-drift.md) and [corrections/wave2-tokens-icons.md](corrections/wave2-tokens-icons.md). The app icon source exists; a person has not yet inspected it.
+- [ ] Consistent brand/art/type and app icon: **open**. Applied in source: OD1 (Classic and Week), OD3, OD10, OD11, OD12, OD13, OD14, OD18, OD22 (most creation copy). Closed: Life's priority mark (#220), the create-sheet title, field labels and Recently Deleted casing (#218). Decided for wave 3: the over-capacity word (OD32), the removal verb (OD30) and "Not now" (OD33). See [corrections/copy-voice.md](corrections/copy-voice.md), [corrections/color-drift.md](corrections/color-drift.md) and [corrections/wave2-tokens-icons.md](corrections/wave2-tokens-icons.md). The app icon source exists; a person has not yet inspected it.
 - [ ] Supported phone/tablet layouts; no clipping: **not verified**. OD20 says iPhone only, but the build still targets iPad (X1, [corrections/release-scope.md](corrections/release-scope.md)).
-- [ ] Scroll, swipes, interruption, haptics: **not verified** on device. The completion haptic is correct in source (OD2). Other haptics are an owner decision (X4).
+- [ ] Scroll, swipes, interruption, haptics: **not verified** on device. The completion haptic is correct in source (OD2). Other haptics are decided by OD31 and change in wave 3 (X4).
 - [ ] Dynamic Type/text zoom, focus/screen reader, reduced motion: **not verified** on device. Reduce Motion is read in 15 native files (re-counted 2026-11-14). Focus transport buttons are 44 pt (OD10).
 - [ ] Screenshot/video evidence: landing before and after captures in `evidence/landing/`. **No native screenshots or video.**
 
@@ -35,7 +35,7 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 - [x] Cross-surface source review: done. [CROSS_SURFACE_REVIEW.md](CROSS_SURFACE_REVIEW.md) lists findings X1 to X12 and covered findings C1 to C7, with file:line evidence on `6f53a60`.
 - [ ] Native build (Codemagic, native-typecheck on GitHub macOS): **not run for this base**. No Swift toolchain here. Check the PR's native checks, if any run.
 - [ ] Integration, E2E and device tests: **not run**. XCUITest sources exist (`ios/App/SpreadNativeUITests/`); no run record was inspected. No UI test asserts the old "Manage Life area" title (checked 2026-11-14).
-- [ ] Local persistence, migrations, undo: **not verified**. Undo is inconsistent on Life (X2). Persistence is owned by the planner, which this program does not change.
+- [ ] Local persistence, migrations, undo: **not verified**. Life keeps one Undo/Redo row (OD29); device step C4 confirms it. Persistence is owned by the planner, which this program does not change.
 - [N/A] Auth, account deletion, cross-user access: N/A. The native app has no account and no server path in the local-first contract. Re-check if sync or iCloud is enabled.
 - [ ] Secrets, dependencies and licensing: no new dependency was added in this pass. Lucide license file present. Inter font license not reviewed. Other licenses not reviewed.
 - [ ] Crash monitoring, backup, rollback: rollback is documented per correction. Crash monitoring is not verified.
@@ -57,7 +57,8 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 
 **Decided and recorded (not blocking):**
 
-- OD20: Spread 1.0 is iPhone only, in the docs and copy. The build setting is still open (X1).
+- OD28 to OD33 (decided 2026-11-14, plan section 8): iPhone only (OD28, X1); one Undo/Redo row on Life, device check C4 (OD29, X2 withdrawn); one removal verb (OD30, X3); the haptic policy (OD31, X4); "over budget" in both roots (OD32, X5); the icon, copy and dead-code items (OD33, X6 to X12). Wave 3 implements them.
+- OD20: Spread 1.0 is iPhone only, in the docs and copy. The build setting changes in wave 3 under OD28 (X1).
 - OD25: no App Store link until the listing exists. The landing page keeps the TestFlight invitation.
 - OD21: Health is teal `#30B0C7` on the landing page, in `model.ts` and in the native category colour (PR #218).
 - OD18: Life is the default root. Applied in source (`SpreadLiveRoot.swift:16`).
@@ -69,9 +70,9 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 
 1. **No candidate build.** No Codemagic TestFlight build of a candidate SHA exists, and `native-typecheck` has not been checked for this base.
 2. **Device script not run.** [DEVICE_TEST_SCRIPT.md](DEVICE_TEST_SCRIPT.md) (about 40 minutes) must pass on a candidate build. Its section 2 lists the steps expected to fail until fixes land.
-3. **Build targets iPad (X1).** `TARGETED_DEVICE_FAMILY = "1,2"` in six places, against OD20. This is a release blocker. Needs the owner's confirmation and a native config change, which this docs lane does not make.
-4. **Owner decisions before code.** X2 (one Undo row in Life, and whether Redo stays), X3 (one verb for removing a responsibility), X4 (the haptic policy beyond completion), and X5 (one over-capacity word).
-5. **Wave-2 lanes not yet complete on `main`.** Merged: W2-2 Lucide assets (PR #217) and W2-4 Health default, create-sheet title, field labels and To place casing (PR #218). Still open: W2-1 deletes the dead Week Focus code (OD19); W2-3 adds the disabled and scrim tokens (OD16, OD17), the shared ! mark on Life (OD1) and token adoption (C2).
+3. **Build targets iPad (X1).** `TARGETED_DEVICE_FAMILY = "1,2"` in six places, against OD20 and OD28. This is a release blocker until wave 3 sets the family to `1` (OD28). This docs lane does not change native config.
+4. **Owner decisions: decided, not implemented.** X1 is OD28 (iPhone only). X2 is withdrawn as a defect (OD29: one Undo/Redo row, checked by device step C4). X3 is OD30, X4 is OD31, X5 is OD32, and X6 to X12 are OD33. All of them need wave-3 code, which is not in this branch.
+5. **Wave-2 lanes not yet complete on `main`.** Merged: W2-2 Lucide assets (PR #217) and W2-4 Health default, create-sheet title, field labels and To place casing (PR #218). Merged since: #220 (shared tokens, `Spread.disabledOpacity`, shared ! mark in Life). Still open: W2-1 deletes the dead Week Focus code (OD19), and W2-3 finishes token adoption (C2) and the Classic and Focus opacities (C6).
 6. **No owner authorization** of a specific commit and build for release.
 
 **Unverified checks:**

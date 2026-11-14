@@ -53,11 +53,11 @@ Not available for native copy: no device run. The landing copy is unchanged.
 
 Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), findings X3, X5 and X8 to X11. Line numbers in the "Applied on main" section have moved: Life's creation button is `Life/LifeRoot.swift:377` and `:1037`.
 
-- **Over capacity has two words (X5, medium, owner decision).** Classic says "overbooked" (`Spread/SpreadSurface.swift:137-138, 166-167`) and explains it with the OD12 sentence (`:251`). Life says "Over budget" (`Life/LifeWeeklyTimeBudget.swift:69, 126, 273`; `Life/LifeEditorialCard.swift:155, 205`) and does not show the sentence. Recommended: "overbooked" for the week state in both roots, keep "budget" as the Weekly Time section name, and show the OD12 sentence in Life.
-- **Two verbs for removing a responsibility (X3, medium, owner decision).** "Delete responsibility" (`Spread/SpreadSurface.swift:955-975`) and "Remove responsibility" (`Sheets/ManageSheets.swift:234, 260`). Recommended: "Remove responsibility".
-- **Open tasks dismissal (X8, low, lane D).** `Sheets/ManageSheets.swift:330-331` reads "Not now". Use "Cancel", as the other leading dismissals do.
-- **Focus and widget wording (X10, low, lane D).** "Cancel session" (`Focus/SpreadFocusTimerSheet.swift:100, 168`) against "Cancel" in the Live Activity (`ios/App/SpreadWidget/SpreadTimerWidget.swift:226`). Use "Cancel session" in both.
-- **Title-only empties (X11, low, lane D).** `Sheets/RecentlyDeletedSheet.swift:37` ("Nothing recently deleted") and `Sheets/WhatsNewSheet.swift:40` ("No release notes yet") have no sentence. Add one plain sentence each (OD22).
+- **Over capacity has two words (X5, medium, decided by OD32, wave 3).** Classic says "overbooked" (`Spread/SpreadSurface.swift:137-138, 166-167`) and explains it with the OD12 sentence (`:251`). Life says "Over budget" (`Life/LifeWeeklyTimeBudget.swift:69, 126, 273`; `Life/LifeEditorialCard.swift:155, 205`) and does not show the sentence. **OD32:** the state reads "over budget" in both roots. Classic's "overbooked" changes. The OD12 sentence explains the state in both roots.
+- **Two verbs for removing a responsibility (X3, medium, decided by OD30, wave 3).** "Delete responsibility" (`Spread/SpreadSurface.swift:955-975`) and "Remove responsibility" (`Sheets/ManageSheets.swift:234, 260`). **OD30:** "Remove responsibility" in Classic, "Remove Life area" in Life.
+- **Open tasks dismissal (X8, low, decided by OD33, wave 3).** `Sheets/ManageSheets.swift:330-331` reads "Not now". Use "Cancel", as the other leading dismissals do.
+- **Focus and widget wording (X10, low, decided by OD33, wave 3).** "Cancel session" (`Focus/SpreadFocusTimerSheet.swift:100, 168`) against "Cancel" in the Live Activity (`ios/App/SpreadWidget/SpreadTimerWidget.swift:226`). Use "Cancel session" in both.
+- **Title-only empties (X11, low, decided by OD33, wave 3).** `Sheets/RecentlyDeletedSheet.swift:37` ("Nothing recently deleted") and `Sheets/WhatsNewSheet.swift:40` ("No release notes yet") have no sentence. Add one plain sentence each (OD22).
 - **X9, closed by PR #218.** The Recently Deleted copy now reads "To place" (`Sheets/RecentlyDeletedSheet.swift:23`).
 
 Regression scenarios added: each destructive act on a responsibility uses one verb in every place it appears, and the Over-capacity state reads the same word in both roots.

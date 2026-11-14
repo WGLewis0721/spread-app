@@ -335,7 +335,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "B (Life/)",
-      "notes": "Over-budget wording reads 'Over budget' here and in the card (LifeWeeklyTimeBudget.swift:69, 126, 273; LifeEditorialCard.swift:155, 205). Classic says 'overbooked' (X5, owner decision; corrections/copy-voice.md)."
+      "notes": "Over-budget wording reads 'over budget' here and in the card (LifeWeeklyTimeBudget.swift:69, 126, 273; LifeEditorialCard.swift:155, 205). Classic says 'overbooked' today; OD32 makes 'over budget' the word in both roots (wave 3; corrections/copy-voice.md)."
     },
     {
       "id": "N13",
@@ -529,7 +529,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Sheets/)",
-      "notes": "Removing a responsibility from Classic: 'Remove responsibility' dialog here (ManageSheets.swift:234, 260). The edit-mode row uses 'Delete responsibility' (SpreadSurface.swift:955-975). One verb is an owner decision (X3; corrections/life-routing.md)."
+      "notes": "Removing a responsibility from Classic: 'Remove responsibility' dialog here (ManageSheets.swift:234, 260). The edit-mode row uses 'Delete responsibility' (SpreadSurface.swift:955-975). OD30 makes 'Remove responsibility' the one verb (wave 3; corrections/life-routing.md)."
     },
     {
       "id": "N21",
@@ -844,7 +844,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "A (Shell/)",
-      "notes": "Position above the home indicator is required by the Spread motion contract; not device-verified (device step B5). On Life, a second Undo row (the Undo and Redo pair in LifeRoot.swift:707-714) can show with it (X2)."
+      "notes": "Position above the home indicator is required by the Spread motion contract; not device-verified (device step B5). The notice renders only in Classic's dock (SpreadLiveRoot.swift:694-697). Life shows its own single Undo/Redo row (LifeRoot.swift:707-714); OD29 keeps it, and device step C4 checks it."
     },
     {
       "id": "N35",
@@ -895,7 +895,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Focus/, Widget/)",
-      "notes": "ActivityConfiguration is declared in SpreadTodayWidget.swift. The Live Activity's cancel action reads 'Cancel' (SpreadTimerWidget.swift:226), while the Focus sheet reads 'Cancel session' (X10; corrections/copy-voice.md). Presentations not device-verified (device step H3)."
+      "notes": "ActivityConfiguration is declared in SpreadTodayWidget.swift. The Live Activity's cancel action reads 'Cancel' (SpreadTimerWidget.swift:226), while the Focus sheet reads 'Cancel session'. OD33 makes 'Cancel session' the label here too (wave 3; X10). Presentations not device-verified (device step H3)."
     },
     {
       "id": "N37",

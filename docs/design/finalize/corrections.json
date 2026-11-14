@@ -13,15 +13,15 @@
         "N34",
         "N37"
       ],
-      "problem": "Life was opt-in behind a preview-named flag that defaulted off. OD18 makes Life the default root, and it is on main (PR #211). A second Week surface (WeekFocusSurface) is still in the tree, reachable only through a path that cannot run; OD19 deletes it in wave 2. Life and Classic also remove a responsibility differently (undoable Details delete versus confirmation). Found on 2026-11-14: after a Life change, two Undo rows can show (the notice and a five-second Undo and Redo pair); Classic has two removal verbs; RoleDeleteConfirm and CrownTravel/DialGeometry are unreachable (findings X2, X3, X7).",
+      "problem": "Life was opt-in behind a preview-named flag that defaulted off. OD18 makes Life the default root, and it is on main (PR #211). A second Week surface (WeekFocusSurface) is still in the tree, reachable only through a path that cannot run; OD19 deletes it in wave 2. Life and Classic also remove a responsibility differently. Decided 2026-11-14: OD30 (one verb: 'Remove responsibility' in Classic, 'Remove Life area' in Life; delete RoleDeleteConfirm and onDeleteRole) and OD33 (dead Crown code and unused Life sheet). The first draft's claim of two Undo rows in Life (X2) is withdrawn: the Classic notice does not render on Life. OD29 keeps the single row; device step C4 decides.",
       "severity": "high",
-      "decision_owner": "decided: OD18 applied on main; OD19 open for wave 2. Owner decides X2 (one Undo row, and whether Redo stays in Life) and X3 (one removal verb).",
+      "decision_owner": "decided: OD18 applied on main; OD19 open for wave 2; OD29 (single Undo/Redo row on Life; device step C4); OD30 (one removal verb; delete unreachable RoleDeleteConfirm); OD33 (delete unused LifeDeleteSheet, onOpenRole and Crown files).",
       "spec": "docs/design/finalize/corrections/life-routing.md",
       "status": "open",
       "observed_evidence": [
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:15,66-83,332-333",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift:594-602",
-        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:696-697,796-800 (Undo notice)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:156-168,694-697 (Classic-only dock with the Undo notice; not rendered on Life)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift:208-230,707-714 (Undo and Redo pair, ids life-undo and life-redo)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:955-975 (Delete responsibility)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift:234,260 (Remove responsibility)",
@@ -44,7 +44,7 @@
       ],
       "problem": "Health had three values (#007AFF default role, #30B0C7 category, #0A84FF landing), and School shared #007AFF. OD21 makes Health teal #30B0C7 everywhere. The landing sample is updated here. The model.ts default is closed by PR #218 (2026-11-14). The native hardcoded values and the widget literals remain open. OD23 settles the gradient: it stays on one lit action per surface. Found on 2026-11-14: the model.ts default is still #007AFF, and the Life cards widget hard-codes colour literals that duplicate tokens (findings X12, C2, C4).",
       "severity": "medium",
-      "decision_owner": "decided: OD21 (Health teal #30B0C7 everywhere): landing sample updated; model.ts default and native category colour applied by #218. OD23 keeps the accent gradient on the one lit action per surface. Native hardcoded values remain for lane A.",
+      "decision_owner": "decided: OD21 (Health teal #30B0C7 everywhere; closed by #218). OD23 keeps the accent gradient on the one lit action per surface. OD33 (widget colours read the shared tokens; wave 3). Native hardcoded values remain for lane A.",
       "spec": "docs/design/finalize/corrections/color-drift.md",
       "status": "open",
       "observed_evidence": [
@@ -77,7 +77,7 @@
       ],
       "problem": "Most of the copy decisions are on main: the Classic entry, empty state and sidebar say 'Add responsibility' (OD22); the Life Details sheet is titled 'Details' (OD8); Life's empty state now has a heading, a sentence and an action. Closed by PR #218 (2026-11-14): the create sheet title and field labels follow the root that opened them; the Recently Deleted sheet says 'To place'; 'To place' casing is uniform in user-visible text. Found on 2026-11-14: Life says 'Over budget' where Classic says 'overbooked' (X5); the removal verb differs ('Delete' and 'Remove', X3); 'Not now' should be 'Cancel' (X8); 'Cancel session' and 'Cancel' differ (X10); two empties have a title only (X11).",
       "severity": "medium",
-      "decision_owner": "decided: OD7, OD8, OD22 (applied on main, including the create sheet and casing by #218); OD12 applied in Classic, Life wording open (X5); OD13 applied. Open items: X3 (one removal verb), X5 (one over-capacity word), X8 ('Not now'), X10 ('Cancel session' in the widget), X11 (title-only empties). Owner decides X3 and X5.",
+      "decision_owner": "decided: OD7, OD8, OD22 (applied on main, including the create sheet and casing by #218); OD12 applied in Classic; OD32 ('over budget' in both roots, wave 3); OD30 (removal verb, wave 3); OD33 (Cancel on Open tasks, Cancel session on the widget, sentences on empty lists; wave 3).",
       "spec": "docs/design/finalize/corrections/copy-voice.md",
       "status": "open",
       "observed_evidence": [
@@ -105,7 +105,7 @@
       ],
       "problem": "CLAUDE.md and the release plan disagreed about device scope. OD20 makes Spread 1.0 iPhone only, and the superseding note is on main. OD25 keeps the TestFlight invitation and adds no App Store link until the listing exists. Found on 2026-11-14: the Xcode build settings still declare iPhone and iPad (TARGETED_DEVICE_FAMILY 1,2 in six places), and the App Store review checklist still says iPhone/iPad. OD20 therefore applies to the docs and copy, not yet to the build. Finding X1, blocks release until the owner confirms and the native config changes.",
       "severity": "high",
-      "decision_owner": "decided: OD20 applied in the docs and copy (superseding note in APP_STORE_RELEASE_PLAN.md); OD25 keeps the TestFlight invitation. Build setting needs the owner's confirmation and a native change (X1). Open for reviewer approval.",
+      "decision_owner": "decided: OD20 applied in the docs and copy; OD28 (iPhone only; wave 3 sets the device family to 1 and aligns the checklist and preflight). OD25 keeps the TestFlight invitation. Open until wave 3 lands.",
       "spec": "docs/design/finalize/corrections/release-scope.md",
       "status": "open",
       "observed_evidence": [
@@ -129,17 +129,19 @@
         "N34",
         "N35"
       ],
-      "problem": "Three decisions from the wave-1 review were not yet in code. Update 2026-11-14: the eight OD11 Lucide assets are in the catalog (PR #217; device check still owed). Still open: the disabled-control token Spread.disabledOpacity = 0.4 (OD17) and the Week sidebar scrim token (OD16). Also open (finding X6): the rail toggle uses SF in one place and Lucide in another, and the undo notice still uses an SF glyph although rotate-ccw is now in the catalog.",
+      "problem": "Three decisions from the wave-1 review were not all in code. The eight OD11 Lucide assets are in the catalog (PR #217; device check owed). #220 added Spread.disabledOpacity (OD17) and the sidebarScrim token (OD16); Life adopts the opacity, Classic and Focus do not yet. Decided 2026-11-14: OD31 (haptic policy, recorded in the 'Haptics (OD31)' section of this record) and OD33 (rail toggle and undo glyph use Lucide, finding X6). Wave 3.",
       "severity": "low",
-      "decision_owner": "resolved by OD11, OD16, OD17 (planning doc section 8); implementation open",
+      "decision_owner": "resolved by OD11, OD16, OD17 (planning doc section 8); OD31 haptic policy and OD33 icon items decided 2026-11-14; implementation in wave 3.",
       "spec": "docs/design/finalize/corrections/wave2-tokens-icons.md",
       "status": "open",
       "observed_evidence": [
         "docs/design/specs/2026-11-14-publish-finalize-plan.md section 8",
-        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets: eight Lucide assets present since PR #217 (plus, coffee, eye, copy, arrow-left-right, rotate-ccw, rotate-cw, circle-help)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets: eight Lucide assets present since PR #217",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:143 (disabledOpacity, #220) and :54 (sidebarScrim, #220)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/PlannerNavigationRail.swift:57 (SF sidebar glyphs)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:552,799 (Lucide panel-left and SF undo glyph)",
-        "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X6, C6)"
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:969 (success haptic after removal, dropped by OD31)",
+        "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X4, X6, C6)"
       ],
       "changed_files": [],
       "regression_evidence": [],
