@@ -79,13 +79,14 @@ struct NewSpreadSheet: View {
             HStack(spacing: 12) {
                 RoleBadge(category: draft.category, color: colorHex, size: 48)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Spread \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
+                    // A Life draft names a Life area: OD7 keeps "spread" for the app name only.
+                    Text("Life area \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
                     TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }), prompt: Spread.fieldPrompt("Parent, shop, study"))
                         .font(.system(.body))
                         .padding(.horizontal, 12).frame(minHeight: 44)
                         .background(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).fill(Spread.inset))
                         .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
-                        .accessibilityLabel("Spread \(index + 1) name")
+                        .accessibilityLabel("Life area \(index + 1) name")
                         .accessibilityIdentifier("role-name-field")
                 }
             }
@@ -233,7 +234,7 @@ struct RoleSheet: View {
                         Button("Remove responsibility", role: .destructive) { confirmRemoval = true }
                         .accessibilityIdentifier("delete-role-button")
                     } footer: {
-                        Text("The hours and tasks for this spread leave every week.")
+                        Text("The hours and tasks for this responsibility leave every week.")
                     }
                         .listRowBackground(Spread.elevated)
                 }
@@ -265,7 +266,7 @@ struct RoleSheet: View {
             .accessibilityIdentifier("confirm-delete-role")
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The hours and tasks for this spread leave every week.")
+            Text("The hours and tasks for this responsibility leave every week.")
         }
     }
 
@@ -401,7 +402,7 @@ struct ProfilesSheet: View {
                         }
                     }
                 } footer: {
-                    Text("Each profile keeps its own spreads and weeks.")
+                    Text("Each profile keeps its own plan and weeks.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
                     .listRowBackground(Spread.elevated)
@@ -440,7 +441,7 @@ struct ProfilesSheet: View {
                     Button { dismiss() } label: { Text("Done").tapTarget() }
                 }
             }
-            .confirmationDialog("Remove this profile and its spreads?", isPresented: Binding(get: { confirmRemove != nil }, set: { if !$0 { confirmRemove = nil } }), titleVisibility: .visible) {
+            .confirmationDialog("Remove this profile and everything in it?", isPresented: Binding(get: { confirmRemove != nil }, set: { if !$0 { confirmRemove = nil } }), titleVisibility: .visible) {
                 Button("Remove profile", role: .destructive) {
                     if let profile = confirmRemove {
                         Task { await planner.send(["type": "removeProfile", "profileId": profile.id]) }
