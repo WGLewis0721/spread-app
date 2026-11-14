@@ -18,7 +18,8 @@ final class SpreadFocusTimer: ObservableObject {
         SpreadFocusPreferences.publishFromApp()
         SpreadFocusStore.migrate()
         session = SpreadFocusStore.load()
-        reconcile()
+        // Reconcile on the first known profile instead of publishing a
+        // completed/idle session while the planner's profile is still unknown.
         SpreadFocusLiveActivityController.refresh(session)
         // Do not publish an idle widget timeline before the planner has loaded
         // the active profile. That empty entry may remain cached by WidgetKit.
@@ -29,6 +30,9 @@ final class SpreadFocusTimer: ObservableObject {
         guard !profileId.isEmpty else { return }
         let changed = SpreadFocusStore.activeProfile() != profileId
         if changed { SpreadFocusStore.setActiveProfile(profileId) }
+        // Preserve the previous launch-time completion behavior, but run it only
+        // after the widget can validate the active profile.
+        reconcile()
         guard changed || publishedProfileId != profileId else { return }
         publishedProfileId = profileId
         widgetChangePendingBackground = true
