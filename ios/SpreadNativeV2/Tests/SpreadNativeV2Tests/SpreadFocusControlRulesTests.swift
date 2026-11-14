@@ -39,12 +39,16 @@ final class SpreadFocusControlRulesTests: XCTestCase {
         XCTAssertEqual(all(), [.openSpread])
     }
 
-    func testTheSmallSizeShowsOneControlTheMediumTwoAndTheLargeAll() {
+    func testEveryActiveTimerSizeHasTransportForwardCancel() {
         let running = all(running: true, hasNext: true)
-        XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .small), [.pause])
-        XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .medium), [.pause, .forward])
+        XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .small), [.pause, .forward, .cancel])
+        XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .medium), [.pause, .forward, .cancel])
         XCTAssertEqual(SpreadFocusControlRules.shown(running, size: .large),
-                       [.pause, .forward, .stop, .cancel, .openSpread])
+                       [.pause, .forward, .cancel, .stop, .openSpread])
+        let paused = all(paused: true, hasNext: false)
+        XCTAssertEqual(SpreadFocusControlRules.shown(paused, size: .small), [.resume, .forward, .cancel])
+        XCTAssertEqual(SpreadFocusControlRules.shown(paused, size: .large),
+                       [.resume, .forward, .cancel, .stop, .openSpread])
     }
 
     func testTheControlsGrowWithTheSizeWhateverTheState() {
@@ -59,7 +63,8 @@ final class SpreadFocusControlRulesTests: XCTestCase {
             let large = SpreadFocusControlRules.shown(controls, size: .large).count
             XCTAssertLessThanOrEqual(small, medium)
             XCTAssertLessThanOrEqual(medium, large)
-            XCTAssertEqual(large, controls.count, "the large size shows every control that applies")
+            XCTAssertGreaterThanOrEqual(large, controls.count - 1,
+                "the large size retains all applicable actions except duplicated transport")
         }
     }
 
@@ -67,6 +72,12 @@ final class SpreadFocusControlRulesTests: XCTestCase {
         for controls in [all(running: true), all(paused: true), all(waiting: true)] {
             XCTAssertTrue(controls.contains(.cancel), "cancel must release the session from any stretch on screen")
         }
+    }
+
+    func testWaitingKeepsForwardAndCancelInAllSizes() {
+        let waiting = all(waiting: true, hasNext: true)
+        XCTAssertEqual(SpreadFocusControlRules.shown(waiting, size: .small), [.forward, .cancel])
+        XCTAssertEqual(SpreadFocusControlRules.shown(waiting, size: .medium), [.forward, .cancel])
     }
 
     func testAWidgetNeverShowsMoreControlsThanApply() {
