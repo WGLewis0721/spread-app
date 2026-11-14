@@ -29,7 +29,7 @@
       "date": "2026-11-13",
       "title": "Recent updates",
       "changes": [
-        "The Focus timer widget fits its size: small shows the timer and one control, medium two, and large every control. Controls are icons.",
+        "The Focus timer widget fits its size. Each size shows Pause or Resume, Forward and Cancel as icons, and large also shows Stop.",
         "A repeating Plan Ahead schedule shows its days on the month calendar before you open each week."
       ]
     },
