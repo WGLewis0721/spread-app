@@ -42,6 +42,8 @@ Required before release:
 - backup/export/restore works from the installed iOS app;
 - native storage behavior is tested under low-storage/interruption conditions.
 
+> **Superseded in part on 2026-11-14 (owner decision OD20, [finalize plan](docs/design/specs/2026-11-14-publish-finalize-plan.md) section 8):** Spread 1.0 is **iPhone only**, matching the rules card. The iCloud lines below stay suspended, as the rules card says ("Nothing may claim iCloud works"). The paid, local-first and App Review rules still apply.
+
 **Direction revised 2026-10-08.** Spread 1.0 is a **$2.99 one-time paid universal app (iPhone and iPad)**
 with **automatic iCloud Backup** and **optional iCloud Sync**. Full design, risks, PR boundaries and
 gates: [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md). The rules below are binding:
