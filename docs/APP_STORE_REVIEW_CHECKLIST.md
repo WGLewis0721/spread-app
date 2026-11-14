@@ -9,13 +9,13 @@
 - [ ] Record source branch, full commit SHA, IPA hash, version/build number, bundle ID `com.graymatter.spread`, and candidate review owner.
 - [ ] Confirm whether candidate is standard Spread or Studio-enabled, based on the actual installed IPA. Branch name or feature flag alone is not proof.
 - [ ] Read the App Store Connect status and any *exact* rejection/metadata message; distinguish Waiting for Review from Rejected before changing anything.
-- [ ] Confirm paid-app pricing, agreement/tax/banking readiness, iPhone-only device support (OD20) and supported iOS versions in App Store Connect.
+- [ ] Confirm paid-app pricing, agreement/tax/banking readiness, existing iPhone and iPad support (Apple error 90101) and supported iOS versions in App Store Connect.
 
 ## Automated technical checks — engineering
 
 - [ ] `python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v`
 - [ ] `python3 scripts/app-store-preflight.py` (bundle ID, localStorage origin, native no-login path, lazy web-auth startup, privacy manifest, purpose string, app icon source).
-- [ ] The same preflight confirms the iPhone-only device scope (OD28): every target sets `TARGETED_DEVICE_FAMILY = 1`, the app and widget Info.plists declare no `~ipad` keys, and the signed IPA declares `UIDeviceFamily` 1.
+- [ ] The same preflight prevents Apple error 90101: all six app/widget/test configurations retain `TARGETED_DEVICE_FAMILY = "1,2"`; the app retains its four iPad orientations and the signed IPA declares `UIDeviceFamily` `[1, 2]`.
 - [ ] `npm run typecheck`, `npm run lint`, `npm run test:spread`, `swift test --package-path ios/App/SpreadCloudCore`.
 - [ ] `npm run ios:sync`, then `python3 scripts/app-store-preflight.py --bundle dist-ios`: all entry-page local assets exist and the web-only injector is excluded.
 - [ ] Inspect the **actual signed release IPA** with `python3 scripts/app-store-preflight.py --ipa path/to/Spread.ipa`. Confirm resolved build number, App Store bundle ID, privacy manifest and export-compliance key. Independently verify distribution signing/capabilities.
@@ -26,7 +26,7 @@
 - [ ] From a **fresh iPhone installation** open the planner without any web-beta approval, login, network connection or shared SysAdmin password. Check the actual IPA, not localhost screenshots.
 - [ ] Complete **Responsibilities → Hours → Week → Tasks**. Create/edit/complete a task, force-quit, reopen, and confirm data persists.
 - [ ] Repeat core workflow in airplane mode. Verify backup/share, Files restore, older-build upgrade and storage failure handling without data loss.
-- [ ] On every supported iPhone size, test safe areas, scrolling, keyboard, the orientations the app declares (portrait and both landscape), VoiceOver, Dynamic Type and navigation.
+- [ ] On supported iPhone sizes and an iPad, test safe areas, scrolling, keyboard, supported orientations, VoiceOver, Dynamic Type and navigation. iPhone-first is not permission to ship broken iPad compatibility.
 - [ ] Check for blank/crashing launch, beta/placeholder screens, dead buttons, clipped text, missing imagery, invalid URLs and incomplete features.
 - [ ] Demonstrate meaningful native/offline behavior, including local planning and native backup/share, for Apple's minimum-functionality review (Guideline 4.2).
 - [ ] Confirm actual privacy practices, permission prompts, iCloud behavior, tracking, data collection and embedded SDKs match the privacy manifest and App Store privacy labels.
