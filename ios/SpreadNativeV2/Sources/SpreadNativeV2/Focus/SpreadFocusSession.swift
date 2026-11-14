@@ -215,6 +215,42 @@ enum SpreadFocusMachine {
     }
 }
 
+/// Settings read by focus controls in both the app and its widget extension.
+/// @AppStorage stays in the app's private defaults; a widget intent executes in a
+/// different process and must not consult that process's UserDefaults.standard.
+/// Only the containing app copies the user's choices into the shared App Group.
+enum SpreadFocusPreferences {
+    static let liveActivityKey = "native.focus.liveActivityEnabled"
+    static let showNameKey = "native.focus.showNameOutsideApp"
+    static let notifyKey = "native.focus.notifyWhenDone"
+
+    static func publishFromApp(_ app: UserDefaults = .standard,
+                               to shared: UserDefaults = SpreadFocusStore.shared) {
+        let widgets = app.bool(forKey: SpreadWidgetShared.todayEnabledKey)
+        shared.set(widgets, forKey: SpreadWidgetShared.todayEnabledKey)
+        shared.set(widgets, forKey: SpreadWidgetShared.timerEnabledMirrorKey)
+        for key in [liveActivityKey, showNameKey, notifyKey] {
+            shared.set(app.bool(forKey: key), forKey: key)
+        }
+    }
+
+    static func widgetsEnabled(_ shared: UserDefaults = SpreadFocusStore.shared) -> Bool {
+        shared.bool(forKey: SpreadWidgetShared.todayEnabledKey)
+    }
+
+    static func liveActivityEnabled(_ shared: UserDefaults = SpreadFocusStore.shared) -> Bool {
+        shared.bool(forKey: liveActivityKey)
+    }
+
+    static func showName(_ shared: UserDefaults = SpreadFocusStore.shared) -> Bool {
+        shared.bool(forKey: showNameKey)
+    }
+
+    static func notifyWhenDone(_ shared: UserDefaults = SpreadFocusStore.shared) -> Bool {
+        shared.bool(forKey: notifyKey)
+    }
+}
+
 /// Where the session, the last choice and the active profile are kept: the shared App Group, so the
 /// widgets and the intents read and change them as well as the app.
 enum SpreadFocusStore {
