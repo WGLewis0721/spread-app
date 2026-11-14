@@ -127,6 +127,9 @@ public struct SpreadLiveRoot: View {
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SpreadOpenFocus"))) { _ in
             weekFocusEnabled = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: SpreadFocusControls.didChange)) { _ in
+            focusTimer.reloadFromStore()
+        }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
