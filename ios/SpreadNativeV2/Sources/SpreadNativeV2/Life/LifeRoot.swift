@@ -100,10 +100,14 @@ struct LifeRoot: View {
                                 .padding(.horizontal, Spread.space4).padding(.top, Spread.space2).padding(.bottom, 28)
                             }
                             .scrollDismissesKeyboard(.interactively).scrollIndicators(.hidden)
-                            // Cards pass through the shorter scroll area and only
-                            // disappear at the actual device/window edge. Without
-                            // this the dock boundary prematurely crops full cards.
+                            // Wallet cards still pass through the scroll area (clip disabled).
                             .scrollClipDisabled()
+                            // The dock is an inset on the scroll area, not a sibling above it. The scroll
+                            // area runs under the dock, and the inset reserves the dock's measured height,
+                            // so the last card rests above the dock instead of beneath it.
+                            .safeAreaInset(edge: .bottom, spacing: 0) {
+                                bottom(snapshot, wide: geometry.size.width >= 820)
+                            }
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
                             // Stack, Focus, Stack in one motion. Opening returns the page to its
                             // top so the card lands in a fixed slot. Closing scrolls only as far
@@ -120,7 +124,6 @@ struct LifeRoot: View {
                                 }
                             }
                         }
-                        bottom(snapshot, wide: geometry.size.width >= 820)
                     } else {
                         ProgressView("Opening your plan…").frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
