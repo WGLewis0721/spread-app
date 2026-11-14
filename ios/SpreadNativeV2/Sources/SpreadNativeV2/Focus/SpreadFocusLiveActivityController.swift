@@ -10,8 +10,8 @@ import Foundation
 /// activity so Continue stays on the island.
 @MainActor
 enum SpreadFocusLiveActivityController {
-    static let enabledKey = "native.focus.liveActivityEnabled"
-    static let showNameKey = "native.focus.showNameOutsideApp"
+    static let enabledKey = SpreadFocusPreferences.liveActivityKey
+    static let showNameKey = SpreadFocusPreferences.showNameKey
 
     /// Where the activity sits when several Spread activities exist. A running or paused stretch outranks a
     /// stretch waiting for a tap.
@@ -39,23 +39,32 @@ enum SpreadFocusLiveActivityController {
             relevanceScore: relevance(session))
     }
 
-    static func start(_ session: SpreadFocusSession) {
-        guard UserDefaults.standard.bool(forKey: enabledKey),
-              ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        Task {
-            for old in Activity<SpreadFocusActivityAttributes>.activities {
-                await old.end(nil, dismissalPolicy: .immediate)
-            }
-            let title = UserDefaults.standard.bool(forKey: showNameKey) ? session.roleName : "Focus session"
-            let attributes = SpreadFocusActivityAttributes(sessionId: session.id, title: title,
-                                                           day: session.blockDay)
-            _ = try? Activity.request(attributes: attributes, content: content(for: session), pushType: nil)
+    /// Serialize ActivityKit mutations. A widget intent can finish in the background
+    /// as soon as perform() returns; fire-and-forget Tasks could be suspended first,
+    /// or let an older Pause update overwrite a newer Resume.
+    private static var pendingWork: Task<Void, Never>?
+
+    private static func enqueue(_ work: @escaping @MainActor () async -> Void) {
+        let prior = pendingWork
+        pendingWork = Task {
+            await prior?.value
+            await work()
         }
+    }
+
+    /// An App Intent awaits this after saving the authoritative timer. No polling.
+    static func awaitSettled() async {
+        await pendingWork?.value
+    }
+
+    static func start(_ session: SpreadFocusSession) {
+        guard SpreadFocusPreferences.liveActivityEnabled() else { return }
+        enqueue { await updateOrCreate(session) }
     }
 
     /// Brings the island in step with the session. Nil, or a finished stretch with nothing after it, ends it.
     static func refresh(_ session: SpreadFocusSession?) {
-        guard UserDefaults.standard.bool(forKey: enabledKey), let session else {
+        guard SpreadFocusPreferences.liveActivityEnabled(), let session else {
             end()
             return
         }
@@ -67,28 +76,43 @@ enum SpreadFocusLiveActivityController {
     }
 
     static func update(_ session: SpreadFocusSession) {
-        guard UserDefaults.standard.bool(forKey: enabledKey) else {
+        guard SpreadFocusPreferences.liveActivityEnabled() else {
             end()
             return
         }
-        let matching = Activity<SpreadFocusActivityAttributes>.activities
-            .filter { $0.attributes.sessionId == session.id }
-        guard !matching.isEmpty else {
-            // A new round or break has a new session id. Start replaces whatever was showing before.
-            if session.phase != .finished || SpreadFocusMachine.nextLabel(after: session) != nil {
-                start(session)
-            }
-            return
+        enqueue { await updateOrCreate(session) }
+    }
+
+    private static func updateOrCreate(_ requested: SpreadFocusSession) async {
+        // Read the latest shared session after any earlier ActivityKit operation.
+        // A delayed update must never resurrect or overwrite a newer focus stretch.
+        guard let session = SpreadFocusStore.load(), session.id == requested.id,
+              SpreadFocusPreferences.liveActivityEnabled() else { return }
+
+        let all = Activity<SpreadFocusActivityAttributes>.activities
+        for old in all where old.attributes.sessionId != session.id {
+            await old.end(nil, dismissalPolicy: .immediate)
         }
-        Task {
+        guard let current = SpreadFocusStore.load(), current.id == requested.id,
+              SpreadFocusPreferences.liveActivityEnabled() else { return }
+
+        let matching = Activity<SpreadFocusActivityAttributes>.activities
+            .filter { $0.attributes.sessionId == current.id }
+        if matching.isEmpty {
+            guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+            let title = SpreadFocusPreferences.showName() ? current.roleName : "Focus session"
+            let attributes = SpreadFocusActivityAttributes(sessionId: current.id, title: title,
+                                                           day: current.blockDay)
+            _ = try? Activity.request(attributes: attributes, content: content(for: current), pushType: nil)
+        } else {
             for activity in matching {
-                await activity.update(content(for: session))
+                await activity.update(content(for: current))
             }
         }
     }
 
     static func end() {
-        Task {
+        enqueue {
             for activity in Activity<SpreadFocusActivityAttributes>.activities {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
