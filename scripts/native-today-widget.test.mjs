@@ -142,8 +142,8 @@ test("the shared widget file is plain Foundation and carries no task text", () =
 });
 
 test("widget privacy: names appear only on opt-in, Life cards have their own switch", () => {
-  assert.match(focusPublisher, /bool\(forKey: SpreadWidgetShared\.todayEnabledKey\)/);
-  assert.match(focusPublisher, /bool\(forKey: showNameKey\) \? session\.roleName : "Focus session"/);
+  assert.match(focusPublisher, /SpreadFocusPreferences\.widgetsEnabled\(\)/);
+  assert.match(focusPublisher, /SpreadFocusPreferences\.showName\(\) \? session\.roleName : "Focus session"/);
   assert.match(lifeCardsPublisher, /static let enabledKey = "native\.widget\.lifeCardsEnabled"/);
   assert.match(lifeCardsPublisher, /guard UserDefaults\.standard\.bool\(forKey: enabledKey\) else/);
   assert.match(lifeCardsPublisher, /snapshot\.weekKey == PlannerDates\.currentWeekKey\(\)/);
@@ -214,18 +214,18 @@ test("every surface uses the same focus intents, and the timer's sizes share one
   assert.match(timerWidgetSource, /SpreadFocusControlRules\.shown\(/);
   // One shared button view draws every control, for the widget sizes and the island alike.
   assert.match(timerWidgetSource, /struct SpreadFocusControlButton: View/);
-  assert.match(timerWidgetSource, /Button\(intent: PauseSpreadFocusIntent\(\)\)/);
-  assert.match(timerWidgetSource, /Button\(intent: ResumeSpreadFocusIntent\(\)\)/);
-  assert.match(timerWidgetSource, /Button\(intent: ForwardSpreadFocusIntent\(\)\)/);
-  assert.match(timerWidgetSource, /Button\(intent: StopSpreadFocusIntent\(\)\)/);
-  assert.match(timerWidgetSource, /Button\(intent: CancelSpreadFocusIntent\(\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: PauseSpreadFocusIntent\(sessionId: sessionId\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: ResumeSpreadFocusIntent\(sessionId: sessionId\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: ForwardSpreadFocusIntent\(sessionId: sessionId\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: StopSpreadFocusIntent\(sessionId: sessionId\)\)/);
+  assert.match(timerWidgetSource, /Button\(intent: CancelSpreadFocusIntent\(sessionId: sessionId\)\)/);
   assert.match(timerWidgetSource, /Button\(intent: StartSpreadFocusIntent\(\)\)/);
   // The island reuses that button view and the same rules, so its controls match the widgets.
   assert.match(source, /SpreadFocusIslandControls\(status:/);
   assert.match(source, /SpreadFocusControlRules\.all\(/);
   assert.match(source, /SpreadFocusControlButton\(control: kind/);
   // On the Lock Screen and the island the controls are icon only: a text label wrapped mid-word there.
-  assert.match(source, /SpreadFocusControlButton\(control: kind, nextLabel: status\.state\.nextLabel, iconOnly: true\)/);
+  assert.match(source, /SpreadFocusControlButton\(control: kind, sessionId: sessionId,/);
   assert.match(timerWidgetSource, /if iconOnly \{\s*controlButton\s*\.labelStyle\(\.iconOnly\)/);
   // With the switch off, the widget says so, and the app records the switch for it.
   assert.match(timerWidgetSource, /Turn on Show Today on widgets in More to see your timer here/);
@@ -239,7 +239,7 @@ test("the Timer widget's controls are icons in 44 pt targets, and each size has 
   // Icons only: a text label wrapped inside the circles on the Home Screen. The names stay as accessibility labels.
   assert.match(timerWidgetSource, /func spreadFocusControls\(\) -> some View \{[\s\S]*\.labelStyle\(\.iconOnly\)[\s\S]*\}/);
   assert.match(timerWidgetSource, /\.frame\(width: 44, height: 44\)/);
-  assert.match(timerWidgetSource, /SpreadFocusControlButton\(control: kind, nextLabel: entry\.state\?\.nextLabel, iconOnly: true\)/);
+  assert.match(timerWidgetSource, /SpreadFocusControlButton\(control: kind, sessionId: state\.sessionId,/);
   // Every active family renders the three 44pt controls. Medium uses a bottom row.
   assert.match(timerWidgetSource, /var mediumBody: some View \{[\s\S]*face\(\.medium\)[\s\S]*controlRow/);
   assert.match(timerWidgetSource, /var smallBody: some View \{[\s\S]*face\(\.small\)[\s\S]*controlRow/);
@@ -345,14 +345,14 @@ test("the island opens the planned day, and a hand-started session still opens t
     assert.match(onChange, /SpreadDayPlanPublisher\.publish\(/);
     assert.match(onChange, /SpreadFocusWidgetPublisher\.republishFromStore\(\)/);
     for (const file of [focusSheet, liveActivity, focusPublisher, dayPlanPublisher]) {
-      assert.match(file, /native\.focus\.showNameOutsideApp/);
+      assert.match(file, /native\.focus\.showNameOutsideApp|SpreadFocusPreferences\.showNameKey|SpreadFocusPreferences\.showName\(\)/);
     }
     assert.match(focusSheet, /Life area names appear on the Lock Screen, the Dynamic Island and the timer widget only while the name switch is on/);
   });
 
   test("the notification switch asks for permission on, and cancels its alerts off", () => {
     assert.match(focusSheet, /@AppStorage\("native\.focus\.notifyWhenDone"\)/);
-    assert.match(intents, /UserDefaults\.standard\.bool\(forKey: "native\.focus\.notifyWhenDone"\)/);
+    assert.match(intents, /SpreadFocusPreferences\.notifyWhenDone\(\)/);
     const onChange = handler(focusSheet, "onChange(of: notifyWhenDone)", 700);
     assert.match(onChange, /SpreadLocalAlerts\.authorized\(\)/);
     assert.match(onChange, /SpreadLocalAlerts\.cancelFocus\(\)/);
@@ -361,8 +361,8 @@ test("the island opens the planned day, and a hand-started session still opens t
 
   test("the Live Activity switch starts, refreshes and ends the island, and nothing starts while it is off", () => {
     assert.match(focusSheet, /@AppStorage\("native\.focus\.liveActivityEnabled"\)/);
-    assert.match(liveActivity, /static let enabledKey = "native\.focus\.liveActivityEnabled"/);
-    assert.match(liveActivity, /static func start\(_ session: SpreadFocusSession\) \{\s*guard UserDefaults\.standard\.bool\(forKey: enabledKey\)/);
+    assert.match(liveActivity, /static let enabledKey = SpreadFocusPreferences\.liveActivityKey/);
+    assert.match(liveActivity, /static func start\(_ session: SpreadFocusSession\) \{\s*guard SpreadFocusPreferences\.liveActivityEnabled\(\)/);
     const onChange = handler(focusSheet, "onChange(of: showLiveTimer)", 400);
     assert.match(onChange, /SpreadFocusLiveActivityController\.end\(\)/);
     assert.match(onChange, /SpreadFocusLiveActivityController\.refresh\(/);
