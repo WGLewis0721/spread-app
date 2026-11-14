@@ -314,6 +314,7 @@ struct SpreadFocusTimerSheet: View {
             }
         }
         .onChange(of: showLiveTimer) { _, enabled in
+            SpreadFocusPreferences.publishFromApp()
             if enabled {
                 if let current, SpreadFocusMachine.isOnScreen(current) {
                     SpreadFocusLiveActivityController.refresh(current)
@@ -323,6 +324,7 @@ struct SpreadFocusTimerSheet: View {
             }
         }
         .onChange(of: notifyWhenDone) { _, enabled in
+            SpreadFocusPreferences.publishFromApp()
             if enabled {
                 Task {
                     if await SpreadLocalAlerts.authorized() {
@@ -337,6 +339,10 @@ struct SpreadFocusTimerSheet: View {
             } else {
                 SpreadLocalAlerts.cancelFocus()
             }
+        }
+        .onChange(of: showNameOutsideApp) { _, _ in
+            SpreadFocusPreferences.publishFromApp()
+            SpreadFocusWidgetPublisher.republishFromStore()
         }
     }
 }
