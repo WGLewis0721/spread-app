@@ -280,6 +280,19 @@ public enum SpreadWidgetColor {
     }
 }
 
+// MARK: - Colours
+
+/// The app's ink, secondary and canvas as "#RRGGBB" text. The widget extension cannot compile
+/// Theme/SpreadTheme.swift, so it reads these instead. Each value must match `Spread.ink`,
+/// `Spread.secondary` and `Spread.canvas` in the app; scripts/native-today-widget.test.mjs checks that.
+public enum SpreadWidgetTokens {
+    public static let inkLight = "0E1A2E"
+    public static let inkDark = "F7FAFF"
+    public static let secondaryLight = "4A5670"
+    public static let secondaryDark = "B0BCD1"
+    public static let canvasLight = "F4F1EA"
+}
+
 // MARK: - Links
 
 /// Where a tap on a widget or the Dynamic Island lands. The extension builds these; the app parses them.

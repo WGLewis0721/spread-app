@@ -42,7 +42,7 @@ struct SpreadFocusTimerSheet: View {
     /// used, and the plan is never changed.
     @ViewBuilder private func todaysBlockRows(_ offered: SpreadOfferedBlock) -> some View {
         let name = roles.first(where: { $0.id == offered.entry.roleId })?.name ?? offered.entry.label
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spread.space2) {
             Text("\(name) · \(SpreadBlockText.hours(offered.entry.hours)) planned")
                 .font(.headline)
                 .foregroundStyle(Spread.ink)
@@ -60,7 +60,7 @@ struct SpreadFocusTimerSheet: View {
             .frame(maxWidth: .infinity, minHeight: 50)
             .accessibilityIdentifier("focus-start-block")
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Spread.space1)
     }
 
     /// "Focus · round 2 of 4", "Break", or "Focus session" for a single stretch.
@@ -80,7 +80,7 @@ struct SpreadFocusTimerSheet: View {
     @ViewBuilder private func transportRow(_ session: SpreadFocusSession) -> some View {
         let next = SpreadFocusMachine.nextLabel(after: session)
         if session.phase == .finished {
-            HStack(spacing: 8) {
+            HStack(spacing: Spread.space2) {
                 Button {
                     timer.forward(profileId: profileId, notify: notifyWhenDone)
                 } label: {
@@ -93,7 +93,7 @@ struct SpreadFocusTimerSheet: View {
                 Button {
                     timer.cancel(profileId: profileId)
                 } label: {
-                    Image(systemName: "xmark").frame(minWidth: 44, minHeight: 44)
+                    Image(systemName: "xmark").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
                 }
                 .buttonStyle(.bordered)
                 .tint(Spread.danger)
@@ -104,12 +104,12 @@ struct SpreadFocusTimerSheet: View {
             .accessibilityIdentifier("focus-media-controls")
         } else {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
+                HStack(spacing: Spread.space2) {
                     mediaActions(session, next: next)
                     Spacer(minLength: 12)
                     endingActions()
                 }
-                VStack(spacing: 8) {
+                VStack(spacing: Spread.space2) {
                     mediaActions(session, next: next)
                     endingActions()
                 }
@@ -120,7 +120,7 @@ struct SpreadFocusTimerSheet: View {
     }
 
     private func mediaActions(_ session: SpreadFocusSession, next: String?) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spread.space2) {
             Button {
                 if session.phase == .running {
                     timer.pause(profileId: profileId)
@@ -129,7 +129,7 @@ struct SpreadFocusTimerSheet: View {
                 }
             } label: {
                 Image(systemName: session.phase == .running ? "pause.fill" : "play.fill")
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
             .buttonStyle(.borderedProminent)
             .accessibilityLabel(session.phase == .running ? "Pause" : "Resume")
@@ -137,7 +137,7 @@ struct SpreadFocusTimerSheet: View {
             Button {
                 timer.forward(profileId: profileId, notify: notifyWhenDone)
             } label: {
-                Image(systemName: "forward.fill").frame(minWidth: 44, minHeight: 44)
+                Image(systemName: "forward.fill").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
             .buttonStyle(.bordered)
             .disabled(next == nil)
@@ -148,11 +148,11 @@ struct SpreadFocusTimerSheet: View {
     }
 
     private func endingActions() -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spread.space2) {
             Button {
                 timer.stop(profileId: profileId)
             } label: {
-                Image(systemName: "stop.fill").frame(minWidth: 44, minHeight: 44)
+                Image(systemName: "stop.fill").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
             .buttonStyle(.bordered)
             .accessibilityLabel("Stop this stretch")
@@ -161,7 +161,7 @@ struct SpreadFocusTimerSheet: View {
             Button {
                 timer.cancel(profileId: profileId)
             } label: {
-                Image(systemName: "xmark").frame(minWidth: 44, minHeight: 44)
+                Image(systemName: "xmark").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
             .buttonStyle(.bordered)
             .tint(Spread.danger)
@@ -198,7 +198,7 @@ struct SpreadFocusTimerSheet: View {
             .lineLimit(1)
             .minimumScaleFactor(0.65)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.vertical, Spread.space2)
         Button(rounds > 1 ? "Start round 1" : "Start focus session") {
             if !timer.startPlan(profileId: profileId, roleId: roleId, roleName: roleName,
                                 plan: plan, notify: notifyWhenDone) {
@@ -221,7 +221,7 @@ struct SpreadFocusTimerSheet: View {
             Form {
                 if let current, current.phase != .finished {
                     Section("Focus timer") {
-                        HStack(spacing: 8) {
+                        HStack(spacing: Spread.space2) {
                             Text("Life area")
                             Spacer(minLength: 8)
                             Text(current.roleName)
@@ -239,7 +239,7 @@ struct SpreadFocusTimerSheet: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.65)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
+                                .padding(.vertical, Spread.space2)
                                 .accessibilityLabel("Time remaining")
                                 .accessibilityValue(SpreadFocusClock.display(current.remaining(at: context.date)))
                         }
@@ -309,7 +309,7 @@ struct SpreadFocusTimerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.frame(minHeight: 44)
+                    Button("Done") { dismiss() }.frame(minHeight: Spread.minimumTarget)
                 }
             }
         }
@@ -396,7 +396,7 @@ struct SpreadReminderSettingsSheet: View {
             .navigationTitle("Daily Reminder")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }.frame(minHeight: 44)
+                Button("Done") { dismiss() }.frame(minHeight: Spread.minimumTarget)
             } }
         }
         .onChange(of: enabled) { _, _ in Task { await updateSchedule() } }

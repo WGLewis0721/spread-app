@@ -223,7 +223,8 @@ struct SpreadFocusControlButton: View {
             }
         case .cancel:
             Button(intent: CancelSpreadFocusIntent()) {
-                Label("Cancel", systemImage: "xmark")
+                // Icon only on the widget (`iconOnly`), so this title is what VoiceOver reads. It matches the Focus sheet.
+                Label("Cancel session", systemImage: "xmark")
             }
         case .startBlock, .startFocus, .openSpread:
             EmptyView()
