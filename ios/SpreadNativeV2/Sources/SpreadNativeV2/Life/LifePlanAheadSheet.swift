@@ -211,9 +211,13 @@ struct LifePlanAheadSheet: View {
                     else { await requestCopyPreview() }
                 }
             } label: {
-                Text(copySaving ? "Copying…" : copyPreviewing ? "Checking…" :
-                     copyPreview?.eligible == true ? "Copy to these weeks" : "Preview copy")
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                Group {
+                    if copySaving { Text("Copying…") }
+                    else if copyPreviewing { Text("Checking…") }
+                    else if copyPreview?.eligible == true { Text("Copy to these weeks") }
+                    else { Label { Text("Preview copy") } icon: { SpreadIcon(name: "lucide-eye", size: 18) } }
+                }
+                .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.borderedProminent)
             .disabled(copySaving || copyPreviewing || planner.busy)
@@ -229,9 +233,13 @@ struct LifePlanAheadSheet: View {
                     else { await requestPreview() }
                 }
             } label: {
-                Text(saving ? "Saving…" : previewing ? "Checking…" :
-                     preview?.eligible == true ? "Move hours" : "Preview transfer")
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                Group {
+                    if saving { Text("Saving…") }
+                    else if previewing { Text("Checking…") }
+                    else if preview?.eligible == true { Text("Move hours") }
+                    else { Label { Text("Preview transfer") } icon: { SpreadIcon(name: "lucide-eye", size: 18) } }
+                }
+                .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.borderedProminent)
             .disabled(saving || previewing || planner.busy ||
@@ -384,7 +392,7 @@ struct LifePlanAheadSheet: View {
                 copyPreview = nil
                 planMode = "copy"
             } label: {
-                Label("Copy this week forward", systemImage: "doc.on.doc")
+                Label { Text("Copy this week forward") } icon: { SpreadIcon(name: "lucide-copy", size: 18) }
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
             .disabled(snapshot.roles.isEmpty)
@@ -393,7 +401,7 @@ struct LifePlanAheadSheet: View {
                 preview = nil
                 planMode = "move"
             } label: {
-                Label("Move hours once", systemImage: "arrow.left.arrow.right")
+                Label { Text("Move hours once") } icon: { SpreadIcon(name: "lucide-arrow-left-right", size: 18) }
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
             .disabled(snapshot.roles.isEmpty)

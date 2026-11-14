@@ -57,6 +57,7 @@ struct LifeHoursView: View {
     @State private var rejected = false
     @GestureState private var contactActive = false
     @ScaledMetric(relativeTo: .largeTitle) private var numberSize: CGFloat = 48
+    @ScaledMetric(relativeTo: .title2) private var helpIconSize: CGFloat = 24
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
     private let clock = Timer.publish(every: 1.0 / 60, on: .main, in: .common).autoconnect()
@@ -100,8 +101,7 @@ struct LifeHoursView: View {
                 }
                 Spacer()
                 Button(action: onHelp) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.title2).frame(width: 44, height: 44)
+                    SpreadIcon(name: "lucide-circle-help", size: helpIconSize).frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Gesture help")
             }
@@ -320,12 +320,12 @@ struct LifeHoursView: View {
             let controls = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 12))
             controls {
                 Button { changeBudget(by: -0.5) } label: {
-                    Label("Return ½h", systemImage: "arrow.counterclockwise")
+                    Label { Text("Return ½h") } icon: { SpreadIcon(name: "lucide-rotate-ccw", size: 18) }
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .keyboardShortcut(.leftArrow, modifiers: [.option])
                 Button { changeBudget(by: 0.5) } label: {
-                    Label("Add ½h", systemImage: "arrow.clockwise")
+                    Label { Text("Add ½h") } icon: { SpreadIcon(name: "lucide-rotate-cw", size: 18) }
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .keyboardShortcut(.rightArrow, modifiers: [.option])
@@ -365,7 +365,7 @@ struct LifeHoursView: View {
                 if let capacity {
                     commitCapacity(LifeOrbitMath.limit(capacity + 1, minimum: storedAssigned, maximum: 168))
                 }
-            } label: { SpreadIcon(name: "icon-add", size: 20).frame(width: 44, height: 44) }
+            } label: { SpreadIcon(name: "lucide-plus", size: 20).frame(width: 44, height: 44) }
                 .accessibilityLabel("Increase weekly planning hours")
                 .keyboardShortcut(.upArrow, modifiers: [.option])
                 .disabled(saving || rejected || capacity == nil || capacity! >= max(168, capacity!))
