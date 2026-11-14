@@ -56,6 +56,10 @@ private struct SpreadTodayProvider: TimelineProvider {
         let now = Date()
         let plan = SpreadTodayStore.load()
         let focus = SpreadFocusWidgetStore.load()
+        #if DEBUG
+        SpreadFocusDiagnostics.log("today_timeline", enabled: SpreadFocusWidgetStore.timerEnabled(),
+                                   extra: "resolved=\(focus != nil)")
+        #endif
         // With a running timer, add an entry at its deadline so the panel flips to "Finished" by itself.
         let entries = (focus?.timelineDates(from: now) ?? [now]).map { (date: Date) -> Entry in
             Entry(date: date, plan: plan, focus: focus)

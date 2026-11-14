@@ -358,6 +358,10 @@ private struct SpreadTimerProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
         let now = Date()
         let state = SpreadFocusWidgetStore.load()
+        #if DEBUG
+        SpreadFocusDiagnostics.log("timer_timeline", enabled: SpreadFocusWidgetStore.timerEnabled(),
+                                   extra: "resolved=\(state != nil)")
+        #endif
         // One entry now, and one at the deadline so a running face flips to "Next" or "Done" by itself.
         let entries = (state?.timelineDates(from: now) ?? [now]).map { entry(at: $0, state: state) }
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1,

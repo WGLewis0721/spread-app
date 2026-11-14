@@ -28,10 +28,18 @@ enum SpreadFocusControls {
     /// Saves a change and brings the island, the widgets and the reminder into step with it.
     static func apply(_ session: SpreadFocusSession?, notify: Bool) {
         if let session { SpreadDayPlanStore.recordCompletion(of: session) }
+        #if DEBUG
+        SpreadFocusDiagnostics.log("apply_begin", enabled: SpreadFocusPreferences.widgetsEnabled())
+        #endif
         SpreadFocusStore.save(session)
         // LiveActivityIntent executes in the app process: update the visible timer now,
         // instead of waiting for SpreadLiveRoot's one-second lifecycle fallback.
         NotificationCenter.default.post(name: didChange, object: nil)
+        #if DEBUG
+        let saved = SpreadFocusStore.load()
+        SpreadFocusDiagnostics.log("save_complete", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "requested_matches_saved=\(session?.id == saved?.id)")
+        #endif
         // Publish the new state before the potentially expensive ActivityKit refresh.
         // App Group session remains the only authority on both paths.
         SpreadFocusWidgetPublisher.publish()

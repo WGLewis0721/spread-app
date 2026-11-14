@@ -519,3 +519,12 @@ test("focus widgets render only the active profile from the single authoritative
   assert.doesNotMatch(focusPublisher, /shared\.set\(data, forKey: SpreadWidgetShared\.focusKey\)/);
   assert.match(focusPublisher, /shared\.removeObject\(forKey: SpreadWidgetShared\.focusKey\)/);
 });
+
+test("app start commits before shared save and widget reload request", () => {
+  const start = focusTimer.slice(focusTimer.indexOf("func startPlan("), focusTimer.indexOf("func startBlock("));
+  assert.match(start, /commit\(next, notify: notify\)/);
+  assert.match(focusTimer, /private func commit\([\s\S]*SpreadFocusControls\.apply\(next, notify: notify\)/);
+  const apply = focusControls.slice(focusControls.indexOf("static func apply("), focusControls.indexOf("static var notifyWhenDone"));
+  assert.ok(apply.indexOf("SpreadFocusStore.save(session)") < apply.indexOf("SpreadFocusWidgetPublisher.publish()"));
+  assert.match(focusPublisher, /reloadTimelines\(ofKind: SpreadWidgetShared\.timerKind\)/);
+});

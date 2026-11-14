@@ -12,6 +12,10 @@ enum SpreadFocusWidgetPublisher {
                    forKey: SpreadWidgetShared.timerEnabledMirrorKey)
         // Remove the obsolete duplicate snapshot created by earlier versions.
         shared.removeObject(forKey: SpreadWidgetShared.focusKey)
+        #if DEBUG
+        SpreadFocusDiagnostics.log("reload_requested", defaults: shared,
+                                   enabled: shared.bool(forKey: SpreadWidgetShared.timerEnabledMirrorKey))
+        #endif
         reload()
     }
 

@@ -136,3 +136,37 @@ workflows:
           PY
     artifacts:
       - artifacts/store-status/*-summary.json
+
+  spread-focus-diagnostics:
+    name: Spread - internal focus diagnostics (no upload)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Spread
+    environment:
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.graymatter.spread
+      vars:
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 27.1
+    scripts:
+      - name: Verify and prepare native app
+        script: |
+          set -eu
+          npm ci
+          node --test scripts/native-today-widget.test.mjs
+          swift test --package-path ios/SpreadNativeV2
+          npm run ios:sync
+      - name: Apply development profiles
+        script: xcode-project use-profiles
+      - name: Build internal DEBUG IPA without publishing
+        script: |
+          set -eu
+          xcode-project build-ipa --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" --scheme App --archive-xcargs "-configuration Debug"
+          test -n "$(find build/ios/ipa -name '*.ipa' -print -quit)"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
