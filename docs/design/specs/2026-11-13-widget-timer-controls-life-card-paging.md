@@ -213,3 +213,18 @@ The owner instructed direct implementation on **PR #208**, followed by merge wit
 **Acceptance gate:** Pass GitHub CI, App Store source preflight, native type-check and a signed Codemagic archive. On a physical iPhone with **Home Screen widget and Live Activity**, repeatedly tap Pause→Resume, Forward, Stop and Cancel with Spread foreground, background and terminated. Check the same remaining time in the app and on both surfaces; stale taps after starting a new round must do nothing. Measure tap-to-commit and tap-to-visible latency (p50/p95). Confirm widgets disabled remain private/off, enabled widgets stay visible, and Live Activities don't disappear after a valid tap. Native checks and source inspection alone do **not** establish runtime responsiveness.
 
 **Rollback:** Revert PR #229. Release/upload remains manual; no changed planner tasks, weekly hours or account requirements.
+
+## 14. Apple-standard timer lifecycle (2026-11-14)
+
+**Owner direction:** Stop building more state managers. Use the timer implementation Apple documents and the existing Spread timer engine.
+
+**Reference:** [Apple, Adding interactivity to widgets and Live Activities](https://developer.apple.com/documentation/widgetkit/adding-interactivity-to-widgets-and-live-activities); [WWDC24 productivity timer example](https://developer.apple.com/videos/play/wwdc2024/10157/); [dynamic countdown labels](https://developer.apple.com/documentation/widgetkit/displaying-dynamic-dates).
+
+**Straightforward steps (no new service):**
+1. **Save one timer record** in the existing App Group: session ID, phase (running/paused/finished), remaining seconds and an absolute deadline. Spread's `SpreadFocusSession`, `SpreadFocusStore` and `SpreadFocusMachine` already do this. Preserve those tested rules.
+2. **Expose a widget control.** Apple uses `Toggle(isOn:intent:)` and `SetValueIntent` for optimistic Play/Pause feedback. The intent updates the shared record synchronously and **returns**; WidgetKit reloads the widget automatically when `perform()` completes. Keep other controls as `Button(intent:)`.
+3. **Render the clock with dates.** Use `Text(timerInterval:countsDown:)` and `ProgressView(timerInterval:countsDown:)`; do not poll or request a widget timeline every second. For a paused session, show the persisted frozen seconds.
+4. **Project to the Live Activity independently.** ActivityKit updates are not prerequisites for saving timer state or completing a Home Screen widget interaction. Preserve session-matching guards and system-controlled activity presentation. A user action never automatically starts the next round.
+5. **Verify the real experience.** GitHub source checks catch API/compiler regressions, but only a signed iPhone build can demonstrate interaction reliability and WidgetKit's actual redraw timing. Check active/background/terminated app, rapid taps, stale session actions and opted-in Lock Screen/Dynamic Island. Record tap-to-store and tap-to-widget response separately.
+
+**Correction to the PR #229 implementation:** Awaiting `SpreadFocusLiveActivityController.awaitSettled()` inside every intent makes WidgetKit wait for ActivityKit before it can redraw. PR #230 removes that wait while keeping the already-correct single authoritative timer and display mirroring. No user accounts, networking, new state machine, platform target changes or planner mutations. The simple Apple flow is the design contract.
