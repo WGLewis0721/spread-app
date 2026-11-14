@@ -39,7 +39,7 @@ enum SpreadFocusControls {
 
     /// Whether the person chose to be told when a stretch ends.
     static var notifyWhenDone: Bool {
-        UserDefaults.standard.bool(forKey: "native.focus.notifyWhenDone")
+        SpreadFocusPreferences.notifyWhenDone()
     }
 }
 
