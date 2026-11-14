@@ -81,7 +81,7 @@ class PreflightTests(unittest.TestCase):
                     "CFBundleVersion": "10",
                     "CFBundleShortVersionString": "1.0",
                     "ITSAppUsesNonExemptEncryption": False,
-                    "UIDeviceFamily": [1],
+                    "UIDeviceFamily": [1, 2],
                 }))
                 bundle.writestr("Payload/App.app/PrivacyInfo.xcprivacy",
                                 plistlib.dumps({"NSPrivacyTracking": False}))
@@ -90,9 +90,14 @@ class PreflightTests(unittest.TestCase):
             self.assertTrue(checks.items)
             self.assertTrue(all(ok for _, ok, _ in checks.items))
 
-    def test_signed_ipa_must_declare_iphone_only(self):
+    def test_signed_ipa_must_preserve_iphone_and_ipad(self):
         with tempfile.TemporaryDirectory() as tmp:
-            for label, family in (("universal", [1, 2]), ("missing", None)):
+            for label, family, expected in (
+                ("universal", [1, 2], True),
+                ("iphone_only", [1], False),
+                ("ipad_only", [2], False),
+                ("missing", None, False),
+            ):
                 with self.subTest(family=label):
                     info = {
                         "CFBundleIdentifier": "com.graymatter.spread",
@@ -110,9 +115,9 @@ class PreflightTests(unittest.TestCase):
                     checks = preflight.Checks()
                     checks.ipa(ipa)
                     results = {name: ok for name, ok, _ in checks.items}
-                    self.assertFalse(results["Built device family"])
+                    self.assertEqual(results["Built device family"], expected)
 
-    def test_every_build_target_must_be_iphone_only(self):
+    def test_every_build_target_must_preserve_universal_device_family(self):
         def device_family_passes(lines):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
@@ -125,43 +130,46 @@ class PreflightTests(unittest.TestCase):
 
         target = "PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread;\n"
         self.assertTrue(device_family_passes([
-            target, "TARGETED_DEVICE_FAMILY = 1;\n",
-            target, 'TARGETED_DEVICE_FAMILY = "1";\n',
+            target, 'TARGETED_DEVICE_FAMILY = "1,2";\n',
+            target, 'TARGETED_DEVICE_FAMILY = "1, 2";\n',
         ]))
-        self.assertFalse(device_family_passes([target, 'TARGETED_DEVICE_FAMILY = "1,2";\n']))
+        self.assertFalse(device_family_passes([target, 'TARGETED_DEVICE_FAMILY = 1;\n']))
+        self.assertFalse(device_family_passes([target, 'TARGETED_DEVICE_FAMILY = 2;\n']))
         self.assertFalse(device_family_passes([
-            target, "TARGETED_DEVICE_FAMILY = 1;\n",
+            target, 'TARGETED_DEVICE_FAMILY = "1,2";\n',
             target,
         ]), "A target without a device family cannot ship")
-        self.assertFalse(device_family_passes([
-            target, "TARGETED_DEVICE_FAMILY = 1;\n",
-            target, "TARGETED_DEVICE_FAMILY = 2;\n",
-        ]))
         self.assertFalse(device_family_passes([]), "An empty project fails closed")
 
-    def test_info_plist_must_not_declare_ipad_keys(self):
-        checks = preflight.Checks()
-        checks.ipad_keys({
-            "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
-            "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationPortrait"],
-        }, "Test plist")
-        self.assertFalse(checks.items[-1][1])
-        checks = preflight.Checks()
-        checks.ipad_keys({"UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"]}, "Test plist")
-        self.assertTrue(checks.items[-1][1])
+    def test_app_info_plist_preserves_ipad_orientations(self):
+        required = [
+            "UIInterfaceOrientationPortrait",
+            "UIInterfaceOrientationPortraitUpsideDown",
+            "UIInterfaceOrientationLandscapeLeft",
+            "UIInterfaceOrientationLandscapeRight",
+        ]
+        for label, values, expected in (
+            ("all", required, True),
+            ("missing", None, False),
+            ("incomplete", required[:-1], False),
+        ):
+            with self.subTest(case=label):
+                checks = preflight.Checks()
+                info = {} if values is None else {"UISupportedInterfaceOrientations~ipad": values}
+                checks.ipad_orientations(info)
+                self.assertEqual(checks.items[-1][1], expected)
 
-    def test_committed_app_and_widget_are_iphone_only(self):
+    def test_committed_app_and_widget_are_universal(self):
         root = Path(__file__).resolve().parent.parent
         checks = preflight.Checks()
         checks.device_family(root)
         self.assertTrue(checks.items[-1][1], checks.items[-1][2])
         app_info = plistlib.loads((root / "ios/App/App/Info.plist").read_bytes())
         widget_info = plistlib.loads((root / "ios/App/SpreadWidget/Info.plist").read_bytes())
-        for label, info in (("iOS Info.plist", app_info), ("Widget Info.plist", widget_info)):
-            with self.subTest(plist=label):
-                checks = preflight.Checks()
-                checks.ipad_keys(info, label)
-                self.assertTrue(checks.items[-1][1], checks.items[-1][2])
+        self.assertIsInstance(widget_info, dict)
+        checks = preflight.Checks()
+        checks.ipad_orientations(app_info)
+        self.assertTrue(checks.items[-1][1], checks.items[-1][2])
         self.assertEqual(app_info["UISupportedInterfaceOrientations"], [
             "UIInterfaceOrientationPortrait",
             "UIInterfaceOrientationLandscapeLeft",
