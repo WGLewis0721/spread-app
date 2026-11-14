@@ -82,10 +82,12 @@ struct TaskSheet: View {
                                         conflictingDraft = nil
                                         scheduleSave()
                                     }
+                                    .frame(minHeight: 44, alignment: .leading)
                                     Button("Keep current task") {
                                         conflictingDraft = nil
                                         if let key = draftKey { UserDefaults.standard.removeObject(forKey: key) }
                                     }
+                                    .frame(minHeight: 44, alignment: .leading)
                                 }.font(.subheadline)
                             }
                             if !loaded {
@@ -125,13 +127,16 @@ struct TaskSheet: View {
                     // overwrite those characters.
                     .onChange(of: task.text) { old, new in if title == old { title = new } }
                 } else {
-                    ContentUnavailableView("This task is no longer in the plan.", systemImage: "checkmark.circle")
+                    // A missing task is not a completed one, so the glyph is a removed day, not a check mark.
+                    ContentUnavailableView("This task is no longer in the plan.", systemImage: "calendar.badge.minus",
+                                           description: Text("It may have been deleted or moved. Tap Done to return to the plan."))
                 }
             }
             .navigationTitle("Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                // An editor that saves as it goes dismisses with a trailing Done, like every other sheet.
+                ToolbarItem(placement: .confirmationAction) {
                     Button { finishEditing() } label: { Text("Done").tapTarget() }
                         .accessibilityIdentifier("task-sheet-done")
                 }
@@ -169,6 +174,9 @@ struct TaskSheet: View {
                     if await planner.send(["type": "deleteTask", "roleId": roleId, "taskId": taskId]) { dismiss() }
                 }
             }
+        } message: {
+            // Tells the person where the task goes, so Recently Deleted is the recovery path they can find.
+            Text("It moves to Recently Deleted and can be restored for 30 days.")
         }
     }
 
@@ -191,7 +199,7 @@ struct TaskSheet: View {
                 .font(.subheadline)
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .padding(.horizontal, 12)
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusControl))
             }
             .accessibilityIdentifier("task-estimate")
             Text("Estimates help you plan; they don't reserve hours on a day.")
