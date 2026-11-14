@@ -359,7 +359,7 @@ struct LifeTaskRows: View {
                                 "taskId": task.id, "important": task.important != true
                             ])
                             pendingTasks.remove(task.id)
-                            if ok { LifeFeedback.accepted() }
+                            _ = ok
                         }
                     } label: {
                         SpreadIcon(name: "lucide-flag", size: 20)
@@ -394,7 +394,7 @@ struct LifeTaskRows: View {
                             "type": "reorderDayTask", "roleId": task.roleId, "day": day,
                             "taskId": item.itemId, "beforeId": task.id
                         ])
-                        if ok { LifeFeedback.accepted() }
+                        _ = ok
                     }
                     return true
                 } isTargeted: { targeted in targetedTaskId = targeted ? task.id : nil }
@@ -413,7 +413,7 @@ struct LifeTaskRows: View {
                 "type": "reorderDayTask", "roleId": task.roleId, "day": day,
                 "taskId": task.id, "beforeId": target
             ])
-            if ok { LifeFeedback.accepted() }
+            _ = ok
         }
     }
 
@@ -478,7 +478,6 @@ struct LifeQuickAdd: View {
               let task = planner.snapshot?.tasks.first(where: { $0.roleId == roleId && !before.contains($0.id) }) else { return }
         title = ""
         withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
-        LifeFeedback.accepted()
         onOpenTask(roleId, task.id)
     }
 }

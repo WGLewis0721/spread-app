@@ -523,7 +523,6 @@ struct LifeHoursView: View {
                 showTips = false
                 capacityText = capacityDraft.map(SpreadHours.text) ?? capacityText
                 resetGestures()
-                if touchFeedback { LifeFeedback.accepted() }
             } else {
                 rejected = true; holding = false
                 message = "Hours were not saved. Your draft is kept. Review the current plan, then retry or discard."

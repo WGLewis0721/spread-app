@@ -316,7 +316,7 @@ struct LifeRoot: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("No Life areas yet").font(.title3.bold()).foregroundStyle(LifePalette.ink)
                         .accessibilityAddTraits(.isHeader)
-                    Text("Add one for each responsibility you want to plan, such as Work, Family or Health.")
+                    Text("Add one for each Life area you want to plan, such as Work, Family or Health.")
                         .font(.body).foregroundStyle(LifePalette.secondary)
                 }
                 newLifeArea
@@ -590,9 +590,7 @@ struct LifeRoot: View {
         }
         budgetError = nil
         Task {
-            if await planner.send(["type": "setLifeCapacity", "hours": value]) {
-                LifeFeedback.accepted()
-            }
+            _ = await planner.send(["type": "setLifeCapacity", "hours": value])
         }
     }
 
@@ -615,9 +613,7 @@ struct LifeRoot: View {
               LifeBudgetBarMath.assigned(snapshot.roles) + delta <= capacity else { return }
         budgetError = nil
         Task {
-            if await planner.send(["type": "setLifeBudget", "roleId": role.id, "hours": next]) {
-                LifeFeedback.accepted()
-            }
+            _ = await planner.send(["type": "setLifeBudget", "roleId": role.id, "hours": next])
         }
     }
 
@@ -710,11 +706,11 @@ struct LifeRoot: View {
         HStack {
             Button("Undo") {
                 guard let id = planner.undoId else { return }
-                Task { if await planner.send(["type": "undo", "editId": id]) { LifeFeedback.accepted() } }
+                Task { _ = await planner.send(["type": "undo", "editId": id]) }
             }.disabled(planner.undoId == nil || planner.busy).accessibilityIdentifier("life-undo")
             Button("Redo") {
                 guard let id = planner.redoId else { return }
-                Task { if await planner.send(["type": "redo", "editId": id]) { LifeFeedback.accepted() } }
+                Task { _ = await planner.send(["type": "redo", "editId": id]) }
             }.disabled(planner.redoId == nil || planner.busy).accessibilityIdentifier("life-redo")
         }
         .buttonStyle(.bordered)

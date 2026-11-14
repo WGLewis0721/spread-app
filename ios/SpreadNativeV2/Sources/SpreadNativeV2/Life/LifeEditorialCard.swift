@@ -236,8 +236,9 @@ struct LifeEditorialFace: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
                 .background(
-                    // Zero-hour days use a darker well so white labels stay legible over bright artwork.
-                    value > 0 ? Color.white.opacity(0.91) : Color.black.opacity(0.42),
+                    // OD3: zero-hour days use a 0.6 black well. The owner's spec gives about 5.7:1 for white
+                    // labels over bright art (WCAG 1.4.3). Not re-measured on device.
+                    value > 0 ? Color.white.opacity(0.91) : Color.black.opacity(0.6),
                     in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                 )
                 .foregroundStyle(value > 0 ? Color.black.opacity(0.9) : Color.white)

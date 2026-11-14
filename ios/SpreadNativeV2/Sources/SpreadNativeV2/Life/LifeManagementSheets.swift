@@ -115,7 +115,6 @@ struct LifeManageSheet: View {
         saving = true
         defer { saving = false }
         if await planner.send(["type": "removeLifeRole", "roleId": roleId]) {
-            LifeFeedback.accepted()
             dismiss()
         }
     }
@@ -130,7 +129,6 @@ struct LifeManageSheet: View {
                               expectedRevision: revision) {
             revision = planner.state?.revision
             hoursSaved = true
-            LifeFeedback.accepted()
         }
     }
 
@@ -141,7 +139,7 @@ struct LifeManageSheet: View {
         if await planner.send(["type": "editLifeRole", "roleId": roleId,
                                "name": name.trimmingCharacters(in: .whitespacesAndNewlines),
                                "color": color, "category": category], expectedRevision: revision) {
-            LifeFeedback.accepted(); dismiss()
+            dismiss()
         }
     }
 }
@@ -164,7 +162,7 @@ struct LifeDeleteSheet: View {
                     saving = true
                     Task {
                         if await planner.send(["type": "removeLifeRole", "roleId": roleId]) {
-                            LifeFeedback.accepted(); dismiss()
+                            dismiss()
                         }
                         saving = false
                     }
@@ -224,7 +222,7 @@ struct LifeReserveSheet: View {
                 let ok: Bool
                 if let allocation { ok = await planner.setAllocationHours(allocation, to: value) }
                 else { ok = await planner.placeHours(roleId: roleId, day: day, hours: value) }
-                if ok { LifeFeedback.accepted() }
+                _ = ok
             }
         }.disabled(planner.busy)
     }
@@ -283,7 +281,7 @@ struct LifePrioritySheet: View {
                             Task {
                                 defer { working = false }
                                 if await planner.send(["type": "setLifePriority", "priorityRoleId": NSNull()]) {
-                                    LifeFeedback.accepted(); dismiss()
+                                    dismiss()
                                 }
                             }
                         }.disabled(working)
@@ -292,7 +290,7 @@ struct LifePrioritySheet: View {
                 if let error = planner.error { Text(error).foregroundStyle(Spread.danger) }
             }.spreadListSurface()
             .navigationTitle("Weekly priority").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() }.disabled(working) } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(working) } }
         }
         .task {
             if let snapshot = planner.snapshot {
@@ -323,7 +321,7 @@ struct LifePrioritySheet: View {
         working = true
         defer { working = false }
         if await planner.send(["type": "setLifePriority", "priorityRoleId": roleId, "goalHours": goal, "day": day]) {
-            LifeFeedback.accepted(); dismiss()
+            dismiss()
         }
     }
     private func apply() async {
