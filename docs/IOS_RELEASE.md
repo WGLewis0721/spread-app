@@ -37,12 +37,12 @@ This feature adds no accounts, analytics, remote polling, or planner writes.
 | Bundle ID | `com.graymatter.spread` |
 | Display name | Spread |
 | Version / build | 1.0 / 1 (raise the build number for every upload) |
-| Devices | iPhone only, portrait only today. Target for 1.0: iPhone + iPad, all orientations (see ICLOUD_PLAN.md) |
-| Minimum iOS | 15.0 today. Target for 1.0: 17.0 (`CKSyncEngine`) |
+| Devices | iPhone only (OD20). Every target sets `TARGETED_DEVICE_FAMILY = 1`. Portrait and both landscape orientations, as Info.plist declares. Corrected 2026-11-14; the iPad target is withdrawn |
+| Minimum iOS | 17.0 in every target (`IPHONEOS_DEPLOYMENT_TARGET`). Corrected 2026-11-14 |
 | Signing | Automatic, no team set in the repo (you choose it in Xcode) |
 | Encryption | `ITSAppUsesNonExemptEncryption = NO` (HTTPS and OS crypto only) |
 | App icon | `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`, from `public/icons/app-icon-spread-cards-square.svg` |
-| Privacy manifest | `ios/App/App/PrivacyInfo.xcprivacy` (no tracking, no collected data) |
+| Privacy manifest | `ios/App/App/PrivacyInfo.xcprivacy` (no tracking, no collected data). Audited 2026-11-14; the widget extension has no manifest yet. See [release/PRIVACY_MANIFEST_AUDIT.md](release/PRIVACY_MANIFEST_AUDIT.md) |
 
 ## What the installed app does differently from the website
 

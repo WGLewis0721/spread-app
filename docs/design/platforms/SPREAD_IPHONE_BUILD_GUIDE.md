@@ -233,10 +233,10 @@ Browser checks (Chromium, Playwright): 390 wide, light and dark, reduced motion,
 ## 10. Open items
 
 - Haptic pattern: decided 2026-11-14. Keep the light impact, fired only when a task is completed ([finalize plan](../specs/2026-11-14-publish-finalize-plan.md), OD2). An in-app haptics switch is still open.
-- Privacy manifest audit not done.
+- Privacy manifest: the app manifest was audited on 2026-11-14 and corrected (system boot time and App Group defaults). The widget extension still has no manifest, and the camera purpose string is an owner decision. See [../../release/PRIVACY_MANIFEST_AUDIT.md](../../release/PRIVACY_MANIFEST_AUDIT.md).
 - Dynamic Type: decided 2026-11-14. Native SwiftUI honours the system text size ([finalize plan](../specs/2026-11-14-publish-finalize-plan.md), OD10).
 - Health role color: decided 2026-11-14. Teal `#30B0C7` everywhere ([finalize plan](../specs/2026-11-14-publish-finalize-plan.md), OD21).
-- Xcode 27.1 final or beta status.
+- Xcode 27.1 final or beta status. `codemagic.yaml` pins `xcode: 27.1` for the upload workflow. Confirm it is a released Xcode before any upload.
 
 ---
 
