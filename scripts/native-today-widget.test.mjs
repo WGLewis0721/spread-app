@@ -449,18 +449,30 @@ test("stale widget and island buttons cannot mutate a replacement focus session"
 });
 
 
-test("ActivityKit refreshes finish before app-process widget intents return", () => {
+test("Apple's timer flow commits before perform returns; ActivityKit never blocks a widget redraw", () => {
   assert.match(focusController, /private static var pendingWork: Task<Void, Never>\?/);
   assert.match(focusController, /await prior\?\.value/);
-  assert.match(focusController, /static func awaitSettled\(\) async/);
-  assert.match(focusController, /await pendingWork\?\.value/);
   assert.match(focusController, /session\.id == requested\.id/);
   assert.match(focusController, /current\.id == requested\.id/);
   assert.match(focusController, /await activity\.update\(content\(for: current\)\)/);
-  const writes = [...focusControls.matchAll(/SpreadFocusControls\.apply\([^\n]+\)\s+await SpreadFocusLiveActivityController\.awaitSettled\(\)/g)];
-  assert.equal(writes.length, 9, "all focus intent transitions must await their queued ActivityKit update");
+  assert.doesNotMatch(focusController, /func awaitSettled/);
+  assert.doesNotMatch(focusControls, /await SpreadFocusLiveActivityController\.awaitSettled/);
+  // The intent saves state, then returns. WidgetKit triggers its own reload after perform().
+  const intentTypes = [
+    "StartSpreadBlockIntent", "StartSpreadFocusIntent", "SetSpreadFocusPlayingIntent",
+    "PauseSpreadFocusIntent", "ResumeSpreadFocusIntent",
+    "ForwardSpreadFocusIntent", "StopSpreadFocusIntent", "CancelSpreadFocusIntent",
+  ];
+  for (const name of intentTypes) {
+    const start = focusControls.indexOf("struct " + name + ": ");
+    assert.ok(start >= 0, name + " must exist");
+    const end = focusControls.indexOf("\nstruct ", start + 1);
+    const intent = focusControls.slice(start, end < 0 ? undefined : end);
+    assert.match(intent, /SpreadFocusControls\.apply\(/, name + " must persist its action");
+    assert.match(intent, /return \.result\(\)/, name + " must finish promptly");
+    assert.doesNotMatch(intent, /await /, name + " must not block on ActivityKit");
+  }
 });
-
 
 test("a widget action updates the visible in-app timer without waiting for the polling fallback", () => {
   assert.match(focusControls, /static let didChange = Notification\.Name\("SpreadFocusSessionChanged"\)/);
