@@ -382,7 +382,7 @@ These are real findings. Each step fails until its wave-3 change lands. OD28 to 
 
 ## 3. Not covered by this script
 
-- **iPad.** Out of scope for 1.0 under OD20. The build still targets iPad, so record the result in the release checklist (X1).
+- **iPad.** The iPhone-focused polish script is not full iPad QA. Universal device-family support is required by the existing App Store identity; test basic iPad usability through the release checklist before upload.
 - **Backup and restore.** Excluded from polish. Use the physical checklist in `docs/IOS_RELEASE.md` (items 4 and 5) before any upload.
 - **iCloud, sync and Studio.** Excluded by the Spread boundaries.
 - **Landing page.** Covered by the lane E captures and reduced-motion checks (`evidence/landing/`).

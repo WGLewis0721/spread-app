@@ -164,3 +164,9 @@ Wave 2 merged as #216 to #221, and `main` passes CI and the combined Swift type-
 After wave 3: a Codemagic TestFlight build of `main`, the device script (`finalize/DEVICE_TEST_SCRIPT.md`) on a physical iPhone, a correction record and a targeted fix for anything that fails, and only then a GO.
 
 Status (2026-11-14, 10:10 UTC): W3-1 (#223), W3-3 (#224) and W3-2 (#225) are merged. W3-2 stopped at the account's 5-hour usage limit before three clean-ups, which ship as a follow-up: delete `RoleDeleteConfirm`, its `.confirmDeleteRole` cases and the `onDeleteRole:` / `onOpenRole:` call-site arguments; delete `CrownTravel.swift`, `DialGeometry.swift` and the package tests that pin them. W3-5 (#228) merges `main` first (it conflicts with #229 in the timer widget). W3-4 (#227) holds the approved spec (OD34) and builds the overdue sheet.
+
+## 2026-11-14 correction — Apple error 90101 after build #73
+
+Build #72 (commit `86ceb2482baa79783e79bc939470a989315fe12f`) targeted `TARGETED_DEVICE_FAMILY = "1,2"` for app, widget and UI-test configurations. PR #223 enforced `1` in build #73; App Store Connect rejected the update with error 90101 (removal of previously supported devices). **The iPhone-only binary restriction in OD20, OD28, OD35 and wave W3-1 is superseded for this existing App Store identity**, not erased from the historical decision record.
+
+Keep the iPhone-first product design, but retain the existing iPad compatibility: universal build targets, previous four iPad orientations, static preflight that rejects `UIDeviceFamily = [1]`, and basic iPad functionality checks. This is a release compatibility correction, not an iPad redesign or approval of iCloud. PR #230's Pomodoro changes remain untouched. The next signed Codemagic IPA must be inspected for `UIDeviceFamily = [1, 2]` before attempting upload; hardware QA and owner authorization are still separate gates.

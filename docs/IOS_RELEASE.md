@@ -37,7 +37,7 @@ This feature adds no accounts, analytics, remote polling, or planner writes.
 | Bundle ID | `com.graymatter.spread` |
 | Display name | Spread |
 | Version / build | 1.0 / 1 (raise the build number for every upload) |
-| Devices | iPhone only for 1.0 (owner decision OD20/OD28: `TARGETED_DEVICE_FAMILY = 1` in every target, no iPad orientation keys; the preflight enforces it). The earlier iPhone + iPad target in ICLOUD_PLAN.md is superseded. |
+| Devices | iPhone and iPad (`TARGETED_DEVICE_FAMILY = "1,2"`). Build #73 was rejected by Apple (90101) after the iPhone-only change in PR #223; restored to the accepted build #72 device-family contract. iPhone-first UI; iPad compatibility requires device QA. |
 | Minimum iOS | 15.0 today. Target for 1.0: 17.0 (`CKSyncEngine`) |
 | Signing | Automatic, no team set in the repo (you choose it in Xcode) |
 | Encryption | `ITSAppUsesNonExemptEncryption = NO` (HTTPS and OS crypto only) |
@@ -156,9 +156,7 @@ appear because the plist answers it.
 
 ## iCloud and iPad: what has been checked, and what has not
 
-> **Superseded for 1.0 (owner decisions OD20 and OD28):** Spread 1.0 is iPhone only, so the iPad checks below
-> do not apply to the 1.0 candidate. iCloud stays suspended and nothing may claim it works. This section is kept
-> as history.
+> **Device-family correction (2026-11-14):** Apple error 90101 requires restoring iPhone + iPad compatibility for the existing app identity; OD20/OD28's iPhone-only binary restriction is superseded. The device checks below remain relevant for compatible iPads. iCloud stays suspended and nothing may claim it works. Historical CI evidence below does not certify this new candidate.
 
 Flags: both iCloud features are off in a normal build. To test them, build with
 `VITE_SPREAD_CLOUD_BACKUP=1 VITE_SPREAD_CLOUD_SYNC=1 npm run ios:sync`. To ship them, change the
