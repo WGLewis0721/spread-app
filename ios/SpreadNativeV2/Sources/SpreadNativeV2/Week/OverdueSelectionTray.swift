@@ -50,8 +50,8 @@ struct OverdueSelectionTray: View {
                             else { selection.insert(item.id) }
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: selection.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(.title3)).foregroundStyle(Spread.accent)
+                                SpreadIcon(name: selection.contains(item.id) ? "lucide-circle-check" : "lucide-circle", size: 22)
+                                    .foregroundStyle(Spread.accent)
                                     .frame(width: 40, height: 44)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.task.text).font(.system(.subheadline))
@@ -96,7 +96,7 @@ struct OverdueSelectionTray: View {
                 Button {
                     Task { await preparePreview() }
                 } label: {
-                    Label("Review reschedule", systemImage: "calendar.badge.clock")
+                    Label { Text("Review reschedule") } icon: { SpreadIcon(name: "lucide-calendar-clock", size: 18) }
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .foregroundStyle(Spread.accent)
                         .spreadChip(selected: true)
@@ -129,7 +129,7 @@ struct OverdueSelectionTray: View {
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
                     ForEach(preview) { item in
                         HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: item.eligible ? "checkmark.circle" : "exclamationmark.circle")
+                            SpreadIcon(name: item.eligible ? "lucide-circle-check" : "lucide-x", size: 20)
                                 .foregroundStyle(item.eligible ? Spread.accent : Spread.caution)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(rows.first(where: { $0.id == item.taskId })?.task.text ?? "Task")

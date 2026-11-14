@@ -267,7 +267,7 @@ struct WeekFocusSurface: View {
                     if sidebarHidden { sidebarExpanded = false }
                     SpreadHaptics.selection()
                 } label: {
-                    Image(systemName: sidebarHidden ? "sidebar.squares.left" : "sidebar.left")
+                    SpreadIcon(name: "lucide-panel-left", size: 20)
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel(sidebarHidden ? "Show responsibilities" : "Hide responsibilities")
@@ -312,8 +312,7 @@ struct WeekFocusSurface: View {
                                                    height: role.id == activeRole ? 6 : 4)
                                     }
                                     if let activeRole, isComplete(roleId: activeRole, on: iso) {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 7, weight: .bold))
+                                        SpreadIcon(name: "icon-check", size: 9)
                                             .foregroundStyle(Spread.accent)
                                     }
                                 }

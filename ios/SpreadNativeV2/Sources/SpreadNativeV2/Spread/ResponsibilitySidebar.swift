@@ -77,8 +77,7 @@ struct ResponsibilitySidebar: View {
             .accessibilityIdentifier("sidebar-add-role")
 
             Button(action: onToggle) {
-                Image(systemName: expanded ? "chevron.left.2" : "chevron.right.2")
-                    .font(.system(.subheadline, weight: .semibold))
+                SpreadIcon(name: expanded ? "lucide-chevron-left" : "lucide-chevron-right", size: 18)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .frame(width: horizontal ? 44 : nil)
             }

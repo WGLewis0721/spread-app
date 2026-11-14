@@ -21,7 +21,7 @@ struct MonthQuickAddSheet: View {
         SpreadSheetStack {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 8) {
-                    Image(systemName: "calendar.badge.plus")
+                    SpreadIcon(name: "lucide-calendar-plus", size: 20)
                         .foregroundStyle(Spread.accent)
                     Text(PlannerDates.label(PlannerDates.date(day), pattern: "EEEE, MMMM d"))
                         .font(.system(.headline, weight: .semibold))

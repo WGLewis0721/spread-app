@@ -1055,7 +1055,7 @@ struct StackLayout: View {
     private func actionTray(for role: Responsibility) -> some View {
         HStack {
             if visibleSide(for: role.id) == .delete {
-                swipeAction("Delete", symbol: "trash.fill", id: "remove-role-\(role.id)", roleName: role.name, destructive: true) {
+                swipeAction("Delete", icon: "icon-trash", id: "remove-role-\(role.id)", roleName: role.name, destructive: true) {
                     guard editing else { return }
                     pendingDeleteId = role.id
                     SpreadHaptics.destructivePrompt()
@@ -1063,7 +1063,7 @@ struct StackLayout: View {
             }
             Spacer(minLength: 0)
             if visibleSide(for: role.id) == .manage {
-                swipeAction("Manage", symbol: "slider.horizontal.3", id: "manage-role-\(role.id)", roleName: role.name, destructive: false) {
+                swipeAction("Manage", icon: "lucide-sliders-horizontal", id: "manage-role-\(role.id)", roleName: role.name, destructive: false) {
                     manage(role.id)
                 }
             }
@@ -1075,7 +1075,7 @@ struct StackLayout: View {
 
     private func swipeAction(
         _ title: String,
-        symbol: String,
+        icon: String,
         id: String,
         roleName: String,
         destructive: Bool,
@@ -1083,7 +1083,7 @@ struct StackLayout: View {
     ) -> some View {
         Button(action: action) {
             VStack(spacing: 3) {
-                Image(systemName: symbol).font(.system(.title3, weight: .semibold))
+                SpreadIcon(name: icon, size: 20)
                 Text(title).font(.system(.caption2, weight: .semibold))
             }
             .foregroundStyle(destructive ? Spread.onDanger : Spread.onAccent)
