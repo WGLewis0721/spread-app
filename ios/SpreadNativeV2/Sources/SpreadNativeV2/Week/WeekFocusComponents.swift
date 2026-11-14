@@ -31,15 +31,19 @@ struct FocusedTaskRow: View {
             .buttonStyle(.plain)
             .accessibilityLabel(task.done ? "Mark \(task.text) incomplete" : "Complete \(task.text)")
             Button { showActions = true } label: {
-                Text(task.text.isEmpty ? "Untitled task" : task.text)
-                    .font(.system(.subheadline))
-                    .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
-                    .strikethrough(task.done)
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .multilineTextAlignment(.leading)
-                    .contentShape(Rectangle())
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if task.important == true { TaskPriorityMark() }
+                    Text(task.text.isEmpty ? "Untitled task" : task.text)
+                        .font(.system(.subheadline))
+                        .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
+                        .strikethrough(task.done)
+                        .multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityValue(task.done ? "Completed" : "Open")
             .accessibilityHint("Complete, Reschedule, Edit, or Delete")
             .accessibilityActions {
                 if let onMoveUp { Button("Move up", action: onMoveUp) }
@@ -156,9 +160,9 @@ struct FocusedQuickAdd: View {
         }
         .confirmationDialog("Schedule this task?", isPresented: $wantsHours, titleVisibility: .visible) {
             Button("Add 30 minutes to this day") { Task { await allocateAndSchedule() } }
-            Button("Keep in To Place", role: .cancel) { pendingTaskId = nil }
+            Button("Keep in To place", role: .cancel) { pendingTaskId = nil }
         } message: {
-            Text("No time has been allocated to this responsibility on the selected day. The task has been saved to To Place.")
+            Text("No time has been allocated to this responsibility on the selected day. The task has been saved to To place.")
         }
     }
 
@@ -290,7 +294,7 @@ struct FocusedRoleCard: View {
             }
             if showHours {
                 if let first = allocations.first {
-                    HourStepper(value: first.hours, label: "\(role.name) on \(day)", step: 0.5) { amount in
+                    HourStepper(value: first.hours, label: "\(role.name) on \(PlannerDates.label(PlannerDates.date(day), pattern: "EEEE"))", step: 0.5) { amount in
                         Task { await planner.setAllocationHours(first, to: amount) }
                     }
                 } else {

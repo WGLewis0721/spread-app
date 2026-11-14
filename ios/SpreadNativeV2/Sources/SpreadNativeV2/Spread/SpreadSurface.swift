@@ -58,7 +58,7 @@ struct SpreadSurface: View {
         let status = WeeklyHourStatus(snapshot: snapshot)
         let spoken = "\(SpreadHours.spoken(status.remaining)) remaining to plan, " +
             "\(SpreadHours.spoken(status.scheduled)) scheduled across \(status.spreadCount) " +
-            (status.spreadCount == 1 ? "spread" : "spreads") +
+            (status.spreadCount == 1 ? "responsibility" : "responsibilities") +
             (status.overbooked > 0 ? ", \(SpreadHours.spoken(status.overbooked)) overbooked" : "")
 
         return VStack(alignment: .leading, spacing: 0) {
@@ -124,7 +124,7 @@ struct SpreadSurface: View {
             summaryIcon
             VStack(alignment: .leading, spacing: 2) {
                 summaryTitle(status).fixedSize(horizontal: true, vertical: false)
-                Text("Across \(status.spreadCount) \(status.spreadCount == 1 ? "spread" : "spreads")")
+                Text("Across \(status.spreadCount) \(status.spreadCount == 1 ? "responsibility" : "responsibilities")")
                     .font(.system(.caption))
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: true, vertical: false)
@@ -156,7 +156,7 @@ struct SpreadSurface: View {
             summaryIcon
             VStack(alignment: .leading, spacing: 3) {
                 summaryTitle(status)
-                Text("Across \(status.spreadCount) \(status.spreadCount == 1 ? "spread" : "spreads")")
+                Text("Across \(status.spreadCount) \(status.spreadCount == 1 ? "responsibility" : "responsibilities")")
                     .font(.system(.caption))
                     .foregroundStyle(Spread.secondary)
                 Text("\(SpreadHours.text(status.scheduled))h scheduled · \(SpreadHours.text(status.remaining))h remaining")
@@ -246,10 +246,13 @@ struct SpreadSurface: View {
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.secondary)
             }
-            if totalHours > 45 || status.overbooked > 0 {
-                Text(status.overbooked > 0
-                     ? "Your week has more scheduled hours than its spread budgets."
-                     : "If the hours don’t fit, something is lying.")
+            // Two truthful cases: over budget (OD12), or a heavy week that is not over budget yet.
+            if status.overbooked > 0 {
+                Text("These hours don't fit in your week. Remove some or raise your weekly hours.")
+                    .font(Spread.footnote)
+                    .foregroundStyle(Spread.caution)
+            } else if totalHours > 45 {
+                Text("That's a full week. Check that the hours still fit.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.caution)
             }
@@ -300,8 +303,8 @@ struct SpreadSurface: View {
             HStack(spacing: 12) {
                 SpreadIcon(name: "icon-new-life", size: 32, original: true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("New Spread").font(.system(.body, weight: .semibold))
-                    Text("Make your own spreads.").font(Spread.footnote).foregroundStyle(Spread.secondary)
+                    Text("Add responsibility").font(.system(.body, weight: .semibold))
+                    Text("Make your own responsibilities.").font(Spread.footnote).foregroundStyle(Spread.secondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -571,9 +574,9 @@ struct RoleRow: View {
                             context: "\(planner.state?.envelope.profileId ?? "")/\(snapshot.weekKey)/\(role.id)",
                             onScrub: { hours, revision in
                     await planner.send(["type": "setHours", "roleId": role.id, "hours": hours],
-                                       completionHaptic: true, expectedRevision: revision)
+                                       completionHaptic: false, expectedRevision: revision)
                 }) { hours in
-                    Task { _ = await planner.send(["type": "setHours", "roleId": role.id, "hours": hours], completionHaptic: true) }
+                    Task { _ = await planner.send(["type": "setHours", "roleId": role.id, "hours": hours], completionHaptic: false) }
                 }
                 Button("Done") {
                     withAnimation(reduceMotion ? nil : SpreadMotion.press) { adjusting = false }
@@ -648,7 +651,7 @@ struct RoleRow: View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { name = role.name; return }
         guard trimmed != role.name else { return }
-        Task { await planner.send(["type": "renameRole", "roleId": role.id, "name": trimmed], completionHaptic: true) }
+        Task { await planner.send(["type": "renameRole", "roleId": role.id, "name": trimmed], completionHaptic: false) }
     }
 }
 
@@ -702,7 +705,7 @@ struct PalettePanel: View {
             FlowRow(spacing: 4) {
                 ForEach(Self.colors, id: \.self) { color in
                     Button {
-                        Task { await planner.send(["type": "setRoleColor", "roleId": role.id, "color": color], completionHaptic: true) }
+                        Task { await planner.send(["type": "setRoleColor", "roleId": role.id, "color": color], completionHaptic: false) }
                     } label: {
                         Circle().fill(Color(hex: color)).frame(width: 28, height: 28)
                             .overlay(Circle().stroke(Spread.ink, lineWidth: role.color.lowercased() == color.lowercased() ? 2 : 0).padding(-4))
@@ -720,7 +723,7 @@ struct PalettePanel: View {
                 ForEach(Self.categories, id: \.id) { item in
                     let selected = role.category == item.id
                     Button {
-                        Task { await planner.send(["type": "setRoleCategory", "roleId": role.id, "category": item.id], completionHaptic: true) }
+                        Task { await planner.send(["type": "setRoleCategory", "roleId": role.id, "category": item.id], completionHaptic: false) }
                     } label: {
                         RoleBadge(category: item.id, color: role.color, size: 32)
                             .frame(width: 44, height: 44)
@@ -782,6 +785,7 @@ struct TaskRow: View {
 
             Button(action: onOpen) {
                 HStack(spacing: 8) {
+                    if task.important == true { TaskPriorityMark() }
                     Text(task.text.isEmpty ? "Untitled task" : task.text)
                         .font(.system(.body))
                         .strikethrough(task.done)
@@ -799,7 +803,7 @@ struct TaskRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(task.text.isEmpty ? "Untitled task" : task.text)
+            .accessibilityLabel((task.important == true ? "High priority, " : "") + (task.text.isEmpty ? "Untitled task" : task.text))
             .accessibilityIdentifier("task-row-\(task.id)")
 
             if isToday && !task.done {
@@ -1055,7 +1059,7 @@ struct StackLayout: View {
     private func actionTray(for role: Responsibility) -> some View {
         HStack {
             if visibleSide(for: role.id) == .delete {
-                swipeAction("Delete", symbol: "trash.fill", id: "remove-role-\(role.id)", roleName: role.name, destructive: true) {
+                swipeAction("Delete", icon: "icon-trash", id: "remove-role-\(role.id)", roleName: role.name, destructive: true) {
                     guard editing else { return }
                     pendingDeleteId = role.id
                     SpreadHaptics.destructivePrompt()
@@ -1063,7 +1067,7 @@ struct StackLayout: View {
             }
             Spacer(minLength: 0)
             if visibleSide(for: role.id) == .manage {
-                swipeAction("Manage", symbol: "slider.horizontal.3", id: "manage-role-\(role.id)", roleName: role.name, destructive: false) {
+                swipeAction("Manage", icon: "lucide-sliders-horizontal", id: "manage-role-\(role.id)", roleName: role.name, destructive: false) {
                     manage(role.id)
                 }
             }
@@ -1075,7 +1079,7 @@ struct StackLayout: View {
 
     private func swipeAction(
         _ title: String,
-        symbol: String,
+        icon: String,
         id: String,
         roleName: String,
         destructive: Bool,
@@ -1083,7 +1087,7 @@ struct StackLayout: View {
     ) -> some View {
         Button(action: action) {
             VStack(spacing: 3) {
-                Image(systemName: symbol).font(.system(.title3, weight: .semibold))
+                SpreadIcon(name: icon, size: 20)
                 Text(title).font(.system(.caption2, weight: .semibold))
             }
             .foregroundStyle(destructive ? Spread.onDanger : Spread.onAccent)

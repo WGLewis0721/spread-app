@@ -53,7 +53,7 @@ struct WeekSurface: View {
             // The caption and the role bubbles sit outside the swipe region: the bubble strip scrolls sideways,
             // and a sideways scrub there must scroll the strip, never change the week.
             VStack(alignment: .leading, spacing: 16) {
-                Text("Drag a spread onto a day, or tap one, then add it.")
+                Text("Drag a responsibility onto a day, or tap one, then add it.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.secondary)
                     .padding(.horizontal, 4)
@@ -66,6 +66,9 @@ struct WeekSurface: View {
             // The swipe region. The gesture is measured on this fixed wrapper while the content inside follows the
             // finger, so the drag never feeds back into itself: 64 points of travel is 64 points, on the first touch.
             VStack(alignment: .leading, spacing: 16) {
+                if !snapshot.allocations.contains(where: { $0.hours > 0 }) {
+                    emptyWeek
+                }
                 freeTime
                 if showsTray {
                     ToPlaceTray(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask)
@@ -145,6 +148,26 @@ struct WeekSurface: View {
             .padding(.vertical, 4)
         }
         .scrollIndicators(.hidden)
+    }
+
+    // MARK: Empty week
+
+    /// Nothing is placed on any day yet. One designed card says what to do next, instead of seven blank day cards.
+    private var emptyWeek: some View {
+        VStack(spacing: 10) {
+            SpreadIcon(name: "lucide-calendar-plus", size: 24)
+                .foregroundStyle(Spread.secondary)
+            Text("Nothing planned this week")
+                .font(.system(.headline, weight: .semibold))
+            Text("Pick a responsibility above, then tap Add on a day. Hours you place show up here.")
+                .font(Spread.footnote).foregroundStyle(Spread.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(16)
+        .spreadCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("week-nothing-planned")
     }
 
     // MARK: Free time (`FreeTimeChip`)
@@ -370,6 +393,8 @@ struct DayCard: View {
         snapshot.allocations.filter { $0.day == day }.sorted { $0.order < $1.order }
     }
     private var selectedName: String? { snapshot.roles.first { $0.id == selectedRole }?.name }
+    /// While the empty-week card shows, the day cards do not repeat "Nothing planned" (owner decision OD13).
+    private var weekHasHours: Bool { snapshot.allocations.contains { $0.hours > 0 } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -378,7 +403,7 @@ struct DayCard: View {
                     .font(.system(.body, weight: .semibold))
                     .accessibilityAddTraits(isToday ? .isHeader : [])
                 if isToday {
-                    Text("Today").font(.system(.caption, weight: .semibold)).foregroundStyle(Spread.ink)
+                    Text("Today").font(.system(.caption, weight: .semibold)).foregroundStyle(Spread.accent)
                 }
                 Spacer()
                 Text(PlannerDates.label(PlannerDates.date(day), pattern: "MM/dd"))
@@ -387,7 +412,13 @@ struct DayCard: View {
             .padding(.horizontal, 4)
             .frame(minHeight: allocations.isEmpty && selectedRole == nil ? 28 : 0)
             .accessibilityElement(children: .combine)
-            .accessibilityValue(allocations.isEmpty ? "Nothing planned" : "")
+
+            // A day with no hours says so on the card itself, not only to VoiceOver, unless the whole week is empty.
+            if allocations.isEmpty && weekHasHours {
+                Text("Nothing planned")
+                    .font(Spread.footnote).foregroundStyle(Spread.secondary)
+                    .padding(.horizontal, 4)
+            }
 
             if !allocations.isEmpty {
             VStack(spacing: 8) {
@@ -460,6 +491,7 @@ struct AllocationRow: View {
 
     @State private var showTasks = false
     @State private var leaving = false
+    @State private var showMoveDay = false
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -480,6 +512,11 @@ struct AllocationRow: View {
                         .draggable(SpreadDragPayload.allocation(id: allocation.id, roleId: role.id, label: role.name))
                         .accessibilityLabel("Move \(role.name)")
                         .accessibilityIdentifier("allocation-\(allocation.id)")
+                        // The tap and VoiceOver path to the same move as the drag: long press, or the Move action.
+                        .contextMenu {
+                            Button("Move to another day") { showMoveDay = true }
+                        }
+                        .accessibilityAction(named: "Move to another day") { showMoveDay = true }
 
                     if typeSize.isAccessibilitySize && tasks.isEmpty {
                         Spacer(minLength: 0)
@@ -514,10 +551,10 @@ struct AllocationRow: View {
                         context: "\(planner.state?.envelope.profileId ?? "")/\(snapshot.weekKey)/\(allocation.id)",
                         onScrub: { hours, revision in
                             await planner.send(["type": "allocationHours", "allocationId": allocation.id, "hours": hours],
-                                               completionHaptic: true, expectedRevision: revision)
+                                               completionHaptic: false, expectedRevision: revision)
                         },
                         onChange: { hours in
-                            Task { if await planner.setAllocationHours(allocation, to: hours) { SpreadHaptics.completed() } }
+                            Task { _ = await planner.setAllocationHours(allocation, to: hours) }
                         }
                     )
 
@@ -563,7 +600,69 @@ struct AllocationRow: View {
                 }
                 return true
             } isTargeted: { _ in }
+            .sheet(isPresented: $showMoveDay) {
+                MoveAllocationSheet(planner: planner, allocation: allocation, roleName: role.name, weekKey: snapshot.weekKey)
+            }
         }
+    }
+}
+
+/// Moves one responsibility's hours to another day of the same week, without dragging. Only this allocation moves,
+/// and only to a day of this week. It is one store command; the planner's Undo notice follows it.
+struct MoveAllocationSheet: View {
+    @ObservedObject var planner: LivePlanner
+    let allocation: DayAllocation
+    let roleName: String
+    let weekKey: String
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var otherDays: [String] {
+        (0..<7).map { PlannerDates.dayISO(weekKey: weekKey, index: $0) }.filter { $0 != allocation.day }
+    }
+
+    var body: some View {
+        SpreadSheetStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("\(roleName), \(SpreadHours.text(allocation.hours))h. Choose another day this week.")
+                        .font(Spread.footnote).foregroundStyle(Spread.secondary)
+                        .padding(.bottom, 4)
+                    ForEach(otherDays, id: \.self) { iso in
+                        Button {
+                            Task {
+                                if await planner.send(["type": "moveAllocation", "allocationId": allocation.id, "day": iso]) { dismiss() }
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE"))
+                                    .font(.system(.headline, weight: .semibold))
+                                Spacer(minLength: 8)
+                                Text(PlannerDates.label(PlannerDates.date(iso), pattern: "MMM d"))
+                                    .font(Spread.footnote).foregroundStyle(Spread.secondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity, minHeight: 56)
+                            .spreadCard()
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.spreadPress)
+                        .accessibilityIdentifier("move-day-\(iso)")
+                    }
+                }
+                .padding(16)
+            }
+            .navigationTitle("Move to day")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier("move-day-cancel")
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .accessibilityIdentifier("move-day-sheet")
     }
 }
 
