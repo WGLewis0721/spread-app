@@ -385,7 +385,7 @@ struct LifeHoursView: View {
 
     private func selectionTick() {
         guard cueGate.tick(at: ProcessInfo.processInfo.systemUptime, enabled: touchFeedback) else { return }
-        SpreadHaptics.selection()
+        LifeFeedback.selection()
     }
     private func warn(_ text: String) {
         message = text
@@ -464,7 +464,7 @@ struct LifeHoursView: View {
     private func beginContext() {
         gestureContext = context
         originRevision = planner.state?.revision
-        cueGate.reset(); SpreadHaptics.prepare()
+        cueGate.reset(); LifeFeedback.prepare()
     }
     private func advanceClock(_ now: Date) {
         let elapsed = max(0, min(0.1, now.timeIntervalSince(phaseTime)))

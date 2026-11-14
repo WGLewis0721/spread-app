@@ -7,13 +7,12 @@ enum LifeDestination: String, CaseIterable, Identifiable {
     var icon: String { self == .life ? "icon-spread-list" : self == .hours ? "icon-rollover" : "icon-week" }
 }
 private enum LifeLocalSheet: Identifiable {
-    case manage(String), reserve(String), priority(String), addTask, help
+    case manage(String), reserve(String), priority(String), help
     var id: String {
         switch self {
         case .manage(let id): return "manage-" + id
         case .reserve(let id): return "reserve-" + id
         case .priority(let id): return "priority-" + id
-        case .addTask: return "add-task"
         case .help: return "help"
         }
     }
@@ -24,10 +23,12 @@ struct LifeRoot: View {
     @ObservedObject var planner: LivePlanner
     @ObservedObject var focusTimer: SpreadFocusTimer
     let onMore: () -> Void
-    let onOpenRole: (String) -> Void
+    // Life never calls these two (review X7, OD30). They are `var` with no-op defaults so the Classic
+    // call site in Shell/SpreadLiveRoot.swift still compiles; its arguments are removed in a later wave.
+    var onOpenRole: (String) -> Void = { _ in }
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
-    let onDeleteRole: (String) -> Void
+    var onDeleteRole: (String) -> Void = { _ in }
     @AccessibilityFocusState private var navigationFocused: Bool
     @AccessibilityFocusState private var openerFocused: Bool
     @State private var destination: LifeDestination = .life
@@ -56,7 +57,6 @@ struct LifeRoot: View {
     @State private var preferredFocusRoleId: String?
     /// A Life card a widget asked to open. It waits for today's week to be on screen, then focuses.
     @State private var pendingWidgetCard: String?
-    @State private var pendingTask: (role: String, task: String)?
     // The Crown position setting is retired (owner decision, 2026-11-11): the tray always opens from the leading edge.
     private let crownRight = true
     @AppStorage("native.life.navigationExpanded") private var navigationExpanded = false
@@ -172,7 +172,7 @@ struct LifeRoot: View {
         // (nil to loaded) is not a change, so a selection made before it survives.
         .onChange(of: planner.state?.envelope.profileId) { old, _ in
             guard old != nil else { return }
-            focusedRole = nil; tasksOpen = false; budgetExpanded = false; localSheet = nil; pendingTask = nil
+            focusedRole = nil; tasksOpen = false; budgetExpanded = false; localSheet = nil
             hoursSelectedRole = nil; weekSelectedRole = nil
             if let id = planner.state?.envelope.profileId { focusTimer.pauseForProfileSwitch(to: id) }
         }
@@ -192,7 +192,7 @@ struct LifeRoot: View {
             navigationFocused = open
             if !open { openerFocused = true }
         }
-        .onChange(of: weekTick) { _, _ in SpreadHaptics.selection() }
+        .onChange(of: weekTick) { _, _ in LifeFeedback.selection() }
         .sheet(isPresented: $showFocusTimer) {
             if let snapshot = planner.snapshot, let profileId = planner.state?.envelope.profileId {
                 SpreadFocusTimerSheet(timer: focusTimer, profileId: profileId,
@@ -207,12 +207,7 @@ struct LifeRoot: View {
                     .preferredColorScheme(colorScheme)
             }
         }
-        .sheet(item: $localSheet, onDismiss: {
-            if let pending = pendingTask {
-                pendingTask = nil
-                onOpenTask(pending.role, pending.task)
-            }
-        }, content: sheetContent)
+        .sheet(item: $localSheet, content: sheetContent)
         .task(id: planner.state?.revision) {
             guard planner.undoId != nil || planner.redoId != nil else {
                 withAnimation(reduceMotion ? .easeOut(duration: 0.12) : SpreadMotion.historyExit) {
@@ -1033,23 +1028,6 @@ struct LifeRoot: View {
         case .reserve(let id): LifeReserveSheet(planner: planner, roleId: id)
         case .priority(let id): LifePrioritySheet(planner: planner, roleId: id)
         case .help: LifeGestureHelp()
-        case .addTask:
-            SpreadSheetStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: Spread.space4) {
-                        ForEach(planner.snapshot?.roles ?? []) { role in
-                            Text(role.name).font(.headline)
-                            LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: { role, task in
-                                pendingTask = (role, task)
-                                localSheet = nil
-                            })
-                        }
-                        if planner.snapshot?.roles.isEmpty == true {
-                            Button("Add Life") { localSheet = nil; onNewRole() }.frame(minHeight: Spread.minimumTarget)
-                        }
-                    }.padding()
-                }.navigationTitle("Add task")
-            }.presentationDragIndicator(.visible)
         }
     }
 }

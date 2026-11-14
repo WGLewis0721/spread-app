@@ -30,9 +30,12 @@ struct LifeWeeklyTimeBudget: View {
     private var positiveRoles: [Responsibility] { roles.filter { $0.hours > 0 } }
 
     var body: some View {
-        Group {
-            if compact { compactContent }
-            else { fullContent }
+        VStack(alignment: .leading, spacing: Spread.space2) {
+            Group {
+                if compact { compactContent }
+                else { fullContent }
+            }
+            overBudgetExplanation
         }
         .padding(.horizontal, compact ? Spread.space3 : Spread.space4)
         .padding(.vertical, Spread.space3)
@@ -40,6 +43,19 @@ struct LifeWeeklyTimeBudget: View {
         .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
             .strokeBorder(Spread.line, lineWidth: 1))
+    }
+
+    /// Life says "over budget" (OD32). When the week is over budget, the card explains why, in Classic's
+    /// quiet caution style with the OD12 sentence. It appears once, under the strip, in both layouts.
+    @ViewBuilder private var overBudgetExplanation: some View {
+        if hasCapacity && overBudget > 0 {
+            Text(LifeBudgetBarMath.overBudgetExplanation)
+                .font(Spread.footnote)
+                .foregroundStyle(Spread.caution)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("life-budget-over-explanation")
+        }
     }
 
     /// The compact card used on Life. It shows the same planner values as Hours, full width,
@@ -246,6 +262,9 @@ struct LifeWeeklyTimeBudget: View {
 /// Geometry is proportional to the *entire weekly capacity*, not just the
 /// hours already assigned. Never stretch small segments to fit text labels.
 enum LifeBudgetBarMath {
+    /// The explanation of an over-budget week (OD12). Classic shows the same sentence in SpreadSurface.
+    static let overBudgetExplanation = "These hours don't fit in your week. Remove some or raise your weekly hours."
+
     static func assigned(_ roles: [Responsibility]) -> Double {
         roles.reduce(0) { $0 + max(0, $1.hours) }
     }
