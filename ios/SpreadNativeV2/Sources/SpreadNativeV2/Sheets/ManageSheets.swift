@@ -1,7 +1,7 @@
 #if os(iOS)
 import SwiftUI
 
-/// New Spread (`NewLifeSheet`): one or more named spreads, each with its hours and an optional symbol.
+/// Add Life (`NewSpreadSheet`): one or more named Life areas, each with its hours and an optional symbol.
 /// "Save spreads" adds every named row through the store's `addRole`, one after another.
 struct NewSpreadSheet: View {
     @ObservedObject var planner: LivePlanner
@@ -485,7 +485,6 @@ struct MoreSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var showCalendarPicker = false
     @State private var showRecentlyDeleted = false
     @State private var showWhatsNew = false
     @State private var showReminders = false
@@ -592,23 +591,25 @@ struct MoreSheet: View {
                                     .accessibilityAddTraits(appearance == item ? .isSelected : [])
                                     .accessibilityIdentifier("appearance-" + item.rawValue)
                                 }
-                                Button { showCalendarPicker = true } label: {
+                                // A native Menu: the system checkmark marks the active design, so no label carries "(current)".
+                                Menu {
+                                    Section {
+                                        Picker("Calendar design", selection: $weekFocusEnabled) {
+                                            Text("Life").tag(true)
+                                            Text("Classic").tag(false)
+                                        }
+                                    } header: {
+                                        Text("Life uses the same tasks, hours and planning data. Choose Classic anytime to return.")
+                                    }
+                                } label: {
                                     SpreadIcon(name: "lucide-calendar-days", size: 20)
                                         .font(.system(.body, weight: .semibold))
                                         .foregroundStyle(Spread.accent)
                                         .frame(width: 44, height: 44)
                                         .contentShape(Rectangle())
                                 }
-                                .buttonStyle(.spreadPress)
                                 .accessibilityLabel(weekFocusEnabled ? "Calendar design: Life" : "Calendar design: Classic")
                                 .accessibilityIdentifier("calendar-design-picker")
-                                .confirmationDialog("Calendar design", isPresented: $showCalendarPicker, titleVisibility: .visible) {
-                                    Button("Classic (current)") { weekFocusEnabled = false }
-                                    Button("Life") { weekFocusEnabled = true }
-                                    Button("Cancel", role: .cancel) {}
-                                } message: {
-                                    Text("Life uses the same tasks, hours and planning data. Choose Classic anytime to return.")
-                                }
                             }
                             .padding(6)
                             .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
