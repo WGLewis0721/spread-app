@@ -12,7 +12,8 @@ public struct SpreadLiveRoot: View {
     @StateObject private var focusTimer = SpreadFocusTimer()
     let recovery: () -> Void
 
-    @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false
+    // OD18: Life is the default root for new installs. The key is unchanged, so a stored choice still wins.
+    @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = true
     @State private var focusSelectedDay: String?
     @State private var spreadSidebarExpanded = true
     @State private var destination: SpreadDestination = .spread
@@ -462,7 +463,7 @@ public struct SpreadLiveRoot: View {
             Text("Name a responsibility, give it hours, then place those hours in your week.")
                 .font(.system(.subheadline)).foregroundStyle(Spread.secondary).multilineTextAlignment(.center)
             Button { sheet = .newRole } label: {
-                Text("Create responsibility")
+                Text("Add responsibility")
                     .font(.system(.headline, weight: .semibold)).foregroundStyle(Spread.onAccent)
                     .padding(.horizontal, 28).frame(minHeight: 50)
                     .background(Capsule().fill(Spread.accentGradient))

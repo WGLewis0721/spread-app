@@ -22,8 +22,12 @@ class NativeUITestCase: XCTestCase {
 
     func launch(_ arguments: [String] = []) {
         if app.state != .notRunning { app.terminate() }
-        app.launchArguments = arguments.contains("-native.whatsNew.lastSeenRelease") ? arguments :
-            arguments + ["-native.whatsNew.lastSeenRelease", "2026-11-11-life-week"]
+        // OD18 made Life the default root. This suite's journeys are Classic journeys, so pin Classic unless a
+        // test asks for the preview itself.
+        var args = arguments
+        if !args.contains("-native.weekMonth.previewEnabled") { args += ["-native.weekMonth.previewEnabled", "NO"] }
+        app.launchArguments = args.contains("-native.whatsNew.lastSeenRelease") ? args :
+            args + ["-native.whatsNew.lastSeenRelease", "2026-11-11-life-week"]
         app.launch()
         XCTAssertTrue(app.buttons["native-spread"].waitForExistence(timeout: 90), "The native planner never appeared")
     }
@@ -1600,7 +1604,7 @@ final class DuoUITests: NativeUITestCase {
 // MARK: - Week/Month redesign (opt-in preview, owner decisions 1-61)
 
 /// Actual-app journeys for the redesigned Week/Month. Each test turns the preview on through its launch
-/// argument (Classic stays the default) and checks behavior through accessibility state, not pixels.
+/// argument (the Classic baseline is pinned by `launch`, OD18) and checks behavior through accessibility state, not pixels.
 final class WeekMonthUITests: NativeUITestCase {
     private let preview = ["-native.weekMonth.previewEnabled", "YES"]
 
