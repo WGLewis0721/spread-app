@@ -912,13 +912,11 @@ private struct RoleDeleteConfirm: View {
     @ObservedObject var planner: LivePlanner
     let roleId: String
     @Environment(\.dismiss) private var dismiss
-    // OD7: the root's flag decides the words, as in ManageSheets. Life says "Life area", Classic says "responsibility".
-    @AppStorage("native.weekMonth.previewEnabled") private var lifeMode = true
 
     var body: some View {
         VStack(spacing: Spread.space4) {
-            Text("Remove \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? (lifeMode ? "this Life area" : "this responsibility"))?").font(Spread.sheetTitle)
-            Text(lifeMode ? "The hours and tasks for this Life area leave every week." : "The hours and tasks for this responsibility leave every week.").font(Spread.callout).foregroundStyle(Spread.secondary)
+            Text("Remove \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "this responsibility")?").font(Spread.sheetTitle)
+            Text("The hours and tasks for this responsibility leave every week.").font(Spread.callout).foregroundStyle(Spread.secondary)
             Button("Remove", role: .destructive) {
                 Task {
                     _ = await planner.send(["type": "removeRole", "roleId": roleId])
