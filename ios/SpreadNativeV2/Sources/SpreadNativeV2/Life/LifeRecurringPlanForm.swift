@@ -39,6 +39,7 @@ struct LifeRecurringPlanForm: View {
     /// Hours per chosen weekday. Empty means weekly hours only, which the planner places without a set day.
     @State private var dayHours: [String: Double] = [:]
     @State private var dayHoursExpanded = false
+    @ScaledMetric(relativeTo: .body) private var dayChipWidth: CGFloat = 64
 
     static let weekdays: [LifeWeekday] = [
         LifeWeekday(code: "mon", name: "Monday"), LifeWeekday(code: "tue", name: "Tuesday"),
@@ -218,7 +219,7 @@ struct LifeRecurringPlanForm: View {
             Section {
                 // A responsive 4/8pt chip grid replaces seven always-visible
                 // switches. Day steppers expand only when someone needs them.
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 8)], spacing: 8) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: dayChipWidth), spacing: 8)], spacing: 8) {
                     ForEach(Self.weekdays) { day in
                         let selected = dayHours[day.code] != nil
                         Button {

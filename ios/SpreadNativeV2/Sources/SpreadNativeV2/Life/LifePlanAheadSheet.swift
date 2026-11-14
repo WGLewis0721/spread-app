@@ -87,81 +87,85 @@ struct LifePlanAheadSheet: View {
                                 }
                                 .accessibilityIdentifier("plan-ahead-back-to-plans")
                             }
-                Section {
-                    Text("Move time to another week. Nothing moves until you preview and confirm.")
-                        .font(.subheadline)
-                        .foregroundStyle(Spread.secondary)
-                    Picker("Life area", selection: $roleId) {
-                        ForEach(snapshot.roles) { role in
-                            Text(role.name).tag(role.id)
-                        }
-                    }
-                    Picker("Move", selection: $dailyTransfer) {
-                        Text("Weekly hours").tag(false)
-                        Text("Hours on a day").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    if dailyTransfer {
-                        if availableDays.isEmpty {
-                            Text("Plan hours on a day first, or switch to Weekly hours.")
-                                .font(.callout).foregroundStyle(Spread.secondary)
-                        } else {
-                            Picker("From day", selection: $sourceDay) {
-                                ForEach(availableDays, id: \.self) { iso in
-                                    Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEE, MMM d"))
-                                        .tag(iso)
+                            Section {
+                                Text("Move time to another week. Nothing moves until you preview and confirm.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Spread.secondary)
+                                Picker("Life area", selection: $roleId) {
+                                    ForEach(snapshot.roles) { role in
+                                        Text(role.name).tag(role.id)
+                                    }
                                 }
-                            }
-                        }
-                    }
-                } header: { Text("From this week") }
-
-                Section {
-                    DatePicker("Move to", selection: $destinationDate,
-                               in: earliestDestination..., displayedComponents: .date)
-                        .environment(\.calendar, PlannerDates.deviceCalendar)
-                        .environment(\.timeZone, TimeZone.current)
-                    Stepper(value: $amount, in: 0.5...168, step: 0.5) {
-                        Text(SpreadHours.text(amount) + " hours")
-                            .font(.headline).monospacedDigit()
-                    }
-                    TextField("Target weekly hours (if not set)", text: $targetCapacityText)
-                        .keyboardType(.decimalPad)
-                        .accessibilityIdentifier("plan-ahead-target-capacity")
-                    Text("Enter the destination week's total hours if it has not been set. Existing budgets are preserved.")
-                        .font(.caption).foregroundStyle(Spread.secondary)
-                } header: { Text("To a future week") }
-
-                Section {
-                    if let preview {
-                        if preview.eligible {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(SpreadHours.text(preview.hours) + "h moves to " +
-                                    PlannerDates.label(PlannerDates.date(preview.targetWeek), pattern: "MMM d"))
-                                    .font(.headline)
-                                PlanAheadDetailRow(
-                                    title: "This week",
-                                    detail: SpreadHours.text(preview.sourceBudgetBefore) +
-                                        "h → " + SpreadHours.text(preview.sourceBudgetAfter) + "h")
-                                PlanAheadDetailRow(
-                                    title: "Future week",
-                                    detail: SpreadHours.text(preview.targetBudgetBefore) +
-                                        "h → " + SpreadHours.text(preview.targetBudgetAfter) + "h")
-                                if preview.movedTasks > 0 {
-                                    Text("\(preview.movedTasks) linked tasks move with these hours.")
+                                Picker("Move", selection: $dailyTransfer) {
+                                    Text("Weekly hours").tag(false)
+                                    Text("Hours on a day").tag(true)
                                 }
-                                Text("No automatic rollover. Changes can be undone from Life.")
-                                    .font(.caption)
-                            }
-                            .font(.subheadline)
-                            .foregroundStyle(Spread.ink)
-                        } else {
-                            Label(preview.reason ?? "This transfer is not available.",
-                                  systemImage: "exclamationmark.circle")
-                                .foregroundStyle(Spread.danger)
-                        }
-                    }
-                } header: { Text("Review before moving") }
+                                .pickerStyle(.segmented)
+                                if dailyTransfer {
+                                    if availableDays.isEmpty {
+                                        Text("Plan hours on a day first, or switch to Weekly hours.")
+                                            .font(.callout).foregroundStyle(Spread.secondary)
+                                    } else {
+                                        Picker("From day", selection: $sourceDay) {
+                                            ForEach(availableDays, id: \.self) { iso in
+                                                Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEE, MMM d"))
+                                                    .tag(iso)
+                                            }
+                                        }
+                                    }
+                                }
+                            } header: { Text("From this week") }
+
+                            Section {
+                                DatePicker("Move to", selection: $destinationDate,
+                                           in: earliestDestination..., displayedComponents: .date)
+                                    .environment(\.calendar, PlannerDates.deviceCalendar)
+                                    .environment(\.timeZone, TimeZone.current)
+                                Stepper(value: $amount, in: 0.5...168, step: 0.5) {
+                                    Text(SpreadHours.text(amount) + " hours")
+                                        .font(.headline).monospacedDigit()
+                                }
+                                TextField("Target weekly hours (if not set)", text: $targetCapacityText)
+                                    .keyboardType(.decimalPad)
+                                    .accessibilityIdentifier("plan-ahead-target-capacity")
+                                Text("Enter the destination week's total hours if it has not been set. Existing budgets are preserved.")
+                                    .font(.caption).foregroundStyle(Spread.secondary)
+                            } header: { Text("To a future week") }
+
+                            Section {
+                                if let preview {
+                                    if preview.eligible {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text(SpreadHours.text(preview.hours) + "h moves to " +
+                                                PlannerDates.label(PlannerDates.date(preview.targetWeek), pattern: "MMM d"))
+                                                .font(.headline)
+                                            PlanAheadDetailRow(
+                                                title: "This week",
+                                                detail: SpreadHours.text(preview.sourceBudgetBefore) +
+                                                    "h → " + SpreadHours.text(preview.sourceBudgetAfter) + "h")
+                                            PlanAheadDetailRow(
+                                                title: "Future week",
+                                                detail: SpreadHours.text(preview.targetBudgetBefore) +
+                                                    "h → " + SpreadHours.text(preview.targetBudgetAfter) + "h")
+                                            if preview.movedTasks > 0 {
+                                                Text("\(preview.movedTasks) linked tasks move with these hours.")
+                                            }
+                                            Text("No automatic rollover. Changes can be undone from Life.")
+                                                .font(.caption)
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundStyle(Spread.ink)
+                                    } else {
+                                        Label(preview.reason ?? "This transfer is not available.",
+                                              systemImage: "exclamationmark.circle")
+                                            .foregroundStyle(Spread.danger)
+                                    }
+                                } else {
+                                    Text("Preview the affected hours before moving them.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(Spread.secondary)
+                                }
+                            } header: { Text("Review before moving") }
                         }
                     }
                     .spreadListSurface()
@@ -527,10 +531,13 @@ struct PlanAheadDetailRow: View {
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
-                Text(title).lineLimit(1)
+                Text(title)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 Text(detail)
                     .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .foregroundStyle(Spread.secondary)
             }
             VStack(alignment: .leading, spacing: 4) {
