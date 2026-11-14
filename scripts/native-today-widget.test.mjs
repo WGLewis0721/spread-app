@@ -297,7 +297,7 @@ test("a finished block is recorded only on its final focus round", () => {
 
 test("the island opens the planned day, and a hand-started session still opens the timer", () => {
   assert.match(source, /context\.attributes\.day == nil \? "spread:\/\/focus" : "spread:\/\/today"/);
-  assert.match(focusController, /day: session\.blockDay/);
+  assert.match(focusController, /day: current\.blockDay/);
 });
 
 // The switches that go with the widgets, the island and the focus timer. Each one writes a key the code reads,
