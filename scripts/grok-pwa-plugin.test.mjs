@@ -483,6 +483,12 @@ test("escapes host-derived values in the install page", () => {
   assert.equal(html.includes("<script>alert(1)</script>"), false);
 });
 
+test("a custom domain names the manifest with the site title, not the platform default", () => {
+  const manifest = JSON.parse(renderWebManifest("thespreadapp.com"));
+  assert.equal(manifest.name, "Spread");
+  assert.equal(manifest.short_name, "Spread");
+});
+
 test("renders the manifest with the per-app name", () => {
   const manifest = JSON.parse(renderWebManifest("wild-race.grok.me"));
   assert.equal(manifest.name, "Wild Race");

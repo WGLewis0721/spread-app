@@ -5,6 +5,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import siteIdentity from "../src/lib/og/site.json" with { type: "json" };
 
 export const DEFAULT_APP_NAME = "Grok App";
 export const OG_SERVICE_URL_DEFAULT = "https://og.grok.me";
@@ -158,7 +159,10 @@ export function renderInstallPageHtml(template, { host, url } = {}) {
 }
 
 export function renderWebManifest(hostHeader) {
-  const name = appNameFromHost(hostHeader);
+  // A custom domain has no *.grok.me slug. Use the site title, the same name the page head uses.
+  const fromHost = appNameFromHost(hostHeader);
+  const siteTitle = String(siteIdentity?.title ?? "").trim();
+  const name = fromHost === DEFAULT_APP_NAME && siteTitle ? siteTitle : fromHost;
   return JSON.stringify(
     {
       name,
