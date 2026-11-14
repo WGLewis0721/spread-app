@@ -36,6 +36,28 @@ rg -n 'Color\(hex6:|Color\(red:|Color\(hex: "|\.white|\.black|\.system\(size:|\.
 
 Files scanned: 70 (sources outside lane A, the widget target and the app host). With at least one literal: 26. With none: 44 (listed in section 5).
 
+W1 update (2026-11-14, [spec](../specs/2026-11-14-w1-design-foundations.md)): new names `Spread.radiusSmall`, `radiusInset`, `iconSmall`, `iconMedium`, `iconLarge` and `roleFallbackHex` in `Theme/`. Applied as 16 exact-duplicate swaps in five files that no other lane owns (`Spread/SpreadSurface.swift` and four `Week/` files). The other 11 substitutions are in the next section, because their files belong to lanes W2, W5 and W8. The per-line tables in this document still show the pre-W1 status until the next audit pass.
+
+## Apply after W5, W2 and W8 merge (W1 deferred substitutions)
+
+These exact-duplicate swaps match an existing token value, so nothing moves on screen. The files belong to other lanes, so W1 did not edit them. Apply each swap after the owning lane merges, and check the line number first, because the lane may have moved it.
+
+| File | Line (2026-11-14 main) | Found | Replace with | Owner |
+|---|---:|---|---|---|
+| `Life/LifeRecurringPlanForm.swift` | 233 | `cornerRadius: 12` | `Spread.radiusSmall` | W2 |
+| `Life/LifeRecurringPlanForm.swift` | 234 | `cornerRadius: 12` | `Spread.radiusSmall` | W2 |
+| `Life/LifeRoot.swift` | 483 | `cornerRadius: 12` | `Spread.radiusSmall` | W2 |
+| `Life/LifeRoot.swift` | 624 | `cornerRadius: 18` | `Spread.radiusInset` | W2 |
+| `Life/LifeRoot.swift` | 811 | `cornerRadius: 12` | `Spread.radiusSmall` | W2 |
+| `Life/LifeWalletStack.swift` | 392 | `cornerRadius: 12` | `Spread.radiusSmall` | W2 |
+| `Life/LifeWeekView.swift` | 70 | `cornerRadius: 18` | `Spread.radiusInset` | W8 |
+| `Sheets/ManageSheets.swift` | 82 | `"#8E8E93"` | `Spread.roleFallbackHex` | W5 |
+| `Sheets/ManageSheets.swift` | 111 | `"#8E8E93"` | `Spread.roleFallbackHex` | W5 |
+| `Sheets/BackupRestoreSheet.swift` | 112 | `cornerRadius: 16` | `Spread.radiusRow` | W5 |
+| `Sheets/BackupRestoreSheet.swift` | 238 | `cornerRadius: 16` | `Spread.radiusRow` | W5 |
+
+`Week/MonthQuickAddSheet.swift` was deleted on main by #234, so it needs no substitution. The guard in `scripts/native-foundation-tokens.test.mjs` skips these six files. Remove each file from its `deferredFiles` set once its swaps land.
+
 Wave 2 note: these totals are the 2026-11-14 record from before wave 2. The six Life files in section 4 were re-audited in wave 2; section 6 summarises them.
 
 ## 3. Blockers and decisions for wave 2

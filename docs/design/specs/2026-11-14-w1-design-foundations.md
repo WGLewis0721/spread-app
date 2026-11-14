@@ -23,9 +23,9 @@ A Life or Week screen and a sheet should look like one product. Today, the nativ
 | Category | Finding | Action in this PR |
 | --- | --- | --- |
 | Parallel colour namespace | `Life/LifePalette.swift` defines seven names that all alias `Spread.*`. Values agree. 42 call sites in 5 files. | Kept. Listed as exception E6. |
-| Duplicate grey | `"#8E8E93"` appeared as a string at 3 sites, the same value as `Spread.roleFallback`. | Added `Spread.roleFallbackHex` and replaced all 3 sites. |
-| Corner radius 12, 18 | Literal values with no name, at 13 sites. | Added `Spread.radiusSmall` (12) and `Spread.radiusInset` (18), and replaced all 13 sites. |
-| Corner radius 14, 16, 24 | Exact duplicates of `radiusControl`, `radiusRow` and `radiusCard`, at 12 sites. | Replaced all 12 sites. No value changed. |
+| Duplicate grey | `"#8E8E93"` appeared as a string at 3 sites, the same value as `Spread.roleFallback`. | Added `Spread.roleFallbackHex`. Replaced 1 site in `Week/WeekSurface.swift`. The other 2, in `Sheets/ManageSheets.swift`, are deferred to lane W5. |
+| Corner radius 12, 18 | Literal values with no name, at 13 sites. | Added `Spread.radiusSmall` (12) and `Spread.radiusInset` (18). Replaced 6 sites in the five kept files. The 7 sites in `Life/` are deferred to lanes W2 and W8. |
+| Corner radius 14, 16, 24 | Exact duplicates of `radiusControl`, `radiusRow` and `radiusCard`, at 12 sites. | Replaced 9 sites: 24 pt (6) in `Spread/SpreadSurface.swift` and 16 pt (3) in `Week/MonthSurface.swift`. The 2 sites of 16 pt in `Sheets/BackupRestoreSheet.swift` are deferred to lane W5. The 14 pt site was already gone on main. No value changed. |
 | Corner radius 7, 10, 13, 15, 23 | No token. 8 sites. | Not changed. Decision D2 in section 8. |
 | Icon frames | 90 `SpreadIcon(size:)` calls. 38 use 18 pt, which has no token. | Added `Spread.iconSmall` (16), `iconMedium` (20) and `iconLarge` (24). Not migrated, because 18, 19 and 22 pt would snap by 1 to 2 pt, which needs a device check. Decision D3. |
 | Font literals | 10 `.font(.system(size:))` calls in artwork and in Focus timer and Hours number displays. These do not scale with Dynamic Type. | Not changed. Exception E9. |
@@ -118,13 +118,13 @@ Covered per shared component in [../ui-kit/UI_KIT.md](../ui-kit/UI_KIT.md) secti
 
 ## 7. Technical approach
 
-- **Where it lives.** `ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift` (new `Spread.roleFallbackHex`, `radiusSmall`, `radiusInset`, `iconSmall`, `iconMedium`, `iconLarge`). Outside `Theme/`: 28 replacements in 12 files (13 for 12 and 18 pt, 12 for 14, 16 and 24 pt, and 3 grey strings). Each is one token name with the same value. The full list is in the diff.
+- **Where it lives.** `ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift` (new `Spread.roleFallbackHex`, `radiusSmall`, `radiusInset`, `iconSmall`, `iconMedium`, `iconLarge`). Outside `Theme/`: 16 replacements in 5 files (`Spread/SpreadSurface.swift`, `Week/MonthSurface.swift`, `Week/OverdueSelectionTray.swift`, `Week/ToPlaceTray.swift`, `Week/WeekSurface.swift`). Each is one token name with the same value. The other 11 are deferred to lanes W2, W5 and W8. They are listed in [../finalize/TOKEN_AUDIT.md](../finalize/TOKEN_AUDIT.md) under "Apply after W5, W2 and W8 merge".
 - **Data and state.** None. No store action, no persisted key, no migration.
 - **Flags and rollout.** None. The change is value-neutral.
 - **Do not touch.** Confirmed: no path under Cloud, SpreadCloudCore, `server/`, schema files, or `golden/*`.
 - **Dependencies.** None added.
 - **Performance and privacy.** No new animation or blur. Nothing leaves the device.
-- **Tests.** New `scripts/native-foundation-tokens.test.mjs`. It checks the new tokens, bans the literal grey and the corner radii that now have tokens outside `Theme/`, asserts the passing contrast pairs, and records E1 to E5 as `todo`. It reads the Swift source as text, as `native-color-contrast.test.mjs` does.
+- **Tests.** New `scripts/native-foundation-tokens.test.mjs`. It checks the new tokens, bans the literal grey and the corner radii that now have tokens outside `Theme/` (skipping the six deferred files), asserts the passing contrast pairs, and records E1 to E5 as `todo`. It reads the Swift source as text, as `native-color-contrast.test.mjs` does.
 
 ## 8. Risks, rabbit holes and open questions
 
@@ -142,7 +142,7 @@ Covered per shared component in [../ui-kit/UI_KIT.md](../ui-kit/UI_KIT.md) secti
 
 ### Acceptance criteria
 
-- Given the native source tree, when `scripts/native-foundation-tokens.test.mjs` runs, then the new tokens exist with the values listed in section 7, and no native file outside `Theme/` writes `"#8E8E93"` or a corner radius of 12, 14, 16, 18 or 24.
+- Given the native source tree, when `scripts/native-foundation-tokens.test.mjs` runs, then the new tokens exist with the values listed in section 7, and no native file outside `Theme/`, other than the six deferred files, writes `"#8E8E93"` or a corner radius of 12, 14, 16, 18 or 24.
 - Given light and dark appearance, when a reviewer reads the passing contrast pairs in section 2, then each one meets its threshold. Failing pairs are recorded as E1 to E5, not hidden.
 - Given UI_KIT section 2, when a designer or engineer builds a shared control, then the state matrix names every state the control must have.
 - Given a device build, when the owner compares it with the previous build, then no screen differs in colour, size or spacing (this is value-neutral; owed on device).
