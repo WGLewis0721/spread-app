@@ -2,6 +2,16 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-771d4f1056fa",
+      "version": "1.0",
+      "date": "2026-11-13",
+      "title": "Recent updates",
+      "changes": [
+        "The Focus timer widget fits its size: small shows the timer and one control, medium two, and large every control. Controls are icons.",
+        "A repeating Plan Ahead schedule shows its days on the month calendar before you open each week."
+      ]
+    },
+    {
       "id": "notes-0656e28caa52",
       "version": "1.0",
       "date": "2026-11-13",
@@ -82,5 +92,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "0656e28caa5232b2fe00ea8e3cb5da8202dfa0ba"
+  "lastProcessedCommit": "771d4f1056fadc979015d244fb171bb9726cbc18"
 }

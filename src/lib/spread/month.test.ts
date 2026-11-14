@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { weekDays, weekKey, parseKey, type SpreadData } from "./model.ts";
+import { defaultData, ensureWeek, planDayIso, shiftWeek, weekDays, weekKey, parseKey, type SpreadData } from "./model.ts";
 import { dayMarks, dominantMonth, monthGrid, shiftMonth } from "./month.ts";
+import { applyRecurringPlan } from "./recurring-plan.ts";
 
 test("January 2026 starts Thursday and reaches back into December", () => {
   const cells = monthGrid(2026, 0);
@@ -84,4 +85,38 @@ test("four spreads show three dots and a remainder", () => {
   assert.equal(marks.extra, 1);
   assert.deepEqual(marks.colors, ["#000000", "#111111", "#222222"]);
   assert.deepEqual(dayMarks(sample([{ hatId: "e", day: "2026-10-02", order: 0 }]), "2026-10-02").extra, 0);
+});
+
+/** A weekly schedule from next week with Thursday and Sunday hours, saved but not yet opened. */
+function scheduleFromNextWeek() {
+  const data = defaultData();
+  data.weeks[data.currentWeek].life = { version: 1, capacityHours: 40 };
+  data.hats.forEach((hat) => { hat.defaultHours = 0; });
+  data.weeks[data.currentWeek].boxes.forEach((box) => { box.hours = 0; });
+  const first = shiftWeek(data.currentWeek, 1);
+  const { data: saved, preview } = applyRecurringPlan(data, {
+    roleId: data.hats[0].id, startWeek: first, everyWeeks: 1, hours: 2,
+    dayHours: [{ weekday: "thu", hours: 1 }, { weekday: "sun", hours: 1 }],
+  });
+  assert.equal(preview.eligible, true);
+  return { saved, first };
+}
+
+test("a repeating plan shows its days on the month grid before its week is opened", () => {
+  const { saved, first } = scheduleFromNextWeek();
+  assert.equal(saved.weeks[first], undefined, "the week is stored only when it is opened");
+  assert.equal(dayMarks(saved, planDayIso(first, "thu")).colors.length, 1);
+  assert.equal(dayMarks(saved, planDayIso(first, "sun")).colors.length, 1);
+  assert.equal(dayMarks(saved, planDayIso(first, "tue")).colors.length, 0);
+});
+
+test("an opened week shows what is stored, so a placement the person removed stays removed", () => {
+  const { saved, first } = scheduleFromNextWeek();
+  const opened = ensureWeek({ ...saved, currentWeek: first });
+  const thursday = planDayIso(first, "thu");
+  const week = opened.weeks[first];
+  const edited = { ...opened, weeks: { ...opened.weeks,
+    [first]: { ...week, allocations: week.allocations.filter((item) => item.day !== thursday) } } };
+  assert.equal(dayMarks(edited, thursday).colors.length, 0);
+  assert.equal(dayMarks(edited, planDayIso(first, "sun")).colors.length, 1);
 });

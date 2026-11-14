@@ -117,7 +117,7 @@ private struct SpreadTodayView: View {
                 todayColumn
                 Divider()
                 Link(destination: SpreadWidgetLink.focus.url) {
-                    SpreadFocusPanel(state: focus, date: entry.date, compact: true)
+                    SpreadFocusPanel(state: focus, date: entry.date, scale: .side)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
