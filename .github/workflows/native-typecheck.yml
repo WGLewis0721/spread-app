@@ -38,7 +38,7 @@ jobs:
         # The exact files the SpreadWidget target compiles (ios/App/App.xcodeproj, widget Sources phase).
         run: >
           xcrun --sdk iphonesimulator swiftc -typecheck -parse-as-library
-          -target arm64-apple-ios17.0-simulator -swift-version 5
+          -target arm64-apple-ios17.0-simulator -swift-version 5 -D DEBUG
           ios/App/SpreadWidget/SpreadTodayWidget.swift
           ios/App/SpreadWidget/SpreadTimerWidget.swift
           ios/App/SpreadWidget/SpreadLifeCardsWidget.swift
@@ -62,5 +62,5 @@ jobs:
           find ios/SpreadNativeV2/Sources/SpreadNativeV2 -name '*.swift' > "$RUNNER_TEMP/files.txt"
           echo "Type-checking $(wc -l < "$RUNNER_TEMP/files.txt") files"
           xcrun --sdk iphonesimulator swiftc -typecheck -parse-as-library \
-            -target arm64-apple-ios17.0-simulator -swift-version 5 \
+            -target arm64-apple-ios17.0-simulator -swift-version 5 -D DEBUG \
             @"$RUNNER_TEMP/files.txt" "$RUNNER_TEMP/stub/BundleModule.swift"
