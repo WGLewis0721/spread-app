@@ -443,6 +443,8 @@ struct DayCard: View {
                     .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).strokeBorder(Spread.accent.opacity(0.45), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                // Say the day as well, so the button is not just "Add Work" to VoiceOver.
+                .accessibilityLabel("Add \(name) to \(label)")
                 .accessibilityIdentifier("add-to-\(day)")
             }
         }

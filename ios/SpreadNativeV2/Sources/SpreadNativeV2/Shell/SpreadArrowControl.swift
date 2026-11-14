@@ -99,24 +99,29 @@ struct SpreadArrowValueControl: View {
     var rightLabel = "Increase"
     let onMove: (Int) -> Void
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
         HStack(spacing: 0) {
             SpreadArrowButton(direction: -1, label: leftLabel,
                               disabled: leftDisabled, repeatsOnHold: repeatsOnHold) { onMove(-1) }
             Button { onValue?() } label: {
                 VStack(spacing: 2) {
+                    // Standard sizes may shrink a little to fit. Accessibility sizes wrap instead, so text is never scaled down.
                     Text(value)
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
+                        .minimumScaleFactor(typeSize.isAccessibilitySize ? 1 : 0.8)
                         .foregroundStyle(Spread.ink)
                     if let detail {
                         Text(detail)
                             .font(.caption2)
                             .foregroundStyle(Spread.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
+                            .minimumScaleFactor(typeSize.isAccessibilitySize ? 1 : 0.8)
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 52)
