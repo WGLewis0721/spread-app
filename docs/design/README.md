@@ -38,9 +38,9 @@ Start here for design rules and task references. Cross-product records: [documen
 | Classic/Life tactile motion and haptics | [Contract](tactile-precision/README.md) | [Implementation](tactile-precision/IMPLEMENTATION.md); Life spec wins |
 | App icon, UI action icons, category badges | [brand/ICON_HANDOFF.md](brand/ICON_HANDOFF.md) | Files in `public/icons/` |
 | Gray Matter workflow | [adoption](brand/GRAY_MATTER_ADOPTION.md) | Spread rules win |
-| Wave-2 token cleanup | [finalize/TOKEN_AUDIT.md](finalize/TOKEN_AUDIT.md) | |
+| Finalize evidence and corrections | [finalize/README.md](finalize/README.md) | finalize/TOKEN_AUDIT.md, finalize/SCREEN_MAP.md, finalize/UPGRADE_AUDIT.md, finalize/REFERENCES.md, finalize/RELEASE_CHECKLIST.md, finalize/corrections/life-routing.md, finalize/corrections/color-drift.md, finalize/corrections/copy-voice.md, finalize/corrections/release-scope.md, finalize/corrections/wave2-tokens-icons.md |
 | Why a planner behavior exists, or what was verified and deferred | [planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md](planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md) (historical record) | `ROADMAP.md` |
-| Wallpaper-driven personalization (Studio) | Section 5 below: it lives on a branch | |
+| Wallpaper personalization (Studio) | Section 5 below | |
 | Recording a decision or checking what is undecided | [DECISIONS.md](DECISIONS.md) | |
 | Pointing an AI tool at these docs | [AI_TOOL_SETUP.md](AI_TOOL_SETUP.md) | |
 
@@ -89,15 +89,15 @@ All paths are under `docs/design/`.
 
 ---
 
-## 5. Studio (wallpaper-driven personalization)
+## 5. Studio (wallpaper personalization)
 
-Studio's original rebuild proposal is [historical](specs/2026-10-28-studio-rebuild.md). Studio-related work has since merged into `main`; inspect source and actual flags before claiming a particular native appearance is enabled. Studio does not override the current Wallet/Life design authority.
+Proposal: [historical](specs/2026-10-28-studio-rebuild.md). Work has merged into `main`; inspect source and flags before claiming a native appearance. It does not override the Wallet/Life authority.
 
 ---
 
-## 6. Historical supporting material
+## 6. Historical material
 
-Archived native handoffs do not override the Wallet board. Concept art is not native test evidence.
+Archived handoffs and concept art do not override the Wallet board or count as test evidence.
 
 ---
 
@@ -106,6 +106,6 @@ Archived native handoffs do not override the Wallet board. Concept art is not na
 - Put new guidance in its scoped document; add map/router links. Every design doc links back here. Date specs in `specs/`.
 - One home per fact. Link, don't duplicate. Only generated rules-card blocks are copied.
 - After editing `src/styles.css` tokens run `npm run docs:tokens`. After editing the rules card run `npm run docs:sync`. `npm run docs:check` (also in `test:scripts` and CI) fails when either is stale, when a link or pack pointer breaks, or when a tier passes its budget.
-- A document over 6 KB opens with a `> Summary:` line under its breadcrumb. Keep section headings short and stable, because packs point at them; if you rename one, fix the pack the check names.
-- Record a decision in the document it changes and in [DECISIONS.md](DECISIONS.md), and remove it from the open list. When a document is superseded, say so at its top and name its replacement. Do not delete history.
+- A document over 6 KB opens with a `> Summary:` line under its breadcrumb. Keep headings stable; packs point at them.
+- Record decisions in the document they change and in [DECISIONS.md](DECISIONS.md). A superseded document says so at its top and names its replacement. Never delete history.
 

@@ -29,7 +29,7 @@ const examples = [
   {
     name: "Health",
     hours: 3,
-    color: "#0a84ff",
+    color: "#30b0c7",
     note: "Make room to take care of yourself, too.",
     days: [
       { day: "Saturday", date: "09/26", hours: 1, task: "Take the long way outside" },

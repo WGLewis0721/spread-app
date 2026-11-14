@@ -1,0 +1,116 @@
+{
+  "_about": "Corrections register for the publish finalize program, following Gray Matter's corrective-action protocol. One record per problem in corrections/<id>.md. A correction closes only with changed_files, regression_evidence and a named reviewer_approval. No record in this file is closed. Status vocabulary: open | closed. Owner decisions are marked decision_owner: owner. Merged records group related findings to fit the design map budget (docs/design/README.md, 9000 bytes).",
+  "corrections": [
+    {
+      "id": "life-routing",
+      "screen_ids": [
+        "N07",
+        "N08",
+        "N13",
+        "N23",
+        "N37"
+      ],
+      "problem": "Life was opt-in behind a preview-named flag that defaulted off. OD18 makes Life the default root, and it is on main (PR #211). A second Week surface (WeekFocusSurface) is still in the tree, reachable only through a path that cannot run; OD19 deletes it in wave 2. Life and Classic also remove a responsibility differently (undoable Details delete versus confirmation).",
+      "severity": "high",
+      "decision_owner": "decided: OD18 applied on main; OD19 open for wave 2",
+      "spec": "docs/design/finalize/corrections/life-routing.md",
+      "status": "open",
+      "observed_evidence": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:15,66-83,332-333",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift:594-602"
+      ],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    },
+    {
+      "id": "color-drift",
+      "screen_ids": [
+        "P03",
+        "N02",
+        "N11"
+      ],
+      "problem": "Health had three values (#007AFF default role, #30B0C7 category, #0A84FF landing), and School shared #007AFF. OD21 makes Health teal #30B0C7 everywhere. The landing sample is updated here; the model.ts default and the native hardcoded values are still open. OD23 settles the gradient: it stays on one lit action per surface.",
+      "severity": "medium",
+      "decision_owner": "decided: OD21 (Health teal #30B0C7 everywhere; landing sample updated in this PR; model.ts default in wave 2). OD23 keeps the accent gradient on the one lit action per surface. Native hardcoded values remain for lane A.",
+      "spec": "docs/design/finalize/corrections/color-drift.md",
+      "status": "open",
+      "observed_evidence": [
+        "src/lib/spread/model.ts:89,107,117",
+        "src/spread/components/landing-sections.tsx (roles array)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:55,450",
+        "docs/design/finalize/TOKEN_AUDIT.md (Lane A, pending)"
+      ],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    },
+    {
+      "id": "copy-voice",
+      "screen_ids": [
+        "N02",
+        "N03",
+        "N17",
+        "N21",
+        "N08"
+      ],
+      "problem": "Most of the copy decisions are on main: the Classic entry, empty state and sidebar say 'Add responsibility' (OD22); the Life Details sheet is titled 'Details' (OD8). Still open: the create sheet title is 'Add Life' on the shared sheet (its title must follow the root that opened it); the Recently Deleted sheet still says 'return to To Place'; and 'To place' casing is not yet uniform.",
+      "severity": "medium",
+      "decision_owner": "decided: OD7, OD8, OD22 (applied in part on main); OD12, OD13 open. Application open in lanes A, C, D.",
+      "spec": "docs/design/finalize/corrections/copy-voice.md",
+      "status": "open",
+      "observed_evidence": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift:58",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:303",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift (emptyPlan)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift:368,1061"
+      ],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    },
+    {
+      "id": "release-scope",
+      "screen_ids": [
+        "P07",
+        "P08",
+        "P01"
+      ],
+      "problem": "CLAUDE.md and the release plan disagreed about device scope. OD20 makes Spread 1.0 iPhone only, and the superseding note is on main. OD25 keeps the TestFlight invitation and adds no App Store link until the listing exists.",
+      "severity": "high",
+      "decision_owner": "decided: OD20 applied on main (superseding note in APP_STORE_RELEASE_PLAN.md); OD25 keeps the TestFlight invitation. Open for reviewer approval.",
+      "spec": "docs/design/finalize/corrections/release-scope.md",
+      "status": "open",
+      "observed_evidence": [
+        "CLAUDE.md (Two products)",
+        "APP_STORE_RELEASE_PLAN.md (Direction revised 2026-10-08; section 5 Release)",
+        "src/lib/links.ts",
+        "src/spread/screens/spread-app.tsx (start section)"
+      ],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    },
+    {
+      "id": "wave2-tokens-icons",
+      "screen_ids": [
+        "N06",
+        "N19",
+        "N35",
+        "N34"
+      ],
+      "problem": "Three decisions from the wave-1 review are not yet in code: the remaining Lucide icon assets (OD11), the disabled-control opacity token Spread.disabledOpacity = 0.4 (OD17), and naming the Week sidebar scrim as a token (OD16). They belong to wave 2.",
+      "severity": "low",
+      "decision_owner": "resolved by OD11, OD16, OD17 (planning doc section 8); implementation open",
+      "spec": "docs/design/finalize/corrections/wave2-tokens-icons.md",
+      "status": "open",
+      "observed_evidence": [
+        "docs/design/specs/2026-11-14-publish-finalize-plan.md section 8 (branch claude/happy-feynman-an60e6)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets (no plus, coffee, eye, copy, arrow-left-right, rotate-ccw, rotate-cw, circle-help asset yet)"
+      ],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    }
+  ]
+}

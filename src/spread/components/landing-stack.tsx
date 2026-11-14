@@ -6,7 +6,7 @@ type StackCard = { name: string; hours: number; color: string; tasks: string[] }
 const cards: StackCard[] = [
   { name: "Work", hours: 8, color: "#34c759", tasks: ["Outline the next chapter", "Move the project forward", "Wrap up the weekly report"] },
   { name: "Home", hours: 4, color: "#ff9500", tasks: ["Tackle the kitchen drawer", "Groceries and a fresh start", "Plan meals for the week"] },
-  { name: "Health", hours: 3, color: "#0a84ff", tasks: ["Go for a morning run", "An hour at the gym", "Take the long way outside"] },
+  { name: "Health", hours: 3, color: "#30b0c7", tasks: ["Go for a morning run", "An hour at the gym", "Take the long way outside"] },
   { name: "Family", hours: 3, color: "#af52de", tasks: ["Sunday dinner together", "Call home", "Movie night in"] },
 ];
 

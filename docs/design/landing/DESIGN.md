@@ -15,7 +15,7 @@ colors:
   device-card: "#1C1C1E"
   role-work: "#34C759"
   role-home: "#FF9500"
-  role-health: "#0A84FF"
+  role-health: "#30B0C7"   # teal, OD21 (planning doc section 8)
   role-family: "#AF52DE"
   dark-page: "#141311"
   dark-sheet: "#1E1D1A"
@@ -116,7 +116,7 @@ The brand board is fixed. Do not add colors to it.
 - **Spread blue `#0A84FF`**: brand, focus, the active step. White text on blue uses **`#0869D4`**, one step deeper, so it passes WCAG AA.
 - **Sage `#DCE6D6`**: the one tinted band (the week). **Peach `#F1DFCF`**: a warm accent, used sparingly (a highlighter mark, a pill).
 - **Device `#0B0B0C` / `#1C1C1E`**: the real app's dark surfaces. This is where the technology lives.
-- **Role colors** come from the app's category icons and always mean the same thing: Work green, Home orange, Health blue, Family purple.
+- **Role colors** come from the app's category icons and always mean the same thing: Work green, Home orange, Health teal (OD21), Family purple.
 
 There are no gradients except the product's own metal date crown and a soft radial glow behind a focal object.
 
