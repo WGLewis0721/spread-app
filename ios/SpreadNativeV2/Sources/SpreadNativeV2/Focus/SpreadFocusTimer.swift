@@ -9,6 +9,9 @@ import Foundation
 @MainActor
 final class SpreadFocusTimer: ObservableObject {
     @Published private(set) var session: SpreadFocusSession?
+    // Local reload bookkeeping only; not a second timer model.
+    private var publishedProfileId: String?
+    private var widgetChangePendingBackground = false
 
     init() {
         // App-only settings must be mirrored before any extension timer update.
@@ -17,13 +20,26 @@ final class SpreadFocusTimer: ObservableObject {
         session = SpreadFocusStore.load()
         reconcile()
         SpreadFocusLiveActivityController.refresh(session)
-        SpreadFocusWidgetPublisher.publish()
+        // Do not publish an idle widget timeline before the planner has loaded
+        // the active profile. That empty entry may remain cached by WidgetKit.
     }
 
-    /// Records which profile is on screen. The widgets and the island act only for that profile.
+    /// Publish only after the saved active profile is available to the extension.
     func noteActiveProfile(_ profileId: String) {
-        SpreadFocusStore.setActiveProfile(profileId)
-        // The mirror for the widgets depends on the profile on screen, so refresh it now.
+        guard !profileId.isEmpty else { return }
+        let changed = SpreadFocusStore.activeProfile() != profileId
+        if changed { SpreadFocusStore.setActiveProfile(profileId) }
+        guard changed || publishedProfileId != profileId else { return }
+        publishedProfileId = profileId
+        widgetChangePendingBackground = true
+        SpreadFocusWidgetPublisher.republishFromStore()
+    }
+
+    /// WidgetKit may coalesce foreground reloads. Apple's WWDC26 guidance
+    /// recommends one final request on background when widget data changed.
+    func finishWidgetRefreshOnBackground() {
+        guard widgetChangePendingBackground else { return }
+        widgetChangePendingBackground = false
         SpreadFocusWidgetPublisher.republishFromStore()
     }
 
@@ -56,6 +72,10 @@ final class SpreadFocusTimer: ObservableObject {
         guard let next = SpreadFocusMachine.stretch(
             id: UUID().uuidString, profileId: profileId, roleId: roleId, roleName: roleName,
             plan: plan, kind: .focus, round: 1, now: Date()) else { return false }
+        // This app-initiated Start comes from the current profile's timer sheet.
+        // Make that profile visible to the widget *before* publishing the session.
+        SpreadFocusStore.setActiveProfile(profileId)
+        publishedProfileId = profileId
         SpreadFocusStore.saveChoice(SpreadFocusChoice(profileId: profileId, roleId: roleId,
                                                       roleName: roleName, plan: plan))
         commit(next, notify: notify)
@@ -66,6 +86,8 @@ final class SpreadFocusTimer: ObservableObject {
     @discardableResult
     func startBlock(_ offered: SpreadOfferedBlock, notify: Bool) -> Bool {
         if let session, SpreadFocusMachine.reconciled(session, now: Date()).phase != .finished { return false }
+        // Never start a stale day block belonging to a different profile.
+        guard SpreadFocusStore.activeProfile() == offered.record.profileId else { return false }
         guard let next = SpreadFocusMachine.stretch(
             id: UUID().uuidString, profileId: offered.record.profileId, roleId: offered.entry.roleId,
             roleName: offered.entry.label, plan: offered.entry.plan, kind: .focus, round: 1, now: Date(),
@@ -127,6 +149,7 @@ final class SpreadFocusTimer: ObservableObject {
     private func commit(_ next: SpreadFocusSession?, notify: Bool) {
         session = next
         SpreadFocusControls.apply(next, notify: notify)
+        widgetChangePendingBackground = true
     }
 }
 #endif
