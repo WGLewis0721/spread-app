@@ -136,7 +136,7 @@ struct OverdueSelectionTray: View {
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
                     ForEach(preview) { item in
                         HStack(alignment: .top, spacing: 8) {
-                            SpreadIcon(name: item.eligible ? "lucide-circle-check" : "lucide-x", size: 20)
+                            Image(systemName: item.eligible ? "checkmark.circle" : "exclamationmark.circle")
                                 .foregroundStyle(item.eligible ? Spread.accent : Spread.caution)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(rows.first(where: { $0.id == item.taskId })?.task.text ?? "Task")

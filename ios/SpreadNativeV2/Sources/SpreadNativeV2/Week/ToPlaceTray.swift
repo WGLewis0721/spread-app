@@ -126,19 +126,6 @@ struct ToPlaceTray: View {
     }
 }
 
-/// High priority (`important`): an optional red "!" beside the task text, spoken as "High priority". It marks the task
-/// only. It never changes where the task is scheduled, and the words carry the meaning without the colour.
-struct TaskPriorityMark: View {
-    var body: some View {
-        Text("!")
-            .font(.system(.caption, weight: .heavy))
-            .foregroundStyle(Spread.danger)
-            .frame(width: 20, height: 20)
-            .overlay(Circle().strokeBorder(Spread.danger, lineWidth: 1.5))
-            .accessibilityLabel("High priority")
-    }
-}
-
 /// One task row. The grip is a native drag handle; the text opens the task sheet; Place (or Move to) is the tap
 /// path to the same change, offering only this responsibility's eligible days as chips.
 struct TaskLine: View {
@@ -238,7 +225,7 @@ struct TaskLine: View {
         Task {
             _ = await planner.send(["type": "reorderDayTask", "roleId": task.roleId, "day": day,
                                     "taskId": id, "beforeId": target.map { $0 as Any } ?? NSNull()],
-                                   completionHaptic: true, expectedRevision: revision)
+                                   completionHaptic: false, expectedRevision: revision)
             reordering = false; reorderTarget = false
         }
     }

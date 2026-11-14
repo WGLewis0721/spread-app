@@ -316,7 +316,8 @@ struct WeekFocusSurface: View {
                                                    height: role.id == activeRole ? 6 : 4)
                                     }
                                     if let activeRole, isComplete(roleId: activeRole, on: iso) {
-                                        SpreadIcon(name: "icon-check", size: 9)
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 7, weight: .bold))
                                             .foregroundStyle(Spread.accent)
                                     }
                                 }

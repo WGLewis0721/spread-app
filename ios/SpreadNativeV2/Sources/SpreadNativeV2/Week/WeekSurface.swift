@@ -53,7 +53,7 @@ struct WeekSurface: View {
             // The caption and the role bubbles sit outside the swipe region: the bubble strip scrolls sideways,
             // and a sideways scrub there must scroll the strip, never change the week.
             VStack(alignment: .leading, spacing: 16) {
-                Text("Drag a spread onto a day, or tap one, then add it.")
+                Text("Drag a responsibility onto a day, or tap one, then add it.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.secondary)
                     .padding(.horizontal, 4)
@@ -393,6 +393,8 @@ struct DayCard: View {
         snapshot.allocations.filter { $0.day == day }.sorted { $0.order < $1.order }
     }
     private var selectedName: String? { snapshot.roles.first { $0.id == selectedRole }?.name }
+    /// While the empty-week card shows, the day cards do not repeat "Nothing planned" (owner decision OD13).
+    private var weekHasHours: Bool { snapshot.allocations.contains { $0.hours > 0 } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -411,8 +413,8 @@ struct DayCard: View {
             .frame(minHeight: allocations.isEmpty && selectedRole == nil ? 28 : 0)
             .accessibilityElement(children: .combine)
 
-            // A day with no hours says so on the card itself, not only to VoiceOver.
-            if allocations.isEmpty {
+            // A day with no hours says so on the card itself, not only to VoiceOver, unless the whole week is empty.
+            if allocations.isEmpty && weekHasHours {
                 Text("Nothing planned")
                     .font(Spread.footnote).foregroundStyle(Spread.secondary)
                     .padding(.horizontal, 4)
@@ -549,10 +551,10 @@ struct AllocationRow: View {
                         context: "\(planner.state?.envelope.profileId ?? "")/\(snapshot.weekKey)/\(allocation.id)",
                         onScrub: { hours, revision in
                             await planner.send(["type": "allocationHours", "allocationId": allocation.id, "hours": hours],
-                                               completionHaptic: true, expectedRevision: revision)
+                                               completionHaptic: false, expectedRevision: revision)
                         },
                         onChange: { hours in
-                            Task { if await planner.setAllocationHours(allocation, to: hours) { SpreadHaptics.completed() } }
+                            Task { _ = await planner.setAllocationHours(allocation, to: hours) }
                         }
                     )
 
