@@ -75,6 +75,72 @@ struct SpreadFocusTimerSheet: View {
         session.phase == .finished && SpreadFocusMachine.nextLabel(after: session) != nil
     }
 
+
+    /// One native transport strip; the authoritative session updates immediately
+    /// while Spread is foregrounded. The same symbols appear in the widgets.
+    private func transportRow(_ session: SpreadFocusSession) -> some View {
+        let waiting = session.phase == .finished
+        let next = SpreadFocusMachine.nextLabel(after: session)
+        return HStack(spacing: 12) {
+            if waiting {
+                Button {
+                    timer.forward(profileId: profileId, notify: notifyWhenDone)
+                } label: {
+                    Image(systemName: "play.fill").frame(width: 44, height: 44)
+                }
+                .disabled(next == nil)
+                .accessibilityLabel(next ?? "No next round")
+                .accessibilityIdentifier("focus-play-next")
+            } else {
+                Button {
+                    if session.phase == .running {
+                        timer.pause(profileId: profileId)
+                    } else {
+                        timer.resume(profileId: profileId, notify: notifyWhenDone)
+                    }
+                } label: {
+                    Image(systemName: session.phase == .running ? "pause.fill" : "play.fill")
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(session.phase == .running ? "Pause" : "Resume")
+                .accessibilityIdentifier(session.phase == .running ? "focus-pause" : "focus-resume")
+            }
+            Button {
+                timer.forward(profileId: profileId, notify: notifyWhenDone)
+            } label: {
+                Image(systemName: "forward.fill").frame(width: 44, height: 44)
+            }
+            .disabled(next == nil)
+            .accessibilityLabel(next ?? "No next round")
+            .accessibilityIdentifier("focus-forward")
+
+            if !waiting {
+                Button {
+                    timer.stop(profileId: profileId)
+                } label: {
+                    Image(systemName: "stop.fill").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Stop this stretch")
+                .accessibilityHint("Keeps any following round waiting for you")
+                .accessibilityIdentifier("focus-stop")
+            }
+            Button {
+                timer.cancel(profileId: profileId)
+            } label: {
+                Image(systemName: "xmark").frame(width: 44, height: 44)
+            }
+            .tint(Spread.danger)
+            .accessibilityLabel("Cancel session")
+            .accessibilityHint("Ends the entire focus session")
+            .accessibilityIdentifier("focus-cancel")
+        }
+        .font(.title3.weight(.semibold))
+        .buttonStyle(.bordered)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+        .accessibilityIdentifier("focus-media-controls")
+    }
+
     var body: some View {
         SpreadSheetStack {
             Form {
@@ -99,29 +165,7 @@ struct SpreadFocusTimerSheet: View {
                                 .accessibilityValue(SpreadFocusClock.display(current.remaining(at: context.date)))
                         }
                         .accessibilityIdentifier("focus-time-remaining")
-                        if current.phase == .running {
-                            Button("Pause") { timer.pause(profileId: profileId) }
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .accessibilityIdentifier("focus-pause")
-                        } else {
-                            Button("Resume") {
-                                timer.resume(profileId: profileId, notify: notifyWhenDone)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .accessibilityIdentifier("focus-resume")
-                        }
-                        if SpreadFocusMachine.nextLabel(after: current) != nil {
-                            Button("Forward") { timer.forward(profileId: profileId, notify: notifyWhenDone) }
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .accessibilityIdentifier("focus-forward")
-                        }
-                        Button("Stop") { timer.stop(profileId: profileId) }
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .accessibilityIdentifier("focus-stop")
-                        Button("Cancel session") { timer.cancel(profileId: profileId) }
-                            .foregroundStyle(Spread.danger)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .accessibilityIdentifier("focus-cancel")
+                        transportRow(current)
                     } else if let current, isWaiting(current) {
                         Text(current.stoppedEarly == true
                              ? "Stopped. Forward starts the next step when you're ready."
@@ -131,16 +175,7 @@ struct SpreadFocusTimerSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(Spread.secondary)
                             .accessibilityIdentifier("focus-waiting")
-                        Button(SpreadFocusMachine.nextLabel(after: current) ?? "Forward") {
-                            timer.forward(profileId: profileId, notify: notifyWhenDone)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                        .accessibilityIdentifier("focus-forward")
-                        Button("Cancel session") { timer.cancel(profileId: profileId) }
-                            .foregroundStyle(Spread.danger)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .accessibilityIdentifier("focus-cancel")
+                        transportRow(current)
                     } else {
                         if let offered = SpreadDayPlanStore.nextBlock(now: Date()) {
                             todaysBlockRows(offered)
