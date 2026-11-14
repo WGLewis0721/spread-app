@@ -135,14 +135,18 @@ struct LifePlanAheadSheet: View {
                 Section {
                     if let preview {
                         if preview.eligible {
-                            VStack(alignment: .leading, spacing: 5) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 Text(SpreadHours.text(preview.hours) + "h moves to " +
                                     PlannerDates.label(PlannerDates.date(preview.targetWeek), pattern: "MMM d"))
                                     .font(.headline)
-                                Text("This week: " + SpreadHours.text(preview.sourceBudgetBefore) +
-                                     "h → " + SpreadHours.text(preview.sourceBudgetAfter) + "h")
-                                Text("Future week: " + SpreadHours.text(preview.targetBudgetBefore) +
-                                     "h → " + SpreadHours.text(preview.targetBudgetAfter) + "h")
+                                PlanAheadDetailRow(
+                                    title: "This week",
+                                    detail: SpreadHours.text(preview.sourceBudgetBefore) +
+                                        "h → " + SpreadHours.text(preview.sourceBudgetAfter) + "h")
+                                PlanAheadDetailRow(
+                                    title: "Future week",
+                                    detail: SpreadHours.text(preview.targetBudgetBefore) +
+                                        "h → " + SpreadHours.text(preview.targetBudgetAfter) + "h")
                                 if preview.movedTasks > 0 {
                                     Text("\(preview.movedTasks) linked tasks move with these hours.")
                                 }
@@ -293,11 +297,9 @@ struct LifePlanAheadSheet: View {
                                 Text(presetSummary(preset))
                                     .font(.caption)
                                     .foregroundStyle(Spread.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
-                            Text("Review")
-                                .font(.subheadline)
-                                .foregroundStyle(Spread.secondary)
                             SpreadIcon(name: "lucide-chevron-right", size: 18)
                                 .foregroundStyle(Spread.secondary)
                         }
@@ -309,7 +311,7 @@ struct LifePlanAheadSheet: View {
             } header: {
                 Text("Suggested plans")
             } footer: {
-                Text("Based on this week. Tap one to review it. Nothing is saved until you confirm, and you can change anything first.")
+                Text("Based on this week. Review or edit before confirming.")
             }
         }
     }
@@ -318,7 +320,6 @@ struct LifePlanAheadSheet: View {
     /// Reads the store snapshot only; tapping a row opens a form, nothing is sent.
     @ViewBuilder
     private var plansSections: some View {
-        copyEntrySection
         Section {
             Button {
                 formPlanId = nil
@@ -353,6 +354,7 @@ struct LifePlanAheadSheet: View {
                                 Text(planSummary(plan))
                                     .font(.caption)
                                     .foregroundStyle(Spread.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
                             SpreadIcon(name: "lucide-chevron-right", size: 18)
@@ -367,21 +369,10 @@ struct LifePlanAheadSheet: View {
             Text("Your plans")
         }
         presetsSection
-        Section {
-            Button {
-                preview = nil
-                planMode = "move"
-            } label: {
-                Label("Move hours once", systemImage: "arrow.left.arrow.right")
-                    .frame(minHeight: 44)
-            }
-            .accessibilityIdentifier("plan-ahead-move-once")
-        } footer: {
-            Text("Move time from this week to another week. Nothing moves until you preview and confirm.")
-        }
+        copyEntrySection
     }
 
-    /// The entry row for copying. It sits above the repeating plans, because it is the plain way to plan forward.
+    /// One primary entry: copy and move are secondary paths.
     private var copyEntrySection: some View {
         Section {
             Button {
@@ -389,13 +380,23 @@ struct LifePlanAheadSheet: View {
                 planMode = "copy"
             } label: {
                 Label("Copy this week forward", systemImage: "doc.on.doc")
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
-            .buttonStyle(.borderedProminent)
             .disabled(snapshot.roles.isEmpty)
             .accessibilityIdentifier("plan-ahead-copy-week")
+            Button {
+                preview = nil
+                planMode = "move"
+            } label: {
+                Label("Move hours once", systemImage: "arrow.left.arrow.right")
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }
+            .disabled(snapshot.roles.isEmpty)
+            .accessibilityIdentifier("plan-ahead-move-once")
+        } header: {
+            Text("Other ways to plan")
         } footer: {
-            Text("Copies this week's hours, day hours and tasks into the eight weeks after it. Weeks that already have a plan are kept. Copied tasks start not done.")
+            Text("Copy your week forward or transfer hours once. Both require a preview.")
         }
     }
 
@@ -439,26 +440,13 @@ struct LifePlanAheadSheet: View {
             Text("Each batch covers eight weeks. Copy the next batch later, when you want it.")
         }
         Section {
-            Button {
-                Task { await requestCopyPreview() }
-            } label: {
-                Label(copyPreviewing ? "Checking…" : "Preview copy", systemImage: "eye")
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .disabled(copyPreviewing || copySaving || planner.busy)
-            .accessibilityIdentifier("plan-ahead-copy-preview")
             if let copyPreview {
                 copyPreviewRows(copyPreview)
+            } else {
+                Text("Preview the affected weeks before copying.")
+                    .font(.subheadline)
+                    .foregroundStyle(Spread.secondary)
             }
-            Button {
-                Task { await confirmCopy() }
-            } label: {
-                Text(copySaving ? "Copying…" : "Copy to these weeks")
-                    .frame(maxWidth: .infinity, minHeight: 50)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(copySaving || planner.busy || copyPreview?.eligible != true)
-            .accessibilityIdentifier("plan-ahead-copy-confirm")
         } header: {
             Text("Review before copying")
         }
@@ -474,13 +462,9 @@ struct LifePlanAheadSheet: View {
                 Text("Each filled week gets \(SpreadHours.text(preview.hours))h and \(preview.tasks) \(preview.tasks == 1 ? "task" : "tasks"), not done.")
                     .font(.subheadline)
                 ForEach(preview.targets, id: \.key) { target in
-                    HStack {
-                        Text("Week of \(PlannerDates.label(PlannerDates.date(target.key), pattern: "MMM d"))")
-                        Spacer()
-                        Text(target.status == "fill" ? "Will be filled" : "Already planned, kept")
-                            .foregroundStyle(Spread.secondary)
-                    }
-                    .font(.subheadline)
+                    PlanAheadDetailRow(
+                        title: "Week of " + PlannerDates.label(PlannerDates.date(target.key), pattern: "MMM d"),
+                        detail: target.status == "fill" ? "Will be filled" : "Already planned, kept")
                 }
             }
             .foregroundStyle(Spread.ink)
@@ -534,4 +518,31 @@ struct LifePlanAheadSheet: View {
         }
     }
 }
+    
+/// Shared adaptive rows for long names, time values and larger text.
+struct PlanAheadDetailRow: View {
+    let title: String
+    let detail: String
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                Text(title).lineLimit(1)
+                Spacer(minLength: 8)
+                Text(detail)
+                    .lineLimit(1)
+                    .foregroundStyle(Spread.secondary)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                Text(detail)
+                    .foregroundStyle(Spread.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .font(.subheadline)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 #endif
