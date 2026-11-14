@@ -36,6 +36,8 @@ rg -n 'Color\(hex6:|Color\(red:|Color\(hex: "|\.white|\.black|\.system\(size:|\.
 
 Files scanned: 70 (sources outside lane A, the widget target and the app host). With at least one literal: 26. With none: 44 (listed in section 5).
 
+W1 update (2026-11-14, [spec](../specs/2026-11-14-w1-design-foundations.md)): new names `Spread.radiusSmall`, `radiusInset`, `iconSmall`, `iconMedium`, `iconLarge` and `roleFallbackHex`; 28 exact-duplicate swaps outside `Theme/` (radius 12, 14, 16, 18 and 24 pt, and the grey string). The per-line table in section 4 still shows the pre-W1 status; the rows that map to these names are replaced in code by this PR and should be marked Done in the next audit pass. The Decide rows for 7, 10, 13, 15 and 23 pt radii, the 0.12 s motion, the `LifePalette` namespace, the font literals and the SF Symbol controls remain open, with decisions E6, E9 and E10 in the spec.
+
 Wave 2 note: these totals are the 2026-11-14 record from before wave 2. The six Life files in section 4 were re-audited in wave 2; section 6 summarises them.
 
 ## 3. Blockers and decisions for wave 2
