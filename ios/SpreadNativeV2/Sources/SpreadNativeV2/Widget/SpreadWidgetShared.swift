@@ -14,6 +14,8 @@ public enum SpreadWidgetShared {
     public static let todayEnabledKey = "native.widget.enabled"
     /// The switch's value as the app last wrote it, so a timer widget can say why it shows no timer.
     public static let timerEnabledMirrorKey = "spread.widget.timerEnabled.v1"
+    /// The Today counters, written by the app and read by the Today widget. One key, one copy.
+    public static let todayKey = "spread.widget.today.v1"
     public static let todayKind = "SpreadToday"
     public static let timerKind = "SpreadTimer"
     public static let lifeCardsKind = "SpreadLifeCards"

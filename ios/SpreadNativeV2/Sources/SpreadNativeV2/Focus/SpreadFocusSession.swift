@@ -218,7 +218,7 @@ enum SpreadFocusMachine {
 /// Where the session, the last choice and the active profile are kept: the shared App Group, so the
 /// widgets and the intents read and change them as well as the app.
 enum SpreadFocusStore {
-    static let appGroup = "group.com.graymatter.spread"
+    static let appGroup = SpreadWidgetShared.appGroup
     static let sessionKey = "native.focus.session.v1"
     static let choiceKey = "spread.focus.choice.v1"
     static let profileKey = "spread.focus.activeProfile.v1"

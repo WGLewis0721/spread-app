@@ -2,6 +2,7 @@ import WidgetKit
 import SwiftUI
 import Foundation
 import ActivityKit
+import UIKit
 
 /// Internal, not private, so the Timer widget's large size can show the same counters.
 struct SpreadToday: Decodable {
@@ -15,8 +16,8 @@ struct SpreadToday: Decodable {
 /// Reads today's counters from the shared App Group. Anything from an earlier day is ignored.
 enum SpreadTodayStore {
     static func load() -> SpreadToday? {
-        guard let data = UserDefaults(suiteName: "group.com.graymatter.spread")?
-            .data(forKey: "spread.widget.today.v1"),
+        guard let data = UserDefaults(suiteName: SpreadWidgetShared.appGroup)?
+            .data(forKey: SpreadWidgetShared.todayKey),
               let value = try? JSONDecoder().decode(SpreadToday.self, from: data),
               value.day == dayKey(Date()) else { return nil }
         return value
@@ -84,7 +85,7 @@ private struct SpreadTodayView: View {
                     .accessibilityLabel("\(plan.doneTasks) of \(plan.totalTasks) tasks completed")
                 } else {
                     Image(systemName: "calendar")
-                        .accessibilityLabel("Open Spread to enable Today widget")
+                        .accessibilityLabel("Open Spread to show Today on widgets")
                 }
             } else if family == .accessoryRectangular {
                 if let plan {
@@ -98,14 +99,14 @@ private struct SpreadTodayView: View {
                 } else {
                     VStack(alignment: .leading) {
                         Text("Spread").font(.headline)
-                        Text("Enable widget in More").font(.caption)
+                        Text("Show Today in More").font(.caption)
                     }
                 }
             } else {
                 homeBody
             }
         }
-        .containerBackground(.background, for: .widget)
+        .spreadWidgetContainer(family)
         .widgetURL(URL(string: "spread://today"))
     }
 
@@ -143,7 +144,7 @@ private struct SpreadTodayView: View {
             } else {
                 Text("Open Spread")
                     .font(.subheadline.weight(.semibold))
-                Text("Enable Today's widget in More.")
+                Text("Show Today on widgets in More.")
                     .font(.caption)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -154,8 +155,34 @@ private struct SpreadTodayView: View {
     }
 }
 
+/// The Spread canvas for Home Screen and Lock Screen surfaces: navy in Dark, cream in Light, the same colours as
+/// the app's canvas (SpreadTheme). Text uses the system primary and secondary colours, which follow the same
+/// appearance, so the copy stays legible on either Home Screen.
+enum SpreadWidgetChrome {
+    static var canvas: Color {
+        Color(uiColor: UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 6 / 255, green: 11 / 255, blue: 24 / 255, alpha: 1)
+                : UIColor(red: 244 / 255, green: 241 / 255, blue: 234 / 255, alpha: 1)
+        })
+    }
+}
+
+extension View {
+    /// The brand canvas behind the system sizes. Accessory sizes keep the system background, because the Lock
+    /// Screen and Home Screen tint them and a fixed fill would fight that tinting.
+    @ViewBuilder func spreadWidgetContainer(_ family: WidgetFamily) -> some View {
+        switch family {
+        case .accessoryCircular, .accessoryRectangular, .accessoryInline:
+            containerBackground(.background, for: .widget)
+        default:
+            containerBackground(for: .widget) { SpreadWidgetChrome.canvas }
+        }
+    }
+}
+
 struct SpreadTodayWidget: Widget {
-    let kind = "SpreadToday"
+    let kind = SpreadWidgetShared.todayKind
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: SpreadTodayProvider()) { entry in
             SpreadTodayView(entry: entry)
@@ -218,7 +245,7 @@ private struct SpreadFocusLiveView: View {
             SpreadFocusIslandControls(status: status)
         }
         .padding()
-        .activityBackgroundTint(Color(uiColor: .systemBackground))
+        .activityBackgroundTint(SpreadWidgetChrome.canvas)
         .activitySystemActionForegroundColor(.primary)
         // A session for a planned day opens that day's Week view; a hand-started one opens the timer.
         .widgetURL(URL(string: context.attributes.day == nil ? "spread://focus" : "spread://today"))
