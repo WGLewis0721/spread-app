@@ -10,6 +10,7 @@ import Foundation
 /// The one place a control's change is saved and shown everywhere it appears.
 @MainActor
 enum SpreadFocusControls {
+    static let didChange = Notification.Name("SpreadFocusSessionChanged")
     /// The session for the profile on screen, with a stretch that ran out while the app was asleep saved as
     /// finished. Nil when there is nothing for the profile on screen.
     static func current(now: Date = Date()) -> SpreadFocusSession? {
@@ -26,6 +27,9 @@ enum SpreadFocusControls {
     static func apply(_ session: SpreadFocusSession?, notify: Bool) {
         if let session { SpreadDayPlanStore.recordCompletion(of: session) }
         SpreadFocusStore.save(session)
+        // LiveActivityIntent executes in the app process: update the visible timer now,
+        // instead of waiting for SpreadLiveRoot's one-second lifecycle fallback.
+        NotificationCenter.default.post(name: didChange, object: nil)
         // Publish the new state before the potentially expensive ActivityKit refresh.
         // App Group session remains the only authority on both paths.
         SpreadFocusWidgetPublisher.publish(session)
