@@ -79,7 +79,7 @@ struct LifeWeeklyTimeBudget: View {
                             Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
                             Text(hasCapacity ? "Adjust" : "Set hours")
                         }
-                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                        SpreadIcon(name: expanded ? "lucide-chevron-up" : "lucide-chevron-down", size: 19)
                     }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Spread.accent)
@@ -135,7 +135,7 @@ struct LifeWeeklyTimeBudget: View {
                 Button(action: onToggle) {
                     HStack(spacing: 4) {
                         Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
-                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                        SpreadIcon(name: expanded ? "lucide-chevron-up" : "lucide-chevron-down", size: 19)
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Spread.accent)
