@@ -17,7 +17,8 @@ This review was written at base `6f53a60`. This branch also contains `main` at `
 - **Partly closed:**
   - C6: `Spread.disabledOpacity` exists (`Theme/SpreadTheme.swift:143`, 0.4) and Life uses it. Classic and Focus still hardcode their own opacities. The scrim token `sidebarScrim` also arrived with #220 (`SpreadTheme.swift:54`), and OD33 removes it.
 - **Recounted:** `Color(hex:)` and `Color(red:)` outside `Theme/`: 40 (was 41). `.font(.system(size:))` outside `Theme/`: 11.
-- **Still open:** the Week Focus dead code is still present (W2-1 not merged).
+- **Closed by PR #219 (OD19):** the unreachable Week Focus surface and its components are removed, and so is `Spread/ResponsibilitySidebar.swift`. Grep on 2026-11-14 finds no remaining references to any of them.
+- **Still open, after #219:** `RoleDeleteConfirm` and `onDeleteRole` (OD30, wave 3). The Crown files (OD33, wave 3).
 - **Withdrawn:** X2 (see section 4).
 - **Extended:** X7 now also covers `LifeDeleteSheet`, never presented, and `LifeRoot.onOpenRole`, never called.
 
@@ -42,9 +43,9 @@ This review was written at base `6f53a60`. This branch also contains `main` at `
 | **OD1** red ! on task rows | `Theme/SpreadPriorityMark.swift:7` (`TaskPriorityMark`): Classic and Week (`Week/ToPlaceTray.swift:162`, `Spread/SpreadSurface.swift:788`) and Life (`Life/LifeWalletStack.swift:334`, #220) | The flag is the control. |
 | **OD3** 0.6 black well for zero hours | `Life/LifeEditorialCard.swift:239-241` | |
 | **OD6** Done trailing, Cancel leading on drafts | Draft sheets: `Sheets/ManageSheets.swift:62-66`, `Life/LifePlanAheadSheet.swift:182-184`, `Week/OverdueSelectionTray.swift:166`, `Week/MonthQuickAddSheet.swift:67`. Done trailing: `Focus/SpreadFocusTimerSheet.swift:311-312, 398-399`, `Sheets/WhatsNewSheet.swift:68-69`, `Sheets/RecentlyDeletedSheet.swift:100-101`, `Life/LifeRoot.swift:1099`, and the OD6 exception `Sheets/BackupRestoreSheet.swift:75-76` | The one leading dismiss that is not "Cancel" is X8. |
-| **OD7, OD22** creation words | "Add Life" / "Add responsibility" by root (`Sheets/ManageSheets.swift:64`, #218); entries at `Life/LifeRoot.swift:377` and `Shell/SpreadLiveRoot.swift:466` | Closed. |
+| **OD7, OD22** creation words | "Add Life" / "Add responsibility" by root (`Sheets/ManageSheets.swift:64`, #218); entries at `Life/LifeRoot.swift:377` and `Shell/SpreadLiveRoot.swift:408` | Closed. |
 | **OD22** empty states: heading, one sentence, action | Classic: `Shell/SpreadLiveRoot.swift:460-466`. Life: `Life/LifeRoot.swift:314-322` | Two title-only empties are X11. |
-| **OD13** empty week does not repeat | `Week/WeekSurface.swift:396-418`: a day says "Nothing planned" only when the week has hours | Dead copy remains in `WeekFocusSurface.swift:489` (C5). |
+| **OD13** empty week does not repeat | `Week/WeekSurface.swift:396-418`: a day says "Nothing planned" only when the week has hours | The dead copy went with the Week Focus surface (#219, C5). |
 | **OD12** overbooked sentence (Classic) | `Spread/SpreadSurface.swift:251`: "These hours don't fit in your week. Remove some or raise your weekly hours." | Life wording is X5. |
 | **OD11** SF exceptions | `Week/OverdueSelectionTray.swift:139` `exclamationmark.circle`; `Shell/PlannerNavigationRail.swift:31` `checkmark` | The eight Lucide assets are in code (C7). |
 | **OD10** Focus transport grows with type | `Focus/SpreadFocusTimerSheet.swift:96, 132, 140, 155, 164` use `minWidth/minHeight: 44`; no fixed width frames in `Focus/` | |
@@ -83,7 +84,7 @@ Severity: **High** blocks release or breaks an explicit owner rule. **Medium** i
 | C2 | Hardcoded values outside `Theme/`: 40 `Color(hex:)` or `Color(red:)`, 11 `.font(.system(size:))` | counted 2026-11-14 | Open. Token adoption continues in wave 3. |
 | C3 | Shared create-sheet title and field labels | `Sheets/ManageSheets.swift:64, 27` | Closed (#218). |
 | C4 | Health default | `src/lib/spread/model.ts:89, 117` | Closed (#218). |
-| C5 | Week Focus dead code, including "Nothing planned" and a success haptic | `Week/WeekFocusSurface.swift`, `Week/WeekFocusComponents.swift:105, 489` | Open. W2-1 has not merged. |
+| C5 | Week Focus dead code, including "Nothing planned" and a success haptic | `Week/WeekFocusSurface.swift`, `Week/WeekFocusComponents.swift:105, 489` | Closed by #219 (OD19). |
 | C6 | Disabled-control and scrim tokens | `Theme/SpreadTheme.swift:143, 54` | Partly closed (#220). Classic and Focus still hardcode opacity. |
 | C7 | Lucide assets | `Resources/Icons.xcassets` | Closed (#217). Device check owed. |
 

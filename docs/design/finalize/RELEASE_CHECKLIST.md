@@ -72,7 +72,7 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 2. **Device script not run.** [DEVICE_TEST_SCRIPT.md](DEVICE_TEST_SCRIPT.md) (about 40 minutes) must pass on a candidate build. Its section 2 lists the steps expected to fail until fixes land.
 3. **Build targets iPad (X1).** `TARGETED_DEVICE_FAMILY = "1,2"` in six places, against OD20 and OD28. This is a release blocker until wave 3 sets the family to `1` (OD28). This docs lane does not change native config.
 4. **Owner decisions: decided, not implemented.** X1 is OD28 (iPhone only). X2 is withdrawn as a defect (OD29: one Undo/Redo row, checked by device step C4). X3 is OD30, X4 is OD31, X5 is OD32, and X6 to X12 are OD33. All of them need wave-3 code, which is not in this branch.
-5. **Wave-2 lanes not yet complete on `main`.** Merged: W2-2 Lucide assets (PR #217) and W2-4 Health default, create-sheet title, field labels and To place casing (PR #218). Merged since: #220 (shared tokens, `Spread.disabledOpacity`, shared ! mark in Life). Still open: W2-1 deletes the dead Week Focus code (OD19), and W2-3 finishes token adoption (C2) and the Classic and Focus opacities (C6).
+5. **Wave-2 lanes not yet complete on `main`.** Merged: W2-2 Lucide assets (PR #217) and W2-4 Health default, create-sheet title, field labels and To place casing (PR #218). Merged since: #219 (dead Week Focus surface removed, OD19) and #220 (shared tokens, `Spread.disabledOpacity`, shared ! mark in Life). Still open: W2-3 finishes token adoption (C2) and the Classic and Focus opacities (C6).
 6. **No owner authorization** of a specific commit and build for release.
 
 **Unverified checks:**

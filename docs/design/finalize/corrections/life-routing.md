@@ -1,14 +1,14 @@
 # Correction: Life routing, default state and a dead Week path
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. OD18 (Life is the default root) is applied on main in PR #211. OD19 (delete the dead Week Focus code) is open for wave 2. Decisions are in section 8 of the planning doc.
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. OD18 (Life is the default root) is applied on main in PR #211. OD19 (delete the dead Week Focus code) is applied by PR #219 (2026-11-14). Decisions are in section 8 of the planning doc.
 
-> Summary: Life's default root and dead Week path, plus findings from the 2026-11-14 cross-surface review. Two Classic removal verbs and unused code are decided by OD30 and OD33 (wave 3). The first draft's claim of two Undo rows in Life (X2) is withdrawn: the Classic notice never renders on Life, and OD29 keeps the single row for device check C4. OD18 is applied. OD19 is open for wave 2.
+> Summary: Life's default root and dead Week path, plus findings from the 2026-11-14 cross-surface review. Two Classic removal verbs and unused code are decided by OD30 and OD33 (wave 3). The first draft's claim of two Undo rows in Life (X2) is withdrawn: the Classic notice never renders on Life, and OD29 keeps the single row for device check C4. OD18 and OD19 are applied (PR #211 and PR #219).
 
 | Field | Value |
 | --- | --- |
 | Screens | N07 Life root, N08 Wallet Stack, N13 Life Week, N23 More, N37 unreachable Week focus |
 | Severity | High: a shipped default that differs from the owner's stated direction |
-| Decided | OD18: Life is the default root; the flag key `native.weekMonth.previewEnabled` stays, so a stored choice survives. OD19: delete the dead Week Focus code in wave 2 |
+| Decided | OD18: Life is the default root; the flag key `native.weekMonth.previewEnabled` stays, so a stored choice survives. OD19: delete the dead Week Focus code (applied by #219) |
 
 ## Observed
 
@@ -30,7 +30,7 @@ The Life feature was built behind a preview flag and merged. The old Classic wee
 
 - `ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift`
 - `ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift`
-- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/WeekFocusSurface.swift`, `WeekFocusComponents.swift` (lane C)
+- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/WeekFocusSurface.swift`, `WeekFocusComponents.swift` (lane C; removed by #219)
 - `ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift` (lane B)
 
 ## Safe corrective plan
@@ -59,7 +59,7 @@ Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), findings X2, X
 - **Two Classic removal verbs (X3, medium, decided by OD30).** "Delete responsibility" (`Spread/SpreadSurface.swift:955-975`) and "Remove responsibility" (`Sheets/ManageSheets.swift:234, 260`) both confirm the same act. **OD30:** Classic says "Remove responsibility" everywhere, and Life says "Remove Life area" (#218). Life keeps its undoable Details delete (OD24).
 - **Unreachable and unused code (X3, X7, low).** `RoleDeleteConfirm` (`Shell/SpreadLiveRoot.swift:936-937, 969`) is reached only through `LifeRoot.swift:30` `onDeleteRole`, which nothing calls. `CrownTravel.swift` and `DialGeometry.swift` are referenced only by each other. `LifeDeleteSheet` (`Life/LifeManagementSheets.swift:147`) is declared and never presented, and `LifeRoot.swift:27` `onOpenRole` is never called. Fix: delete these after a reference check (lanes A and B).
 - **Life's Details delete has no prompt.** The Details button calls `deleteRole()` directly (`Life/LifeManagementSheets.swift:85-87`), which matches OD24. Device step B3 checks it.
-- **RoleDeleteConfirm (OD30).** The owner decided to delete it, with Life's unused `onDeleteRole`, in wave 3. Its wording is also being changed in W2-1, but W2-1 does not need to keep it, because nothing reaches it.
+- **RoleDeleteConfirm (OD30).** The owner decided to delete it, with Life's unused `onDeleteRole`, in wave 3. PR #219 (W2-1) did not remove it. It stays unreachable on main until wave 3.
 - **Update to Observed item 4.** The Classic removal path is no longer a single confirmation: the dialogs above are the live ones, and `RoleDeleteConfirm` is dead.
 
 Regression scenario added: after a Life change, exactly one Undo row shows, and it restores the change.

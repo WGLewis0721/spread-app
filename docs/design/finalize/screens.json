@@ -917,7 +917,7 @@
       "test_sources": [],
       "owner_lane": "C (Week/)",
       "reachable": false,
-      "notes": "Dead-path candidate: the only construction site is SpreadLiveRoot.swift content(), which runs only when weekFocusEnabled is false. OD19 decides deletion in wave 2 (lane W2-1). Not yet removed on main."
+      "notes": "Removed by PR #219 (OD19). The inventory entry stays until the owner retires it, because no screen is removed from the inventory without owner approval. The code is gone from main."
     },
     {
       "id": "W01",

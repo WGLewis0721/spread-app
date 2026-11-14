@@ -10,7 +10,7 @@
 
 ## Applied on main
 
-- **Classic creation.** The Classic entry, the empty state and the sidebar all say "Add responsibility" (OD22; `Spread/SpreadSurface.swift:306`, `Shell/SpreadLiveRoot.swift:466`, `Spread/ResponsibilitySidebar.swift:76`).
+- **Classic creation.** The Classic entry, the empty state and the sidebar all say "Add responsibility" (OD22; `Spread/SpreadSurface.swift:306`, `Shell/SpreadLiveRoot.swift:408`; `Spread/ResponsibilitySidebar.swift` was removed by #219).
 - **Life creation.** Life's button says "Add Life" (`Life/LifeRoot.swift:368`, `:1061`), as OD22 sets.
 - **Details.** The Life card's sheet is titled "Details" (OD8). The UI tests that asserted "Manage Life area" now assert "Details".
 
@@ -18,7 +18,7 @@
 
 - **Create sheet title. Closed by PR #218.** `Sheets/ManageSheets.swift:64` now reads `lifeMode ? "Add Life" : "Add responsibility"`. Field labels follow the same rule (`ManageSheets.swift:27`).
 - **Recently Deleted copy. Closed by PR #218.** `Sheets/RecentlyDeletedSheet.swift:23` reads "To place".
-- **Casing. Closed by PR #218.** User-visible text uses "To place". Only a code comment in `Week/WeekFocusComponents.swift:110` keeps the old form, and W2-1 removes that file.
+- **Casing. Closed by PR #218.** User-visible text uses "To place". The one old form was a code comment in `Week/WeekFocusComponents.swift`, which #219 removed with that file.
 - **Empty states.** Corrected 2026-11-14: Life's empty state now has a heading, one sentence and an action ("No Life areas yet", `Life/LifeRoot.swift:314-322`). "Nothing to do here yet." is no longer in Sources. The two title-only empties are listed below.
 
 ## Expected

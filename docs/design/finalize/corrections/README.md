@@ -7,11 +7,11 @@
 
 | Record | Status | What it covers |
 | --- | --- | --- |
-| [life-routing.md](life-routing.md) | open | Life as the default root, and the dead Week path (OD18, OD19) |
-| [color-drift.md](color-drift.md) | open | Health colour, and hardcoded native values |
-| [copy-voice.md](copy-voice.md) | open | Copy still to apply across Life, Classic and sheets |
-| [release-scope.md](release-scope.md) | open | iPhone-only scope and the TestFlight invitation |
-| [wave2-tokens-icons.md](wave2-tokens-icons.md) | open | Wave-2 tokens and Lucide assets still to add |
+| [life-routing.md](life-routing.md) | open | Life as the default root and the dead Week path (OD18 and OD19 applied); removal verb and unused code (OD30, OD33, wave 3) |
+| [color-drift.md](color-drift.md) | open | Health colour (closed, #218); hardcoded native values and widget colours (OD33, wave 3) |
+| [copy-voice.md](copy-voice.md) | open | Copy: over-budget word (OD32), removal verb (OD30), Cancel labels and empty-list sentences (OD33), all wave 3 |
+| [release-scope.md](release-scope.md) | open | iPhone-only scope (OD28, wave 3) and the TestFlight invitation |
+| [wave2-tokens-icons.md](wave2-tokens-icons.md) | open | Icon assets in code (#217); haptic policy (OD31) and icon items (OD33), wave 3 |
 
 ## Parity gaps from the Week Focus removal (wave 3)
 
