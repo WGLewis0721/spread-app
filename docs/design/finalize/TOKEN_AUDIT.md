@@ -1,8 +1,8 @@
 # Native token audit (input for wave 2)
 
-> Summary: Every hardcoded colour, font size, spacing value, touch-target size, corner radius and animation duration in the native SwiftUI files outside lane A, with file, line and the `Spread` token that should replace it. Wave 2 works from this list. Theme, Shell, Layouts and Chalk already use tokens.
+> Summary: Every hardcoded colour, font size, spacing value, touch-target size, corner radius and animation duration in the native SwiftUI files outside lane A, with file, line and the `Spread` token that should replace it. Wave 2 works from this list. Theme, Shell and Chalk already use tokens. `Layouts/` was deleted in this PR (OD14).
 
-> Part of the [Spread design brain](../README.md). Scope: `ios/SpreadNativeV2/Sources/SpreadNativeV2/` (except `Theme/`, `Shell/`, `Layouts/`, `Chalk/`), `ios/App/SpreadWidget/` and `ios/App/App/*.swift`. Excluded: `Tests/`, `Resources/`, and `ios/App/App/Cloud` and `ios/App/SpreadCloudCore`, which are outside the design rules.
+> Part of the [Spread design brain](../README.md). Scope: `ios/SpreadNativeV2/Sources/SpreadNativeV2/` (except `Theme/`, `Shell/`, `Chalk/`), `ios/App/SpreadWidget/` and `ios/App/App/*.swift`. Excluded: `Tests/`, `Resources/`, and `ios/App/App/Cloud` and `ios/App/SpreadCloudCore`, which are outside the design rules.
 
 Recorded 2026-11-14 on branch `claude/finalize-a-design-system`. Line numbers will drift as other lanes merge. Before editing a file, rerun the search in section 1 for that file.
 
@@ -39,15 +39,16 @@ Files scanned: 70 (sources outside lane A, the widget target and the app host). 
 ## 3. Blockers and decisions for wave 2
 
 1. **The widget cannot use `Spread` tokens yet.** `ios/App/SpreadWidget/*.swift` compiles only `Widget/SpreadWidgetShared.swift` from the app sources. `Theme/SpreadTheme.swift` is not in the SpreadWidget target, so every `(widget)` row is blocked. Options: add the theme file to the target (a project change, outside lane A; needs owner or lane E approval), or move a token subset into `SpreadWidgetShared.swift`.
-2. **`Layouts/SpreadLayouts.swift` is dormant.** `FanLayout`, `DialLayout`, `TabsLayout` and `DayLayout` have no call sites. The brand board allows dormant five-mode code for rollback. Lane A tokenised it. One literal, `Color(hex6: 0x0B0B0C)` (the Dial centre), has no token and is kept. Owner decision: delete the file or keep it.
-3. **Springs have no token.** `.spring(response:dampingFraction:)` appears in dormant Layouts code and in Life. Decide: use `SpreadTactile.settle`, or add a named spring.
+2. **Dormant layouts deleted (OD14).** `Layouts/SpreadLayouts.swift` had no call sites and is removed in this PR. `DialGeometry.swift` stays, because the native contract tests use it.
+3. **Springs have no token.** Any `.spring(response:dampingFraction:)` left in the rows is a Decide row. Decide: use `SpreadTactile.settle`, or add a named spring.
 4. **Corner radius 20 and 22 have no token.** The scale is 14 (`radiusControl`), 16 (`radiusRow`), 24 (`radiusCard`) and 28 (`radiusSheet`). Decide whether to add a tile radius of 20 or snap these.
 5. **Off-grid spacing** (2, 3, 5, 6, 10, 14, 18, 28 and similar) is listed with its nearest step. Snapping moves layout by 1 to 4 pt, so do it in a visual pass with device checks, not in a token-only pass.
 6. **Artwork stays.** The Chalk effect colours in `Chalk/ChalkEffects.swift` and the per-effect glow colours in its table are authored illustration data. `ChalkTiming.phase(duration:)` loop lengths are authored artwork timing. Neither is listed here.
-7. **Font sizes.** Only 11 literal `.system(size:)` calls remain outside lane A. Dynamic Type makes them scale with the user's setting, so check each at accessibility sizes. Mapping: 9 to 11 pt to `caption2` (no token), 12 to `Spread.caption`, 13 to `Spread.footnote`, 14 to 15 to `Spread.callout`, 16 to `Spread.headline`, 17 to `Spread.body`, 18 to 21 and 23 to 28 to `title3` or `title` (no token), 22 to `Spread.heading`, 29 to 34 to `Spread.display`.
+7. **Font sizes.** Only 11 literal `.system(size:)` calls remain outside lane A. Dynamic Type makes them scale with the user's setting, so check each at accessibility sizes. Mapping: 9 to 11 pt to `caption2` (no token), 12 to `Spread.caption`, 13 to `Spread.footnote`, 14 to 15 to `Spread.callout`, 16 to `Spread.headline`, 17 to `Spread.body`, 18 to 21 and 23 to 28 to SwiftUI `title3` or `title` (no token), 22 to `Spread.sheetTitle`, 29 to 34 to `Spread.title`.
 8. **Colour fallbacks.** `Color(hex: x ?? "#8E8E93")` should become `Spread.roleFallback`. `Color(hex:)` already returns that grey for a bad string, so the two are equivalent.
 9. **Glints, shadows and tile glyphs.** `.white` and `.black` are not tokens. Use `Spread.highlight` for glints, `Spread.onAccent` for text on filled controls, `Spread.tileGlyph` and `Spread.tileGlyphOnBright` for glyphs on role tiles, and `Spread.shadow` or `Spread.scrim` for dark overlays. Choose by use, because these are different roles.
 
+10. **Owner decisions applied in this PR** (plan section 8, the OD items in lane A): OD4 keeps `success` as it is. OD5 removes the Gray Matter alias tokens; the UI kit maps the names in one line. OD7 changes the role-deletion confirmation to say responsibility. OD14 deletes the dormant layouts. OD15 makes `chalkInk` share the light secondary ink, including its Increase Contrast variant.
 ## 4. Per-file list
 
 Rows are in file order. The code excerpt is trimmed to about 110 characters.
@@ -499,7 +500,7 @@ Rows are in file order. The code excerpt is trimmed to about 110 characters.
 |---:|---|---|---|---|
 | 21 | Spacing | `spacing: 20` | Spread.space5 | Replace |
 | 22 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 24 | Font size | `.system(size: 28` | title (Dynamic Type) | Decide |
+| 24 | Font size | `.system(size: 28` | SwiftUI .title (Dynamic Type) | Decide |
 | 27 | Radius | `cornerRadius: 16` | Spread.radiusRow | Replace |
 | 37 | Spacing | `.padding(.bottom, 4)` | Spread.space1 | Replace |
 | 53 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Replace |
@@ -841,15 +842,15 @@ Blocked until the widget target can see the theme (section 3, item 1).
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 141 | Colour | `Color(hex: "F7FAFF")` | Spread.ink (text) (RGB distance 0) | Replace |
-| 141 | Colour | `Color(hex: "B0BCD1")` | Spread.secondary (secondaryText) (RGB distance 0) | Replace |
+| 141 | Colour | `Color(hex: "F7FAFF")` | Spread.ink (RGB distance 0) | Replace |
+| 141 | Colour | `Color(hex: "B0BCD1")` | Spread.secondary (RGB distance 0) | Replace |
 | 142 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
 | 142 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 143 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 143 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
 | 144 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-| 147 | Colour | `Color(hex: "0E1A2E")` | Spread.ink (text) (RGB distance 0) | Replace |
-| 149 | Colour | `Color(hex: "4A5670")` | Spread.secondary (secondaryText) (RGB distance 0) | Replace |
+| 147 | Colour | `Color(hex: "0E1A2E")` | Spread.ink (RGB distance 0) | Replace |
+| 149 | Colour | `Color(hex: "4A5670")` | Spread.secondary (RGB distance 0) | Replace |
 | 150 | Colour | `Color(hex: "F4F1EA")` | Spread.canvas (RGB distance 0) | Replace |
 | 171 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 172 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
