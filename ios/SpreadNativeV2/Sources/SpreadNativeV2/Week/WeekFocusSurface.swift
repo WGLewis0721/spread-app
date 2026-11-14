@@ -233,7 +233,7 @@ struct WeekFocusSurface: View {
         }
         .overlay {
             if showDayDone {
-                Image(systemName: "checkmark.circle.fill")
+                SpreadIcon(name: "lucide-circle-check", size: 21)
                     .font(.system(size: 64, weight: .semibold))
                     .foregroundStyle(Spread.accent)
                     .padding(24)
@@ -284,7 +284,7 @@ struct WeekFocusSurface: View {
                     }
                     SpreadHaptics.selection()
                 } label: {
-                    Image(systemName: monthPlane ? "calendar.day.timeline.left" : "calendar")
+                    SpreadIcon(name: monthPlane ? "lucide-calendar-range" : "lucide-calendar-days", size: 20)
                         .font(.system(.body, weight: .semibold))
                         .frame(width: 44, height: 44)
                 }
@@ -418,7 +418,7 @@ struct WeekFocusSurface: View {
                         trayOpen.toggle()
                         if trayOpen { overdueOpen = false }
                     } label: {
-                        Label("To Place \(unplaced.count)", systemImage: "tray")
+                        Label { Text("To Place \(unplaced.count)") } icon: { SpreadIcon(name: "lucide-inbox", size: 18) }
                             .font(.system(.caption, weight: .semibold))
                             .frame(minHeight: 44)
                             .padding(.horizontal, 8)
@@ -432,7 +432,7 @@ struct WeekFocusSurface: View {
                         overdueOpen.toggle()
                         if overdueOpen { trayOpen = false }
                     } label: {
-                        Label("Overdue \(overdueRows.count)", systemImage: "clock.arrow.circlepath")
+                        Label { Text("Overdue \(overdueRows.count)") } icon: { SpreadIcon(name: "lucide-clock", size: 18) }
                             .font(.system(.caption, weight: .semibold))
                             .frame(minHeight: 44)
                             .padding(.horizontal, 8)
@@ -471,7 +471,7 @@ struct WeekFocusSurface: View {
             // its compact Add row (decision 16), so Add appears here only when there is no card to hold it.
             if todaysAllocations.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "calendar.badge.plus")
+                    SpreadIcon(name: "lucide-calendar-plus", size: 24)
                         .font(.system(.title2))
                         .foregroundStyle(Spread.secondary)
                     Text("Nothing planned")

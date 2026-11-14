@@ -156,7 +156,7 @@ struct WeekSurface: View {
                 Label {
                     Text("Free time").font(.system(.subheadline, weight: .semibold))
                 } icon: {
-                    Image(systemName: "clock").font(.system(.footnote, weight: .bold))
+                    SpreadIcon(name: "lucide-clock", size: 17).font(.system(.footnote, weight: .bold))
                 }
                 .foregroundStyle(Spread.accent)
                 .padding(.horizontal, 4)
@@ -169,7 +169,7 @@ struct WeekSurface: View {
                             Task { await planner.placeHours(roleId: item.roleId, day: item.day, hours: item.hours) }
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: "plus").font(.system(.footnote, weight: .bold))
+                                SpreadIcon(name: "icon-add", size: 19).font(.system(.footnote, weight: .bold))
                                 Circle().fill(Color(hex: role?.color ?? "#8E8E93")).frame(width: 8, height: 8)
                                 Text(role?.name ?? "").foregroundStyle(Spread.ink)
                                 Text(String(item.dayLabel.prefix(3))).foregroundStyle(Spread.ink)
@@ -403,7 +403,7 @@ struct DayCard: View {
                     Task { await planner.placeHours(roleId: selectedRole, day: day, hours: 1) }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "plus").font(.system(.subheadline, weight: .bold))
+                        SpreadIcon(name: "icon-add", size: 19).font(.system(.subheadline, weight: .bold))
                         Text("Add \(name)").font(.system(.subheadline, weight: .semibold))
                     }
                     .foregroundStyle(Spread.accent)
@@ -494,7 +494,7 @@ struct AllocationRow: View {
                                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                                 HStack(spacing: 2) {
                                     Text("\(tasks.count) \(tasks.count == 1 ? "task" : "tasks")")
-                                    Image(systemName: "chevron.down").font(.system(.caption2, weight: .bold))
+                                    SpreadIcon(name: "lucide-chevron-down", size: 16).font(.system(.caption2, weight: .bold))
                                         .rotationEffect(.degrees(showTasks ? 180 : 0))
                                 }
                                 .font(.system(.caption)).foregroundStyle(Spread.secondary)
@@ -528,7 +528,7 @@ struct AllocationRow: View {
                             leaving = false
                         }
                     } label: {
-                        Image(systemName: "minus").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                        SpreadIcon(name: "lucide-minus", size: 18).font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.tertiary)
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -596,7 +596,7 @@ struct HourStepper: View {
     var body: some View {
         HStack(spacing: 0) {
             Button { adjust(-step) } label: {
-                Image(systemName: "minus").font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
+                SpreadIcon(name: "lucide-minus", size: 18).font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.spreadPress)
             .accessibilityLabel("Decrease \(label)\(step < 1 ? " by half an hour" : "")")
@@ -616,7 +616,7 @@ struct HourStepper: View {
             .accessibilityAdjustableAction { adjust($0 == .increment ? step : -step) }
             .simultaneousGesture(scrub, including: onScrub == nil ? .none : .all)
             Button { adjust(step) } label: {
-                Image(systemName: "plus").font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
+                SpreadIcon(name: "icon-add", size: 19).font(.system(.footnote, weight: .semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.spreadPress)
             .accessibilityLabel("Increase \(label)\(step < 1 ? " by half an hour" : "")")

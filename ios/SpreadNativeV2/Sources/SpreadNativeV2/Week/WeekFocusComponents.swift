@@ -23,7 +23,7 @@ struct FocusedTaskRow: View {
             Button {
                 Task { await toggle() }
             } label: {
-                Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
+                SpreadIcon(name: task.done ? "lucide-circle-check" : "lucide-circle", size: 22)
                     .font(.system(.title3))
                     .foregroundStyle(task.done ? Spread.accent : Spread.secondary)
                     .frame(width: 44, height: 44)
@@ -46,7 +46,7 @@ struct FocusedTaskRow: View {
                 if let onMoveDown { Button("Move down", action: onMoveDown) }
             }
             .accessibilityIdentifier("focus-task-\(task.id)")
-            Image(systemName: "line.3.horizontal")
+            SpreadIcon(name: "icon-drag", size: 19)
                 .foregroundStyle(Spread.tertiary)
                 .font(.system(.footnote))
                 .frame(width: 38, height: 44)
@@ -124,7 +124,7 @@ struct FocusedQuickAdd: View {
                     expanded = true
                     focused = true
                 } label: {
-                    Label("Add task", systemImage: "plus")
+                    Label { Text("Add task") } icon: { SpreadIcon(name: "icon-add", size: 18) }
                         .font(.system(.subheadline, weight: .medium))
                         .foregroundStyle(Spread.accent)
                         .frame(minHeight: 44)
@@ -264,7 +264,7 @@ struct FocusedRoleCard: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text("\(tasks.count) task\(tasks.count == 1 ? "" : "s")")
                             .font(Spread.caption).foregroundStyle(Spread.secondary)
-                        Image(systemName: "chevron.down")
+                        SpreadIcon(name: "lucide-chevron-down", size: 17)
                             .font(.system(.footnote, weight: .semibold))
                             .rotationEffect(.degrees(expanded ? 180 : 0))
                             .foregroundStyle(Spread.secondary)
@@ -313,7 +313,7 @@ struct FocusedRoleCard: View {
                         Button {
                             showCompleted.toggle()
                         } label: {
-                            Label("\(doneTasks.count) completed", systemImage: "checkmark.circle")
+                            Label { Text("\(doneTasks.count) completed") } icon: { SpreadIcon(name: "lucide-circle-check", size: 16) }
                                 .font(.system(.footnote, weight: .medium))
                                 .foregroundStyle(Spread.secondary)
                                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
