@@ -43,19 +43,43 @@ All `CLAUDE.md` rules apply unchanged. Gray Matter gates are mapped onto existin
 
 **Exceptions needed:** None planned. Any lane that thinks it needs one stops and lists it in its PR for the owner.
 
+### Owner goals (every lane is judged on these)
+
+| Goal | What it means in review |
+| --- | --- |
+| Continuity | The same element (card, row, sheet header, toast, empty state, arrow control) looks and behaves the same on every surface and in widgets |
+| Consistency | Values come from `SpreadTheme` tokens; one copy voice; one icon set (Lucide via `SpreadIcons`) |
+| Thorough design choices | Every change names its reason: a Gray Matter fundamental or UX law, a brand-board rule, or an accessibility need |
+| Familiar functionality | Apple-standard patterns first (Jakob's law): sheets with detents, swipe-back, context menus, standard Undo, system Dynamic Type and VoiceOver. Spread invents a control only when the native board already defines it |
+
+### Skills and MCPs each lane uses
+
+| Tool | Use |
+| --- | --- |
+| `design:design-critique` skill | Structured critique of the lane's surfaces before editing (hierarchy, consistency, usability) |
+| `design:design-system` skill | Audit token naming and hardcoded values; document component variants and states |
+| `design:accessibility-review` skill | WCAG 2.2 / HIG pass: contrast, 44 pt targets, VoiceOver order, Dynamic Type, reduced motion |
+| `design:ux-copy` skill | Every label, empty state, error, confirmation and Undo message in one voice |
+| 21st.dev MCP (`get_inspiration`, `search`) | Pattern reference only. React code is never ported into SwiftUI |
+| Playwright MCP | Landing screenshots at 390/820/1024/1440, light and dark (lane G) and evidence (lane F) |
+| GitHub MCP | Draft PRs, `native-typecheck` results, PR subscriptions |
+
+Each PR body lists which skills and MCPs were used and what changed because of them.
+
 ## 5. Lanes (one Haiku session each, disjoint file ownership)
 
 | Lane | Owns (only these paths) | Effort | Deliverable |
 | --- | --- | --- | --- |
 | A. Design system foundation | `Theme/`, `Shell/`, `Layouts/`, `Chalk/`, `docs/design/ui-kit/UI_KIT.md` | xhigh | Complete semantic tokens (color, type ramp on Dynamic Type, spacing, radius, motion) in `SpreadTheme.swift`; Shell/Layout files use only tokens; native UI-kit section; `docs/design/finalize/TOKEN_AUDIT.md` listing every remaining hardcoded value by file for wave 2 |
-| B. Life surface | `Life/` (all files) | high | States, spacing, type, 44 pt targets, VoiceOver labels, copy polish across Wallet Stack, card, Hours, Weekly Time, Plan Ahead, notes, recurring form |
+| B1. Life stack and card | `Life/LifeRoot.swift`, `LifeWalletStack.swift`, `LifeEditorialCard.swift`, `LifeNotesEditor.swift`, `LifeAttachmentStore.swift`, `LifeTaskContent.swift` | high | Wallet Stack, focused card, Details/Tasks, notes: states, type, targets, VoiceOver, copy |
+| B2. Life time and plans | `Life/LifeHoursView.swift`, `LifeWeeklyTimeBudget.swift`, `LifeWeekView.swift`, `LifePlanAheadSheet.swift`, `LifeRecurringPlanForm.swift`, `LifeManagementSheets.swift`, `PlanAheadPresets.swift` | high | Hours, Weekly Time strip, Plan Ahead preview/validate/confirm, recurring form, management sheets |
 | C. Planner surfaces | `Week/`, `Spread/`, `HourStrip.swift`, `WeekSwipeRules.swift`, `LifeCalendarRules.swift` | high | Same polish pass for Week, Month, Spread, trays; status never color alone |
 | D. Sheets | `Sheets/` except `BackupRestoreSheet.swift` | high | Consistent sheet anatomy (title, detents, primary action, Undo), empty/error states, copy voice |
 | E. Focus and widgets | `Focus/`, `Widget/`, `ios/App/SpreadWidget/` | medium | Widget families sized and branded consistently with app tokens; timer sheet polish |
 | F. Evidence and inventory (docs only) | `docs/design/finalize/` except `TOKEN_AUDIT.md` | medium | Screen map + `screens.json`, upgrade audit, references register, corrections register, release checklist |
 | G. Marketing site | `src/spread/components/landing-*`, landing-only styles | medium | Landing polish at 390/820/1024/1440, light/dark, reduced motion; real before/after Playwright screenshots |
 
-**Wave 2 (after A merges):** a token-adoption sweep per lane using `TOKEN_AUDIT.md`, then a cross-surface consistency review against the release checklist. Lanes B to E use existing tokens now and record any missing token in their PR instead of adding one.
+**Wave 2 (after A merges):** a token-adoption sweep per lane using `TOKEN_AUDIT.md`, then a cross-surface consistency review against the release checklist. Lanes B1 to E use existing tokens now and record any missing token in their PR instead of adding one.
 
 ## 6. Acceptance
 
