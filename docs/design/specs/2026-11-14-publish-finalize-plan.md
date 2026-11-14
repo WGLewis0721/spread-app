@@ -70,16 +70,15 @@ Each PR body lists which skills and MCPs were used and what changed because of t
 
 | Lane | Owns (only these paths) | Effort | Deliverable |
 | --- | --- | --- | --- |
-| A. Design system foundation | `Theme/`, `Shell/`, `Layouts/`, `Chalk/`, `docs/design/ui-kit/UI_KIT.md` | xhigh | Complete semantic tokens (color, type ramp on Dynamic Type, spacing, radius, motion) in `SpreadTheme.swift`; Shell/Layout files use only tokens; native UI-kit section; `docs/design/finalize/TOKEN_AUDIT.md` listing every remaining hardcoded value by file for wave 2 |
-| B1. Life stack and card | `Life/LifeRoot.swift`, `LifeWalletStack.swift`, `LifeEditorialCard.swift`, `LifeNotesEditor.swift`, `LifeAttachmentStore.swift`, `LifeTaskContent.swift` | high | Wallet Stack, focused card, Details/Tasks, notes: states, type, targets, VoiceOver, copy |
-| B2. Life time and plans | `Life/LifeHoursView.swift`, `LifeWeeklyTimeBudget.swift`, `LifeWeekView.swift`, `LifePlanAheadSheet.swift`, `LifeRecurringPlanForm.swift`, `LifeManagementSheets.swift`, `PlanAheadPresets.swift` | high | Hours, Weekly Time strip, Plan Ahead preview/validate/confirm, recurring form, management sheets |
-| C. Planner surfaces | `Week/`, `Spread/`, `HourStrip.swift`, `WeekSwipeRules.swift`, `LifeCalendarRules.swift` | high | Same polish pass for Week, Month, Spread, trays; status never color alone |
-| D. Sheets | `Sheets/` except `BackupRestoreSheet.swift` | high | Consistent sheet anatomy (title, detents, primary action, Undo), empty/error states, copy voice |
-| E. Focus and widgets | `Focus/`, `Widget/`, `ios/App/SpreadWidget/` | medium | Widget families sized and branded consistently with app tokens; timer sheet polish |
-| F. Evidence and inventory (docs only) | `docs/design/finalize/` except `TOKEN_AUDIT.md` | medium | Screen map + `screens.json`, upgrade audit, references register, corrections register, release checklist |
-| G. Marketing site | `src/spread/components/landing-*`, landing-only styles | medium | Landing polish at 390/820/1024/1440, light/dark, reduced motion; real before/after Playwright screenshots |
+| A. Design system foundation | `Theme/`, `Shell/`, `Layouts/`, `Chalk/`, `docs/design/ui-kit/UI_KIT.md`, `docs/design/finalize/TOKEN_AUDIT.md` | xhigh | Complete semantic tokens in `SpreadTheme.swift`; Shell/Layout/Chalk use only tokens; native UI-kit section; `TOKEN_AUDIT.md` listing every remaining hardcoded value for wave 2 |
+| B. Life surface | `Life/` (all files) | xhigh | Wallet Stack, card Details/Tasks, notes, Hours, Weekly Time, Plan Ahead, recurring form, management sheets: states, type, targets, VoiceOver, copy |
+| C. Planner surfaces | `Week/`, `Spread/`, `HourStrip.swift`, `WeekSwipeRules.swift`, `LifeCalendarRules.swift`, `PlannerDates.swift`, `TactilePrecisionMath.swift` | xhigh | Week, Month, Spread, trays, Focus-in-Week; status never color alone; tap path and Undo for every drag |
+| D. Sheets, Focus, widgets | `Sheets/` except `BackupRestoreSheet.swift`, `Focus/`, `Widget/`, `ios/App/SpreadWidget/`, `ReleaseNotes.swift` | xhigh | One sheet anatomy, empty/error states, timer polish, consistent widget families and Live Activity |
+| E. Evidence and landing | `docs/design/finalize/` (except `TOKEN_AUDIT.md`), landing components | xhigh | Screen map + `screens.json`, upgrade audit, references, corrections register, release checklist; landing polish with real Playwright screenshots at 390/820/1024/1440 |
 
-**Wave 2 (after A merges):** a token-adoption sweep per lane using `TOKEN_AUDIT.md`, then a cross-surface consistency review against the release checklist. Lanes B1 to E use existing tokens now and record any missing token in their PR instead of adding one.
+Five Haiku sessions run in parallel (owner cap: five).
+
+**Wave 2 (after A merges):** a token-adoption sweep per lane using `TOKEN_AUDIT.md`, then a cross-surface consistency review against the release checklist. Lanes B to D use existing tokens now and record any missing token in their PR instead of adding one.
 
 ## 6. Acceptance
 
