@@ -81,6 +81,7 @@ class PreflightTests(unittest.TestCase):
                     "CFBundleVersion": "10",
                     "CFBundleShortVersionString": "1.0",
                     "ITSAppUsesNonExemptEncryption": False,
+                    "UIDeviceFamily": [1],
                 }))
                 bundle.writestr("Payload/App.app/PrivacyInfo.xcprivacy",
                                 plistlib.dumps({"NSPrivacyTracking": False}))
@@ -88,6 +89,84 @@ class PreflightTests(unittest.TestCase):
             checks.ipa(ipa)
             self.assertTrue(checks.items)
             self.assertTrue(all(ok for _, ok, _ in checks.items))
+
+    def test_signed_ipa_must_declare_iphone_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for label, family in (("universal", [1, 2]), ("missing", None)):
+                with self.subTest(family=label):
+                    info = {
+                        "CFBundleIdentifier": "com.graymatter.spread",
+                        "CFBundleVersion": "10",
+                        "CFBundleShortVersionString": "1.0",
+                        "ITSAppUsesNonExemptEncryption": False,
+                    }
+                    if family is not None:
+                        info["UIDeviceFamily"] = family
+                    ipa = Path(tmp) / f"{label}.ipa"
+                    with ZipFile(ipa, "w") as bundle:
+                        bundle.writestr("Payload/App.app/Info.plist", plistlib.dumps(info))
+                        bundle.writestr("Payload/App.app/PrivacyInfo.xcprivacy",
+                                        plistlib.dumps({"NSPrivacyTracking": False}))
+                    checks = preflight.Checks()
+                    checks.ipa(ipa)
+                    results = {name: ok for name, ok, _ in checks.items}
+                    self.assertFalse(results["Built device family"])
+
+    def test_every_build_target_must_be_iphone_only(self):
+        def device_family_passes(lines):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                project = root / "ios/App/App.xcodeproj/project.pbxproj"
+                project.parent.mkdir(parents=True)
+                project.write_text("".join(lines), encoding="utf-8")
+                checks = preflight.Checks()
+                checks.device_family(root)
+                return checks.items[-1][1]
+
+        target = "PRODUCT_BUNDLE_IDENTIFIER = com.graymatter.spread;\n"
+        self.assertTrue(device_family_passes([
+            target, "TARGETED_DEVICE_FAMILY = 1;\n",
+            target, 'TARGETED_DEVICE_FAMILY = "1";\n',
+        ]))
+        self.assertFalse(device_family_passes([target, 'TARGETED_DEVICE_FAMILY = "1,2";\n']))
+        self.assertFalse(device_family_passes([
+            target, "TARGETED_DEVICE_FAMILY = 1;\n",
+            target,
+        ]), "A target without a device family cannot ship")
+        self.assertFalse(device_family_passes([
+            target, "TARGETED_DEVICE_FAMILY = 1;\n",
+            target, "TARGETED_DEVICE_FAMILY = 2;\n",
+        ]))
+        self.assertFalse(device_family_passes([]), "An empty project fails closed")
+
+    def test_info_plist_must_not_declare_ipad_keys(self):
+        checks = preflight.Checks()
+        checks.ipad_keys({
+            "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
+            "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationPortrait"],
+        }, "Test plist")
+        self.assertFalse(checks.items[-1][1])
+        checks = preflight.Checks()
+        checks.ipad_keys({"UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"]}, "Test plist")
+        self.assertTrue(checks.items[-1][1])
+
+    def test_committed_app_and_widget_are_iphone_only(self):
+        root = Path(__file__).resolve().parent.parent
+        checks = preflight.Checks()
+        checks.device_family(root)
+        self.assertTrue(checks.items[-1][1], checks.items[-1][2])
+        app_info = plistlib.loads((root / "ios/App/App/Info.plist").read_bytes())
+        widget_info = plistlib.loads((root / "ios/App/SpreadWidget/Info.plist").read_bytes())
+        for label, info in (("iOS Info.plist", app_info), ("Widget Info.plist", widget_info)):
+            with self.subTest(plist=label):
+                checks = preflight.Checks()
+                checks.ipad_keys(info, label)
+                self.assertTrue(checks.items[-1][1], checks.items[-1][2])
+        self.assertEqual(app_info["UISupportedInterfaceOrientations"], [
+            "UIInterfaceOrientationPortrait",
+            "UIInterfaceOrientationLandscapeLeft",
+            "UIInterfaceOrientationLandscapeRight",
+        ])
 
     def test_release_notes_are_valid_and_version_matched(self):
         with tempfile.TemporaryDirectory() as tmp:
