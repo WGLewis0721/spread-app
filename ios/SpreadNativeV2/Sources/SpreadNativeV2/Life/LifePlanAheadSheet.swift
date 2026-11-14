@@ -52,31 +52,41 @@ struct LifePlanAheadSheet: View {
         return result
     }
 
+    /// A single primary action sits above the safe area, rather than after an
+    /// arbitrarily long preview. The repeating editor owns its own Form and footer.
     var body: some View {
         SpreadSheetStack {
-            Form {
-                if planMode == "plans" {
-                    plansSections
-                } else if planMode == "copy" {
-                    copySections
-                } else {
-                    Section {
-                        Button {
+            Group {
+                if planMode == "repeat" {
+                    LifeRecurringPlanForm(
+                        planner: planner, snapshot: snapshot,
+                        initialPlanId: formPlanId, initialPreset: formPreset,
+                        onBackToPlans: {
                             formPlanId = nil
                             formPreset = nil
                             preview = nil
                             planMode = "plans"
-                        } label: {
-                            Label { Text("Your plans") } icon: { SpreadIcon(name: "lucide-chevron-left", size: 18) }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .frame(minHeight: 44)
-                        }
-                        .accessibilityIdentifier("plan-ahead-back-to-plans")
-                    }
-                    if planMode == "repeat" {
-                        LifeRecurringPlanForm(planner: planner, snapshot: snapshot,
-                                              initialPlanId: formPlanId, initialPreset: formPreset)
-                    } else {
+                        })
+                } else {
+                    Form {
+                        if planMode == "plans" {
+                            plansSections
+                        } else if planMode == "copy" {
+                            copySections
+                        } else {
+                            Section {
+                                Button {
+                                    preview = nil
+                                    planMode = "plans"
+                                } label: {
+                                    Label { Text("Your plans") } icon: {
+                                        SpreadIcon(name: "lucide-chevron-left", size: 18)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .frame(minHeight: 44)
+                                }
+                                .accessibilityIdentifier("plan-ahead-back-to-plans")
+                            }
                 Section {
                     Text("Move time to another week. Nothing moves until you preview and confirm.")
                         .font(.subheadline)
@@ -123,15 +133,6 @@ struct LifePlanAheadSheet: View {
                 } header: { Text("To a future week") }
 
                 Section {
-                    Button {
-                        Task { await requestPreview() }
-                    } label: {
-                        Label(previewing ? "Checking…" : "Preview transfer", systemImage: "eye")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .disabled(previewing || saving || planner.busy ||
-                              role == nil || (dailyTransfer && availableDays.isEmpty))
-                    .accessibilityIdentifier("plan-ahead-preview")
                     if let preview {
                         if preview.eligible {
                             VStack(alignment: .leading, spacing: 5) {
@@ -156,25 +157,22 @@ struct LifePlanAheadSheet: View {
                                 .foregroundStyle(Spread.danger)
                         }
                     }
-                    Button {
-                        Task { await confirmTransfer() }
-                    } label: {
-                        Text(saving ? "Saving…" : "Move hours")
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(saving || planner.busy || preview?.eligible != true)
-                    .accessibilityIdentifier("plan-ahead-confirm")
                 } header: { Text("Review before moving") }
+                        }
+                    }
+                    .spreadListSurface()
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        if planMode == "copy" || planMode == "move" {
+                            bottomAction
+                        }
                     }
                 }
             }
-            .spreadListSurface()
             .navigationTitle("Plan Ahead")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }.disabled(saving)
+                    Button("Close") { dismiss() }.disabled(saving || copySaving)
                 }
             }
         }
@@ -196,7 +194,47 @@ struct LifePlanAheadSheet: View {
         .accessibilityIdentifier("life-plan-ahead-sheet")
     }
 
-    /// Repeating schedules that still apply from next week onward.
+    @ViewBuilder private var bottomAction: some View {
+        if planMode == "copy" {
+            Button {
+                Task {
+                    if copyPreview?.eligible == true { await confirmCopy() }
+                    else { await requestCopyPreview() }
+                }
+            } label: {
+                Text(copySaving ? "Copying…" : copyPreviewing ? "Checking…" :
+                     copyPreview?.eligible == true ? "Copy to these weeks" : "Preview copy")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(copySaving || copyPreviewing || planner.busy)
+            .accessibilityIdentifier(copyPreview?.eligible == true
+                                      ? "plan-ahead-copy-confirm" : "plan-ahead-copy-preview")
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Spread.canvas)
+        } else if planMode == "move" {
+            Button {
+                Task {
+                    if preview?.eligible == true { await confirmTransfer() }
+                    else { await requestPreview() }
+                }
+            } label: {
+                Text(saving ? "Saving…" : previewing ? "Checking…" :
+                     preview?.eligible == true ? "Move hours" : "Preview transfer")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(saving || previewing || planner.busy ||
+                      role == nil || (dailyTransfer && availableDays.isEmpty))
+            .accessibilityIdentifier(preview?.eligible == true
+                                      ? "plan-ahead-confirm" : "plan-ahead-preview")
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Spread.canvas)
+        }
+    }
+
     private var activeRules: [NativeRecurringPlan] {
         (snapshot.recurringPlans ?? []).filter { rule in
             rule.terminatedWeek == nil &&
