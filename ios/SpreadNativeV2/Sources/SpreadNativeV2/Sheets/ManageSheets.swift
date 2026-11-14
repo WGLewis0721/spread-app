@@ -1,11 +1,13 @@
 #if os(iOS)
 import SwiftUI
 
-/// Add Life (`NewSpreadSheet`): one or more named Life areas, each with its hours and an optional symbol.
-/// "Save spreads" adds every named row through the store's `addRole`, one after another.
+/// Add Life, or Add responsibility in Classic (`NewSpreadSheet`): one or more named roles, each with its hours and an optional symbol.
+/// "Save" adds every named row through the store's `addRole`, one after another.
 struct NewSpreadSheet: View {
     @ObservedObject var planner: LivePlanner
     @Environment(\.dismiss) private var dismiss
+    /// The root's flag (`SpreadLiveRoot` reads the same key): on is Life, off is Classic.
+    @AppStorage("native.weekMonth.previewEnabled") private var lifeMode = true
 
     private struct Draft: Identifiable {
         let id: Int
@@ -19,6 +21,10 @@ struct NewSpreadSheet: View {
     @State private var saving = false
 
     private var ready: Bool { drafts.contains { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
+    /// OD7: Life says "Life area", Classic says "responsibility". "Spread" is the app name only.
+    private var roleWord: String { lifeMode ? "Life area" : "responsibility" }
+    private var roleWords: String { lifeMode ? "Life areas" : "responsibilities" }
+    private func fieldName(_ index: Int) -> String { lifeMode ? "Life area \(index + 1)" : "Responsibility \(index + 1)" }
 
     var body: some View {
         SpreadSheetStack {
@@ -35,7 +41,7 @@ struct NewSpreadSheet: View {
                     } label: {
                         HStack(spacing: 6) {
                             SpreadIcon(name: "icon-add", size: 19).font(.system(.subheadline, weight: .bold))
-                            Text("Add another Life area").font(.system(.subheadline, weight: .semibold))
+                            Text("Add another \(roleWord)").font(.system(.subheadline, weight: .semibold))
                         }
                         .foregroundStyle(Spread.accent)
                         .frame(maxWidth: .infinity, minHeight: 44)
@@ -44,7 +50,7 @@ struct NewSpreadSheet: View {
                     .buttonStyle(.spreadPress)
                     .accessibilityIdentifier("add-another-spread")
                     Button { save() } label: {
-                        Text("Save Life areas").font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
+                        Text("Save \(roleWords)").font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Capsule().fill(Spread.accentGradient))
                     }
@@ -55,7 +61,7 @@ struct NewSpreadSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle("Add Life")
+            .navigationTitle(lifeMode ? "Add Life" : "Add responsibility")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // Creating drafts discards them on Cancel, so the leading control is Cancel, not Close.
@@ -79,21 +85,20 @@ struct NewSpreadSheet: View {
             HStack(spacing: 12) {
                 RoleBadge(category: draft.category, color: colorHex, size: 48)
                 VStack(alignment: .leading, spacing: 4) {
-                    // A Life draft names a Life area: OD7 keeps "spread" for the app name only.
-                    Text("Life area \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
+                    Text(fieldName(index)).font(.system(.footnote)).foregroundStyle(Spread.secondary)
                     TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }), prompt: Spread.fieldPrompt("Parent, shop, study"))
                         .font(.system(.body))
                         .padding(.horizontal, 12).frame(minHeight: 44)
                         .background(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).fill(Spread.inset))
                         .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
-                        .accessibilityLabel("Life area \(index + 1) name")
+                        .accessibilityLabel("\(fieldName(index)) name")
                         .accessibilityIdentifier("role-name-field")
                 }
             }
             HStack {
                 Text("Hours each week").font(Spread.callout).foregroundStyle(Spread.secondary)
                 Spacer()
-                HourStepper(value: draft.hours, label: "Hours for Life area \(index + 1)", step: 0.5) { hours in
+                HourStepper(value: draft.hours, label: lifeMode ? "Hours for Life area \(index + 1)" : "Hours for responsibility \(index + 1)", step: 0.5) { hours in
                     drafts[index].hours = hours
                 }
             }
@@ -151,6 +156,8 @@ struct RoleSheet: View {
     @State private var placeDay = ""
     @State private var placeHours = 1.0
     @State private var confirmRemoval = false
+    /// Reached from Life's "Adjust hours" alert as well as Classic, so it reads the root's flag (OD7).
+    @AppStorage("native.weekMonth.previewEnabled") private var lifeMode = true
 
     private var role: Responsibility? { planner.snapshot?.roles.first { $0.id == roleId } }
 
@@ -158,7 +165,7 @@ struct RoleSheet: View {
         SpreadSheetStack {
             if let snapshot = planner.snapshot, let role {
                 Form {
-                    Section("Responsibility") {
+                    Section(lifeMode ? "Life area" : "Responsibility") {
                         TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"))
                             .submitLabel(.done)
                             .onSubmit { rename(role) }
@@ -231,15 +238,15 @@ struct RoleSheet: View {
                     }
                         .listRowBackground(Spread.elevated)
                     Section {
-                        Button("Remove responsibility", role: .destructive) { confirmRemoval = true }
+                        Button(lifeMode ? "Remove Life area" : "Remove responsibility", role: .destructive) { confirmRemoval = true }
                         .accessibilityIdentifier("delete-role-button")
                     } footer: {
-                        Text("The hours and tasks for this responsibility leave every week.")
+                        Text(lifeMode ? "The hours and tasks for this Life area leave every week." : "The hours and tasks for this responsibility leave every week.")
                     }
                         .listRowBackground(Spread.elevated)
                 }
                     .spreadListSurface()
-                .navigationTitle("Responsibility")
+                .navigationTitle(lifeMode ? "Life area" : "Responsibility")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
@@ -251,14 +258,14 @@ struct RoleSheet: View {
                     placeDay = PlannerOrder.day(weekKey: snapshot.weekKey, displayPosition: 0)
                 }
             } else {
-                ContentUnavailableView("This responsibility is no longer in the plan.", systemImage: "square.stack")
+                ContentUnavailableView(lifeMode ? "This Life area is no longer in the plan." : "This responsibility is no longer in the plan.", systemImage: "square.stack")
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
-        .confirmationDialog("Remove \(role?.name ?? "this responsibility")?", isPresented: $confirmRemoval, titleVisibility: .visible) {
-            Button("Remove responsibility", role: .destructive) {
+        .confirmationDialog("Remove \(role?.name ?? (lifeMode ? "this Life area" : "this responsibility"))?", isPresented: $confirmRemoval, titleVisibility: .visible) {
+            Button(lifeMode ? "Remove Life area" : "Remove responsibility", role: .destructive) {
                 Task {
                     if await planner.send(["type": "removeRole", "roleId": roleId]) { dismiss() }
                 }
@@ -266,7 +273,7 @@ struct RoleSheet: View {
             .accessibilityIdentifier("confirm-delete-role")
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The hours and tasks for this responsibility leave every week.")
+            Text(lifeMode ? "The hours and tasks for this Life area leave every week." : "The hours and tasks for this responsibility leave every week.")
         }
     }
 
@@ -656,7 +663,7 @@ struct MoreSheet: View {
                                 .frame(minHeight: 48)
                                 .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                                 .accessibilityIdentifier("life-cards-widget-enabled")
-                            Text("Life area names, colors and this week's hours appear on your Home Screen. Anyone who can see it can see them. Stays on this device.")
+                            Text("\(weekFocusEnabled ? "Life area" : "Responsibility") names, colors and this week's hours appear on your Home Screen. Anyone who can see it can see them. Stays on this device.")
                                 .font(.footnote)
                                 .foregroundStyle(Spread.secondary)
                         }
