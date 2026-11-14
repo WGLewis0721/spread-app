@@ -776,30 +776,7 @@ struct LifeRoot: View {
     private var lifeWeekToggle: some View {
         HStack(spacing: 2) {
             ForEach([LifeDestination.life, LifeDestination.week]) { item in
-                Button {
-                    navigate(item)
-                } label: {
-                    VStack(spacing: 2) {
-                        if item == .life {
-                            SpreadBrandMark(size: 23)
-                        } else {
-                            SpreadIcon(name: "lucide-calendar-days", size: 18)
-                                .font(.subheadline)
-                        }
-                        Text(item == .life ? "Life" : "Week")
-                            .font(.caption2.weight(.semibold))
-                    }
-                    .foregroundStyle(destination == item ? Spread.onAccent : Spread.ink)
-                    .frame(width: 51).frame(minHeight: 52)
-                    .background(destination == item ? Spread.accent : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 12))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.spreadPress)
-                .accessibilityLabel(item == .life ? "Life" : "Week")
-                .accessibilityHint(item == .life ? "Show Life areas" : "Show the calendar week")
-                .accessibilityAddTraits(destination == item ? .isSelected : [])
-                .accessibilityIdentifier("life-nav-" + item.rawValue.lowercased())
+                lifeWeekToggleButton(item)
             }
         }
         .padding(3)
@@ -808,6 +785,40 @@ struct LifeRoot: View {
             .strokeBorder(Spread.line, lineWidth: 1))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-week-toggle")
+    }
+
+    // Keep the ForEach content small. Xcode's release optimizer timed out
+    // type-checking the original nested Button/VStack/modifier expression.
+    private func lifeWeekToggleButton(_ item: LifeDestination) -> some View {
+        let selected = destination == item
+        return Button {
+            navigate(item)
+        } label: {
+            lifeWeekToggleLabel(item, selected: selected)
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityLabel(item.rawValue)
+        .accessibilityHint(item == .life ? "Show Life areas" : "Show the calendar week")
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier("life-nav-" + item.rawValue.lowercased())
+    }
+
+    private func lifeWeekToggleLabel(_ item: LifeDestination, selected: Bool) -> some View {
+        VStack(spacing: 2) {
+            if item == .life {
+                SpreadBrandMark(size: 23)
+            } else {
+                SpreadIcon(name: "lucide-calendar-days", size: 18)
+                    .font(.subheadline)
+            }
+            Text(item.rawValue)
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+        .frame(width: 51).frame(minHeight: 52)
+        .background(selected ? Spread.accent : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 12))
+        .contentShape(Rectangle())
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
         WeekCrownView(title: PlannerDates.label(PlannerDates.date(snapshot.weekKey), pattern: "MMM d"),
