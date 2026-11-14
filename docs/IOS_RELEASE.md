@@ -37,7 +37,7 @@ This feature adds no accounts, analytics, remote polling, or planner writes.
 | Bundle ID | `com.graymatter.spread` |
 | Display name | Spread |
 | Version / build | 1.0 / 1 (raise the build number for every upload) |
-| Devices | iPhone only, portrait only today. Target for 1.0: iPhone + iPad, all orientations (see ICLOUD_PLAN.md) |
+| Devices | iPhone only for 1.0 (owner decision OD20/OD28: `TARGETED_DEVICE_FAMILY = 1` in every target, no iPad orientation keys; the preflight enforces it). The earlier iPhone + iPad target in ICLOUD_PLAN.md is superseded. |
 | Minimum iOS | 15.0 today. Target for 1.0: 17.0 (`CKSyncEngine`) |
 | Signing | Automatic, no team set in the repo (you choose it in Xcode) |
 | Encryption | `ITSAppUsesNonExemptEncryption = NO` (HTTPS and OS crypto only) |
@@ -155,6 +155,10 @@ appear because the plist answers it.
   build is untouched.
 
 ## iCloud and iPad: what has been checked, and what has not
+
+> **Superseded for 1.0 (owner decisions OD20 and OD28):** Spread 1.0 is iPhone only, so the iPad checks below
+> do not apply to the 1.0 candidate. iCloud stays suspended and nothing may claim it works. This section is kept
+> as history.
 
 Flags: both iCloud features are off in a normal build. To test them, build with
 `VITE_SPREAD_CLOUD_BACKUP=1 VITE_SPREAD_CLOUD_SYNC=1 npm run ios:sync`. To ship them, change the
