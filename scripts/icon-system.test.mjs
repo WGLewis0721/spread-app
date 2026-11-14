@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const iconMap = {
@@ -121,20 +121,54 @@ const nativeLucideIcons = [
   "x", "ellipsis", "chevron-left", "chevron-right", "chevron-up", "chevron-down",
   "calendar-days", "calendar-clock", "calendar-plus", "calendar-range", "sliders-horizontal",
   "list-todo", "circle-plus", "circle-check", "circle", "flag", "inbox",
-  "timer", "clock", "minus", "panel-left", "bell"
+  "timer", "clock", "minus", "panel-left", "bell",
+  "plus", "coffee", "eye", "copy", "arrow-left-right", "rotate-ccw", "rotate-cw", "circle-help"
 ];
+
+const xcassets = "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets";
 
 test("native action glyphs are canonical 24-point Lucide templates with one license", () => {
   for (const icon of nativeLucideIcons) {
-    const root = `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets/lucide-${icon}.imageset`;
+    const root = `${xcassets}/lucide-${icon}.imageset`;
     const svg = read(`${root}/lucide-${icon}.svg`);
     const meta = JSON.parse(read(`${root}/Contents.json`));
     assert.match(svg, /viewBox="0 0 24 24"/, `${icon}: 24-point grid`);
     assert.match(svg, /stroke-width="2"/, `${icon}: consistent stroke`);
     assert.match(svg, /stroke-linecap="round"/);
+    assert.match(svg, /stroke="#007AFF"/, `${icon}: accent stroke, tinted at runtime`);
+    assert.doesNotMatch(svg, /currentColor|<image|<script|href=/, `${icon}: no remote or inherited paint`);
     assert.equal(meta.images[0].filename, `lucide-${icon}.svg`);
     assert.equal(meta.properties["template-rendering-intent"], "template");
     assert.equal(meta.properties["preserves-vector-representation"], true);
+  }
+});
+
+test("every shipped lucide imageset is covered by the native glyph audit", () => {
+  const shipped = readdirSync(new URL(`../${xcassets}`, import.meta.url))
+    .filter((name) => name.startsWith("lucide-") && name.endsWith(".imageset"))
+    .map((name) => name.slice("lucide-".length, -".imageset".length));
+  assert.deepEqual([...shipped].sort(), [...nativeLucideIcons].sort());
+});
+
+test("every icon name the Swift sources reference resolves to an imageset", () => {
+  const root = "ios/SpreadNativeV2/Sources/SpreadNativeV2";
+  const names = new Set();
+  for (const file of readdirSync(new URL(`../${root}`, import.meta.url), { recursive: true })) {
+    if (!String(file).endsWith(".swift")) continue;
+    for (const match of read(`${root}/${file}`).matchAll(/"((?:lucide|icon|category-glyph|app-icon)-[a-z0-9-]+)"/g)) {
+      names.add(match[1]);
+    }
+  }
+  assert.ok(names.size > 0, "expected Swift icon references");
+  for (const name of names) {
+    assert.ok(existsSync(new URL(`../${xcassets}/${name}.imageset`, import.meta.url)), `${name} has no imageset`);
+  }
+});
+
+test("every native-only Lucide glyph is recorded in the icon handoff", () => {
+  const handoff = read("docs/design/brand/ICON_HANDOFF.md");
+  for (const icon of nativeLucideIcons) {
+    assert.ok(handoff.includes(`\`${icon}\``), `${icon} is missing from ICON_HANDOFF.md`);
   }
 });
 

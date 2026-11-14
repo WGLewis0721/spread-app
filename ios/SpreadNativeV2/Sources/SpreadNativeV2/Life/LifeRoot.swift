@@ -734,7 +734,7 @@ struct LifeRoot: View {
                 } label: {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         HStack(spacing: 8) {
-                            SpreadIcon(name: session.currentKind == .rest ? "lucide-clock" : "lucide-timer", size: 18)
+                            SpreadIcon(name: session.currentKind == .rest ? "lucide-coffee" : "lucide-timer", size: 18)
                             Text(session.roleName).lineLimit(1)
                             Spacer(minLength: 8)
                             // A finished stretch with a next step waits for a tap, so it shows "Next", not 00:00.
