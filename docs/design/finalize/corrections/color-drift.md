@@ -1,12 +1,12 @@
 # Correction: color and token drift across role colors and surfaces
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision owner: **owner** for the canonical Health blue; the rest is a lane fix.
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **Health is resolved** (OD21, teal `#30B0C7`); the landing sample is updated in this PR. OD23 settles the gradient. Native hardcoded values and the `model.ts` default remain open.
 
 | Field | Value |
 | --- | --- |
 | Screens | P03 How it works, N02 Spread, N11 Hours |
 | Severity | Medium: role color means a different thing in different places |
-| Owner decision needed | Canonical Health blue, and whether the School category may share a blue with a role |
+| Decided | OD21: Health teal `#30B0C7` everywhere, which also ends the School and Health blue collision. OD23: keep the accent gradient on the one lit action per surface |
 
 ## Observed
 

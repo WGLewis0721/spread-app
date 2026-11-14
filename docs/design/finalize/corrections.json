@@ -10,9 +10,9 @@
         "N23",
         "N37"
       ],
-      "problem": "Life is opt-in and hidden behind a preview-named flag that defaults off, while the native board records Life as the single Wallet direction. A second, unreachable Week surface (WeekFocusSurface) is still built from a path that cannot run, and Life and Classic remove a responsibility differently.",
+      "problem": "Life is opt-in behind a preview-named flag that defaults off, although the native board names Life as the single Wallet direction. A second Week surface (WeekFocusSurface) is reachable only through a path that cannot run, and Life and Classic remove a responsibility differently. Decided by OD18 and OD19; not yet in code.",
       "severity": "high",
-      "decision_owner": "owner (not covered by OD1 to OD17)",
+      "decision_owner": "decided: OD18 (Life is the default root; flag key kept) and OD19 (delete dead Week Focus code in wave 2). Open until the code lands.",
       "spec": "docs/design/finalize/corrections/life-routing.md",
       "status": "open",
       "observed_evidence": [
@@ -30,9 +30,9 @@
         "N02",
         "N11"
       ],
-      "problem": "The same role color has different values in different places: Health is #007AFF as a default role, #30B0C7 as a category, and #0A84FF on the landing page. The default School category also uses #007AFF. Native source has many hardcoded Color(hex:) and font-size calls outside the theme, and one accent gradient is used as a button fill where the board describes solid surfaces.",
+      "problem": "Health had three values (#007AFF default role, #30B0C7 category, #0A84FF landing), and School shared #007AFF. OD21 makes Health teal #30B0C7 everywhere. The landing sample is updated here; the model.ts default and the native hardcoded values are still open. OD23 settles the gradient: it stays on one lit action per surface.",
       "severity": "medium",
-      "decision_owner": "owner for the Health blue and gradient fills (not covered by OD1 to OD17); OD5 and OD15 settle token names and chalkInk",
+      "decision_owner": "decided: OD21 (Health teal #30B0C7 everywhere; landing sample updated in this PR; model.ts default in wave 2). OD23 keeps the accent gradient on the one lit action per surface. Native hardcoded values remain for lane A.",
       "spec": "docs/design/finalize/corrections/color-drift.md",
       "status": "open",
       "observed_evidence": [
@@ -56,7 +56,7 @@
       ],
       "problem": "Creating a responsibility has three names on main: the sheet title is 'Add Life', the Classic entry says 'New Spread', and the Classic empty state says 'Create responsibility'. The words are now decided (OD7: Life areas in Life, responsibilities in Classic; 'spread' never names a role). The code has not changed yet. 'To place' also still appears with two capitalizations.",
       "severity": "medium",
-      "decision_owner": "resolved by OD7, OD8, OD12, OD13 (planning doc section 8); application open",
+      "decision_owner": "decided: OD7 and OD22 (Life: Life area and Add Life; Classic: responsibility and Add responsibility; always To place; empty states are heading, one sentence, action). Application open in lanes A, C, D.",
       "spec": "docs/design/finalize/corrections/copy-voice.md",
       "status": "open",
       "observed_evidence": [
@@ -76,9 +76,9 @@
         "P08",
         "P01"
       ],
-      "problem": "Three documents disagree about what is shipped and advertised. CLAUDE.md says iPhone only. APP_STORE_RELEASE_PLAN.md says a universal iPhone and iPad app at $2.99. The landing page says private beta on TestFlight and has no App Store link, which the plan says to add only after the listing is live.",
+      "problem": "CLAUDE.md and the release plan disagreed about device scope. OD20 makes Spread 1.0 iPhone only. OD25 keeps the TestFlight invitation and adds no App Store link until the listing exists. The superseding note in APP_STORE_RELEASE_PLAN.md is not on this branch yet.",
       "severity": "high",
-      "decision_owner": "owner (not covered by OD1 to OD17)",
+      "decision_owner": "decided: OD20 (Spread 1.0 is iPhone only; supersedes the October universal line in APP_STORE_RELEASE_PLAN.md) and OD25 (no App Store link until the listing exists). The superseding note is in the owner-docs PR, not on this branch.",
       "spec": "docs/design/finalize/corrections/release-scope.md",
       "status": "open",
       "observed_evidence": [

@@ -2,7 +2,7 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md). Folder index: [README.md](README.md).
 
-> Summary: the Gray Matter release template, filled for Spread. Verdict **NO-GO**. Web checks pass. Native and store checks are unverified, five correction records are open, and the owner has not decided the device scope or the default root. Decisions OD1 to OD17 are recorded and are being applied by the lanes. Build green does not mean the app is complete or approved.
+> Summary: the Gray Matter release template, filled for Spread. Verdict **NO-GO**. Web checks pass. Native and store checks are unverified. Decisions OD1 to OD25 are recorded; several are not yet in code. Five correction records stay open until the code lands. Build green does not mean the app is complete or approved.
 
 Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gate is the authority for App Review: [docs/APP_STORE_REVIEW_CHECKLIST.md](../../APP_STORE_REVIEW_CHECKLIST.md). This file does not repeat it.
 
@@ -48,20 +48,28 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 - [ ] Store screenshots, reviewer demo account, signing: **not done**. The plan requires 13-inch iPad screenshots only if iPad is in scope.
 - [ ] Controlled publish and post-publish smoke test: **not planned in this program**. Owner authorization is required for any upload or submission.
 
-**Exception for the owner:** the landing page has **no App Store link**. There is no listing URL, and the release plan says to add the CTA only after the listing is live. It keeps the TestFlight invitation. See [corrections/release-scope.md](corrections/release-scope.md).
+**Decided (OD25):** the landing page has **no App Store link** until the listing exists. The TestFlight invitation stays. See [corrections/release-scope.md](corrections/release-scope.md).
 
 ## Verdict
 
 **Verdict: NO-GO**
 
-**Blocking issues:**
+**Decided and recorded (not blocking):**
 
-1. The default root is Classic, and Life is an opt-in preview. The owner has not chosen the release default ([corrections/life-routing.md](corrections/life-routing.md)).
-2. The device scope is unresolved: iPhone only in `CLAUDE.md`, universal iPhone and iPad in the release plan ([corrections/release-scope.md](corrections/release-scope.md)).
-3. The Health role color has three values ([corrections/color-drift.md](corrections/color-drift.md)). The copy decisions (OD7, OD8) are recorded but not yet in code ([corrections/copy-voice.md](corrections/copy-voice.md)).
-4. Zero surfaces are verified on device. `screens.json` lists 48 surfaces, all `implemented`, none `verified`.
-5. No native build or run has been done for this polish program. The native-typecheck runs on GitHub only when a Swift PR is opened.
-6. The owner has not confirmed the Gray Matter gate mapping or this register.
+- OD20: Spread 1.0 is iPhone only. The superseding note for `APP_STORE_RELEASE_PLAN.md` lives in the owner-docs PR, not on this branch.
+- OD25: no App Store link until the listing exists. The landing page keeps the TestFlight invitation.
+- OD21: Health is teal `#30B0C7`. The landing sample is updated in this PR.
+- OD18: Life is the default root. Lane A applies it.
+- OD7, OD8, OD22: the words "Life area", "Details", "Add Life" and "Add responsibility". Lanes A to D apply them.
+- OD23 and OD24: the gradient stays on one lit action, and Life's Details delete with Undo stays as it is.
+
+**Blocking issues (these keep the verdict at NO-GO):**
+
+1. No native build. `native-typecheck` has not run on this branch, and there is no Codemagic build.
+2. No device checks. No surface is verified on a phone or tablet, and no XCUITest run record was inspected.
+3. Decided but not yet in code: OD18 and the OD7 and OD22 wording (lanes A to D), OD19 deletion of the dead Week Focus code (wave 2), OD11, OD16 and OD17 tokens and icons (wave 2), and the OD21 default in `model.ts` (wave 2).
+4. The superseding note for `APP_STORE_RELEASE_PLAN.md` (OD20) is not on this branch.
+5. No owner authorization of a specific commit and build for release.
 
 **Unverified checks:**
 

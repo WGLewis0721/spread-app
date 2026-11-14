@@ -1,5 +1,7 @@
-// Usage: node capture3.cjs <phase> <outDir> [dpr=2] [url]
+/* eslint-disable @typescript-eslint/no-require-imports -- Node evidence script, run outside the app bundle. Playwright is preinstalled on the machine and is not a repo dependency, so it is required by name. */
+// Usage: node capture-landing.cjs <phase> <outDir> [dpr=2] [url]
 // Viewport captures at named section stops (real scroll positions), plus overflow and error checks.
+// Needs the dev server on the given URL (npm run dev) and writes WebP frames through to_webp.py beside this file.
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -22,7 +24,7 @@ const stops = [
   const report = [];
   const run = async (s, mode, reduced, shoot) => {
     const context = await browser.newContext({ viewport: { width: s.w, height: s.h }, deviceScaleFactor: dpr, colorScheme: mode, reducedMotion: reduced ? 'reduce' : 'no-preference', isMobile: s.w < 500, hasTouch: s.w < 500 });
-    await context.addInitScript((m) => { try { localStorage.setItem('spread.theme', m); } catch (e) {} }, mode);
+    await context.addInitScript((m) => { try { localStorage.setItem('spread.theme', m); } catch { /* storage blocked: keep the system theme */ } }, mode);
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));

@@ -38,15 +38,15 @@
 
 ## Ranked improvements and definition of done
 
-1. **Life root default and the dead Week path.** Owner decides the default. *Done when:* one default is set and the flag name says what it does; existing installs keep their choice; `WeekFocusSurface` and `WeekFocusComponents` are either removed after a usage check or kept with a reason; widget deep links still open the Life root. (Lanes A and C, owner decision.)
+1. **Life root default and the dead Week path.** Decided: OD18 (Life is the default root) and OD19 (delete the dead Week Focus code in wave 2). *Done when:* one default is set and the flag name says what it does; existing installs keep their choice; `WeekFocusSurface` and `WeekFocusComponents` are either removed after a usage check or kept with a reason; widget deep links still open the Life root. (Lanes A and C, owner decision.)
 2. **One name for each action and one noun.** Decided by OD7 and OD8 ("Life area" in Life, "responsibility" in Classic, "Details" for the Life sheet). *Done when:* a grep finds one title for creating a responsibility per root, one "To place" casing, and VoiceOver labels match visible text. (Lanes A, C, D, B.)
-3. **Role color identity.** Owner picks the canonical Health blue. *Done when:* each role color is one value across Week, Life, the widgets and the landing sample; no two roles share a blue; role text and dots pass contrast in both modes. (Owner decision, then lanes.)
+3. **Role color identity.** Decided: OD21 (Health is teal `#30B0C7` everywhere). *Done when:* each role color is one value across Week, Life, the widgets and the landing sample; no two roles share a blue; role text and dots pass contrast in both modes. (Owner decision, then lanes.)
 4. **Native tokens.** Lane A moves hardcoded values to `SpreadTheme` tokens. *Done when:* `Color(hex:)` outside `Theme/` is limited to role data, and each remaining `.system(size:)` is a token. (Lane A, with `TOKEN_AUDIT.md`.)
-5. **Gradient fill.** Owner decides whether primary button fills are solid. *Done when:* the decision is recorded in the brand board and the affected capsules match it. A visible change, so it needs device evidence.
+5. **Gradient fill.** Decided: OD23 keeps the accent gradient on the one lit action per surface; content surfaces stay solid. *Done when:* the decision is recorded in the brand board and the affected capsules match it. A visible change, so it needs device evidence.
 6. **Landing type floor.** *Done when:* no landing text is under 11px at any width. **Applied in this pass** (two selectors raised to 11px).
 7. **Landing motion and reduced motion.** *Done when:* reduced-motion captures show finished states and no orbit (partly verified: the stack checks the preference in JavaScript; CSS reduced-motion blocks exist). Frames for the story and the week preview under reduced motion are still owed.
 8. **Accessibility.** *Done when:* VoiceOver order, Dynamic Type at accessibility sizes, 44-point targets and contrast are checked on device and in the browser. Not done in this pass: there is no native device, and no contrast tool was added (no new dependencies).
-9. **Store and device scope.** *Done when:* the owner resolves iPhone-only against universal, and the landing copy names only what passed QA. (Owner decision.)
+9. **Store and device scope.** Decided: OD20 (iPhone only) and OD25 (no App Store link until the listing exists). The superseding note in `APP_STORE_RELEASE_PLAN.md` is in the owner-docs PR. (Owner docs and lane E.)
 10. **Empty and error states.** *Done when:* every surface in `screens.json` shows its designed empty and error state on device. Currently reviewed in source only.
 
 ## Upgrade approach
@@ -55,4 +55,4 @@
 - **Wireframes and mockups.** Not produced. The landing has real evidence; native uses the existing brand board and iOS audit. No new visual mockups were made in this pass.
 - **Branch, tests and rollback.** Each change is a separate commit so it can be reverted alone. Web checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run docs:check`. Native checks run only on GitHub (`native-typecheck`); no Swift toolchain runs here.
 - **After screenshots.** Captured after the landing change with the same script and sizes, into `evidence/landing/after/`.
-- **Approval to begin native work.** Pending the owner's answers on life-routing (default root), color-drift (Health blue and gradient fills) and release-scope (device scope). See [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
+- **Approval to begin native work.** Decisions OD18 to OD25 are recorded. Native work starts with the lane PRs; device checks remain required before any native verdict. See [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).

@@ -199,7 +199,7 @@
         "ios/App/SpreadNativeUITests/LifeUITests.swift (XCUITest source; no run record inspected)"
       ],
       "owner_lane": "B (Life/)",
-      "notes": "Life is opt-in: weekFocusEnabled defaults to false via @AppStorage native.weekMonth.previewEnabled. See corrections/life-routing.md."
+      "notes": "Life is opt-in: weekFocusEnabled defaults to false via @AppStorage native.weekMonth.previewEnabled. OD18 makes Life the default root (lane A applies it; the flag key stays). See corrections/life-routing.md."
     },
     {
       "id": "N08",
@@ -597,7 +597,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Sheets/)",
-      "notes": "This is the only place a user can switch to Life outside widget deep links; see corrections/life-routing.md."
+      "notes": "This is the only place a user can switch to Life outside widget deep links. OD18 removes the \"(current)\" label from Classic and makes Life the default. See corrections/life-routing.md."
     },
     {
       "id": "N24",
@@ -917,7 +917,7 @@
       "test_sources": [],
       "owner_lane": "C (Week/)",
       "reachable": false,
-      "notes": "Dead-path candidate: the only construction site is SpreadLiveRoot.swift content(), which runs only when weekFocusEnabled is false. Removal is an owner decision. See corrections/life-routing.md."
+      "notes": "Dead-path candidate: the only construction site is SpreadLiveRoot.swift content(), which runs only when weekFocusEnabled is false. Removal is an owner decision. See corrections/life-routing.md. OD19: delete this code in wave 2."
     },
     {
       "id": "W01",

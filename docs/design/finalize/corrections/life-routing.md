@@ -1,12 +1,12 @@
 # Correction: Life routing, default state and a dead Week path
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision owner: **owner**.
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open** (decided; code not yet in place). Decision: **resolved** by OD18 and OD19 in the planning doc section 8.
 
 | Field | Value |
 | --- | --- |
 | Screens | N07 Life root, N08 Wallet Stack, N13 Life Week, N23 More, N37 unreachable Week focus |
 | Severity | High: a shipped default that differs from the owner's stated direction |
-| Owner decision needed | Which root is the default for new users, and whether the flag keeps its name |
+| Decided | OD18: Life is the default root; the flag key `native.weekMonth.previewEnabled` stays, so a stored choice survives. OD19: delete the dead Week Focus code in wave 2 |
 
 ## Observed
 

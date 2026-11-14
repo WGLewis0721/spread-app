@@ -10,7 +10,7 @@ const DAYS = ["M", "Tu", "W", "Th", "F", "Sa", "Su"] as const;
 const roles: Role[] = [
   { name: "Work", hours: 8, color: "#34c759", days: { M: 3, W: 3, F: 2 }, task: "Move the project forward" },
   { name: "Home", hours: 4, color: "#ff9500", days: { Tu: 1, Sa: 2, Su: 1 }, task: "Groceries and a fresh start" },
-  { name: "Health", hours: 3, color: "#0a84ff", days: { Tu: 1, Th: 1, Sa: 1 }, task: "Go for a morning run" },
+  { name: "Health", hours: 3, color: "#30b0c7", days: { Tu: 1, Th: 1, Sa: 1 }, task: "Go for a morning run" },
 ];
 
 /** true once the element has been at least `threshold` visible */

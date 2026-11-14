@@ -1,12 +1,12 @@
 # Correction: release scope, device families and the App Store link
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision owner: **owner**. Blocked on the App Store listing.
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open** until the superseding note is on main. Decision: **resolved** by OD20 (iPhone only) and OD25 (no App Store link until the listing exists).
 
 | Field | Value |
 | --- | --- |
 | Screens | P01 landing shell, P07 privacy facts, P08 start and TestFlight |
 | Severity | High: store copy and device claims are not yet settled |
-| Owner decision needed | Device families for 1.0; the landing CTA target and wording before the listing exists |
+| Decided | OD20: Spread 1.0 is iPhone only; this supersedes the October universal line. OD25: the landing page keeps the TestFlight invitation |
 
 ## Observed
 
