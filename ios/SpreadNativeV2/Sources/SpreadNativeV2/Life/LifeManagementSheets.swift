@@ -144,37 +144,6 @@ struct LifeManageSheet: View {
     }
 }
 
-struct LifeDeleteSheet: View {
-    @ObservedObject var planner: LivePlanner
-    let roleId: String
-    @Environment(\.dismiss) private var dismiss
-    @State private var saving = false
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spread.space4) {
-                Text("Delete \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "this Life area") from all weeks?")
-                    .font(.title2.bold())
-                Text("This removes the Life area, its tasks and its hours from all weeks in this profile. Undo is available until another unrelated change.")
-                    .font(.body)
-                if let error = planner.error { Text(error).foregroundStyle(Spread.danger) }
-                Button("Delete from all weeks", role: .destructive) {
-                    guard !saving else { return }
-                    saving = true
-                    Task {
-                        if await planner.send(["type": "removeLifeRole", "roleId": roleId]) {
-                            dismiss()
-                        }
-                        saving = false
-                    }
-                }.frame(minHeight: Spread.minimumTarget).disabled(saving)
-                Button("Cancel") { dismiss() }.frame(minHeight: Spread.minimumTarget).disabled(saving)
-            }.padding(Spread.space6)
-        }.background(Spread.canvas).tint(Spread.accent)
-            .presentationBackground(Spread.canvas)
-            .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
-    }
-}
-
 struct LifeReserveSheet: View {
     @ObservedObject var planner: LivePlanner
     let roleId: String

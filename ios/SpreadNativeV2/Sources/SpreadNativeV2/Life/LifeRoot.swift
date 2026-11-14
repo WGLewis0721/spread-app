@@ -24,10 +24,12 @@ struct LifeRoot: View {
     @ObservedObject var planner: LivePlanner
     @ObservedObject var focusTimer: SpreadFocusTimer
     let onMore: () -> Void
-    let onOpenRole: (String) -> Void
+    // Life never calls these two (review X7, OD30). They are `var` with no-op defaults so the Classic
+    // call site in Shell/SpreadLiveRoot.swift still compiles; its arguments are removed in a later wave.
+    var onOpenRole: (String) -> Void = { _ in }
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
-    let onDeleteRole: (String) -> Void
+    var onDeleteRole: (String) -> Void = { _ in }
     @AccessibilityFocusState private var navigationFocused: Bool
     @AccessibilityFocusState private var openerFocused: Bool
     @State private var destination: LifeDestination = .life
@@ -192,7 +194,7 @@ struct LifeRoot: View {
             navigationFocused = open
             if !open { openerFocused = true }
         }
-        .onChange(of: weekTick) { _, _ in SpreadHaptics.selection() }
+        .onChange(of: weekTick) { _, _ in LifeFeedback.selection() }
         .sheet(isPresented: $showFocusTimer) {
             if let snapshot = planner.snapshot, let profileId = planner.state?.envelope.profileId {
                 SpreadFocusTimerSheet(timer: focusTimer, profileId: profileId,
