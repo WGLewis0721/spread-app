@@ -2,7 +2,6 @@ import WidgetKit
 import SwiftUI
 import Foundation
 import ActivityKit
-import UIKit
 
 /// Internal, not private, so the Timer widget's large size can show the same counters.
 struct SpreadToday: Decodable {
@@ -85,7 +84,7 @@ private struct SpreadTodayView: View {
                     .accessibilityLabel("\(plan.doneTasks) of \(plan.totalTasks) tasks completed")
                 } else {
                     Image(systemName: "calendar")
-                        .accessibilityLabel("Open Spread to show Today on widgets")
+                        .accessibilityLabel("Open Spread to enable Today widget")
                 }
             } else if family == .accessoryRectangular {
                 if let plan {
@@ -106,7 +105,7 @@ private struct SpreadTodayView: View {
                 homeBody
             }
         }
-        .spreadWidgetContainer(family)
+        .containerBackground(.background, for: .widget)
         .widgetURL(URL(string: "spread://today"))
     }
 
@@ -152,32 +151,6 @@ private struct SpreadTodayView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// The Spread canvas for Home Screen and Lock Screen surfaces: navy in Dark, cream in Light, the same colours as
-/// the app's canvas (SpreadTheme). Text uses the system primary and secondary colours, which follow the same
-/// appearance, so the copy stays legible on either Home Screen.
-enum SpreadWidgetChrome {
-    static var canvas: Color {
-        Color(uiColor: UIColor { trait in
-            trait.userInterfaceStyle == .dark
-                ? UIColor(red: 6 / 255, green: 11 / 255, blue: 24 / 255, alpha: 1)
-                : UIColor(red: 244 / 255, green: 241 / 255, blue: 234 / 255, alpha: 1)
-        })
-    }
-}
-
-extension View {
-    /// The brand canvas behind the system sizes. Accessory sizes keep the system background, because the Lock
-    /// Screen and Home Screen tint them and a fixed fill would fight that tinting.
-    @ViewBuilder func spreadWidgetContainer(_ family: WidgetFamily) -> some View {
-        switch family {
-        case .accessoryCircular, .accessoryRectangular, .accessoryInline:
-            containerBackground(.background, for: .widget)
-        default:
-            containerBackground(for: .widget) { SpreadWidgetChrome.canvas }
-        }
     }
 }
 
@@ -245,7 +218,7 @@ private struct SpreadFocusLiveView: View {
             SpreadFocusIslandControls(status: status)
         }
         .padding()
-        .activityBackgroundTint(SpreadWidgetChrome.canvas)
+        .activityBackgroundTint(Color(uiColor: .systemBackground))
         .activitySystemActionForegroundColor(.primary)
         // A session for a planned day opens that day's Week view; a hand-started one opens the timer.
         .widgetURL(URL(string: context.attributes.day == nil ? "spread://focus" : "spread://today"))

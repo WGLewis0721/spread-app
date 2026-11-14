@@ -93,7 +93,7 @@ struct SpreadFocusTimerSheet: View {
                 Button {
                     timer.cancel(profileId: profileId)
                 } label: {
-                    Image(systemName: "xmark").frame(minWidth: 44, minHeight: 44)
+                    Image(systemName: "xmark").frame(width: 44, height: 44)
                 }
                 .buttonStyle(.bordered)
                 .tint(Spread.danger)
@@ -129,7 +129,7 @@ struct SpreadFocusTimerSheet: View {
                 }
             } label: {
                 Image(systemName: session.phase == .running ? "pause.fill" : "play.fill")
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.borderedProminent)
             .accessibilityLabel(session.phase == .running ? "Pause" : "Resume")
@@ -137,7 +137,7 @@ struct SpreadFocusTimerSheet: View {
             Button {
                 timer.forward(profileId: profileId, notify: notifyWhenDone)
             } label: {
-                Image(systemName: "forward.fill").frame(minWidth: 44, minHeight: 44)
+                Image(systemName: "forward.fill").frame(width: 44, height: 44)
             }
             .buttonStyle(.bordered)
             .disabled(next == nil)
@@ -152,7 +152,7 @@ struct SpreadFocusTimerSheet: View {
             Button {
                 timer.stop(profileId: profileId)
             } label: {
-                Image(systemName: "stop.fill").frame(minWidth: 44, minHeight: 44)
+                Image(systemName: "stop.fill").frame(width: 44, height: 44)
             }
             .buttonStyle(.bordered)
             .accessibilityLabel("Stop this stretch")
@@ -161,7 +161,7 @@ struct SpreadFocusTimerSheet: View {
             Button {
                 timer.cancel(profileId: profileId)
             } label: {
-                Image(systemName: "xmark").frame(minWidth: 44, minHeight: 44)
+                Image(systemName: "xmark").frame(width: 44, height: 44)
             }
             .buttonStyle(.bordered)
             .tint(Spread.danger)

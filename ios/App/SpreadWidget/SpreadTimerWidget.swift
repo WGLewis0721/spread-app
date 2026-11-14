@@ -417,7 +417,7 @@ private struct SpreadTimerView: View {
             default: smallBody
             }
         }
-        .spreadWidgetContainer(family)
+        .containerBackground(.background, for: .widget)
         .widgetURL(SpreadWidgetLink.focus.url)
     }
 
