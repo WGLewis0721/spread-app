@@ -66,10 +66,22 @@ test('W1 tokens exist with the values the audit adopted', () => {
   assert.match(theme, /static let roleFallback = Color\(hex6: 0x8E8E93\)/, 'the string and the Color must name the same grey');
 });
 
+const deferredFiles = new Set([
+  'Life/LifeRecurringPlanForm.swift',
+  'Life/LifeRoot.swift',
+  'Life/LifeWalletStack.swift',
+  'Life/LifeWeekView.swift',
+  'Sheets/ManageSheets.swift',
+  'Sheets/BackupRestoreSheet.swift',
+]);
+
 test('native code outside Theme uses the grey and corner tokens, not their literals', () => {
   const offenders = [];
   for (const file of swiftFiles(sourceRoot)) {
     if (file === themePath) continue;
+    // Deferred to the lanes that own these files (W2, W5, W8). Their 11 substitutions are listed in
+    // docs/design/finalize/TOKEN_AUDIT.md under "Apply after W5, W2 and W8 merge". Remove an entry when its file is fixed.
+    if (deferredFiles.has(relative(sourceRoot, file))) continue;
     const text = readFileSync(file, 'utf8');
     if (text.includes('"#8E8E93"')) offenders.push(`${relative(sourceRoot, file)}: literal grey`);
     if (/cornerRadius: (12|14|16|18|24)[),]/.test(text)) offenders.push(`${relative(sourceRoot, file)}: literal corner radius that has a token`);
