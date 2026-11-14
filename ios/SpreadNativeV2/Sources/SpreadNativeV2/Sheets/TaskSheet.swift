@@ -183,7 +183,7 @@ struct TaskSheet: View {
                 }
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "clock")
+                    SpreadIcon(name: "lucide-clock", size: 19)
                     Text(task.estimateMinutes.map { "Estimated time: \($0) min" } ?? "Add time estimate")
                     Spacer()
                     Image(systemName: "chevron.up.chevron.down")
@@ -223,7 +223,7 @@ struct TaskSheet: View {
                     Task { await planner.send(["type": "toggleTask", "roleId": roleId, "taskId": taskId], completionHaptic: !task.done && (!lifeMode || lifeTouchFeedback)) }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
+                        SpreadIcon(name: task.done ? "lucide-circle-check" : "lucide-circle", size: 22)
                         if !typeSize.isAccessibilitySize { Text(task.done ? "Done" : "Mark done") }
                     }
                     .font(.system(.subheadline, weight: .semibold))

@@ -68,7 +68,7 @@ struct ResponsibilitySidebar: View {
             }
             .scrollIndicators(.hidden)
             Button(action: onAdd) {
-                Image(systemName: "plus").font(.system(.headline, weight: .medium))
+                SpreadIcon(name: "icon-add", size: 20).font(.system(.headline, weight: .medium))
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .frame(width: horizontal ? 44 : nil)
             }

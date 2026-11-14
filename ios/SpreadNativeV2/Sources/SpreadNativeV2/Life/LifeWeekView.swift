@@ -186,7 +186,7 @@ struct LifeWeekView: View {
             withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded.toggle() }
         } label: {
             VStack(spacing: 2) {
-                Image(systemName: "calendar")
+                SpreadIcon(name: "lucide-calendar-days", size: 20)
                 Text(expanded ? "Week" : "Month").font(.caption)
             }.frame(minWidth: 44, minHeight: 44)
         }.accessibilityLabel(expanded ? "Show week" : "Show full calendar")
@@ -231,12 +231,12 @@ struct LifeWeekView: View {
                     withAnimation(reduceMotion ? nil : SpreadTactile.settle) { inboxOpen.toggle() }
                 } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: "tray.full")
+                        SpreadIcon(name: "lucide-inbox", size: 19)
                             .font(.title3.weight(.medium))
                         Text(String(tasks.count))
                             .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
-                        Image(systemName: inboxOpen ? "chevron.up" : "chevron.down")
+                        SpreadIcon(name: inboxOpen ? "lucide-chevron-up" : "lucide-chevron-down", size: 18)
                             .font(.caption.weight(.semibold))
                     }
                     .foregroundStyle(Spread.ink)
@@ -292,7 +292,7 @@ struct LifeWeekView: View {
     }
 
     private func arrow(_ label: String, system: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: system).frame(minWidth: 44, minHeight: 44) }
+        Button(action: action) { SpreadIcon(name: system == "chevron.left" ? "lucide-chevron-left" : "lucide-chevron-right", size: 20).frame(minWidth: 44, minHeight: 44) }
             .accessibilityLabel(label).disabled(planner.busy)
     }
     private func mark(for iso: String) -> NativeDayMark {

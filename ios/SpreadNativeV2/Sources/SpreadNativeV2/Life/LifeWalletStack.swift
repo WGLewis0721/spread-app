@@ -262,7 +262,7 @@ struct LifeTaskRows: View {
                             pendingTasks.remove(task.id)
                         }
                     } label: {
-                        Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
+                        SpreadIcon(name: task.done ? "lucide-circle-check" : "lucide-circle", size: 22)
                             .font(.title3).frame(width: 44, height: 44)
                     }.buttonStyle(.spreadPress).foregroundStyle(task.done ? LifePalette.accent : LifePalette.secondary)
                         .disabled(planner.busy || pendingTasks.contains(task.id))
@@ -274,14 +274,14 @@ struct LifeTaskRows: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(task.text).font(.body).strikethrough(task.done).foregroundStyle(LifePalette.ink)
                                 if task.important == true {
-                                    Label("High priority", systemImage: "exclamationmark")
+                                    Label { Text("High priority") } icon: { SpreadIcon(name: "lucide-flag", size: 14) }
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(Spread.danger)
                                 }
                                 Text(placement(task)).font(.subheadline).foregroundStyle(LifePalette.secondary)
                             }
                             Spacer(minLength: 6)
-                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(LifePalette.secondary)
+                            SpreadIcon(name: "lucide-chevron-right", size: 16).font(.caption).foregroundStyle(LifePalette.secondary)
                         }.frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
                     }.buttonStyle(.spreadPress)
                         .accessibilityActions {
@@ -308,8 +308,7 @@ struct LifeTaskRows: View {
                             if ok { LifeFeedback.accepted() }
                         }
                     } label: {
-                        Image(systemName: task.important == true
-                              ? "exclamationmark.circle.fill" : "flag")
+                        SpreadIcon(name: "lucide-flag", size: 20)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(task.important == true ? Spread.danger : Spread.secondary)
                             .frame(width: 44, height: 44)
@@ -320,7 +319,7 @@ struct LifeTaskRows: View {
                         ? "Remove high priority from " : "Mark high priority: ") + task.text)
                     .accessibilityIdentifier("life-task-priority-" + task.id)
                     if day != nil {
-                        Image(systemName: "line.3.horizontal")
+                        SpreadIcon(name: "icon-drag", size: 18)
                             .font(.footnote).foregroundStyle(LifePalette.secondary)
                             .frame(width: 44, height: 44)
                             .draggable(SpreadDragPayload.task(id: task.id, roleId: task.roleId, label: task.text))
@@ -398,7 +397,7 @@ struct LifeQuickAdd: View {
                     focused = true
                     LifeFeedback.selection()
                 } label: {
-                    Label("Add a task", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    Label { Text("Add a task") } icon: { SpreadIcon(name: "icon-add", size: 18) }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }
             }
         }.font(.body).tint(LifePalette.accent)

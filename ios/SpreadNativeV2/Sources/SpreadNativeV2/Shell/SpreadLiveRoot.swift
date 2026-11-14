@@ -175,7 +175,7 @@ public struct SpreadLiveRoot: View {
                         HStack {
                             Text("Spread").font(.headline); Spacer()
                             Button(action: closeClassicNavigation) {
-                                Image(systemName: "xmark").frame(width: 44, height: 44)
+                                SpreadIcon(name: "lucide-x", size: 20).frame(width: 44, height: 44)
                             }.accessibilityLabel("Close navigation")
                         }.padding(.horizontal, 12)
                         classicNavigation
@@ -548,7 +548,7 @@ public struct SpreadLiveRoot: View {
                 if usableWidth >= 820 { navigationExpanded.toggle() }
                 else { classicNavigationOpen.toggle() }
             }
-        } label: { Image(systemName: "sidebar.left").frame(width: 44, height: 44) }
+        } label: { SpreadIcon(name: "lucide-panel-left", size: 20).frame(width: 44, height: 44) }
         .buttonStyle(.spreadPress)
         .accessibilityLabel("Open navigation")
         .accessibilityIdentifier("classic-navigation")

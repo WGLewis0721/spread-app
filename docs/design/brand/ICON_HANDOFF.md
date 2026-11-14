@@ -75,6 +75,17 @@ Spread's category icons were already matched between iOS and React. A subsequent
 
 **Verification gate:** code parity and static asset checks are necessary but not evidence of visual correctness on an iPhone. Review 24pt legibility, light/dark, contrast, VoiceOver, and Codemagic/TestFlight screenshots prior to merge or release. Roll back the icon commit if any platform's appearance regresses.
 
+
+## Native Life/Week Lucide adoption (November 13, 2026)
+
+Native SwiftUI's visible Life, Week, Classic, task and More custom controls now draw from the **same 24×24, 2pt Lucide family** as the 26 matched category/utility icons. Existing `SpreadIcon` is reused; **no icon runtime, package or remote service was added**. Navigation (chevrons, close, More, calendar), task (check/circle, flag, grip, add), hours (plus/minus), inbox, timing and management controls use Lucide templates. Explicit text and accessibility labels, tap sizes, colors, planner writes, gestures and animations are preserved.
+
+**22 additional native-only source glyphs:** `x`, `ellipsis`, `chevron-left`, `chevron-right`, `chevron-up`, `chevron-down`, `calendar-days`, `calendar-clock`, `calendar-plus`, `calendar-range`, `sliders-horizontal`, `list-todo`, `circle-plus`, `circle-check`, `circle`, `flag`, `inbox`, `timer`, `clock`, `minus`, `panel-left`, `bell`. Names: `Resources/Icons.xcassets/lucide-<name>.imageset`. These are compiled **into the native app only** because the React planner is parked. All are copied from [Lucide's canonical vector source](https://github.com/lucide-icons/lucide/tree/main/icons); the shipped ISC notice already covers them.
+
+**Intentional exceptions:** SF Symbols remain for OS-native alerts, specialized controls, system integrations and tiny calendar state markers. Do not replace Spread's app launcher icon, trademark, branded Life mark or editorial artwork with generic UI glyphs. No change to Apple/Codemagic release settings or product data.
+
+**Verification:** `scripts/icon-system.test.mjs` checks new asset geometry/template metadata and live SwiftUI references; iOS type-check and physical iPhone light/dark, Dynamic Type, VoiceOver and task-state review are separate gates. Revert this native Lucide PR to restore prior visuals without any planner data migration.
+
 ## Existing UI actions and brand assets
 
 Beyond the 16 standardized utility outlines above, preserve existing icon identities and production launcher branding. They are consolidated under `public/icons/`, and their native analogues are in `Resources/Icons.xcassets/`, `SpreadIcon` and SF Symbols as appropriate:

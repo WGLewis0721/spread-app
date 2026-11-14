@@ -67,7 +67,7 @@ struct LifePlanAheadSheet: View {
                             preview = nil
                             planMode = "plans"
                         } label: {
-                            Label("Your plans", systemImage: "chevron.backward")
+                            Label { Text("Your plans") } icon: { SpreadIcon(name: "lucide-chevron-left", size: 18) }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .frame(minHeight: 44)
                         }
@@ -260,7 +260,7 @@ struct LifePlanAheadSheet: View {
                             Text("Review")
                                 .font(.subheadline)
                                 .foregroundStyle(Spread.secondary)
-                            Image(systemName: "chevron.right")
+                            SpreadIcon(name: "lucide-chevron-right", size: 18)
                                 .foregroundStyle(Spread.secondary)
                         }
                         .frame(minHeight: 44)
@@ -288,7 +288,7 @@ struct LifePlanAheadSheet: View {
                 preview = nil
                 planMode = "repeat"
             } label: {
-                Label("Make a new plan", systemImage: "plus")
+                Label { Text("Make a new plan") } icon: { SpreadIcon(name: "icon-add", size: 18) }
                     .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.borderedProminent)
@@ -317,7 +317,7 @@ struct LifePlanAheadSheet: View {
                                     .foregroundStyle(Spread.secondary)
                             }
                             Spacer()
-                            Image(systemName: "chevron.right")
+                            SpreadIcon(name: "lucide-chevron-right", size: 18)
                                 .foregroundStyle(Spread.secondary)
                         }
                         .frame(minHeight: 44)
@@ -380,7 +380,7 @@ struct LifePlanAheadSheet: View {
                 planMode = "plans"
                 copyPreview = nil
             } label: {
-                Label("Your plans", systemImage: "chevron.backward")
+                Label { Text("Your plans") } icon: { SpreadIcon(name: "lucide-chevron-left", size: 18) }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(minHeight: 44)
             }

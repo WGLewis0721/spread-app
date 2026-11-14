@@ -252,7 +252,7 @@ struct LifeRoot: View {
                 Button {
                     withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) { focusedRole = nil }
                 } label: {
-                    Image(systemName: "xmark").frame(width: 44, height: 44)
+                    SpreadIcon(name: "lucide-x", size: 20).frame(width: 44, height: 44)
                         .background(LifePalette.surface, in: Circle())
                 }.accessibilityLabel("Close Life area").accessibilityIdentifier("life-close-focus")
                     .transition(.opacity)
@@ -265,7 +265,7 @@ struct LifeRoot: View {
             }
             Spacer(minLength: 4)
             Button(action: onMore) {
-                Image(systemName: "ellipsis").frame(width: 44, height: 44)
+                SpreadIcon(name: "lucide-ellipsis", size: 20).frame(width: 44, height: 44)
                     .background(LifePalette.surface, in: Circle())
             }.accessibilityLabel("More").accessibilityIdentifier("life-more")
         }.padding(.horizontal, 16).padding(.vertical, 4)
@@ -289,7 +289,7 @@ struct LifeRoot: View {
                     Button {
                         showPlanAhead = true
                     } label: {
-                        Label("Plan Ahead", systemImage: "calendar.badge.clock")
+                        Label { Text("Plan Ahead") } icon: { SpreadIcon(name: "lucide-calendar-clock", size: 18) }
                             .font(.subheadline.weight(.semibold))
                             .frame(minHeight: 44)
                     }
@@ -324,7 +324,7 @@ struct LifeRoot: View {
                     Button {
                         localSheet = .manage(id)
                     } label: {
-                        Label("Details", systemImage: "slider.horizontal.3")
+                        Label { Text("Details") } icon: { SpreadIcon(name: "lucide-sliders-horizontal", size: 18) }
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.spreadPress)
@@ -337,7 +337,7 @@ struct LifeRoot: View {
                             tasksOpen.toggle()
                         }
                     } label: {
-                        Label("Tasks", systemImage: "text.book.closed")
+                        Label { Text("Tasks") } icon: { SpreadIcon(name: "lucide-list-todo", size: 18) }
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.spreadPress)
@@ -362,7 +362,7 @@ struct LifeRoot: View {
     private var newLifeArea: some View {
         Button(action: onNewRole) {
             HStack(spacing: 10) {
-                Image(systemName: "plus.circle.fill")
+                SpreadIcon(name: "lucide-circle-plus", size: 22)
                     .font(.title3)
                     .foregroundStyle(Spread.accent)
                 Text("Add Life")
@@ -650,7 +650,7 @@ struct LifeRoot: View {
                 preferredFocusRoleId = role.id
                 showFocusTimer = true
             } label: {
-                Label("Focus timer", systemImage: "timer")
+                Label { Text("Focus timer") } icon: { SpreadIcon(name: "lucide-timer", size: 18) }
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
@@ -660,7 +660,7 @@ struct LifeRoot: View {
             Button {
                 openBudget(for: role.id)
             } label: {
-                Label("Adjust weekly hours", systemImage: "slider.horizontal.3")
+                Label { Text("Adjust weekly hours") } icon: { SpreadIcon(name: "lucide-sliders-horizontal", size: 18) }
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
@@ -736,7 +736,7 @@ struct LifeRoot: View {
                             Text(session.phase == .finished ? "Next"
                                  : SpreadFocusClock.display(session.remaining(at: context.date)))
                                 .monospacedDigit()
-                            Image(systemName: "chevron.up")
+                            SpreadIcon(name: "lucide-chevron-up", size: 18)
                         }
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Spread.ink)
@@ -778,7 +778,7 @@ struct LifeRoot: View {
                         if item == .life {
                             SpreadBrandMark(size: 23)
                         } else {
-                            Image(systemName: "calendar")
+                            SpreadIcon(name: "lucide-calendar-days", size: 18)
                                 .font(.subheadline)
                         }
                         Text(item == .life ? "Life" : "Week")
@@ -854,7 +854,7 @@ struct LifeRoot: View {
                                 SpreadIcon(name: item.icon)
                                 Text(item.rawValue).font(.headline)
                                 Spacer()
-                                Image(systemName: destination == item ? "checkmark.circle.fill" : "chevron.right")
+                                SpreadIcon(name: destination == item ? "lucide-circle-check" : "lucide-chevron-right", size: 19)
                                     .accessibilityHidden(true)
                             }
                             .padding(.horizontal, 12).frame(minHeight: 52)
@@ -877,7 +877,7 @@ struct LifeRoot: View {
                 Button {
                     closeNavigation()
                 } label: {
-                    Image(systemName: "xmark").frame(width: 44, height: 44)
+                    SpreadIcon(name: "lucide-x", size: 20).frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Close navigation")
                 .accessibilityIdentifier("life-navigation-close")

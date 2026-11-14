@@ -98,7 +98,7 @@ struct SpreadSurface: View {
     }
 
     private var summaryIcon: some View {
-        Image(systemName: "calendar.badge.clock")
+        SpreadIcon(name: "lucide-calendar-clock", size: 20)
             .font(.system(.title3, weight: .semibold))
             .foregroundStyle(Spread.accent)
             .frame(width: 44, height: 44)
@@ -142,7 +142,7 @@ struct SpreadSurface: View {
                 summaryRoleColors
             }
             .fixedSize(horizontal: true, vertical: false)
-            Image(systemName: summaryExpanded ? "chevron.down" : "chevron.right")
+            SpreadIcon(name: summaryExpanded ? "lucide-chevron-down" : "lucide-chevron-right", size: 18)
                 .font(.system(.subheadline, weight: .bold))
                 .foregroundStyle(Spread.ink)
                 .frame(width: 20, height: 44)
@@ -172,7 +172,7 @@ struct SpreadSurface: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
-            Image(systemName: summaryExpanded ? "chevron.down" : "chevron.right")
+            SpreadIcon(name: summaryExpanded ? "lucide-chevron-down" : "lucide-chevron-right", size: 18)
                 .font(.system(.subheadline, weight: .bold))
                 .foregroundStyle(Spread.ink)
                 .frame(width: 20, height: 44)
@@ -524,7 +524,7 @@ struct RoleRow: View {
 
             // Never replace the chevron with an ellipsis or hour stepper.
             Button(action: toggleOpen) {
-                Image(systemName: "chevron.down")
+                SpreadIcon(name: "lucide-chevron-down", size: 18)
                     .font(.system(.subheadline, weight: .bold))
                     .foregroundStyle(Spread.ink)
                     .rotationEffect(.degrees(isOpen ? 180 : 0))
@@ -766,7 +766,7 @@ struct TaskRow: View {
                     pending = false
                 }
             } label: {
-                Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
+                SpreadIcon(name: task.done ? "lucide-circle-check" : "lucide-circle", size: 22)
                     .font(.system(.title2, weight: .regular))
                     .foregroundStyle(task.done ? Spread.accent : Spread.tertiary)
                     .frame(width: 56, height: 56)
@@ -793,7 +793,7 @@ struct TaskRow: View {
                         Text(PlannerDates.label(PlannerDates.date(dayISO), pattern: "EEE"))
                             .font(.system(.caption, weight: .semibold)).foregroundStyle(Spread.secondary)
                     }
-                    Image(systemName: "chevron.right").font(.system(.footnote)).foregroundStyle(Spread.tertiary)
+                    SpreadIcon(name: "lucide-chevron-right", size: 16).font(.system(.footnote)).foregroundStyle(Spread.tertiary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
                 .contentShape(Rectangle())
@@ -845,7 +845,7 @@ struct AddTaskRow: View {
                 .accessibilityHidden(true)
         }
         HStack(spacing: 0) {
-            Image(systemName: "plus").font(.system(.body, weight: .regular)).foregroundStyle(Spread.accent)
+            SpreadIcon(name: "icon-add", size: 20).font(.system(.body, weight: .regular)).foregroundStyle(Spread.accent)
                 .frame(width: 56, height: 56)
                 .accessibilityHidden(true)
             TextField(placeholder, text: $text, prompt: typeSize.isAccessibilitySize ? nil : Spread.fieldPrompt(placeholder))
