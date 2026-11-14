@@ -94,6 +94,9 @@ Apple-ready screenshots + still assets
 
 ## Achievement 6 — Apple-Native Data Foundation
 
+> **Superseded in part (2026-11-14, owner decision OD20):** Spread 1.0 is iPhone only, so iPad is no
+> longer part of 1.0. The rules card still suspends iCloud, and nothing may claim iCloud works.
+>
 > **Pulled into 1.0 (2026-10-08):** iCloud Backup, optional iCloud Sync and iPad are part of the
 > Spread 1.0 direction. See [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md) for phases and gates. The
 > checklists below remain the long-term view; macOS and Watch stay post-1.0.

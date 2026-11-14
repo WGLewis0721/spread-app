@@ -1148,21 +1148,8 @@ final class PlannerUITests: NativeUITestCase {
         capture("long-names-spread")
     }
 
-    /// iPad supports every orientation; full-screen captures avoid XCTest's rotated app-rect crop.
-    func testIPadOrientations() throws {
-        defer { XCUIDevice.shared.orientation = .portrait }
-        goWeek()
-        for (name, orientation) in [("landscape-left", UIDeviceOrientation.landscapeLeft), ("landscape-right", .landscapeRight), ("portrait-upside-down", .portraitUpsideDown)] {
-            XCUIDevice.shared.orientation = orientation
-            XCTAssertTrue(eventually { orientation.isLandscape ? self.app.frame.width > self.app.frame.height : self.app.frame.height > self.app.frame.width }, "Window did not adopt the requested orientation")
-            XCTAssertTrue(app.buttons["native-spread"].waitForExistence(timeout: 20))
-            capture("orientation-\(name)-week", wholeScreen: true)
-            attach(app.debugDescription, "orientation-hierarchy-" + name)
-            try audit("orientation-\(name)-week")
-            goSpread(); chooseMode("Stack"); capture("orientation-\(name)-wallet", wholeScreen: true)
-            goWeek()
-        }
-    }
+    // The iPad orientation test was removed with the iPad family (owner decision OD20/OD28): Spread 1.0 is iPhone only
+    // and the app declares no iPad orientations, so there is nothing for it to assert.
 }
 
 // MARK: - Visual tour (screenshot evidence for design changes)
