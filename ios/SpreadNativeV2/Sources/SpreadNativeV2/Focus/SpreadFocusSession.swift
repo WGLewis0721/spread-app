@@ -311,3 +311,38 @@ enum SpreadFocusStore {
         return true
     }
 }
+
+#if DEBUG
+/// Diagnostic classifications only; never include profile IDs, session IDs, or planner content.
+enum SpreadFocusDiagnostics {
+    struct Snapshot {
+        let storage: String
+        let profile: String
+        let enabled: Bool
+        let phase: String
+        let deadline: String
+    }
+
+    static func snapshot(_ defaults: UserDefaults, enabled: Bool, now: Date = Date()) -> Snapshot {
+        let object = defaults.object(forKey: SpreadFocusStore.sessionKey)
+        let data = defaults.data(forKey: SpreadFocusStore.sessionKey)
+        let session = data.flatMap { try? JSONDecoder().decode(SpreadFocusSession.self, from: $0) }
+        let storage = object == nil ? "missing" : (session == nil ? "decode_failed" : "decoded")
+        let active = SpreadFocusStore.activeProfile(defaults)
+        let profile = session == nil ? "unknown" : (active == nil ? "missing" : (active == session?.profileId ? "match" : "mismatch"))
+        let current = session.map { SpreadFocusMachine.reconciled($0, now: now) }
+        let deadline = current?.endAt.map { String(format: "%.3f", $0.timeIntervalSince1970) } ?? "none"
+        return Snapshot(storage: storage, profile: profile, enabled: enabled,
+                        phase: current?.phase.rawValue ?? "none", deadline: deadline)
+    }
+
+    static func log(_ event: String, defaults: UserDefaults = SpreadFocusStore.shared,
+                    enabled: Bool, extra: String = "") {
+        let state = snapshot(defaults, enabled: enabled)
+        let suite = UserDefaults(suiteName: SpreadFocusStore.appGroup) == nil ? "unavailable_fallback" : "available"
+        NSLog("[SpreadFocusDiag] t=%.3f event=%@ suite=%@ storage=%@ profile=%@ enabled=%@ phase=%@ deadline=%@ %@",
+              Date().timeIntervalSince1970, event, suite, state.storage, state.profile,
+              String(state.enabled), state.phase, state.deadline, extra)
+    }
+}
+#endif

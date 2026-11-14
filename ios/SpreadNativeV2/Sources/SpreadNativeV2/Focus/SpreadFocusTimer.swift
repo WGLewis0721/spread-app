@@ -23,6 +23,9 @@ final class SpreadFocusTimer: ObservableObject {
     /// Records which profile is on screen. The widgets and the island act only for that profile.
     func noteActiveProfile(_ profileId: String) {
         SpreadFocusStore.setActiveProfile(profileId)
+        #if DEBUG
+        SpreadFocusDiagnostics.log("profile_noted", enabled: SpreadFocusPreferences.widgetsEnabled())
+        #endif
         // The mirror for the widgets depends on the profile on screen, so refresh it now.
         SpreadFocusWidgetPublisher.republishFromStore()
     }

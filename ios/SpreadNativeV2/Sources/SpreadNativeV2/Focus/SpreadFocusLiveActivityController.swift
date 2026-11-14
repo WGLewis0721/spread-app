@@ -58,6 +58,13 @@ enum SpreadFocusLiveActivityController {
 
     /// Brings the island in step with the session. Nil, or a finished stretch with nothing after it, ends it.
     static func refresh(_ session: SpreadFocusSession?) {
+        #if DEBUG
+        let stored = SpreadFocusStore.load()
+        let activities = Activity<SpreadFocusActivityAttributes>.activities
+        let matches = activities.filter { $0.attributes.sessionId == stored?.id }.count
+        SpreadFocusDiagnostics.log("activity_refresh", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "requested_matches_saved=\(session?.id == stored?.id) activities=\(activities.count) matches=\(matches)")
+        #endif
         guard SpreadFocusPreferences.liveActivityEnabled(), let session else {
             end()
             return
@@ -84,6 +91,11 @@ enum SpreadFocusLiveActivityController {
               SpreadFocusPreferences.liveActivityEnabled() else { return }
 
         let all = Activity<SpreadFocusActivityAttributes>.activities
+        #if DEBUG
+        let matches = all.filter { $0.attributes.sessionId == session.id }.count
+        SpreadFocusDiagnostics.log("activity_reconcile", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "activities=\(all.count) matches=\(matches)")
+        #endif
         for old in all where old.attributes.sessionId != session.id {
             await old.end(nil, dismissalPolicy: .immediate)
         }
