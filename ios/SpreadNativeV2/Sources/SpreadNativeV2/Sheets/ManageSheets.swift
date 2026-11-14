@@ -19,6 +19,8 @@ struct NewSpreadSheet: View {
     @State private var drafts = [Draft(id: 1)]
     @State private var nextId = 2
     @State private var saving = false
+    /// Shown inside the sheet when a save fails, so the entries stay here and the message is not left behind it.
+    @State private var saveFailure: String?
 
     private var ready: Bool { drafts.contains { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
     /// OD7: Life says "Life area", Classic says "responsibility". "Spread" is the app name only.
@@ -49,6 +51,12 @@ struct NewSpreadSheet: View {
                     }
                     .buttonStyle(.spreadPress)
                     .accessibilityIdentifier("add-another-spread")
+                    if let saveFailure = saveFailure {
+                        Text(saveFailure)
+                            .font(Spread.callout).foregroundStyle(Spread.danger)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("add-life-error")
+                    }
                     Button { save() } label: {
                         Text("Save \(roleWords)").font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
                             .frame(maxWidth: .infinity, minHeight: 50)
@@ -56,7 +64,7 @@ struct NewSpreadSheet: View {
                     }
                     .buttonStyle(.spreadPress)
                     .disabled(!ready || saving)
-                    .opacity(ready ? 1 : 0.4)
+                    .opacity(ready ? 1 : Spread.disabledOpacity)
                     .accessibilityIdentifier("save-spreads")
                 }
                 .padding(20)
@@ -128,6 +136,7 @@ struct NewSpreadSheet: View {
         let rows = drafts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         guard !rows.isEmpty else { return }
         saving = true
+        saveFailure = nil
         Task {
             for row in rows {
                 let ok = await planner.send([
@@ -136,10 +145,18 @@ struct NewSpreadSheet: View {
                     "hours": row.hours,
                     "category": row.category ?? "custom",
                 ])
-                if !ok { break }
+                if ok {
+                    // A saved row leaves the form, so a retry never adds it twice.
+                    drafts.removeAll { $0.id == row.id }
+                } else {
+                    // Stay open with every unsaved entry. The store's message is shown here, not behind the sheet.
+                    saveFailure = planner.error ?? "Couldn't save. Your entries are still here."
+                    planner.error = nil
+                    break
+                }
             }
             saving = false
-            dismiss()
+            if saveFailure == nil { dismiss() }
         }
     }
 }
@@ -177,12 +194,12 @@ struct RoleSheet: View {
                                 Task { await planner.send(["type": "setHours", "roleId": role.id, "hours": hours]) }
                             }
                         }
-                        Text("\(SpreadHours.text(snapshot.remainingHours(for: role.id)))h left in this week’s bank")
+                        Text("\(SpreadHours.text(snapshot.remainingHours(for: role.id)))h left to place this week")
                             .font(Spread.footnote).foregroundStyle(Spread.secondary)
                             .accessibilityIdentifier("bank-remaining")
                     }
                         .listRowBackground(Spread.elevated)
-                    Section("Colour and symbol") {
+                    Section("Color and symbol") {
                         PalettePanel(planner: planner, role: role)
                             .listRowInsets(EdgeInsets())
                     }
@@ -337,7 +354,7 @@ struct CarryOverSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Not now") { dismiss() }.frame(minHeight: 44)
+                    Button("Cancel") { dismiss() }.frame(minHeight: 44)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(chosen.isEmpty ? "Move" : "Move \(chosen.count)") { move() }
@@ -354,7 +371,13 @@ struct CarryOverSheet: View {
         let picks = chosen.map { ["roleId": $0.roleId, "taskId": $0.id] }
         Task {
             let ok = await planner.send(["type": "carryOver", "picks": picks])
-            if ok { dismiss() } else { status = "Nothing to move." }
+            if ok {
+                dismiss()
+            } else {
+                // The sheet stays open with the picks. The store's reason is shown here, not behind the sheet.
+                status = planner.error ?? "Couldn't move these tasks. Try again."
+                planner.error = nil
+            }
         }
     }
 }
@@ -541,7 +564,7 @@ struct MoreSheet: View {
                 Image(systemName: symbol)
                     .font(.system(.title3, weight: .medium))
                     .foregroundStyle(Spread.accent)
-                    .frame(height: 26)
+                    .frame(minHeight: 26)
                 Text(title)
                     .font(.system(.caption, weight: .semibold))
                     .foregroundStyle(Spread.ink)
@@ -625,7 +648,7 @@ struct MoreSheet: View {
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
-                            sectionLabel("Notifications")
+                            sectionLabel("Focus and reminders")
                             Button { showFocusTimer = true } label: {
                                 Label { Text("Focus timer") } icon: { SpreadIcon(name: "lucide-timer", size: 18) }
                                     .font(.subheadline.weight(.semibold))
@@ -648,13 +671,13 @@ struct MoreSheet: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Widgets")
-                            Toggle("Show Today on widgets", isOn: $todayWidgetsEnabled)
+                            Toggle("Show Today and Focus timer on widgets", isOn: $todayWidgetsEnabled)
                                 .font(.subheadline.weight(.semibold))
                                 .padding(.horizontal, 12)
                                 .frame(minHeight: 48)
                                 .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                                 .accessibilityIdentifier("today-widget-enabled")
-                            Text("Only task counts, hours placed today and a running focus timer are shared locally. No task names or accounts.")
+                            Text("Turns on the Today and Focus timer widgets. Only task counts, hours placed today and a running focus timer are shared on this device. No task names or accounts.")
                                 .font(.footnote)
                                 .foregroundStyle(Spread.secondary)
                             Toggle("Show Life cards on widgets", isOn: $lifeCardsWidgetsEnabled)
@@ -748,7 +771,7 @@ struct MoreSheet: View {
                                     Image(systemName: "sparkles")
                                         .font(.title3)
                                         .foregroundStyle(Spread.accent)
-                                        .frame(width: 32)
+                                        .frame(minWidth: 32)
                                         .accessibilityHidden(true)
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text("What's New")
