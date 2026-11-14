@@ -43,6 +43,37 @@ struct LifeWalletStack: View {
     private var shown: [Responsibility] {
         focusActive ? ordered.filter { $0.id == selectedRole } : ordered
     }
+
+    private func page(_ delta: Int) {
+        guard let selectedRole,
+              let index = ordered.firstIndex(where: { $0.id == selectedRole }),
+              ordered.count > 1 else { return }
+        let next = (index + delta + ordered.count) % ordered.count
+        select(ordered[next].id)
+    }
+
+    /// A focused Life card supports swipe-up to the next card.
+    /// The existing downward Wallet pull still closes the focused card.
+    @ViewBuilder private var pageDots: some View {
+        if focusActive, ordered.count > 1, let selectedRole,
+           let selected = ordered.firstIndex(where: { $0.id == selectedRole }) {
+            let count = min(ordered.count, 9)
+            let first = min(max(selected - 4, 0), max(0, ordered.count - count))
+            VStack(spacing: 6) {
+                ForEach(0..<count, id: \.self) { index in
+                    Circle()
+                        .fill(first + index == selected ? Color.white : Color.white.opacity(0.35))
+                        .frame(width: first + index == selected ? 6 : 4,
+                               height: first + index == selected ? 6 : 4)
+                }
+            }
+            .padding(6)
+            .background(Color.black.opacity(0.25), in: Capsule())
+            .padding(.trailing, 5)
+            .accessibilityHidden(true)
+            .allowsHitTesting(false)
+        }
+    }
     var body: some View {
         Group {
             if typeSize.isAccessibilitySize {
@@ -89,6 +120,7 @@ struct LifeWalletStack: View {
                 // This also avoids an oversized animated GPU mask.
             }
         }
+        .overlay(alignment: .trailing) { pageDots }
         .animation(reduceMotion ? nil : SpreadTactile.walletFocus, value: selectedRole)
         .onChange(of: selectedRole) { old, new in
             if let new { lastSelected = new; focusedRole = new }
@@ -97,6 +129,13 @@ struct LifeWalletStack: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Life area cards")
         .accessibilityIdentifier("life-wallet-stack")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: page(1)
+            case .decrement: page(-1)
+            @unknown default: break
+            }
+        }
     }
     private func card(_ role: Responsibility, faceVisible: Bool) -> some View {
         LifeWalletFace(role: role, snapshot: snapshot, day: day,
@@ -113,16 +152,19 @@ struct LifeWalletStack: View {
             .accessibilityFocused($focusedRole, equals: role.id)
             .simultaneousGesture(pullToClose(role.id))
     }
-    /// Wallet-style exit: a deliberate downward pull on the focused card closes it.
-    /// The scroll view supplies the visible pull. This only decides on release.
+    /// In foreground Life, swipe up changes to the next card; pull down retains
+    /// the existing Wallet exit. The two gestures use opposite directions.
     private func pullToClose(_ id: String) -> some Gesture {
         DragGesture(minimumDistance: 20, coordinateSpace: .global)
             .onEnded { value in
                 guard focusActive, selectedRole == id else { return }
-                let down = value.translation.height
-                guard down > abs(value.translation.width) * 1.5,
-                      down > 110 || value.predictedEndTranslation.height > 260 else { return }
-                select(id)
+                let dy = value.translation.height
+                guard abs(dy) > abs(value.translation.width) * 1.5 else { return }
+                if dy < -85 || value.predictedEndTranslation.height < -200 {
+                    page(1)
+                } else if dy > 110 || value.predictedEndTranslation.height > 260 {
+                    select(id)
+                }
             }
     }
     private func select(_ id: String) {

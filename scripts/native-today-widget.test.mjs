@@ -188,8 +188,9 @@ test("every widget follows the system's light or dark appearance", () => {
   // The Life card reads the appearance and picks a palette. Dark keeps the app's look, light uses cream
   // and navy text. No text or fill is fixed to white.
   assert.match(lifeCardsSource, /@Environment\(\\\.colorScheme\) private var scheme/);
-  assert.match(lifeCardsSource, /SpreadLifeCardPalette\.make\(scheme\)/);
-  assert.match(lifeCardsSource, /SpreadLifeCardBackground\(colorHex: card\.colorHex, scheme: scheme\)/);
+  assert.match(lifeCardsSource, /SpreadLifeCardPalette\.make\(/);
+  assert.match(lifeCardsSource, /SpreadLifeWidgetArtwork\.image\(for: card\.category\)/);
+  assert.match(lifeCardsSource, /SpreadLifeCardBackground\(colorHex: card\.colorHex, category: card\.category, scheme: scheme\)/);
   assert.match(lifeCardsSource, /if scheme == \.dark/);
   assert.doesNotMatch(lifeCardsSource, /\.foregroundStyle\(Color\.white\)|\.tint\(\.white\)/);
 });
@@ -239,11 +240,13 @@ test("the Timer widget's controls are icons in 44 pt targets, and each size has 
   assert.match(timerWidgetSource, /func spreadFocusControls\(\) -> some View \{[\s\S]*\.labelStyle\(\.iconOnly\)[\s\S]*\}/);
   assert.match(timerWidgetSource, /\.frame\(width: 44, height: 44\)/);
   assert.match(timerWidgetSource, /SpreadFocusControlButton\(control: kind, nextLabel: entry\.state\?\.nextLabel, iconOnly: true\)/);
-  // The medium size puts its controls in a column beside the face: a row under the face does not fit its height.
-  assert.match(timerWidgetSource, /HStack\(alignment: \.center, spacing: 14\) \{[\s\S]*face\(\.medium\)[\s\S]*controlColumn\s*\}/);
-  // The small size shows one control under its face, and the large size shows every control in one row.
-  assert.match(timerWidgetSource, /var smallBody: some View \{[\s\S]*face\(\.small\)[\s\S]*controlRow[\s\S]*\}\n\n/);
+  // Every active family renders the three 44pt controls. Medium uses a bottom row.
+  assert.match(timerWidgetSource, /var mediumBody: some View \{[\s\S]*face\(\.medium\)[\s\S]*controlRow/);
+  assert.match(timerWidgetSource, /var smallBody: some View \{[\s\S]*face\(\.small\)[\s\S]*controlRow/);
   assert.match(timerWidgetSource, /var largeBody: some View \{[\s\S]*face\(\.large\)[\s\S]*controlRow[\s\S]*Divider\(\)/);
+  assert.match(timerWidgetSource, /SetSpreadFocusPlayingIntent\(sessionId: state\.sessionId\)/);
+  assert.match(timerWidgetSource, /SpreadTransportToggleStyle/);
+  assert.match(timerWidgetSource, /\.contentMarginsDisabled\(\)/);
   assert.doesNotMatch(timerWidgetSource, /\.controlSize\(\.small\)/);
 });
 
@@ -375,3 +378,34 @@ test("the island opens the planned day, and a hand-started session still opens t
     }
   });
 }
+
+test("Focus uses one session-scoped optimistic transport without changing the planner", () => {
+  assert.match(focusControls, /struct SetSpreadFocusPlayingIntent: SetValueIntent, LiveActivityIntent/);
+  assert.match(focusControls, /session\.id == sessionId/);
+  assert.match(focusControls, /if value \{[\s\S]*SpreadFocusMachine\.resume/);
+  assert.match(focusControls, /else \{[\s\S]*SpreadFocusMachine\.pause/);
+  assert.match(focusSheet, /Image\(systemName: session\.phase == \.running \? "pause\.fill" : "play\.fill"\)/);
+  assert.match(focusSheet, /Image\(systemName: "forward\.fill"\)/);
+  assert.match(focusSheet, /Image\(systemName: "stop\.fill"\)/);
+  assert.match(focusSheet, /Image\(systemName: "xmark"\)/);
+  for (const label of ["focus-pause", "focus-resume", "focus-forward", "focus-stop", "focus-cancel"]) {
+    assert.match(focusSheet, new RegExp(label));
+  }
+  assert.doesNotMatch(focusSheet, /Button\("(?:Pause|Resume|Forward|Stop|Cancel session)"\)/);
+});
+
+test("widget Life art, branding and vertical paging are compiled as extension resources", () => {
+  assert.match(lifeCardsSource, /Image\("SpreadMark"\)/);
+  assert.match(lifeCardsSource, /Bundle\.main\.url\(forResource: category,/);
+  assert.match(lifeCardsSource, /stepButton\(\.previous, symbol: "chevron\.up"/);
+  assert.match(lifeCardsSource, /stepButton\(\.next, symbol: "chevron\.down"/);
+  assert.match(lifeCardsSource, /private var dots: some View/);
+  assert.match(project, /Widget Assets in Resources/);
+  assert.match(project, /Widget Editorial in Resources/);
+  for (const category of ["family", "fitness", "home", "personal", "school", "work"]) {
+    const bytes = readFileSync("ios/App/SpreadWidget/Editorial/" + category + ".webp");
+    assert.ok(bytes.byteLength > 0, category + " art must be bundled");
+  }
+  assert.match(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift"), /private func page\(_ delta: Int\)/);
+  assert.match(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift"), /pageDots/);
+});

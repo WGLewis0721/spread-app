@@ -150,8 +150,22 @@ public enum SpreadFocusControlRules {
         return [.openSpread]
     }
 
-    /// The controls a widget of this size shows, from the list `all` gives.
+    /// Three transport controls are visible at every active Timer widget size.
+    /// Forward remains present but disabled by the widget view if there is no next stage.
+    /// The expanded island still uses `all` to show only actions that apply.
     public static func shown(_ controls: [SpreadFocusControl], size: Size) -> [SpreadFocusControl] {
+        if let transport = controls.first(where: { $0 == .pause || $0 == .resume }) {
+            let essential: [SpreadFocusControl] = [transport, .forward, .cancel]
+            return size == .large
+                ? essential + controls.filter { $0 == .stop || $0 == .openSpread }
+                : essential
+        }
+        if controls.contains(.cancel) {
+            let essential: [SpreadFocusControl] = [.forward, .cancel]
+            return size == .large
+                ? essential + controls.filter { $0 == .openSpread }
+                : essential
+        }
         switch size {
         case .small: return Array(controls.prefix(1))
         case .medium: return Array(controls.prefix(2))

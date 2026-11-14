@@ -502,8 +502,23 @@ private struct SpreadTimerView: View {
             Link(destination: SpreadWidgetLink.focus.url) {
                 Label("Open Spread", systemImage: "arrow.up.forward.app")
             }
-        case .pause, .resume, .forward, .stop, .cancel:
+        case .pause, .resume:
+            if let state = entry.state {
+                // WidgetKit optimistically flips this icon before the LiveActivityIntent returns.
+                Toggle(isOn: state.phase == .running,
+                       intent: SetSpreadFocusPlayingIntent(sessionId: state.sessionId)) {
+                    Text("Play or pause focus")
+                }
+                .toggleStyle(SpreadTransportToggleStyle())
+                .accessibilityIdentifier("widget-focus-play-pause")
+            }
+        case .forward:
             SpreadFocusControlButton(control: kind, nextLabel: entry.state?.nextLabel, iconOnly: true)
+                .disabled(entry.state?.nextLabel == nil)
+                .accessibilityIdentifier("widget-focus-forward")
+        case .stop, .cancel:
+            SpreadFocusControlButton(control: kind, nextLabel: entry.state?.nextLabel, iconOnly: true)
+                .accessibilityIdentifier(kind == .cancel ? "widget-focus-cancel" : "widget-focus-stop")
         }
     }
 
@@ -516,19 +531,13 @@ private struct SpreadTimerView: View {
         }
     }
 
-    /// The controls in a row, for the small and large sizes.
+    /// Every active size has Play/Pause, Forward and Cancel. Use stable 44pt targets
+    /// and a 2pt gap so a 141pt small widget fits a genuine three-button row.
     private var controlRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: family == .systemSmall ? 2 : 8) {
             controlItems
         }
-        .spreadFocusControls()
-    }
-
-    /// The controls stacked on the right, for the medium size.
-    private var controlColumn: some View {
-        VStack(spacing: 8) {
-            controlItems
-        }
+        .frame(maxWidth: .infinity, alignment: .center)
         .spreadFocusControls()
     }
 
@@ -564,31 +573,31 @@ private struct SpreadTimerView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The small widget is about 158 pt square, so about 126 pt is left inside its margins: the face, then one control.
+    /// 141pt square is the smallest supported small canvas. Tight horizontal
+    /// margins preserve three 44pt targets (132pt total) without shrinking touch areas.
     @ViewBuilder private var smallBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             face(.small)
-            controlRow
             Spacer(minLength: 0)
+            controlRow
         }
+        .padding(.horizontal, 2)
+        .padding(.vertical, 7)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    /// The medium widget is about 338 by 158 pt, so about 126 pt is left inside its margins. The face sits on the left
-    /// and the controls stack on the right, because a row of controls under the face would not fit that height.
+    /// Medium uses the extra width for a legible timer, without hiding Cancel.
     @ViewBuilder private var mediumBody: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                face(.medium)
-                endsAt
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            controlColumn
+        VStack(alignment: .leading, spacing: 5) {
+            face(.medium)
+            Spacer(minLength: 0)
+            controlRow
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    /// The large widget is about 338 by 354 pt: the full face, every control in a row, then today's counts.
+    /// Large retains the Stop affordance and today's contextual counts.
     @ViewBuilder private var largeBody: some View {
         VStack(alignment: .leading, spacing: 10) {
             face(.large)
@@ -600,7 +609,28 @@ private struct SpreadTimerView: View {
             }
             Spacer(minLength: 0)
         }
+        .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// WidgetKit renders both toggle states ahead of time. The custom style reads
+/// the optimistic configuration value, so the icon flips immediately.
+private struct SpreadTransportToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            Image(systemName: configuration.isOn ? "pause.fill" : "play.fill")
+                .font(.title3.weight(.semibold))
+                .frame(width: 44, height: 44)
+                .foregroundStyle(.primary)
+                .background(Color.primary.opacity(0.09), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(configuration.isOn ? "Pause focus" : "Play focus")
+        .accessibilityValue(configuration.isOn ? "Playing" : "Paused")
     }
 }
 
@@ -623,7 +653,10 @@ struct SpreadTimerWidget: Widget {
             SpreadTimerView(entry: entry)
         }
         .configurationDisplayName("Focus timer")
-        .description("Your focus session and its controls, counting down on your Home Screen. Small shows one control, medium two, and large every control.")
+        .description("Focus timer with Play/Pause, Forward and Cancel in every size.")
+        // The content includes its own measured family margins. The standard
+        // 16pt automatic inset would clip 3 x 44pt targets at 141pt square.
+        .contentMarginsDisabled()
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

@@ -26,8 +26,10 @@ enum SpreadFocusControls {
     static func apply(_ session: SpreadFocusSession?, notify: Bool) {
         if let session { SpreadDayPlanStore.recordCompletion(of: session) }
         SpreadFocusStore.save(session)
-        SpreadFocusLiveActivityController.refresh(session)
+        // Publish the new state before the potentially expensive ActivityKit refresh.
+        // App Group session remains the only authority on both paths.
         SpreadFocusWidgetPublisher.publish(session)
+        SpreadFocusLiveActivityController.refresh(session)
         if let session, session.phase == .running, notify {
             Task { await SpreadLocalAlerts.scheduleFocus(session) }
         } else {
@@ -83,6 +85,38 @@ struct StartSpreadFocusIntent: LiveActivityIntent {
             id: UUID().uuidString, profileId: choice.profileId, roleId: choice.roleId, roleName: choice.roleName,
             plan: choice.plan, kind: .focus, round: 1, now: Date()) else { return .result() }
         SpreadFocusControls.apply(session, notify: SpreadFocusControls.notifyWhenDone)
+        return .result()
+    }
+}
+
+/// An optimistic transport control for Home Screen widgets.
+/// Apple's Toggle renders Play/Pause instantly; the system supplies the requested Boolean.
+/// The session ID prevents an old widget tap from changing a replacement session.
+struct SetSpreadFocusPlayingIntent: SetValueIntent, LiveActivityIntent {
+    static var title: LocalizedStringResource = "Play or pause focus"
+
+    @Parameter(title: "Playing")
+    var value: Bool
+
+    @Parameter(title: "Session")
+    var sessionId: String
+
+    init() {}
+    init(sessionId: String) { self.sessionId = sessionId }
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        guard let session = SpreadFocusControls.current(),
+              session.id == sessionId else { return .result() }
+        if value {
+            guard session.phase == .paused,
+                  let resumed = SpreadFocusMachine.resume(session, now: Date()) else { return .result() }
+            SpreadFocusControls.apply(resumed, notify: SpreadFocusControls.notifyWhenDone)
+        } else {
+            guard session.phase == .running,
+                  let paused = SpreadFocusMachine.pause(session, now: Date()) else { return .result() }
+            SpreadFocusControls.apply(paused, notify: false)
+        }
         return .result()
     }
 }
