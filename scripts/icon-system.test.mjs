@@ -149,10 +149,10 @@ test("core native controls use Lucide without touching branded launcher or task 
     "Spread/ResponsibilitySidebar.swift"
   ]) {
     const content = read(root + file);
-    assert.match(content, /SpreadIcon\\(name:/, `${file} should use one icon renderer`);
+    assert.match(content, /SpreadIcon\(name:/, `${file} should use one icon renderer`);
   }
   const icons = read(root + "Theme/SpreadIcons.swift");
-  assert.match(icons, /Image\\("app-icon-spread-cards"/);
+  assert.match(icons, /Image\("app-icon-spread-cards"/);
   assert.match(icons, /struct SpreadBrandMark:/);
-  assert.match(icons, /accessibilityHidden\\(true\\)/);
+  assert.match(icons, /accessibilityHidden\(true\)/);
 });
