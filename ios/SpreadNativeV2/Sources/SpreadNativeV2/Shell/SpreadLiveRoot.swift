@@ -972,8 +972,8 @@ private struct RoleDeleteConfirm: View {
 
     var body: some View {
         VStack(spacing: Spread.space4) {
-            Text("Remove \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "this spread")?").font(Spread.sheetTitle)
-            Text("The hours and tasks for this spread leave every week.").font(Spread.callout).foregroundStyle(Spread.secondary)
+            Text("Remove \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "this responsibility")?").font(Spread.sheetTitle)
+            Text("The hours and tasks for this responsibility leave every week.").font(Spread.callout).foregroundStyle(Spread.secondary)
             Button("Remove", role: .destructive) {
                 Task {
                     _ = await planner.send(["type": "removeRole", "roleId": roleId])

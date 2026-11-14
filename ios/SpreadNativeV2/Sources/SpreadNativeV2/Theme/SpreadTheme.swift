@@ -55,20 +55,10 @@ public enum Spread {
     public static let accentGradient = LinearGradient(
         colors: [Color(hex6: 0x0A6FE8), Color(hex6: 0x0559C7)], startPoint: .topLeading, endPoint: .bottomTrailing)
 
-    // MARK: Semantic roles (Gray Matter DESIGN_SYSTEM.md section 3)
+    // MARK: Success (the one new hue). Spread's own names are the only names in code; the UI kit maps Gray Matter's.
 
-    // Names for the rest of the app and the UI kit. Each one resolves to a token above, so light and dark values
-    // live in one place. `surface` is the recessed content surface (rows and fields inside a card); `elevated`
-    // stays the card and sheet fill.
-    public static let surface = inset
-    public static let primary = accent
-    public static let text = ink
-    public static let secondaryText = secondary
-    public static let outline = line
-    public static let destructive = danger
-    public static let warning = caution
-    /// The only new hue in the set. Calm green with at least 4.5:1 text contrast on the cream and navy canvases.
-    /// Status is always paired with a word or an icon, never colour alone.
+    /// Calm green with at least 4.5:1 text contrast on the cream and navy canvases. Status is always paired with a
+    /// word or an icon, never colour alone.
     public static let success = dynamic(light: 0x17743A, dark: 0x30D158)
 
     // MARK: Illustration and tile ink (artwork and role tiles, not UI roles)
@@ -79,8 +69,11 @@ public enum Spread {
     public static let tileGlyph = Color.white
     /// Glyph ink on a bright role tile (yellow, orange, bright green), where white would not read.
     public static let tileGlyphOnBright = Color(hex6: 0x16212A)
-    /// Chalk strokes: bright on night, the secondary ink on cream.
-    public static let chalkInk = adaptive(light: (74, 86, 112, 1), dark: (244, 247, 255, 1))
+    /// Chalk strokes: bright on night; on cream, the secondary ink with its Increase Contrast variant (OD15). The light
+    /// values equal `secondary`'s. They are repeated here because the contrast test reads `secondary` as a literal.
+    public static let chalkInk = adaptive(
+        light: (74, 86, 112, 1), dark: (244, 247, 255, 1),
+        highLight: (14, 26, 46, 0.92))
     /// The sparkle in the Chalkboard artwork.
     public static let chalkSpark = Color(hex6: 0xFFE066)
     /// Neutral grey for a responsibility without a usable colour. Matches the fallback in `Color(hex:)`.
@@ -154,9 +147,6 @@ public enum Spread {
     public static let callout = Font.system(.subheadline, weight: .regular)
     public static let footnote = Font.system(.footnote, weight: .regular)
     public static let caption = Font.system(.caption, weight: .regular)
-    /// Gray Matter's ramp names over the same Dynamic Type styles: display and heading are the title sizes above.
-    public static let display = title
-    public static let heading = sheetTitle
     /// Figures that must line up (hour totals, counters, the week readout): tabular digits at body size, scaled.
     public static let numeric = Font.system(.body, weight: .semibold).monospacedDigit()
 
