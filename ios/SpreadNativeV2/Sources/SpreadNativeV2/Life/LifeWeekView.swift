@@ -30,7 +30,7 @@ struct LifeWeekView: View {
     private var selectionKey: String { "native.life.selectedDate.\(profile)" }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spread.space3) {
             calendarSurface
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -61,7 +61,7 @@ struct LifeWeekView: View {
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),
                             day: date, onOpenTask: onOpenTask)
                         LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
-                        }.padding(.horizontal, 4)
+                        }.padding(.horizontal, Spread.space1)
                             .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }.padding(18).spreadCard()
                     .id(roleID)
@@ -133,7 +133,7 @@ struct LifeWeekView: View {
         let selectedRow = (cells.firstIndex(of: monday ?? date) ?? 0) / 7
         return VStack(spacing: 10) {
             if typeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spread.space1) {
                     Text(PlannerDates.label(PlannerDates.date(date), pattern: "MMMM yyyy")).font(.headline)
                     HStack { monthControls; Spacer(minLength: 0); monthToggle }
                 }
@@ -169,9 +169,9 @@ struct LifeWeekView: View {
                 Text(expanded ? "Choose a date to see its Life cards." : PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
                     .font(.caption).foregroundStyle(LifePalette.secondary)
                 Spacer(minLength: 0)
-                if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: 44) }
+                if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: Spread.minimumTarget) }
             }
-        }.padding(12).spreadCard().accessibilityElement(children: .contain)
+        }.padding(Spread.space3).spreadCard().accessibilityElement(children: .contain)
             .simultaneousGesture(daySwipe)
     }
 
@@ -188,7 +188,7 @@ struct LifeWeekView: View {
             VStack(spacing: 2) {
                 SpreadIcon(name: "lucide-calendar-days", size: 20)
                 Text(expanded ? "Week" : "Month").font(.caption)
-            }.frame(minWidth: 44, minHeight: 44)
+            }.frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
         }.accessibilityLabel(expanded ? "Show week" : "Show full calendar")
             .accessibilityValue(expanded ? "Expanded" : "Collapsed")
             .accessibilityIdentifier("life-week-month-toggle")
@@ -215,7 +215,7 @@ struct LifeWeekView: View {
             }.frame(maxWidth: .infinity, minHeight: 48)
                 .opacity(iso.prefix(7) == date.prefix(7) ? 1 : 0.4)
                 .contentShape(Rectangle())
-        }.buttonStyle(.spreadPress).disabled(planner.busy)
+        }.buttonStyle(.spreadPress).disabled(planner.busy).opacity(planner.busy ? Spread.disabledOpacity : 1)
             .accessibilityLabel("\(today ? "Today, " : "")\(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d yyyy"))")
             .accessibilityValue("\(mark.count) Life areas planned")
             .accessibilityAddTraits(selected ? .isSelected : [])
@@ -230,7 +230,7 @@ struct LifeWeekView: View {
                 Button {
                     withAnimation(reduceMotion ? nil : SpreadTactile.settle) { inboxOpen.toggle() }
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spread.space2) {
                         SpreadIcon(name: "lucide-inbox", size: 19)
                             .font(.title3.weight(.medium))
                         Text(String(tasks.count))
@@ -241,7 +241,7 @@ struct LifeWeekView: View {
                     }
                     .foregroundStyle(Spread.ink)
                     .padding(.horizontal, 14)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                     .background(Spread.elevated, in: Capsule())
                     .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
                 }
@@ -253,7 +253,7 @@ struct LifeWeekView: View {
             }
             if inboxOpen && !tasks.isEmpty {
                 LifeTaskRows(planner: planner, snapshot: snapshot, tasks: tasks, onOpenTask: onOpenTask)
-                    .padding(12)
+                    .padding(Spread.space3)
                     .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -263,7 +263,7 @@ struct LifeWeekView: View {
     private var room: some View {
         GeometryReader { geometry in
             ScrollView(.horizontal) {
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .top, spacing: Spread.space3) {
                     ForEach(snapshot.roles) { role in
                         Button {
                             let targetDay = date
@@ -272,7 +272,7 @@ struct LifeWeekView: View {
                                 _ = await planner.placeHours(roleId: role.id, day: targetDay, hours: 1)
                             }
                         } label: {
-                            VStack(spacing: 8) {
+                            VStack(spacing: Spread.space2) {
                                 ZStack {
                                     Circle().fill(Color(hex: role.color).opacity(0.16))
                                     Circle().strokeBorder(Color(hex: role.color), lineWidth: 2)
@@ -283,16 +283,18 @@ struct LifeWeekView: View {
                             }.frame(width: max(56, (geometry.size.width - 36) / 4))
                         }.buttonStyle(.spreadPress)
                             .disabled(planner.busy || snapshot.remainingHours(for: role.id) < 1)
+                            .opacity(planner.busy || snapshot.remainingHours(for: role.id) < 1 ? Spread.disabledOpacity : 1)
                             .accessibilityLabel("Plan one hour of \(role.name) on \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))")
                     }
-                }.padding(.vertical, 8)
+                }.padding(.vertical, Spread.space2)
             }.scrollIndicators(.hidden)
         }.frame(height: 112)
     }
 
     private func arrow(_ label: String, system: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { SpreadIcon(name: system == "chevron.left" ? "lucide-chevron-left" : "lucide-chevron-right", size: 20).frame(minWidth: 44, minHeight: 44) }
+        Button(action: action) { SpreadIcon(name: system == "chevron.left" ? "lucide-chevron-left" : "lucide-chevron-right", size: 20).frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget) }
             .accessibilityLabel(label).disabled(planner.busy)
+            .opacity(planner.busy ? Spread.disabledOpacity : 1)
     }
     private func mark(for iso: String) -> NativeDayMark {
         if let known = marks[iso] { return known }
