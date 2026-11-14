@@ -171,6 +171,7 @@ struct SpreadTodayWidget: Widget {
 /// widget, so a control on one surface is the control on the other.
 private struct SpreadFocusIslandControls: View {
     let status: SpreadFocusLiveStatus
+    let sessionId: String
 
     private var controls: [SpreadFocusControl] {
         SpreadFocusControlRules.all(
@@ -185,7 +186,8 @@ private struct SpreadFocusIslandControls: View {
     var body: some View {
         HStack(spacing: 12) {
             ForEach(Array(controls.enumerated()), id: \.offset) { _, kind in
-                SpreadFocusControlButton(control: kind, nextLabel: status.state.nextLabel, iconOnly: true)
+                SpreadFocusControlButton(control: kind, sessionId: sessionId,
+                                         nextLabel: status.state.nextLabel, iconOnly: true)
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
         }
@@ -215,7 +217,7 @@ private struct SpreadFocusLiveView: View {
                 SpreadFocusTimeText(status: status, deadline: context.state.deadline)
                     .font(.title3.weight(.semibold))
             }
-            SpreadFocusIslandControls(status: status)
+            SpreadFocusIslandControls(status: status, sessionId: context.attributes.sessionId)
         }
         .padding()
         .activityBackgroundTint(Color(uiColor: .systemBackground))
@@ -250,7 +252,8 @@ struct SpreadFocusLiveActivityWidget: Widget {
                         Text(SpreadFocusLiveActivityWidget.status(context).caption)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        SpreadFocusIslandControls(status: SpreadFocusLiveActivityWidget.status(context))
+                        SpreadFocusIslandControls(status: SpreadFocusLiveActivityWidget.status(context),
+                                                   sessionId: context.attributes.sessionId)
                     }
                 }
             } compactLeading: {

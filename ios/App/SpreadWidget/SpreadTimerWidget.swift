@@ -185,6 +185,7 @@ struct SpreadFocusPanel: View {
 /// the same on every surface.
 struct SpreadFocusControlButton: View {
     let control: SpreadFocusControl
+    let sessionId: String
     /// The words for Forward, such as "Start break".
     let nextLabel: String?
     /// Icon only, for the Lock Screen banner and the island, where a text label wraps mid-word. The name stays
@@ -206,51 +207,26 @@ struct SpreadFocusControlButton: View {
     @ViewBuilder private var controlButton: some View {
         switch control {
         case .pause:
-            Button(intent: PauseSpreadFocusIntent()) {
+            Button(intent: PauseSpreadFocusIntent(sessionId: sessionId)) {
                 Label("Pause", systemImage: "pause.fill")
             }
         case .resume:
-            Button(intent: ResumeSpreadFocusIntent()) {
+            Button(intent: ResumeSpreadFocusIntent(sessionId: sessionId)) {
                 Label("Resume", systemImage: "play.fill")
             }
         case .forward:
-            Button(intent: ForwardSpreadFocusIntent()) {
+            Button(intent: ForwardSpreadFocusIntent(sessionId: sessionId)) {
                 Label(nextLabel ?? "Forward", systemImage: "forward.fill")
             }
         case .stop:
-            Button(intent: StopSpreadFocusIntent()) {
+            Button(intent: StopSpreadFocusIntent(sessionId: sessionId)) {
                 Label("Stop", systemImage: "stop.fill")
             }
         case .cancel:
-            Button(intent: CancelSpreadFocusIntent()) {
+            Button(intent: CancelSpreadFocusIntent(sessionId: sessionId)) {
                 Label("Cancel", systemImage: "xmark")
             }
         case .startBlock, .startFocus, .openSpread:
-            EmptyView()
-        }
-    }
-}
-
-/// One control for the focus session, for the Today widget's panel. The Timer widget lays out every control itself.
-struct SpreadFocusActionButton: View {
-    let running: Bool
-    let paused: Bool
-    let nextLabel: String?
-
-    var body: some View {
-        if running {
-            Button(intent: PauseSpreadFocusIntent()) {
-                Label("Pause", systemImage: "pause.fill")
-            }
-        } else if paused {
-            Button(intent: ResumeSpreadFocusIntent()) {
-                Label("Resume", systemImage: "play.fill")
-            }
-        } else if let nextLabel {
-            Button(intent: ForwardSpreadFocusIntent()) {
-                Label(nextLabel, systemImage: "forward.fill")
-            }
-        } else {
             EmptyView()
         }
     }
@@ -513,12 +489,18 @@ private struct SpreadTimerView: View {
                 .accessibilityIdentifier("widget-focus-play-pause")
             }
         case .forward:
-            SpreadFocusControlButton(control: kind, nextLabel: entry.state?.nextLabel, iconOnly: true)
-                .disabled(entry.state?.nextLabel == nil)
-                .accessibilityIdentifier("widget-focus-forward")
+            if let state = entry.state {
+                SpreadFocusControlButton(control: kind, sessionId: state.sessionId,
+                                         nextLabel: state.nextLabel, iconOnly: true)
+                    .disabled(state.nextLabel == nil)
+                    .accessibilityIdentifier("widget-focus-forward")
+            }
         case .stop, .cancel:
-            SpreadFocusControlButton(control: kind, nextLabel: entry.state?.nextLabel, iconOnly: true)
-                .accessibilityIdentifier(kind == .cancel ? "widget-focus-cancel" : "widget-focus-stop")
+            if let state = entry.state {
+                SpreadFocusControlButton(control: kind, sessionId: state.sessionId,
+                                         nextLabel: state.nextLabel, iconOnly: true)
+                    .accessibilityIdentifier(kind == .cancel ? "widget-focus-cancel" : "widget-focus-stop")
+            }
         }
     }
 
