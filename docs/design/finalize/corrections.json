@@ -26,7 +26,9 @@
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:955-975 (Delete responsibility)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift:234,260 (Remove responsibility)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift:30 (onDeleteRole, never called)",
-        "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X2, X3, X7)"
+        "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X2, X3, X7)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeManagementSheets.swift:147 (LifeDeleteSheet, declared and never presented)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift:27 (onOpenRole, never called)"
       ],
       "changed_files": [],
       "regression_evidence": [],
@@ -40,13 +42,14 @@
         "N11",
         "W03"
       ],
-      "problem": "Health had three values (#007AFF default role, #30B0C7 category, #0A84FF landing), and School shared #007AFF. OD21 makes Health teal #30B0C7 everywhere. The landing sample is updated here; the model.ts default and the native hardcoded values are still open. OD23 settles the gradient: it stays on one lit action per surface. Found on 2026-11-14: the model.ts default is still #007AFF, and the Life cards widget hard-codes colour literals that duplicate tokens (findings X12, C2, C4).",
+      "problem": "Health had three values (#007AFF default role, #30B0C7 category, #0A84FF landing), and School shared #007AFF. OD21 makes Health teal #30B0C7 everywhere. The landing sample is updated here. The model.ts default is closed by PR #218 (2026-11-14). The native hardcoded values and the widget literals remain open. OD23 settles the gradient: it stays on one lit action per surface. Found on 2026-11-14: the model.ts default is still #007AFF, and the Life cards widget hard-codes colour literals that duplicate tokens (findings X12, C2, C4).",
       "severity": "medium",
-      "decision_owner": "decided: OD21 (Health teal #30B0C7 everywhere; landing sample updated in this PR; model.ts default in wave 2). OD23 keeps the accent gradient on the one lit action per surface. Native hardcoded values remain for lane A.",
+      "decision_owner": "decided: OD21 (Health teal #30B0C7 everywhere): landing sample updated; model.ts default and native category colour applied by #218. OD23 keeps the accent gradient on the one lit action per surface. Native hardcoded values remain for lane A.",
       "spec": "docs/design/finalize/corrections/color-drift.md",
       "status": "open",
       "observed_evidence": [
-        "src/lib/spread/model.ts:89,107,117",
+        "src/lib/spread/model.ts:89,117 (#30B0C7 after PR #218; closed)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:694 (native Health #30B0C7; already matched)",
         "src/spread/components/landing-sections.tsx (roles array)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:55,450",
         "ios/App/SpreadWidget/SpreadLifeCardsWidget.swift:141-185 (widget literals)",
@@ -72,9 +75,9 @@
         "N35",
         "N36"
       ],
-      "problem": "Most of the copy decisions are on main: the Classic entry, empty state and sidebar say 'Add responsibility' (OD22); the Life Details sheet is titled 'Details' (OD8); Life's empty state now has a heading, a sentence and an action. Still open: the create sheet title is 'Add Life' on the shared sheet (its title must follow the root that opened it); the Recently Deleted sheet still says 'return to To Place'; and 'To place' casing is not yet uniform. Found on 2026-11-14: Life says 'Over budget' where Classic says 'overbooked' (X5); the removal verb differs ('Delete' and 'Remove', X3); 'Not now' should be 'Cancel' (X8); 'Cancel session' and 'Cancel' differ (X10); two empties have a title only (X11).",
+      "problem": "Most of the copy decisions are on main: the Classic entry, empty state and sidebar say 'Add responsibility' (OD22); the Life Details sheet is titled 'Details' (OD8); Life's empty state now has a heading, a sentence and an action. Closed by PR #218 (2026-11-14): the create sheet title and field labels follow the root that opened them; the Recently Deleted sheet says 'To place'; 'To place' casing is uniform in user-visible text. Found on 2026-11-14: Life says 'Over budget' where Classic says 'overbooked' (X5); the removal verb differs ('Delete' and 'Remove', X3); 'Not now' should be 'Cancel' (X8); 'Cancel session' and 'Cancel' differ (X10); two empties have a title only (X11).",
       "severity": "medium",
-      "decision_owner": "decided: OD7, OD8, OD22 (applied in part on main); OD12, OD13 open. Application open in lanes A, C, D. Owner decides X5 (one over-capacity word) and X3 (one removal verb).",
+      "decision_owner": "decided: OD7, OD8, OD22 (applied on main, including the create sheet and casing by #218); OD12 applied in Classic, Life wording open (X5); OD13 applied. Open items: X3 (one removal verb), X5 (one over-capacity word), X8 ('Not now'), X10 ('Cancel session' in the widget), X11 (title-only empties). Owner decides X3 and X5.",
       "spec": "docs/design/finalize/corrections/copy-voice.md",
       "status": "open",
       "observed_evidence": [
@@ -126,17 +129,17 @@
         "N34",
         "N35"
       ],
-      "problem": "Three decisions from the wave-1 review are not yet in code: the remaining Lucide icon assets (OD11), the disabled-control opacity token Spread.disabledOpacity = 0.4 (OD17), and naming the Week sidebar scrim as a token (OD16). They belong to wave 2. Found on 2026-11-14: the rail toggle uses an SF glyph in one place and a Lucide glyph in another, and the undo notice uses an SF glyph where OD11 names Lucide rotate-ccw (finding X6).",
+      "problem": "Three decisions from the wave-1 review were not yet in code. Update 2026-11-14: the eight OD11 Lucide assets are in the catalog (PR #217; device check still owed). Still open: the disabled-control token Spread.disabledOpacity = 0.4 (OD17) and the Week sidebar scrim token (OD16). Also open (finding X6): the rail toggle uses SF in one place and Lucide in another, and the undo notice still uses an SF glyph although rotate-ccw is now in the catalog.",
       "severity": "low",
       "decision_owner": "resolved by OD11, OD16, OD17 (planning doc section 8); implementation open",
       "spec": "docs/design/finalize/corrections/wave2-tokens-icons.md",
       "status": "open",
       "observed_evidence": [
-        "docs/design/specs/2026-11-14-publish-finalize-plan.md section 8 (branch claude/happy-feynman-an60e6)",
-        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets (no plus, coffee, eye, copy, arrow-left-right, rotate-ccw, rotate-cw, circle-help asset yet)",
+        "docs/design/specs/2026-11-14-publish-finalize-plan.md section 8",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets: eight Lucide assets present since PR #217 (plus, coffee, eye, copy, arrow-left-right, rotate-ccw, rotate-cw, circle-help)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/PlannerNavigationRail.swift:57 (SF sidebar glyphs)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:552,799 (Lucide panel-left and SF undo glyph)",
-        "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X6, C6, C7)"
+        "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X6, C6)"
       ],
       "changed_files": [],
       "regression_evidence": [],

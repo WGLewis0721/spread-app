@@ -93,7 +93,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "C (Week/)",
-      "notes": "To place casing is 'To place' on the Week tray and rows. The one remaining 'To Place' is in Recently Deleted (N26; corrections/copy-voice.md, X9)."
+      "notes": "To place casing is 'To place' on the Week tray and rows. Recently Deleted now says 'To place' too (#218; corrections/copy-voice.md)."
     },
     {
       "id": "N04",
@@ -551,7 +551,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Sheets/)",
-      "notes": "Title on main is 'Add Life' (ManageSheets.swift:58) for both roots. The Classic entry says 'Add responsibility' (OD22, applied). The title must follow the root that opened it (lane W2-4, corrections/copy-voice.md)."
+      "notes": "The title follows the root that opened it: 'Add Life' in Life and 'Add responsibility' in Classic (ManageSheets.swift:64, PR #218). Field labels follow the same rule (lane W2-4 closed)."
     },
     {
       "id": "N22",
@@ -666,7 +666,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Sheets/)",
-      "notes": "Copy says 'return to To Place' (RecentlyDeletedSheet.swift:21). It should read 'To place' (X9; corrections/copy-voice.md, lane D)."
+      "notes": "Copy says 'return to To place' (RecentlyDeletedSheet.swift:23, PR #218). Closed."
     },
     {
       "id": "N27",
@@ -1244,7 +1244,7 @@
     }
   ],
   "_review_2026_11_14": {
-    "base": "6f53a60",
+    "base": "6f53a60; main at 862c182 (PRs #217 and #218) merged into this branch",
     "lane": "W2-5 cross-surface review (docs/design/finalize/CROSS_SURFACE_REVIEW.md)",
     "change": "Notes updated where they described main before OD18, OD8, OD22 or OD19 were applied, and where the review found new behaviour. No status changed. verified_count stays 0: nothing here is device-verified."
   }

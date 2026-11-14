@@ -42,7 +42,8 @@ Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), finding X6 and
 
 - **Rail toggle has two glyphs (X6, low).** `Shell/PlannerNavigationRail.swift:57` uses SF `sidebar.left` and `sidebar.right`. `Shell/SpreadLiveRoot.swift:552` uses Lucide `lucide-panel-left` for what appears to be the same rail. Fix: one Lucide glyph in both places (lane A). Confirm on device that both toggle the same rail.
 - **Undo notice uses an SF glyph (X6, low).** `Shell/SpreadLiveRoot.swift:799` uses SF `arrow.uturn.backward`. The ICON_HANDOFF Nov 13 section puts custom controls in Lucide. OD11 names `rotate-ccw` for undo, so lane W2-2 should map the notice to it.
-- **Still open, confirmed by grep on 2026-11-14.** `Spread.disabledOpacity` is not in code (C6, lane W2-3). The eight Lucide assets are not in `Resources/Icons.xcassets` (C7, lane W2-2).
+- **Icons (OD11): assets in code, PR #217.** The eight Lucide assets are in `Resources/Icons.xcassets` (C7 closed). Their device check is still owed. The undo notice and the rail toggle still use SF glyphs (X6 open).
+- **Still open, grep on 2026-11-14.** `Spread.disabledOpacity` is not in code (C6, lane W2-3). The scrim token (OD16) was not checked in this update.
 
 ## Reviewer approval
 

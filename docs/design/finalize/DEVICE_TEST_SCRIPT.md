@@ -189,10 +189,10 @@ A run without this record is not evidence.
 - **Then** one heading ("Make room for what matters"), one sentence, and one "Add responsibility" action appear (OD22).
 - Notes:
 
-**E3. Create a responsibility.** Expected fail until fix C3 (W2-4). [Pass ☐] [Fail ☐]
+**E3. Create a responsibility.** [Pass ☐] [Fail ☐]
 - **Given** Classic is open.
 - **When** you tap "Add responsibility".
-- **Then** the sheet title reads "Add responsibility". Today it reads "Add Life" (C3). Cancel is leading.
+- **Then** the sheet title reads "Add responsibility" (fixed by PR #218). Cancel is leading.
 - Notes:
 
 **E4. Choice persists.** [Pass ☐] [Fail ☐]
@@ -253,7 +253,7 @@ A run without this record is not evidence.
 - **Then** it reads "Cancel". Today it reads "Not now".
 - Notes:
 
-**G3. Restore a deleted task.** Expected fail until fix X9. [Pass ☐] [Fail ☐]
+**G3. Restore a deleted task.** [Pass ☐] [Fail ☐]
 - **Given** a task in Recently Deleted.
 - **When** you read the explanation and restore it.
 - **Then** the copy says "To place" with that casing, and the task returns to To place in its original responsibility and week.
@@ -376,10 +376,8 @@ These are real findings. Each step fails until its fix lands, and the verdict st
 | B4 one Undo row | X2 | Owner decision, then Life lane |
 | C2 red ! in Life | C1 (OD1) | W2-3 |
 | D2 over-capacity word | X5 | Owner decision |
-| E3 sheet title | C3 | W2-4 |
 | G1 one removal verb | X3 | Owner decision, then Classic lane |
 | G2 "Cancel" | X8 | Lane D |
-| G3 "To place" casing | X9 | Lane D |
 | H6 "Cancel session" | X10 | Lane D |
 | I6 haptic policy | X4 | Owner decision |
 | (all) build family | X1 | Owner decision, then native config |
