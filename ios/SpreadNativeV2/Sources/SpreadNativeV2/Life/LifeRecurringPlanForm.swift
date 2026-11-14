@@ -302,25 +302,18 @@ struct LifeRecurringPlanForm: View {
                             Text(Self.dayLine(days))
                                 .font(.subheadline)
                         }
-                        HStack {
-                            Text("Starts")
-                            Spacer()
-                            Text(PlannerDates.label(PlannerDates.date(preview.startWeek), pattern: "MMM d, yyyy"))
-                        }
-                        HStack {
-                            Text("Ends")
-                            Spacer()
-                            Text(preview.endWeek.map {
+                        PlanAheadDetailRow(
+                            title: "Starts",
+                            detail: PlannerDates.label(PlannerDates.date(preview.startWeek), pattern: "MMM d, yyyy"))
+                        PlanAheadDetailRow(
+                            title: "Ends",
+                            detail: preview.endWeek.map {
                                 PlannerDates.label(PlannerDates.date($0), pattern: "MMM d, yyyy")
                             } ?? "Never")
-                        }
                         ForEach(preview.nextOccurrences, id: \.self) { week in
-                            HStack {
-                                Text("Week of " + PlannerDates.label(PlannerDates.date(week), pattern: "MMM d"))
-                                Spacer()
-                                Text(SpreadHours.text(preview.hours) + "h")
-                                    .monospacedDigit()
-                            }
+                            PlanAheadDetailRow(
+                                title: "Week of " + PlannerDates.label(PlannerDates.date(week), pattern: "MMM d"),
+                                detail: SpreadHours.text(preview.hours) + "h")
                         }
                         if !preview.preservedWeeks.isEmpty {
                             Label("\(preview.preservedWeeks.count) existing weeks will be left unchanged.",
