@@ -190,7 +190,7 @@
       ],
       "problem": "Bulk reschedule of overdue tasks (OverdueSelectionTray) was reachable only from the Week Focus surface, which cannot run. Life has no overdue path. OD19, as refined on 2026-11-14, keeps the tray and records this gap instead of deleting it.",
       "severity": "low",
-      "decision_owner": "owner: wave 3. Open decision: whether Life offers overdue bulk reschedule. Kept, not wired.",
+      "decision_owner": "owner (coordinator, 2026-11-14): build Option A, approved. Overdue is explicit, previewed, validated and confirmed; nothing auto-moves.",
       "spec": "docs/design/finalize/corrections/README.md#overdue-bulk-reschedule",
       "status": "open",
       "observed_evidence": [
@@ -198,9 +198,18 @@
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/LivePlanner.swift:395-402 (allOverdueTasks has no caller)",
         "Week/WeekFocusSurface.swift at 6f53a60, lines 435-477 (the focus-overdue entry point, deleted in this PR)"
       ],
-      "changed_files": [],
+      "changed_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeOverdueSheet.swift (new)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/OverdueSelectionTray.swift",
+        "docs/design/specs/2026-11-14-life-overdue-and-quick-add.md (new)",
+        "docs/design/specs/README.md",
+        "docs/design/finalize/corrections.json",
+        "docs/design/finalize/corrections/README.md"
+      ],
       "regression_evidence": [],
-      "reviewer_approval": ""
+      "reviewer_approval": "",
+      "resolution": "Built on the lane branch (PR #227), Option A. An Overdue count capsule beside To place in Life (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift:249) opens a sheet (Life/LifeOverdueSheet.swift) that hosts the existing OverdueSelectionTray. Confirmed moves use the existing bulkMoveOverdue action, pinned to the revision reviewed, and the planner's existing Life undo notice is the only Undo. Nothing shows as Nothing overdue unless the read succeeded. Spec: docs/design/specs/2026-11-14-life-overdue-and-quick-add.md. CI native-typecheck and checks passed on e221bdb (PR #227). Open: device checks (owed) and reviewer approval."
     },
     {
       "id": "parity-month-long-press-add",
@@ -210,7 +219,7 @@
       ],
       "problem": "A one-gesture add from the Month grid (long press a date, then add a task for the active responsibility) was reachable only from the Week Focus surface, which cannot run. Life's Month selects a date on a tap and adds in further steps. Classic Month has no gesture. OD19, as refined on 2026-11-14, keeps MonthQuickAddSheet and the MonthSurface hook and records this gap.",
       "severity": "low",
-      "decision_owner": "owner: wave 3. Open decision: whether Month gets a one-gesture add, and in which root. Kept, not wired.",
+      "decision_owner": "owner (coordinator, 2026-11-14): covered, not built, approved. The Month long-press add is not built; the Life day panel is the one quick add.",
       "spec": "docs/design/finalize/corrections/README.md#one-gesture-add-from-month",
       "status": "open",
       "observed_evidence": [
@@ -218,9 +227,15 @@
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthSurface.swift (onLongPressAdd and MonthDayAddGesture, no caller)",
         "Week/WeekFocusSurface.swift at 6f53a60, lines 152-155 (the long-press entry point, deleted in this PR)"
       ],
-      "changed_files": [],
+      "changed_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthQuickAddSheet.swift (deleted)",
+        "docs/design/specs/2026-11-14-life-overdue-and-quick-add.md (new)",
+        "docs/design/finalize/corrections.json",
+        "docs/design/finalize/corrections/README.md"
+      ],
       "regression_evidence": [],
-      "reviewer_approval": ""
+      "reviewer_approval": "",
+      "resolution": "Covered by an existing Life capability; nothing built. The Life day panel quick add (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift:68, LifeQuickAdd with a day) calls addTaskForDay (ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift:479), the same action the sheet used. The unused Week/MonthQuickAddSheet.swift is deleted. A repo-wide grep of Swift, UI tests, scripts and src finds no caller. The dead onLongPressAdd hook and MonthDayAddGesture in Week/MonthSurface.swift were removed on main by #225. Reviewer approval is empty; the coordinator is the named reviewer."
     }
   ]
 }
