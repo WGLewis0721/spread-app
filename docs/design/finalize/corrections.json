@@ -1,0 +1,57 @@
+{
+  "_about": "Corrections register for the publish finalize program, following Gray Matter's corrective-action protocol. One record per problem in corrections/<id>.md. A correction closes only with changed_files, regression_evidence and a named reviewer_approval. No record in this file is closed. Status vocabulary: open | closed. Owner decisions are marked decision_owner: owner. Merged records group related findings to fit the design map budget (docs/design/README.md, 9000 bytes).",
+  "corrections": [
+    {
+      "id": "life-routing",
+      "screen_ids": ["N07", "N08", "N13", "N23", "N37"],
+      "problem": "Life is opt-in and hidden behind a preview-named flag that defaults off, while the native board records Life as the single Wallet direction. A second, unreachable Week surface (WeekFocusSurface) is still built from a path that cannot run, and Life and Classic remove a responsibility differently.",
+      "severity": "high",
+      "decision_owner": "owner",
+      "spec": "docs/design/finalize/corrections/life-routing.md",
+      "status": "open",
+      "observed_evidence": ["ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:15,66-83,332-333", "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift:594-602"],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    },
+    {
+      "id": "color-drift",
+      "screen_ids": ["P03", "N02", "N11"],
+      "problem": "The same role color has different values in different places: Health is #007AFF as a default role, #30B0C7 as a category, and #0A84FF on the landing page. The default School category also uses #007AFF. Native source has many hardcoded Color(hex:) and font-size calls outside the theme, and one accent gradient is used as a button fill where the board describes solid surfaces.",
+      "severity": "medium",
+      "decision_owner": "owner",
+      "spec": "docs/design/finalize/corrections/color-drift.md",
+      "status": "open",
+      "observed_evidence": ["src/lib/spread/model.ts:89,107,117", "src/spread/components/landing-sections.tsx (roles array)", "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:55,450", "docs/design/finalize/TOKEN_AUDIT.md (Lane A, pending)"],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    },
+    {
+      "id": "copy-voice",
+      "screen_ids": ["N02", "N03", "N17", "N21", "N08"],
+      "problem": "One action has three names: the same sheet is titled 'Add Life' while its Classic entry says 'New Spread' and its empty state says 'Create responsibility'. Nouns also drift between 'responsibility', 'spread' and 'Life area', and 'To place' appears with two capitalizations.",
+      "severity": "medium",
+      "decision_owner": "owner",
+      "spec": "docs/design/finalize/corrections/copy-voice.md",
+      "status": "open",
+      "observed_evidence": ["ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift:58", "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:303", "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift (emptyPlan)", "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift:368,1061"],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    },
+    {
+      "id": "release-scope",
+      "screen_ids": ["P07", "P08", "P01"],
+      "problem": "Three documents disagree about what is shipped and advertised. CLAUDE.md says iPhone only. APP_STORE_RELEASE_PLAN.md says a universal iPhone and iPad app at $2.99. The landing page says private beta on TestFlight and has no App Store link, which the plan says to add only after the listing is live.",
+      "severity": "high",
+      "decision_owner": "owner",
+      "spec": "docs/design/finalize/corrections/release-scope.md",
+      "status": "open",
+      "observed_evidence": ["CLAUDE.md (Two products)", "APP_STORE_RELEASE_PLAN.md (Direction revised 2026-10-08; section 5 Release)", "src/lib/links.ts", "src/spread/screens/spread-app.tsx (start section)"],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    }
+  ]
+}

@@ -1,0 +1,301 @@
+{
+  "_about": "Machine-readable companion to REFERENCES.md. inspected: true only for sources this lane opened. partial means some sections only. Never mark a source inspected without opening it.",
+  "sources": [
+    {
+      "id": 1,
+      "title": "Gray Matter app-design README",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/README.md",
+      "category": "platform",
+      "inspected": true,
+      "note": "Workflow order and gate list"
+    },
+    {
+      "id": 2,
+      "title": "Gray Matter UPGRADE_AND_CORRECTIVE_WORKFLOW.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": true,
+      "note": "Corrections record fields; release gate on open items"
+    },
+    {
+      "id": 3,
+      "title": "Gray Matter DESIGN_TO_BUILD_CONTRACT.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": true,
+      "note": "Stage vocabulary; screens.json authority"
+    },
+    {
+      "id": 4,
+      "title": "Gray Matter UI_AUTOMATION_AND_EVIDENCE.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": true,
+      "note": "Failure classification; run totals"
+    },
+    {
+      "id": 5,
+      "title": "Gray Matter SECURITY_AND_RELEASE.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": true,
+      "note": "Experience release gate"
+    },
+    {
+      "id": 6,
+      "title": "Gray Matter IOS_PLAYBOOK.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "platform",
+      "inspected": "partial",
+      "note": "First 2.6 KB of 4.5 KB"
+    },
+    {
+      "id": 7,
+      "title": "Gray Matter TACTILE_MOTION_AND_DEVICE_QA.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": "partial",
+      "note": "First 2.6 KB of 6.7 KB"
+    },
+    {
+      "id": 8,
+      "title": "Gray Matter UX_REVIEW_AND_SPEC_PROTOCOL.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": "partial",
+      "note": "First 2.6 KB of 6.3 KB"
+    },
+    {
+      "id": 9,
+      "title": "Gray Matter DESIGN_SYSTEM.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": "partial",
+      "note": "First 2.6 KB of 5.0 KB"
+    },
+    {
+      "id": 10,
+      "title": "Gray Matter WEB_PLAYBOOK.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "platform",
+      "inspected": false,
+      "note": "Not opened"
+    },
+    {
+      "id": 11,
+      "title": "Gray Matter WEBSITE_DESIGN_WORKFLOW.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": false,
+      "note": "Not opened"
+    },
+    {
+      "id": 12,
+      "title": "Gray Matter EDITORIAL_CARD_AND_ARTWORK.md",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": false,
+      "note": "Not opened"
+    },
+    {
+      "id": 13,
+      "title": "Gray Matter CREATIVE_ASSET_PRODUCTION, ANIMATED_MEDIA_PIPELINE, OBJECT_FIRST_NATIVE_PATTERNS, NATIVE_UI_REFERENCES, LIBRARY_CATALOG, AI_WORKFLOW",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/",
+      "category": "process",
+      "inspected": false,
+      "note": "Not opened"
+    },
+    {
+      "id": 14,
+      "title": "Gray Matter templates: SCREEN_MAP, SCREEN_SPEC, UPGRADE_AUDIT, REFERENCES, CORRECTIVE_ACTION, DESIGN_QA, RELEASE_CHECKLIST, BRAND_BOARD, UI_KIT",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/templates/",
+      "category": "template",
+      "inspected": true,
+      "note": "Mapped onto this folder"
+    },
+    {
+      "id": 15,
+      "title": "Gray Matter templates: DECISION_LOG, DESIGN_CHANGE_SPEC, ASSET_JOB_MANIFEST, PREBUILD_PLAN, PROJECT_BRIEF, WEBSITE_BRIEF, FEATURE_SPEC",
+      "path_or_url": "github.com/WGLewis0721/graymattertechllc- app-design/templates/",
+      "category": "template",
+      "inspected": false,
+      "note": "Not opened"
+    },
+    {
+      "id": 16,
+      "title": "Spread CLAUDE.md and AGENTS.project.md",
+      "path_or_url": "repo root",
+      "category": "owner rules",
+      "inspected": true,
+      "note": "Binding rules and boundaries"
+    },
+    {
+      "id": 17,
+      "title": "Spread docs/design/README.md (design map)",
+      "path_or_url": "docs/design/README.md",
+      "category": "owner docs",
+      "inspected": true,
+      "note": "Router, folder map, budgets; docs:check rules by excerpt of scripts/design-docs.mjs"
+    },
+    {
+      "id": 18,
+      "title": "Spread docs/design/landing/DESIGN.md",
+      "path_or_url": "docs/design/landing/DESIGN.md",
+      "category": "owner docs",
+      "inspected": true,
+      "note": "Landing composition, motion, modes (through Process section)"
+    },
+    {
+      "id": 19,
+      "title": "Spread docs/design/packs/landing-change.md",
+      "path_or_url": "docs/design/packs/landing-change.md",
+      "category": "owner docs",
+      "inspected": true,
+      "note": "Landing checklist"
+    },
+    {
+      "id": 20,
+      "title": "Spread docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md",
+      "path_or_url": "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md",
+      "category": "owner docs",
+      "inspected": "partial",
+      "note": "Grep and selected amendment lines; full read owed"
+    },
+    {
+      "id": 21,
+      "title": "Spread docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md",
+      "path_or_url": "docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md",
+      "category": "owner docs",
+      "inspected": false,
+      "note": "Not opened; owed before any native verdict"
+    },
+    {
+      "id": 22,
+      "title": "Spread docs/APP_STORE_REVIEW_CHECKLIST.md",
+      "path_or_url": "docs/APP_STORE_REVIEW_CHECKLIST.md",
+      "category": "owner docs",
+      "inspected": true,
+      "note": "App Review gates"
+    },
+    {
+      "id": 23,
+      "title": "Spread APP_STORE_RELEASE_PLAN.md",
+      "path_or_url": "APP_STORE_RELEASE_PLAN.md",
+      "category": "owner docs",
+      "inspected": "partial",
+      "note": "Header, lines 40-75, 136-160"
+    },
+    {
+      "id": 24,
+      "title": "Spread publish master plan",
+      "path_or_url": "branch claude/happy-feynman-an60e6, docs/design/specs/2026-11-14-publish-finalize-plan.md (PR #209)",
+      "category": "owner plan",
+      "inspected": true,
+      "note": "Lane E scope and owner goals"
+    },
+    {
+      "id": 25,
+      "title": "Spread docs/design/README.md section 5 (Studio)",
+      "path_or_url": "docs/design/README.md",
+      "category": "owner docs",
+      "inspected": "partial",
+      "note": "Studio section only"
+    },
+    {
+      "id": 26,
+      "title": "Spread docs/evidence/",
+      "path_or_url": "docs/evidence/",
+      "category": "evidence",
+      "inspected": false,
+      "note": "Bash access denied in this session; contents unknown"
+    },
+    {
+      "id": 27,
+      "title": "Spread docs/IOS_RELEASE.md and docs/ICLOUD_PLAN.md",
+      "path_or_url": "docs/",
+      "category": "owner docs",
+      "inspected": false,
+      "note": "Not opened"
+    },
+    {
+      "id": 28,
+      "title": "Spread native source",
+      "path_or_url": "ios/SpreadNativeV2/Sources, ios/App/SpreadWidget",
+      "category": "implementation",
+      "inspected": true,
+      "note": "Inventory and checks by grep and targeted reads; not compiled"
+    },
+    {
+      "id": 29,
+      "title": "Spread landing source",
+      "path_or_url": "src/spread/**, src/lib/links.ts, src/lib/spread/model.ts, profiles.ts, cloud-flags.ts",
+      "category": "implementation",
+      "inspected": true,
+      "note": "Landing structure, copy, colors, links"
+    },
+    {
+      "id": 30,
+      "title": "Apple Human Interface Guidelines",
+      "path_or_url": "developer.apple.com/design/human-interface-guidelines",
+      "category": "platform",
+      "inspected": false,
+      "note": "Referenced; not fetched"
+    },
+    {
+      "id": 31,
+      "title": "Apple App Review Guidelines",
+      "path_or_url": "developer.apple.com/app-store/review/guidelines",
+      "category": "platform",
+      "inspected": false,
+      "note": "Referenced; not fetched"
+    },
+    {
+      "id": 32,
+      "title": "WCAG 2.2",
+      "path_or_url": "w3.org/TR/WCAG22",
+      "category": "accessibility",
+      "inspected": false,
+      "note": "Referenced; not fetched; contrast not measured"
+    },
+    {
+      "id": 33,
+      "title": "Lucide icons and license",
+      "path_or_url": "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/LUCIDE_LICENSE.txt",
+      "category": "license",
+      "inspected": false,
+      "note": "Present; not opened in this pass"
+    },
+    {
+      "id": 34,
+      "title": "Inter variable (Spread Sans)",
+      "path_or_url": "public/fonts/inter-latin.woff2",
+      "category": "typography",
+      "inspected": false,
+      "note": "Font license not reviewed"
+    },
+    {
+      "id": 35,
+      "title": "Playwright (preinstalled)",
+      "path_or_url": "local",
+      "category": "tooling",
+      "inspected": true,
+      "note": "Landing captures; not a design reference"
+    },
+    {
+      "id": 36,
+      "title": "design:design-critique, design:accessibility-review, design:ux-copy skills",
+      "path_or_url": "claude.ai skills",
+      "category": "tooling",
+      "inspected": false,
+      "note": "SearchSkills returned no matches; not used"
+    },
+    {
+      "id": 37,
+      "title": "21st.dev MCP",
+      "path_or_url": "not connected",
+      "category": "tooling",
+      "inspected": false,
+      "note": "Not available; not used"
+    }
+  ]
+}

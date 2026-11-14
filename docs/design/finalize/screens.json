@@ -1,0 +1,1246 @@
+{
+  "_about": "Machine-readable screen inventory for the Spread publish finalize program. Authoritative list of native screens, sheets, widgets and the landing page. Human companion: SCREEN_MAP.md. Status vocabulary: planned | designed | implemented | verified. 'verified' requires device or test evidence tied to a named commit; none exists yet (see RELEASE_CHECKLIST.md). Paths are repository-relative. Line counts were read at the commit this file was written against.",
+  "_status_legend": {
+    "planned": "named and scoped, no design or implementation claim",
+    "designed": "a design document in this repo specifies the surface, but source is absent or incomplete",
+    "implemented": "integrated source exists in the repo; not compiled or run by this lane",
+    "verified": "device or test evidence exists for the reviewed revision"
+  },
+  "verified_count": 0,
+  "brand_board_proofs": [
+    "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md",
+    "docs/design/planner/SPREAD_NATIVE_VISUAL_SPECIMEN.svg"
+  ],
+  "ui_kit_proofs": [
+    "docs/design/ui-kit/UI_KIT.md"
+  ],
+  "screens": [
+    {
+      "id": "N01",
+      "name": "Planner launch, loading and recovery",
+      "kind": "system",
+      "surface": "shell",
+      "purpose": "Opens the local planner and shows a recovery path when storage cannot be read or saved.",
+      "entry": "App launch; a failed refresh.",
+      "exit": "Classic root or Life root; Backup sheet from the recovery state.",
+      "states": [
+        "loading",
+        "error with Try again",
+        "error with Open existing planner",
+        "save failed with Retry saving and Back up"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift"
+      ],
+      "design_proofs": [
+        "docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "A (Shell/)",
+      "notes": "Launch-time recovery copy is in SpreadLiveRoot.swift near the error alert; not reviewed on device."
+    },
+    {
+      "id": "N02",
+      "name": "Classic: Spread (responsibilities)",
+      "kind": "screen",
+      "surface": "classic",
+      "purpose": "Shows each responsibility with its hours and tasks. Default destination of Classic.",
+      "entry": "Classic launch; navigation rail Spread.",
+      "exit": "Week or Month via rail; Responsibility and Task sheets.",
+      "states": [
+        "empty: 'Make room for what matters' with Create responsibility",
+        "populated",
+        "accessibility text size (sticky header hidden)"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/ResponsibilitySidebar.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "C (Spread/)",
+      "notes": "Empty-state CTA uses Spread.accentGradient and ChalkMotionArt (Classic keeps Chalk per its own rules). Copy vocabulary differs from Life; see corrections/copy-voice.md."
+    },
+    {
+      "id": "N03",
+      "name": "Classic: Week",
+      "kind": "screen",
+      "surface": "classic",
+      "purpose": "Seven day cards with hours per responsibility, a To place inbox for unplaced tasks and an overdue tray.",
+      "entry": "Navigation rail Week; Month header returns here.",
+      "exit": "Task sheet, Move-to sheet, Month, Carry-over review.",
+      "states": [
+        "populated week",
+        "empty day",
+        "To place expanded and collapsed",
+        "overdue selection tray",
+        "week change with hold-to-repeat arrows"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/WeekSurface.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/ToPlaceTray.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/OverdueSelectionTray.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "C (Week/)",
+      "notes": "To place casing is inconsistent across user-visible strings (To place and To Place); see corrections/copy-voice.md."
+    },
+    {
+      "id": "N04",
+      "name": "Classic: Month",
+      "kind": "screen",
+      "surface": "classic",
+      "purpose": "Month grid with plan days. Tapping a day opens that day in Week.",
+      "entry": "Week header toggle to Month.",
+      "exit": "Week (day picked); Month quick add.",
+      "states": [
+        "current month",
+        "month change",
+        "day with tasks",
+        "empty month"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthSurface.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/PlannerDates.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "C (Week/)",
+      "notes": "Plan days on the month grid shipped in PR #206 (see git history)."
+    },
+    {
+      "id": "N05",
+      "name": "Classic: Month quick add",
+      "kind": "sheet",
+      "surface": "classic",
+      "purpose": "Adds a task to a chosen day from Month without opening Week.",
+      "entry": "Month day add gesture.",
+      "exit": "Dismiss or save; returns to Month.",
+      "states": [
+        "empty title",
+        "saved",
+        "dismissed"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthQuickAddSheet.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "C (Week/)",
+      "notes": ""
+    },
+    {
+      "id": "N06",
+      "name": "Classic: navigation rail, header and week navigator",
+      "kind": "component",
+      "surface": "classic",
+      "purpose": "Switches Spread, Hours and Week; steps the calendar period one week or month at a time.",
+      "entry": "Always visible in Classic; collapsed or expanded.",
+      "exit": "Any destination; period tap opens the value alert.",
+      "states": [
+        "selected destination",
+        "expanded and condensed rail",
+        "hold-to-repeat arrows",
+        "accessibility text size",
+        "Reduce Motion"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/PlannerNavigationRail.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadArrowControl.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/WeekCrownView.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "A (Shell/)",
+      "notes": "WeekCrownView keeps its legacy name; it is a plain arrow/value/arrow control, not a metal Crown. Rename is a Lane A decision."
+    },
+    {
+      "id": "N07",
+      "name": "Life: root with destinations",
+      "kind": "screen",
+      "surface": "life",
+      "purpose": "Single Wallet-style root with Life, Hours and Week destinations, a labeled toggle and collapsible navigation.",
+      "entry": "More, Calendar design, Life (or a widget deep link, which switches to Life).",
+      "exit": "More sheet; Task, Details, Plan Ahead, Focus timer.",
+      "states": [
+        "Life destination",
+        "Hours destination",
+        "Week destination",
+        "focused card",
+        "help",
+        "accessibility text size"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md",
+        "docs/design/specs/2026-11-10-life-card-visual-implementation.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "ios/App/SpreadNativeUITests/LifeUITests.swift (XCUITest source; no run record inspected)"
+      ],
+      "owner_lane": "B (Life/)",
+      "notes": "Life is opt-in: weekFocusEnabled defaults to false via @AppStorage native.weekMonth.previewEnabled. See corrections/life-routing.md."
+    },
+    {
+      "id": "N08",
+      "name": "Life: Wallet Stack of responsibility cards",
+      "kind": "screen",
+      "surface": "life",
+      "purpose": "Shows each responsibility as an editorial card in one stack; a focused card reveals its week and actions.",
+      "entry": "Life destination.",
+      "exit": "Focus a card; Details, Tasks, Hours, Week.",
+      "states": [
+        "populated stack",
+        "empty: 'Nothing to do here yet.'",
+        "focused card",
+        "Dynamic Type",
+        "Reduce Motion"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeEditorialCard.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeEditorialPresentation.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifePalette.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeOutlineRules.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Editorial/"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_LIFE_CARD_ART_DIRECTION.md",
+        "docs/design/specs/2026-11-10-life-card-visual-implementation.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "ios/App/SpreadNativeUITests/LifeEditorialUITests.swift (XCUITest source; no run record inspected)"
+      ],
+      "owner_lane": "B (Life/)",
+      "notes": "Editorial artwork is text-free by rule; names and hours are native SwiftUI."
+    },
+    {
+      "id": "N09",
+      "name": "Life: card Details sheet",
+      "kind": "sheet",
+      "surface": "life",
+      "purpose": "Edits a responsibility's name, hours, icon and color, and deletes it with Undo.",
+      "entry": "Focused card, Details.",
+      "exit": "Dismiss; delete returns to the stack with Undo.",
+      "states": [
+        "editing",
+        "delete with Undo",
+        "validation"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeManagementSheets.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "B (Life/)",
+      "notes": "Delete is undoable without a confirmation prompt, per the Nov 11 amendment."
+    },
+    {
+      "id": "N10",
+      "name": "Life: card Tasks notebook",
+      "kind": "sheet",
+      "surface": "life",
+      "purpose": "Free-form notes for one responsibility, with its task rows.",
+      "entry": "Focused card, Tasks.",
+      "exit": "Dismiss.",
+      "states": [
+        "empty notes",
+        "populated",
+        "keyboard shown"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeNotesEditor.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeTaskContent.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "B (Life/)",
+      "notes": ""
+    },
+    {
+      "id": "N11",
+      "name": "Life: Hours allocator",
+      "kind": "screen",
+      "surface": "life",
+      "purpose": "Shows the weekly hour budget per responsibility and edits capacity and role budgets.",
+      "entry": "Life destination Hours; Weekly Time strip summary button.",
+      "exit": "Life, Week, capacity field sheet.",
+      "states": [
+        "within budget",
+        "over budget",
+        "no capacity",
+        "capacity entry sheet"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeHoursView.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeeklyTimeBudget.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "ios/App/SpreadNativeUITests/LifeUITests.swift (XCUITest source)"
+      ],
+      "owner_lane": "B (Life/)",
+      "notes": "The Life/ folder holds 7 .system(size:) calls and 16 Color(hex:/red:) calls; some Color(hex:) uses read role data, not hardcoded values. Per-line detail belongs in TOKEN_AUDIT.md (Lane A)."
+    },
+    {
+      "id": "N12",
+      "name": "Life: Weekly Time strip",
+      "kind": "component",
+      "surface": "life",
+      "purpose": "Compact capacity bar in Life; expands in place to adjust weekly hours through existing planner actions.",
+      "entry": "Life root, below the stack.",
+      "exit": "Collapse; Hours allocator.",
+      "states": [
+        "collapsed",
+        "expanded",
+        "no capacity",
+        "over budget",
+        "budget error"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeeklyTimeBudget.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "B (Life/)",
+      "notes": ""
+    },
+    {
+      "id": "N13",
+      "name": "Life: Week",
+      "kind": "screen",
+      "surface": "life",
+      "purpose": "The current week for the focused Life area: days, a To place inbox and week navigation.",
+      "entry": "Life destination Week.",
+      "exit": "Task sheet, Life root.",
+      "states": [
+        "populated",
+        "empty day",
+        "To place collapsed",
+        "week change"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWeekView.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "ios/App/SpreadNativeUITests/LifeUITests.swift (XCUITest source)"
+      ],
+      "owner_lane": "B (Life/)",
+      "notes": "Does not reuse Classic WeekSurface; two week implementations exist. See corrections/life-routing.md."
+    },
+    {
+      "id": "N14",
+      "name": "Life: Plan Ahead sheet",
+      "kind": "sheet",
+      "surface": "life",
+      "purpose": "Previews, then confirms, moving hours from this week to a future week. Never automatic.",
+      "entry": "Life root Plan Ahead button.",
+      "exit": "Confirm (undoable) or cancel.",
+      "states": [
+        "nothing selected",
+        "preview",
+        "validation",
+        "confirmed with Undo"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifePlanAheadSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/PlanAheadPresets.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "B (Life/)",
+      "notes": "Copy: 'Nothing moves until you preview and confirm.'"
+    },
+    {
+      "id": "N15",
+      "name": "Life: recurring schedule form",
+      "kind": "sheet",
+      "surface": "life",
+      "purpose": "Creates or edits a repeating weekly schedule for a responsibility.",
+      "entry": "Plan Ahead, recurring schedule.",
+      "exit": "Save or cancel; Stop repeating confirmation.",
+      "states": [
+        "new",
+        "editing",
+        "stop-repeat confirmation",
+        "validation"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRecurringPlanForm.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "B (Life/)",
+      "notes": ""
+    },
+    {
+      "id": "N16",
+      "name": "Life: Reserve and Priority sheets",
+      "kind": "sheet",
+      "surface": "life",
+      "purpose": "Reserve hours for a responsibility; set the optional high-priority red ! flag.",
+      "entry": "Focused card or task row.",
+      "exit": "Dismiss or save.",
+      "states": [
+        "default",
+        "priority on",
+        "priority off"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeManagementSheets.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "B (Life/)",
+      "notes": "Priority is a flag, not a scheduling change, per the rules card."
+    },
+    {
+      "id": "N17",
+      "name": "Life: quick add and add task",
+      "kind": "component",
+      "surface": "life",
+      "purpose": "Adds a task to a responsibility from the stack or as a sheet.",
+      "entry": "Life root Add Life or the card's add control.",
+      "exit": "Saved task or dismiss.",
+      "states": [
+        "empty title",
+        "saved",
+        "dismissed"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "B (Life/)",
+      "notes": "Creation label is 'Add Life' here; see corrections/copy-voice.md."
+    },
+    {
+      "id": "N18",
+      "name": "Life: gesture help",
+      "kind": "sheet",
+      "surface": "life",
+      "purpose": "Explains the Life gestures and where each action lives.",
+      "entry": "Life root help.",
+      "exit": "Dismiss.",
+      "states": [
+        "default"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "B (Life/)",
+      "notes": ""
+    },
+    {
+      "id": "N19",
+      "name": "Task sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Creates or edits one task: text, responsibility, day and hours, priority, photo attachment; deletes with confirmation.",
+      "entry": "Any task row; Add task; Life card.",
+      "exit": "Save, delete, dismiss.",
+      "states": [
+        "new",
+        "editing",
+        "photo decode error",
+        "attachment unavailable alert",
+        "delete confirmation",
+        "Life mode"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/TaskSheet.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "ios/App/SpreadNativeUITests/PlannerUITests.swift (XCUITest source)"
+      ],
+      "owner_lane": "D (Sheets/)",
+      "notes": "Shared with Life through lifeMode."
+    },
+    {
+      "id": "N20",
+      "name": "Responsibility (Spread) sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Edits one responsibility and removes it with confirmation.",
+      "entry": "Responsibility header in Spread or Week.",
+      "exit": "Save, remove, dismiss.",
+      "states": [
+        "editing",
+        "remove confirmation"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Sheets/)",
+      "notes": ""
+    },
+    {
+      "id": "N21",
+      "name": "New responsibility sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Creates a responsibility with a name, hours, icon and color.",
+      "entry": "Classic: Create responsibility, New Spread; More.",
+      "exit": "Save or cancel.",
+      "states": [
+        "empty name",
+        "saved",
+        "dismissed"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Sheets/)",
+      "notes": "Title 'New Spread' differs from Life's 'Add Life'; see corrections/copy-voice.md."
+    },
+    {
+      "id": "N22",
+      "name": "Carry-over review sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Reviews unfinished tasks from earlier weeks and offers to carry them forward.",
+      "entry": "Classic Week and Spread review actions (LiveSheet.review).",
+      "exit": "Carry forward, leave, dismiss.",
+      "states": [
+        "nothing to review",
+        "tasks to review"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Sheets/)",
+      "notes": "Rollover is never automatic (rules card). Entry is Classic only; Life has no equivalent entry."
+    },
+    {
+      "id": "N23",
+      "name": "More (settings) sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Calendar design (Classic or Life), appearance, reminders, Recently Deleted, What's New, Focus timer, Backup and restore, profiles.",
+      "entry": "Gear in the header or dock.",
+      "exit": "Child sheets; dismiss.",
+      "states": [
+        "Classic selected",
+        "Life selected",
+        "appearance light/dark/system"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Sheets/)",
+      "notes": "This is the only place a user can switch to Life outside widget deep links; see corrections/life-routing.md."
+    },
+    {
+      "id": "N24",
+      "name": "Profiles sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Lists profiles, switches between them and removes one with its spreads.",
+      "entry": "More, profiles.",
+      "exit": "Switch profile; dismiss.",
+      "states": [
+        "one profile",
+        "several profiles",
+        "remove confirmation"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Sheets/)",
+      "notes": "Profile limit is 10 (src/lib/spread/profiles.ts)."
+    },
+    {
+      "id": "N25",
+      "name": "Backup and restore sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Creates a .spread backup or a plan file; previews a restore before anything changes.",
+      "entry": "More, Backup and restore; recovery state.",
+      "exit": "Restore preview confirm or cancel.",
+      "states": [
+        "export",
+        "preview",
+        "nothing changes in this file",
+        "file error"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/BackupRestoreSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/LivePlannerBackup.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "none: backup and restore is excluded from polish by the Spread boundaries",
+      "notes": "Not reviewed for design in this lane. Changes need a separate owner decision."
+    },
+    {
+      "id": "N26",
+      "name": "Recently Deleted sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Restores or permanently removes deleted tasks within the 30-day window.",
+      "entry": "More, Recently Deleted.",
+      "exit": "Restore, delete, dismiss.",
+      "states": [
+        "empty",
+        "populated",
+        "unreadable: 'Recently Deleted could not be read. Nothing was removed.'",
+        "permanent delete confirmation"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/RecentlyDeletedSheet.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Sheets/)",
+      "notes": ""
+    },
+    {
+      "id": "N27",
+      "name": "What's New sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Shows release notes once after an update.",
+      "entry": "Launch after an update; More.",
+      "exit": "Continue or dismiss.",
+      "states": [
+        "notes shown",
+        "no notes"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/WhatsNewSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/ReleaseNotes.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Sheets/)",
+      "notes": "ReleaseNotes.swift is in Lane D's owned list."
+    },
+    {
+      "id": "N28",
+      "name": "Reminder settings sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Turns focus and planned-block reminders on or off; notifications are requested only on opt-in.",
+      "entry": "More, Reminders.",
+      "exit": "Dismiss.",
+      "states": [
+        "off",
+        "on",
+        "permission denied"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimerSheet.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Focus/)",
+      "notes": ""
+    },
+    {
+      "id": "N29",
+      "name": "Replace next week? confirmation",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Confirms that copying this week replaces next week's tasks and days.",
+      "entry": "Classic rollover action.",
+      "exit": "Replace or Cancel.",
+      "states": [
+        "confirm",
+        "cancel"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "A (Shell/)",
+      "notes": "Destructive; uses a danger-tinted primary button."
+    },
+    {
+      "id": "N30",
+      "name": "Remove responsibility confirmation",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Confirms that removing a responsibility removes its hours and tasks from every week.",
+      "entry": "Responsibility sheet, Remove.",
+      "exit": "Remove or Cancel.",
+      "states": [
+        "confirm",
+        "cancel"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "A (Shell/)",
+      "notes": "Life removes cards with Undo instead; the two paths differ. Owner decision."
+    },
+    {
+      "id": "N31",
+      "name": "Week export",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Exports the current week as a document the user can share or print.",
+      "entry": "Week export action (call site not traced in this pass).",
+      "exit": "Share sheet; dismiss.",
+      "states": [
+        "ready",
+        "failed"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/WeekExport.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Sheets/)",
+      "notes": "Entry point not verified."
+    },
+    {
+      "id": "N32",
+      "name": "To place tray and Move-to sheet",
+      "kind": "component",
+      "surface": "classic",
+      "purpose": "Holds tasks that have no day yet; Move-to chooses a responsibility or day.",
+      "entry": "Week To place header.",
+      "exit": "Placed task, Move-to dismissed.",
+      "states": [
+        "empty",
+        "populated",
+        "expanded",
+        "collapsed"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/ToPlaceTray.swift"
+      ],
+      "design_proofs": [
+        "docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "C (Week/)",
+      "notes": ""
+    },
+    {
+      "id": "N33",
+      "name": "Overdue selection tray and preview",
+      "kind": "sheet",
+      "surface": "classic",
+      "purpose": "Selects overdue tasks and previews where they will move before any change.",
+      "entry": "Week overdue banner.",
+      "exit": "Confirm (undoable) or cancel.",
+      "states": [
+        "selection",
+        "preview",
+        "confirmed with Undo"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/OverdueSelectionTray.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "C (Week/)",
+      "notes": ""
+    },
+    {
+      "id": "N34",
+      "name": "Undo notice",
+      "kind": "component",
+      "surface": "shared",
+      "purpose": "Offers Undo for the last change, for a limited time, above the Home indicator.",
+      "entry": "Any undoable change.",
+      "exit": "Undo, timeout or the next change.",
+      "states": [
+        "visible",
+        "expired",
+        "Undo last change"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift"
+      ],
+      "design_proofs": [
+        "docs/design/tactile-precision/MOTION_CONTRACT.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "A (Shell/)",
+      "notes": "Position above the home indicator is required by the Spread motion contract; not device-verified."
+    },
+    {
+      "id": "N35",
+      "name": "Focus timer sheet",
+      "kind": "sheet",
+      "surface": "shared",
+      "purpose": "Runs a focus session for a planned block; pauses, ends and reflects the day's plan.",
+      "entry": "Life root Focus; More, Focus timer; widget.",
+      "exit": "End session or dismiss; Live Activity continues.",
+      "states": [
+        "idle",
+        "running",
+        "paused",
+        "done for today",
+        "notifications optional"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimerSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimer.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusSession.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Focus/)",
+      "notes": "Presented from LifeRoot and from More."
+    },
+    {
+      "id": "N36",
+      "name": "Focus Live Activity",
+      "kind": "system",
+      "surface": "widget",
+      "purpose": "Shows the running focus timer on the Lock Screen and Dynamic Island, with pause and end intents.",
+      "entry": "Focus session starts.",
+      "exit": "Session ends.",
+      "states": [
+        "running",
+        "paused",
+        "ended"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusLiveActivityController.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusIntents.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusActivityAttributes.swift",
+        "ios/App/SpreadWidget/SpreadTodayWidget.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "D (Focus/, Widget/)",
+      "notes": "ActivityConfiguration is declared in SpreadTodayWidget.swift; presentations not device-verified."
+    },
+    {
+      "id": "N37",
+      "name": "Classic: Week focus surface (unreachable)",
+      "kind": "screen",
+      "surface": "classic",
+      "purpose": "A focused Week layout that is only built when the Life flag is on and the Classic path is active.",
+      "entry": "None reachable: SpreadLiveRoot.body shows LifeRoot when the flag is on and never builds Classic content in that case.",
+      "exit": "None.",
+      "states": [
+        "not reachable"
+      ],
+      "implementation_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/WeekFocusSurface.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/WeekFocusComponents.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "owner_lane": "C (Week/)",
+      "reachable": false,
+      "notes": "Dead-path candidate: the only construction site is SpreadLiveRoot.swift content(), which runs only when weekFocusEnabled is false. Removal is an owner decision. See corrections/life-routing.md."
+    },
+    {
+      "id": "W01",
+      "name": "Today widget",
+      "kind": "widget",
+      "surface": "widget",
+      "purpose": "Shows today's planned blocks and tasks.",
+      "entry": "Home or Lock Screen widget gallery.",
+      "exit": "Tap opens Today in the app.",
+      "states": [
+        "populated",
+        "nothing planned",
+        "accessory families"
+      ],
+      "implementation_files": [
+        "ios/App/SpreadWidget/SpreadTodayWidget.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadWidgetPublisher.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadWidgetShared.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadDayPlanPublisher.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "families": [
+        "systemSmall",
+        "systemMedium",
+        "accessoryRectangular",
+        "accessoryCircular"
+      ],
+      "owner_lane": "D (Widget/, ios/App/SpreadWidget/)",
+      "notes": ""
+    },
+    {
+      "id": "W02",
+      "name": "Focus timer widget",
+      "kind": "widget",
+      "surface": "widget",
+      "purpose": "Shows the focus timer state and a control to start or pause.",
+      "entry": "Home or Lock Screen widget gallery.",
+      "exit": "Tap opens the Focus sheet.",
+      "states": [
+        "idle",
+        "running",
+        "paused",
+        "done"
+      ],
+      "implementation_files": [
+        "ios/App/SpreadWidget/SpreadTimerWidget.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadFocusWidgetPublisher.swift"
+      ],
+      "design_proofs": [],
+      "status": "implemented",
+      "test_sources": [],
+      "families": [
+        "systemSmall",
+        "systemMedium",
+        "systemLarge"
+      ],
+      "owner_lane": "D (Widget/, ios/App/SpreadWidget/)",
+      "notes": "Sized in PR #206."
+    },
+    {
+      "id": "W03",
+      "name": "Life cards widget",
+      "kind": "widget",
+      "surface": "widget",
+      "purpose": "Shows Life cards with their editorial artwork and the week's time.",
+      "entry": "Home or Lock Screen widget gallery.",
+      "exit": "Tap opens that Life card in the app.",
+      "states": [
+        "populated",
+        "empty",
+        "artwork fallback"
+      ],
+      "implementation_files": [
+        "ios/App/SpreadWidget/SpreadLifeCardsWidget.swift",
+        "ios/App/SpreadWidget/Editorial/",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadLifeCardsPublisher.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadLifeCardsWidgetBuilder.swift"
+      ],
+      "design_proofs": [
+        "docs/design/specs/2026-11-10-life-card-visual-implementation.md"
+      ],
+      "status": "implemented",
+      "test_sources": [],
+      "families": [
+        "systemMedium",
+        "systemLarge"
+      ],
+      "owner_lane": "D (Widget/, ios/App/SpreadWidget/)",
+      "notes": "Editorial copies in ios/App/SpreadWidget/Editorial are byte-identical to Resources/Editorial today (checked with cmp). They are copied by build step; keep them in sync if artwork changes."
+    },
+    {
+      "id": "P01",
+      "name": "Landing: navigation, appearance switch and footer",
+      "kind": "screen",
+      "surface": "landing",
+      "purpose": "Identifies Spread, links the sections, switches light and dark, and links the privacy policy.",
+      "entry": "Visitor without a license (UnlockScreen).",
+      "exit": "Anchor sections; TestFlight link; privacy policy.",
+      "states": [
+        "light",
+        "dark",
+        "system",
+        "narrow width"
+      ],
+      "implementation_files": [
+        "src/spread/screens/spread-app.tsx"
+      ],
+      "design_proofs": [
+        "docs/design/landing/DESIGN.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "Playwright captures: docs/design/finalize/evidence/landing/before/ and after/"
+      ],
+      "owner_lane": "E (landing parts only)",
+      "notes": "Nav CTA 'Join the beta' goes to #start, which holds the TestFlight button."
+    },
+    {
+      "id": "P02",
+      "name": "Landing: hero",
+      "kind": "screen",
+      "surface": "landing",
+      "purpose": "Introduces the product with the fanned stack of spread cards and orbiting tasks.",
+      "entry": "Landing load.",
+      "exit": "Start, How it works, TestFlight.",
+      "states": [
+        "load sequence",
+        "orbit",
+        "tap or hover deal into week",
+        "tray drag",
+        "reduced motion"
+      ],
+      "implementation_files": [
+        "src/spread/components/landing-stack.tsx"
+      ],
+      "design_proofs": [
+        "docs/design/landing/DESIGN.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "Playwright captures: docs/design/finalize/evidence/landing/before/ and after/"
+      ],
+      "owner_lane": "E (landing parts only)",
+      "notes": "Touch drag on a phone not verified on device."
+    },
+    {
+      "id": "P03",
+      "name": "Landing: How it works",
+      "kind": "screen",
+      "surface": "landing",
+      "purpose": "One sample week builds itself as three steps scroll past.",
+      "entry": "Hero 'See how it works'.",
+      "exit": "Week band; step buttons.",
+      "states": [
+        "step 1",
+        "step 2",
+        "step 3",
+        "reduced motion"
+      ],
+      "implementation_files": [
+        "src/spread/components/landing-sections.tsx"
+      ],
+      "design_proofs": [
+        "docs/design/landing/DESIGN.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "Playwright captures: docs/design/finalize/evidence/landing/before/ and after/"
+      ],
+      "owner_lane": "E (landing parts only)",
+      "notes": "Sample role colors are hardcoded; see corrections/color-drift.md."
+    },
+    {
+      "id": "P04",
+      "name": "Landing: week band",
+      "kind": "screen",
+      "surface": "landing",
+      "purpose": "Copy, a 15-of-168-hour tile and an interactive week preview that share one role selection.",
+      "entry": "After How it works.",
+      "exit": "Start section.",
+      "states": [
+        "role selected",
+        "no selection",
+        "reveal on scroll"
+      ],
+      "implementation_files": [
+        "src/spread/components/landing-sections.tsx",
+        "src/spread/components/landing-preview.tsx"
+      ],
+      "design_proofs": [
+        "docs/design/landing/DESIGN.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "Playwright captures: docs/design/finalize/evidence/landing/before/ and after/"
+      ],
+      "owner_lane": "E (landing parts only)",
+      "notes": ""
+    },
+    {
+      "id": "P05",
+      "name": "Landing: story (paper to product)",
+      "kind": "screen",
+      "surface": "landing",
+      "purpose": "The handwritten Sunday page beside the Spread card; each handwritten responsibility carries across.",
+      "entry": "Anchor #story.",
+      "exit": "Philosophy section.",
+      "states": [
+        "page written",
+        "carry across",
+        "reduced motion",
+        "read full story disclosure"
+      ],
+      "implementation_files": [
+        "src/spread/components/landing-preview.tsx",
+        "src/spread/screens/spread-app.tsx"
+      ],
+      "design_proofs": [
+        "docs/design/landing/DESIGN.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "Playwright captures: docs/design/finalize/evidence/landing/before/ and after/"
+      ],
+      "owner_lane": "E (landing parts only)",
+      "notes": "Copy is the founder's; unchanged."
+    },
+    {
+      "id": "P06",
+      "name": "Landing: philosophy (to-do list versus spread)",
+      "kind": "screen",
+      "surface": "landing",
+      "purpose": "A to-do list beside the same tasks grouped by responsibility.",
+      "entry": "After story.",
+      "exit": "Privacy section.",
+      "states": [
+        "hover or tap focus pairs",
+        "reduced motion"
+      ],
+      "implementation_files": [
+        "src/spread/components/landing-sections.tsx"
+      ],
+      "design_proofs": [
+        "docs/design/landing/DESIGN.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "Playwright captures: docs/design/finalize/evidence/landing/before/ and after/"
+      ],
+      "owner_lane": "E (landing parts only)",
+      "notes": ""
+    },
+    {
+      "id": "P07",
+      "name": "Landing: privacy facts",
+      "kind": "screen",
+      "surface": "landing",
+      "purpose": "Four plain facts: nothing to sync, on this device, profiles, backup and restore.",
+      "entry": "After philosophy.",
+      "exit": "Start section.",
+      "states": [
+        "default"
+      ],
+      "implementation_files": [
+        "src/spread/components/landing-sections.tsx",
+        "src/spread/screens/spread-app.tsx"
+      ],
+      "design_proofs": [
+        "docs/design/landing/DESIGN.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "Playwright captures: docs/design/finalize/evidence/landing/before/ and after/"
+      ],
+      "owner_lane": "E (landing parts only)",
+      "notes": "'Nothing to sync' is accurate only while cloud flags stay off; see corrections/release-scope.md."
+    },
+    {
+      "id": "P08",
+      "name": "Landing: start (168 hours and TestFlight)",
+      "kind": "screen",
+      "surface": "landing",
+      "purpose": "The 168-cell week with 15 hours placed, and the TestFlight beta link.",
+      "entry": "Anchor #start; nav Join the beta.",
+      "exit": "TestFlight (external); footer.",
+      "states": [
+        "default",
+        "reveal on scroll"
+      ],
+      "implementation_files": [
+        "src/spread/components/landing-sections.tsx",
+        "src/spread/screens/spread-app.tsx",
+        "src/lib/links.ts"
+      ],
+      "design_proofs": [
+        "docs/design/landing/DESIGN.md"
+      ],
+      "status": "implemented",
+      "test_sources": [
+        "Playwright captures: docs/design/finalize/evidence/landing/before/ and after/"
+      ],
+      "owner_lane": "E (landing parts only)",
+      "notes": "No App Store link exists yet. The release plan says update the CTA only after the public listing is live."
+    }
+  ],
+  "out_of_inventory": [
+    {
+      "name": "React web planner (WeekScreen)",
+      "reason": "Suspended by CLAUDE.md; snapshot on branch parked/web-cloud-2026-11-11."
+    },
+    {
+      "name": "iCloud backup, sync and cloud flags",
+      "reason": "Excluded by CLAUDE.md boundaries; cloud-flags.ts ships off."
+    },
+    {
+      "name": "Studio (wallpaper personalization)",
+      "reason": "Status on main not established in this pass; docs/design/README.md section 5 says inspect source before claiming it. Not inspected."
+    },
+    {
+      "name": "Docs evidence folder (docs/evidence)",
+      "reason": "Bash access was denied for this path in this session; not read."
+    }
+  ]
+}
