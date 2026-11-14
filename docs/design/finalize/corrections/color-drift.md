@@ -1,6 +1,6 @@
 # Correction: color and token drift across role colors and surfaces
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **Health is resolved** (OD21, teal `#30B0C7`); the landing sample is updated in this PR. OD23 settles the gradient. On main the `model.ts` Health default is still `#007AFF` (wave 2), and the native hardcoded values remain. Both are open.
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **Health is resolved** (OD21, teal `#30B0C7`). The landing sample is updated, and the `model.ts` Health default was closed by PR #218 (2026-11-14). The native category colour already matched. OD23 settles the gradient. The native hardcoded values and the widget literals remain open.
 
 | Field | Value |
 | --- | --- |
@@ -45,6 +45,14 @@ Landing before and after captures are in `evidence/landing/`. Native evidence is
 - Each role color appears the same on Week, Life, the widget and the landing sample.
 - Light and dark values are checked for contrast (role text and dots, not color alone).
 - Reduce Transparency and Dynamic Type do not change role identity.
+
+## Added by the cross-surface review (base `6f53a60`, 2026-11-14)
+
+Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), finding X12 and covered findings C2 and C4.
+
+- **Widget literals (X12, low, decided by OD33: widget colours read the shared tokens, wave 3).** `ios/App/SpreadWidget/SpreadLifeCardsWidget.swift:141-185` hard-codes `F7FAFF`, `B0BCD1`, `0E1A2E`, `4A5670` and `F4F1EA`. The first two duplicate the ink and secondary tokens. Fix: read tokens through a shared widget file or a widget colour set (lane D with lane A).
+- **Health default (C4, closed).** `src/lib/spread/model.ts:117` is `#30B0C7` after PR #218 (2026-11-14). The native category colour (`Spread/SpreadSurface.swift:694`) already matched.
+- **Native hardcoding, re-counted.** Outside `Theme/`, grep on 2026-11-14 finds 41 `Color(hex:)` or `Color(red:)` calls and 11 `.font(.system(size:))` calls. The earlier figures above came from an earlier pass. Lane W2-3 adopts tokens.
 
 ## Reviewer approval
 

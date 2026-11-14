@@ -36,6 +36,32 @@ None yet. Native, so it needs a device run from a candidate SHA.
 - The scrim matches its previous strength pixel for pixel in both modes.
 - The icon set contains each asset named in OD11 and no unused replacement.
 
+## Added by the cross-surface review (base `6f53a60`, 2026-11-14)
+
+Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), finding X6 and covered findings C6 and C7.
+
+- **Rail toggle has two glyphs (X6, low).** `Shell/PlannerNavigationRail.swift:57` uses SF `sidebar.left` and `sidebar.right`. `Shell/SpreadLiveRoot.swift:552` uses Lucide `lucide-panel-left` for what appears to be the same rail. Fix: one Lucide glyph in both places (lane A). Confirm on device that both toggle the same rail.
+- **Undo notice uses an SF glyph (X6, low).** `Shell/SpreadLiveRoot.swift:799` uses SF `arrow.uturn.backward`. The ICON_HANDOFF Nov 13 section puts custom controls in Lucide. OD11 names `rotate-ccw` for undo, so lane W2-2 should map the notice to it.
+- **Icons (OD11): assets in code, PR #217.** The eight Lucide assets are in `Resources/Icons.xcassets` (C7 closed). Their device check is still owed. The undo notice and the rail toggle still use SF glyphs (X6 open).
+- **Still open, grep on 2026-11-14.** `Spread.disabledOpacity` is not in code (C6, lane W2-3). The scrim token (OD16) was not checked in this update.
+
+## Haptics (OD31)
+
+Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), finding X4. Owner decision OD31, recorded in [the plan, section 8](../../specs/2026-11-14-publish-finalize-plan.md). Decided, not yet in code (wave 3).
+
+- **The only success haptic is completion.** The light impact fires when a task is completed, and only after the store accepts it (`Planner/LivePlanner.swift:487`).
+- **Kept (brand board "Feedback"):** discrete detent ticks on steppers and week steps; the Edit enter and leave cue; the reveal snap on Manage and Delete.
+- **Kept, rate-limited:** one warning at a boundary or before a destructive confirm.
+- **Dropped:** the success impact after removing a responsibility (`Spread/SpreadSurface.swift:969`). The visible change and Undo already confirm it.
+- **Gates:** all haptics are iPhone only and skip when the system turns haptics off (`Theme/SpreadTheme.swift:332-335`).
+- **Code owners (wave 3):** lane A (`SpreadHaptics`, `Theme/SpreadTheme.swift:330-374`), with the call sites in lanes C and D.
+- **Device check:** [../DEVICE_TEST_SCRIPT.md](../DEVICE_TEST_SCRIPT.md) step I6 counts the taps and checks the completion-only rule.
+
+## OD33 items on this register
+
+- **X6 icons.** Lucide `panel-left` for the rail toggle (`Shell/PlannerNavigationRail.swift:57` and `Shell/SpreadLiveRoot.swift:552`), and `rotate-ccw` for the Undo notice (`Shell/SpreadLiveRoot.swift:799`). Wave 3, lane A.
+- **Also decided by OD33** (recorded in their own records): X7 dead Crown code, X8 "Cancel", X10 "Cancel session" on the timer widget, X11 empty-list sentences, X12 widget colour tokens.
+
 ## Reviewer approval
 
 Empty. Not closed.

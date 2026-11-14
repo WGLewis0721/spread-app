@@ -50,6 +50,17 @@ Landing captures show the current TestFlight wording (`evidence/landing/`).
 - No claim of iPad or iCloud support appears on the landing page.
 - Privacy facts stay true with cloud flags off.
 
+## Added by the cross-surface review (base `6f53a60`, 2026-11-14)
+
+Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), finding X1 (high, blocks release).
+
+- **The build still targets iPad.** `ios/App/App.xcodeproj/project.pbxproj` has six `TARGETED_DEVICE_FAMILY = "1,2"` entries. OD20 and `CLAUDE.md` say iPhone only. The OD20 record above is therefore applied in the docs and copy, not in the build settings.
+- **The App Store checklist still says iPad.** `docs/APP_STORE_REVIEW_CHECKLIST.md:12` ("supported iPhone/iPad") and `:28` ("every supported iPhone/iPad layout") disagree with OD20.
+- **Fix, owner first.** Confirm that 1.0 is iPhone only. Then set the family to `1` in every target, and align the checklist and the release plan in one change. The native config change sits outside the docs lane and was not made in this review.
+- **Device evidence.** The device script records the device family result in its notes. Testing iPad is out of scope under OD20.
+
+**OD28 (2026-11-14) decides X1:** 1.0 ships iPhone only. Wave 3 sets every target's family to `1`, and the checklist and preflight change in the same PR. The record stays open until that lands.
+
 ## Reviewer approval
 
 Empty. Not closed.

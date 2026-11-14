@@ -10,16 +10,16 @@
 
 ## Applied on main
 
-- **Classic creation.** The Classic entry, the empty state and the sidebar all say "Add responsibility" (OD22; `Spread/SpreadSurface.swift:306`, `Shell/SpreadLiveRoot.swift:466`, `Spread/ResponsibilitySidebar.swift:76`).
+- **Classic creation.** The Classic entry, the empty state and the sidebar all say "Add responsibility" (OD22; `Spread/SpreadSurface.swift:306`, `Shell/SpreadLiveRoot.swift:408`; `Spread/ResponsibilitySidebar.swift` was removed by #219).
 - **Life creation.** Life's button says "Add Life" (`Life/LifeRoot.swift:368`, `:1061`), as OD22 sets.
 - **Details.** The Life card's sheet is titled "Details" (OD8). The UI tests that asserted "Manage Life area" now assert "Details".
 
 ## Still open
 
-- **Create sheet title.** `Sheets/ManageSheets.swift:58` titles the shared create sheet "Add Life", and Classic reaches the same sheet. The title has to follow the root that opened it: "Add Life" from Life, "Add responsibility" from Classic (lane D).
-- **Recently Deleted copy.** `Sheets/RecentlyDeletedSheet.swift:21` says "return to To Place". It should read "To place" (lane D).
-- **Casing.** "To place" is the board's form. Any other capitalization in user-visible text must follow it (lanes C and D).
-- **Empty states.** OD22 asks for a short heading, one plain sentence, then the action. Life's "Nothing to do here yet." (`Life/LifeWalletStack.swift`) has no heading and no action (lane B).
+- **Create sheet title. Closed by PR #218.** `Sheets/ManageSheets.swift:64` now reads `lifeMode ? "Add Life" : "Add responsibility"`. Field labels follow the same rule (`ManageSheets.swift:27`).
+- **Recently Deleted copy. Closed by PR #218.** `Sheets/RecentlyDeletedSheet.swift:23` reads "To place".
+- **Casing. Closed by PR #218.** User-visible text uses "To place". The one old form was a code comment in `Week/WeekFocusComponents.swift`, which #219 removed with that file.
+- **Empty states.** Corrected 2026-11-14: Life's empty state now has a heading, one sentence and an action ("No Life areas yet", `Life/LifeRoot.swift:314-322`). "Nothing to do here yet." is no longer in Sources. The two title-only empties are listed below.
 
 ## Expected
 
@@ -48,6 +48,19 @@ Not available for native copy: no device run. The landing copy is unchanged.
 - The Details sheet title is "Details", and the UI tests pass with it.
 - Restoring a deleted task says "return to To place".
 - VoiceOver reads the same label as the visible text.
+
+## Added by the cross-surface review (base `6f53a60`, 2026-11-14)
+
+Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), findings X3, X5 and X8 to X11. Line numbers in the "Applied on main" section have moved: Life's creation button is `Life/LifeRoot.swift:377` and `:1037`.
+
+- **Over capacity has two words (X5, medium, decided by OD32, wave 3).** Classic says "overbooked" (`Spread/SpreadSurface.swift:137-138, 166-167`) and explains it with the OD12 sentence (`:251`). Life says "Over budget" (`Life/LifeWeeklyTimeBudget.swift:69, 126, 273`; `Life/LifeEditorialCard.swift:155, 205`) and does not show the sentence. **OD32:** the state reads "over budget" in both roots. Classic's "overbooked" changes. The OD12 sentence explains the state in both roots.
+- **Two verbs for removing a responsibility (X3, medium, decided by OD30, wave 3).** "Delete responsibility" (`Spread/SpreadSurface.swift:955-975`) and "Remove responsibility" (`Sheets/ManageSheets.swift:234, 260`). **OD30:** "Remove responsibility" in Classic, "Remove Life area" in Life.
+- **Open tasks dismissal (X8, low, decided by OD33, wave 3).** `Sheets/ManageSheets.swift:330-331` reads "Not now". Use "Cancel", as the other leading dismissals do.
+- **Focus and widget wording (X10, low, decided by OD33, wave 3).** "Cancel session" (`Focus/SpreadFocusTimerSheet.swift:100, 168`) against "Cancel" in the Live Activity (`ios/App/SpreadWidget/SpreadTimerWidget.swift:226`). Use "Cancel session" in both.
+- **Title-only empties (X11, low, decided by OD33, wave 3).** `Sheets/RecentlyDeletedSheet.swift:37` ("Nothing recently deleted") and `Sheets/WhatsNewSheet.swift:40` ("No release notes yet") have no sentence. Add one plain sentence each (OD22).
+- **X9, closed by PR #218.** The Recently Deleted copy now reads "To place" (`Sheets/RecentlyDeletedSheet.swift:23`).
+
+Regression scenarios added: each destructive act on a responsibility uses one verb in every place it appears, and the Over-capacity state reads the same word in both roots.
 
 ## Reviewer approval
 

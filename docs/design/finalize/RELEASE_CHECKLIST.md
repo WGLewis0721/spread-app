@@ -2,39 +2,40 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md). Folder index: [README.md](README.md).
 
-> Summary: the Gray Matter release template, filled for Spread. Verdict **NO-GO**. Web checks pass. Native and store checks are unverified. Decisions OD1 to OD25 are recorded; several are not yet in code. Five correction records stay open until the code lands. Build green does not mean the app is complete or approved.
+> Summary: the Gray Matter release template, filled for Spread at base `6f53a60`. Verdict **NO-GO**. Web checks pass. Native, device and store checks are unverified. Source review (2026-11-14) finds the core decisions in code, a release blocker in the Xcode device-family setting (X1), and six owner decisions (OD28 to OD33), now decided and awaiting wave-3 code. The proof still owed is the iPhone script in [DEVICE_TEST_SCRIPT.md](DEVICE_TEST_SCRIPT.md), run on a Codemagic TestFlight build. Build green does not mean the app is complete or approved.
 
 Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gate is the authority for App Review: [docs/APP_STORE_REVIEW_CHECKLIST.md](../../APP_STORE_REVIEW_CHECKLIST.md). This file does not repeat it.
 
-**Version:** 1.0 (per the release notes in `ReleaseNotes.swift`; "Current version 1.0" in the preflight)
-**Commit SHA:** base `9248935` on `main`. The branch head is recorded in the pull request, not here, because a committed file cannot contain its own commit.
-**Branch/PR:** `claude/finalize-e-evidence-landing` (draft PR against `main`)
-**Candidate URL or TestFlight build:** none. No Codemagic build was run in this session.
+**Version:** 1.0 (`MARKETING_VERSION = 1.0`; build `CURRENT_PROJECT_VERSION = 1` in the project. Raise the build number for each upload.)
+**Commit SHA:** base `6f53a60` on `main` (2026-11-14). This branch also contains `main` at `862c182` (PRs #217 and #218, merged in). The branch head is recorded in the pull request, not here, because a committed file cannot contain its own commit.
+**Branch/PR:** `claude/finalize-w2-review-device-script` (draft PR against `main`; the link is in the PR).
+**Candidate URL or TestFlight build:** none. No Codemagic build has been run for this base.
 **Date:** 2026-11-14
 **Owner/reviewer:** owner (pending)
 
 ## Product and design
 
-- [ ] First core journey with real data: **not verified** on device. Responsibilities → Hours → Week → Tasks is designed; no run record.
-- [ ] Empty/loading/error/offline/permission states: **source review only**. Empty and error copy is inventoried in `screens.json`; no screen has device evidence.
-- [ ] Consistent brand/art/type and app icon: **open**. Words are decided (OD7, OD8) but not applied: [corrections/copy-voice.md](corrections/copy-voice.md). Color: [corrections/color-drift.md](corrections/color-drift.md). Icon and token assets for wave 2: [corrections/wave2-tokens-icons.md](corrections/wave2-tokens-icons.md). App icon source exists; the preflight check "visually inspect it" was not done by a person.
-- [ ] Supported phone/tablet layouts; no clipping: **not verified**. Universal scope is open ([corrections/release-scope.md](corrections/release-scope.md)).
-- [ ] Scroll, swipes, interruption, haptics: **not verified** on device.
-- [ ] Dynamic Type/text zoom, focus/screen reader, reduced motion: **not verified** on device. Reduce Motion is read in 16 native files; landing reduced-motion checks ran for overflow and errors only.
+- [ ] First core journey with real data: **not verified** on device. Life is the default root (OD18, applied in source). Device script steps A1 to A3, C1 and D1 to D7 cover it.
+- [ ] Empty/loading/error/offline/permission states: **source review only**. Life and Classic empty states now have a heading, one sentence and an action (OD22, [CROSS_SURFACE_REVIEW.md](CROSS_SURFACE_REVIEW.md) section 3). Two title-only empties remain (X11). No screen has device evidence.
+- [ ] Consistent brand/art/type and app icon: **open**. Applied in source: OD1 (Classic and Week), OD3, OD10, OD11, OD12, OD13, OD14, OD18, OD22 (most creation copy). Closed: Life's priority mark (#220), the create-sheet title, field labels and Recently Deleted casing (#218). Decided for wave 3: the over-capacity word (OD32), the removal verb (OD30) and "Not now" (OD33). See [corrections/copy-voice.md](corrections/copy-voice.md), [corrections/color-drift.md](corrections/color-drift.md) and [corrections/wave2-tokens-icons.md](corrections/wave2-tokens-icons.md). The app icon source exists; a person has not yet inspected it.
+- [ ] Supported phone/tablet layouts; no clipping: **not verified**. OD20 says iPhone only, but the build still targets iPad (X1, [corrections/release-scope.md](corrections/release-scope.md)).
+- [ ] Scroll, swipes, interruption, haptics: **not verified** on device. The completion haptic is correct in source (OD2). Other haptics are decided by OD31 and change in wave 3 (X4).
+- [ ] Dynamic Type/text zoom, focus/screen reader, reduced motion: **not verified** on device. Reduce Motion is read in 15 native files (re-counted 2026-11-14). Focus transport buttons are 44 pt (OD10).
 - [ ] Screenshot/video evidence: landing before and after captures in `evidence/landing/`. **No native screenshots or video.**
 
 ## Engineering
 
-- [x] Web build succeeded: `npm run build` exit 0 (baseline and after changes, see the PR).
-- [x] Typecheck: `npm run typecheck` exit 0.
-- [x] Lint: `npm run lint` exit 0 with 0 errors and 6 existing warnings (baseline; recheck in the PR).
-- [x] Unit tests: `npm test`, 282 tests: 278 passed, 4 skipped, 0 failed (baseline; recheck in the PR).
-- [x] Docs: `npm run docs:check` passes after this folder was added (rechecked in the PR).
-- [x] App Store preflight, unit tests: 16 of 16 pass (`python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v`).
-- [x] App Store preflight, source checks: 14 pass, 0 fail (`python3 scripts/app-store-preflight.py`).
-- [ ] Native build (Codemagic, native-typecheck on GitHub macOS): **not run**. No Swift toolchain here.
-- [ ] Integration, E2E and device tests: **not run**. XCUITest sources exist (`ios/App/SpreadNativeUITests/`); no run record was inspected.
-- [ ] Local persistence, migrations, undo: **not reviewed** in this lane. Undo behavior is inventoried; persistence is owned by the planner, which this program does not change.
+- [x] Web build succeeded: `npm run build` exit 0 at the base (see the PR for the branch run).
+- [x] Typecheck: `npm run typecheck` exit 0 at the base.
+- [x] Lint: `npm run lint` exit 0 with 0 errors and 6 existing warnings at the base.
+- [x] Unit tests: `npm test`, 282 tests: 278 passed, 4 skipped, 0 failed at the base.
+- [x] Docs: `node scripts/design-docs.mjs` (`npm run docs:check`) exit 0 at the base. Rerun on this branch; the router is at its 9,000-byte budget (see the PR).
+- [x] App Store preflight, unit tests: 16 of 16 pass at the base.
+- [x] App Store preflight, source checks: 14 pass, 0 fail at the base.
+- [x] Cross-surface source review: done. [CROSS_SURFACE_REVIEW.md](CROSS_SURFACE_REVIEW.md) lists findings X1 to X12 and covered findings C1 to C7, with file:line evidence on `6f53a60`.
+- [ ] Native build (Codemagic, native-typecheck on GitHub macOS): **not run for this base**. No Swift toolchain here. Check the PR's native checks, if any run.
+- [ ] Integration, E2E and device tests: **not run**. XCUITest sources exist (`ios/App/SpreadNativeUITests/`); no run record was inspected. No UI test asserts the old "Manage Life area" title (checked 2026-11-14).
+- [ ] Local persistence, migrations, undo: **not verified**. Life keeps one Undo/Redo row (OD29); device step C4 confirms it. Persistence is owned by the planner, which this program does not change.
 - [N/A] Auth, account deletion, cross-user access: N/A. The native app has no account and no server path in the local-first contract. Re-check if sync or iCloud is enabled.
 - [ ] Secrets, dependencies and licensing: no new dependency was added in this pass. Lucide license file present. Inter font license not reviewed. Other licenses not reviewed.
 - [ ] Crash monitoring, backup, rollback: rollback is documented per correction. Crash monitoring is not verified.
@@ -44,11 +45,11 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 - [ ] Offers, prices and entitlements: **open**. The plan says $2.99, one-time. App Store Connect was not checked.
 - [N/A] Test purchases, restore, cancellation, refund: N/A. The plan forbids in-app purchase for 1.0.
 - [N/A] iOS IAP rules for digital goods: N/A for the same reason.
-- [ ] Privacy, terms, support and metadata: the privacy policy link is on the landing page. The live page was not fetched. Metadata is not written.
-- [ ] Store screenshots, reviewer demo account, signing: **not done**. The plan requires 13-inch iPad screenshots only if iPad is in scope.
+- [ ] Privacy, terms, support and metadata: the privacy policy link is on the landing page. The live page was not fetched. Metadata is not written. `docs/APP_STORE_REVIEW_CHECKLIST.md` lines 12 and 28 still say iPhone/iPad (X1).
+- [ ] Store screenshots, reviewer demo account, signing: **not done**. Screenshots for iPad are needed only if iPad is in scope, which OD20 says it is not.
 - [ ] Controlled publish and post-publish smoke test: **not planned in this program**. Owner authorization is required for any upload or submission.
 
-**Decided (OD25):** the landing page has **no App Store link** until the listing exists. The TestFlight invitation stays. See [corrections/release-scope.md](corrections/release-scope.md).
+**Decided (OD25):** the landing page has **no App Store link** until the listing exists (no `apps.apple.com` in `src/`, checked 2026-11-14). The TestFlight invitation stays. See [corrections/release-scope.md](corrections/release-scope.md).
 
 ## Verdict
 
@@ -56,29 +57,34 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 
 **Decided and recorded (not blocking):**
 
-- OD20: Spread 1.0 is iPhone only. The superseding note is in `APP_STORE_RELEASE_PLAN.md` on main.
+- OD28 to OD33 (decided 2026-11-14, plan section 8): iPhone only (OD28, X1); one Undo/Redo row on Life, device check C4 (OD29, X2 withdrawn); one removal verb (OD30, X3); the haptic policy (OD31, X4); "over budget" in both roots (OD32, X5); the icon, copy and dead-code items (OD33, X6 to X12). Wave 3 implements them.
+- OD20: Spread 1.0 is iPhone only, in the docs and copy. The build setting changes in wave 3 under OD28 (X1).
 - OD25: no App Store link until the listing exists. The landing page keeps the TestFlight invitation.
-- OD21: Health is teal `#30B0C7`. The landing sample is updated in this PR.
-- OD18: Life is the default root. Applied on main in PR #211.
-- OD7, OD8, OD22: the words "Life area", "Details", "Add Life" and "Add responsibility". Lanes A to D apply them.
+- OD21: Health is teal `#30B0C7` on the landing page, in `model.ts` and in the native category colour (PR #218).
+- OD18: Life is the default root. Applied in source (`SpreadLiveRoot.swift:16`).
+- OD1 (Classic and Week), OD3, OD10, OD11, OD12, OD13, OD14: applied in source (see the Product section).
+- OD7, OD8, OD22: "Life area", "Details", "Add Life" and "Add responsibility" are applied on the sheets and empties, including the shared create-sheet title and field labels (PR #218).
 - OD23 and OD24: the gradient stays on one lit action, and Life's Details delete with Undo stays as it is.
 
 **Blocking issues (these keep the verdict at NO-GO):**
 
-1. No native build. `native-typecheck` has not run on this branch, and there is no Codemagic build.
-2. No device checks. No surface is verified on a phone or tablet, and no XCUITest run record was inspected.
-3. Decided but not yet in code: the rest of the OD7 and OD22 wording (lanes A to D, including the create sheet title and Recently Deleted copy), OD19 deletion of the dead Week Focus code (wave 2), OD11, OD16 and OD17 tokens and icons (wave 2), and the OD21 default in `model.ts` (wave 2).
-4. No owner authorization of a specific commit and build for release.
+1. **No candidate build.** No Codemagic TestFlight build of a candidate SHA exists, and `native-typecheck` has not been checked for this base.
+2. **Device script not run.** [DEVICE_TEST_SCRIPT.md](DEVICE_TEST_SCRIPT.md) (about 40 minutes) must pass on a candidate build. Its section 2 lists the steps expected to fail until fixes land.
+3. **Build targets iPad (X1).** `TARGETED_DEVICE_FAMILY = "1,2"` in six places, against OD20 and OD28. This is a release blocker until wave 3 sets the family to `1` (OD28). This docs lane does not change native config.
+4. **Owner decisions: decided, not implemented.** X1 is OD28 (iPhone only). X2 is withdrawn as a defect (OD29: one Undo/Redo row, checked by device step C4). X3 is OD30, X4 is OD31, X5 is OD32, and X6 to X12 are OD33. All of them need wave-3 code, which is not in this branch.
+5. **Wave-2 lanes not yet complete on `main`.** Merged: W2-2 Lucide assets (PR #217) and W2-4 Health default, create-sheet title, field labels and To place casing (PR #218). Merged since: #219 (dead Week Focus surface removed, OD19) and #220 (shared tokens, `Spread.disabledOpacity`, shared ! mark in Life). Still open: W2-3 finishes token adoption (C2) and the Classic and Focus opacities (C6).
+6. **No owner authorization** of a specific commit and build for release.
 
 **Unverified checks:**
 
 - Native build, native-typecheck, all XCUITest runs
-- Device checks: layout at 390, 820, 1024 and 1366, light and dark, Reduce Motion, VoiceOver, Dynamic Type, haptics, Undo position above the home indicator
+- Device checks, all in [DEVICE_TEST_SCRIPT.md](DEVICE_TEST_SCRIPT.md): layout at 390, 820 and 1024, light and dark, Reduce Motion, VoiceOver, the largest Dynamic Type size, haptic count, the Undo row count, and the Undo position above the home indicator
 - Contrast (no contrast tool was run)
 - Landing: reduced-motion frames for the story and the week preview; the live privacy page; phone touch on the hero tray
 - App Store Connect state, pricing, screenshots, age rating, support URL
-- `docs/evidence/` (not readable in this session) and `docs/IOS_RELEASE.md`
+- `docs/evidence/` (not readable in this session) and `docs/IOS_RELEASE.md` physical checklist items 4, 5 and 9 (backup, restore, upgrade)
 - Gray Matter guides marked `inspected: false` in [REFERENCES.md](REFERENCES.md)
+- Design skills (`design:design-critique`, `design:design-system`, `design:accessibility-review`, `design:ux-copy`): not available in the session that wrote this review
 
 **Rollback:**
 

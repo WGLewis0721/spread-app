@@ -14,6 +14,8 @@
 | [REFERENCES.md](REFERENCES.md) and [references.json](references.json) | Sources, with `inspected` set only for sources actually opened |
 | [corrections.json](corrections.json) and [corrections/](corrections/) | Open corrections, one record each |
 | [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | The Gray Matter release template, filled for Spread. Verdict NO-GO |
+| [CROSS_SURFACE_REVIEW.md](CROSS_SURFACE_REVIEW.md) | Source review across Life, Classic, sheets, Focus, widgets and the Live Activity: findings with file:line, owner and covering lane |
+| [DEVICE_TEST_SCRIPT.md](DEVICE_TEST_SCRIPT.md) | The iPhone script (about 40 minutes) for a Codemagic TestFlight build: build record, pass and fail boxes, expected fails |
 | [TOKEN_AUDIT.md](TOKEN_AUDIT.md) | Wave-2 token audit from the design-system lane (PR #211) |
 | `evidence/landing/before/`, `after/` | Playwright captures of the landing page, with `report-*.json` |
 
