@@ -299,6 +299,7 @@ struct WeekFocusSurface: View {
                 HStack(spacing: 1) {
                     ForEach(weekDays, id: \.self) { iso in
                         let active = iso == day
+                        let complete = activeRole.map { isComplete(roleId: $0, on: iso) } ?? false
                         Button {
                             selectWeekDay(iso)
                         } label: {
@@ -329,6 +330,7 @@ struct WeekFocusSurface: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d"))
                         .accessibilityAddTraits(active ? .isSelected : [])
+                        .accessibilityValue(complete ? "All tasks done" : "")
                         .matchedGeometryEffect(id: "calendar-day-\(iso)", in: calendarMorph)
                         .accessibilityIdentifier("focus-day-\(iso)")
                         .dropDestination(for: SpreadDragPayload.self) { items, _ in
@@ -420,7 +422,7 @@ struct WeekFocusSurface: View {
                         trayOpen.toggle()
                         if trayOpen { overdueOpen = false }
                     } label: {
-                        Label { Text("To Place \(unplaced.count)") } icon: { SpreadIcon(name: "lucide-inbox", size: 18) }
+                        Label { Text("To place \(unplaced.count)") } icon: { SpreadIcon(name: "lucide-inbox", size: 18) }
                             .font(.system(.caption, weight: .semibold))
                             .frame(minHeight: 44)
                             .padding(.horizontal, 8)

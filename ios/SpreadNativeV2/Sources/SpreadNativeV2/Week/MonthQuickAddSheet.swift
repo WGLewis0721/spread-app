@@ -16,6 +16,9 @@ struct MonthQuickAddSheet: View {
     private var roleName: String {
         planner.snapshot?.roles.first(where: { $0.id == roleId })?.name ?? "Responsibility"
     }
+    private var canSave: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !saving
+    }
 
     var body: some View {
         SpreadSheetStack {
@@ -49,10 +52,11 @@ struct MonthQuickAddSheet: View {
                         .font(.system(.subheadline, weight: .semibold))
                         .foregroundStyle(Spread.onAccent)
                         .frame(maxWidth: .infinity, minHeight: 50)
-                        .background(Spread.accent, in: Capsule())
+                        .background(Spread.accentGradient, in: Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || saving)
+                .disabled(!canSave)
+                .opacity(canSave ? 1 : 0.4)
                 .accessibilityIdentifier("month-quick-add-save")
                 Spacer(minLength: 0)
             }

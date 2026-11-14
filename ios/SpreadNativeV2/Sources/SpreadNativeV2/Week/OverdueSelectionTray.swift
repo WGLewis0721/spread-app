@@ -61,9 +61,12 @@ struct OverdueSelectionTray: View {
                                 }
                                 Spacer(minLength: 0)
                             }
+                            .frame(minHeight: 44)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityValue(selection.contains(item.id) ? "Selected" : "Not selected")
+                        .accessibilityAddTraits(selection.contains(item.id) ? .isSelected : [])
                         .accessibilityIdentifier("overdue-task-\(item.id)")
                     }
                 }
@@ -71,7 +74,7 @@ struct OverdueSelectionTray: View {
                 .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
             }
             if !selection.isEmpty {
-                Text("Reschedule \(selection.count) selected")
+                Text("\(selection.count) selected · choose a day")
                     .font(.system(.subheadline, weight: .semibold))
                 HStack(spacing: 2) {
                     ForEach(weekDays, id: \.self) { iso in
@@ -82,10 +85,13 @@ struct OverdueSelectionTray: View {
                                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEEE"))
                                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "d"))
                             }
-                            .font(.system(.caption2, weight: .medium))
+                            .font(.system(.caption2, weight: targetDay == iso ? .bold : .medium))
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .background(targetDay == iso ? Spread.accent.opacity(0.18) : Color.clear,
                                         in: RoundedRectangle(cornerRadius: 10))
+                            // Selected is shown by weight and an outline too, not by tint alone.
+                            .overlay(RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(targetDay == iso ? Spread.accent : Color.clear, lineWidth: 1.5))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMM d"))
@@ -103,6 +109,7 @@ struct OverdueSelectionTray: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(preparing || targetDay.isEmpty)
+                .opacity(preparing || targetDay.isEmpty ? 0.4 : 1)
                 .accessibilityIdentifier("overdue-preview")
             }
         }
@@ -142,10 +149,11 @@ struct OverdueSelectionTray: View {
                         .padding(10)
                         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 12))
                     }
-                    Button("Move \(eligible.count) eligible tasks") {
+                    Button("Move \(eligible.count) eligible \(eligible.count == 1 ? "task" : "tasks")") {
                         Task { await commitPreview() }
                     }
                     .disabled(eligible.isEmpty || preparing)
+                    .opacity(eligible.isEmpty || preparing ? 0.4 : 1)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .spreadChip(selected: true)
                     .accessibilityIdentifier("overdue-confirm-valid")

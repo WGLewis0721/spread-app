@@ -332,7 +332,7 @@ struct MoveToSheet: View {
                             Spacer(minLength: 0)
                             Text("Back to To place").font(.system(.footnote)).foregroundStyle(Spread.secondary)
                         }
-                        .foregroundStyle(Spread.danger)
+                        .foregroundStyle(Spread.accent)
                         .padding(.horizontal, 16).frame(maxWidth: .infinity, minHeight: 52)
                         .spreadCard()
                         .contentShape(Rectangle())

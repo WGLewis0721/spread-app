@@ -294,7 +294,7 @@ struct FocusedRoleCard: View {
             }
             if showHours {
                 if let first = allocations.first {
-                    HourStepper(value: first.hours, label: "\(role.name) on \(day)", step: 0.5) { amount in
+                    HourStepper(value: first.hours, label: "\(role.name) on \(PlannerDates.label(PlannerDates.date(day), pattern: "EEEE"))", step: 0.5) { amount in
                         Task { await planner.setAllocationHours(first, to: amount) }
                     }
                 } else {
