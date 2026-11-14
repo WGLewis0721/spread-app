@@ -84,16 +84,43 @@ struct SpreadFocusFace {
 /// The running, paused or waiting face of the timer. Shared by the Timer widget and the Today widget's panel.
 /// Widgets are drawn ahead of time, so what to show is decided at the timeline entry's own date, never at "now".
 struct SpreadFocusPanel: View {
+    /// How much of the face a widget size has room for. Each size sets its own digit size and spacing, so the
+    /// face is laid out for its size rather than shrunk to fit.
+    enum Scale {
+        /// The small widget: the digits, the status and the progress bar.
+        case small
+        /// The medium widget's left column: the round and "Ends at" lines fit beside the controls.
+        case medium
+        /// The large widget: the whole face, with the title.
+        case large
+        /// The Today widget's medium side panel, beside the counters.
+        case side
+    }
+
     let state: SpreadFocusWidgetState
     let date: Date
-    /// Smaller digits, for the Today widget's side panel.
-    var compact = false
+    var scale: Scale = .large
+    /// The round line, "Round 1 of 4". Off where the height is tight.
+    var showsRound = true
+    /// The title, the role name or "Focus session". Off where the height is tight.
+    var showsTitle = true
 
     private var face: SpreadFocusFace { SpreadFocusFace(state: state, date: date) }
 
     private var digitFont: Font {
-        compact ? .system(.title2, design: .rounded, weight: .semibold)
-                : .system(.largeTitle, design: .rounded, weight: .semibold)
+        switch scale {
+        case .small, .side: return .system(.title2, design: .rounded, weight: .semibold)
+        case .medium: return .system(.title, design: .rounded, weight: .semibold)
+        case .large: return .system(.largeTitle, design: .rounded, weight: .semibold)
+        }
+    }
+
+    private var spacing: CGFloat {
+        switch scale {
+        case .small, .side: return 4
+        case .medium: return 6
+        case .large: return 8
+        }
     }
 
     @ViewBuilder private var digits: some View {
@@ -129,21 +156,25 @@ struct SpreadFocusPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 4 : 8) {
+        VStack(alignment: .leading, spacing: spacing) {
             Label(face.statusText, systemImage: face.symbol)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            if let round = face.roundText {
+                .lineLimit(1)
+            if showsRound, let round = face.roundText {
                 Text(round)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             digits
             bar
-            Text(state.title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+            if showsTitle {
+                Text(state.title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -390,27 +421,35 @@ private struct SpreadTimerView: View {
         .widgetURL(SpreadWidgetLink.focus.url)
     }
 
-    /// The face: the running, paused or waiting timer, or the idle words.
-    @ViewBuilder private var face: some View {
+    /// The face for one size: the running, paused or waiting timer, or the idle words.
+    @ViewBuilder private func face(_ scale: SpreadFocusPanel.Scale) -> some View {
         if let state = entry.state {
-            SpreadFocusPanel(state: state, date: entry.date)
+            SpreadFocusPanel(state: state, date: entry.date, scale: scale,
+                             showsRound: scale != .small, showsTitle: scale == .large)
         } else {
-            idle
+            idle(scale)
         }
     }
 
-    private var idle: some View {
-        VStack(alignment: .leading, spacing: 6) {
+    /// The idle face. The small size keeps only the headline; the medium and large sizes add the detail,
+    /// and the large size adds today's block progress.
+    private func idle(_ scale: SpreadFocusPanel.Scale) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
             Label("Focus", systemImage: "timer")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            Text("No timer running")
+            Text(entry.enabled ? "No timer running" : "Timer is off")
                 .font(.system(.title3, design: .rounded, weight: .semibold))
-            Text(idleDetail)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            if scale != .small {
+                Text(idleDetail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+            }
             // While a block is still on offer, say how far through today's blocks the person is. Counts only.
-            if entry.enabled, let progress = entry.progress, !progress.allDone {
+            if scale == .large, entry.enabled, let progress = entry.progress, !progress.allDone {
                 Text(SpreadBlockText.progress(progress))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -464,18 +503,33 @@ private struct SpreadTimerView: View {
                 Label("Open Spread", systemImage: "arrow.up.forward.app")
             }
         case .pause, .resume, .forward, .stop, .cancel:
-            SpreadFocusControlButton(control: kind, nextLabel: entry.state?.nextLabel)
+            SpreadFocusControlButton(control: kind, nextLabel: entry.state?.nextLabel, iconOnly: true)
         }
     }
 
-    private var controlRow: some View {
-        HStack(spacing: 8) {
-            ForEach(Array(controls.enumerated()), id: \.offset) { _, kind in
-                control(kind)
-            }
+    /// Every control this size shows, each a 44 by 44 pt target. Icons only: the names stay as the accessibility
+    /// labels, so VoiceOver still says "Pause", "Forward" or "Start 25 min focus".
+    @ViewBuilder private var controlItems: some View {
+        ForEach(Array(controls.enumerated()), id: \.offset) { _, kind in
+            control(kind)
+                .frame(width: 44, height: 44)
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+    }
+
+    /// The controls in a row, for the small and large sizes.
+    private var controlRow: some View {
+        HStack(spacing: 10) {
+            controlItems
+        }
+        .spreadFocusControls()
+    }
+
+    /// The controls stacked on the right, for the medium size.
+    private var controlColumn: some View {
+        VStack(spacing: 8) {
+            controlItems
+        }
+        .spreadFocusControls()
     }
 
     @ViewBuilder private var endsAt: some View {
@@ -510,28 +564,34 @@ private struct SpreadTimerView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// The small widget is about 158 pt square, so about 126 pt is left inside its margins: the face, then one control.
     @ViewBuilder private var smallBody: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            face
+        VStack(alignment: .leading, spacing: 6) {
+            face(.small)
             controlRow
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    /// The medium widget is about 338 by 158 pt, so about 126 pt is left inside its margins. The face sits on the left
+    /// and the controls stack on the right, because a row of controls under the face would not fit that height.
     @ViewBuilder private var mediumBody: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            face
-            endsAt
-            controlRow
-            Spacer(minLength: 0)
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                face(.medium)
+                endsAt
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            controlColumn
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
+    /// The large widget is about 338 by 354 pt: the full face, every control in a row, then today's counts.
     @ViewBuilder private var largeBody: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            face
+        VStack(alignment: .leading, spacing: 10) {
+            face(.large)
             endsAt
             controlRow
             Divider()
@@ -541,6 +601,18 @@ private struct SpreadTimerView: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// The look of a widget's controls: bordered circles with an icon at the title size. Icons only, so no label wraps.
+private extension View {
+    func spreadFocusControls() -> some View {
+        self
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
+            .controlSize(.regular)
+            .labelStyle(.iconOnly)
+            .font(.title3.weight(.semibold))
     }
 }
 

@@ -420,3 +420,24 @@ Security comes first. The `.spread` backup stays as it is: checksummed, and not 
 **Tests.** `SpreadFocusStopForwardTests` covers Stop and Forward, the stopped flag through a save and reload, and the refusals at the end of a flow. `SpreadFocusControlRulesTests` covers the controls each surface shows, and that Cancel is offered whenever a stretch is on screen. `scripts/native-today-widget.test.mjs` covers the intents, the shared button view, and that the island uses the shared controls.
 
 **Owed on a device.** Stop, Forward and Cancel from the island, the Lock Screen banner, each widget size, and the app sheet. A cancelled session leaves no island, and a stopped one keeps Forward. A three-round plan stopped mid-round, then cancelled from the app: the island and the widgets must both clear.
+
+## 24. Widget sizing, icon-only controls, and plan days on the month grid (2026-11-14)
+
+**What was wrong.** On a device, the Timer widget's large size wrapped its labelled controls inside their circles ("P / au / se"), and the medium face was taller than the widget, so its top line was clipped. Separately, a repeating Plan Ahead schedule showed in the plan list, but the month grid showed no dots for its days until each week was opened, because the grid read stored weeks only.
+
+**Sizes.** Apple's [Widgets page](https://developer.apple.com/design/human-interface-guidelines/widgets) gives the family sizes on a 390 by 844 pt screen: small 158 by 158 pt, medium 338 by 158 pt, large 338 by 354 pt. It recommends the standard 16 pt widget margin, text no smaller than 11 pt, and a layout designed for each size rather than a smaller layout stretched to fill a larger one. The widget keeps the system's margin and adds none. About 126 pt of height is left in the small and medium sizes, and about 306 by 322 pt in the large.
+
+**Layout per size.**
+- **Small:** the digits, the status and the progress bar, then one icon control. About 112 pt.
+- **Medium:** the face on the left, with its round line and "Ends at", and the controls stacked on the right. About 114 pt tall. A row under the face would not fit.
+- **Large:** the whole face, every control in one row, then today's counts. About 300 pt.
+
+The heights are estimates from the type sizes, not measurements. The idle headline says "Timer is off" when the Today switch is off, which matches section 22.
+
+**Controls.** Icons only, each in a 44 by 44 pt target, with its name kept as the accessibility label. The labelled row was the cause of the wrapping. The Today widget's side panel keeps its size.
+
+**Month grid.** The grid's dots read each week as opening it would show it. A stored week is used as it is. An unopened week that a repeating plan covers is seeded in memory, the same way opening it seeds it. The grid stores nothing. A week the person has edited shows only what is stored, so a placement they removed stays removed. The repeat rule itself is unchanged: it still writes a week when the week is opened.
+
+**Tests.** `src/lib/spread/month.test.ts` covers a plan's days before the week is opened, and an edited week that keeps its removed placement. `scripts/native-today-widget.test.mjs` covers the icon-only controls, the 44 pt targets, and the medium and small layouts.
+
+**Not verified here.** No simulator or device run, and the Swift compiles only on the native type-check job. **Owed on a device:** the three Timer widget sizes while running, paused, waiting and idle, in light and dark, at Dynamic Type sizes, and with VoiceOver; and the month grid's dots for a repeating plan after a new Codemagic build of `main`.

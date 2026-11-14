@@ -1,4 +1,4 @@
-import { isoDate, parseKey, weekKey, type SpreadData } from "./model.ts";
+import { ensureWeek, isoDate, parseKey, weekKey, type SpreadData } from "./model.ts";
 
 export type MonthCell = { date: string; inMonth: boolean; day: number };
 export type MonthCursor = { year: number; month: number };
@@ -48,7 +48,11 @@ export function dominantMonth(key: string): MonthCursor {
 }
 
 export function dayMarks(data: SpreadData, date: string, preferredRoleId?: string): { colors: string[]; extra: number } {
-  const allocations = data.weeks[weekKey(parseKey(date))]?.allocations ?? [];
+  // The week as opening it would show it. A stored week is used as it is. A week that a repeating plan covers
+  // but nobody has opened yet is seeded in memory, exactly as opening it would, so the month shows the plan.
+  // Nothing is stored here.
+  const key = weekKey(parseKey(date));
+  const allocations = ensureWeek({ ...data, currentWeek: key }).weeks[key]?.allocations ?? [];
   const colorsByHat = new Map(data.hats.map((hat) => [hat.id, hat.color]));
   const colors: string[] = [];
   const seen = new Set<string>();
