@@ -39,9 +39,8 @@ enum SpreadFocusLiveActivityController {
             relevanceScore: relevance(session))
     }
 
-    /// Serialize ActivityKit mutations. A widget intent can finish in the background
-    /// as soon as perform() returns; fire-and-forget Tasks could be suspended first,
-    /// or let an older Pause update overwrite a newer Resume.
+    /// Serialize best-effort Live Activity updates without blocking a widget intent.
+    /// The saved timer is authoritative; the system displays the activity separately.
     private static var pendingWork: Task<Void, Never>?
 
     private static func enqueue(_ work: @escaping @MainActor () async -> Void) {
@@ -50,11 +49,6 @@ enum SpreadFocusLiveActivityController {
             await prior?.value
             await work()
         }
-    }
-
-    /// An App Intent awaits this after saving the authoritative timer. No polling.
-    static func awaitSettled() async {
-        await pendingWork?.value
     }
 
     static func start(_ session: SpreadFocusSession) {
