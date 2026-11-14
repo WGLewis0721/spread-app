@@ -31,15 +31,19 @@ struct FocusedTaskRow: View {
             .buttonStyle(.plain)
             .accessibilityLabel(task.done ? "Mark \(task.text) incomplete" : "Complete \(task.text)")
             Button { showActions = true } label: {
-                Text(task.text.isEmpty ? "Untitled task" : task.text)
-                    .font(.system(.subheadline))
-                    .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
-                    .strikethrough(task.done)
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .multilineTextAlignment(.leading)
-                    .contentShape(Rectangle())
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if task.important == true { TaskPriorityMark() }
+                    Text(task.text.isEmpty ? "Untitled task" : task.text)
+                        .font(.system(.subheadline))
+                        .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
+                        .strikethrough(task.done)
+                        .multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityValue(task.done ? "Completed" : "Open")
             .accessibilityHint("Complete, Reschedule, Edit, or Delete")
             .accessibilityActions {
                 if let onMoveUp { Button("Move up", action: onMoveUp) }

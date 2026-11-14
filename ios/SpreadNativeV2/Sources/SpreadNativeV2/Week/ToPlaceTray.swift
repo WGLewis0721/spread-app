@@ -126,6 +126,19 @@ struct ToPlaceTray: View {
     }
 }
 
+/// High priority (`important`): an optional red "!" beside the task text, spoken as "High priority". It marks the task
+/// only. It never changes where the task is scheduled, and the words carry the meaning without the colour.
+struct TaskPriorityMark: View {
+    var body: some View {
+        Text("!")
+            .font(.system(.caption, weight: .heavy))
+            .foregroundStyle(Spread.danger)
+            .frame(width: 20, height: 20)
+            .overlay(Circle().strokeBorder(Spread.danger, lineWidth: 1.5))
+            .accessibilityLabel("High priority")
+    }
+}
+
 /// One task row. The grip is a native drag handle; the text opens the task sheet; Place (or Move to) is the tap
 /// path to the same change, offering only this responsibility's eligible days as chips.
 struct TaskLine: View {
@@ -158,16 +171,20 @@ struct TaskLine: View {
                     .accessibilityIdentifier("task-grip-\(task.id)")
 
                 Button { onOpenTask(task.roleId, task.id) } label: {
-                    Text(task.text.isEmpty ? "Untitled task" : task.text)
-                        .font(.system(.subheadline))
-                        .strikethrough(task.done)
-                        .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(4).fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .contentShape(Rectangle())
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        if task.important == true { TaskPriorityMark() }
+                        Text(task.text.isEmpty ? "Untitled task" : task.text)
+                            .font(.system(.subheadline))
+                            .strikethrough(task.done)
+                            .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(4).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityValue(task.done ? "Completed" : "Open")
                 .accessibilityIdentifier("task-row-\(task.id)")
 
                 if !task.done {

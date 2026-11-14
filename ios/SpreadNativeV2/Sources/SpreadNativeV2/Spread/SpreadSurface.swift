@@ -782,6 +782,7 @@ struct TaskRow: View {
 
             Button(action: onOpen) {
                 HStack(spacing: 8) {
+                    if task.important == true { TaskPriorityMark() }
                     Text(task.text.isEmpty ? "Untitled task" : task.text)
                         .font(.system(.body))
                         .strikethrough(task.done)
@@ -799,7 +800,7 @@ struct TaskRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(task.text.isEmpty ? "Untitled task" : task.text)
+            .accessibilityLabel((task.important == true ? "High priority, " : "") + (task.text.isEmpty ? "Untitled task" : task.text))
             .accessibilityIdentifier("task-row-\(task.id)")
 
             if isToday && !task.done {
