@@ -48,7 +48,7 @@ struct LifeManageSheet: View {
                             Button("Save area hours") { Task { await saveHours() } }
                                 .disabled(saving || savingHours || planner.busy || budgetHours == role.hours)
                                 .accessibilityIdentifier("life-manage-save-hours")
-                            if hoursSaved { Label("Area hours saved", systemImage: "checkmark.circle.fill")
+                            if hoursSaved { Label { Text("Area hours saved") } icon: { SpreadIcon(name: "lucide-circle-check", size: 18) }
                                 .font(.subheadline).foregroundStyle(LifePalette.accent) }
                         } else {
                             Text("Set weekly planning hours in Hours before allocating time to this area.")

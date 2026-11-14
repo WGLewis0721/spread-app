@@ -351,7 +351,7 @@ struct LifeHoursView: View {
                 if let capacity {
                     commitCapacity(LifeOrbitMath.limit(capacity - 1, minimum: storedAssigned, maximum: 168))
                 }
-            } label: { Image(systemName: "minus").frame(width: 44, height: 44) }
+            } label: { SpreadIcon(name: "lucide-minus", size: 20).frame(width: 44, height: 44) }
                 .accessibilityLabel("Decrease weekly planning hours")
                 .keyboardShortcut(.downArrow, modifiers: [.option])
                 .disabled(saving || rejected || capacity == nil || capacity! <= min(storedAssigned, capacity!))
@@ -365,7 +365,7 @@ struct LifeHoursView: View {
                 if let capacity {
                     commitCapacity(LifeOrbitMath.limit(capacity + 1, minimum: storedAssigned, maximum: 168))
                 }
-            } label: { Image(systemName: "plus").frame(width: 44, height: 44) }
+            } label: { SpreadIcon(name: "icon-add", size: 20).frame(width: 44, height: 44) }
                 .accessibilityLabel("Increase weekly planning hours")
                 .keyboardShortcut(.upArrow, modifiers: [.option])
                 .disabled(saving || rejected || capacity == nil || capacity! >= max(168, capacity!))
