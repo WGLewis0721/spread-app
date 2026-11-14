@@ -511,11 +511,35 @@ test("a widget action updates the visible in-app timer without waiting for the p
 
 
 test("focus widgets render only the active profile from the single authoritative session", () => {
-  assert.match(timerWidgetSource, /guard timerEnabled\(\), let session = SpreadFocusStore\.load\(\)/);
-  assert.match(timerWidgetSource, /SpreadFocusStore\.activeProfile\(\) == session\.profileId/);
+  assert.ok(timerWidgetSource.includes("SpreadFocusStore.visibleForWidget("));
+  assert.ok(focusSession.includes("activeProfile(defaults) == session.profileId"));
+  assert.ok(timerWidgetSource.includes("UserDefaults(suiteName: SpreadFocusStore.appGroup)"));
   assert.match(timerWidgetSource, /SpreadFocusPreferences\.showName\(\) \? current\.roleName : "Focus session"/);
   assert.doesNotMatch(timerWidgetSource, /mirrorState\(\)/);
   assert.doesNotMatch(focusPublisher, /JSONEncoder\(\)\.encode\(state\)/);
   assert.doesNotMatch(focusPublisher, /shared\.set\(data, forKey: SpreadWidgetShared\.focusKey\)/);
   assert.match(focusPublisher, /shared\.removeObject\(forKey: SpreadWidgetShared\.focusKey\)/);
+});
+
+test("focus widget publishes after profile readiness and refreshes once on background", () => {
+  const constructor = focusTimer.slice(focusTimer.indexOf("    init() {"), focusTimer.indexOf("    func noteActiveProfile"));
+  assert.ok(!constructor.includes("SpreadFocusWidgetPublisher.publish()"), "initialization must not publish an idle profile-less entry");
+
+  const profile = focusTimer.slice(focusTimer.indexOf("    func noteActiveProfile("), focusTimer.indexOf("    func visibleSession("));
+  assert.ok(profile.indexOf("SpreadFocusStore.setActiveProfile(profileId)") < profile.indexOf("SpreadFocusWidgetPublisher.republishFromStore()"));
+  assert.ok(profile.includes("publishedProfileId != profileId"), "duplicate launch lifecycle events must not spam reloads");
+
+  const start = focusTimer.slice(focusTimer.indexOf("    func startPlan("), focusTimer.indexOf("    func startBlock("));
+  assert.ok(start.indexOf("SpreadFocusStore.setActiveProfile(profileId)") < start.indexOf("commit(next, notify: notify)"),
+            "starting from the app must record the profile before persisting the session");
+  assert.ok(focusTimer.includes("widgetChangePendingBackground = true"));
+  assert.ok(liveRoot.includes("phase == .background"));
+  assert.ok(liveRoot.includes("focusTimer.finishWidgetRefreshOnBackground()"));
+  const background = focusTimer.slice(focusTimer.indexOf("func finishWidgetRefreshOnBackground()"),
+                                     focusTimer.indexOf("func visibleSession("));
+  assert.ok(background.includes("widgetChangePendingBackground = false"));
+  assert.ok(background.includes("SpreadFocusWidgetPublisher.republishFromStore()"));
+
+  assert.ok(focusSession.includes("static func visibleForWidget("));
+  assert.ok(!focusTimer.includes("Timer.scheduledTimer"), "no extra timer");
 });
