@@ -16,7 +16,7 @@
 | [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | The Gray Matter release template, filled for Spread. Verdict NO-GO |
 | `evidence/landing/before/`, `after/` | Playwright captures of the landing page, with `report-*.json` |
 
-`TOKEN_AUDIT.md` is owned by the design-system lane (lane A) and is not in this folder yet.
+This folder also indexes `TOKEN_AUDIT.md`, which the design-system lane (lane A, PR #211) adds. It is not on this branch yet, so it is named here without a link.
 
 ## Gray Matter gate to Spread home
 

@@ -41,7 +41,7 @@ Start here for design rules and task references. Cross-product records: [documen
 | Why a planner behavior exists, or what was verified and deferred | [planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md](planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md) (historical record) | `ROADMAP.md` |
 | Wallpaper personalization (Studio) | Section 5 below | |
 | Recording a decision or checking what is undecided | [DECISIONS.md](DECISIONS.md) | |
-| Finalize: screens, audit, references, corrections, release | [finalize/README.md](finalize/README.md) | finalize/SCREEN_MAP.md, finalize/UPGRADE_AUDIT.md, finalize/REFERENCES.md, finalize/RELEASE_CHECKLIST.md, finalize/corrections/life-routing.md, finalize/corrections/color-drift.md, finalize/corrections/copy-voice.md, finalize/corrections/release-scope.md |
+| Finalize evidence and corrections | [index](finalize/README.md) | finalize/SCREEN_MAP.md, finalize/UPGRADE_AUDIT.md, finalize/REFERENCES.md, finalize/RELEASE_CHECKLIST.md, finalize/corrections/life-routing.md, finalize/corrections/color-drift.md, finalize/corrections/copy-voice.md, finalize/corrections/release-scope.md, finalize/corrections/wave2-tokens-icons.md |
 | Pointing an AI tool at these docs | [AI_TOOL_SETUP.md](AI_TOOL_SETUP.md) | |
 
 For cross-surface work, read both packs.
@@ -95,9 +95,9 @@ Proposal: [historical](specs/2026-10-28-studio-rebuild.md). Work has merged into
 
 ---
 
-## 6. Historical supporting material
+## 6. Historical material
 
-Archived native handoffs do not override the Wallet board. Concept art is not native test evidence.
+Archived handoffs and concept art do not override the Wallet board or count as test evidence.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > Part of the Spread design brain. Start at [../README.md](../README.md). Folder index: [README.md](README.md).
 
-> Summary: the Gray Matter release template, filled for Spread. Verdict **NO-GO**. Web checks pass. Native and store checks are unverified, four corrections are open, and the owner has not decided the device scope or the default root. Build green does not mean the app is complete or approved.
+> Summary: the Gray Matter release template, filled for Spread. Verdict **NO-GO**. Web checks pass. Native and store checks are unverified, five correction records are open, and the owner has not decided the device scope or the default root. Decisions OD1 to OD17 are recorded and are being applied by the lanes. Build green does not mean the app is complete or approved.
 
 Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gate is the authority for App Review: [docs/APP_STORE_REVIEW_CHECKLIST.md](../../APP_STORE_REVIEW_CHECKLIST.md). This file does not repeat it.
 
@@ -17,7 +17,7 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 
 - [ ] First core journey with real data: **not verified** on device. Responsibilities → Hours → Week → Tasks is designed; no run record.
 - [ ] Empty/loading/error/offline/permission states: **source review only**. Empty and error copy is inventoried in `screens.json`; no screen has device evidence.
-- [ ] Consistent brand/art/type and app icon: **open**. [corrections/copy-voice.md](corrections/copy-voice.md), [corrections/color-drift.md](corrections/color-drift.md). App icon source exists; the preflight check "visually inspect it" was not done by a person.
+- [ ] Consistent brand/art/type and app icon: **open**. Words are decided (OD7, OD8) but not applied: [corrections/copy-voice.md](corrections/copy-voice.md). Color: [corrections/color-drift.md](corrections/color-drift.md). Icon and token assets for wave 2: [corrections/wave2-tokens-icons.md](corrections/wave2-tokens-icons.md). App icon source exists; the preflight check "visually inspect it" was not done by a person.
 - [ ] Supported phone/tablet layouts; no clipping: **not verified**. Universal scope is open ([corrections/release-scope.md](corrections/release-scope.md)).
 - [ ] Scroll, swipes, interruption, haptics: **not verified** on device.
 - [ ] Dynamic Type/text zoom, focus/screen reader, reduced motion: **not verified** on device. Reduce Motion is read in 16 native files; landing reduced-motion checks ran for overflow and errors only.
@@ -58,7 +58,7 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 
 1. The default root is Classic, and Life is an opt-in preview. The owner has not chosen the release default ([corrections/life-routing.md](corrections/life-routing.md)).
 2. The device scope is unresolved: iPhone only in `CLAUDE.md`, universal iPhone and iPad in the release plan ([corrections/release-scope.md](corrections/release-scope.md)).
-3. The Health role color has three values, and the copy names one action three ways ([corrections/color-drift.md](corrections/color-drift.md), [corrections/copy-voice.md](corrections/copy-voice.md)).
+3. The Health role color has three values ([corrections/color-drift.md](corrections/color-drift.md)). The copy decisions (OD7, OD8) are recorded but not yet in code ([corrections/copy-voice.md](corrections/copy-voice.md)).
 4. Zero surfaces are verified on device. `screens.json` lists 48 surfaces, all `implemented`, none `verified`.
 5. No native build or run has been done for this polish program. The native-typecheck runs on GitHub only when a Swift PR is opened.
 6. The owner has not confirmed the Gray Matter gate mapping or this register.

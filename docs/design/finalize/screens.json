@@ -64,7 +64,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "C (Spread/)",
-      "notes": "Empty-state CTA uses Spread.accentGradient and ChalkMotionArt (Classic keeps Chalk per its own rules). Copy vocabulary differs from Life; see corrections/copy-voice.md."
+      "notes": "Empty-state CTA uses Spread.accentGradient and ChalkMotionArt (Classic keeps Chalk per its own rules). Copy vocabulary differs from Life; see corrections/copy-voice.md. OD7: Classic uses \"responsibility\"; the entry label and empty-state CTA still differ on main (see corrections/copy-voice.md)."
     },
     {
       "id": "N03",
@@ -169,7 +169,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "A (Shell/)",
-      "notes": "WeekCrownView keeps its legacy name; it is a plain arrow/value/arrow control, not a metal Crown. Rename is a Lane A decision."
+      "notes": "WeekCrownView keeps its legacy name; it is a plain arrow/value/arrow control, not a metal Crown. Rename is a Lane A decision. Icon and token work is tracked in corrections/wave2-tokens-icons.md."
     },
     {
       "id": "N07",
@@ -203,10 +203,10 @@
     },
     {
       "id": "N08",
-      "name": "Life: Wallet Stack of responsibility cards",
+      "name": "Life: Wallet Stack of Life area cards",
       "kind": "screen",
       "surface": "life",
-      "purpose": "Shows each responsibility as an editorial card in one stack; a focused card reveals its week and actions.",
+      "purpose": "Shows each Life area as an editorial card in one stack; a focused card reveals its week and actions.",
       "entry": "Life destination.",
       "exit": "Focus a card; Details, Tasks, Hours, Week.",
       "states": [
@@ -240,7 +240,7 @@
       "name": "Life: card Details sheet",
       "kind": "sheet",
       "surface": "life",
-      "purpose": "Edits a responsibility's name, hours, icon and color, and deletes it with Undo.",
+      "purpose": "Edits a Life area's name, hours, icon and color, and deletes it with Undo.",
       "entry": "Focused card, Details.",
       "exit": "Dismiss; delete returns to the stack with Undo.",
       "states": [
@@ -257,14 +257,14 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "B (Life/)",
-      "notes": "Delete is undoable without a confirmation prompt, per the Nov 11 amendment."
+      "notes": "Current title on main is 'Manage Life area' (LifeManagementSheets.swift:96). OD8 sets the title to 'Details'; the two UI tests that assert 'Manage Life area' change with it (lane B). Delete is undoable without a confirmation prompt, per the Nov 11 amendment."
     },
     {
       "id": "N10",
       "name": "Life: card Tasks notebook",
       "kind": "sheet",
       "surface": "life",
-      "purpose": "Free-form notes for one responsibility, with its task rows.",
+      "purpose": "Free-form notes for one Life area, with its task rows.",
       "entry": "Focused card, Tasks.",
       "exit": "Dismiss.",
       "states": [
@@ -287,7 +287,7 @@
       "name": "Life: Hours allocator",
       "kind": "screen",
       "surface": "life",
-      "purpose": "Shows the weekly hour budget per responsibility and edits capacity and role budgets.",
+      "purpose": "Shows the weekly hour budget per Life area and edits capacity and role budgets.",
       "entry": "Life destination Hours; Weekly Time strip summary button.",
       "exit": "Life, Week, capacity field sheet.",
       "states": [
@@ -396,7 +396,7 @@
       "name": "Life: recurring schedule form",
       "kind": "sheet",
       "surface": "life",
-      "purpose": "Creates or edits a repeating weekly schedule for a responsibility.",
+      "purpose": "Creates or edits a repeating weekly schedule for a Life area.",
       "entry": "Plan Ahead, recurring schedule.",
       "exit": "Save or cancel; Stop repeating confirmation.",
       "states": [
@@ -419,7 +419,7 @@
       "name": "Life: Reserve and Priority sheets",
       "kind": "sheet",
       "surface": "life",
-      "purpose": "Reserve hours for a responsibility; set the optional high-priority red ! flag.",
+      "purpose": "Reserve hours for a Life area; set the optional high-priority red ! flag.",
       "entry": "Focused card or task row.",
       "exit": "Dismiss or save.",
       "states": [
@@ -443,7 +443,7 @@
       "name": "Life: quick add and add task",
       "kind": "component",
       "surface": "life",
-      "purpose": "Adds a task to a responsibility from the stack or as a sheet.",
+      "purpose": "Adds a task to a Life area from the stack or as a sheet.",
       "entry": "Life root Add Life or the card's add control.",
       "exit": "Saved task or dismiss.",
       "states": [
@@ -551,7 +551,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Sheets/)",
-      "notes": "Title 'New Spread' differs from Life's 'Add Life'; see corrections/copy-voice.md."
+      "notes": "Title on main is 'Add Life' (ManageSheets.swift:58); the Classic entry says 'New Spread'. OD7 makes this a Classic 'responsibility' sheet; the exact label is set by lane D (see corrections/copy-voice.md)."
     },
     {
       "id": "N22",
@@ -870,7 +870,7 @@
       "status": "implemented",
       "test_sources": [],
       "owner_lane": "D (Focus/)",
-      "notes": "Presented from LifeRoot and from More."
+      "notes": "Presented from LifeRoot and from More. Icon and token work is tracked in corrections/wave2-tokens-icons.md."
     },
     {
       "id": "N36",

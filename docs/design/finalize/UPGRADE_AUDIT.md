@@ -39,7 +39,7 @@
 ## Ranked improvements and definition of done
 
 1. **Life root default and the dead Week path.** Owner decides the default. *Done when:* one default is set and the flag name says what it does; existing installs keep their choice; `WeekFocusSurface` and `WeekFocusComponents` are either removed after a usage check or kept with a reason; widget deep links still open the Life root. (Lanes A and C, owner decision.)
-2. **One name for each action and one noun.** *Done when:* a grep finds one title for creating a responsibility, one noun across Life, Classic and Focus, and one "To place" casing; VoiceOver labels match visible text. (Lanes B, C, D; landing copy in lane E.)
+2. **One name for each action and one noun.** Decided by OD7 and OD8 ("Life area" in Life, "responsibility" in Classic, "Details" for the Life sheet). *Done when:* a grep finds one title for creating a responsibility per root, one "To place" casing, and VoiceOver labels match visible text. (Lanes A, C, D, B.)
 3. **Role color identity.** Owner picks the canonical Health blue. *Done when:* each role color is one value across Week, Life, the widgets and the landing sample; no two roles share a blue; role text and dots pass contrast in both modes. (Owner decision, then lanes.)
 4. **Native tokens.** Lane A moves hardcoded values to `SpreadTheme` tokens. *Done when:* `Color(hex:)` outside `Theme/` is limited to role data, and each remaining `.system(size:)` is a token. (Lane A, with `TOKEN_AUDIT.md`.)
 5. **Gradient fill.** Owner decides whether primary button fills are solid. *Done when:* the decision is recorded in the brand board and the affected capsules match it. A visible change, so it needs device evidence.
@@ -55,4 +55,4 @@
 - **Wireframes and mockups.** Not produced. The landing has real evidence; native uses the existing brand board and iOS audit. No new visual mockups were made in this pass.
 - **Branch, tests and rollback.** Each change is a separate commit so it can be reverted alone. Web checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run docs:check`. Native checks run only on GitHub (`native-typecheck`); no Swift toolchain runs here.
 - **After screenshots.** Captured after the landing change with the same script and sizes, into `evidence/landing/after/`.
-- **Approval to begin native work.** Pending the owner's answers to corrections 1, 2, 3 and 5 and 9 (see [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)).
+- **Approval to begin native work.** Pending the owner's answers on life-routing (default root), color-drift (Health blue and gradient fills) and release-scope (device scope). See [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
