@@ -447,3 +447,16 @@ test("stale widget and island buttons cannot mutate a replacement focus session"
   assert.match(source, /sessionId: context\.attributes\.sessionId/);
   assert.match(timerWidgetSource, /SetSpreadFocusPlayingIntent\(sessionId: state\.sessionId\)/);
 });
+
+
+test("ActivityKit refreshes finish before app-process widget intents return", () => {
+  assert.match(focusController, /private static var pendingWork: Task<Void, Never>\?/);
+  assert.match(focusController, /await prior\?\.value/);
+  assert.match(focusController, /static func awaitSettled\(\) async/);
+  assert.match(focusController, /await pendingWork\?\.value/);
+  assert.match(focusController, /session\.id == requested\.id/);
+  assert.match(focusController, /current\.id == requested\.id/);
+  assert.match(focusController, /await activity\.update\(content\(for: current\)\)/);
+  const writes = [...focusControls.matchAll(/SpreadFocusControls\.apply\([^\n]+\)\s+await SpreadFocusLiveActivityController\.awaitSettled\(\)/g)];
+  assert.equal(writes.length, 9, "all focus intent transitions must await their queued ActivityKit update");
+});
