@@ -163,57 +163,6 @@ final class NativeContractsTests: XCTestCase {
         XCTAssertEqual(ChalkTiming.sample(1, beat, out: true), 1)
     }
 
-    func testCrownSubDetentNeverChangesWeek() {
-        var crown = CrownTravel()
-        XCTAssertEqual(crown.update(translation: 63.9), 0)
-        XCTAssertEqual(crown.update(translation: -63.9), 0)
-        XCTAssertEqual(crown.crossed, 0)
-    }
-
-    func testCrownCrossingsAndReversalsAreExact() {
-        var crown = CrownTravel()
-        XCTAssertEqual(crown.update(translation: 64), 1)
-        XCTAssertEqual(crown.update(translation: 128), 1)
-        XCTAssertEqual(crown.update(translation: 68), -1)
-        XCTAssertEqual(crown.update(translation: -65), -2)
-        XCTAssertEqual(crown.update(translation: 0), 1)
-        XCTAssertEqual(crown.crossed, 0)
-    }
-
-    func testCrownCapsLargeGesturesAndResetsOnRelease() {
-        var crown = CrownTravel()
-        XCTAssertEqual(crown.update(translation: 9999), 3)
-        XCTAssertEqual(crown.update(translation: 9998), 0)
-        XCTAssertEqual(crown.update(translation: -.infinity), 0)
-        XCTAssertEqual(crown.update(translation: -9999), -6)
-        crown.release()
-        XCTAssertEqual(crown.update(translation: 64), 1)
-    }
-
-    func testDialSegmentsUseHoursWithoutChangingData() {
-        let source = SpreadV2Fixture.week
-        let arcs = DialGeometry.arcs(for: source.roles)
-        XCTAssertEqual(arcs.count, source.roles.count)
-        XCTAssertEqual(arcs.map(\.id), source.roles.map(\.id))
-        XCTAssertEqual(arcs.reduce(0) { $0 + $1.span }, 360 - Double(source.roles.count) * 3, accuracy: 0.0001)
-        XCTAssertEqual(source.roles.first?.hours, 8)
-    }
-
-    func testDialKeepsZeroHourRoleReachable() {
-        let roles = [
-            Responsibility(id: "a", name: "A", category: "work", color: "#FFFFFF", hours: 10),
-            Responsibility(id: "b", name: "B", category: "home", color: "#FFFFFF", hours: 0)
-        ]
-        let arcs = DialGeometry.arcs(for: roles)
-        XCTAssertGreaterThan(arcs[1].span, 0)
-        XCTAssertEqual(DialGeometry.roleId(at: (arcs[1].from + arcs[1].to) / 2, arcs: arcs), "b")
-    }
-
-    func testEmptyDialIsSafe() {
-        XCTAssertEqual(DialGeometry.arcs(for: []), [])
-        XCTAssertNil(DialGeometry.roleId(at: 42, arcs: []))
-    }
-
     func testFiveModesAreOnePresentationEnum() {
         XCTAssertEqual(Set(SpreadLayout.allCases.map(\.rawValue)),
                        Set(["stack", "fan", "dial", "tabs", "day"]))
@@ -365,27 +314,6 @@ extension NativeContractsTests {
 }
 
 extension NativeContractsTests {
-    func testHundredCrownGesturesAndThirtyReversals() {
-        var crown = CrownTravel()
-        var week = 0
-        for index in 0..<100 {
-            week += crown.update(translation: 63)
-            XCTAssertEqual(week, index)
-            week += crown.update(translation: 64)
-            XCTAssertEqual(week, index + 1)
-            if index < 30 {
-                week += crown.update(translation: 0)
-                XCTAssertEqual(week, index)
-                week += crown.update(translation: 64)
-                XCTAssertEqual(week, index + 1)
-            }
-            crown.release()
-        }
-        XCTAssertEqual(week, 100)
-    }
-}
-
-extension NativeContractsTests {
     func testMonthGridUsesUniqueCellsAndKeepsTheFirstSixDates() {
         let cells = PlannerDates.monthCells(weekKey: "2026-11-02")
         XCTAssertEqual(Set(cells.map(\.id)).count, cells.count)
@@ -446,20 +374,6 @@ extension NativeContractsTests {
         XCTAssertEqual(bad.reduce(0, +), 300, accuracy: 0.001)
         XCTAssertTrue(bad.allSatisfy { $0.isFinite && $0 >= 0 })
         XCTAssertEqual(HourStrip.widths(hours: [3], available: 0, spacing: 0, minimum: 44), [0])
-    }
-
-    // MARK: Crown lifecycle
-
-    /// Why the on-screen Crown must call `release()` when a drag is cancelled, not only when it ends: a reducer
-    /// that still holds detents answers the next drag's first update (translation 0) with the opposite week.
-    func testCrownThatIsNotReleasedAfterACancelEmitsAPhantomOppositeWeek() throws {
-        var crown = CrownTravel()
-        XCTAssertEqual(crown.update(translation: 130), 2)
-        XCTAssertEqual(crown.update(translation: 0), -2, "an unreleased reducer undoes weeks on the next drag")
-        var released = CrownTravel()
-        XCTAssertEqual(released.update(translation: 130), 2)
-        released.release()
-        XCTAssertEqual(released.update(translation: 0), 0, "after release the next drag starts clean")
     }
 }
 

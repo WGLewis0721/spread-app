@@ -86,7 +86,7 @@ SwiftUI tokens live in `ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTh
 - **Motion** (`SpreadMotion`): `fastSeconds`, `normalSeconds`, `deliberateSeconds`, `timing(_:)`, and `seconds(_:reduceMotion:)`, which returns zero under Reduce Motion. Gestures use `SpreadTactile`.
 - **Disabled** (`disabledOpacity`): the one dim for a disabled control that uses Spread's press style. System-styled controls (bordered, toolbar, Form rows) keep the system's disabled look and are not dimmed twice.
 - **Life artwork scrims** (`artGround`, `artScrimStrong`, `artScrimMid`, `artScrimSoft`, `artWell`): fixed values that keep white labels legible over authored art. They do not follow appearance and are not theme colours.
-- **Week sidebar overlay** (`sidebarScrim`): named for the tap-to-dismiss overlay. Adoption is pending; see `docs/design/finalize/TOKEN_AUDIT.md`, section 6.
+- **Week sidebar overlay:** the `sidebarScrim` token was removed in wave 3 (OD33). The overlay went with the Week Focus surface (OD19), so nothing draws it. See `docs/design/finalize/TOKEN_AUDIT.md`, section 6.
 - **Shared marks**: `TaskPriorityMark()` (`Theme/SpreadPriorityMark.swift`) is the one high-priority marker on task rows. The flag is the toggle; the red "!" and the spoken "High priority" are the mark.
 - **Role colours** are data (`Responsibility.color`), never tokens. Illustration colours are authored artwork.
 - Remaining hardcoded native values, with the token that should replace each: `docs/design/finalize/TOKEN_AUDIT.md`.

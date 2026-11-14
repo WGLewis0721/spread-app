@@ -23,12 +23,8 @@ struct LifeRoot: View {
     @ObservedObject var planner: LivePlanner
     @ObservedObject var focusTimer: SpreadFocusTimer
     let onMore: () -> Void
-    // Life never calls these two (review X7, OD30). They are `var` with no-op defaults so the Classic
-    // call site in Shell/SpreadLiveRoot.swift still compiles; its arguments are removed in a later wave.
-    var onOpenRole: (String) -> Void = { _ in }
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
-    var onDeleteRole: (String) -> Void = { _ in }
     @AccessibilityFocusState private var navigationFocused: Bool
     @AccessibilityFocusState private var openerFocused: Bool
     @State private var destination: LifeDestination = .life

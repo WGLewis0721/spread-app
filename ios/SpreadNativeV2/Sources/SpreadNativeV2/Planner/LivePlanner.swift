@@ -502,7 +502,6 @@ enum LiveSheet: Identifiable, Equatable {
     case more
     case profiles
     case confirmRollover
-    case confirmDeleteRole(String)
     case backup
 
     var id: String {
@@ -514,7 +513,6 @@ enum LiveSheet: Identifiable, Equatable {
         case .more: return "more"
         case .profiles: return "profiles"
         case .confirmRollover: return "confirmRollover"
-        case .confirmDeleteRole(let id): return "confirmDeleteRole-" + id
         case .backup: return "backup"
         }
     }
