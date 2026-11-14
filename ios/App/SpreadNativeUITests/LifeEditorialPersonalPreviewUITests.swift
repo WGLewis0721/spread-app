@@ -303,7 +303,7 @@ final class LifeEditorialPersonalPreviewUITests: XCTestCase {
         XCTAssertFalse(element("life-task-notebook").exists)
 
         details.tap()
-        XCTAssertTrue(app.navigationBars["Manage Life area"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Details"].waitForExistence(timeout: 10))
         app.buttons["Cancel"].tap()
         XCTAssertTrue(details.waitForExistence(timeout: 10))
     }

@@ -93,7 +93,7 @@ struct LifeManageSheet: View {
                 if savingHours { ProgressView("Saving area hours…") }
                 if let error = planner.error { Text(error).foregroundStyle(Spread.danger) }
             }.spreadListSurface()
-            .navigationTitle("Manage Life area").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Details").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(saving || savingHours) }
                 ToolbarItem(placement: .confirmationAction) {

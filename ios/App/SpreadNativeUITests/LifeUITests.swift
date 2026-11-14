@@ -143,7 +143,7 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(notebook.exists)
 
         details.tap()
-        XCTAssertTrue(app.navigationBars["Manage Life area"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Details"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-area-name").firstMatch.exists)
         XCTAssertTrue(app.buttons["life-manage-delete"].exists)
         app.buttons["Cancel"].tap()
