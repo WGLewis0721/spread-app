@@ -16,12 +16,15 @@ struct MonthQuickAddSheet: View {
     private var roleName: String {
         planner.snapshot?.roles.first(where: { $0.id == roleId })?.name ?? "Responsibility"
     }
+    private var canSave: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !saving
+    }
 
     var body: some View {
         SpreadSheetStack {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 8) {
-                    Image(systemName: "calendar.badge.plus")
+                    SpreadIcon(name: "lucide-calendar-plus", size: 20)
                         .foregroundStyle(Spread.accent)
                     Text(PlannerDates.label(PlannerDates.date(day), pattern: "EEEE, MMMM d"))
                         .font(.system(.headline, weight: .semibold))
@@ -38,7 +41,7 @@ struct MonthQuickAddSheet: View {
                     .frame(minHeight: 48)
                     .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 12))
                     .accessibilityIdentifier("month-quick-add-title")
-                Text("If there are no allocated hours for this responsibility that day, the task is saved to that week's To Place.")
+                Text("If there are no allocated hours for this responsibility that day, the task is saved to that week's To place.")
                     .font(Spread.caption)
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -49,10 +52,11 @@ struct MonthQuickAddSheet: View {
                         .font(.system(.subheadline, weight: .semibold))
                         .foregroundStyle(Spread.onAccent)
                         .frame(maxWidth: .infinity, minHeight: 50)
-                        .background(Spread.accent, in: Capsule())
+                        .background(Spread.accentGradient, in: Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || saving)
+                .disabled(!canSave)
+                .opacity(canSave ? 1 : 0.4)
                 .accessibilityIdentifier("month-quick-add-save")
                 Spacer(minLength: 0)
             }

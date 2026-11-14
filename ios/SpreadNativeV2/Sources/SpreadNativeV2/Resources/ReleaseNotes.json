@@ -2,6 +2,18 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-b3e37d9c22ba",
+      "version": "1.0",
+      "date": "2026-11-13",
+      "title": "Recent updates",
+      "changes": [
+        "Life no longer offers the retired Crown position setting.",
+        "Life areas and tasks have clearer empty states.",
+        "Life text and weekly time controls follow your text size setting.",
+        "Completing a task is the only action that gives a haptic in Life."
+      ]
+    },
+    {
       "id": "notes-771d4f1056fa",
       "version": "1.0",
       "date": "2026-11-13",
@@ -92,5 +104,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "771d4f1056fadc979015d244fb171bb9726cbc18"
+  "lastProcessedCommit": "99a4710c5052022f65a7efaa543adb0a2f158243"
 }

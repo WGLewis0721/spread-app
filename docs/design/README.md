@@ -38,6 +38,7 @@ Start here for design rules and task references. Cross-product records: [documen
 | Classic/Life tactile motion and haptics | [Contract](tactile-precision/README.md) | [Implementation](tactile-precision/IMPLEMENTATION.md); Life spec wins |
 | App icon, UI action icons, category badges | [brand/ICON_HANDOFF.md](brand/ICON_HANDOFF.md) | Files in `public/icons/` |
 | Gray Matter workflow | [adoption](brand/GRAY_MATTER_ADOPTION.md) | Spread rules win |
+| Wave-2 token cleanup | [finalize/TOKEN_AUDIT.md](finalize/TOKEN_AUDIT.md) | |
 | Why a planner behavior exists, or what was verified and deferred | [planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md](planner/SPREAD_UNIFIED_UX_IMPLEMENTATION.md) (historical record) | `ROADMAP.md` |
 | Wallpaper personalization (Studio) | Section 5 below | |
 | Recording a decision or checking what is undecided | [DECISIONS.md](DECISIONS.md) | |

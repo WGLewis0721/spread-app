@@ -12,6 +12,7 @@ struct LifeWeeklyTimeBudget: View {
     let onSelectRole: (String) -> Void
 
     @ScaledMetric(relativeTo: .body) private var barHeight: CGFloat = 32
+    @ScaledMetric(relativeTo: .body) private var compactBarHeight: CGFloat = 26
     @ScaledMetric(relativeTo: .caption) private var minimumRoleLabelWidth: CGFloat = 40
     @ScaledMetric(relativeTo: .caption) private var minimumAvailableLabelWidth: CGFloat = 54
 
@@ -41,8 +42,8 @@ struct LifeWeeklyTimeBudget: View {
             .strokeBorder(Spread.line, lineWidth: 1))
     }
 
-    /// Keep the budget beside the Life heading on a standard iPhone.
-    /// This preserves the same planner values and full-width tap action.
+    /// The compact card used on Life. It shows the same planner values as Hours, full width,
+    /// and keeps the full-width tap action.
     private var compactContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("WEEKLY TIME")
@@ -67,7 +68,7 @@ struct LifeWeeklyTimeBudget: View {
                 Text(hasCapacity
                     ? (overBudget > 0 ? SpreadHours.text(overBudget) + "h over budget"
                                       : SpreadHours.text(available ?? 0) + "h available")
-                    : "Capacity not set")
+                    : "Weekly hours not set")
                     .font(.caption2)
                     .foregroundStyle(overBudget > 0 ? Spread.danger : Spread.secondary)
                     .lineLimit(1)
@@ -86,7 +87,9 @@ struct LifeWeeklyTimeBudget: View {
                     .frame(minHeight: 44)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(expanded ? "Close weekly hours" : "Set weekly hours")
+                .accessibilityLabel(hasCapacity ? "Adjust hours" : "Set weekly hours")
+                .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+                .accessibilityHint(expanded ? "Closes the weekly hours editor" : "Opens the weekly hours editor")
                 .accessibilityIdentifier("life-budget-toggle")
             }
         }
@@ -142,7 +145,9 @@ struct LifeWeeklyTimeBudget: View {
                     .frame(minHeight: 44)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(expanded ? "Close weekly hours" : "Set weekly hours")
+                .accessibilityLabel(hasCapacity ? "Adjust hours" : "Set weekly hours")
+                .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+                .accessibilityHint(expanded ? "Closes the weekly hours editor" : "Opens the weekly hours editor")
                 .accessibilityIdentifier("life-budget-toggle")
             }
         }
@@ -229,7 +234,7 @@ struct LifeWeeklyTimeBudget: View {
                 }
             }
         }
-        .frame(height: compact ? 26 : max(32, barHeight))
+        .frame(height: compact ? compactBarHeight : max(32, barHeight))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(LifeBudgetBarMath.accessibilityLabel(roles: roles, capacity: capacity))
         .accessibilityAddTraits(.isButton)

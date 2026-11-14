@@ -28,7 +28,7 @@ struct ToPlaceTray: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "tray").font(.system(.subheadline, weight: .semibold)).foregroundStyle(Spread.secondary)
+                SpreadIcon(name: "lucide-inbox", size: 18).foregroundStyle(Spread.secondary)
                 Text("To place").font(.system(.subheadline, weight: .semibold))
                 Spacer()
                 if tasks.isEmpty {
@@ -92,7 +92,7 @@ struct ToPlaceTray: View {
                     Spacer(minLength: 4)
                     Text("\(mine.count) \(mine.count == 1 ? "task" : "tasks")")
                         .font(Spread.caption).foregroundStyle(Spread.secondary).monospacedDigit()
-                    Image(systemName: "chevron.down").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                    SpreadIcon(name: "lucide-chevron-down", size: 16).foregroundStyle(Spread.tertiary)
                         .rotationEffect(.degrees(opened ? 180 : 0))
                 }
                 .padding(.horizontal, 16)
@@ -150,8 +150,7 @@ struct TaskLine: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.tertiary)
+                SpreadIcon(name: "icon-drag", size: 18).foregroundStyle(Spread.tertiary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .draggable(SpreadDragPayload.task(id: task.id, roleId: task.roleId, label: task.text))
@@ -159,16 +158,20 @@ struct TaskLine: View {
                     .accessibilityIdentifier("task-grip-\(task.id)")
 
                 Button { onOpenTask(task.roleId, task.id) } label: {
-                    Text(task.text.isEmpty ? "Untitled task" : task.text)
-                        .font(.system(.subheadline))
-                        .strikethrough(task.done)
-                        .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(4).fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .contentShape(Rectangle())
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        if task.important == true { TaskPriorityMark() }
+                        Text(task.text.isEmpty ? "Untitled task" : task.text)
+                            .font(.system(.subheadline))
+                            .strikethrough(task.done)
+                            .foregroundStyle(task.done ? Spread.secondary : Spread.ink)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(4).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityValue(task.done ? "Completed" : "Open")
                 .accessibilityIdentifier("task-row-\(task.id)")
 
                 if !task.done {
@@ -222,7 +225,7 @@ struct TaskLine: View {
         Task {
             _ = await planner.send(["type": "reorderDayTask", "roleId": task.roleId, "day": day,
                                     "taskId": id, "beforeId": target.map { $0 as Any } ?? NSNull()],
-                                   completionHaptic: true, expectedRevision: revision)
+                                   completionHaptic: false, expectedRevision: revision)
             reordering = false; reorderTarget = false
         }
     }
@@ -294,8 +297,8 @@ struct MoveToSheet: View {
                             }
                             Spacer(minLength: 8)
                             Text("\(SpreadHours.text(allocation.hours))h").font(.system(.title3, weight: .bold)).monospacedDigit()
-                            Image(systemName: current ? "checkmark.circle.fill" : "circle")
-                                .font(.system(.title3)).foregroundStyle(current ? tint : Spread.tertiary)
+                            SpreadIcon(name: current ? "lucide-circle-check" : "lucide-circle", size: 22)
+                                .foregroundStyle(current ? tint : Spread.tertiary)
                         }
                         .padding(.horizontal, 16).frame(maxWidth: .infinity, minHeight: 60)
                         .spreadCard(edge: tint, active: current)
@@ -311,12 +314,12 @@ struct MoveToSheet: View {
                         Task { if await planner.send(["type": "assignTask", "roleId": task.roleId, "taskId": task.id, "allocationId": NSNull()]) { dismiss() } }
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: "tray")
+                            SpreadIcon(name: "lucide-inbox", size: 18)
                             Text("Not scheduled").font(.system(.subheadline, weight: .semibold))
                             Spacer(minLength: 0)
                             Text("Back to To place").font(.system(.footnote)).foregroundStyle(Spread.secondary)
                         }
-                        .foregroundStyle(Spread.danger)
+                        .foregroundStyle(Spread.accent)
                         .padding(.horizontal, 16).frame(maxWidth: .infinity, minHeight: 52)
                         .spreadCard()
                         .contentShape(Rectangle())

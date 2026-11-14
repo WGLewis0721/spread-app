@@ -22,8 +22,12 @@ class NativeUITestCase: XCTestCase {
 
     func launch(_ arguments: [String] = []) {
         if app.state != .notRunning { app.terminate() }
-        app.launchArguments = arguments.contains("-native.whatsNew.lastSeenRelease") ? arguments :
-            arguments + ["-native.whatsNew.lastSeenRelease", "2026-11-11-life-week"]
+        // OD18 made Life the default root. This suite's journeys are Classic journeys, so pin Classic unless a
+        // test asks for the preview itself.
+        var args = arguments
+        if !args.contains("-native.weekMonth.previewEnabled") { args += ["-native.weekMonth.previewEnabled", "NO"] }
+        app.launchArguments = args.contains("-native.whatsNew.lastSeenRelease") ? args :
+            args + ["-native.whatsNew.lastSeenRelease", "2026-11-11-life-week"]
         app.launch()
         XCTAssertTrue(app.buttons["native-spread"].waitForExistence(timeout: 90), "The native planner never appeared")
     }
@@ -1285,6 +1289,9 @@ final class SpreadFlowUITests: NativeUITestCase {
             if done.exists && done.isHittable { done.tap(); continue }
             let close = app.buttons["Close"].firstMatch
             if close.exists && close.isHittable { close.tap(); continue }
+            // Sheets that hold an unconfirmed draft dismiss with a leading Cancel (finalize OD6).
+            let cancel = app.buttons["Cancel"].firstMatch
+            if cancel.exists && cancel.isHittable { cancel.tap(); continue }
             break
         }
     }
@@ -1600,7 +1607,7 @@ final class DuoUITests: NativeUITestCase {
 // MARK: - Week/Month redesign (opt-in preview, owner decisions 1-61)
 
 /// Actual-app journeys for the redesigned Week/Month. Each test turns the preview on through its launch
-/// argument (Classic stays the default) and checks behavior through accessibility state, not pixels.
+/// argument (the Classic baseline is pinned by `launch`, OD18) and checks behavior through accessibility state, not pixels.
 final class WeekMonthUITests: NativeUITestCase {
     private let preview = ["-native.weekMonth.previewEnabled", "YES"]
 
@@ -1804,7 +1811,7 @@ final class WeekMonthUITests: NativeUITestCase {
         tapID("sidebar-add-role")
         let name = "Budget " + String(UUID().uuidString.prefix(6))
         typeInto("role-name-field", name)
-        for _ in 0..<3 { tapButton("Decrease Hours for spread 1 by half an hour") }
+        for _ in 0..<3 { tapButton("Decrease Hours for Life area 1 by half an hour") }
         tapID("save-spreads")
         let selector = app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH 'focus-role-' AND label == %@", name)

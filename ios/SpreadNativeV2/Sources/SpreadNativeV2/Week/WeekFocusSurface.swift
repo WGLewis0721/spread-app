@@ -20,6 +20,8 @@ struct WeekFocusSurface: View {
     @State private var trayOpen = false
     @State private var overdueOpen = false
     @State private var overdueRows: [NativeOverdueTask] = []
+    /// True only after a load that succeeded, so "Nothing overdue" is never shown on a failed load.
+    @State private var overdueChecked = false
     @State private var monthQuickAddDay: MonthAddDate?
     @State private var sidebarExpanded = false
     @State private var sidebarHidden = false
@@ -233,8 +235,7 @@ struct WeekFocusSurface: View {
         }
         .overlay {
             if showDayDone {
-                SpreadIcon(name: "lucide-circle-check", size: 21)
-                    .font(.system(size: 64, weight: .semibold))
+                SpreadIcon(name: "lucide-circle-check", size: 56)
                     .foregroundStyle(Spread.accent)
                     .padding(24)
                     .background(.ultraThinMaterial, in: Circle())
@@ -251,7 +252,9 @@ struct WeekFocusSurface: View {
             MonthQuickAddSheet(planner: planner, roleId: activeRole ?? "", day: target.iso)
         }
         .task(id: refreshKey) {
-            overdueRows = await planner.allOverdueTasks(today: PlannerDates.localISO()) ?? []
+            let rows = await planner.allOverdueTasks(today: PlannerDates.localISO())
+            overdueRows = rows ?? []
+            overdueChecked = rows != nil
         }
         // A container identifier otherwise replaces its children's own identifiers.
         .accessibilityElement(children: .contain)
@@ -267,7 +270,7 @@ struct WeekFocusSurface: View {
                     if sidebarHidden { sidebarExpanded = false }
                     SpreadHaptics.selection()
                 } label: {
-                    Image(systemName: sidebarHidden ? "sidebar.squares.left" : "sidebar.left")
+                    SpreadIcon(name: "lucide-panel-left", size: 20)
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel(sidebarHidden ? "Show responsibilities" : "Hide responsibilities")
@@ -296,6 +299,7 @@ struct WeekFocusSurface: View {
                 HStack(spacing: 1) {
                     ForEach(weekDays, id: \.self) { iso in
                         let active = iso == day
+                        let complete = activeRole.map { isComplete(roleId: $0, on: iso) } ?? false
                         Button {
                             selectWeekDay(iso)
                         } label: {
@@ -327,6 +331,7 @@ struct WeekFocusSurface: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE MMMM d"))
                         .accessibilityAddTraits(active ? .isSelected : [])
+                        .accessibilityValue(complete ? "All tasks done" : "")
                         .matchedGeometryEffect(id: "calendar-day-\(iso)", in: calendarMorph)
                         .accessibilityIdentifier("focus-day-\(iso)")
                         .dropDestination(for: SpreadDragPayload.self) { items, _ in
@@ -418,7 +423,7 @@ struct WeekFocusSurface: View {
                         trayOpen.toggle()
                         if trayOpen { overdueOpen = false }
                     } label: {
-                        Label { Text("To Place \(unplaced.count)") } icon: { SpreadIcon(name: "lucide-inbox", size: 18) }
+                        Label { Text("To place \(unplaced.count)") } icon: { SpreadIcon(name: "lucide-inbox", size: 18) }
                             .font(.system(.caption, weight: .semibold))
                             .frame(minHeight: 44)
                             .padding(.horizontal, 8)
@@ -440,6 +445,13 @@ struct WeekFocusSurface: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("focus-overdue")
+                } else if overdueChecked {
+                    Label { Text("Nothing overdue") } icon: { SpreadIcon(name: "icon-check", size: 16) }
+                        .font(.system(.caption, weight: .semibold))
+                        .foregroundStyle(Spread.secondary)
+                        .frame(minHeight: 44)
+                        .padding(.horizontal, 8)
+                        .accessibilityIdentifier("focus-nothing-overdue")
                 }
                 Spacer(minLength: 0)
             }

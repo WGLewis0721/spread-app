@@ -268,9 +268,8 @@ struct LifeWeekView: View {
                         Button {
                             let targetDay = date
                             Task {
-                                if await planner.placeHours(roleId: role.id, day: targetDay, hours: 1) {
-                                    LifeFeedback.accepted()
-                                }
+                                // Hours placement is not a task completion, so it is silent (OD2).
+                                _ = await planner.placeHours(roleId: role.id, day: targetDay, hours: 1)
                             }
                         } label: {
                             VStack(spacing: 8) {

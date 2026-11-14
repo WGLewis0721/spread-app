@@ -32,7 +32,7 @@ struct SpreadArrowButton: View {
             SpreadIcon(name: direction < 0 ? "lucide-chevron-left" : "lucide-chevron-right", size: 20)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(disabled ? Spread.secondary : Spread.ink)
-                .frame(width: 44, height: 52)
+                .frame(width: Spread.minimumTarget, height: 52)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.spreadPress)

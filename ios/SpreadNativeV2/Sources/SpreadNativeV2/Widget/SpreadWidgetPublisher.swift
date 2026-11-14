@@ -13,10 +13,11 @@ struct SpreadTodayWidgetSnapshot: Codable {
 }
 
 enum SpreadWidgetPublisher {
-    static let appGroup = "group.com.graymatter.spread"
-    static let key = "spread.widget.today.v1"
-    static let enabledKey = "native.widget.enabled"
-    static let widgetKind = "SpreadToday"
+    // The App Group, key and kind live once, in SpreadWidgetShared, which the widget extension also compiles.
+    static let appGroup = SpreadWidgetShared.appGroup
+    static let key = SpreadWidgetShared.todayKey
+    static let enabledKey = SpreadWidgetShared.todayEnabledKey
+    static let widgetKind = SpreadWidgetShared.todayKind
 
     static func publish(snapshot: PlannerSnapshot) {
         guard UserDefaults.standard.bool(forKey: enabledKey) else {

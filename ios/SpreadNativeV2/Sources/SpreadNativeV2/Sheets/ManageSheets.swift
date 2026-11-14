@@ -1,7 +1,7 @@
 #if os(iOS)
 import SwiftUI
 
-/// New Spread (`NewLifeSheet`): one or more named spreads, each with its hours and an optional symbol.
+/// Add Life (`NewSpreadSheet`): one or more named Life areas, each with its hours and an optional symbol.
 /// "Save spreads" adds every named row through the store's `addRole`, one after another.
 struct NewSpreadSheet: View {
     @ObservedObject var planner: LivePlanner
@@ -58,8 +58,10 @@ struct NewSpreadSheet: View {
             .navigationTitle("Add Life")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Creating drafts discards them on Cancel, so the leading control is Cancel, not Close.
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: { Text("Close").tapTarget() }
+                    Button { dismiss() } label: { Text("Cancel").tapTarget() }
+                        .accessibilityIdentifier("add-life-cancel")
                 }
             }
         }
@@ -77,20 +79,21 @@ struct NewSpreadSheet: View {
             HStack(spacing: 12) {
                 RoleBadge(category: draft.category, color: colorHex, size: 48)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Spread \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
+                    // A Life draft names a Life area: OD7 keeps "spread" for the app name only.
+                    Text("Life area \(index + 1)").font(.system(.footnote)).foregroundStyle(Spread.secondary)
                     TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }), prompt: Spread.fieldPrompt("Parent, shop, study"))
                         .font(.system(.body))
                         .padding(.horizontal, 12).frame(minHeight: 44)
-                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Spread.inset))
-                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
-                        .accessibilityLabel("Spread \(index + 1) name")
+                        .background(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).fill(Spread.inset))
+                        .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
+                        .accessibilityLabel("Life area \(index + 1) name")
                         .accessibilityIdentifier("role-name-field")
                 }
             }
             HStack {
                 Text("Hours each week").font(Spread.callout).foregroundStyle(Spread.secondary)
                 Spacer()
-                HourStepper(value: draft.hours, label: "Hours for spread \(index + 1)", step: 0.5) { hours in
+                HourStepper(value: draft.hours, label: "Hours for Life area \(index + 1)", step: 0.5) { hours in
                     drafts[index].hours = hours
                 }
             }
@@ -231,7 +234,7 @@ struct RoleSheet: View {
                         Button("Remove responsibility", role: .destructive) { confirmRemoval = true }
                         .accessibilityIdentifier("delete-role-button")
                     } footer: {
-                        Text("The hours and tasks for this spread leave every week.")
+                        Text("The hours and tasks for this responsibility leave every week.")
                     }
                         .listRowBackground(Spread.elevated)
                 }
@@ -239,7 +242,7 @@ struct RoleSheet: View {
                 .navigationTitle("Responsibility")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
+                    ToolbarItem(placement: .confirmationAction) {
                         Button { dismiss() } label: { Text("Done").tapTarget() }
                     }
                 }
@@ -249,7 +252,7 @@ struct RoleSheet: View {
                 }
             } else {
                 ContentUnavailableView("This responsibility is no longer in the plan.", systemImage: "square.stack")
-                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             }
         }
         .presentationDetents([.large])
@@ -263,7 +266,7 @@ struct RoleSheet: View {
             .accessibilityIdentifier("confirm-delete-role")
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The hours and tasks for this spread leave every week.")
+            Text("The hours and tasks for this responsibility leave every week.")
         }
     }
 
@@ -330,7 +333,7 @@ struct CarryOverSheet: View {
                     Button("Not now") { dismiss() }.frame(minHeight: 44)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Move \(chosen.count)") { move() }
+                    Button(chosen.isEmpty ? "Move" : "Move \(chosen.count)") { move() }
                         .disabled(chosen.isEmpty)
                         .accessibilityIdentifier("carry-selected")
                 }
@@ -399,7 +402,7 @@ struct ProfilesSheet: View {
                         }
                     }
                 } footer: {
-                    Text("Each profile keeps its own spreads and weeks.")
+                    Text("Each profile keeps its own plan and weeks.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
                     .listRowBackground(Spread.elevated)
@@ -421,6 +424,12 @@ struct ProfilesSheet: View {
                         .accessibilityIdentifier("create-profile")
                 } header: {
                     Text("New profile").fixedSize(horizontal: false, vertical: true)
+                } footer: {
+                    // A disabled Create button needs its reason on screen, not only in the disabled state.
+                    if planner.profiles.count >= Self.limit {
+                        Text("Spread keeps up to \(Self.limit) profiles. Remove one to add another.")
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                     .listRowBackground(Spread.elevated)
             }
@@ -428,11 +437,11 @@ struct ProfilesSheet: View {
             .navigationTitle("Profiles")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done").tapTarget() }
                 }
             }
-            .confirmationDialog("Remove this profile and its spreads?", isPresented: Binding(get: { confirmRemove != nil }, set: { if !$0 { confirmRemove = nil } }), titleVisibility: .visible) {
+            .confirmationDialog("Remove this profile and everything in it?", isPresented: Binding(get: { confirmRemove != nil }, set: { if !$0 { confirmRemove = nil } }), titleVisibility: .visible) {
                 Button("Remove profile", role: .destructive) {
                     if let profile = confirmRemove {
                         Task { await planner.send(["type": "removeProfile", "profileId": profile.id]) }
@@ -476,7 +485,6 @@ struct MoreSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var showCalendarPicker = false
     @State private var showRecentlyDeleted = false
     @State private var showWhatsNew = false
     @State private var showReminders = false
@@ -583,23 +591,25 @@ struct MoreSheet: View {
                                     .accessibilityAddTraits(appearance == item ? .isSelected : [])
                                     .accessibilityIdentifier("appearance-" + item.rawValue)
                                 }
-                                Button { showCalendarPicker = true } label: {
+                                // A native Menu: the system checkmark marks the active design, so no label carries "(current)".
+                                Menu {
+                                    Section {
+                                        Picker("Calendar design", selection: $weekFocusEnabled) {
+                                            Text("Life").tag(true)
+                                            Text("Classic").tag(false)
+                                        }
+                                    } header: {
+                                        Text("Life uses the same tasks, hours and planning data. Choose Classic anytime to return.")
+                                    }
+                                } label: {
                                     SpreadIcon(name: "lucide-calendar-days", size: 20)
                                         .font(.system(.body, weight: .semibold))
                                         .foregroundStyle(Spread.accent)
                                         .frame(width: 44, height: 44)
                                         .contentShape(Rectangle())
                                 }
-                                .buttonStyle(.spreadPress)
                                 .accessibilityLabel(weekFocusEnabled ? "Calendar design: Life" : "Calendar design: Classic")
                                 .accessibilityIdentifier("calendar-design-picker")
-                                .confirmationDialog("Calendar design", isPresented: $showCalendarPicker, titleVisibility: .visible) {
-                                    Button("Classic (current)") { weekFocusEnabled = false }
-                                    Button("Life") { weekFocusEnabled = true }
-                                    Button("Cancel", role: .cancel) {}
-                                } message: {
-                                    Text("Life uses the same tasks, hours and planning data. Choose Classic anytime to return.")
-                                }
                             }
                             .padding(6)
                             .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
@@ -779,7 +789,7 @@ struct MoreSheet: View {
             .navigationTitle("More")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Text("Done").tapTarget() }
                         .accessibilityIdentifier("close-more")
                 }

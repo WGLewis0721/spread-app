@@ -296,7 +296,7 @@ private struct SpreadLifeCardFace: View {
                 .font(.system(size: size, weight: .semibold, design: .serif))
                 .monospacedDigit()
             Text("THIS WEEK")
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .tracking(1.4)
                 .foregroundStyle(palette.secondary)
         }
@@ -317,7 +317,7 @@ private struct SpreadLifeCardFace: View {
         let value = index < card.days.count ? card.days[index] : 0
         return VStack(spacing: 2) {
             Text(large ? Self.longDays[index] : Self.shortDays[index])
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
             Text(hoursText(value) + (large ? "h" : ""))
                 .font(.system(size: large ? 11 : 10, weight: .bold))
                 .monospacedDigit()

@@ -19,7 +19,7 @@ struct ChalkEffects: View {
 
     private func draw(_ fx: ChalkFX, in context: GraphicsContext) {
         let x = fx.x * 1.44, y = fx.y
-        let ink = scheme == .dark ? Color(hex: "#F4F7FF") : Spread.secondary
+        let ink = Spread.chalkInk
         switch fx.kind {
         case .steam:
             for index in 0..<3 {
@@ -53,7 +53,7 @@ struct ChalkEffects: View {
             c.scaleBy(x: scale, y: scale)
             let points: [CGPoint] = [.init(x: 0, y: -4), .init(x: 1, y: -1), .init(x: 4, y: 0), .init(x: 1, y: 1), .init(x: 0, y: 4), .init(x: -1, y: 1), .init(x: -4, y: 0), .init(x: -1, y: -1)]
             var path = Path(); path.addLines(points); path.closeSubpath()
-            c.fill(path, with: .color(Color(hex: "#FFE066")))
+            c.fill(path, with: .color(Spread.chalkSpark))
         case .shine:
             guard scheme == .dark, let left = fx.points.map({ $0.x * 1.44 }).min(), let right = fx.points.map({ $0.x * 1.44 }).max() else { return }
             let p = ChalkTiming.phase(elapsed, duration: 6.5)
@@ -63,7 +63,7 @@ struct ChalkEffects: View {
             let travel = ChalkTiming.sample(p, [(0, 0), (0.55, 0), (1, right - left + 40)])
             let start = left - 20 + travel, skew = tan(-22 * Double.pi / 180) * 100
             var glint = Path(); glint.addLines([.init(x: start, y: 0), .init(x: start + 14, y: 0), .init(x: start + 14 + skew, y: 100), .init(x: start + skew, y: 100)]); glint.closeSubpath()
-            c.fill(glint, with: .color(.white))
+            c.fill(glint, with: .color(Spread.highlight))
         case .glow:
             let p = ChalkTiming.phase(elapsed, duration: 2.4)
             let radius = fx.r * ChalkTiming.sample(p, [(0, 0.85), (0.5, 1.1), (1, 0.85)])
@@ -75,7 +75,7 @@ struct ChalkEffects: View {
             let travel = (fx.h - 6) * ChalkTiming.ease(p)
             var c = context; c.opacity = ChalkTiming.sample(p, [(0, 0), (0.2, 0.9), (0.8, 0.9), (1, 0)])
             var path = Path(); path.move(to: CGPoint(x: x, y: y + travel)); path.addLine(to: CGPoint(x: x, y: y + travel + 6))
-            c.stroke(path, with: .color(.white), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+            c.stroke(path, with: .color(Spread.highlight), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
         case .speed:
             for index in 0..<3 {
                 let p = ChalkTiming.phase(elapsed, duration: 1.4, delay: -Double(index) * 0.25)

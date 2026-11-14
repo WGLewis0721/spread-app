@@ -15,8 +15,8 @@ struct SpreadToday: Decodable {
 /// Reads today's counters from the shared App Group. Anything from an earlier day is ignored.
 enum SpreadTodayStore {
     static func load() -> SpreadToday? {
-        guard let data = UserDefaults(suiteName: "group.com.graymatter.spread")?
-            .data(forKey: "spread.widget.today.v1"),
+        guard let data = UserDefaults(suiteName: SpreadWidgetShared.appGroup)?
+            .data(forKey: SpreadWidgetShared.todayKey),
               let value = try? JSONDecoder().decode(SpreadToday.self, from: data),
               value.day == dayKey(Date()) else { return nil }
         return value
@@ -98,7 +98,7 @@ private struct SpreadTodayView: View {
                 } else {
                     VStack(alignment: .leading) {
                         Text("Spread").font(.headline)
-                        Text("Enable widget in More").font(.caption)
+                        Text("Show Today in More").font(.caption)
                     }
                 }
             } else {
@@ -143,7 +143,7 @@ private struct SpreadTodayView: View {
             } else {
                 Text("Open Spread")
                     .font(.subheadline.weight(.semibold))
-                Text("Enable Today's widget in More.")
+                Text("Show Today on widgets in More.")
                     .font(.caption)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -155,7 +155,7 @@ private struct SpreadTodayView: View {
 }
 
 struct SpreadTodayWidget: Widget {
-    let kind = "SpreadToday"
+    let kind = SpreadWidgetShared.todayKind
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: SpreadTodayProvider()) { entry in
             SpreadTodayView(entry: entry)
