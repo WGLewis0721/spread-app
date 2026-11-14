@@ -160,9 +160,9 @@ struct FocusedQuickAdd: View {
         }
         .confirmationDialog("Schedule this task?", isPresented: $wantsHours, titleVisibility: .visible) {
             Button("Add 30 minutes to this day") { Task { await allocateAndSchedule() } }
-            Button("Keep in To Place", role: .cancel) { pendingTaskId = nil }
+            Button("Keep in To place", role: .cancel) { pendingTaskId = nil }
         } message: {
-            Text("No time has been allocated to this responsibility on the selected day. The task has been saved to To Place.")
+            Text("No time has been allocated to this responsibility on the selected day. The task has been saved to To place.")
         }
     }
 

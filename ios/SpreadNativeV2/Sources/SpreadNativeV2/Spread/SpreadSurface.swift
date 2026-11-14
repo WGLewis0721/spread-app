@@ -298,7 +298,7 @@ struct SpreadSurface: View {
             HStack(spacing: 12) {
                 SpreadIcon(name: "icon-new-life", size: 32, original: true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("New Spread").font(.system(.body, weight: .semibold))
+                    Text("Add responsibility").font(.system(.body, weight: .semibold))
                     Text("Make your own responsibilities.").font(Spread.footnote).foregroundStyle(Spread.secondary)
                 }
                 Spacer(minLength: 0)

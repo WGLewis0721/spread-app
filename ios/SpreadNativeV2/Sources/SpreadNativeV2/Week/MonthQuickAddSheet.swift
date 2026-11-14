@@ -41,7 +41,7 @@ struct MonthQuickAddSheet: View {
                     .frame(minHeight: 48)
                     .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 12))
                     .accessibilityIdentifier("month-quick-add-title")
-                Text("If there are no allocated hours for this responsibility that day, the task is saved to that week's To Place.")
+                Text("If there are no allocated hours for this responsibility that day, the task is saved to that week's To place.")
                     .font(Spread.caption)
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
