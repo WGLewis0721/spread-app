@@ -14,9 +14,10 @@
 | [REFERENCES.md](REFERENCES.md) and [references.json](references.json) | Sources, with `inspected` set only for sources actually opened |
 | [corrections.json](corrections.json) and [corrections/](corrections/) | Open corrections, one record each |
 | [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | The Gray Matter release template, filled for Spread. Verdict NO-GO |
+| [TOKEN_AUDIT.md](TOKEN_AUDIT.md) | Wave-2 token audit from the design-system lane (PR #211) |
 | `evidence/landing/before/`, `after/` | Playwright captures of the landing page, with `report-*.json` |
 
-This folder also indexes `TOKEN_AUDIT.md`, which the design-system lane (lane A, PR #211) adds. It is not on this branch yet, so it is named here without a link.
+This folder is the index for the finalize documents and for [TOKEN_AUDIT.md](TOKEN_AUDIT.md), the wave-2 token audit from the design-system lane (PR #211).
 
 ## Gray Matter gate to Spread home
 

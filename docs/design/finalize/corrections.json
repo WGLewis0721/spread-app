@@ -10,9 +10,9 @@
         "N23",
         "N37"
       ],
-      "problem": "Life is opt-in behind a preview-named flag that defaults off, although the native board names Life as the single Wallet direction. A second Week surface (WeekFocusSurface) is reachable only through a path that cannot run, and Life and Classic remove a responsibility differently. Decided by OD18 and OD19; not yet in code.",
+      "problem": "Life was opt-in behind a preview-named flag that defaulted off. OD18 makes Life the default root, and it is on main (PR #211). A second Week surface (WeekFocusSurface) is still in the tree, reachable only through a path that cannot run; OD19 deletes it in wave 2. Life and Classic also remove a responsibility differently (undoable Details delete versus confirmation).",
       "severity": "high",
-      "decision_owner": "decided: OD18 (Life is the default root; flag key kept) and OD19 (delete dead Week Focus code in wave 2). Open until the code lands.",
+      "decision_owner": "decided: OD18 applied on main; OD19 open for wave 2",
       "spec": "docs/design/finalize/corrections/life-routing.md",
       "status": "open",
       "observed_evidence": [
@@ -54,9 +54,9 @@
         "N21",
         "N08"
       ],
-      "problem": "Creating a responsibility has three names on main: the sheet title is 'Add Life', the Classic entry says 'New Spread', and the Classic empty state says 'Create responsibility'. The words are now decided (OD7: Life areas in Life, responsibilities in Classic; 'spread' never names a role). The code has not changed yet. 'To place' also still appears with two capitalizations.",
+      "problem": "Most of the copy decisions are on main: the Classic entry, empty state and sidebar say 'Add responsibility' (OD22); the Life Details sheet is titled 'Details' (OD8). Still open: the create sheet title is 'Add Life' on the shared sheet (its title must follow the root that opened it); the Recently Deleted sheet still says 'return to To Place'; and 'To place' casing is not yet uniform.",
       "severity": "medium",
-      "decision_owner": "decided: OD7 and OD22 (Life: Life area and Add Life; Classic: responsibility and Add responsibility; always To place; empty states are heading, one sentence, action). Application open in lanes A, C, D.",
+      "decision_owner": "decided: OD7, OD8, OD22 (applied in part on main); OD12, OD13 open. Application open in lanes A, C, D.",
       "spec": "docs/design/finalize/corrections/copy-voice.md",
       "status": "open",
       "observed_evidence": [
@@ -76,9 +76,9 @@
         "P08",
         "P01"
       ],
-      "problem": "CLAUDE.md and the release plan disagreed about device scope. OD20 makes Spread 1.0 iPhone only. OD25 keeps the TestFlight invitation and adds no App Store link until the listing exists. The superseding note in APP_STORE_RELEASE_PLAN.md is not on this branch yet.",
+      "problem": "CLAUDE.md and the release plan disagreed about device scope. OD20 makes Spread 1.0 iPhone only, and the superseding note is on main. OD25 keeps the TestFlight invitation and adds no App Store link until the listing exists.",
       "severity": "high",
-      "decision_owner": "decided: OD20 (Spread 1.0 is iPhone only; supersedes the October universal line in APP_STORE_RELEASE_PLAN.md) and OD25 (no App Store link until the listing exists). The superseding note is in the owner-docs PR, not on this branch.",
+      "decision_owner": "decided: OD20 applied on main (superseding note in APP_STORE_RELEASE_PLAN.md); OD25 keeps the TestFlight invitation. Open for reviewer approval.",
       "spec": "docs/design/finalize/corrections/release-scope.md",
       "status": "open",
       "observed_evidence": [

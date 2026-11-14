@@ -56,10 +56,10 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 
 **Decided and recorded (not blocking):**
 
-- OD20: Spread 1.0 is iPhone only. The superseding note for `APP_STORE_RELEASE_PLAN.md` lives in the owner-docs PR, not on this branch.
+- OD20: Spread 1.0 is iPhone only. The superseding note is in `APP_STORE_RELEASE_PLAN.md` on main.
 - OD25: no App Store link until the listing exists. The landing page keeps the TestFlight invitation.
 - OD21: Health is teal `#30B0C7`. The landing sample is updated in this PR.
-- OD18: Life is the default root. Lane A applies it.
+- OD18: Life is the default root. Applied on main in PR #211.
 - OD7, OD8, OD22: the words "Life area", "Details", "Add Life" and "Add responsibility". Lanes A to D apply them.
 - OD23 and OD24: the gradient stays on one lit action, and Life's Details delete with Undo stays as it is.
 
@@ -67,9 +67,8 @@ Gray Matter's `templates/RELEASE_CHECKLIST.md` is mapped here. The App Store gat
 
 1. No native build. `native-typecheck` has not run on this branch, and there is no Codemagic build.
 2. No device checks. No surface is verified on a phone or tablet, and no XCUITest run record was inspected.
-3. Decided but not yet in code: OD18 and the OD7 and OD22 wording (lanes A to D), OD19 deletion of the dead Week Focus code (wave 2), OD11, OD16 and OD17 tokens and icons (wave 2), and the OD21 default in `model.ts` (wave 2).
-4. The superseding note for `APP_STORE_RELEASE_PLAN.md` (OD20) is not on this branch.
-5. No owner authorization of a specific commit and build for release.
+3. Decided but not yet in code: the rest of the OD7 and OD22 wording (lanes A to D, including the create sheet title and Recently Deleted copy), OD19 deletion of the dead Week Focus code (wave 2), OD11, OD16 and OD17 tokens and icons (wave 2), and the OD21 default in `model.ts` (wave 2).
+4. No owner authorization of a specific commit and build for release.
 
 **Unverified checks:**
 

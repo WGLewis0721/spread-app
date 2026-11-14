@@ -1,6 +1,6 @@
 # Correction: color and token drift across role colors and surfaces
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **Health is resolved** (OD21, teal `#30B0C7`); the landing sample is updated in this PR. OD23 settles the gradient. Native hardcoded values and the `model.ts` default remain open.
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **Health is resolved** (OD21, teal `#30B0C7`); the landing sample is updated in this PR. OD23 settles the gradient. On main the `model.ts` Health default is still `#007AFF` (wave 2), and the native hardcoded values remain. Both are open.
 
 | Field | Value |
 | --- | --- |

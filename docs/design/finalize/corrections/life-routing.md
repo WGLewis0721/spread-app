@@ -1,6 +1,6 @@
 # Correction: Life routing, default state and a dead Week path
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open** (decided; code not yet in place). Decision: **resolved** by OD18 and OD19 in the planning doc section 8.
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. OD18 (Life is the default root) is applied on main in PR #211. OD19 (delete the dead Week Focus code) is open for wave 2. Decisions are in section 8 of the planning doc.
 
 | Field | Value |
 | --- | --- |
@@ -10,7 +10,7 @@
 
 ## Observed
 
-1. `SpreadLiveRoot.swift:15` declares `@AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false`. Life is off by default, and the flag name still says "preview".
+1. `SpreadLiveRoot.swift:15` declares `@AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = false`. On main the default is now on (OD18). The key still says "preview", so a stored choice survives.
 2. `SpreadLiveRoot.swift:66-83`: when the flag is on, `body` shows `LifeRoot`; otherwise it shows the Classic `presented` branch.
 3. `SpreadLiveRoot.swift:332-333` builds `WeekFocusSurface` inside `content()`. `content()` is only reached from the Classic branch (line 163), where the flag is false. So the `weekFocusEnabled && destination == .week` branch cannot run. `WeekFocusSurface.swift` and `WeekFocusComponents.swift` are therefore dead code, and `LifeWeekView` is the only live Week for Life.
 4. Life removes a responsibility with Details delete and Undo, with no confirmation. Classic uses a confirmation dialog (`ManageSheets.swift:257`) and a sheet (`RoleDeleteConfirm`, `SpreadLiveRoot.swift`). The brand board (Nov 11 amendment) records Life's undoable delete as the owner's decision.

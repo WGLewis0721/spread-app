@@ -1,47 +1,42 @@
 # Correction: copy vocabulary, casing and empty-state voice
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **resolved** (OD7, OD8, OD12, OD13, OD22 in the planning doc section 8 on branch `claude/happy-feynman-an60e6`). Application: **open** in lanes A, C and D.
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **resolved** (OD7, OD8, OD12, OD13, OD22 in the planning doc section 8 on `claude/happy-feynman-an60e6`). Application: **partly applied on main**.
 
 | Field | Value |
 | --- | --- |
-| Screens | N02 Spread, N03 Week, N08 Wallet Stack, N17 quick add, N21 new responsibility |
-| Severity | Medium: the same action is named differently on each surface |
+| Screens | N02 Spread, N03 Week, N08 Wallet Stack, N17 quick add, N21 new responsibility, N26 Recently Deleted |
+| Severity | Medium: the same action is still named differently in places |
 | Decided | OD7 role words; OD8 Details title; OD12 overbooked copy; OD13 empty week; OD22 creation and empty-state voice |
-| Still open | Applying every string in code. The code on main still has the old wording. |
 
-## Observed on main
+## Applied on main
 
-- **One action, three names.** The create-responsibility sheet's navigation title is "Add Life" (`Sheets/ManageSheets.swift:58`). The Classic entry says "New Spread" (`Spread/SpreadSurface.swift:303`). The Classic empty state says "Create responsibility" (`Shell/SpreadLiveRoot.swift:465`). Life's button says "Add Life" (`Life/LifeRoot.swift:368`, `:1061`).
-- **The Details sheet** is titled "Manage Life area" (`Life/LifeManagementSheets.swift:96`). Two UI tests assert that title (`LifeUITests.swift:146`, `LifeEditorialPersonalPreviewUITests.swift:306`).
-- **Casing.** "To place" appears in the tray and its accessibility label. "To Place" appears in `Week/WeekFocusSurface.swift:421`, which is unreachable and goes in wave 2 with OD19.
-- **Empty states.** Classic: "Make room for what matters" with an action. Life: "Nothing to do here yet." (`Life/LifeWalletStack.swift:294`), with no heading and no action.
+- **Classic creation.** The Classic entry, the empty state and the sidebar all say "Add responsibility" (OD22; `Spread/SpreadSurface.swift:306`, `Shell/SpreadLiveRoot.swift:466`, `Spread/ResponsibilitySidebar.swift:76`).
+- **Life creation.** Life's button says "Add Life" (`Life/LifeRoot.swift:368`, `:1061`), as OD22 sets.
+- **Details.** The Life card's sheet is titled "Details" (OD8). The UI tests that asserted "Manage Life area" now assert "Details".
 
-## Decided by the planning doc (section 8)
+## Still open
 
-- **OD7.** Life uses "Life area". Classic uses "responsibility". "Spread" never names a role.
-- **OD8.** The focused card's Details button opens a sheet titled "Details". The two UI tests that assert "Manage Life area" change with it (lane B).
-- **OD12.** Overbooked warning: "These hours don't fit in your week. Remove some or raise your weekly hours." (lane C)
-- **OD13.** Empty week: when "Nothing planned this week" shows, the day cards do not repeat "Nothing planned" (lane C).
-- **OD22.** Life's creation action is "Add Life". Classic's is "Add responsibility", replacing "New Spread" and "Create responsibility". Always "To place". Empty states are a short heading, one plain sentence, then the action. Shell empty plan (lane A); Spread and sidebar (lane C); sheet title (lane D).
+- **Create sheet title.** `Sheets/ManageSheets.swift:58` titles the shared create sheet "Add Life", and Classic reaches the same sheet. The title has to follow the root that opened it: "Add Life" from Life, "Add responsibility" from Classic (lane D).
+- **Recently Deleted copy.** `Sheets/RecentlyDeletedSheet.swift:21` says "return to To Place". It should read "To place" (lane D).
+- **Casing.** "To place" is the board's form. Any other capitalization in user-visible text must follow it (lanes C and D).
+- **Empty states.** OD22 asks for a short heading, one plain sentence, then the action. Life's "Nothing to do here yet." (`Life/LifeWalletStack.swift`) has no heading and no action (lane B).
 
 ## Expected
 
 Life: "Add Life", "Life area", "Details". Classic: "Add responsibility", "responsibility". "To place" everywhere. Empty states follow OD22. The landing copy is unchanged by this record.
 
-## Affected files (applied by lanes A, C, D, B)
+## Affected files
 
-- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift` (lane D: sheet title)
-- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift`, `ResponsibilitySidebar.swift` (lane C)
-- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift` (lane A: empty plan)
-- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeRoot.swift`, `LifeManagementSheets.swift`, `LifeWalletStack.swift` (lane B)
-- `ios/App/SpreadNativeUITests/LifeUITests.swift`, `LifeEditorialPersonalPreviewUITests.swift` (lane B, OD8)
+- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift`, `RecentlyDeletedSheet.swift` (lane D)
+- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/` and `Spread/` (lane C)
+- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift` (lane A)
+- `ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/` (lane B)
 
 ## Safe corrective plan
 
-1. Each lane applies its own strings in one PR and lists them.
-2. Use the OD22 wording exactly: "Add Life" in Life, "Add responsibility" in Classic.
-3. Empty states follow the OD22 shape. Life's "Nothing to do here yet." becomes a heading, one sentence and the action.
-4. Grep for stale strings in the lane PR: "New Spread", "Create responsibility", "Manage Life area", "To Place".
+1. Each lane fixes its own strings in one PR and lists them.
+2. Keep the OD22 wording exactly.
+3. Grep for stale strings in each PR: "New Spread", "Create responsibility", "Manage Life area", "To Place" in user-visible text.
 
 ## Before and after evidence
 
@@ -49,10 +44,10 @@ Not available for native copy: no device run. The landing copy is unchanged.
 
 ## Regression scenarios
 
-- Creating a responsibility from each entry point shows the same title for that root.
-- The Details sheet title is "Details", and the two UI tests pass with it.
+- Creating a responsibility from Classic shows "Add responsibility"; from Life it shows "Add Life".
+- The Details sheet title is "Details", and the UI tests pass with it.
+- Restoring a deleted task says "return to To place".
 - VoiceOver reads the same label as the visible text.
-- The grep in step 4 finds no stale string.
 
 ## Reviewer approval
 

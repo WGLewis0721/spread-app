@@ -1,6 +1,6 @@
 # Correction: release scope, device families and the App Store link
 
-> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open** until the superseding note is on main. Decision: **resolved** by OD20 (iPhone only) and OD25 (no App Store link until the listing exists).
+> Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open** for reviewer approval. OD20 is applied on main: the superseding note is in `APP_STORE_RELEASE_PLAN.md`. OD25 keeps the landing copy as it is. Decision: **resolved** by OD20 (iPhone only) and OD25 (no App Store link until the listing exists).
 
 | Field | Value |
 | --- | --- |
