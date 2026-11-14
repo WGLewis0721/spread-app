@@ -6,6 +6,8 @@ import SwiftUI
 struct RecentlyDeletedSheet: View {
     @ObservedObject var planner: LivePlanner
     @Environment(\.dismiss) private var dismiss
+    /// The root's flag (OD7): Life says "Life area", Classic says "responsibility".
+    @AppStorage("native.weekMonth.previewEnabled") private var lifeMode = true
     @State private var rows: [NativeDeletedTask] = []
     @State private var selected: Set<String> = []
     @State private var selecting = false
@@ -18,7 +20,7 @@ struct RecentlyDeletedSheet: View {
         SpreadSheetStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Tasks can be recovered for 30 days. Restored tasks return to To Place in their original responsibility and week.")
+                    Text("Tasks can be recovered for 30 days. Restored tasks return to To place in their original \(lifeMode ? "Life area" : "responsibility") and week.")
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if !loaded {
@@ -119,7 +121,7 @@ struct RecentlyDeletedSheet: View {
     }
 
     private func rowView(_ row: NativeDeletedTask) -> some View {
-        let roleName = planner.snapshot?.roles.first(where: { $0.id == row.hatId })?.name ?? "Removed responsibility"
+        let roleName = planner.snapshot?.roles.first(where: { $0.id == row.hatId })?.name ?? (lifeMode ? "Removed Life area" : "Removed responsibility")
         let date = Date(timeIntervalSince1970: row.deletedAt / 1000)
         let remain = max(0, Int(ceil(date.addingTimeInterval(30 * 86400).timeIntervalSinceNow / 86400)))
         return HStack(spacing: 10) {

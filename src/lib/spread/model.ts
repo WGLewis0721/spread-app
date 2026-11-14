@@ -114,7 +114,7 @@ export const ROLE_COLORS = [
 const DEFAULT_SPREADS: { id: SpreadCategory; name: string; hours: number; color: string }[] = [
   { id: "work", name: "Work", hours: 8, color: "#34C759" },
   { id: "home", name: "Home", hours: 4, color: "#FF9500" },
-  { id: "health", name: "Health", hours: 3, color: "#007AFF" },
+  { id: "health", name: "Health", hours: 3, color: "#30B0C7" },
 ];
 
 export function uid() {

@@ -254,7 +254,8 @@ struct TaskSheet: View {
               let allocation = planner.snapshot?.allocations.first(where: { $0.id == allocationId }) else {
             return "Not placed on a day"
         }
-        return PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE, MMM d") + " · " + SpreadHours.text(allocation.hours) + "h for this responsibility"
+        let scope = lifeMode ? "Life area" : "responsibility"
+        return PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE, MMM d") + " · " + SpreadHours.text(allocation.hours) + "h for this " + scope
     }
 
     // MARK: Loading and saving
