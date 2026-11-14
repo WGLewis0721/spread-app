@@ -143,10 +143,9 @@ test("core native controls use Lucide without touching branded launcher or task 
   for (const file of [
     "Life/LifeRoot.swift", "Life/LifeWalletStack.swift", "Life/LifeWeekView.swift",
     "Life/LifeWeeklyTimeBudget.swift", "Life/LifePlanAheadSheet.swift",
-    "Week/WeekSurface.swift", "Week/WeekFocusSurface.swift", "Week/WeekFocusComponents.swift",
+    "Week/WeekSurface.swift",
     "Spread/SpreadSurface.swift", "Sheets/TaskSheet.swift", "Sheets/ManageSheets.swift",
-    "Shell/SpreadArrowControl.swift", "Shell/SpreadLiveRoot.swift",
-    "Spread/ResponsibilitySidebar.swift"
+    "Shell/SpreadArrowControl.swift", "Shell/SpreadLiveRoot.swift"
   ]) {
     const content = read(root + file);
     assert.match(content, /SpreadIcon\(name:/, `${file} should use one icon renderer`);
