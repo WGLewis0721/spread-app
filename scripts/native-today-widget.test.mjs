@@ -409,3 +409,41 @@ test("widget Life art, branding and vertical paging are compiled as extension re
   assert.match(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift"), /private func page\(_ delta: Int\)/);
   assert.match(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift"), /pageDots/);
 });
+
+
+test("widget actions use shared opt-ins rather than the extension's private defaults", () => {
+  const prefs = focusSession.slice(focusSession.indexOf("enum SpreadFocusPreferences"), focusSession.indexOf("enum SpreadFocusStore"));
+  assert.match(prefs, /static func publishFromApp\(_ app: UserDefaults = \.standard,/);
+  assert.match(prefs, /to shared: UserDefaults = SpreadFocusStore\.shared/);
+  assert.match(focusTimer, /SpreadFocusPreferences\.publishFromApp\(\)/);
+  assert.match(moreSheet, /onChange\(of: todayWidgetsEnabled\)[\s\S]{0,120}SpreadFocusPreferences\.publishFromApp\(\)/);
+  for (const option of ["showLiveTimer", "notifyWhenDone", "showNameOutsideApp"]) {
+    assert.match(focusSheet, new RegExp("onChange\\(of: " + option + "\\)[\\s\\S]{0,140}SpreadFocusPreferences\\.publishFromApp\\(\\)"));
+  }
+  assert.match(focusPublisher, /guard SpreadFocusPreferences\.widgetsEnabled\(\)/);
+  assert.match(focusController, /guard SpreadFocusPreferences\.liveActivityEnabled\(\)/);
+  assert.match(focusControls, /SpreadFocusPreferences\.notifyWhenDone\(\)/);
+  assert.doesNotMatch(focusPublisher, /UserDefaults\.standard\.bool/);
+  assert.doesNotMatch(focusController, /UserDefaults\.standard\.bool/);
+  assert.doesNotMatch(focusControls, /UserDefaults\.standard\.bool/);
+});
+
+test("stale widget and island buttons cannot mutate a replacement focus session", () => {
+  for (const name of [
+    "PauseSpreadFocusIntent", "ResumeSpreadFocusIntent",
+    "ForwardSpreadFocusIntent", "StopSpreadFocusIntent", "CancelSpreadFocusIntent",
+  ]) {
+    const start = focusControls.indexOf("struct " + name + ": LiveActivityIntent");
+    assert.ok(start >= 0, name);
+    const end = focusControls.indexOf("\nstruct ", start + 1);
+    const body = focusControls.slice(start, end < 0 ? undefined : end);
+    assert.match(body, /@Parameter\(title: "Session"\)\s*var sessionId: String/);
+    assert.match(body, /init\(sessionId: String\) \{ self\.sessionId = sessionId \}/);
+    assert.match(body, /(?:session|current)\.id == sessionId/);
+    assert.match(timerWidgetSource, new RegExp(name + "\\(sessionId: sessionId\\)"));
+  }
+  assert.match(timerWidgetSource, /SpreadFocusControlButton\(control: kind, sessionId: state\.sessionId,/);
+  assert.match(source, /SpreadFocusControlButton\(control: kind, sessionId: sessionId,/);
+  assert.match(source, /sessionId: context\.attributes\.sessionId/);
+  assert.match(timerWidgetSource, /SetSpreadFocusPlayingIntent\(sessionId: state\.sessionId\)/);
+});
