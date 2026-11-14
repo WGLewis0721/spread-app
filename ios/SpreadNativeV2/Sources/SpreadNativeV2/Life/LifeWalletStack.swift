@@ -291,7 +291,19 @@ struct LifeTaskRows: View {
     var body: some View {
         VStack(spacing: 0) {
             if tasks.isEmpty {
-                Text("Nothing to do here yet.").font(.subheadline).foregroundStyle(LifePalette.secondary).padding(.vertical, 16)
+                // Designed empty state: an icon, a plain heading and one line of guidance. Spoken as one element.
+                VStack(spacing: 6) {
+                    SpreadIcon(name: "lucide-list-todo", size: 28)
+                    Text(day == nil ? "No tasks yet" : "Nothing scheduled")
+                        .font(.headline).foregroundStyle(LifePalette.ink)
+                    Text(day == nil ? "Add a task below to start planning this Life area." : "Add a task to plan this day.")
+                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .foregroundStyle(LifePalette.secondary)
+                .accessibilityElement(children: .combine)
             }
             ForEach(tasks) { task in
                 HStack(spacing: 0) {
@@ -359,6 +371,9 @@ struct LifeTaskRows: View {
                     .disabled(planner.busy || pendingTasks.contains(task.id))
                     .accessibilityLabel((task.important == true
                         ? "Remove high priority from " : "Mark high priority: ") + task.text)
+                    // Priority is shown by the red flag and the "High priority" label, and spoken as a state.
+                    .accessibilityValue(task.important == true ? "High priority" : "Not high priority")
+                    .accessibilityAddTraits(task.important == true ? .isSelected : [])
                     .accessibilityIdentifier("life-task-priority-" + task.id)
                     if day != nil {
                         SpreadIcon(name: "icon-drag", size: 18)
@@ -431,6 +446,7 @@ struct LifeQuickAdd: View {
                     Button("Cancel") {
                         withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
                         title = ""
+                        focused = false
                     }.disabled(saving)
                 }.frame(minHeight: 44)
             } else {
