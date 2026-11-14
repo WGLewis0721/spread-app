@@ -31,13 +31,13 @@ Both are Life-lane files, outside W3's ownership, so they are exceptions (sectio
 - Routing: `Shell/SpreadLiveRoot.swift:63-83` (Life or Classic), `:16` (the flag and its default).
 - Classic Week and Month: `Week/WeekSurface.swift`, `Week/MonthSurface.swift`, `Week/ToPlaceTray.swift`.
 - Shared navigator: `Shell/WeekCrownView.swift` and `Shell/SpreadArrowControl.swift`. Both are also used by Life (`Life/LifeRoot.swift:462, 549, 819`), so fixes there reach the owner's screen.
-- Dead code: `Week/OverdueSelectionTray.swift` and `Week/MonthQuickAddSheet.swift` have no caller. The finalize plan (OD26) keeps them and records a parity gap in [../finalize/corrections/README.md](../finalize/corrections/README.md).
+- Dead code, as of this branch's base: `Week/OverdueSelectionTray.swift` and `Week/MonthQuickAddSheet.swift` had no caller. On `main` since then, #227 wired the overdue tray into Life as an Overdue capsule and sheet, and deleted `MonthQuickAddSheet.swift` (quick add is covered in Life). The gap record is [../finalize/corrections/README.md](../finalize/corrections/README.md).
 - Haptics: `Planner/LivePlanner.swift:448` defaults `completionHaptic` to false. Only a task that becomes done passes true, in Classic Spread's `toggleTask` (`Spread/SpreadSurface.swift:768`). Owner decision OD2 is met.
 
 ## 3. Goals, non-goals and budget
 
 - **Goals:** a verified audit of W3 surfaces and states; the four fixes below; a clear handoff of Life defects to the Life lane.
-- **Non-goals:** editing `Life/`, `Theme/` or `Sheets/`; deleting the two dead files (OD26); new colours, fonts or tokens; any change to store actions, data or schema; iCloud claims; merge, release or TestFlight.
+- **Non-goals:** editing `Life/`, `Theme/` or `Sheets/`; reviving or deleting the overdue and quick-add files (now decided on main by #227); new colours, fonts or tokens; any change to store actions, data or schema; iCloud claims; merge, release or TestFlight.
 
 ## 4. Rules that apply and exceptions needed
 
@@ -45,9 +45,9 @@ Rules: [../RULES_CARD.md](../RULES_CARD.md) (44 pt touch targets, status never b
 
 **Exceptions needed (for the owner or the Life lane to decide):**
 
-- **E1. Life week defects (screenshot items 1a and 1b).** Owner: Life lane (B). Proposed fix: in `LifeWeekView` expanded mode, draw only as many rows as the month needs (`ceil((lead + days) / 7)`), and give the Life scroll area a bottom inset or an edge fade so the header clears the dock. Not changed here.
+- **E1. Life week defects (screenshot items 1a and 1b).** Owner: lane W8 (Life week), started 2026-11-14 by the orchestrator. Proposed fix: in `LifeWeekView` expanded mode, draw only as many rows as the month needs (`ceil((lead + days) / 7)`), and give the Life scroll area a bottom inset or an edge fade so the header clears the dock. Not changed in this PR.
 - **E2. Shared navigator.** `SpreadArrowValueControl` and `WeekCrownView` are used by Life. This PR changes the value text at accessibility sizes, so Life's navigator changes too (intended; section 6).
-- **E3. Dead Week code kept.** `OverdueSelectionTray` and `MonthQuickAddSheet` stay, per OD26. Owner decides whether Life gets an equivalent or they are deleted.
+- **E3. Overdue and quick-add parity (resolved on main).** #227 added the Life overdue capsule and sheet and removed `MonthQuickAddSheet.swift`. This PR does not touch either file. Owner confirms the Life behavior on device.
 - **E4. Task completion has no control on Week rows.** Completion happens in `TaskSheet` (`Sheets/`, not W3). `TaskLine` shows strikethrough only. The haptic policy is correct; the missing row control is a product decision for the owner.
 
 ## 5. Options and the chosen concept
@@ -124,6 +124,6 @@ Draft pull request. Not merged, not released, not uploaded to TestFlight. Rollba
 
 ## 11. Decision record
 
-- Recorded in this spec: the routing finding (Life is the default root), E1 to E4, and the kept dead code (OD26).
+- Recorded in this spec: the routing finding (Life is the default root), E1 to E4, and the overdue and quick-add status on main (#227).
 - Not run: Swift compile here (none available), simulator, VoiceOver, Dynamic Type rendering and hold-to-accelerate timing.
 - Owed on a physical iPhone and iPad, with light and dark, Reduce Motion, and widths 390, 820, 1024 and 1366: the Life week month band and header overlap (E1), the navigator at accessibility sizes, the hold timing, VoiceOver reading of the day and task labels, and landscape on iPad.
