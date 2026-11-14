@@ -124,3 +124,17 @@ The owner delegated these decisions to Claude Code on 2026-11-14 ("you are the o
 | OD23 | `Spread.accentGradient` stays for the one lit primary action on a surface (Done, Add, the selected segment). Content surfaces stay solid. No change. | Brand board (solid content; one lit control in the dock) | None |
 | OD24 | Removing a role: Life keeps Details delete with Undo (owner decision, 11 Nov). Classic keeps its confirmation. No change. | Rules card ("Classic retains its own rules") | None |
 | OD25 | No App Store link until the listing exists. The landing page keeps the TestFlight invitation and claims only what has passed QA. | `APP_STORE_RELEASE_PLAN.md` release sequence | E (no change) |
+| OD26 | OD19, refined: delete only the dead composition (`WeekFocusSurface`, `WeekFocusComponents`, `ResponsibilitySidebar`, and the two dead branches in Classic's `content()`). `OverdueSelectionTray` (bulk overdue reschedule) and `MonthQuickAddSheet` (month quick add) are reachable only through that dead code. Delete each one only if Life already offers the same capability; otherwise keep it and record a parity gap for wave 3, so a feature people expect is never silently lost. | Foundational UX (familiar functionality); Gray Matter contract (no silent removal) | W2-1 |
+| OD27 | The heavy-week line, shown when the week exceeds 45 hours but is not over budget, reads: "That's a full week. Check that the hours still fit." | Plain, true copy | Done in #212 |
+
+## 9. Wave 2 (started 2026-11-14)
+
+Wave 1 merged as #209, #211, #212, #213, #214 and #215; CI on `main` is green. Wave 2 runs five Haiku sessions at xhigh effort, each owning separate files.
+
+| Lane | Owns | Closes |
+| --- | --- | --- |
+| W2-1 Dead code | `Week/`, `Spread/ResponsibilitySidebar.swift`, the dead branches of `content()`, `PlannerUITests.swift` | OD19/OD26; the stale calendar-design UI test |
+| W2-2 Icons | New Lucide imagesets, `ICON_HANDOFF.md`, `icon-system.test.mjs`, Life Plan Ahead, Hours, recurring form, and the Life rest icon line | OD11 |
+| W2-3 Tokens and Life | `SpreadTheme.swift`, the UI kit tokens section, `TOKEN_AUDIT.md`, the other Life files | OD1 in Life, OD16, OD17, art tokens, exact token adoption |
+| W2-4 Health and copy | `model.ts` defaults, `Sheets/`, string-pinning UI tests (not `PlannerUITests`) | OD21 default, OD22 create-sheet title, "To place" |
+| W2-5 Review and device script | `finalize/` docs only | Cross-surface review, iPhone device test script, release checklist |
