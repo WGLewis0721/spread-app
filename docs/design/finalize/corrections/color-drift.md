@@ -1,5 +1,7 @@
 # Correction: color and token drift across role colors and surfaces
 
+> Summary: Wave 3 lane D landed X12. The Life cards widget reads one named set of ink, secondary and canvas values from `SpreadWidgetShared.swift`, which the widget target compiles, so it no longer repeats the hex literals. Lane D's sheet and focus files also use 100 exact-value spacing and touch-target tokens. Native colour literals in lanes A to C and the widget's opacity overlays remain. The record stays open until a reviewer approves it.
+
 > Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **Health is resolved** (OD21, teal `#30B0C7`). The landing sample is updated, and the `model.ts` Health default was closed by PR #218 (2026-11-14). The native category colour already matched. OD23 settles the gradient. The native hardcoded values and the widget literals remain open.
 
 | Field | Value |
@@ -53,6 +55,14 @@ Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), finding X12 an
 - **Widget literals (X12, low, decided by OD33: widget colours read the shared tokens, wave 3).** `ios/App/SpreadWidget/SpreadLifeCardsWidget.swift:141-185` hard-codes `F7FAFF`, `B0BCD1`, `0E1A2E`, `4A5670` and `F4F1EA`. The first two duplicate the ink and secondary tokens. Fix: read tokens through a shared widget file or a widget colour set (lane D with lane A).
 - **Health default (C4, closed).** `src/lib/spread/model.ts:117` is `#30B0C7` after PR #218 (2026-11-14). The native category colour (`Spread/SpreadSurface.swift:694`) already matched.
 - **Native hardcoding, re-counted.** Outside `Theme/`, grep on 2026-11-14 finds 41 `Color(hex:)` or `Color(red:)` calls and 11 `.font(.system(size:))` calls. The earlier figures above came from an earlier pass. Lane W2-3 adopts tokens.
+
+## Applied in wave 3 (lane D, W3-5)
+
+- **X12, widget literals: done.** `Widget/SpreadWidgetShared.swift` now holds one named set, `SpreadWidgetTokens`, with the ink, secondary and canvas values for light and dark. It is in the file the widget target already compiles, and the widget target cannot compile `Theme/`, so the set mirrors `SpreadTheme`. `SpreadLifeCardsWidget.swift` reads it. The values are unchanged. `scripts/native-today-widget.test.mjs` checks that the widget set and `Theme/SpreadTheme.swift` hold the same values.
+- **Native literals in lane D's files: spacing and touch targets.** 100 exact-value literals in `Sheets/` (except `BackupRestoreSheet.swift`) and `Focus/SpreadFocusTimerSheet.swift` now use `Spread` tokens. Each token has the same value, so nothing moves on screen. Snap and Decide rows are unchanged (`TOKEN_AUDIT.md`, section 7). No colour changed in these files; role colours stay as data.
+- **Left in the widget.** The white and black opacity overlays and the `Color(red:)` panel tone in `SpreadLifeCardsWidget.swift` have no shared token yet. `TOKEN_AUDIT.md` lists them as blocked.
+
+Still open: native colour literals in lanes A to C, the Decide and Snap rows, and the widget overlays above. Reviewer approval is needed to close this record.
 
 ## Reviewer approval
 

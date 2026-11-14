@@ -1,5 +1,7 @@
 # Correction: copy vocabulary, casing and empty-state voice
 
+> Summary: Wave 3 lane D landed X8 (Open tasks says "Cancel") and X10 (the timer widget says "Cancel session", icon only). X11 needed no change: both title-only empties already had one sentence at base `6f53a60`, so that review finding was wrong. X3's sheet side was already correct. X3's Classic delete (lane C) and X5 stay open. The record stays open until a reviewer approves it.
+
 > Part of the Spread design brain. Start at [../../README.md](../../README.md). Register: [../corrections.json](../corrections.json). Status: **open**. Decision: **resolved** (OD7, OD8, OD12, OD13, OD22 in the planning doc section 8 on `claude/happy-feynman-an60e6`). Application: **partly applied on main**.
 
 | Field | Value |
@@ -61,6 +63,15 @@ Source: [../CROSS_SURFACE_REVIEW.md](../CROSS_SURFACE_REVIEW.md), findings X3, X
 - **X9, closed by PR #218.** The Recently Deleted copy now reads "To place" (`Sheets/RecentlyDeletedSheet.swift:23`).
 
 Regression scenarios added: each destructive act on a responsibility uses one verb in every place it appears, and the Over-capacity state reads the same word in both roots.
+
+## Applied in wave 3 (lane D, W3-5)
+
+- **X8, Open tasks dismissal: done.** The leading dismiss reads "Cancel" (`Sheets/ManageSheets.swift`, the Open tasks toolbar). "Move" is unchanged. `scripts/native-menu-polish.test.mjs` pins Cancel and checks that "Not now" is gone.
+- **X10, timer widget: done.** The control reads "Cancel session" (`ios/App/SpreadWidget/SpreadTimerWidget.swift`). It stays icon only at every widget size, as it was, so the title is the VoiceOver label and no text needs to fit. The Focus sheet already says "Cancel session". `scripts/native-today-widget.test.mjs` pins the title and the icon-only control.
+- **X11, empty lists: no change needed. The review finding was wrong.** At base `6f53a60` both empty states already had one plain sentence: "Future updates will appear here." (`Sheets/WhatsNewSheet.swift:41`) and "Tasks you delete will appear here for 30 days." (`Sheets/RecentlyDeletedSheet.swift:40`). Neither has an action, so none was added. The review's `CROSS_SURFACE_REVIEW.md` row is corrected to match.
+- **X3, ManageSheets side: already correct on main.** Life says "Remove Life area" and Classic says "Remove responsibility" (`Sheets/ManageSheets.swift:241, 268`). `Spread/SpreadSurface.swift` still says "Delete responsibility". That is lane C's file, so X3 stays open.
+
+Still open: X3's Classic delete (lane C), and X5 "overbooked" and "over budget" (lanes B and C). Reviewer approval is needed to close this record.
 
 ## Reviewer approval
 

@@ -60,18 +60,18 @@ Rows are in file order. The code excerpt is trimmed to about 110 characters.
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
 | 43 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 64 | Spacing | `.padding(.vertical, 4)` | Spread.space1 | Replace |
-| 84 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 89 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 103 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 111 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 121 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 130 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 140 | Spacing | `.padding(.vertical, 4)` | Spread.space1 | Replace |
-| 163 | Spacing | `.padding(.vertical, 16)` | Spread.space4 | Replace |
-| 213 | Spacing | `.padding(.vertical, 12)` | Spread.space3 | Replace |
-| 256 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 343 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 64 | Spacing | `.padding(.vertical, 4)` | Spread.space1 | Done (W3-5) |
+| 84 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
+| 89 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 103 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 111 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 121 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 130 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 140 | Spacing | `.padding(.vertical, 4)` | Spread.space1 | Done (W3-5) |
+| 163 | Spacing | `.padding(.vertical, 16)` | Spread.space4 | Done (W3-5) |
+| 213 | Spacing | `.padding(.vertical, 12)` | Spread.space3 | Done (W3-5) |
+| 256 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 343 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 
 ### Life/LifeEditorialCard.swift (21 rows: Done 10, Snap 7, Decide 3, Allowed 1)
 
@@ -415,64 +415,64 @@ Re-audited in wave 2 (W2-3) from origin/main `6f53a60`; line numbers are that co
 |---:|---|---|---|---|
 | 26 | Spacing | `spacing: 14` | Spread.space4 (+2 pt) or keep off-grid | Snap |
 | 36 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 41 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 56 | Spacing | `.padding(20)` | Spread.space5 | Replace |
+| 41 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 56 | Spacing | `.padding(20)` | Spread.space5 | Done (W3-5) |
 | 75 | Colour | `Color(hex: colorHex)` | role or artwork data (stored colour) | Allowed |
-| 76 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 77 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 79 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 83 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
-| 83 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 76 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
+| 77 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
+| 79 | Spacing | `spacing: 4` | Spread.space1 | Done (W3-5) |
+| 83 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done (W3-5) |
+| 83 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 | 84 | Radius | `cornerRadius: 12` | no radius token for 12 (snap to 16 or 24, or add one) | Decide |
 | 85 | Radius | `cornerRadius: 12` | no radius token for 12 (snap to 16 or 24, or add one) | Decide |
-| 99 | Spacing | `spacing: 4` | Spread.space1 | Replace |
+| 99 | Spacing | `spacing: 4` | Spread.space1 | Done (W3-5) |
 | 99 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 104 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 105 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 105 | Radius | `cornerRadius: 14` | Spread.radiusControl | Replace |
+| 104 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 105 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 105 | Radius | `cornerRadius: 14` | Spread.radiusControl | Done (W3-5) |
 | 114 | Spacing | `.padding(14)` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 299 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 308 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 330 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 369 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 378 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 299 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
+| 308 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 330 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 369 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
+| 378 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 | 387 | Spacing | `.padding(.vertical, 10)` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 389 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 389 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 | 411 | Spacing | `.padding(.vertical, 10)` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 413 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 418 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Replace |
+| 413 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 418 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 | 525 | Spacing | `spacing: 5` | Spread.space1 (-1 pt) or keep off-grid | Snap |
 | 539 | Spacing | `.padding(.horizontal, 5)` | Spread.space1 (-1 pt) or keep off-grid | Snap |
 | 558 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 567 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 570 | Spacing | `spacing: 12` | Spread.space3 | Replace |
+| 567 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
+| 570 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
 | 571 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 579 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 590 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 579 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 590 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 | 604 | Spacing | `.padding(6)` | Spread.space2 (+2 pt) or keep off-grid | Snap |
 | 610 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 616 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
-| 625 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
+| 616 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done (W3-5) |
+| 625 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done (W3-5) |
 | 632 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 636 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
-| 645 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
+| 636 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done (W3-5) |
+| 645 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done (W3-5) |
 | 653 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
 | 655 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 667 | Touch target | `.frame(minWidth: 64, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 674 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
+| 667 | Touch target | `.frame(minWidth: 64, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 674 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done (W3-5) |
 | 679 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 681 | Spacing | `spacing: 8` | Spread.space2 | Replace |
+| 681 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
 | 696 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 698 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 707 | Spacing | `.padding(.horizontal, 8)` | Spread.space2 | Replace |
-| 718 | Spacing | `.padding(.horizontal, 8)` | Spread.space2 | Replace |
+| 698 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
+| 707 | Spacing | `.padding(.horizontal, 8)` | Spread.space2 | Done (W3-5) |
+| 718 | Spacing | `.padding(.horizontal, 8)` | Spread.space2 | Done (W3-5) |
 | 725 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 730 | Spacing | `spacing: 12` | Spread.space3 | Replace |
+| 730 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
 | 736 | Spacing | `spacing: 3` | Spread.space1 (+1 pt) or keep off-grid | Snap |
 | 757 | Spacing | `.padding(.horizontal, 14)` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 770 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Replace |
-| 771 | Spacing | `.padding(.top, 8)` | Spread.space2 | Replace |
-| 772 | Spacing | `.padding(.bottom, 16)` | Spread.space4 | Replace |
+| 770 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Done (W3-5) |
+| 771 | Spacing | `.padding(.top, 8)` | Spread.space2 | Done (W3-5) |
+| 772 | Spacing | `.padding(.bottom, 16)` | Spread.space4 | Done (W3-5) |
 
 ### Sheets/RecentlyDeletedSheet.swift (13 rows: Replace 9, Snap 4)
 
@@ -480,72 +480,72 @@ Re-audited in wave 2 (W2-3) from origin/main `6f53a60`; line numbers are that co
 |---:|---|---|---|---|
 | 20 | Spacing | `spacing: 14` | Spread.space4 (+2 pt) or keep off-grid | Snap |
 | 27 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 32 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 49 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 55 | Spacing | `.padding(.leading, 12)` | Spread.space3 | Replace |
-| 64 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 66 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 91 | Spacing | `.padding(16)` | Spread.space4 | Replace |
+| 32 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 49 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 55 | Spacing | `.padding(.leading, 12)` | Spread.space3 | Done (W3-5) |
+| 64 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 66 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
+| 91 | Spacing | `.padding(16)` | Spread.space4 | Done (W3-5) |
 | 122 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 129 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 129 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 | 134 | Spacing | `spacing: 3` | Spread.space1 (+1 pt) or keep off-grid | Snap |
-| 146 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 150 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
+| 146 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 150 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done (W3-5) |
 
 ### Sheets/TaskSheet.swift (36 rows: Allowed 1, Decide 1, Replace 23, Snap 11)
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 64 | Spacing | `spacing: 20` | Spread.space5 | Replace |
+| 64 | Spacing | `spacing: 20` | Spread.space5 | Done (W3-5) |
 | 68 | Spacing | `.padding(.vertical, 10)` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 77 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 106 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 113 | Spacing | `.padding(.top, 8)` | Spread.space2 | Replace |
-| 116 | Spacing | `.padding(20)` | Spread.space5 | Replace |
+| 77 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
+| 106 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
+| 113 | Spacing | `.padding(.top, 8)` | Spread.space2 | Done (W3-5) |
+| 116 | Spacing | `.padding(20)` | Spread.space5 | Done (W3-5) |
 | 178 | Spacing | `spacing: 5` | Spread.space1 (-1 pt) or keep off-grid | Snap |
-| 185 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 192 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 193 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
+| 185 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
+| 192 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 193 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done (W3-5) |
 | 194 | Radius | `cornerRadius: 12` | no radius token for 12 (snap to 16 or 24, or add one) | Decide |
-| 215 | Spacing | `spacing: 12` | Spread.space3 | Replace |
+| 215 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
 | 217 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
 | 225 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
 | 231 | Spacing | `.padding(.horizontal, 14)` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 231 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 231 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 | 238 | Spacing | `.padding(14)` | Spread.space4 (+2 pt) or keep off-grid | Snap |
 | 240 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
-| 420 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 423 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Replace |
-| 448 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 502 | Spacing | `.padding(8)` | Spread.space2 | Replace |
-| 510 | Spacing | `spacing: 8` | Spread.space2 | Replace |
+| 420 | Spacing | `spacing: 4` | Spread.space1 | Done (W3-5) |
+| 423 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 448 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
+| 502 | Spacing | `.padding(8)` | Spread.space2 | Done (W3-5) |
+| 510 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
 | 535 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
 | 538 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 554 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 554 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
 | 587 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
 | 590 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 608 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 649 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 674 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 678 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 693 | Spacing | `spacing: 12` | Spread.space3 | Replace |
+| 608 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 649 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
+| 674 | Spacing | `spacing: 8` | Spread.space2 | Done (W3-5) |
+| 678 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 693 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
 | 695 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 702 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Replace |
-| 702 | Spacing | `.padding(.vertical, 12)` | Spread.space3 | Replace |
+| 702 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Done (W3-5) |
+| 702 | Spacing | `.padding(.vertical, 12)` | Spread.space3 | Done (W3-5) |
 
 ### Sheets/WhatsNewSheet.swift (10 rows: Decide 1, Replace 6, Snap 3)
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 21 | Spacing | `spacing: 20` | Spread.space5 | Replace |
+| 21 | Spacing | `spacing: 20` | Spread.space5 | Done (W3-5) |
 | 22 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
 | 24 | Font size | `.system(size: 28` | SwiftUI .title (Dynamic Type) | Decide |
-| 27 | Radius | `cornerRadius: 16` | Spread.radiusRow | Replace |
-| 37 | Spacing | `.padding(.bottom, 4)` | Spread.space1 | Replace |
-| 53 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Replace |
-| 60 | Spacing | `.padding(20)` | Spread.space5 | Replace |
+| 27 | Radius | `cornerRadius: 16` | Spread.radiusRow | Done (W3-5) |
+| 37 | Spacing | `.padding(.bottom, 4)` | Spread.space1 | Done (W3-5) |
+| 53 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Done (W3-5) |
+| 60 | Spacing | `.padding(20)` | Spread.space5 | Done (W3-5) |
 | 81 | Spacing | `spacing: 14` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 96 | Spacing | `spacing: 12` | Spread.space3 | Replace |
+| 96 | Spacing | `spacing: 12` | Spread.space3 | Done (W3-5) |
 | 110 | Spacing | `.padding(18)` | Spread.space5 (+2 pt) or keep off-grid | Snap |
 
 ### Spread/ResponsibilitySidebar.swift (11 rows: Allowed 3, Decide 2, Replace 4, Snap 2)
@@ -881,16 +881,16 @@ Blocked until the widget target can see the theme (section 3, item 1).
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 141 | Colour | `Color(hex: "F7FAFF")` | Spread.ink (RGB distance 0) | Replace |
-| 141 | Colour | `Color(hex: "B0BCD1")` | Spread.secondary (RGB distance 0) | Replace |
+| 141 | Colour | `Color(hex: "F7FAFF")` | Spread.ink (RGB distance 0) | Done (W3-5, SpreadWidgetTokens) |
+| 141 | Colour | `Color(hex: "B0BCD1")` | Spread.secondary (RGB distance 0) | Done (W3-5, SpreadWidgetTokens) |
 | 142 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
 | 142 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 143 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 143 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
 | 144 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-| 147 | Colour | `Color(hex: "0E1A2E")` | Spread.ink (RGB distance 0) | Replace |
-| 149 | Colour | `Color(hex: "4A5670")` | Spread.secondary (RGB distance 0) | Replace |
-| 150 | Colour | `Color(hex: "F4F1EA")` | Spread.canvas (RGB distance 0) | Replace |
+| 147 | Colour | `Color(hex: "0E1A2E")` | Spread.ink (RGB distance 0) | Done (W3-5, SpreadWidgetTokens) |
+| 149 | Colour | `Color(hex: "4A5670")` | Spread.secondary (RGB distance 0) | Done (W3-5, SpreadWidgetTokens) |
+| 150 | Colour | `Color(hex: "F4F1EA")` | Spread.canvas (RGB distance 0) | Done (W3-5, SpreadWidgetTokens) |
 | 171 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 172 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 173 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
@@ -900,7 +900,7 @@ Blocked until the widget target can see the theme (section 3, item 1).
 | 191 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 192 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
 | 196 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 201 | Colour | `Color(hex: "F4F1EA")` | Spread.canvas (RGB distance 0) | Replace |
+| 201 | Colour | `Color(hex: "F4F1EA")` | Spread.canvas (RGB distance 0) | Done (W3-5, SpreadWidgetTokens) |
 | 204 | Colour | `Color(hex: colorHex)` | role or artwork data (stored colour) | Allowed |
 | 244 | Font size | `.system(size: 14` | Spread.callout (Dynamic Type) | Replace |
 | 245 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
@@ -987,3 +987,25 @@ Recorded 2026-11-14 on branch `claude/finalize-w2-tokens-life`, from origin/main
 **Removed in wave 3 (lane W3-2, OD33).** `sidebarScrim` (`Color.black.opacity(0.12)`) is deleted from `Theme/SpreadTheme.swift`. Its only consumer, the Week sidebar overlay, went with the Week Focus surface (OD19, #219), so the token was never adopted. The Crown-metal tokens (`crownLight`, `crownDark`, `crownRecess`, `crownRecessStroke` and the eight `tooth*` values) are deleted too; no file outside `SpreadTheme.swift` read them.
 
 **Outside this lane.** The Focus mini-bar in `LifeRoot.swift`: the rest-icon line 737 and its neighbour 736 belong to lane W2-2 and are not edited here. `Life/LifeHoursView.swift` and `Life/LifePlanAheadSheet.swift` are not in this lane.
+
+## 7. Wave 3 adoption (lane W3-5: sheets, focus, widgets)
+
+**Converted: 100 exact-value literals.** Each one is a `Spread` token with the same value, so nothing moves on screen. The per-file rows above are marked **Done (W3-5)** (87 rows). This list adds the rows the 2026-11-14 record missed.
+
+| File | Literals | Notes |
+|---|---:|---|
+| `Sheets/ManageSheets.swift` | 37 | Matches the audit's 37 Replace rows. The Open tasks leading dismiss is "Cancel" (X8). |
+| `Sheets/TaskSheet.swift` | 27 | The audit listed 23. Four more were not in the record: `.frame(minHeight: 44, alignment: .leading)` on two lines and `.tapTarget(minWidth: 44)` on two lines. |
+| `Sheets/RecentlyDeletedSheet.swift` | 9 | Matches the audit. |
+| `Sheets/WhatsNewSheet.swift` | 5 | The audit listed 6. The sixth, `cornerRadius: 16`, was already `Spread.radiusRow` on main. |
+| `Focus/SpreadFocusTimerSheet.swift` | 22 | The audit listed 12. The file changed after the record (#208 moved the transport frames to `minWidth` and `minHeight` and added 8 pt spacing), so its rows were counted from the current file: 12 touch-target and 10 spacing. |
+
+**Not converted, on purpose.**
+- **Snap rows.** They change a value, so they wait for a device check.
+- **Decide rows.** Radius 12 in `ManageSheets` and `TaskSheet`, the 28 pt symbol in `WhatsNewSheet`, and the other Decide rows still have no token.
+- **`Sheets/BackupRestoreSheet.swift`.** Outside this lane.
+- **Focus files that the widget also compiles** (`SpreadFocusSession`, `SpreadFocusIntents` and the rest). They cannot see `Theme/`, so they keep their values.
+
+**Widget colours (X12).** `SpreadLifeCardsWidget.swift` reads `SpreadWidgetTokens` from `Widget/SpreadWidgetShared.swift`, a file the widget target compiles, instead of five hex literals. The values are unchanged. `scripts/native-today-widget.test.mjs` checks them against `Theme/SpreadTheme.swift`. This is section 3 option 2, applied to colour only. The other widget rows stay blocked: the white and black overlays, `Color(red:)`, and the spacing and radius literals in all three widgets. They need the widget target to see the theme, or a shared spacing set.
+
+**Line numbers.** The per-file tables are from 2026-11-14 and have moved since. Rerun the search in section 1 before editing any file here.

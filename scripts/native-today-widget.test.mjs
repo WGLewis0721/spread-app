@@ -143,7 +143,7 @@ test("the shared widget file is plain Foundation and carries no task text", () =
 
 test("widget privacy: names appear only on opt-in, Life cards have their own switch", () => {
   assert.match(focusPublisher, /SpreadFocusPreferences\.widgetsEnabled\(\)/);
-  assert.match(focusPublisher, /SpreadFocusPreferences\.showName\(\) \? session\.roleName : "Focus session"/);
+  assert.match(timerWidgetSource, /SpreadFocusPreferences\.showName\(\) \? current\.roleName : "Focus session"/);
   assert.match(lifeCardsPublisher, /static let enabledKey = "native\.widget\.lifeCardsEnabled"/);
   assert.match(lifeCardsPublisher, /guard UserDefaults\.standard\.bool\(forKey: enabledKey\) else/);
   assert.match(lifeCardsPublisher, /snapshot\.weekKey == PlannerDates\.currentWeekKey\(\)/);
@@ -158,9 +158,9 @@ test("widget privacy: names appear only on opt-in, Life cards have their own swi
 test("continuity: one timer, one write path, every surface opens the right place", () => {
   // Every start, pause, resume, finish and expiry passes through persist(), which feeds the widgets.
   assert.match(focusTimer, /private func commit\(_ next: SpreadFocusSession\?, notify: Bool\) \{[\s\S]*SpreadFocusControls\.apply\(next, notify: notify\)[\s\S]*\}/);
-  assert.match(focusControls, /SpreadFocusWidgetPublisher\.publish\(session\)/);
+  assert.match(focusControls, /SpreadFocusWidgetPublisher\.publish\(\)/);
   assert.match(focusControls, /SpreadFocusLiveActivityController\.refresh\(session\)/);
-  // The mirror is rebuilt from the saved session when the opt-in changes mid-session.
+  // The widget rereads the saved session when the opt-in changes mid-session.
   assert.match(moreSheet, /SpreadFocusWidgetPublisher\.republishFromStore\(\)/);
   // The Dynamic Island, Lock Screen, Timer widget and Today panel all open the Focus Timer.
   assert.match(source, /context\.attributes\.day == nil \? "spread:\/\/focus" : "spread:\/\/today"/);
@@ -229,8 +229,8 @@ test("every surface uses the same focus intents, and the timer's sizes share one
   assert.match(timerWidgetSource, /if iconOnly \{\s*controlButton\s*\.labelStyle\(\.iconOnly\)/);
   // With the switch off, the widget says so, and the app records the switch for it.
   assert.match(timerWidgetSource, /Turn on Show Today on widgets in More to see your timer here/);
-  assert.match(focusPublisher, /shared\.set\(true, forKey: SpreadWidgetShared\.timerEnabledMirrorKey\)/);
-  assert.match(focusPublisher, /shared\.set\(enabled, forKey: SpreadWidgetShared\.timerEnabledMirrorKey\)/);
+  assert.match(focusPublisher, /shared\.set\(SpreadFocusPreferences\.widgetsEnabled\(\),/);
+  assert.match(focusPublisher, /shared\.removeObject\(forKey: SpreadWidgetShared\.focusKey\)/);
   // The island no longer uses the old single-control button, so it cannot show a lone control again.
   assert.doesNotMatch(source, /SpreadFocusActionButton\(/);
 });
@@ -344,7 +344,7 @@ test("the island opens the planned day, and a hand-started session still opens t
     const onChange = handler(liveRoot, "onChange(of: showNamesOutsideApp)", 500);
     assert.match(onChange, /SpreadDayPlanPublisher\.publish\(/);
     assert.match(onChange, /SpreadFocusWidgetPublisher\.republishFromStore\(\)/);
-    for (const file of [focusSheet, liveActivity, focusPublisher, dayPlanPublisher]) {
+    for (const file of [focusSheet, liveActivity, timerWidgetSource, dayPlanPublisher]) {
       assert.match(file, /native\.focus\.showNameOutsideApp|SpreadFocusPreferences\.showNameKey|SpreadFocusPreferences\.showName\(\)/);
     }
     assert.match(focusSheet, /Life area names appear on the Lock Screen, the Dynamic Island and the timer widget only while the name switch is on/);
@@ -410,6 +410,33 @@ test("widget Life art, branding and vertical paging are compiled as extension re
   assert.match(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift"), /pageDots/);
 });
 
+test("Timer widget Cancel reads Cancel session and stays icon only (OD33, X10)", () => {
+  assert.match(timerSource, /Label\("Cancel session", systemImage: "xmark"\)/);
+  assert.doesNotMatch(timerSource, /Label\("Cancel", systemImage/);
+  // Every widget size shows this control as an icon, so its title is the VoiceOver label and no text competes for space.
+  assert.match(timerSource, /SpreadFocusControlButton\(control: kind, sessionId: state\.sessionId,\s*nextLabel: state\.nextLabel, iconOnly: true\)/);
+  assert.match(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimerSheet.swift"), /accessibilityLabel\("Cancel session"\)/);
+});
+
+test("Life cards widget colours come from one shared set that matches the app's tokens (OD33, X12)", () => {
+  const theme = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift");
+  // The widget compiles SpreadWidgetShared.swift, so the named set lives there.
+  assert.match(shared, /public enum SpreadWidgetTokens \{/);
+  assert.match(shared, /public static let inkLight = "0E1A2E"/);
+  assert.match(shared, /public static let inkDark = "F7FAFF"/);
+  assert.match(shared, /public static let secondaryLight = "4A5670"/);
+  assert.match(shared, /public static let secondaryDark = "B0BCD1"/);
+  assert.match(shared, /public static let canvasLight = "F4F1EA"/);
+  // The app's values: ink and canvas are hex; secondary is the tuples (74, 86, 112) and (176, 188, 209).
+  assert.match(theme, /public static let ink = dynamic\(light: 0x0E1A2E, dark: 0xF7FAFF\)/);
+  assert.match(theme, /public static let canvas = dynamic\(light: 0xF4F1EA, dark: 0x060B18\)/);
+  assert.match(theme, /public static let secondary = adaptive\(\s*light: \(74, 86, 112, 1\), dark: \(176, 188, 209, 1\)/);
+  // The Life cards widget reads the tokens and keeps no colour literal of its own.
+  assert.doesNotMatch(lifeCardsSource, /Color\(hex: "/);
+  for (const name of ["inkLight", "inkDark", "secondaryLight", "secondaryDark", "canvasLight"]) {
+    assert.match(lifeCardsSource, new RegExp("SpreadWidgetTokens\\." + name));
+  }
+});
 
 test("widget actions use shared opt-ins rather than the extension's private defaults", () => {
   const prefs = focusSession.slice(focusSession.indexOf("enum SpreadFocusPreferences"), focusSession.indexOf("enum SpreadFocusStore"));
@@ -420,7 +447,7 @@ test("widget actions use shared opt-ins rather than the extension's private defa
   for (const option of ["showLiveTimer", "notifyWhenDone", "showNameOutsideApp"]) {
     assert.match(focusSheet, new RegExp("onChange\\(of: " + option + "\\)[\\s\\S]{0,140}SpreadFocusPreferences\\.publishFromApp\\(\\)"));
   }
-  assert.match(focusPublisher, /guard SpreadFocusPreferences\.widgetsEnabled\(\)/);
+  assert.match(focusPublisher, /shared\.set\(SpreadFocusPreferences\.widgetsEnabled\(\),/);
   assert.match(focusController, /guard SpreadFocusPreferences\.liveActivityEnabled\(\)/);
   assert.match(focusControls, /SpreadFocusPreferences\.notifyWhenDone\(\)/);
   assert.doesNotMatch(focusPublisher, /UserDefaults\.standard\.bool/);
@@ -449,18 +476,30 @@ test("stale widget and island buttons cannot mutate a replacement focus session"
 });
 
 
-test("ActivityKit refreshes finish before app-process widget intents return", () => {
+test("Apple's timer flow commits before perform returns; ActivityKit never blocks a widget redraw", () => {
   assert.match(focusController, /private static var pendingWork: Task<Void, Never>\?/);
   assert.match(focusController, /await prior\?\.value/);
-  assert.match(focusController, /static func awaitSettled\(\) async/);
-  assert.match(focusController, /await pendingWork\?\.value/);
   assert.match(focusController, /session\.id == requested\.id/);
   assert.match(focusController, /current\.id == requested\.id/);
   assert.match(focusController, /await activity\.update\(content\(for: current\)\)/);
-  const writes = [...focusControls.matchAll(/SpreadFocusControls\.apply\([^\n]+\)\s+await SpreadFocusLiveActivityController\.awaitSettled\(\)/g)];
-  assert.equal(writes.length, 9, "all focus intent transitions must await their queued ActivityKit update");
+  assert.doesNotMatch(focusController, /func awaitSettled/);
+  assert.doesNotMatch(focusControls, /await SpreadFocusLiveActivityController\.awaitSettled/);
+  // The intent saves state, then returns. WidgetKit triggers its own reload after perform().
+  const intentTypes = [
+    "StartSpreadBlockIntent", "StartSpreadFocusIntent", "SetSpreadFocusPlayingIntent",
+    "PauseSpreadFocusIntent", "ResumeSpreadFocusIntent",
+    "ForwardSpreadFocusIntent", "StopSpreadFocusIntent", "CancelSpreadFocusIntent",
+  ];
+  for (const name of intentTypes) {
+    const start = focusControls.indexOf("struct " + name + ": ");
+    assert.ok(start >= 0, name + " must exist");
+    const end = focusControls.indexOf("\nstruct ", start + 1);
+    const intent = focusControls.slice(start, end < 0 ? undefined : end);
+    assert.match(intent, /SpreadFocusControls\.apply\(/, name + " must persist its action");
+    assert.match(intent, /return \.result\(\)/, name + " must finish promptly");
+    assert.doesNotMatch(intent, /await /, name + " must not block on ActivityKit");
+  }
 });
-
 
 test("a widget action updates the visible in-app timer without waiting for the polling fallback", () => {
   assert.match(focusControls, /static let didChange = Notification\.Name\("SpreadFocusSessionChanged"\)/);
@@ -468,4 +507,15 @@ test("a widget action updates the visible in-app timer without waiting for the p
   assert.match(liveRoot, /NotificationCenter\.default\.publisher\(for: SpreadFocusControls\.didChange\)/);
   assert.match(liveRoot, /publisher\(for: SpreadFocusControls\.didChange\)\) \{ _ in\s*focusTimer\.reloadFromStore\(\)/);
   assert.match(liveRoot, /try\? await Task\.sleep\(for: \.seconds\(1\)\)/);
+});
+
+
+test("focus widgets render only the active profile from the single authoritative session", () => {
+  assert.match(timerWidgetSource, /guard timerEnabled\(\), let session = SpreadFocusStore\.load\(\)/);
+  assert.match(timerWidgetSource, /SpreadFocusStore\.activeProfile\(\) == session\.profileId/);
+  assert.match(timerWidgetSource, /SpreadFocusPreferences\.showName\(\) \? current\.roleName : "Focus session"/);
+  assert.doesNotMatch(timerWidgetSource, /mirrorState\(\)/);
+  assert.doesNotMatch(focusPublisher, /JSONEncoder\(\)\.encode\(state\)/);
+  assert.doesNotMatch(focusPublisher, /shared\.set\(data, forKey: SpreadWidgetShared\.focusKey\)/);
+  assert.match(focusPublisher, /shared\.removeObject\(forKey: SpreadWidgetShared\.focusKey\)/);
 });
