@@ -389,7 +389,7 @@ struct LifeTaskRows: View {
                     }
                 }
                 .background(targetedTaskId == task.id ? LifePalette.fill : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 12))
+                            in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                 .animation(reduceMotion ? nil : SpreadTactile.snap, value: targetedTaskId)
                 .dropDestination(for: SpreadDragPayload.self) { items, _ in
                     guard let day, !planner.busy, let item = items.first, item.kind == .task,

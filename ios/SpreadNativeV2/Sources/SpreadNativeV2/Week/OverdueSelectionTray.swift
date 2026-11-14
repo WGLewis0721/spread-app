@@ -71,7 +71,7 @@ struct OverdueSelectionTray: View {
                     }
                 }
                 .padding(8)
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
             }
             if !selection.isEmpty {
                 Text("\(selection.count) selected · choose a day")
@@ -147,7 +147,7 @@ struct OverdueSelectionTray: View {
                             Spacer(minLength: 0)
                         }
                         .padding(10)
-                        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 12))
+                        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                     }
                     Button("Move \(eligible.count) eligible \(eligible.count == 1 ? "task" : "tasks")") {
                         Task { await commitPreview() }

@@ -62,7 +62,7 @@ struct LifeWeekView: View {
                             day: date, onOpenTask: onOpenTask)
                         LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
                         }.padding(.horizontal, Spread.space1)
-                            .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusInset, style: .continuous))
                     }.padding(18).spreadCard()
                     .id(roleID)
                     .transition(SpreadTactile.detailReveal)

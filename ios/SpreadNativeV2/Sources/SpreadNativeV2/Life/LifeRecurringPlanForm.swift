@@ -230,8 +230,8 @@ struct LifeRecurringPlanForm: View {
                                 .frame(maxWidth: .infinity, minHeight: 44)
                                 .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
                                 .background(selected ? Spread.accent : Spread.canvas,
-                                            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            in: RoundedRectangle(cornerRadius: Spread.radiusSmall, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: Spread.radiusSmall, style: .continuous)
                                     .strokeBorder(Spread.accent.opacity(selected ? 1 : 0.24), lineWidth: 1))
                         }
                         .buttonStyle(.plain)

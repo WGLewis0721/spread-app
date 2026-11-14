@@ -190,7 +190,7 @@ struct TaskLine: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(task.text)
         .accessibilityAddTraits(task.done ? .isSelected : [])
-        .background(reorderTarget ? Spread.fill : .clear, in: RoundedRectangle(cornerRadius: 12))
+        .background(reorderTarget ? Spread.fill : .clear, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
         .animation(reduceMotion ? nil : SpreadTactile.snap, value: reorderTarget)
         .animation(reduceMotion ? nil : SpreadTactile.settle, value: dayTasks.map(\.id))
         .accessibilityActions {

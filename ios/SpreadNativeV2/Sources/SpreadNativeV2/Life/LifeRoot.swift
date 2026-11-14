@@ -484,7 +484,7 @@ struct LifeRoot: View {
                         .focused($capacityInputFocused)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
-                        .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                        .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                         .accessibilityIdentifier("life-budget-capacity-input")
                         .onAppear { capacityInputFocused = true }
                     Button("Set") {
@@ -625,7 +625,7 @@ struct LifeRoot: View {
                     LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
                         .padding(.horizontal, Spread.space3).padding(.vertical, 6)
                 }
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18))
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusInset))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("life-task-notebook")
             }
@@ -812,7 +812,7 @@ struct LifeRoot: View {
         .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
         .frame(width: 51).frame(minHeight: 52)
         .background(selected ? Spread.accent : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 12))
+                    in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
         .contentShape(Rectangle())
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {
