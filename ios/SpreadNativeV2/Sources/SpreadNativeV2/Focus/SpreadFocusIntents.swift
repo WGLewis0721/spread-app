@@ -34,7 +34,7 @@ enum SpreadFocusControls {
         NotificationCenter.default.post(name: didChange, object: nil)
         // Publish the new state before the potentially expensive ActivityKit refresh.
         // App Group session remains the only authority on both paths.
-        SpreadFocusWidgetPublisher.publish(session)
+        SpreadFocusWidgetPublisher.publish()
         SpreadFocusLiveActivityController.refresh(session)
         if let session, session.phase == .running, notify {
             Task { await SpreadLocalAlerts.scheduleFocus(session) }
