@@ -92,3 +92,27 @@ Five Haiku sessions run in parallel (owner cap: five).
 - Haiku edits to Swift cannot be compiled locally; rely on `native-typecheck` and keep diffs small.
 - Parallel lanes could collide; file ownership above is strict.
 - Polish can drift into redesign; lanes polish within the native brand board, never replace it.
+
+## 8. Owner decisions (2026-11-14)
+
+The owner delegated these decisions to Claude Code on 2026-11-14 ("you are the owner; make decisions that advance continuity, consistency, thorough design choices and familiar functionality, consistent with the repo design docs"). Each decision cites the document it follows. The [wave 1 after-action report](https://claude.ai/artifact/XMhfBTZMDtNgNz967SZzMr) has the findings behind them.
+
+| # | Decision | Follows | Applied by |
+| --- | --- | --- | --- |
+| OD1 | High priority: the flag is the control that turns priority on and off. On task rows, one marker everywhere: the red **!** (`TaskPriorityMark`) with its spoken label, in Life as well as Week. The mark moves to `Theme/SpreadPriorityMark.swift` so every surface shares one component. | Rules card (red ! plus spoken label); icon handoff (flag is the task control) | C moves it; B adopts it in wave 2 |
+| OD2 | Completion haptic: only completing a task fires it. Hours, rename, colour, category and move commands pass `completionHaptic: false`. Keep the current light impact. Resolves the open "completion haptic" decision. | Rules card; planner pack ("one light tap on completing a task") | C (Spread, Week), B (Life) |
+| OD3 | Text on Life art: the zero-hour day well becomes 0.6 black (5.7:1 for white labels over bright art). | Apple-native pack (dim bright art behind text); WCAG 1.4.3 | B |
+| OD4 | `Spread.success` keeps its value (`#17743A` light, `#30D158` dark). The UI kit already names success as a semantic colour. | `ui-kit/UI_KIT.md` | A (no change) |
+| OD5 | Token names: Spread's names (`ink`, `accent`, `danger`, `caution`, `line`, `inset`, `secondary`) are the only names in code. Remove the Gray Matter aliases from `SpreadTheme.swift`; the UI kit keeps a one-line mapping to Gray Matter's role names. | Gray Matter adoption note (link, don't build a parallel token store) | A |
+| OD6 | Sheet dismissal, everywhere: Done is trailing (`.confirmationAction`); Cancel is leading only where it discards a draft. This includes Life sheets and, as a toolbar-placement-only exception, `BackupRestoreSheet.swift` (no other line in that file changes). | Foundational UX (Jakob's law); Apple sheet convention | D (Sheets, Backup placement), B (Life) |
+| OD7 | Words for a role: Life uses "Life area"; Classic uses "responsibility". The word "spread" never names a role, because Spread is the app's name. | Rules card ("Classic retains its own rules"); brand board | A (Shell confirm dialog), C, D |
+| OD8 | The focused card's Details button opens a sheet titled "Details"; the two UI tests that assert "Manage Life area" change with it. | Rules card ("A focused card offers Details") | B |
+| OD9 | Widgets keep the system background (the existing test contract and Apple widget convention). Continuity comes from Spread's type, accent and glyphs, not a painted canvas. | Today widget spec; Apple widget convention | D (no change) |
+| OD10 | Focus transport buttons grow with Dynamic Type: the test changes to `minWidth/minHeight: 44` and the fixed frames go. Resolves the open "Dynamic Type" decision: native honours the system text size. | Rules card (44 pt); UI kit | D |
+| OD11 | Icons follow `ICON_HANDOFF.md`: Lucide for custom controls; SF Symbols for alerts, specialised controls and tiny calendar markers. Revert the overdue ineligible marker to `exclamationmark.circle` and the calendar-strip day check to SF `checkmark`. Add Lucide `plus`, `coffee`, `eye`, `copy`, `arrow-left-right`, `rotate-ccw`, `rotate-cw` and `circle-help` in wave 2. | `brand/ICON_HANDOFF.md` section on native Lucide adoption | C now; wave 2 for assets |
+| OD12 | Overbooked warning copy: "These hours don't fit in your week. Remove some or raise your weekly hours." | Gray Matter UX copy rules; plain language | C |
+| OD13 | Empty week: when the "Nothing planned this week" card shows, the day cards don't repeat "Nothing planned". | Hick's law; one message per state | C |
+| OD14 | Delete the dormant five-mode layouts in `Layouts/SpreadLayouts.swift` (superseded 2026-11-04). | `DECISIONS.md` 2026-11-04 | A |
+| OD15 | `chalkInk` uses `secondary` in light mode so it keeps the Increase Contrast variant. | Apple-native pack (Increase Contrast) | A |
+| OD16 | The Week sidebar scrim stays at its current strength for now; wave 2 names it as a token instead of changing it. | Polish, not redesign | Wave 2 |
+| OD17 | Disabled controls dim through one token, `Spread.disabledOpacity` (0.4), added in wave 2. | Gray Matter design system (every state is a token) | Wave 2 |
