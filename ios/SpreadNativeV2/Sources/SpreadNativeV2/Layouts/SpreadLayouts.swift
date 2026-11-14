@@ -22,7 +22,7 @@ struct FanLayout: View {
     private var at: Int { max(0, rows.firstIndex { $0.id == selectedId } ?? 0) }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spread.space3) {
             GeometryReader { proxy in
                 ZStack {
                     ForEach(rows.indices, id: \.self) { index in
@@ -83,7 +83,7 @@ struct FanLayout: View {
                         await planner.send(["type": "addTask", "roleId": front.role.id, "text": text])
                     }
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Spread.space1)
                 .spreadCard(edge: Color(hex: front.role.color), active: true)
             }
         }
@@ -99,7 +99,7 @@ struct FanLayout: View {
     private func move(_ steps: Int) {
         guard count > 1, steps != 0 else { return }
         let target = rows[((at + steps) % count + count * 4) % count]
-        withAnimation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.56)) {
+        withAnimation(reduceMotion ? nil : SpreadMotion.timing(SpreadMotion.deliberateSeconds)) {
             onSelect(target.id)
         }
     }
@@ -130,7 +130,7 @@ struct FanLayout: View {
                 Text("\(SpreadHours.text(row.hours))h")
                     .font(.system(.footnote, weight: .bold)).foregroundStyle(Spread.ink).monospacedDigit()
                     .frame(width: cardWidth, alignment: .trailing)
-                    .padding(.trailing, 16)
+                    .padding(.trailing, Spread.space4)
                     .padding(.top, 62)
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -142,7 +142,7 @@ struct FanLayout: View {
                     .font(.system(.headline, weight: .bold)).foregroundStyle(Spread.secondary).monospacedDigit()
             }
             .foregroundStyle(Spread.ink)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Spread.space5)
             .padding(.bottom, 18)
             .frame(width: cardWidth, height: 176, alignment: .bottomLeading)
             .opacity(max(0, min(1, 1 - Double(ea) * 1.8)))
@@ -160,7 +160,7 @@ struct FanLayout: View {
         .accessibilityLabel("\(row.role.name), \(SpreadHours.spoken(row.hours))")
         .accessibilityAddTraits(front ? .isSelected : [])
         .accessibilityIdentifier("fan-card-\(row.role.id)")
-        .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.56), value: at)
+        .animation(reduceMotion ? nil : SpreadMotion.timing(SpreadMotion.deliberateSeconds), value: at)
     }
 }
 
@@ -184,7 +184,7 @@ struct DialLayout: View {
     private var total: Double { rows.reduce(0) { $0 + $1.hours } }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spread.space3) {
             GeometryReader { proxy in
                 let side = min(280, proxy.size.width * 0.8)
                 // Every part is drawn in the dial's square, then the whole square is centered in
@@ -195,10 +195,10 @@ struct DialLayout: View {
                     ForEach(arcs, id: \.id) { arc in
                         let isSelected = arc.id == selectedId
                         arcPath(arc, center: center, radius: side / 2 - 22)
-                            .stroke(Color(hex: rows.first { $0.id == arc.id }?.role.color ?? "#8E8E93"),
+                            .stroke(rows.first { $0.id == arc.id }.map { Color(hex: $0.role.color) } ?? Spread.roleFallback,
                                     style: StrokeStyle(lineWidth: isSelected ? 26 : 14, lineCap: .round))
                             .opacity(isSelected ? 1 : 0.42)
-                            .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.38), value: selectedId)
+                            .animation(reduceMotion ? nil : SpreadMotion.timing(SpreadMotion.normalSeconds), value: selectedId)
                     }
                     knob(center: center, side: side)
                     sphere(side: side)
@@ -267,30 +267,30 @@ struct DialLayout: View {
         let mid = segment.map { ($0.from + $0.to) / 2 } ?? 0
         let radius = side / 2 - 22
         let rad = (mid - 90) * .pi / 180
-        return Circle().fill(.white)
+        return Circle().fill(Spread.highlight)
             .frame(width: 20, height: 20)
-            .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+            .shadow(color: Spread.shadow, radius: 4, y: 2)
             .position(x: center.x + CGFloat(cos(rad)) * radius, y: center.y + CGFloat(sin(rad)) * radius)
-            .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.52), value: selectedId)
+            .animation(reduceMotion ? nil : SpreadMotion.timing(SpreadMotion.deliberateSeconds), value: selectedId)
             .accessibilityHidden(true)
     }
 
     private func sphere(side: CGFloat) -> some View {
-        let glow = Color(hex: selected?.role.color ?? "#8E8E93")
+        let glow = selected.map { Color(hex: $0.role.color) } ?? Spread.roleFallback
         return VStack(spacing: 2) {
             Text("\(SpreadHours.text(selected?.hours ?? 0))h")
                 .font(.system(typeSize.isAccessibilitySize ? .title3 : .largeTitle, weight: .heavy)).monospacedDigit().tracking(-1.2)
                 .lineLimit(1).minimumScaleFactor(0.65)
                 .contentTransition(.numericText())
-                .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.42), value: selected?.hours)
+                .animation(reduceMotion ? nil : SpreadMotion.curve, value: selected?.hours)
             if !typeSize.isAccessibilitySize {
                 Text(selected?.role.name ?? "")
                     .font(.system(.body, weight: .bold)).lineLimit(1)
             }
             Text("of \(SpreadHours.text(total))h")
-                .font(.system(.footnote, weight: .semibold)).foregroundStyle(.white.opacity(0.78))
+                .font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.highlight.opacity(0.78))
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Spread.highlight)
         .frame(width: side * 0.64, height: side * 0.64)
         .background(
             RadialGradient(colors: [glow.opacity(0.52), Color(hex6: 0x0B0B0C)], center: UnitPoint(x: 0.38, y: 0.24), startRadius: 0, endRadius: side * 0.42)
@@ -319,10 +319,10 @@ struct TabsLayout: View {
     private var index: Int { ids.firstIndex(of: tab) ?? 0 }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spread.space3) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spread.space2) {
                         tabButton(id: "all", title: "All", color: nil, category: nil)
                         ForEach(rows) { row in
                             tabButton(id: row.id, title: row.role.name, color: row.role.color, category: row.role.category)
@@ -379,13 +379,13 @@ struct TabsLayout: View {
             // with Stack, Fan and Dial; onChange(of: tab) alone misses that case.
             if id != "all" { onSelect(id) }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: Spread.space2) {
                 if let color { RoleBadge(category: category == "custom" ? nil : category, color: color, size: 26) }
                 Text(title).font(.system(.subheadline, weight: .semibold)).lineLimit(1)
             }
             .foregroundStyle(selected && color == nil ? Spread.onAccent : Spread.ink)
-            .padding(.leading, color == nil ? 16 : 9).padding(.trailing, 16)
-            .frame(minHeight: 44)
+            .padding(.leading, color == nil ? 16 : 9).padding(.trailing, Spread.space4)
+            .frame(minHeight: Spread.minimumTarget)
             .background {
                 if selected {
                     if let tint {
@@ -440,7 +440,7 @@ struct DayLayout: View {
         let label = PlannerDates.label(PlannerDates.date(selectedDay), pattern: "EEEE")
         let chosenRole = selectedRole ?? rows.first?.id
 
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Spread.space4) {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
                 ForEach(days, id: \.self) { day in
                     let filled = load(day) / busiest
@@ -457,9 +457,9 @@ struct DayLayout: View {
                         .frame(maxWidth: .infinity, minHeight: 60)
                         .background(alignment: .bottom) {
                             // How busy the day is, against the busiest day: a quiet fill rising from the bottom.
-                            Rectangle().fill(isSelected ? Color.white.opacity(0.24) : Spread.accent.opacity(0.22))
+                            Rectangle().fill(isSelected ? Spread.highlight.opacity(0.24) : Spread.accent.opacity(0.22))
                                 .frame(height: 60 * filled)
-                                .animation(reduceMotion ? nil : .timingCurve(0.32, 0.72, 0, 1, duration: 0.64), value: filled)
+                                .animation(reduceMotion ? nil : SpreadMotion.timing(SpreadMotion.deliberateSeconds), value: filled)
                         }
                         .background {
                             if isSelected {
@@ -479,7 +479,7 @@ struct DayLayout: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spread.space1) {
                 Text(selectedDay == today ? "Your day at a glance" : "\(label) at a glance")
                     .font(.system(.title2, weight: .bold))
                 Text(dayTotal > 0 ? "\(SpreadHours.spoken(dayTotal)) planned across \(blocks.count) \(blocks.count == 1 ? "block" : "blocks")" : "Nothing planned yet. Place hours on the Week tab.")
@@ -487,16 +487,16 @@ struct DayLayout: View {
             }
 
             if !blocks.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spread.space2) {
                     ForEach(blocks.indices, id: \.self) { index in
                         let block = blocks[index]
                         let start = starts[index]
                         let role = rows.first { $0.role.id == block.roleId }?.role
-                        HStack(alignment: .top, spacing: 8) {
+                        HStack(alignment: .top, spacing: Spread.space2) {
                             Text("\(SpreadHours.text(start))h")
                                 .font(.system(.caption2, weight: .semibold)).foregroundStyle(Spread.secondary)
                                 .frame(width: 42, alignment: .trailing).padding(.top, 14)
-                            Circle().fill(Color(hex: role?.color ?? "#8E8E93")).frame(width: 12, height: 12).padding(.top, 14)
+                            Circle().fill(role.map { Color(hex: $0.color) } ?? Spread.roleFallback).frame(width: 12, height: 12).padding(.top, 14)
                             Button {
                                 selectedRole = block.roleId
                             } label: {
@@ -510,7 +510,7 @@ struct DayLayout: View {
                                 .padding(.horizontal, 14)
                                 .frame(maxWidth: .infinity, minHeight: max(56, 40 + min(block.hours, 6) * 14), alignment: .leading)
                                 .background {
-                                    let tint = Color(hex: role?.color ?? "#8E8E93")
+                                    let tint = role.map { Color(hex: $0.color) } ?? Spread.roleFallback
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Spread.cardFill)
                                         RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -527,7 +527,7 @@ struct DayLayout: View {
                         }
                         .transition(.opacity.combined(with: .offset(y: reduceMotion ? 0 : 14)))
                     }
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spread.space2) {
                         Text("\(SpreadHours.text(dayTotal))h").font(.system(.caption2, weight: .semibold)).foregroundStyle(Spread.secondary)
                             .frame(width: 42, alignment: .trailing)
                         Circle().strokeBorder(Spread.ink, lineWidth: 2).frame(width: 12, height: 12)
