@@ -20,6 +20,8 @@ struct WeekFocusSurface: View {
     @State private var trayOpen = false
     @State private var overdueOpen = false
     @State private var overdueRows: [NativeOverdueTask] = []
+    /// True only after a load that succeeded, so "Nothing overdue" is never shown on a failed load.
+    @State private var overdueChecked = false
     @State private var monthQuickAddDay: MonthAddDate?
     @State private var sidebarExpanded = false
     @State private var sidebarHidden = false
@@ -233,8 +235,7 @@ struct WeekFocusSurface: View {
         }
         .overlay {
             if showDayDone {
-                SpreadIcon(name: "lucide-circle-check", size: 21)
-                    .font(.system(size: 64, weight: .semibold))
+                SpreadIcon(name: "lucide-circle-check", size: 56)
                     .foregroundStyle(Spread.accent)
                     .padding(24)
                     .background(.ultraThinMaterial, in: Circle())
@@ -251,7 +252,9 @@ struct WeekFocusSurface: View {
             MonthQuickAddSheet(planner: planner, roleId: activeRole ?? "", day: target.iso)
         }
         .task(id: refreshKey) {
-            overdueRows = await planner.allOverdueTasks(today: PlannerDates.localISO()) ?? []
+            let rows = await planner.allOverdueTasks(today: PlannerDates.localISO())
+            overdueRows = rows ?? []
+            overdueChecked = rows != nil
         }
         // A container identifier otherwise replaces its children's own identifiers.
         .accessibilityElement(children: .contain)
@@ -439,6 +442,13 @@ struct WeekFocusSurface: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("focus-overdue")
+                } else if overdueChecked {
+                    Label { Text("Nothing overdue") } icon: { SpreadIcon(name: "icon-check", size: 16) }
+                        .font(.system(.caption, weight: .semibold))
+                        .foregroundStyle(Spread.secondary)
+                        .frame(minHeight: 44)
+                        .padding(.horizontal, 8)
+                        .accessibilityIdentifier("focus-nothing-overdue")
                 }
                 Spacer(minLength: 0)
             }

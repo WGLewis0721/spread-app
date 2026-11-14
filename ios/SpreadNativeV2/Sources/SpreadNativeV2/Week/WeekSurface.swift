@@ -66,6 +66,9 @@ struct WeekSurface: View {
             // The swipe region. The gesture is measured on this fixed wrapper while the content inside follows the
             // finger, so the drag never feeds back into itself: 64 points of travel is 64 points, on the first touch.
             VStack(alignment: .leading, spacing: 16) {
+                if !snapshot.allocations.contains(where: { $0.hours > 0 }) {
+                    emptyWeek
+                }
                 freeTime
                 if showsTray {
                     ToPlaceTray(planner: planner, snapshot: snapshot, onOpenTask: onOpenTask)
@@ -145,6 +148,26 @@ struct WeekSurface: View {
             .padding(.vertical, 4)
         }
         .scrollIndicators(.hidden)
+    }
+
+    // MARK: Empty week
+
+    /// Nothing is placed on any day yet. One designed card says what to do next, instead of seven blank day cards.
+    private var emptyWeek: some View {
+        VStack(spacing: 10) {
+            SpreadIcon(name: "lucide-calendar-plus", size: 24)
+                .foregroundStyle(Spread.secondary)
+            Text("Nothing planned this week")
+                .font(.system(.headline, weight: .semibold))
+            Text("Pick a responsibility above, then tap Add on a day. Hours you place show up here.")
+                .font(Spread.footnote).foregroundStyle(Spread.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(16)
+        .spreadCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("week-nothing-planned")
     }
 
     // MARK: Free time (`FreeTimeChip`)
@@ -387,7 +410,13 @@ struct DayCard: View {
             .padding(.horizontal, 4)
             .frame(minHeight: allocations.isEmpty && selectedRole == nil ? 28 : 0)
             .accessibilityElement(children: .combine)
-            .accessibilityValue(allocations.isEmpty ? "Nothing planned" : "")
+
+            // A day with no hours says so on the card itself, not only to VoiceOver.
+            if allocations.isEmpty {
+                Text("Nothing planned")
+                    .font(Spread.footnote).foregroundStyle(Spread.secondary)
+                    .padding(.horizontal, 4)
+            }
 
             if !allocations.isEmpty {
             VStack(spacing: 8) {
