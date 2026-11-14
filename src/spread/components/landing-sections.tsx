@@ -237,7 +237,7 @@ export function ListVersusSpread() {
 /* ---------------------------------------------------------------- privacy */
 
 const facts = [
-  { icon: UserRoundX, title: "Nothing to sync", body: "Your planning never leaves." },
+  { icon: UserRoundX, title: "Nothing to sync", body: "Nothing leaves unless you export it." },
   { icon: Smartphone, title: "On this device", body: "Your planning stays here." },
   { icon: UsersRound, title: "Profiles", body: "Up to ten, each with its own weeks." },
   { icon: ArchiveRestore, title: "Backup and restore", body: "A .spread file you keep." },

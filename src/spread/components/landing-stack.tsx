@@ -443,7 +443,7 @@ export function SpreadStack() {
           type="button"
           className="stack-toggle"
           aria-pressed={open}
-          aria-label={open ? "Stack the sample spreads" : "Spread out the sample spreads"}
+          aria-label="Spread out the sample spreads"
           onClick={() => { setSpread((value) => !value); setHover(false); }}
         />
 
