@@ -823,6 +823,7 @@ struct MoreSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onChange(of: todayWidgetsEnabled) { _, enabled in
+            SpreadFocusPreferences.publishFromApp()
             if enabled {
                 if let snapshot = planner.snapshot {
                     SpreadWidgetPublisher.publish(snapshot: snapshot)

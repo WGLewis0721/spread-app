@@ -163,6 +163,40 @@ final class SpreadFocusMachineTests: XCTestCase {
         XCTAssertNil(legacy.data(forKey: SpreadFocusStore.sessionKey))
     }
 
+    func testWidgetActionsUseSharedOptInsInsteadOfExtensionPrivateDefaults() {
+        let app = isolatedDefaults()
+        let shared = isolatedDefaults()
+
+        app.set(true, forKey: SpreadWidgetShared.todayEnabledKey)
+        app.set(true, forKey: SpreadFocusPreferences.liveActivityKey)
+        app.set(true, forKey: SpreadFocusPreferences.showNameKey)
+        app.set(true, forKey: SpreadFocusPreferences.notifyKey)
+        SpreadFocusPreferences.publishFromApp(app, to: shared)
+
+        XCTAssertTrue(SpreadFocusPreferences.widgetsEnabled(shared))
+        XCTAssertTrue(SpreadFocusPreferences.liveActivityEnabled(shared))
+        XCTAssertTrue(SpreadFocusPreferences.showName(shared))
+        XCTAssertTrue(SpreadFocusPreferences.notifyWhenDone(shared))
+        XCTAssertTrue(shared.bool(forKey: SpreadWidgetShared.timerEnabledMirrorKey))
+
+        // A widget process has different UserDefaults.standard. Its actions
+        // must read the App Group, not re-interpret absent values as opt-out.
+        app.set(false, forKey: SpreadFocusPreferences.liveActivityKey)
+        XCTAssertTrue(SpreadFocusPreferences.liveActivityEnabled(shared))
+        SpreadFocusPreferences.publishFromApp(app, to: shared)
+        XCTAssertFalse(SpreadFocusPreferences.liveActivityEnabled(shared))
+
+        for key in [SpreadWidgetShared.todayEnabledKey,
+                    SpreadFocusPreferences.showNameKey, SpreadFocusPreferences.notifyKey] {
+            app.set(false, forKey: key)
+        }
+        SpreadFocusPreferences.publishFromApp(app, to: shared)
+        XCTAssertFalse(SpreadFocusPreferences.widgetsEnabled(shared))
+        XCTAssertFalse(SpreadFocusPreferences.showName(shared))
+        XCTAssertFalse(SpreadFocusPreferences.notifyWhenDone(shared))
+        XCTAssertFalse(shared.bool(forKey: SpreadWidgetShared.timerEnabledMirrorKey))
+    }
+
     func testWidgetsMayStartOnlyForTheProfileOnScreenAndOnlyWhenNothingIsWaiting() {
         let defaults = isolatedDefaults()
         XCTAssertFalse(SpreadFocusStore.canStartFromWidget(now: now, defaults))   // no plan chosen yet

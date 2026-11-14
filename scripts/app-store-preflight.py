@@ -69,6 +69,7 @@ class Checks:
                        and not re.search(r"todo|placeholder|lorem ipsum", desc, re.I),
                        "Explain why camera access is requested")
             self.check("Visible app name", info.get("CFBundleDisplayName") == "Spread", "Unexpected display name")
+            self.ipad_keys(info, "iOS Info.plist")
         privacy = self.plist(self.file(root, "ios/App/App/PrivacyInfo.xcprivacy"), "PrivacyInfo.xcprivacy")
         if privacy is not None:
             self.check("Tracking declaration", isinstance(privacy.get("NSPrivacyTracking"), bool),
@@ -87,6 +88,10 @@ class Checks:
             )
             self.check("Required-reason declarations", valid, "Each declared API requires a reason")
         self.release_notes(root)
+        self.device_family(root)
+        widget = self.plist(self.file(root, "ios/App/SpreadWidget/Info.plist"), "Widget Info.plist")
+        if widget is not None:
+            self.ipad_keys(widget, "Widget Info.plist")
         self.check("App icon", (root / "ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png").is_file(),
                    "1024px app icon source must exist; visually inspect it")
         paths = [root / path for path in (
@@ -151,6 +156,25 @@ class Checks:
         self.check("Bundled release notes", True,
                    "Current version " + marketing_version + "; " + str(len(releases)) + " releases, unique IDs")
 
+    def device_family(self, root):
+        """Spread 1.0 is iPhone only (OD20, OD28): every app, extension and test target sets TARGETED_DEVICE_FAMILY = 1."""
+        project = self.file(root, "ios/App/App.xcodeproj/project.pbxproj")
+        if project is None:
+            return
+        text = project.decode("utf-8", errors="replace")
+        families = re.findall(r"TARGETED_DEVICE_FAMILY\s*=\s*\"?([^\";]*)\"?\s*;", text)
+        targets = len(re.findall(r"PRODUCT_BUNDLE_IDENTIFIER\s*=", text))
+        values = sorted(set(families))
+        self.check("iPhone-only build targets", values == ["1"] and len(families) == targets,
+                   f"{len(families)} of {targets} target configurations set TARGETED_DEVICE_FAMILY; "
+                   f"values: {', '.join(values) or 'none'}. Every one must be 1")
+
+    def ipad_keys(self, info, label):
+        """An iPhone-only app must not carry iPad-specific Info.plist keys such as UISupportedInterfaceOrientations~ipad."""
+        keys = sorted(key for key in info if key.endswith("~ipad"))
+        self.check(f"{label}: no iPad-only keys", not keys,
+                   "Remove " + ", ".join(keys) if keys else "No ~ipad keys")
+
     def bundle(self, path):
         index = path / "index.html"
         if not index.is_file():
@@ -183,6 +207,8 @@ class Checks:
                                and bool(info.get("CFBundleVersion"))
                                and "$" not in str(info.get("CFBundleVersion")),
                                "Build number must be resolved")
+                    self.check("Built device family", info.get("UIDeviceFamily") == [1],
+                               "The signed binary must declare iPhone only: UIDeviceFamily 1")
                     self.check("Built export disclosure",
                                isinstance(info.get("ITSAppUsesNonExemptEncryption"), bool),
                                "Validate the declared encryption exemption")
