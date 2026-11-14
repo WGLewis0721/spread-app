@@ -141,7 +141,7 @@ struct SpreadFocusTimerSheet: View {
             }
             .buttonStyle(.bordered)
             .disabled(next == nil)
-            .accessibilityLabel(next.map { "Forward to " + $0 } ?? "No next round")
+            .accessibilityLabel(next.map { "Forward: " + $0 } ?? "Forward unavailable, no next step")
             .accessibilityIdentifier("focus-forward")
         }
         .font(.title3.weight(.semibold))

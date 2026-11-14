@@ -127,7 +127,8 @@ private struct SpreadTodayView: View {
     }
 
     private var todayColumn: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // 6 pt rhythm keeps the small widget's counters inside its 126 pt content height at default text size.
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: "calendar")
                 Text("Today").font(.headline)
@@ -258,6 +259,7 @@ struct SpreadFocusLiveActivityWidget: Widget {
                 }
             } compactLeading: {
                 Image(systemName: SpreadFocusLiveActivityWidget.status(context).symbol)
+                    .accessibilityLabel(SpreadFocusLiveActivityWidget.status(context).headline)
             } compactTrailing: {
                 SpreadFocusCompactTrailing(status: SpreadFocusLiveActivityWidget.status(context),
                                            deadline: context.state.deadline)

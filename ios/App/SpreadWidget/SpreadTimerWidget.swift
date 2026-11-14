@@ -6,8 +6,8 @@ import Foundation
 // The focus timer on the Home Screen and the Dynamic Island. The app's timer stays the only source of truth:
 // the widgets and the island read the record the app and the intents keep in the shared App Group. A running
 // stretch carries an absolute deadline, so the digits count down by themselves with no refresh. A stretch that
-// ran out shows as waiting for a tap, and nothing starts on its own. Each size shows more of the same controls:
-// the small widget one, the medium two, and the large every control that applies right now.
+// ran out shows as waiting for a tap, and nothing starts on its own. Every size shows the same transport controls
+// (Pause or Resume, Forward, Cancel) as 44 pt icons. The large size also shows Stop and the link to Spread.
 
 /// The timer face for the widgets. It reads the same session record the Dynamic Island reads, so a timer that runs on
 /// the island shows here too. Nothing shows while "Show Today on widgets" is off. The app's mirror supplies the title
@@ -104,6 +104,8 @@ struct SpreadFocusPanel: View {
     var showsRound = true
     /// The title, the role name or "Focus session". Off where the height is tight.
     var showsTitle = true
+    /// The progress bar. The medium size drops it first when Dynamic Type leaves no room.
+    var showsBar = true
 
     private var face: SpreadFocusFace { SpreadFocusFace(state: state, date: date) }
 
@@ -168,7 +170,7 @@ struct SpreadFocusPanel: View {
                     .lineLimit(1)
             }
             digits
-            bar
+            if showsBar { bar }
             if showsTitle {
                 Text(state.title)
                     .font(.caption)
@@ -216,7 +218,8 @@ struct SpreadFocusControlButton: View {
             }
         case .forward:
             Button(intent: ForwardSpreadFocusIntent(sessionId: sessionId)) {
-                Label(nextLabel ?? "Forward", systemImage: "forward.fill")
+                // The spoken name says what Forward starts, such as "Forward: Start break".
+                Label(nextLabel.map { "Forward: " + $0 } ?? "Forward", systemImage: "forward.fill")
             }
         case .stop:
             Button(intent: StopSpreadFocusIntent(sessionId: sessionId)) {
@@ -299,6 +302,7 @@ struct SpreadFocusCompactTrailing: View {
         } else {
             Image(systemName: status.isPaused ? "pause.fill" : (status.isWaiting ? "bell.fill" : "checkmark"))
                 .font(.caption2)
+                .accessibilityLabel(status.caption)
         }
     }
 }
@@ -311,6 +315,7 @@ struct SpreadFocusMinimal: View {
     var body: some View {
         HStack(spacing: 2) {
             Image(systemName: status.symbol)
+                .accessibilityLabel(status.headline)
             if status.isRunning, let deadline {
                 Text(timerInterval: Date.now...max(deadline, Date.now), countsDown: true)
                     .monospacedDigit()
@@ -398,10 +403,13 @@ private struct SpreadTimerView: View {
     }
 
     /// The face for one size: the running, paused or waiting timer, or the idle words.
-    @ViewBuilder private func face(_ scale: SpreadFocusPanel.Scale) -> some View {
+    /// `showsRound` and `showsBar` let the medium size drop its extra lines when the height runs short.
+    @ViewBuilder private func face(_ scale: SpreadFocusPanel.Scale, showsRound: Bool = true,
+                                   showsBar: Bool = true) -> some View {
         if let state = entry.state {
             SpreadFocusPanel(state: state, date: entry.date, scale: scale,
-                             showsRound: scale != .small, showsTitle: scale == .large)
+                             showsRound: showsRound && scale != .small, showsTitle: scale == .large,
+                             showsBar: showsBar)
         } else {
             idle(scale)
         }
@@ -521,6 +529,9 @@ private struct SpreadTimerView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .spreadFocusControls()
+        // The icons sit in fixed 44 pt circles, so their text size stops at xxxLarge. Larger text would overlap
+        // the neighbouring control. The face above still scales with the full range.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     @ViewBuilder private var endsAt: some View {
@@ -568,15 +579,25 @@ private struct SpreadTimerView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    /// Medium uses the extra width for a legible timer, without hiding Cancel.
+    /// Medium keeps the face above the three controls, without hiding Cancel. The medium widget is about 158 pt
+    /// tall on a 390 pt screen and less on smaller iPhones. When the height runs short, the progress bar and then
+    /// the round line go first, so the top line is never clipped.
     @ViewBuilder private var mediumBody: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            face(.medium)
-            Spacer(minLength: 0)
-            controlRow
+        ViewThatFits(in: .vertical) {
+            mediumStack(showsRound: true, showsBar: true)
+            mediumStack(showsRound: true, showsBar: false)
+            mediumStack(showsRound: false, showsBar: false)
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func mediumStack(showsRound: Bool, showsBar: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            face(.medium, showsRound: showsRound, showsBar: showsBar)
+            Spacer(minLength: 0)
+            controlRow
+        }
     }
 
     /// Large retains the Stop affordance and today's contextual counts.
