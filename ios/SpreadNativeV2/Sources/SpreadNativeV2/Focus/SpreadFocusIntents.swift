@@ -120,6 +120,11 @@ struct SetSpreadFocusPlayingIntent: SetValueIntent, LiveActivityIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        #if DEBUG
+        let diagnosticStored = SpreadFocusStore.load()
+        SpreadFocusDiagnostics.log("intent_SetSpreadFocusPlayingIntent", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "target_matches_saved=\(diagnosticStored != nil && diagnosticStored?.id == sessionId) value=\(value)")
+        #endif
         guard let session = SpreadFocusControls.current(),
               session.id == sessionId else { return .result() }
         if value {
@@ -146,6 +151,11 @@ struct PauseSpreadFocusIntent: LiveActivityIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        #if DEBUG
+        let diagnosticStored = SpreadFocusStore.load()
+        SpreadFocusDiagnostics.log("intent_PauseSpreadFocusIntent", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "target_matches_saved=\(diagnosticStored != nil && diagnosticStored?.id == sessionId)")
+        #endif
         guard let session = SpreadFocusControls.current(),
               session.id == sessionId,
               let paused = SpreadFocusMachine.pause(session, now: Date()) else { return .result() }
@@ -165,6 +175,11 @@ struct ResumeSpreadFocusIntent: LiveActivityIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        #if DEBUG
+        let diagnosticStored = SpreadFocusStore.load()
+        SpreadFocusDiagnostics.log("intent_ResumeSpreadFocusIntent", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "target_matches_saved=\(diagnosticStored != nil && diagnosticStored?.id == sessionId)")
+        #endif
         guard let session = SpreadFocusControls.current(),
               session.id == sessionId,
               let resumed = SpreadFocusMachine.resume(session, now: Date()) else { return .result() }
@@ -187,6 +202,11 @@ struct StopSpreadFocusIntent: LiveActivityIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        #if DEBUG
+        let diagnosticStored = SpreadFocusStore.load()
+        SpreadFocusDiagnostics.log("intent_StopSpreadFocusIntent", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "target_matches_saved=\(diagnosticStored != nil && diagnosticStored?.id == sessionId)")
+        #endif
         guard let session = SpreadFocusControls.current(),
               session.id == sessionId,
               let stopped = SpreadFocusMachine.stopped(session, now: Date()) else { return .result() }
@@ -209,6 +229,11 @@ struct CancelSpreadFocusIntent: LiveActivityIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        #if DEBUG
+        let diagnosticStored = SpreadFocusStore.load()
+        SpreadFocusDiagnostics.log("intent_CancelSpreadFocusIntent", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "target_matches_saved=\(diagnosticStored != nil && diagnosticStored?.id == sessionId)")
+        #endif
         guard let current = SpreadFocusControls.current(),
               current.id == sessionId else { return .result() }
         SpreadFocusControls.apply(nil, notify: false)
@@ -230,6 +255,11 @@ struct ForwardSpreadFocusIntent: LiveActivityIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        #if DEBUG
+        let diagnosticStored = SpreadFocusStore.load()
+        SpreadFocusDiagnostics.log("intent_ForwardSpreadFocusIntent", enabled: SpreadFocusPreferences.widgetsEnabled(),
+                                   extra: "target_matches_saved=\(diagnosticStored != nil && diagnosticStored?.id == sessionId)")
+        #endif
         guard let session = SpreadFocusControls.current(),
               session.id == sessionId,
               let next = SpreadFocusMachine.forward(session, id: UUID().uuidString, now: Date()) else {
