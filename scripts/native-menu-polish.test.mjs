@@ -64,7 +64,8 @@ test("the Focus sheet separates active controls, completed rounds and optional s
   assert.match(focus, /private func mediaActions/);
   assert.match(focus, /private func endingActions/);
   assert.match(focus, /ViewThatFits\(in: \.horizontal\)/);
-  assert.match(focus, /frame\(width: 44, height: 44\)/);
+  // At least 44 pt, and free to grow with Dynamic Type (finalize plan OD10).
+  assert.match(focus, /frame\((?:width: 44, height: 44|minWidth: 44, minHeight: 44)\)/);
   assert.match(focus, /focus-pause/);
   assert.match(focus, /focus-resume/);
   assert.match(focus, /focus-forward/);

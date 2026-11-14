@@ -72,7 +72,7 @@ struct BackupRestoreSheet: View {
             .navigationTitle("Backup and restore")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
