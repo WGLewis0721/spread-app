@@ -1,7 +1,7 @@
 #if os(iOS)
 import SwiftUI
 
-/// All-role overdue tray. The engine owns classification and eligibility;
+/// All-role overdue tray, hosted by LifeOverdueSheet. The engine owns classification and eligibility;
 /// this surface only selects items, previews the result, and confirms the valid subset.
 struct OverdueSelectionTray: View {
     @ObservedObject var planner: LivePlanner
@@ -9,13 +9,19 @@ struct OverdueSelectionTray: View {
     let rows: [NativeOverdueTask]
     let currentDay: String
     let weekDays: [String]
+    /// Runs after a confirmed move succeeds, so the host can close. The Life notice then offers Undo.
+    var onMoved: () -> Void = {}
 
     @State private var selection: Set<String> = []
     @State private var targetDay: String = ""
     @State private var preview: [NativeBulkPreview] = []
+    /// The plan revision the person reviewed. Confirming sends it, so a plan that changed since refuses the move.
+    @State private var reviewRevision: Int?
     @State private var showingPreview = false
     @State private var preparing = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Why the last review or move did not complete. Nothing moved while this is set.
+    @State private var message: String?
+    @AccessibilityFocusState private var messageFocused: Bool
 
     private var groupedRoles: [Responsibility] {
         snapshot.roles.filter { role in rows.contains { $0.hatId == role.id } }
@@ -25,7 +31,7 @@ struct OverdueSelectionTray: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Overdue").font(.system(.headline, weight: .semibold))
+                Text("Choose tasks to move").font(.system(.subheadline, weight: .semibold))
                 Spacer()
                 Button(selection.count == rows.count ? "Deselect all" : "Select all") {
                     selection = selection.count == rows.count ? [] : Set(rows.map(\.id))
@@ -33,6 +39,16 @@ struct OverdueSelectionTray: View {
                 .font(.system(.footnote, weight: .semibold))
                 .frame(minHeight: 44)
                 .accessibilityIdentifier("overdue-select-all")
+            }
+            if let message {
+                Label { Text(message).font(.system(.subheadline)).foregroundStyle(Spread.ink) } icon: {
+                    Image(systemName: "exclamationmark.circle").foregroundStyle(Spread.caution)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityFocused($messageFocused)
+                .accessibilityIdentifier("overdue-message")
             }
             ForEach(groupedRoles) { role in
                 VStack(alignment: .leading, spacing: 4) {
@@ -138,6 +154,7 @@ struct OverdueSelectionTray: View {
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: item.eligible ? "checkmark.circle" : "exclamationmark.circle")
                                 .foregroundStyle(item.eligible ? Spread.accent : Spread.caution)
+                                .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(rows.first(where: { $0.id == item.taskId })?.task.text ?? "Task")
                                     .font(.system(.subheadline, weight: .medium))
@@ -148,6 +165,10 @@ struct OverdueSelectionTray: View {
                         }
                         .padding(10)
                         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    if eligible.isEmpty {
+                        Text("None of these tasks can move to that day.")
+                            .font(Spread.callout).foregroundStyle(Spread.secondary)
                     }
                     Button("Move \(eligible.count) eligible \(eligible.count == 1 ? "task" : "tasks")") {
                         Task { await commitPreview() }
@@ -175,27 +196,44 @@ struct OverdueSelectionTray: View {
     private func preparePreview() async {
         guard !preparing, !selectedIDs.isEmpty, !targetDay.isEmpty else { return }
         preparing = true
-        let response = await planner.previewOverdueMove(taskIds: selectedIDs, targetDay: targetDay,
-                                                        today: PlannerDates.localISO())
+        message = nil
+        // Read the revision before the review, so the review is pinned to the plan it was built from.
+        let revisionBefore = planner.state?.revision
+        let fetched = await planner.previewOverdueMove(taskIds: selectedIDs, targetDay: targetDay,
+                                                       today: PlannerDates.localISO())
         preparing = false
-        guard let response else { planner.error = "Could not review these tasks. Nothing was moved."; return }
-        preview = response
+        guard let lines = fetched, let revision = revisionBefore else {
+            fail("Couldn't review these tasks. Nothing was moved.")
+            return
+        }
+        preview = lines
+        reviewRevision = revision
         showingPreview = true
     }
 
     private func commitPreview() async {
-        // Move exactly what the person reviewed and confirmed: the eligible rows of this preview.
-        // Sending the whole selection would let a planner change made after the preview move more.
+        // Move exactly what the person reviewed and confirmed: the eligible rows of this preview,
+        // at the revision they were reviewed at. A plan changed since then refuses the move.
         let reviewed = preview.filter(\.eligible).map(\.taskId)
-        guard !preparing, !reviewed.isEmpty else { return }
+        guard !preparing, !reviewed.isEmpty, let revision = reviewRevision else { return }
         preparing = true
         let ok = await planner.send(["type": "bulkMoveOverdue", "taskIds": reviewed,
-                                     "targetDay": targetDay, "today": PlannerDates.localISO()])
+                                     "targetDay": targetDay, "today": PlannerDates.localISO()],
+                                    expectedRevision: revision)
         preparing = false
+        showingPreview = false
         if ok {
             selection.removeAll()
-            showingPreview = false
+            message = nil
+            onMoved()
+        } else {
+            fail("Nothing was moved. Your plan may have changed. Review the tasks again.")
         }
+    }
+
+    private func fail(_ text: String) {
+        message = text
+        messageFocused = true
     }
 }
 #endif

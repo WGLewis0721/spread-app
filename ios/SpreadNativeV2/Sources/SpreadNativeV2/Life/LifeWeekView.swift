@@ -20,6 +20,9 @@ struct LifeWeekView: View {
     @State private var navigationID = UUID()
     @State private var pendingDate: String?
     @State private var activeProfile = ""
+    @State private var overdueLoad: LifeOverdueLoad = .loading
+    @State private var overdueOpen = false
+    @State private var overdueAttempt = 0
     @AccessibilityFocusState private var dateHeadingFocused: Bool
 
     private var profile: String { planner.state?.envelope.profileId ?? "" }
@@ -28,6 +31,8 @@ struct LifeWeekView: View {
     private var roles: [Responsibility] { LifeCalendarRules.dailyRoles(snapshot, day: date) }
     private var marksKey: String { "\(profile)|\(date.prefix(7))|\(planner.state?.sessionId ?? "")|\(planner.state?.revision ?? 0)" }
     private var selectionKey: String { "native.life.selectedDate.\(profile)" }
+    /// Re-reads overdue tasks when the plan changes or the person retries. The count and the sheet share this one read.
+    private var overdueKey: String { "\(profile)|\(snapshot.weekKey)|\(planner.state?.sessionId ?? "")|\(planner.state?.revision ?? 0)|\(overdueAttempt)" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spread.space3) {
@@ -104,6 +109,20 @@ struct LifeWeekView: View {
             }
             guard !Task.isCancelled, marksKey == origin else { return }
             marks = combined
+        }
+        .task(id: overdueKey) {
+            let fetched = await planner.allOverdueTasks(today: PlannerDates.localISO())
+            guard !Task.isCancelled else { return }
+            if let rows = fetched {
+                overdueLoad = .loaded(rows)
+            } else {
+                overdueLoad = .failed
+            }
+        }
+        .sheet(isPresented: $overdueOpen) {
+            LifeOverdueSheet(planner: planner, snapshot: snapshot, load: overdueLoad,
+                             onRetry: { overdueLoad = .loading; overdueAttempt += 1 },
+                             onMoved: { overdueOpen = false })
         }
     }
 
@@ -225,8 +244,9 @@ struct LifeWeekView: View {
     private var unplaced: some View {
         let tasks = snapshot.unplacedTasks
         return VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            HStack(spacing: Spread.space2) {
                 Spacer(minLength: 0)
+                overdueCapsule
                 Button {
                     withAnimation(reduceMotion ? nil : SpreadTactile.settle) { inboxOpen.toggle() }
                 } label: {
@@ -257,6 +277,49 @@ struct LifeWeekView: View {
                     .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
+        }
+    }
+
+    /// Overdue count beside To place (decision 41). It opens a review sheet; nothing moves until a person confirms.
+    private var overdueCapsule: some View {
+        Button {
+            overdueOpen = true
+        } label: {
+            HStack(spacing: Spread.space2) {
+                SpreadIcon(name: "lucide-calendar-clock", size: 19)
+                    .font(.title3.weight(.medium))
+                overdueCount
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(Spread.ink)
+            .padding(.horizontal, 14)
+            .frame(minHeight: Spread.minimumTarget)
+            .background(Spread.elevated, in: Capsule())
+            .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityLabel("Overdue tasks")
+        .accessibilityValue(overdueValue)
+        .accessibilityHint("Review and move overdue tasks into this week")
+        .accessibilityIdentifier("life-overdue-entry")
+    }
+
+    @ViewBuilder private var overdueCount: some View {
+        switch overdueLoad {
+        case .loading:
+            Text("–").monospacedDigit()
+        case .failed:
+            Image(systemName: "exclamationmark.circle")
+        case .loaded(let rows):
+            Text(String(rows.count)).monospacedDigit()
+        }
+    }
+
+    private var overdueValue: LocalizedStringKey {
+        switch overdueLoad {
+        case .loading: return "Checking"
+        case .failed: return "Could not check"
+        case .loaded(let rows): return rows.isEmpty ? "Nothing overdue" : "\(rows.count) overdue"
         }
     }
 
