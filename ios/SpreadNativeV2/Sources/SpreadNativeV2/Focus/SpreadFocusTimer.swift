@@ -11,6 +11,8 @@ final class SpreadFocusTimer: ObservableObject {
     @Published private(set) var session: SpreadFocusSession?
 
     init() {
+        // App-only settings must be mirrored before any extension timer update.
+        SpreadFocusPreferences.publishFromApp()
         SpreadFocusStore.migrate()
         session = SpreadFocusStore.load()
         reconcile()

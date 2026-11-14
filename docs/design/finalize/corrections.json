@@ -129,7 +129,7 @@
       ],
       "problem": "CLAUDE.md and the release plan disagreed about device scope. OD20 makes Spread 1.0 iPhone only, and the superseding note is on main. OD25 keeps the TestFlight invitation and adds no App Store link until the listing exists. Found on 2026-11-14: the Xcode build settings still declare iPhone and iPad (TARGETED_DEVICE_FAMILY 1,2 in six places), and the App Store review checklist still says iPhone/iPad. OD20 therefore applies to the docs and copy, not yet to the build. Finding X1, blocks release until the owner confirms and the native config changes.",
       "severity": "high",
-      "decision_owner": "decided: OD20 applied in the docs and copy; OD28 (iPhone only; wave 3 sets the device family to 1 and aligns the checklist and preflight). OD25 keeps the TestFlight invitation. Open until wave 3 lands.",
+      "decision_owner": "decided: OD20 applied in the docs and copy; OD28 resolved in code by #223 (2026-11-14): every target TARGETED_DEVICE_FAMILY = 1; checklist, preflight and release plan say iPhone only. OD25 keeps the TestFlight invitation. Status stays open until the owner fills reviewer_approval at merge, then closed.",
       "spec": "docs/design/finalize/corrections/release-scope.md",
       "status": "open",
       "observed_evidence": [
@@ -141,8 +141,19 @@
         "docs/APP_STORE_REVIEW_CHECKLIST.md:12,28 (iPhone/iPad wording)",
         "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X1)"
       ],
-      "changed_files": [],
-      "regression_evidence": [],
+      "changed_files": [
+        "ios/App/App.xcodeproj/project.pbxproj",
+        "ios/App/App/Info.plist",
+        "ios/App/SpreadNativeUITests/PlannerUITests.swift",
+        "docs/APP_STORE_REVIEW_CHECKLIST.md",
+        "APP_STORE_RELEASE_PLAN.md",
+        "scripts/app-store-preflight.py",
+        "scripts/test_app_store_preflight.py"
+      ],
+      "regression_evidence": [
+        "python3 scripts/test_app_store_preflight.py: 20 tests OK on the merged branch (iPhone-only device scope).",
+        "grep on the merged tree: six TARGETED_DEVICE_FAMILY = 1 entries in ios/App/App.xcodeproj/project.pbxproj; docs/APP_STORE_REVIEW_CHECKLIST.md line 18 states the iPhone-only scope."
+      ],
       "reviewer_approval": ""
     },
     {
@@ -161,7 +172,7 @@
       "observed_evidence": [
         "docs/design/specs/2026-11-14-publish-finalize-plan.md section 8",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets: eight Lucide assets present since PR #217",
-        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:143 (disabledOpacity, #220) and :54 (sidebarScrim, #220)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:143 (disabledOpacity, #220); sidebarScrim (#220) was removed in #225 (OD33)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/PlannerNavigationRail.swift:57 (SF sidebar glyphs)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:552,799 (Lucide panel-left and SF undo glyph)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:969 (success haptic after removal, dropped by OD31)",

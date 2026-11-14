@@ -10,6 +10,7 @@ import Foundation
 /// The one place a control's change is saved and shown everywhere it appears.
 @MainActor
 enum SpreadFocusControls {
+    static let didChange = Notification.Name("SpreadFocusSessionChanged")
     /// The session for the profile on screen, with a stretch that ran out while the app was asleep saved as
     /// finished. Nil when there is nothing for the profile on screen.
     static func current(now: Date = Date()) -> SpreadFocusSession? {
@@ -26,6 +27,9 @@ enum SpreadFocusControls {
     static func apply(_ session: SpreadFocusSession?, notify: Bool) {
         if let session { SpreadDayPlanStore.recordCompletion(of: session) }
         SpreadFocusStore.save(session)
+        // LiveActivityIntent executes in the app process: update the visible timer now,
+        // instead of waiting for SpreadLiveRoot's one-second lifecycle fallback.
+        NotificationCenter.default.post(name: didChange, object: nil)
         // Publish the new state before the potentially expensive ActivityKit refresh.
         // App Group session remains the only authority on both paths.
         SpreadFocusWidgetPublisher.publish(session)
@@ -39,7 +43,7 @@ enum SpreadFocusControls {
 
     /// Whether the person chose to be told when a stretch ends.
     static var notifyWhenDone: Bool {
-        UserDefaults.standard.bool(forKey: "native.focus.notifyWhenDone")
+        SpreadFocusPreferences.notifyWhenDone()
     }
 }
 
@@ -64,6 +68,7 @@ struct StartSpreadBlockIntent: LiveActivityIntent {
             profileId: offered.record.profileId, roleId: offered.entry.roleId,
             roleName: offered.entry.label, plan: offered.entry.plan))
         SpreadFocusControls.apply(session, notify: SpreadFocusControls.notifyWhenDone)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -85,6 +90,7 @@ struct StartSpreadFocusIntent: LiveActivityIntent {
             id: UUID().uuidString, profileId: choice.profileId, roleId: choice.roleId, roleName: choice.roleName,
             plan: choice.plan, kind: .focus, round: 1, now: Date()) else { return .result() }
         SpreadFocusControls.apply(session, notify: SpreadFocusControls.notifyWhenDone)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -112,10 +118,12 @@ struct SetSpreadFocusPlayingIntent: SetValueIntent, LiveActivityIntent {
             guard session.phase == .paused,
                   let resumed = SpreadFocusMachine.resume(session, now: Date()) else { return .result() }
             SpreadFocusControls.apply(resumed, notify: SpreadFocusControls.notifyWhenDone)
+            await SpreadFocusLiveActivityController.awaitSettled()
         } else {
             guard session.phase == .running,
                   let paused = SpreadFocusMachine.pause(session, now: Date()) else { return .result() }
             SpreadFocusControls.apply(paused, notify: false)
+            await SpreadFocusLiveActivityController.awaitSettled()
         }
         return .result()
     }
@@ -124,11 +132,19 @@ struct SetSpreadFocusPlayingIntent: SetValueIntent, LiveActivityIntent {
 struct PauseSpreadFocusIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Pause focus"
 
+    @Parameter(title: "Session")
+    var sessionId: String
+
+    init() {}
+    init(sessionId: String) { self.sessionId = sessionId }
+
     @MainActor
     func perform() async throws -> some IntentResult {
         guard let session = SpreadFocusControls.current(),
+              session.id == sessionId,
               let paused = SpreadFocusMachine.pause(session, now: Date()) else { return .result() }
         SpreadFocusControls.apply(paused, notify: false)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -136,11 +152,19 @@ struct PauseSpreadFocusIntent: LiveActivityIntent {
 struct ResumeSpreadFocusIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Resume focus"
 
+    @Parameter(title: "Session")
+    var sessionId: String
+
+    init() {}
+    init(sessionId: String) { self.sessionId = sessionId }
+
     @MainActor
     func perform() async throws -> some IntentResult {
         guard let session = SpreadFocusControls.current(),
+              session.id == sessionId,
               let resumed = SpreadFocusMachine.resume(session, now: Date()) else { return .result() }
         SpreadFocusControls.apply(resumed, notify: SpreadFocusControls.notifyWhenDone)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -151,11 +175,19 @@ struct StopSpreadFocusIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop focus"
     static var description = IntentDescription("Stop the current stretch now. Nothing starts after it.")
 
+    @Parameter(title: "Session")
+    var sessionId: String
+
+    init() {}
+    init(sessionId: String) { self.sessionId = sessionId }
+
     @MainActor
     func perform() async throws -> some IntentResult {
         guard let session = SpreadFocusControls.current(),
+              session.id == sessionId,
               let stopped = SpreadFocusMachine.stopped(session, now: Date()) else { return .result() }
         SpreadFocusControls.apply(stopped, notify: false)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -163,13 +195,21 @@ struct StopSpreadFocusIntent: LiveActivityIntent {
 /// Cancels the whole focus session: the current stretch and anything that would have followed it. The island and
 /// the widgets release it at once. Nothing is recorded as done, and nothing starts.
 struct CancelSpreadFocusIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Cancel focus"
+    static var title: LocalizedStringResource = "Cancel session"
     static var description = IntentDescription("Cancel the focus session. Nothing is recorded, and nothing starts.")
+
+    @Parameter(title: "Session")
+    var sessionId: String
+
+    init() {}
+    init(sessionId: String) { self.sessionId = sessionId }
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        guard SpreadFocusControls.current() != nil else { return .result() }
+        guard let current = SpreadFocusControls.current(),
+              current.id == sessionId else { return .result() }
         SpreadFocusControls.apply(nil, notify: false)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -180,13 +220,21 @@ struct ForwardSpreadFocusIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Forward to next step"
     static var description = IntentDescription("Start the break, or the next focus round, now.")
 
+    @Parameter(title: "Session")
+    var sessionId: String
+
+    init() {}
+    init(sessionId: String) { self.sessionId = sessionId }
+
     @MainActor
     func perform() async throws -> some IntentResult {
         guard let session = SpreadFocusControls.current(),
+              session.id == sessionId,
               let next = SpreadFocusMachine.forward(session, id: UUID().uuidString, now: Date()) else {
             return .result()
         }
         SpreadFocusControls.apply(next, notify: SpreadFocusControls.notifyWhenDone)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }

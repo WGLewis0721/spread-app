@@ -44,8 +44,8 @@ Required before release:
 
 > **Superseded in part on 2026-11-14 (owner decision OD20, [finalize plan](docs/design/specs/2026-11-14-publish-finalize-plan.md) section 8):** Spread 1.0 is **iPhone only**, matching the rules card. The iCloud lines below stay suspended, as the rules card says ("Nothing may claim iCloud works"). The paid, local-first and App Review rules still apply.
 
-**Direction revised 2026-10-08.** Spread 1.0 is a **$2.99 one-time paid universal app (iPhone and iPad)**
-with **automatic iCloud Backup** and **optional iCloud Sync**. Full design, risks, PR boundaries and
+**Direction revised 2026-10-08; device scope superseded 2026-11-14 (OD20).** Spread 1.0 is a **$2.99 one-time paid iPhone app**
+planned with **automatic iCloud Backup** and **optional iCloud Sync**. Both iCloud features stay suspended for 1.0 and are not advertised. Full design, risks, PR boundaries and
 gates: [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md). The rules below are binding:
 
 - Local-first and fully offline. iCloud is the operating system's account; Spread adds no account.
@@ -54,8 +54,8 @@ gates: [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md). The rules below are binding:
 - **Sync** is off by default and enabled only by an explicit, per-profile user action. Independent
   device data is never silently combined, overwritten or deleted; every link, merge and restore
   takes a safety snapshot first. It ships behind `cloud.sync` and may slip to 1.1 without blocking 1.0.
-- Minimum iOS is 17 (`CKSyncEngine`). iPad supports all orientations and resizable windows.
-- Advertise iCloud or iPad only after each has accepted physical-device QA.
+- Minimum iOS is 17 (`CKSyncEngine`). Spread 1.0 is iPhone only (OD20): portrait and both landscape orientations, as `Info.plist` declares. The 2026-10-08 iPad orientation and resizable-window rules no longer apply.
+- Advertise iCloud only after it has accepted physical-device QA. Do not advertise iPad for 1.0.
 
 ## Commerce
 
@@ -127,7 +127,7 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 ### 3. Physical iPhone and TestFlight QA
 
 - [ ] Build and run on a physical iPhone.
-- [ ] Verify supported iPhones and an iPad (included at launch; configured, device QA pending); safe areas,
+- [ ] Verify supported iPhones (iPhone only for 1.0, OD20); safe areas,
       orientation, light/dark modes, keyboard, interruption/resume, low storage,
       offline use, and date/time-zone/week-boundary behavior.
 - [ ] Internal TestFlight build.
@@ -140,14 +140,13 @@ Status is tracked in [docs/IOS_RELEASE.md](docs/IOS_RELEASE.md), which also hold
 - [ ] Name, subtitle, description, keywords, category, and age rating.
 - [ ] Privacy answers that match the binary.
 - [ ] Support, privacy, and terms URLs.
-- [ ] Screenshots for required device classes.
-- [ ] Advertise only the device families with accepted physical-device QA
+- [ ] Screenshots for the iPhone sizes App Store Connect requires (iPhone only, OD20).
+- [ ] Advertise iPhone only (OD20), with accepted physical-device QA
       and an approved store build; do not imply iPad/macOS/Watch availability
       from the web layout alone.
-- [ ] Price $2.99 (one-time, no IAP), territories, and availability. One app record, one bundle ID,
-      iPhone and iPad in one binary, so one purchase covers both (universal purchase). Leave Family
+- [ ] Price $2.99 (one-time, no IAP), territories, and availability. One app record and one bundle ID for the iPhone-only binary. Leave Family
       Sharing off unless App Store Connect shows it for paid apps and it is verified.
-- [ ] 13-inch iPad screenshots (2064x2752 or 2752x2064) in addition to iPhone sizes.
+- [ ] No iPad screenshots and no 13-inch iPad assets: 1.0 is iPhone only (OD20).
 - [ ] CloudKit schema deployed from Development to Production **before** the first TestFlight build
       that enables sync (production schema is additive-only).
 - [ ] Paid Apps Agreement, banking, and tax setup.
@@ -166,20 +165,20 @@ A build goes to external TestFlight or App Review only when all of these hold. D
 [docs/ICLOUD_PLAN.md](docs/ICLOUD_PLAN.md) section 11.
 
 1. `typecheck`, `lint`, `test:spread`, `test:cloud` and the Swift tests are green.
-2. Golden comparison is clean on iPhone widths; the iPad matrix passes (820/1024/1366, light/dark, Reduce Motion).
+2. Golden comparison is clean on iPhone widths in light and dark, with Reduce Motion (iPhone only, OD20).
 3. The migration suite passes on every legacy and golden fixture, including interruption and newer-version cases.
 4. Backup: kill-during-write, corrupt-latest, retention and per-device isolation proven; reinstall and new-device restore proven on hardware.
-5. Sync (if shipping): no-loss property tests green; two-device offline matrix passed on a real iPhone and a real iPad; account switch and deleted zone handled; CloudKit Production schema deployed and verified from a TestFlight build.
+5. Sync (if shipping): no-loss property tests green; two-device offline matrix passed on two real iPhones; account switch and deleted zone handled; CloudKit Production schema deployed and verified from a TestFlight build.
 6. The full planner loop works offline with iCloud signed out, disabled, and full.
 7. No network requests when iCloud features are off.
 8. Privacy manifest, App Privacy answers, policy, support page and review notes match the binary.
-9. Paid Apps Agreement, banking and tax complete; $2.99 set; universal purchase verified.
+9. Paid Apps Agreement, banking and tax complete; $2.99 set; iPhone-only listing verified.
 10. Rollback rehearsed on a TestFlight build.
 
 ## Planner UX pass checks (added 2026-10-08)
 
-Before the next TestFlight build, on a real iPhone and iPad: touch-hold drag of a task onto a day, Undo toast clears above the home indicator, the completion haptic fires once, Reduce Motion removes movement, and Airplane Mode planning loses nothing. `@capacitor/haptics` is the only new native plugin; it is a no-op on the web.
+Before the next TestFlight build, on a real iPhone: touch-hold drag of a task onto a day, Undo toast clears above the home indicator, the completion haptic fires once, Reduce Motion removes movement, and Airplane Mode planning loses nothing. `@capacitor/haptics` is the only new native plugin; it is a no-op on the web.
 
 ## 1.0 exit condition
 
-Spread is App Store ready when a customer can buy it once from the App Store, install it on an iPhone and/or an iPad, complete the full Responsibilities → Hours → Week → Tasks loop offline, close/reopen/update the app without losing data, restore their planner from an iCloud backup or a file, and get support without the planner depending on Vercel or an account service. Sync, if shipped, adds nothing to this bar and removes nothing from it.
+Spread is App Store ready when a customer can buy it once from the App Store, install it on an iPhone, complete the full Responsibilities → Hours → Week → Tasks loop offline, close/reopen/update the app without losing data, restore their planner from an iCloud backup or a file, and get support without the planner depending on Vercel or an account service. Sync, if shipped, adds nothing to this bar and removes nothing from it.

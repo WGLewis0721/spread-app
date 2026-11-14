@@ -54,7 +54,8 @@ struct PlannerNavigationRail: View {
                 SpreadHaptics.selection()
                 withAnimation(reduceMotion ? nil : SpreadTactile.glide) { expanded.toggle() }
             } label: {
-                Image(systemName: expanded ? "sidebar.left" : "sidebar.right")
+                // The same Lucide panel-left as the Classic navigation toggle (ICON_HANDOFF); the label carries the state.
+                SpreadIcon(name: "lucide-panel-left", size: 20)
                     .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget).contentShape(Rectangle())
             }
             .buttonStyle(.spreadPress)

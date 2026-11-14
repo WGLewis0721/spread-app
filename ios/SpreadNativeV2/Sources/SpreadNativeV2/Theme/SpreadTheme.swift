@@ -22,7 +22,7 @@ public enum Spread {
     public static let canvasUIColor = UIColor { trait in
         trait.userInterfaceStyle == .dark ? UIColor(hex6: 0x060B18) : UIColor(hex6: 0xF4F1EA)
     }
-    /// Recess: the Crown's centre, task rows, the rail's trough.
+    /// Recess: task rows and the navigation rail's trough.
     public static let inset = dynamic(light: 0xEBE7DD, dark: 0x0A1427)
     public static let ink = dynamic(light: 0x0E1A2E, dark: 0xF7FAFF)
     // Increase Contrast ("stronger separators and ink", docs/design/packs/apple-native-feel.md) swaps in the
@@ -50,8 +50,6 @@ public enum Spread {
     public static let onDanger = Color.white
     public static let caution = dynamic(light: 0x9A3412, dark: 0xFF9F0A)
     public static let scrim = dynamic(lightRGBA: (0, 0, 0, 0.32), darkRGBA: (0, 0, 0, 0.55))
-    /// The Week sidebar's tap-to-dismiss overlay (OD16). Named at its current strength; adoption is pending (TOKEN_AUDIT).
-    public static let sidebarScrim = Color.black.opacity(0.12)
     /// The lit blue of a selected segment or primary button. The specimen's `blueBtn` runs #2F95FF to #0559C7, but white
     /// text on #2F95FF is only 3.06:1; the light end is #0A6FE8 so white text is at least 4.5:1 across the whole gradient.
     public static let accentGradient = LinearGradient(
@@ -113,22 +111,6 @@ public enum Spread {
         highLight: (14, 26, 46, 0.46), highDark: (255, 255, 255, 0.50))
     public static let glassLine = adaptive(light: (14, 26, 46, 0.12), dark: (255, 255, 255, 0.14))
     public static let shadow = dynamic(lightRGBA: (14, 26, 46, 0.12), darkRGBA: (0, 0, 0, 0.50))
-
-    // MARK: Crown metal (specimen `metal`: cool steel, bright top edge, recessed centre)
-
-    private static let steel: [Color] = [
-        Color(hex6: 0xF3F5FF), Color(hex6: 0xC9D1E2), Color(hex6: 0x606F8B), Color(hex6: 0xDDE2ED),
-        Color(hex6: 0x44516C), Color(hex6: 0xECEFF4), Color(hex6: 0x8190AC),
-    ]
-    public static let crownLight: [Color] = steel
-    public static let crownDark: [Color] = steel
-    /// The recessed centre that holds the week readout.
-    public static let crownRecess = dynamic(light: 0xEEF1F7, dark: 0x081223)
-    public static let crownRecessStroke = adaptive(light: (14, 26, 46, 0.30), dark: (213, 220, 232, 0.55))
-    public static let toothDarkLight = Color(hex6: 0x44516C), toothMidLight = Color(hex6: 0xC7CFDF)
-    public static let toothLightLight = Color.white, toothGapLight = Color(hex6: 0x8190AC)
-    public static let toothDarkDark = Color(hex6: 0x111827), toothMidDark = Color(hex6: 0x8190AC)
-    public static let toothLightDark = Color(hex6: 0xFAFDFF), toothGapDark = Color(hex6: 0x1B2438)
 
     // MARK: Shape language (styles.css @theme and tailwind classes in the planner)
 
@@ -345,7 +327,16 @@ public enum SpreadUndo {
     public static let seconds: Double = 6
 }
 
-/// One light haptic when a task is completed, after the store has acknowledged the change. iPhone only.
+/// Haptic policy (OD31; brand board "Feedback"; Gray Matter "Haptics are semantic, bounded and optional").
+/// One cue per event. Every cue is iPhone only and is skipped when the in-app Touch feedback setting is off or the app
+/// is not active. UIKit generators also stop when iOS System Haptics is off (device check owed).
+///   - Success: the only success cue is one light impact after the store accepts a completed task (`completed`).
+///     Removing, editing or renaming has none: the visible change already confirms it.
+///   - Detent: one selection tick per accepted stepper or week step (`selection`), never per frame or drag update.
+///   - Edit: one impact on entering Edit and one softer impact on leaving it (`editMode`).
+///   - Reveal: one impact when a Manage or Delete swipe snaps open (`revealed`).
+///   - Warning: one rate-limited warning at a boundary or before a destructive confirm (`destructivePrompt`).
+///   - Navigation and disclosure: one selection tick when a surface, the navigation rail, a card or a summary opens.
 public enum SpreadHaptics {
     /// Retain the existing preference key. One owner for both presentations and all cues.
     @MainActor public static var enabled: Bool {
@@ -360,8 +351,7 @@ public enum SpreadHaptics {
         guard enabled else { return }
         selectionGenerator.prepare(); lightGenerator.prepare(); warningGenerator.prepare()
     }
-    /// Discrete feedback, never tied to repeating glow frames or drag updates.
-    /// An iPhone home-screen style touch cue on edit, swipe reveal and commit.
+    /// Edit mode: a firm impact on entering, a softer one on leaving. Never tied to glow frames or drag updates.
     @MainActor public static func editMode(entering: Bool) {
         guard enabled else { return }
         UIImpactFeedbackGenerator(style: entering ? .rigid : .soft)
@@ -380,16 +370,20 @@ public enum SpreadHaptics {
             .impactOccurred(intensity: destructive ? 0.9 : 0.65)
     }
 
+    /// Repeats of a warning inside this window are dropped, so a boundary tapped again does not buzz again.
+    private static let warningInterval: TimeInterval = 0.5
+    @MainActor private static var lastWarning: TimeInterval = -.infinity
+
+    /// Boundary or destructive-confirm warning, rate-limited by the helper so every caller follows the policy.
     @MainActor public static func destructivePrompt() {
         guard enabled else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - lastWarning >= warningInterval else { return }
+        lastWarning = now
         warningGenerator.notificationOccurred(.warning)
     }
 
-    @MainActor public static func success() {
-        guard enabled else { return }
-        warningGenerator.notificationOccurred(.success)
-    }
-
+    /// The one success cue: a light impact after the store accepts a completed task (OD2).
     @MainActor public static func completed() {
         guard enabled else { return }
         lightGenerator.impactOccurred()

@@ -8,18 +8,17 @@ import WidgetKit
 /// widget can say why it shows no timer. Life area names appear only when the person allowed them outside the app.
 /// Nothing here changes a budget, an allocation or a task.
 enum SpreadFocusWidgetPublisher {
-    private static let showNameKey = "native.focus.showNameOutsideApp"
+    private static let showNameKey = SpreadFocusPreferences.showNameKey
 
     static func publish(_ session: SpreadFocusSession?) {
-        let enabled = UserDefaults.standard.bool(forKey: SpreadWidgetShared.todayEnabledKey)
-        guard enabled,
+        guard SpreadFocusPreferences.widgetsEnabled(),
               let session, SpreadFocusMachine.isOnScreen(session),
               SpreadFocusStore.activeProfile() == session.profileId,
               let shared = UserDefaults(suiteName: SpreadWidgetShared.appGroup) else {
             revoke()
             return
         }
-        let title = UserDefaults.standard.bool(forKey: showNameKey) ? session.roleName : "Focus session"
+        let title = SpreadFocusPreferences.showName() ? session.roleName : "Focus session"
         let state = SpreadFocusWidgetState(
             sessionId: session.id,
             // A finished stretch with a next step is shown as running with no deadline, which the widget reads
@@ -50,7 +49,7 @@ enum SpreadFocusWidgetPublisher {
     /// there is no timer to show.
     static func revoke() {
         guard let shared = UserDefaults(suiteName: SpreadWidgetShared.appGroup) else { return }
-        let enabled = UserDefaults.standard.bool(forKey: SpreadWidgetShared.todayEnabledKey)
+        let enabled = SpreadFocusPreferences.widgetsEnabled()
         shared.set(enabled, forKey: SpreadWidgetShared.timerEnabledMirrorKey)
         if shared.object(forKey: SpreadWidgetShared.focusKey) != nil {
             shared.removeObject(forKey: SpreadWidgetShared.focusKey)

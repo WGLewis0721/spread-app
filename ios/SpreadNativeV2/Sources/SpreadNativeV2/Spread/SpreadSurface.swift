@@ -59,7 +59,7 @@ struct SpreadSurface: View {
         let spoken = "\(SpreadHours.spoken(status.remaining)) remaining to plan, " +
             "\(SpreadHours.spoken(status.scheduled)) scheduled across \(status.spreadCount) " +
             (status.spreadCount == 1 ? "responsibility" : "responsibilities") +
-            (status.overbooked > 0 ? ", \(SpreadHours.spoken(status.overbooked)) overbooked" : "")
+            (status.overbooked > 0 ? ", \(SpreadHours.spoken(status.overbooked)) over budget" : "")
 
         return VStack(alignment: .leading, spacing: 0) {
             Button {
@@ -135,7 +135,7 @@ struct SpreadSurface: View {
                     .font(.system(.caption2))
                     .foregroundStyle(Spread.secondary)
                 Text(status.overbooked > 0
-                     ? "\(SpreadHours.text(status.overbooked))h overbooked"
+                     ? "\(SpreadHours.text(status.overbooked))h over budget"
                      : "\(SpreadHours.text(status.remaining))h remaining")
                     .font(.system(.caption2, weight: .medium))
                     .foregroundStyle(status.overbooked > 0 ? Spread.caution : Spread.secondary)
@@ -164,7 +164,7 @@ struct SpreadSurface: View {
                     .foregroundStyle(Spread.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if status.overbooked > 0 {
-                    Text("\(SpreadHours.text(status.overbooked))h overbooked")
+                    Text("\(SpreadHours.text(status.overbooked))h over budget")
                         .font(.system(.caption, weight: .semibold))
                         .foregroundStyle(Spread.caution)
                 }
@@ -960,19 +960,15 @@ struct StackLayout: View {
             ),
             titleVisibility: .visible
         ) {
-            Button("Delete responsibility", role: .destructive) {
+            Button("Remove responsibility", role: .destructive) {
                 guard let id = pendingDeleteId else { return }
                 pendingDeleteId = nil
                 closeReveal()
-                Task {
-                    if await planner.send(["type": "removeRole", "roleId": id]) {
-                        SpreadHaptics.success()
-                    }
-                }
+                // No success cue after a removal (OD31): the row leaving the list is the confirmation.
+                Task { await planner.send(["type": "removeRole", "roleId": id]) }
             }
             Button("Cancel", role: .cancel) {
                 pendingDeleteId = nil
-                SpreadHaptics.selection()
             }
         } message: {
             Text("This removes the responsibility and its planned work. You cannot undo this from the card.")
@@ -1005,7 +1001,7 @@ struct StackLayout: View {
         .accessibilityActions {
             if editing {
                 Button("Manage \(role.name)") { manage(role.id) }
-                Button("Delete \(role.name)", role: .destructive) {
+                Button("Remove \(role.name)", role: .destructive) {
                     guard editing else { return }
                     pendingDeleteId = role.id
                     SpreadHaptics.destructivePrompt()
@@ -1059,7 +1055,7 @@ struct StackLayout: View {
     private func actionTray(for role: Responsibility) -> some View {
         HStack {
             if visibleSide(for: role.id) == .delete {
-                swipeAction("Delete", icon: "icon-trash", id: "remove-role-\(role.id)", roleName: role.name, destructive: true) {
+                swipeAction("Remove", icon: "icon-trash", id: "remove-role-\(role.id)", roleName: role.name, destructive: true) {
                     guard editing else { return }
                     pendingDeleteId = role.id
                     SpreadHaptics.destructivePrompt()
@@ -1157,8 +1153,8 @@ struct StackLayout: View {
     private func manage(_ id: String) {
         guard editing else { return }
         closeReveal()
+        // Leaving Edit gives the one Edit cue (root onChange); no second tick here.
         editing = false
-        SpreadHaptics.selection()
         onOpenRole(id)
     }
 
