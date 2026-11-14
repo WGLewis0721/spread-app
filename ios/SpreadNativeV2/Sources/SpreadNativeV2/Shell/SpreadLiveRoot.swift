@@ -5,7 +5,7 @@ import SwiftUI
 /// only writer (every change is an awaited intent through `LivePlanner.send`).
 ///
 /// Hierarchy, top to bottom, follows `WeekScreen` in the pre-migration `spread-app.tsx`:
-/// brand row (folds to the mark), profile chip, the metal Week Crown, the Spread/Week rail, then the surface.
+/// brand row (folds to the mark), profile chip, the Week control, the Spread/Week rail, then the surface.
 /// The floating glass dock sits over the bottom edge and holds Done, the Week/Month morph, Edit, and Settings.
 public struct SpreadLiveRoot: View {
     @ObservedObject var planner: LivePlanner
@@ -14,7 +14,6 @@ public struct SpreadLiveRoot: View {
 
     // OD18: Life is the default root for new installs. The key is unchanged, so a stored choice still wins.
     @AppStorage("native.weekMonth.previewEnabled") private var weekFocusEnabled = true
-    @State private var focusSelectedDay: String?
     @State private var destination: SpreadDestination = .spread
     @State private var monthPlane = false
     @State private var monthAnchor = PlannerDates.date(PlannerDates.currentWeekKey())
@@ -306,7 +305,6 @@ public struct SpreadLiveRoot: View {
         monthPlane = remembered.monthPlane
         selectedRole = nil
         focusDay = nil
-        focusSelectedDay = nil
         editing = false
         sheet = nil
         classicNavigationOpen = false
@@ -433,7 +431,7 @@ public struct SpreadLiveRoot: View {
             .combined(with: .opacity)
     }
 
-    /// Compact and stable: the brand and the one Spread/Week switch share a row, the metal Crown sits below, and
+    /// Compact and stable: the brand and the one Spread/Week switch share a row, the Week control sits below, and
     /// nothing in here changes size after launch. When large text no longer fits one row, the switch drops below.
     private func header(_ snapshot: PlannerSnapshot, isMonth: Bool) -> some View {
         let isCurrent = snapshot.weekKey == PlannerDates.currentWeekKey()
@@ -446,14 +444,6 @@ public struct SpreadLiveRoot: View {
         let detailAction: (() -> Void)?
         if isMonth {
             detailAction = onThisMonth ? nil : { jumpMonth(to: now) }
-        } else if weekFocusEnabled {
-            // In the opt-in Week, tapping the Crown's date returns to Today.
-            // A successful week jump already emits its own haptic through weekTick.
-            detailAction = {
-                if isCurrent { SpreadHaptics.selection() }
-                focusSelectedDay = PlannerDates.localISO()
-                Task { await moveToToday() }
-            }
         } else {
             detailAction = isCurrent ? nil : { Task { await moveToToday() } }
         }
@@ -742,7 +732,7 @@ public struct SpreadLiveRoot: View {
     private func undoNotice(_ editId: String) -> some View {
         Button { Task { await planner.send(["type": "undo", "editId": editId]) } } label: {
             HStack(spacing: Spread.space2) {
-                Image(systemName: "arrow.uturn.backward").font(.system(.footnote, weight: .bold))
+                SpreadIcon(name: "lucide-rotate-ccw", size: 16)
                 Text("Undo last change").font(.system(.subheadline, weight: .semibold))
             }
             .foregroundStyle(Spread.accent)
@@ -836,7 +826,6 @@ public struct SpreadLiveRoot: View {
             let monday = PlannerDates.weekKey(for: PlannerDates.date(iso))
             if await planner.send(["type": "openWeek", "weekKey": monday]) {
                 focusDay = iso
-                focusSelectedDay = iso
                 withAnimation(reduceMotion ? nil : SpreadMotion.morph) { monthPlane = false }
             }
         }
