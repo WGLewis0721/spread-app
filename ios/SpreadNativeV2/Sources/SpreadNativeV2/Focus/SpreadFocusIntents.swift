@@ -64,6 +64,7 @@ struct StartSpreadBlockIntent: LiveActivityIntent {
             profileId: offered.record.profileId, roleId: offered.entry.roleId,
             roleName: offered.entry.label, plan: offered.entry.plan))
         SpreadFocusControls.apply(session, notify: SpreadFocusControls.notifyWhenDone)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -85,6 +86,7 @@ struct StartSpreadFocusIntent: LiveActivityIntent {
             id: UUID().uuidString, profileId: choice.profileId, roleId: choice.roleId, roleName: choice.roleName,
             plan: choice.plan, kind: .focus, round: 1, now: Date()) else { return .result() }
         SpreadFocusControls.apply(session, notify: SpreadFocusControls.notifyWhenDone)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -112,10 +114,12 @@ struct SetSpreadFocusPlayingIntent: SetValueIntent, LiveActivityIntent {
             guard session.phase == .paused,
                   let resumed = SpreadFocusMachine.resume(session, now: Date()) else { return .result() }
             SpreadFocusControls.apply(resumed, notify: SpreadFocusControls.notifyWhenDone)
+            await SpreadFocusLiveActivityController.awaitSettled()
         } else {
             guard session.phase == .running,
                   let paused = SpreadFocusMachine.pause(session, now: Date()) else { return .result() }
             SpreadFocusControls.apply(paused, notify: false)
+            await SpreadFocusLiveActivityController.awaitSettled()
         }
         return .result()
     }
@@ -136,6 +140,7 @@ struct PauseSpreadFocusIntent: LiveActivityIntent {
               session.id == sessionId,
               let paused = SpreadFocusMachine.pause(session, now: Date()) else { return .result() }
         SpreadFocusControls.apply(paused, notify: false)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -155,6 +160,7 @@ struct ResumeSpreadFocusIntent: LiveActivityIntent {
               session.id == sessionId,
               let resumed = SpreadFocusMachine.resume(session, now: Date()) else { return .result() }
         SpreadFocusControls.apply(resumed, notify: SpreadFocusControls.notifyWhenDone)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -177,6 +183,7 @@ struct StopSpreadFocusIntent: LiveActivityIntent {
               session.id == sessionId,
               let stopped = SpreadFocusMachine.stopped(session, now: Date()) else { return .result() }
         SpreadFocusControls.apply(stopped, notify: false)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -198,6 +205,7 @@ struct CancelSpreadFocusIntent: LiveActivityIntent {
         guard let current = SpreadFocusControls.current(),
               current.id == sessionId else { return .result() }
         SpreadFocusControls.apply(nil, notify: false)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
@@ -222,6 +230,7 @@ struct ForwardSpreadFocusIntent: LiveActivityIntent {
             return .result()
         }
         SpreadFocusControls.apply(next, notify: SpreadFocusControls.notifyWhenDone)
+        await SpreadFocusLiveActivityController.awaitSettled()
         return .result()
     }
 }
