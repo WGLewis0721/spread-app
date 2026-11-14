@@ -34,6 +34,7 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 | 2026-11-04 | [Week/Month: 61 owner decisions](2026-11-04-week-month-owner-decisions.md) | Owner-approved direction; opt-in UI preview, release gated |
 | 2026-11-04 | [Week/Month component specification](2026-11-04-week-month-components-implementation.md) | Component source of truth for the 61 decisions; release gated |
 | 2026-11-04 | [Week/Month 61-decision verification status](2026-11-04-week-month-verification.md) | Historical #139 verification snapshot; merged code does not imply final-device acceptance. |
+| 2026-11-14 | [Life Week month rows and dock inset](2026-11-14-life-week-month-scroll-inset.md) | Draft; device checks owed. Fixes an empty month row and the dock overlap on Life Week. |
 | 2026-11-03 | [Working-build SwiftUI parity spec (root)](../../archive/SPREAD_SWIFTUI_PARITY_SPEC.md) and [implementation instructions](../../archive/SPREAD_SWIFTUI_PARITY_INSTRUCTIONS.md) | Historical five-mode parity direction, superseded by current single Wallet/Life design. Retained for provenance. |
 
 - [Life and Classic: shared polish and tray controls](2026-11-06-life-classic-polish.md) — shared polish contract, with both recording reviews completed.
