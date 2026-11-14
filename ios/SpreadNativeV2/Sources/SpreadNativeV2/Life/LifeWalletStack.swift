@@ -68,7 +68,7 @@ struct LifeWalletStack: View {
                 }
             }
             .padding(6)
-            .background(.black.opacity(0.25), in: Capsule())
+            .background(Color.black.opacity(0.25), in: Capsule())
             .padding(.trailing, 5)
             .accessibilityHidden(true)
             .allowsHitTesting(false)

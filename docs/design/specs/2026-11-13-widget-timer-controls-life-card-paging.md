@@ -9,7 +9,7 @@
 | Surface | Native iPhone: Home Screen Timer small/medium/large, Today medium, Life cards medium/large, in-app Focus sheet and Life Wallet, expanded Live Activity |
 | Size | L: cross-process state/latency, widgets, asset distribution and native gestures |
 | Author / baseline | ChatGPT design audit, 2026-11-13 local; Spread main commit a25a0852bddc82774813c32b4c5b9bca70350a28; Gray Matter main 8871c85930317025a309c08a5261d81cb06acee2 |
-| Status | **Proposed; not implemented.** Physical latency, exact widget image treatment and 141 pt layout not yet validated |
+| Status | **Implemented on PR #208 feature branch; native build, measured latency and physical-device QA unverified.** Owner directed implementation and merge without waiting for test/simulator completion. |
 | Governing docs | [RULES_CARD](../RULES_CARD.md), [spec protocol](../PLAN_SPEC_PROTOCOL.md), [native brand board](../planner/SPREAD_NATIVE_BRAND_BOARD.md), [Life artwork](../planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), [existing widget continuity spec](2026-11-13-widgets-timer-life-cards-continuity.md), [Gray Matter library](https://github.com/WGLewis0721/Graymattertechllc-/tree/8871c85930317025a309c08a5261d81cb06acee2/app-design) |
 
 ## 1. Problem
@@ -186,3 +186,20 @@ Do the full timer scope in the existing application in PR A and the full editori
 | 2026-11-13 | Proposed: make three media controls visible across dedicated Timer widget sizes; optimistic Play/Pause only after correctness/device evaluation; preserve Stop vs Cancel and current local-first store | ChatGPT recommendation for owner review | This spec; no prior spec overwritten |
 | 2026-11-13 | Proposed: use authentic Spread mark and six installed editorial category images in widget, with fallback; show Up/Down intent navigation and dots because WidgetKit cannot support real vertical swipe | ChatGPT recommendation for owner review | This spec; no existing Wallet gestures changed |
 | 2026-11-13 | Blocked until measured: 141pt small-widget geometry with three 44pt targets and meaningful countdown | iOS engineer to measure, owner to approve any exception | This spec |
+
+## 12. Implementation record (owner direction 2026-11-13)
+
+The owner instructed direct implementation on **PR #208**, followed by merge without waiting for pending tests/simulators. This supersedes the two-implementation-PR rollout proposed in section 10. No Apple or Vercel deployment was requested.
+
+**Implemented on the same PR:**
+
+- Three 44pt actions in all **running and paused** dedicated Timer widget sizes. Forward stays visible but is disabled when no next stage exists. The small family disables default margins and uses a compact 2pt-spaced row. The waiting phase continues to show Forward and Cancel, rather than a fake Pause.
+- Apple `SetValueIntent + LiveActivityIntent` Play/Pause Toggle, session-ID guarded and idempotent, with a native SwiftUI ToggleStyle that draws Play/Pause from the optimistic state. This addresses *visual* feedback, not an unproven claim of zero timer execution latency. Publish the widget mirror before ActivityKit refresh. Existing island controls keep their intent actions.
+- Foreground Focus sheet uses native 44pt Play/Pause, Forward, Stop and Cancel icons with accessible spoken names. Stop remains distinct from Cancel; no planner tasks or budgets are changed.
+- The widget target bundles the original Spread SVG brand mark in its own asset catalog and all six installed category WebP images via a resource folder, without transferring images through the App Group. Its Life cards use approved image plus readability mask, category gradient fallback, up/down AppIntent buttons, rolling position dots and exact index/counter.
+- In the native foreground Life Wallet, swipe up advances to the next focused responsibility while the existing downward pull still closes it; index dots and VoiceOver adjustable navigation follow the selected role.
+- Updated shared control-rule unit assertions and widget source/resource regression checks. No timer session schema migration, second data store or external service.
+
+**Verification still owed at time of merge:** a real Codemagic native archive, TestFlight widget screenshots on small/medium/large families, measured Play/Pause tap-to-commit and tap-to-visible latency (p50/p95), accessibility, visual contrast, tinted Home Screen and repeated rapid control interactions. An automated test passing or a source commit cannot stand in for these device checks. If any build check fails after merge, revert the PR merge or prepare a corrective PR before distribution.
+
+**Key Apple reference used for the working transport control:** [WWDC24: Extend your app's controls](https://developer.apple.com/videos/play/wwdc2024/10157/?time=281) demonstrates a `SetValueIntent, LiveActivityIntent` timer toggle; [WidgetKit interactivity](https://developer.apple.com/documentation/widgetkit/adding-interactivity-to-widgets-and-live-activities) specifies optimistic Toggle rendering and post-intent widget refresh.

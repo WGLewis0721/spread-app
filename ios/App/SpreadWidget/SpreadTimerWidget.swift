@@ -625,7 +625,7 @@ private struct SpreadTransportToggleStyle: ToggleStyle {
                 .font(.title3.weight(.semibold))
                 .frame(width: 44, height: 44)
                 .foregroundStyle(.primary)
-                .background(.primary.opacity(0.09), in: Circle())
+                .background(Color.primary.opacity(0.09), in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
