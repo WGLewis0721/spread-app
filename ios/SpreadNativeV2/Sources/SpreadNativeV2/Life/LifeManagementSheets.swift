@@ -332,7 +332,6 @@ struct LifePrioritySheet: View {
         defer { working = false }
         if await planner.send(["type": "applyLifePriority", "roleId": roleId, "goalHours": goal, "day": day],
                               expectedRevision: previewRevision) {
-            if LifeFeedback.enabled { SpreadHaptics.completed() }
             dismiss()
         }
     }

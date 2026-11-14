@@ -31,7 +31,11 @@ test("the sheet previews the copy first, and confirms only a preview that is eli
   assert.match(sheet, /planMode = "copy"/);
   assert.match(sheet, /accessibilityIdentifier\("plan-ahead-copy-week"\)/);
   assert.match(sheet, /await planner\.previewWeekCopy\(batch: copyBatch\)/);
-  assert.match(sheet, /\.disabled\(copySaving \|\| planner\.busy \|\| copyPreview\?\.eligible != true\)/);
+  // One persistent action changes from Preview to Confirm only on a valid preview.
+  assert.match(sheet, /if copyPreview\?\.eligible == true \{ await confirmCopy\(\) \}/);
+  assert.match(sheet, /else \{ await requestCopyPreview\(\) \}/);
+  assert.match(sheet, /guard !copySaving, copyPreview\?\.eligible == true else \{ return \}/);
+  assert.match(sheet, /\.disabled\(copySaving \|\| copyPreviewing \|\| planner\.busy\)/);
   assert.match(sheet, /planner\.send\(\["type": "copyWeekForward", "batch": copyBatch\]\)/);
   // Each week is listed with its status in words, not only by colour.
   assert.match(sheet, /"Will be filled" : "Already planned, kept"/);

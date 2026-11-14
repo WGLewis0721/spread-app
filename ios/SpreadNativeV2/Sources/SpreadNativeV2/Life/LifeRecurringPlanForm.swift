@@ -17,6 +17,7 @@ struct LifeRecurringPlanForm: View {
     /// When set (and no saved schedule is open), the form opens pre-filled from this suggestion and
     /// already reviewed. Nothing is saved until the person confirms.
     var initialPreset: PlanAheadPreset? = nil
+    var onBackToPlans: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var roleId = ""
     @State private var hours = 2.0
@@ -37,6 +38,8 @@ struct LifeRecurringPlanForm: View {
     @State private var showStopConfirmation = false
     /// Hours per chosen weekday. Empty means weekly hours only, which the planner places without a set day.
     @State private var dayHours: [String: Double] = [:]
+    @State private var dayHoursExpanded = false
+    @ScaledMetric(relativeTo: .body) private var dayChipWidth: CGFloat = 64
 
     static let weekdays: [LifeWeekday] = [
         LifeWeekday(code: "mon", name: "Monday"), LifeWeekday(code: "tue", name: "Tuesday"),
@@ -140,7 +143,19 @@ struct LifeRecurringPlanForm: View {
         snapshot.roles.first(where: { $0.id == roleId })?.name ?? "Life area"
     }
     var body: some View {
-        Group {
+        Form {
+            if let onBackToPlans {
+                Section {
+                    Button(action: onBackToPlans) {
+                        Label { Text("Your plans") } icon: {
+                            SpreadIcon(name: "lucide-chevron-left", size: 18)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(minHeight: 44)
+                    }
+                    .accessibilityIdentifier("plan-ahead-back-to-plans")
+                }
+            }
             if let issue = snapshot.recurrenceIssue {
                 Section {
                     Label(issue, systemImage: "exclamationmark.triangle")
@@ -202,21 +217,56 @@ struct LifeRecurringPlanForm: View {
                      : "Hours go on the chosen days in each scheduled week. No tasks are copied.")
             }
             Section {
-                ForEach(Self.weekdays) { day in
-                    Toggle(day.name, isOn: dayToggle(day.code))
+                // A responsive 4/8pt chip grid replaces seven always-visible
+                // switches. Day steppers expand only when someone needs them.
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: dayChipWidth), spacing: 8)], spacing: 8) {
+                    ForEach(Self.weekdays) { day in
+                        let selected = dayHours[day.code] != nil
+                        Button {
+                            dayToggle(day.code).wrappedValue.toggle()
+                        } label: {
+                            Text(String(day.name.prefix(3)))
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                                .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+                                .background(selected ? Spread.accent : Spread.canvas,
+                                            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(Spread.accent.opacity(selected ? 1 : 0.24), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(day.name)
+                        .accessibilityValue(selected ? "Selected" : "Not selected")
+                        .accessibilityAddTraits(selected ? .isSelected : [])
                         .accessibilityIdentifier("plan-ahead-day-" + day.code)
-                    if dayHours[day.code] != nil {
-                        Stepper(value: dayAmount(day.code), in: 0.5...24, step: 0.5) {
-                            Text(SpreadHours.text(dayHours[day.code] ?? 1) + " hours on " + day.name)
-                                .font(.body)
+                    }
+                }
+                if !dayHours.isEmpty {
+                    Text(Self.weekdays.compactMap { day in
+                        dayHours[day.code].map {
+                            String(day.name.prefix(3)) + " " + SpreadHours.text($0) + "h"
+                        }
+                    }.joined(separator: " · "))
+                        .font(.subheadline)
+                        .foregroundStyle(Spread.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    DisclosureGroup("Adjust day hours", isExpanded: $dayHoursExpanded) {
+                        ForEach(Self.weekdays) { day in
+                            if dayHours[day.code] != nil {
+                                Stepper(value: dayAmount(day.code), in: 0.5...24, step: 0.5) {
+                                    Text(SpreadHours.text(dayHours[day.code] ?? 1) + " hours on " + day.name)
+                                        .font(.body)
+                                }
+                            }
                         }
                     }
+                    .accessibilityIdentifier("plan-ahead-adjust-day-hours")
                 }
             } header: {
                 Text("Fixed days (optional)")
             } footer: {
                 Text(dayHours.isEmpty
-                     ? "Pick days to plan fixed hours on them. With no days chosen, only weekly hours are set."
+                     ? "Select days to place fixed hours. Without chosen days, only weekly hours repeat."
                      : "Total " + SpreadHours.text(weeklyHours) + " hours per scheduled week.")
             }
             if selectedRule != nil {
@@ -253,25 +303,18 @@ struct LifeRecurringPlanForm: View {
                             Text(Self.dayLine(days))
                                 .font(.subheadline)
                         }
-                        HStack {
-                            Text("Starts")
-                            Spacer()
-                            Text(PlannerDates.label(PlannerDates.date(preview.startWeek), pattern: "MMM d, yyyy"))
-                        }
-                        HStack {
-                            Text("Ends")
-                            Spacer()
-                            Text(preview.endWeek.map {
+                        PlanAheadDetailRow(
+                            title: "Starts",
+                            detail: PlannerDates.label(PlannerDates.date(preview.startWeek), pattern: "MMM d, yyyy"))
+                        PlanAheadDetailRow(
+                            title: "Ends",
+                            detail: preview.endWeek.map {
                                 PlannerDates.label(PlannerDates.date($0), pattern: "MMM d, yyyy")
                             } ?? "Never")
-                        }
                         ForEach(preview.nextOccurrences, id: \.self) { week in
-                            HStack {
-                                Text("Week of " + PlannerDates.label(PlannerDates.date(week), pattern: "MMM d"))
-                                Spacer()
-                                Text(SpreadHours.text(preview.hours) + "h")
-                                    .monospacedDigit()
-                            }
+                            PlanAheadDetailRow(
+                                title: "Week of " + PlannerDates.label(PlannerDates.date(week), pattern: "MMM d"),
+                                detail: SpreadHours.text(preview.hours) + "h")
                         }
                         if !preview.preservedWeeks.isEmpty {
                             Label("\(preview.preservedWeeks.count) existing weeks will be left unchanged.",
@@ -292,21 +335,25 @@ struct LifeRecurringPlanForm: View {
                     }
                 }
             }
-            Section {
-                Button {
-                    Task {
-                        if preview?.eligible == true { await confirm() }
-                        else { await review() }
-                    }
-                } label: {
-                    Text(saving ? "Saving…" : checking ? "Checking…" :
-                         preview?.eligible == true ? "Confirm schedule" : "Review schedule")
-                        .frame(maxWidth: .infinity, minHeight: 50)
+        }
+        .spreadListSurface()
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button {
+                Task {
+                    if preview?.eligible == true { await confirm() }
+                    else { await review() }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(saving || checking || planner.busy || roleId.isEmpty)
-                .accessibilityIdentifier("plan-ahead-repeat-primary")
+            } label: {
+                Text(saving ? "Saving…" : checking ? "Checking…" :
+                     preview?.eligible == true ? "Confirm schedule" : "Review schedule")
+                    .frame(maxWidth: .infinity, minHeight: 50)
             }
+            .buttonStyle(.borderedProminent)
+            .disabled(saving || checking || planner.busy || roleId.isEmpty)
+            .accessibilityIdentifier("plan-ahead-repeat-primary")
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Spread.canvas)
         }
         .onAppear {
             if roleId.isEmpty { roleId = snapshot.roles.first?.id ?? "" }
