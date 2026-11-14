@@ -410,6 +410,33 @@ test("widget Life art, branding and vertical paging are compiled as extension re
   assert.match(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Life/LifeWalletStack.swift"), /pageDots/);
 });
 
+test("Timer widget Cancel reads Cancel session and stays icon only (OD33, X10)", () => {
+  assert.match(timerSource, /Label\("Cancel session", systemImage: "xmark"\)/);
+  assert.doesNotMatch(timerSource, /Label\("Cancel", systemImage/);
+  // Every widget size shows this control as an icon, so its title is the VoiceOver label and no text competes for space.
+  assert.match(timerSource, /SpreadFocusControlButton\(control: kind, sessionId: state\.sessionId,\s*nextLabel: state\.nextLabel, iconOnly: true\)/);
+  assert.match(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimerSheet.swift"), /accessibilityLabel\("Cancel session"\)/);
+});
+
+test("Life cards widget colours come from one shared set that matches the app's tokens (OD33, X12)", () => {
+  const theme = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift");
+  // The widget compiles SpreadWidgetShared.swift, so the named set lives there.
+  assert.match(shared, /public enum SpreadWidgetTokens \{/);
+  assert.match(shared, /public static let inkLight = "0E1A2E"/);
+  assert.match(shared, /public static let inkDark = "F7FAFF"/);
+  assert.match(shared, /public static let secondaryLight = "4A5670"/);
+  assert.match(shared, /public static let secondaryDark = "B0BCD1"/);
+  assert.match(shared, /public static let canvasLight = "F4F1EA"/);
+  // The app's values: ink and canvas are hex; secondary is the tuples (74, 86, 112) and (176, 188, 209).
+  assert.match(theme, /public static let ink = dynamic\(light: 0x0E1A2E, dark: 0xF7FAFF\)/);
+  assert.match(theme, /public static let canvas = dynamic\(light: 0xF4F1EA, dark: 0x060B18\)/);
+  assert.match(theme, /public static let secondary = adaptive\(\s*light: \(74, 86, 112, 1\), dark: \(176, 188, 209, 1\)/);
+  // The Life cards widget reads the tokens and keeps no colour literal of its own.
+  assert.doesNotMatch(lifeCardsSource, /Color\(hex: "/);
+  for (const name of ["inkLight", "inkDark", "secondaryLight", "secondaryDark", "canvasLight"]) {
+    assert.match(lifeCardsSource, new RegExp("SpreadWidgetTokens\\." + name));
+  }
+});
 
 test("widget actions use shared opt-ins rather than the extension's private defaults", () => {
   const prefs = focusSession.slice(focusSession.indexOf("enum SpreadFocusPreferences"), focusSession.indexOf("enum SpreadFocusStore"));

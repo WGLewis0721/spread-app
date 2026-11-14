@@ -230,7 +230,7 @@ A run without this record is not evidence.
 **F5. Overbooked explanation.** [Pass ☐] [Fail ☐]
 - **Given** the hours on the week exceed the weekly capacity.
 - **When** the Spread header shows.
-- **Then** the header reads "overbooked", and the explanation reads "These hours don't fit in your week. Remove some or raise your weekly hours." (OD12).
+- **Then** the header reads "over budget", and the explanation reads "These hours don't fit in your week. Remove some or raise your weekly hours." (OD12).
 - Notes:
 
 **F6. Empty week.** [Pass ☐] [Fail ☐]
@@ -244,7 +244,7 @@ A run without this record is not evidence.
 **G1. One verb for removing a responsibility.** Expected fail until wave 3 (OD30). [Pass ☐] [Fail ☐]
 - **Given** a Classic responsibility.
 - **When** you remove it from its sheet and, separately, from the edit-mode row delete.
-- **Then** the same words are used in both places. Today the sheet says "Remove responsibility" and the row says "Delete responsibility". Record both: ______
+- **Then** the same words are used in both places. Both say "Remove responsibility" (OD30). Record both: ______
 - Notes:
 
 **G2. Dismiss an open-tasks sheet.** Expected fail until wave 3 (OD33). [Pass ☐] [Fail ☐]

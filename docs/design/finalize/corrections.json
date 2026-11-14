@@ -56,8 +56,22 @@
         "docs/design/finalize/TOKEN_AUDIT.md (Lane A, pending)",
         "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X12, C2, C4)"
       ],
-      "changed_files": [],
-      "regression_evidence": [],
+      "changed_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Widget/SpreadWidgetShared.swift",
+        "ios/App/SpreadWidget/SpreadLifeCardsWidget.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/TaskSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/RecentlyDeletedSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/WhatsNewSheet.swift",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimerSheet.swift",
+        "scripts/native-today-widget.test.mjs",
+        "scripts/native-menu-polish.test.mjs"
+      ],
+      "regression_evidence": [
+        "X12: scripts/native-today-widget.test.mjs 'Life cards widget colours come from one shared set that matches the app's tokens'. The five values equal Spread.ink, Spread.secondary and Spread.canvas in Theme/SpreadTheme.swift, and the Life cards widget has no Color(hex: \"...\") literal.",
+        "Spacing and touch-target literals (not colour): 100 exact-value replacements in the owned sheet and focus files, each a token with the same value (TOKEN_AUDIT.md section 7). Snap and Decide literals are unchanged.",
+        "scripts/native-menu-polish.test.mjs: the Focus transport frame pin accepts Spread.minimumTarget as well as 44."
+      ],
       "reviewer_approval": ""
     },
     {
@@ -92,8 +106,18 @@
         "ios/App/SpreadWidget/SpreadTimerWidget.swift:226",
         "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X3, X5, X8 to X11)"
       ],
-      "changed_files": [],
-      "regression_evidence": [],
+      "changed_files": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/ManageSheets.swift",
+        "ios/App/SpreadWidget/SpreadTimerWidget.swift",
+        "scripts/native-menu-polish.test.mjs",
+        "scripts/native-today-widget.test.mjs"
+      ],
+      "regression_evidence": [
+        "X8: scripts/native-menu-polish.test.mjs 'Open tasks dismisses with Cancel ... and keeps Move' (no 'Not now' in ManageSheets; Cancel is the leading toolbar item).",
+        "X10: scripts/native-today-widget.test.mjs 'Timer widget Cancel reads Cancel session and stays icon only' (title and icon-only control pinned; the Focus sheet label checked).",
+        "X11: no code change. At base 6f53a60 both empty states already have one sentence (WhatsNewSheet 'Future updates will appear here.', RecentlyDeletedSheet 'Tasks you delete will appear here for 30 days.'). The review's 'title only' finding was wrong.",
+        "X3 (ManageSheets side): already correct on main. 'Remove Life area' and 'Remove responsibility' at ManageSheets.swift:241, 268. 'Delete responsibility' in SpreadSurface.swift stays open in lane C."
+      ],
       "reviewer_approval": ""
     },
     {
@@ -105,7 +129,7 @@
       ],
       "problem": "CLAUDE.md and the release plan disagreed about device scope. OD20 makes Spread 1.0 iPhone only, and the superseding note is on main. OD25 keeps the TestFlight invitation and adds no App Store link until the listing exists. Found on 2026-11-14: the Xcode build settings still declare iPhone and iPad (TARGETED_DEVICE_FAMILY 1,2 in six places), and the App Store review checklist still says iPhone/iPad. OD20 therefore applies to the docs and copy, not yet to the build. Finding X1, blocks release until the owner confirms and the native config changes.",
       "severity": "high",
-      "decision_owner": "decided: OD20 applied in the docs and copy; OD28 (iPhone only; wave 3 sets the device family to 1 and aligns the checklist and preflight). OD25 keeps the TestFlight invitation. Open until wave 3 lands.",
+      "decision_owner": "decided: OD20 applied in the docs and copy; OD28 resolved in code by #223 (2026-11-14): every target TARGETED_DEVICE_FAMILY = 1; checklist, preflight and release plan say iPhone only. OD25 keeps the TestFlight invitation. Status stays open until the owner fills reviewer_approval at merge, then closed.",
       "spec": "docs/design/finalize/corrections/release-scope.md",
       "status": "open",
       "observed_evidence": [
@@ -117,8 +141,19 @@
         "docs/APP_STORE_REVIEW_CHECKLIST.md:12,28 (iPhone/iPad wording)",
         "docs/design/finalize/CROSS_SURFACE_REVIEW.md (X1)"
       ],
-      "changed_files": [],
-      "regression_evidence": [],
+      "changed_files": [
+        "ios/App/App.xcodeproj/project.pbxproj",
+        "ios/App/App/Info.plist",
+        "ios/App/SpreadNativeUITests/PlannerUITests.swift",
+        "docs/APP_STORE_REVIEW_CHECKLIST.md",
+        "APP_STORE_RELEASE_PLAN.md",
+        "scripts/app-store-preflight.py",
+        "scripts/test_app_store_preflight.py"
+      ],
+      "regression_evidence": [
+        "python3 scripts/test_app_store_preflight.py: 20 tests OK on the merged branch (iPhone-only device scope).",
+        "grep on the merged tree: six TARGETED_DEVICE_FAMILY = 1 entries in ios/App/App.xcodeproj/project.pbxproj; docs/APP_STORE_REVIEW_CHECKLIST.md line 18 states the iPhone-only scope."
+      ],
       "reviewer_approval": ""
     },
     {
@@ -137,7 +172,7 @@
       "observed_evidence": [
         "docs/design/specs/2026-11-14-publish-finalize-plan.md section 8",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Icons.xcassets: eight Lucide assets present since PR #217",
-        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:143 (disabledOpacity, #220) and :54 (sidebarScrim, #220)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadTheme.swift:143 (disabledOpacity, #220); sidebarScrim (#220) was removed in #225 (OD33)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/PlannerNavigationRail.swift:57 (SF sidebar glyphs)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift:552,799 (Lucide panel-left and SF undo glyph)",
         "ios/SpreadNativeV2/Sources/SpreadNativeV2/Spread/SpreadSurface.swift:969 (success haptic after removal, dropped by OD31)",

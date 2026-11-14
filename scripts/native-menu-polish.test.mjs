@@ -65,7 +65,7 @@ test("the Focus sheet separates active controls, completed rounds and optional s
   assert.match(focus, /private func endingActions/);
   assert.match(focus, /ViewThatFits\(in: \.horizontal\)/);
   // At least 44 pt, and free to grow with Dynamic Type (finalize plan OD10).
-  assert.match(focus, /frame\((?:width: 44, height: 44|minWidth: 44, minHeight: 44)\)/);
+  assert.match(focus, /frame\((?:width: (?:44|Spread\.minimumTarget), height: (?:44|Spread\.minimumTarget)|minWidth: (?:44|Spread\.minimumTarget), minHeight: (?:44|Spread\.minimumTarget))\)/);
   assert.match(focus, /focus-pause/);
   assert.match(focus, /focus-resume/);
   assert.match(focus, /focus-forward/);
@@ -80,4 +80,11 @@ test("the Focus sheet separates active controls, completed rounds and optional s
   assert.match(focus, /focus-live-activity-name/);
   assert.match(focus, /accessibilityIdentifier\("focus-start"\)/);
   assert.match(focus, /accessibilityIdentifier\("focus-start-block"\)/);
+});
+
+test("Open tasks dismisses with Cancel, the leading word every draft sheet uses, and keeps Move (OD33, X8)", () => {
+  const manage = get(root + "Sheets/ManageSheets.swift");
+  assert.doesNotMatch(manage, /Not now/);
+  assert.match(manage, /ToolbarItem\(placement: \.cancellationAction\) \{\s*Button\("Cancel"\) \{ dismiss\(\) \}/);
+  assert.match(manage, /\? "Move" : "Move /);
 });

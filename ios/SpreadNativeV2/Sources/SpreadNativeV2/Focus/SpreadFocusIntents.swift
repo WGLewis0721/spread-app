@@ -195,7 +195,7 @@ struct StopSpreadFocusIntent: LiveActivityIntent {
 /// Cancels the whole focus session: the current stretch and anything that would have followed it. The island and
 /// the widgets release it at once. Nothing is recorded as done, and nothing starts.
 struct CancelSpreadFocusIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Cancel focus"
+    static var title: LocalizedStringResource = "Cancel session"
     static var description = IntentDescription("Cancel the focus session. Nothing is recorded, and nothing starts.")
 
     @Parameter(title: "Session")

@@ -61,7 +61,7 @@ struct TaskSheet: View {
             Group {
                 if let task {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: Spread.space5) {
                             taskHeader(task)
                             TextField("Task title", text: $title, prompt: Spread.fieldPrompt("Task title"), axis: .vertical)
                                 .font(.system(.title2, weight: .bold))
@@ -74,7 +74,7 @@ struct TaskSheet: View {
                                 .accessibilityIdentifier("task-editor")
                             if lifeMode { taskEstimateControl(task) }
                             if lifeMode, let draft = conflictingDraft {
-                                VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: Spread.space2) {
                                     Text("This task changed after an earlier draft was saved on this iPhone.")
                                     Button("Restore saved draft") {
                                         title = draft.title
@@ -82,12 +82,12 @@ struct TaskSheet: View {
                                         conflictingDraft = nil
                                         scheduleSave()
                                     }
-                                    .frame(minHeight: 44, alignment: .leading)
+                                    .frame(minHeight: Spread.minimumTarget, alignment: .leading)
                                     Button("Keep current task") {
                                         conflictingDraft = nil
                                         if let key = draftKey { UserDefaults.standard.removeObject(forKey: key) }
                                     }
-                                    .frame(minHeight: 44, alignment: .leading)
+                                    .frame(minHeight: Spread.minimumTarget, alignment: .leading)
                                 }.font(.subheadline)
                             }
                             if !loaded {
@@ -105,17 +105,17 @@ struct TaskSheet: View {
                             }
                             if expandedNote == nil {
                                 Button(role: .destructive) { confirmDelete = true } label: {
-                                    HStack(spacing: 8) {
+                                    HStack(spacing: Spread.space2) {
                                         SpreadIcon(name: "icon-trash", size: 22, original: true)
                                         Text("Delete task").font(.system(.subheadline, weight: .semibold))
                                     }
                                     .frame(maxWidth: .infinity, minHeight: 48)
                                 }
                                 .accessibilityIdentifier("delete-task")
-                                .padding(.top, 8)
+                                .padding(.top, Spread.space2)
                             }
                         }
-                        .padding(20)
+                        .padding(Spread.space5)
                     }
                     // The rich-content Add control can sit below the keyboard.
                     // Dismiss on an intentional scroll so it stays reachable
@@ -190,15 +190,15 @@ struct TaskSheet: View {
                     Button("\(minutes) minutes") { setEstimate(minutes) }
                 }
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: Spread.space2) {
                     SpreadIcon(name: "lucide-clock", size: 19)
                     Text(task.estimateMinutes.map { "Estimated time: \($0) min" } ?? "Add time estimate")
                     Spacer()
                     Image(systemName: "chevron.up.chevron.down")
                 }
                 .font(.subheadline)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
+                .padding(.horizontal, Spread.space3)
                 .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusControl))
             }
             .accessibilityIdentifier("task-estimate")
@@ -220,7 +220,7 @@ struct TaskSheet: View {
     /// checkbox in the list, so the haptic is felt only after the store has acknowledged it.
     @ViewBuilder private func taskHeader(_ task: PlannerTask) -> some View {
         if let role = planner.snapshot?.roles.first(where: { $0.id == roleId }) {
-            HStack(spacing: 12) {
+            HStack(spacing: Spread.space3) {
                 RoleBadge(category: role.category == "custom" ? nil : role.category, color: role.color, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(role.name).font(.system(.headline, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
@@ -236,7 +236,7 @@ struct TaskSheet: View {
                     }
                     .font(.system(.subheadline, weight: .semibold))
                     .foregroundStyle(task.done ? Spread.onAccent : Spread.accent)
-                    .padding(.horizontal, 14).frame(minHeight: 44)
+                    .padding(.horizontal, 14).frame(minHeight: Spread.minimumTarget)
                     .spreadChip(selected: task.done)
                 }
                 .buttonStyle(.spreadPress)
@@ -426,10 +426,10 @@ struct TaskSheet: View {
             do { previewURL = try LifeAttachmentStore.url(profile: profile, task: taskId, file: file) }
             catch { attachmentError = "The saved file could not be opened. Its reference is preserved. Restore the file from a full local backup." }
         } label: {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spread.space1) {
                 Label(block.file?.name ?? "File", systemImage: "doc")
                 Text("Saved on this iPhone").font(.caption)
-            }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }.frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
         }.accessibilityLabel("Open file, \(block.file?.name ?? "File")")
     }
 
@@ -454,7 +454,7 @@ struct TaskSheet: View {
     // MARK: Blocks
 
     private func blockSection(_ block: NativeContentBlock) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spread.space2) {
             HStack {
                 Text(label(for: block.type))
                     .font(.system(.footnote, weight: .medium))
@@ -462,11 +462,11 @@ struct TaskSheet: View {
                 Spacer()
                 if block.type == "notes" {
                     Button { expandedNote = block.id } label: {
-                        Text("Expand").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget(minWidth: 44)
+                        Text("Expand").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.accent).tapTarget(minWidth: Spread.minimumTarget)
                     }
                 }
                 Button { remove(block.id) } label: {
-                    Text("Remove").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.danger).tapTarget(minWidth: 44)
+                    Text("Remove").font(.system(.footnote, weight: .semibold)).foregroundStyle(Spread.danger).tapTarget(minWidth: Spread.minimumTarget)
                 }
                 .accessibilityIdentifier("remove-block-\(block.id)")
             }
@@ -508,7 +508,7 @@ struct TaskSheet: View {
         }))
             .frame(minHeight: 120)
             .scrollContentBackground(.hidden)
-            .padding(8)
+            .padding(Spread.space2)
             .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
             .accessibilityLabel("Notes")
             .accessibilityIdentifier("content-notes")
@@ -516,7 +516,7 @@ struct TaskSheet: View {
 
     /// Notes opened full height (the React `expanded` note). Done returns to the block list.
     private func expandedNotes(_ block: NativeContentBlock) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spread.space2) {
             HStack {
                 Text("Notes").font(.system(.footnote, weight: .medium)).foregroundStyle(Spread.secondary)
                 Spacer()
@@ -560,7 +560,7 @@ struct TaskSheet: View {
                     }), prompt: Spread.fieldPrompt(item.level == 0 ? "Point" : "Detail"), axis: .vertical)
                     .font(.system(.body))
                     .lineLimit(1...3)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                     .focused($focusedField, equals: "outline-\(block.id)-\(index)")
                     .accessibilityIdentifier("content-outline-\(index)")
                     Button {
@@ -614,7 +614,7 @@ struct TaskSheet: View {
                             .font(.system(.body))
                             .lineLimit(1...3)
                             .frame(width: 140)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Spread.minimumTarget)
                             .focused($focusedField, equals: "cell-\(block.id)-\(row)-\(column)")
                             .accessibilityLabel("Row \(row + 1), column \(column + 1)")
                             .accessibilityIdentifier("content-cell-\(row)-\(column)")
@@ -655,7 +655,7 @@ struct TaskSheet: View {
     }
 
     private var formatMenu: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spread.space3) {
             if showFormats || content.blocks.isEmpty {
                 VStack(spacing: 0) {
                     formatRow(type: "notes", label: "Notes", detail: "Write. I. or A. starts an outline.", icon: "icon-notes") {
@@ -680,11 +680,11 @@ struct TaskSheet: View {
                 .background(Spread.canvas, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
             } else {
                 Button { showFormats = true } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spread.space2) {
                         SpreadIcon(name: "icon-add", size: 22)
                         Text("Add").font(.system(.subheadline, weight: .semibold))
                     }
-                    .foregroundStyle(Spread.accent).frame(minHeight: 44)
+                    .foregroundStyle(Spread.accent).frame(minHeight: Spread.minimumTarget)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("add-block")
@@ -699,7 +699,7 @@ struct TaskSheet: View {
     }
 
     private func formatLabel(label: String, detail: String, icon: String) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spread.space3) {
             SpreadIcon(name: icon, size: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.system(.body, weight: .semibold))
@@ -708,7 +708,7 @@ struct TaskSheet: View {
             Spacer(minLength: 0)
         }
         .foregroundStyle(Spread.ink)
-        .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.horizontal, Spread.space4).padding(.vertical, Spread.space3)
         .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
         .overlay(alignment: .top) { Rectangle().fill(Spread.line).frame(height: 0.5) }
     }

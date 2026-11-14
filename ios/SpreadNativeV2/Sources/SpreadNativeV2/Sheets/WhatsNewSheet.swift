@@ -18,7 +18,7 @@ struct WhatsNewSheet: View {
     var body: some View {
         SpreadSheetStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: Spread.space5) {
                     VStack(alignment: .leading, spacing: 10) {
                         Image(systemName: "sparkles")
                             .font(.system(size: 28, weight: .medium))
@@ -34,7 +34,7 @@ struct WhatsNewSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(Spread.secondary)
                     }
-                    .padding(.bottom, 4)
+                    .padding(.bottom, Spread.space1)
 
                     if releases.isEmpty {
                         ContentUnavailableView("No release notes yet", systemImage: "doc.text",
@@ -50,14 +50,14 @@ struct WhatsNewSheet: View {
                             historyExpanded = true
                         } label: {
                             Label("See past updates", systemImage: "clock.arrow.circlepath")
-                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
                         }
                         .foregroundStyle(Spread.accent)
                         .accessibilityIdentifier("whats-new-history")
                     }
                 }
                 .frame(maxWidth: 620, alignment: .leading)
-                .padding(20)
+                .padding(Spread.space5)
                 .frame(maxWidth: .infinity)
             }
             .background(Spread.canvas)
@@ -93,7 +93,7 @@ struct WhatsNewSheet: View {
                 .foregroundStyle(Spread.ink)
                 .accessibilityAddTraits(.isHeader)
             ForEach(Array(release.changes.enumerated()), id: \.offset) { index, change in
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .top, spacing: Spread.space3) {
                     Text(String(format: "%02d", index + 1))
                         .font(.caption.monospacedDigit().weight(.semibold))
                         .foregroundStyle(Spread.accent)
