@@ -246,8 +246,13 @@ struct SpreadSurface: View {
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.secondary)
             }
-            if totalHours > 45 || status.overbooked > 0 {
+            // Two truthful cases: over budget (OD12), or a heavy week that is not over budget yet.
+            if status.overbooked > 0 {
                 Text("These hours don't fit in your week. Remove some or raise your weekly hours.")
+                    .font(Spread.footnote)
+                    .foregroundStyle(Spread.caution)
+            } else if totalHours > 45 {
+                Text("That's a full week. Check that the hours still fit.")
                     .font(Spread.footnote)
                     .foregroundStyle(Spread.caution)
             }
