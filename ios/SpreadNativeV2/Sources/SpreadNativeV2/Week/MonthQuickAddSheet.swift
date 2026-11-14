@@ -39,7 +39,7 @@ struct MonthQuickAddSheet: View {
                     .textInputAutocapitalization(.sentences)
                     .padding(.horizontal, 12)
                     .frame(minHeight: 48)
-                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 12))
+                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                     .accessibilityIdentifier("month-quick-add-title")
                 Text("If there are no allocated hours for this responsibility that day, the task is saved to that week's To place.")
                     .font(Spread.caption)

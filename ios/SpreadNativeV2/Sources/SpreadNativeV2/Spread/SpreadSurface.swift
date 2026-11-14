@@ -634,7 +634,7 @@ struct RoleRow: View {
                 await planner.send(["type": "addTask", "roleId": role.id, "text": text])
             }
         }
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Spread.inset))
+        .background(RoundedRectangle(cornerRadius: Spread.radiusInset, style: .continuous).fill(Spread.inset))
         .padding(.horizontal, 10)
         .padding(.bottom, 10)
     }
@@ -1013,7 +1013,7 @@ struct StackLayout: View {
                     focused: true, expanded: true, onOpenTask: onOpenTask, onOpenRole: onOpenRole,
                     separateDetails: true, detailsOnly: true)
                 .padding(.top, 12)
-                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
                 .transition(.opacity)
         }
         }
@@ -1029,19 +1029,19 @@ struct StackLayout: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             let tint = Color(hex: role.color)
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
                 .fill(Spread.cardFill)
                 .overlay(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
                         .fill(LinearGradient(
                             colors: [tint.opacity(0.48), tint.opacity(0.16), .clear],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         ))
                 }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
                 .strokeBorder(Color(hex: role.color).opacity(open || editing ? 0.85 : 0.48),
                               lineWidth: editing ? 1.5 : 1)
                 .allowsHitTesting(false)
@@ -1194,7 +1194,7 @@ private struct RoleEditGlow: ViewModifier {
                     // Breathe along the card's actual edge without changing
                     // its size or shifting a single glyph. Static when Reduce
                     // Motion is enabled; no jitter or constant vibration.
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
                         .strokeBorder(color.opacity(bright || reduceMotion ? 1 : 0.375),
                                       lineWidth: bright || reduceMotion ? 2.5 : 1.25)
                         .blur(radius: bright || reduceMotion ? 3.125 : 0.625)
