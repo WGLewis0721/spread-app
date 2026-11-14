@@ -187,8 +187,9 @@ struct MonthSurface: View {
     }
 }
 
-/// Long press (and a VoiceOver action) to add a task on a Month date, only where the opt-in Week offers it.
-/// Classic Month gets no gesture at all. A simultaneous gesture keeps the date tap and the scroll view working.
+/// Long press (and a VoiceOver action) to add a task on a Month date, only where a caller passes `onLongPressAdd`.
+/// No caller does on main, so Month has no add gesture today (see docs/design/finalize/corrections/README.md).
+/// A simultaneous gesture keeps the date tap and the scroll view working.
 private struct MonthDayAddGesture: ViewModifier {
     let iso: String
     let onAdd: ((String) -> Void)?

@@ -720,53 +720,44 @@ final class PlannerUITests: NativeUITestCase {
         capture("more-all-options-visible-390")
     }
 
-    /// The opt-in preview must not silently replace Classic or mutate the planner.
-    /// Restore Classic before returning so other native journeys keep their baseline.
-    func testCalendarDesignPreviewCanReturnToClassic() {
-        launch(); goSpread()
-        tapID("open-more")
+    /// Life is the default root (OD18) and Classic is one tap away in More. `launch` pins Classic with a launch
+    /// argument, and an argument shadows a later write to the same key, so this journey launches without the pin
+    /// and makes its choices in the picker. Whatever was stored last time, it ends on Classic.
+    func testCalendarDesignSwitchesBetweenLifeAndClassic() {
+        if app.state != .notRunning { app.terminate() }
+        app.launchArguments = ["-native.whatsNew.lastSeenRelease", "2026-11-11-life-week"]
+        app.launch()
+        XCTAssertTrue(eventually(90) { self.el("life-root").exists || self.el("native-spread").exists },
+                      "The native planner never appeared")
+        if !el("life-root").exists {
+            // Classic is stored from an earlier run. Life is chosen from Classic, where no "Life" control sits
+            // underneath the More sheet (Life's own navigation has one).
+            openCalendarDesignMenu()
+            chooseCalendarDesign("Life")
+        }
+        XCTAssertTrue(el("life-root").waitForExistence(timeout: 20), "Choosing Life did not open the Life root")
+        capture("calendar-design-life")
+        openCalendarDesignMenu()
+        chooseCalendarDesign("Classic")
+        XCTAssertTrue(el("week-crown").waitForExistence(timeout: 20), "Choosing Classic did not restore the Week Crown")
+        XCTAssertTrue(eventually(15) { !self.el("life-root").exists }, "Life stayed on screen after choosing Classic")
+    }
+
+    /// Life's More button is `life-more`; Classic's is `open-more`. Both open the same More sheet.
+    private func openCalendarDesignMenu() {
+        if el("life-more").waitForExistence(timeout: 5) { tapID("life-more") } else { tapID("open-more") }
+        XCTAssertTrue(el("calendar-design-picker").waitForExistence(timeout: 10), "Calendar design must be available in More")
+    }
+
+    private func chooseCalendarDesign(_ name: String) {
         let picker = el("calendar-design-picker")
-        XCTAssertTrue(picker.waitForExistence(timeout: 10), "Calendar design must be available in Settings")
         XCTAssertTrue(picker.isHittable, "Calendar design must be visible without scrolling")
         XCTAssertGreaterThanOrEqual(picker.frame.height, 44, "Calendar design has a small hit target")
         picker.tap()
-        let preview = app.buttons["Week + Month (preview)"]
-        XCTAssertTrue(preview.waitForExistence(timeout: 10), "New calendar preference was not offered")
-        preview.tap()
+        let option = app.buttons[name]
+        XCTAssertTrue(option.waitForExistence(timeout: 10), "Calendar design did not offer \(name)")
+        option.tap()
         closeNativeSheets()
-        tapID("native-week")
-        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20),
-                      "Opt-in preview did not open the focused Week view")
-        capture("focus-week-preview-opted-in")
-        tapID("open-more")
-        tapID("calendar-design-picker")
-        let classic = app.buttons["Classic (current)"]
-        XCTAssertTrue(classic.waitForExistence(timeout: 10), "Classic rollback option is missing")
-        classic.tap()
-        closeNativeSheets()
-        XCTAssertTrue(eventually(15) { !self.el("week-focus-surface").exists },
-                      "Choosing Classic did not restore the existing Week view")
-        XCTAssertTrue(el("week-crown").exists, "Classic view lost the Week Crown")
-    }
-
-    /// Preview-specific acceptance: Classic uses a separate view and is never the target of these assertions.
-    func testFocusedWeekRetainsSidebarAndMorphsCalendar() {
-        launch(["-native.weekMonth.previewEnabled", "YES"])
-        tapID("native-week")
-        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20))
-        XCTAssertTrue(el("responsibility-sidebar").exists,
-                      "The focused Week must retain the responsibility rail")
-        XCTAssertTrue(el("focus-week-overview").exists,
-                      "The seven-day navigation must remain pinned above the schedule")
-        XCTAssertEqual(waitElements(prefix: "focus-day-", minimum: 7).count, 7)
-        tapID("focus-week-month-toggle")
-        XCTAssertTrue(el("month").waitForExistence(timeout: 10),
-                      "The calendar button must open Month without leaving Week")
-        capture("focused-month")
-        tapID("focus-week-month-toggle")
-        XCTAssertTrue(el("focus-week-overview").exists)
-        XCTAssertEqual(waitElements(prefix: "focus-day-", minimum: 7).count, 7)
-        capture("focused-week")
     }
 
     func testRecentlyDeletedIsReachableInNativeSettings() {
@@ -1602,244 +1593,4 @@ final class DuoUITests: NativeUITestCase {
                 closeNativeSheets()
         }
     }
-}
-
-// MARK: - Week/Month redesign (opt-in preview, owner decisions 1-61)
-
-/// Actual-app journeys for the redesigned Week/Month. Each test turns the preview on through its launch
-/// argument (the Classic baseline is pinned by `launch`, OD18) and checks behavior through accessibility state, not pixels.
-final class WeekMonthUITests: NativeUITestCase {
-    private let preview = ["-native.weekMonth.previewEnabled", "YES"]
-
-    private func openFocusedWeek() {
-        tapID("native-week")
-        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20), "The focused Week did not open")
-        if el("month").exists { tapID("focus-week-month-toggle") }
-        XCTAssertEqual(waitElements(prefix: "focus-day-", minimum: 7).count, 7)
-    }
-    private func dayIDs() -> [String] { waitElements(prefix: "focus-day-", minimum: 7).map(\.identifier) }
-    private func roleIDs() -> [String] {
-        waitElements(prefix: "focus-role-").map(\.identifier)
-            .filter { !$0.hasPrefix("focus-role-toggle-") }
-            .map { String($0.dropFirst("focus-role-".count)) }
-    }
-    private func todayISO() -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
-    }
-    private func taskRow(_ title: String) -> XCUIElement {
-        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'focus-task-' AND label == %@", title)).firstMatch
-    }
-    /// Switching between two profiles whose remembered destination is Week must not
-    /// carry the first person's hidden rail or open trays into the second profile.
-    func testFocusedWeekResetsTransientStateAcrossProfiles() throws {
-        launch(preview); openFocusedWeek()
-        tapID("open-more"); tapID("manage-profiles")
-        let profiles = elements(prefix: "profile-")
-        let original = try XCTUnwrap(profiles.first { ($0.value as? String) == "Current profile" } ?? profiles.first).identifier
-        typeInto("new-profile-field", "Week isolation " + String(UUID().uuidString.prefix(6)))
-        tapID("create-profile")
-        closeNativeSheets(); openFocusedWeek()
-        tapID("open-more"); tapID("manage-profiles")
-        let other = try XCTUnwrap(elements(prefix: "profile-").first {
-            ($0.value as? String) == "Current profile" || $0.isSelected
-        }).identifier
-        tapID(original); closeNativeSheets(); openFocusedWeek()
-        tapID("focus-show-sidebar")
-        XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists })
-        tapID("open-more"); tapID("manage-profiles"); tapID(other); closeNativeSheets()
-        XCTAssertTrue(el("week-focus-surface").waitForExistence(timeout: 20))
-        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5),
-                      "The previous profile's hidden rail leaked into this profile's Week")
-        capture("wm-profile-isolated-rail")
-        tapID("open-more"); tapID("manage-profiles"); tapID(original); closeNativeSheets()
-    }
-    /// A real finger drag across the seven-day strip. `swipeLeft()` on one narrow day button travels about that
-    /// button's width, under the strip's 65 pt minimum, so it never reached the week-change gesture.
-    private func dragStrip(towardNextWeek: Bool) {
-        let days = dayIDs().map { el($0) }
-        let start = towardNextWeek ? days[5] : days[1]
-        let origin = app.coordinate(withNormalizedOffset: .zero)
-        let from = origin.withOffset(CGVector(dx: start.frame.midX - app.frame.minX, dy: start.frame.midY - app.frame.minY))
-        from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: towardNextWeek ? -180 : 180, dy: 0)))
-    }
-
-    /// Decisions 25, 54 and 90-91: tap a day, Month round trip keeps it, a strip swipe changes week and opens Monday.
-    func testDaySelectionSurvivesMonthAndStripSwipeOpensMonday() {
-        launch(preview); openFocusedWeek()
-        let days = dayIDs()
-        let thursday = days[3]
-        tapID(thursday)
-        XCTAssertTrue(eventually(5) { self.el(thursday).isSelected }, "Tapping a day did not select it")
-        tapID("focus-week-month-toggle")
-        XCTAssertTrue(el("month").waitForExistence(timeout: 10), "Month did not open")
-        let dates = waitElements(prefix: "month-day-", minimum: 28)
-        for date in dates {
-            XCTAssertGreaterThanOrEqual(date.frame.width, 43.5, "Month date target is narrower than 44pt: " + date.identifier)
-            XCTAssertGreaterThanOrEqual(date.frame.height, 43.5, "Month date target is shorter than 44pt: " + date.identifier)
-        }
-        XCTAssertTrue(el("responsibility-sidebar").exists, "Month must retain responsibility controls")
-        capture("wm-month-from-thursday")
-        tapID("focus-week-month-toggle")
-        XCTAssertTrue(eventually(10) { self.el(thursday).exists && self.el(thursday).isSelected },
-                      "Closing Month without choosing a date must restore the previous day")
-        dragStrip(towardNextWeek: true)
-        XCTAssertTrue(eventually(15) { self.dayIDs().first != days.first }, "Swiping the seven-day strip did not change week")
-        let next = dayIDs()
-        XCTAssertTrue(eventually(5) { self.el(next[0]).isSelected }, "Changing weeks must open Monday")
-        capture("wm-next-week-opens-monday")
-        dragStrip(towardNextWeek: false)
-        XCTAssertTrue(eventually(15) { self.dayIDs().first == days.first }, "Swiping back did not return to the first week")
-    }
-
-    /// Decision 91: the selected responsibility is shared by Spread, Week and Month.
-    func testSelectedResponsibilityIsSharedAcrossSpreadWeekAndMonth() {
-        launch(preview); openFocusedWeek()
-        let roles = roleIDs()
-        guard roles.count >= 2 else { return XCTFail("The default planner should have at least two responsibilities") }
-        let pick = "focus-role-" + roles[1]
-        tapID(pick)
-        XCTAssertTrue(eventually(5) { self.el(pick).isSelected }, "Selecting a responsibility in Week did not take")
-        tapID("focus-week-month-toggle")
-        XCTAssertTrue(el("month").waitForExistence(timeout: 10))
-        XCTAssertTrue(el(pick).isSelected, "Month lost the selected responsibility")
-        goSpread()
-        XCTAssertTrue(eventually(10) { self.el(pick).exists && self.el(pick).isSelected },
-                      "Spread's sidebar does not show the same selected responsibility")
-        capture("wm-spread-shares-selection")
-        tapID("native-week")
-        XCTAssertTrue(eventually(10) { self.el(pick).exists && self.el(pick).isSelected },
-                      "Returning to Week lost the selected responsibility")
-    }
-
-    /// Decisions 18, 24 and 50: compact rail; expanded rail overlays without squeezing or shifting; hide and restore.
-    func testExpandedSidebarOverlaysScheduleAndHiddenSidebarRestores() {
-        launch(preview); openFocusedWeek()
-        let role = roleIDs()[0]
-        let card = el("focus-role-toggle-" + role)
-        XCTAssertTrue(card.waitForExistence(timeout: 20), "The selected responsibility's schedule row is missing")
-        let before = card.frame
-        tapID("sidebar-expand-collapse")
-        XCTAssertTrue(eventually(5) { self.el("sidebar-expand-collapse").label == "Condense sidebar" },
-                      "The sidebar did not expand")
-        capture("wm-sidebar-expanded-overlay")
-        let during = el("focus-role-toggle-" + role).frame
-        XCTAssertEqual(during.width, before.width, accuracy: 1, "Expanding the sidebar squeezed the schedule")
-        XCTAssertEqual(during.minX, before.minX, accuracy: 1, "Expanding the sidebar shifted the schedule")
-        tapID("focus-role-" + role)
-        XCTAssertTrue(eventually(5) { self.el("sidebar-expand-collapse").label == "Expand sidebar" },
-                      "Choosing a responsibility must collapse the expanded sidebar")
-        tapID("focus-show-sidebar")
-        XCTAssertTrue(eventually(5) { !self.el("responsibility-sidebar").exists }, "Hide did not hide the sidebar")
-        capture("wm-sidebar-hidden")
-        tapID("focus-show-sidebar")
-        XCTAssertTrue(el("responsibility-sidebar").waitForExistence(timeout: 5), "The hidden sidebar did not come back")
-    }
-
-    /// Task lifecycle through the store: Quick Add, complete (folded section), relaunch, uncomplete, delete,
-    /// Recently Deleted restore to To Place, relaunch again. Each step must survive a cold start.
-    func testQuickAddCompleteDeleteRestoreSurvivesRelaunch() {
-        launch(preview); openFocusedWeek()
-        let role = roleIDs()[0]
-        let title = "WM \(Int(Date().timeIntervalSince1970) % 1_000_000)"
-        tapID("focus-quick-add-" + role)
-        typeInto("focus-quick-add-field", title)
-        tapButton("Save")
-        let offer = app.buttons["Add 30 minutes to this day"]
-        if offer.waitForExistence(timeout: 5) { offer.tap() }
-        XCTAssertTrue(taskRow(title).waitForExistence(timeout: 20), "Quick Add did not place the task on the day")
-        let taskId = String(taskRow(title).identifier.dropFirst("focus-task-".count))
-        capture("wm-quick-added")
-
-        tapButton("Complete " + title)
-        XCTAssertTrue(el("focus-completed-toggle-" + role).waitForExistence(timeout: 10),
-                      "A completed task must fold under the completed section")
-        relaunch(); openFocusedWeek()
-        tapID("focus-completed-toggle-" + role)
-        XCTAssertTrue(app.buttons["Mark " + title + " incomplete"].waitForExistence(timeout: 20),
-                      "Completion did not survive relaunch")
-        tapButton("Mark " + title + " incomplete")
-        XCTAssertTrue(app.buttons["Complete " + title].waitForExistence(timeout: 10))
-
-        scrollIntoView(taskRow(title)); taskRow(title).tap()
-        tapButton("Delete")
-        XCTAssertTrue(eventually(10) { !self.taskRow(title).exists }, "Delete did not remove the task from the day")
-        relaunch()
-        goSpread(); tapID("open-more"); tapID("more-recently-deleted")
-        XCTAssertTrue(el("deleted-item-" + taskId).waitForExistence(timeout: 20),
-                      "The deleted task is not in Recently Deleted after relaunch")
-        capture("wm-recently-deleted")
-        tapID("deleted-restore-" + taskId)
-        XCTAssertTrue(eventually(10) { !self.el("deleted-item-" + taskId).exists }, "Restore did not take the task out")
-        closeNativeSheets()
-
-        relaunch(); openFocusedWeek()
-        tapID("focus-to-place")
-        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", title))
-                        .firstMatch.waitForExistence(timeout: 20),
-                      "The restored task is not in its responsibility's To Place after relaunch")
-        capture("wm-restored-to-place")
-    }
-
-    /// Decisions 54-56: long press a Month date to add without leaving Month; Month swipe changes month.
-    func testMonthLongPressAddsWithoutLeavingMonthAndSwipeChangesMonth() {
-        launch(preview); openFocusedWeek()
-        tapID("focus-week-month-toggle")
-        XCTAssertTrue(el("month").waitForExistence(timeout: 10))
-        let cell = el("month-day-" + todayISO())
-        XCTAssertTrue(cell.waitForExistence(timeout: 10), "Today is missing from Month")
-        cell.press(forDuration: 0.9)
-        XCTAssertTrue(el("month-quick-add-title").waitForExistence(timeout: 10), "Long press did not open Quick Add")
-        typeInto("month-quick-add-title", "Month add \(Int(Date().timeIntervalSince1970) % 100_000)")
-        tapID("month-quick-add-save")
-        XCTAssertTrue(eventually(10) { !self.el("month-quick-add-title").exists }, "Quick Add did not save and close")
-        XCTAssertTrue(el("month").exists, "Quick Add must not leave Month")
-        XCTAssertFalse(el("focus-day-" + todayISO()).exists, "The long press release also drilled into Week")
-        capture("wm-month-after-quick-add")
-        let firstBefore = elements(prefix: "month-day-").first?.identifier
-        el("month").swipeLeft()
-        XCTAssertTrue(eventually(10) { self.elements(prefix: "month-day-").first?.identifier != firstBefore },
-                      "Swiping Month did not change the month")
-    }
-    /// A refused hour increase must not clamp the requested time. Offer a
-    /// measured shortage and the affected responsibility's own hour editor.
-    func testInsufficientHoursOffersMeasuredAdjustment() {
-        launch(preview); openFocusedWeek()
-        tapID("sidebar-add-role")
-        let name = "Budget " + String(UUID().uuidString.prefix(6))
-        typeInto("role-name-field", name)
-        for _ in 0..<3 { tapButton("Decrease Hours for Life area 1 by half an hour") }
-        tapID("save-spreads")
-        let selector = app.buttons.matching(
-            NSPredicate(format: "identifier BEGINSWITH 'focus-role-' AND label == %@", name)
-        ).firstMatch
-        XCTAssertTrue(selector.waitForExistence(timeout: 20), "The new responsibility is not in Week")
-        scrollIntoView(selector)
-        selector.tap()
-        let roleID = String(selector.identifier.dropFirst("focus-role-".count))
-        let hourID = "focus-hour-" + roleID
-        let day = elements(prefix: "focus-day-").first(where: { $0.isSelected })
-        guard let day else { return XCTFail("No selected date on Week") }
-        let iso = String(day.identifier.dropFirst("focus-day-".count))
-        tapID(hourID)
-        tapButton("Allocate 30 minutes")
-        let increase = "Increase " + name + " on " + iso + " by half an hour"
-        XCTAssertTrue(app.buttons[increase].waitForExistence(timeout: 20))
-        tapButton(increase)
-        let adjust = app.buttons["Adjust hours"]
-        XCTAssertTrue(adjust.waitForExistence(timeout: 15),
-                      "A rejected allocation must offer Adjust hours")
-        XCTAssertTrue(app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS %@", "needs 0.5h more")
-        ).firstMatch.exists, "Refusal did not explain the exact missing hours")
-        capture("wm-insufficient-hours-adjustment")
-        adjust.tap()
-        XCTAssertTrue(el("role-name-field").waitForExistence(timeout: 15),
-                      "Adjust hours did not open the role editor")
-        XCTAssertEqual(fieldText("role-name-field"), name, "Opened wrong responsibility")
-    }
-
 }

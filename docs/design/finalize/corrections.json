@@ -111,6 +111,46 @@
       "changed_files": [],
       "regression_evidence": [],
       "reviewer_approval": ""
+    },
+    {
+      "id": "parity-overdue-bulk-reschedule",
+      "screen_ids": [
+        "N33",
+        "N37"
+      ],
+      "problem": "Bulk reschedule of overdue tasks (OverdueSelectionTray) was reachable only from the Week Focus surface, which cannot run. Life has no overdue path. OD19, as refined on 2026-11-14, keeps the tray and records this gap instead of deleting it.",
+      "severity": "low",
+      "decision_owner": "owner: wave 3. Open decision: whether Life offers overdue bulk reschedule. Kept, not wired.",
+      "spec": "docs/design/finalize/corrections/README.md#overdue-bulk-reschedule",
+      "status": "open",
+      "observed_evidence": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/OverdueSelectionTray.swift (no caller after the Focus surface was deleted)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Planner/LivePlanner.swift:395-402 (allOverdueTasks has no caller)",
+        "Week/WeekFocusSurface.swift at 6f53a60, lines 435-477 (the focus-overdue entry point, deleted in this PR)"
+      ],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
+    },
+    {
+      "id": "parity-month-long-press-add",
+      "screen_ids": [
+        "N05",
+        "N37"
+      ],
+      "problem": "A one-gesture add from the Month grid (long press a date, then add a task for the active responsibility) was reachable only from the Week Focus surface, which cannot run. Life's Month selects a date on a tap and adds in further steps. Classic Month has no gesture. OD19, as refined on 2026-11-14, keeps MonthQuickAddSheet and the MonthSurface hook and records this gap.",
+      "severity": "low",
+      "decision_owner": "owner: wave 3. Open decision: whether Month gets a one-gesture add, and in which root. Kept, not wired.",
+      "spec": "docs/design/finalize/corrections/README.md#one-gesture-add-from-month",
+      "status": "open",
+      "observed_evidence": [
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthQuickAddSheet.swift (no caller after the Focus surface was deleted)",
+        "ios/SpreadNativeV2/Sources/SpreadNativeV2/Week/MonthSurface.swift (onLongPressAdd and MonthDayAddGesture, no caller)",
+        "Week/WeekFocusSurface.swift at 6f53a60, lines 152-155 (the long-press entry point, deleted in this PR)"
+      ],
+      "changed_files": [],
+      "regression_evidence": [],
+      "reviewer_approval": ""
     }
   ]
 }
