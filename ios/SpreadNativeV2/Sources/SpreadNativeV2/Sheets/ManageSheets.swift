@@ -93,7 +93,7 @@ struct NewSpreadSheet: View {
             HStack {
                 Text("Hours each week").font(Spread.callout).foregroundStyle(Spread.secondary)
                 Spacer()
-                HourStepper(value: draft.hours, label: "Hours for spread \(index + 1)", step: 0.5) { hours in
+                HourStepper(value: draft.hours, label: "Hours for Life area \(index + 1)", step: 0.5) { hours in
                     drafts[index].hours = hours
                 }
             }

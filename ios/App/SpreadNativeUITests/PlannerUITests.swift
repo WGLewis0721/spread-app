@@ -1285,6 +1285,9 @@ final class SpreadFlowUITests: NativeUITestCase {
             if done.exists && done.isHittable { done.tap(); continue }
             let close = app.buttons["Close"].firstMatch
             if close.exists && close.isHittable { close.tap(); continue }
+            // Sheets that hold an unconfirmed draft dismiss with a leading Cancel (finalize OD6).
+            let cancel = app.buttons["Cancel"].firstMatch
+            if cancel.exists && cancel.isHittable { cancel.tap(); continue }
             break
         }
     }
@@ -1804,7 +1807,7 @@ final class WeekMonthUITests: NativeUITestCase {
         tapID("sidebar-add-role")
         let name = "Budget " + String(UUID().uuidString.prefix(6))
         typeInto("role-name-field", name)
-        for _ in 0..<3 { tapButton("Decrease Hours for spread 1 by half an hour") }
+        for _ in 0..<3 { tapButton("Decrease Hours for Life area 1 by half an hour") }
         tapID("save-spreads")
         let selector = app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH 'focus-role-' AND label == %@", name)
