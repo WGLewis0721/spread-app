@@ -48,7 +48,7 @@ Files scanned: 70 (sources outside lane A, the widget target and the app host). 
 8. **Colour fallbacks.** `Color(hex: x ?? "#8E8E93")` should become `Spread.roleFallback`. `Color(hex:)` already returns that grey for a bad string, so the two are equivalent.
 9. **Glints, shadows and tile glyphs.** `.white` and `.black` are not tokens. Use `Spread.highlight` for glints, `Spread.onAccent` for text on filled controls, `Spread.tileGlyph` and `Spread.tileGlyphOnBright` for glyphs on role tiles, and `Spread.shadow` or `Spread.scrim` for dark overlays. Choose by use, because these are different roles.
 
-10. **Owner decisions applied in this PR** (plan section 8, the OD items in lane A): OD4 keeps `success` as it is. OD5 removes the Gray Matter alias tokens; the UI kit maps the names in one line. OD7 changes the role-deletion confirmation to say responsibility. OD14 deletes the dormant layouts. OD15 makes `chalkInk` share the light secondary ink, including its Increase Contrast variant.
+10. **Owner decisions applied in this PR** (plan section 8, the OD items in lane A): OD4 keeps `success` as it is. OD5 removes the Gray Matter alias tokens; the UI kit maps the names in one line. OD7 changes the role-deletion confirmation to say responsibility. OD14 deletes the dormant layouts. OD15 makes `chalkInk` share the light secondary ink, including its Increase Contrast variant. OD18 makes Life the default root, with the key unchanged, and the UI test launch helper pins Classic for its own journeys. OD22 changes the empty-plan action to "Add responsibility".
 ## 4. Per-file list
 
 Rows are in file order. The code excerpt is trimmed to about 110 characters.
