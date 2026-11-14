@@ -46,7 +46,7 @@ struct OverdueSelectionTray: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                 .accessibilityFocused($messageFocused)
                 .accessibilityIdentifier("overdue-message")
             }
@@ -87,7 +87,7 @@ struct OverdueSelectionTray: View {
                     }
                 }
                 .padding(8)
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
             }
             if !selection.isEmpty {
                 Text("\(selection.count) selected · choose a day")
@@ -164,7 +164,7 @@ struct OverdueSelectionTray: View {
                             Spacer(minLength: 0)
                         }
                         .padding(10)
-                        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 12))
+                        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                     }
                     if eligible.isEmpty {
                         Text("None of these tasks can move to that day.")
