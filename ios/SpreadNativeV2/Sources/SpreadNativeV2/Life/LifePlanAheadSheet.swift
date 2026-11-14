@@ -52,129 +52,135 @@ struct LifePlanAheadSheet: View {
         return result
     }
 
+    /// A single primary action sits above the safe area, rather than after an
+    /// arbitrarily long preview. The repeating editor owns its own Form and footer.
     var body: some View {
         SpreadSheetStack {
-            Form {
-                if planMode == "plans" {
-                    plansSections
-                } else if planMode == "copy" {
-                    copySections
-                } else {
-                    Section {
-                        Button {
+            Group {
+                if planMode == "repeat" {
+                    LifeRecurringPlanForm(
+                        planner: planner, snapshot: snapshot,
+                        initialPlanId: formPlanId, initialPreset: formPreset,
+                        onBackToPlans: {
                             formPlanId = nil
                             formPreset = nil
                             preview = nil
                             planMode = "plans"
-                        } label: {
-                            Label { Text("Your plans") } icon: { SpreadIcon(name: "lucide-chevron-left", size: 18) }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .frame(minHeight: 44)
-                        }
-                        .accessibilityIdentifier("plan-ahead-back-to-plans")
-                    }
-                    if planMode == "repeat" {
-                        LifeRecurringPlanForm(planner: planner, snapshot: snapshot,
-                                              initialPlanId: formPlanId, initialPreset: formPreset)
-                    } else {
-                Section {
-                    Text("Move time to another week. Nothing moves until you preview and confirm.")
-                        .font(.subheadline)
-                        .foregroundStyle(Spread.secondary)
-                    Picker("Life area", selection: $roleId) {
-                        ForEach(snapshot.roles) { role in
-                            Text(role.name).tag(role.id)
-                        }
-                    }
-                    Picker("Move", selection: $dailyTransfer) {
-                        Text("Weekly hours").tag(false)
-                        Text("Hours on a day").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    if dailyTransfer {
-                        if availableDays.isEmpty {
-                            Text("Plan hours on a day first, or switch to Weekly hours.")
-                                .font(.callout).foregroundStyle(Spread.secondary)
+                        })
+                } else {
+                    Form {
+                        if planMode == "plans" {
+                            plansSections
+                        } else if planMode == "copy" {
+                            copySections
                         } else {
-                            Picker("From day", selection: $sourceDay) {
-                                ForEach(availableDays, id: \.self) { iso in
-                                    Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEE, MMM d"))
-                                        .tag(iso)
+                            Section {
+                                Button {
+                                    preview = nil
+                                    planMode = "plans"
+                                } label: {
+                                    Label { Text("Your plans") } icon: {
+                                        SpreadIcon(name: "lucide-chevron-left", size: 18)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .frame(minHeight: 44)
                                 }
+                                .accessibilityIdentifier("plan-ahead-back-to-plans")
                             }
+                            Section {
+                                Text("Move time to another week. Nothing moves until you preview and confirm.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Spread.secondary)
+                                Picker("Life area", selection: $roleId) {
+                                    ForEach(snapshot.roles) { role in
+                                        Text(role.name).tag(role.id)
+                                    }
+                                }
+                                Picker("Move", selection: $dailyTransfer) {
+                                    Text("Weekly hours").tag(false)
+                                    Text("Hours on a day").tag(true)
+                                }
+                                .pickerStyle(.segmented)
+                                if dailyTransfer {
+                                    if availableDays.isEmpty {
+                                        Text("Plan hours on a day first, or switch to Weekly hours.")
+                                            .font(.callout).foregroundStyle(Spread.secondary)
+                                    } else {
+                                        Picker("From day", selection: $sourceDay) {
+                                            ForEach(availableDays, id: \.self) { iso in
+                                                Text(PlannerDates.label(PlannerDates.date(iso), pattern: "EEE, MMM d"))
+                                                    .tag(iso)
+                                            }
+                                        }
+                                    }
+                                }
+                            } header: { Text("From this week") }
+
+                            Section {
+                                DatePicker("Move to", selection: $destinationDate,
+                                           in: earliestDestination..., displayedComponents: .date)
+                                    .environment(\.calendar, PlannerDates.deviceCalendar)
+                                    .environment(\.timeZone, TimeZone.current)
+                                Stepper(value: $amount, in: 0.5...168, step: 0.5) {
+                                    Text(SpreadHours.text(amount) + " hours")
+                                        .font(.headline).monospacedDigit()
+                                }
+                                TextField("Target weekly hours (if not set)", text: $targetCapacityText)
+                                    .keyboardType(.decimalPad)
+                                    .accessibilityIdentifier("plan-ahead-target-capacity")
+                                Text("Enter the destination week's total hours if it has not been set. Existing budgets are preserved.")
+                                    .font(.caption).foregroundStyle(Spread.secondary)
+                            } header: { Text("To a future week") }
+
+                            Section {
+                                if let preview {
+                                    if preview.eligible {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text(SpreadHours.text(preview.hours) + "h moves to " +
+                                                PlannerDates.label(PlannerDates.date(preview.targetWeek), pattern: "MMM d"))
+                                                .font(.headline)
+                                            PlanAheadDetailRow(
+                                                title: "This week",
+                                                detail: SpreadHours.text(preview.sourceBudgetBefore) +
+                                                    "h → " + SpreadHours.text(preview.sourceBudgetAfter) + "h")
+                                            PlanAheadDetailRow(
+                                                title: "Future week",
+                                                detail: SpreadHours.text(preview.targetBudgetBefore) +
+                                                    "h → " + SpreadHours.text(preview.targetBudgetAfter) + "h")
+                                            if preview.movedTasks > 0 {
+                                                Text("\(preview.movedTasks) linked tasks move with these hours.")
+                                            }
+                                            Text("No automatic rollover. Changes can be undone from Life.")
+                                                .font(.caption)
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundStyle(Spread.ink)
+                                    } else {
+                                        Label(preview.reason ?? "This transfer is not available.",
+                                              systemImage: "exclamationmark.circle")
+                                            .foregroundStyle(Spread.danger)
+                                    }
+                                } else {
+                                    Text("Preview the affected hours before moving them.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(Spread.secondary)
+                                }
+                            } header: { Text("Review before moving") }
                         }
                     }
-                } header: { Text("From this week") }
-
-                Section {
-                    DatePicker("Move to", selection: $destinationDate,
-                               in: earliestDestination..., displayedComponents: .date)
-                        .environment(\.calendar, PlannerDates.deviceCalendar)
-                        .environment(\.timeZone, TimeZone.current)
-                    Stepper(value: $amount, in: 0.5...168, step: 0.5) {
-                        Text(SpreadHours.text(amount) + " hours")
-                            .font(.headline).monospacedDigit()
-                    }
-                    TextField("Target weekly hours (if not set)", text: $targetCapacityText)
-                        .keyboardType(.decimalPad)
-                        .accessibilityIdentifier("plan-ahead-target-capacity")
-                    Text("Enter the destination week's total hours if it has not been set. Existing budgets are preserved.")
-                        .font(.caption).foregroundStyle(Spread.secondary)
-                } header: { Text("To a future week") }
-
-                Section {
-                    Button {
-                        Task { await requestPreview() }
-                    } label: {
-                        Label(previewing ? "Checking…" : "Preview transfer", systemImage: "eye")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .disabled(previewing || saving || planner.busy ||
-                              role == nil || (dailyTransfer && availableDays.isEmpty))
-                    .accessibilityIdentifier("plan-ahead-preview")
-                    if let preview {
-                        if preview.eligible {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(SpreadHours.text(preview.hours) + "h moves to " +
-                                    PlannerDates.label(PlannerDates.date(preview.targetWeek), pattern: "MMM d"))
-                                    .font(.headline)
-                                Text("This week: " + SpreadHours.text(preview.sourceBudgetBefore) +
-                                     "h → " + SpreadHours.text(preview.sourceBudgetAfter) + "h")
-                                Text("Future week: " + SpreadHours.text(preview.targetBudgetBefore) +
-                                     "h → " + SpreadHours.text(preview.targetBudgetAfter) + "h")
-                                if preview.movedTasks > 0 {
-                                    Text("\(preview.movedTasks) linked tasks move with these hours.")
-                                }
-                                Text("No automatic rollover. Changes can be undone from Life.")
-                                    .font(.caption)
-                            }
-                            .font(.subheadline)
-                            .foregroundStyle(Spread.ink)
-                        } else {
-                            Label(preview.reason ?? "This transfer is not available.",
-                                  systemImage: "exclamationmark.circle")
-                                .foregroundStyle(Spread.danger)
+                    .spreadListSurface()
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        if planMode == "copy" || planMode == "move" {
+                            bottomAction
                         }
-                    }
-                    Button {
-                        Task { await confirmTransfer() }
-                    } label: {
-                        Text(saving ? "Saving…" : "Move hours")
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(saving || planner.busy || preview?.eligible != true)
-                    .accessibilityIdentifier("plan-ahead-confirm")
-                } header: { Text("Review before moving") }
                     }
                 }
             }
-            .spreadListSurface()
             .navigationTitle("Plan Ahead")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }.disabled(saving)
+                    Button("Close") { dismiss() }.disabled(saving || copySaving)
                 }
             }
         }
@@ -196,7 +202,47 @@ struct LifePlanAheadSheet: View {
         .accessibilityIdentifier("life-plan-ahead-sheet")
     }
 
-    /// Repeating schedules that still apply from next week onward.
+    @ViewBuilder private var bottomAction: some View {
+        if planMode == "copy" {
+            Button {
+                Task {
+                    if copyPreview?.eligible == true { await confirmCopy() }
+                    else { await requestCopyPreview() }
+                }
+            } label: {
+                Text(copySaving ? "Copying…" : copyPreviewing ? "Checking…" :
+                     copyPreview?.eligible == true ? "Copy to these weeks" : "Preview copy")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(copySaving || copyPreviewing || planner.busy)
+            .accessibilityIdentifier(copyPreview?.eligible == true
+                                      ? "plan-ahead-copy-confirm" : "plan-ahead-copy-preview")
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Spread.canvas)
+        } else if planMode == "move" {
+            Button {
+                Task {
+                    if preview?.eligible == true { await confirmTransfer() }
+                    else { await requestPreview() }
+                }
+            } label: {
+                Text(saving ? "Saving…" : previewing ? "Checking…" :
+                     preview?.eligible == true ? "Move hours" : "Preview transfer")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(saving || previewing || planner.busy ||
+                      role == nil || (dailyTransfer && availableDays.isEmpty))
+            .accessibilityIdentifier(preview?.eligible == true
+                                      ? "plan-ahead-confirm" : "plan-ahead-preview")
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Spread.canvas)
+        }
+    }
+
     private var activeRules: [NativeRecurringPlan] {
         (snapshot.recurringPlans ?? []).filter { rule in
             rule.terminatedWeek == nil &&
@@ -255,11 +301,9 @@ struct LifePlanAheadSheet: View {
                                 Text(presetSummary(preset))
                                     .font(.caption)
                                     .foregroundStyle(Spread.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
-                            Text("Review")
-                                .font(.subheadline)
-                                .foregroundStyle(Spread.secondary)
                             SpreadIcon(name: "lucide-chevron-right", size: 18)
                                 .foregroundStyle(Spread.secondary)
                         }
@@ -271,7 +315,7 @@ struct LifePlanAheadSheet: View {
             } header: {
                 Text("Suggested plans")
             } footer: {
-                Text("Based on this week. Tap one to review it. Nothing is saved until you confirm, and you can change anything first.")
+                Text("Based on this week. Review or edit before confirming.")
             }
         }
     }
@@ -280,7 +324,6 @@ struct LifePlanAheadSheet: View {
     /// Reads the store snapshot only; tapping a row opens a form, nothing is sent.
     @ViewBuilder
     private var plansSections: some View {
-        copyEntrySection
         Section {
             Button {
                 formPlanId = nil
@@ -315,6 +358,7 @@ struct LifePlanAheadSheet: View {
                                 Text(planSummary(plan))
                                     .font(.caption)
                                     .foregroundStyle(Spread.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
                             SpreadIcon(name: "lucide-chevron-right", size: 18)
@@ -329,21 +373,10 @@ struct LifePlanAheadSheet: View {
             Text("Your plans")
         }
         presetsSection
-        Section {
-            Button {
-                preview = nil
-                planMode = "move"
-            } label: {
-                Label("Move hours once", systemImage: "arrow.left.arrow.right")
-                    .frame(minHeight: 44)
-            }
-            .accessibilityIdentifier("plan-ahead-move-once")
-        } footer: {
-            Text("Move time from this week to another week. Nothing moves until you preview and confirm.")
-        }
+        copyEntrySection
     }
 
-    /// The entry row for copying. It sits above the repeating plans, because it is the plain way to plan forward.
+    /// One primary entry: copy and move are secondary paths.
     private var copyEntrySection: some View {
         Section {
             Button {
@@ -351,13 +384,23 @@ struct LifePlanAheadSheet: View {
                 planMode = "copy"
             } label: {
                 Label("Copy this week forward", systemImage: "doc.on.doc")
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
-            .buttonStyle(.borderedProminent)
             .disabled(snapshot.roles.isEmpty)
             .accessibilityIdentifier("plan-ahead-copy-week")
+            Button {
+                preview = nil
+                planMode = "move"
+            } label: {
+                Label("Move hours once", systemImage: "arrow.left.arrow.right")
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }
+            .disabled(snapshot.roles.isEmpty)
+            .accessibilityIdentifier("plan-ahead-move-once")
+        } header: {
+            Text("Other ways to plan")
         } footer: {
-            Text("Copies this week's hours, day hours and tasks into the eight weeks after it. Weeks that already have a plan are kept. Copied tasks start not done.")
+            Text("Copy your week forward or transfer hours once. Both require a preview.")
         }
     }
 
@@ -401,26 +444,13 @@ struct LifePlanAheadSheet: View {
             Text("Each batch covers eight weeks. Copy the next batch later, when you want it.")
         }
         Section {
-            Button {
-                Task { await requestCopyPreview() }
-            } label: {
-                Label(copyPreviewing ? "Checking…" : "Preview copy", systemImage: "eye")
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .disabled(copyPreviewing || copySaving || planner.busy)
-            .accessibilityIdentifier("plan-ahead-copy-preview")
             if let copyPreview {
                 copyPreviewRows(copyPreview)
+            } else {
+                Text("Preview the affected weeks before copying.")
+                    .font(.subheadline)
+                    .foregroundStyle(Spread.secondary)
             }
-            Button {
-                Task { await confirmCopy() }
-            } label: {
-                Text(copySaving ? "Copying…" : "Copy to these weeks")
-                    .frame(maxWidth: .infinity, minHeight: 50)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(copySaving || planner.busy || copyPreview?.eligible != true)
-            .accessibilityIdentifier("plan-ahead-copy-confirm")
         } header: {
             Text("Review before copying")
         }
@@ -436,13 +466,9 @@ struct LifePlanAheadSheet: View {
                 Text("Each filled week gets \(SpreadHours.text(preview.hours))h and \(preview.tasks) \(preview.tasks == 1 ? "task" : "tasks"), not done.")
                     .font(.subheadline)
                 ForEach(preview.targets, id: \.key) { target in
-                    HStack {
-                        Text("Week of \(PlannerDates.label(PlannerDates.date(target.key), pattern: "MMM d"))")
-                        Spacer()
-                        Text(target.status == "fill" ? "Will be filled" : "Already planned, kept")
-                            .foregroundStyle(Spread.secondary)
-                    }
-                    .font(.subheadline)
+                    PlanAheadDetailRow(
+                        title: "Week of " + PlannerDates.label(PlannerDates.date(target.key), pattern: "MMM d"),
+                        detail: target.status == "fill" ? "Will be filled" : "Already planned, kept")
                 }
             }
             .foregroundStyle(Spread.ink)
@@ -496,4 +522,34 @@ struct LifePlanAheadSheet: View {
         }
     }
 }
+    
+/// Shared adaptive rows for long names, time values and larger text.
+struct PlanAheadDetailRow: View {
+    let title: String
+    let detail: String
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                Text(detail)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .foregroundStyle(Spread.secondary)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                Text(detail)
+                    .foregroundStyle(Spread.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .font(.subheadline)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 #endif
