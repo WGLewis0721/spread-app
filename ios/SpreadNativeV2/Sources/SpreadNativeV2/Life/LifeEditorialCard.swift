@@ -60,8 +60,8 @@ struct LifeEditorialArtwork: View {
 
     var body: some View {
         LinearGradient(
-            // A fixed dark ground keeps white labels legible in light and dark mode. Art legibility, not a theme token.
-            colors: [roleColor.opacity(0.85), Color(red: 0.10, green: 0.13, blue: 0.15)],
+            // A fixed dark ground keeps white labels legible in light and dark mode: Spread.artGround, an art token, not a theme colour.
+            colors: [roleColor.opacity(0.85), Spread.artGround],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -76,15 +76,15 @@ struct LifeEditorialArtwork: View {
         .overlay {
             LinearGradient(
                 stops: [
-                    .init(color: Color.black.opacity(0.66), location: 0),
-                    .init(color: Color.black.opacity(0.40), location: 0.50),
-                    .init(color: Color.black.opacity(0.12), location: 1)
+                    .init(color: Spread.artScrimStrong, location: 0),
+                    .init(color: Spread.artScrimMid, location: 0.50),
+                    .init(color: Spread.artScrimSoft, location: 1)
                 ],
                 startPoint: .leading, endPoint: .trailing
             )
         }
         .overlay {
-            LinearGradient(colors: [.clear, Color.black.opacity(0.40)],
+            LinearGradient(colors: [.clear, Spread.artScrimMid],
                            startPoint: .center, endPoint: .bottom)
         }
         .clipped()
@@ -136,7 +136,7 @@ struct LifeEditorialFace: View {
             Spacer(minLength: 10)
             distributionFooter
         }
-        .foregroundStyle(Color.white)
+        .foregroundStyle(Spread.tileGlyph)
         .padding(.horizontal, 17)
         .padding(.top, 13)
         .padding(.bottom, 28)
@@ -219,10 +219,10 @@ struct LifeEditorialFace: View {
     }
 
     private var weekdayStrip: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Spread.space1) {
             ForEach(0..<7, id: \.self) { index in
                 let value = days[index]
-                VStack(spacing: 4) {
+                VStack(spacing: Spread.space1) {
                     Text(PlannerDates.weekday(weekKey: snapshot.weekKey, index: index).uppercased())
                         .font(.system(size: dayLabelSize, weight: .semibold))
                         .lineLimit(1)
@@ -238,10 +238,10 @@ struct LifeEditorialFace: View {
                 .background(
                     // OD3: zero-hour days use a 0.6 black well. The owner's spec gives about 5.7:1 for white
                     // labels over bright art (WCAG 1.4.3). Not re-measured on device.
-                    value > 0 ? Color.white.opacity(0.91) : Color.black.opacity(0.6),
+                    value > 0 ? Color.white.opacity(0.91) : Spread.artWell,
                     in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                 )
-                .foregroundStyle(value > 0 ? Color.black.opacity(0.9) : Color.white)
+                .foregroundStyle(value > 0 ? Color.black.opacity(0.9) : Spread.tileGlyph)
             }
         }
         .accessibilityElement(children: .ignore)

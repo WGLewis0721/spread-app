@@ -50,6 +50,8 @@ public enum Spread {
     public static let onDanger = Color.white
     public static let caution = dynamic(light: 0x9A3412, dark: 0xFF9F0A)
     public static let scrim = dynamic(lightRGBA: (0, 0, 0, 0.32), darkRGBA: (0, 0, 0, 0.55))
+    /// The Week sidebar's tap-to-dismiss overlay (OD16). Named at its current strength; adoption is pending (TOKEN_AUDIT).
+    public static let sidebarScrim = Color.black.opacity(0.12)
     /// The lit blue of a selected segment or primary button. The specimen's `blueBtn` runs #2F95FF to #0559C7, but white
     /// text on #2F95FF is only 3.06:1; the light end is #0A6FE8 so white text is at least 4.5:1 across the whole gradient.
     public static let accentGradient = LinearGradient(
@@ -78,6 +80,20 @@ public enum Spread {
     public static let chalkSpark = Color(hex6: 0xFFE066)
     /// Neutral grey for a responsibility without a usable colour. Matches the fallback in `Color(hex:)`.
     public static let roleFallback = Color(hex6: 0x8E8E93)
+
+    // MARK: Life artwork scrims. Fixed values for legibility over authored artwork: they do not follow appearance, and
+    // views use these names, never a copied literal.
+
+    /// The ground behind a Life card when its editorial image is missing. Dark enough that white labels read.
+    public static let artGround = Color(red: 0.10, green: 0.13, blue: 0.15)
+    /// Leading edge of a card's art scrim, behind the responsibility name and weekly budget.
+    public static let artScrimStrong = Color.black.opacity(0.66)
+    /// Middle of the leading scrim, and the bottom vignette.
+    public static let artScrimMid = Color.black.opacity(0.40)
+    /// Trailing edge of the art scrim, where the artwork stays most visible.
+    public static let artScrimSoft = Color.black.opacity(0.12)
+    /// The zero-hour day well in a card's weekly strip: black at 0.6 so white labels read over bright art (OD3).
+    public static let artWell = Color.black.opacity(0.6)
 
     // MARK: Card surface (specimen `navyCard`)
 
@@ -122,6 +138,9 @@ public enum Spread {
     public static let radiusControl: CGFloat = 14  // --radius-control
     /// Interactive targets are never smaller than 44 pt (HIG and the planner's own rule).
     public static let minimumTarget: CGFloat = 44
+    /// Disabled controls dim through this one value (owner decision OD17). Custom-styled controls apply it. System-styled
+    /// controls (bordered, toolbar and Form rows) keep the system's own disabled look, so nothing dims twice.
+    public static let disabledOpacity: Double = 0.4
 
     // MARK: Spacing (4-point grid from UI_KIT.md). Use the nearest step; hit targets and icon frames are not spacing.
 

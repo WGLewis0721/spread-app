@@ -34,8 +34,8 @@ struct LifeWeeklyTimeBudget: View {
             if compact { compactContent }
             else { fullContent }
         }
-        .padding(.horizontal, compact ? 12 : 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, compact ? Spread.space3 : Spread.space4)
+        .padding(.vertical, Spread.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
@@ -50,7 +50,7 @@ struct LifeWeeklyTimeBudget: View {
                 .font(.caption2.weight(.semibold))
                 .tracking(1.2)
                 .foregroundStyle(Spread.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: Spread.space1) {
                 Text(SpreadHours.text(assigned) + "h")
                     .font(.title3.bold())
                     .monospacedDigit()
@@ -64,7 +64,7 @@ struct LifeWeeklyTimeBudget: View {
                 Spacer(minLength: 0)
             }
             storageBar
-            HStack(spacing: 4) {
+            HStack(spacing: Spread.space1) {
                 Text(hasCapacity
                     ? (overBudget > 0 ? SpreadHours.text(overBudget) + "h over budget"
                                       : SpreadHours.text(available ?? 0) + "h available")
@@ -84,7 +84,7 @@ struct LifeWeeklyTimeBudget: View {
                     }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Spread.accent)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(hasCapacity ? "Adjust hours" : "Set weekly hours")
@@ -96,7 +96,7 @@ struct LifeWeeklyTimeBudget: View {
     }
 
     private var fullContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spread.space2) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("WEEKLY TIME")
@@ -136,13 +136,13 @@ struct LifeWeeklyTimeBudget: View {
                     .font(.caption2).foregroundStyle(Spread.secondary)
                 Spacer(minLength: 8)
                 Button(action: onToggle) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: Spread.space1) {
                         Text(hasCapacity ? "Adjust hours" : "Set weekly hours")
                         SpreadIcon(name: expanded ? "lucide-chevron-up" : "lucide-chevron-down", size: 19)
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Spread.accent)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(hasCapacity ? "Adjust hours" : "Set weekly hours")
@@ -163,7 +163,7 @@ struct LifeWeeklyTimeBudget: View {
                         let width = LifeBudgetBarMath.width(hours: role.hours, track: track, totalWidth: geometry.size.width)
                         ZStack {
                             Color(hex: role.color)
-                            LinearGradient(colors: [.white.opacity(0.16), .clear],
+                            LinearGradient(colors: [Spread.highlight.opacity(0.16), .clear],
                                            startPoint: .top, endPoint: .bottom)
                             if width >= minimumRoleLabelWidth {
                                 Text(SpreadHours.text(role.hours) + "h")
