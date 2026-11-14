@@ -13,10 +13,11 @@ import Foundation
 /// active-profile guard as the App Intents so visible buttons always target an actionable timer.
 enum SpreadFocusWidgetStore {
     static func load(now: Date = Date()) -> SpreadFocusWidgetState? {
-        guard timerEnabled(), let session = SpreadFocusStore.load(),
-              SpreadFocusStore.activeProfile() == session.profileId else { return nil }
-        let current = SpreadFocusMachine.reconciled(session, now: now)
-        guard SpreadFocusMachine.isOnScreen(current) else { return nil }
+        // Do not use the extension's private UserDefaults fallback if the
+        // signed App Group suite is unavailable.
+        guard let shared = UserDefaults(suiteName: SpreadFocusStore.appGroup),
+              let current = SpreadFocusStore.visibleForWidget(
+                now: now, enabled: timerEnabled(), shared) else { return nil }
         let title = SpreadFocusPreferences.showName() ? current.roleName : "Focus session"
         // A finished stretch with a next step is shown as running with no deadline, which reads as waiting for a tap.
         let finished = current.phase == .finished

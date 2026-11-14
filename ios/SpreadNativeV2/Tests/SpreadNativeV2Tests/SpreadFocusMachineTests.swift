@@ -218,4 +218,38 @@ final class SpreadFocusMachineTests: XCTestCase {
         XCTAssertFalse(SpreadFocusMachine.isOnScreen(SpreadFocusMachine.finished(session)))
         XCTAssertTrue(SpreadFocusMachine.isOnScreen(SpreadFocusMachine.finished(start(.focus, round: 1))))
     }
+    func testWidgetVisibilityWaitsForActiveProfileAndRespectsPrivacy() {
+        let defaults = isolatedDefaults()
+        let running = start(.focus, round: 1)
+        SpreadFocusStore.save(running, defaults)
+
+        // Regression: initial timer publication before the app knows its
+        // profile would render an idle widget that WidgetKit may cache.
+        XCTAssertNil(SpreadFocusStore.visibleForWidget(now: now, enabled: true, defaults))
+        SpreadFocusStore.setActiveProfile("another-profile", defaults)
+        XCTAssertNil(SpreadFocusStore.visibleForWidget(now: now, enabled: true, defaults))
+
+        SpreadFocusStore.setActiveProfile(running.profileId, defaults)
+        XCTAssertEqual(SpreadFocusStore.visibleForWidget(now: now, enabled: true, defaults), running)
+        XCTAssertNil(SpreadFocusStore.visibleForWidget(now: now, enabled: false, defaults))
+
+        let paused = SpreadFocusMachine.pause(running, now: now.addingTimeInterval(15))!
+        SpreadFocusStore.save(paused, defaults)
+        XCTAssertEqual(SpreadFocusStore.visibleForWidget(
+            now: now.addingTimeInterval(20), enabled: true, defaults)?.phase, .paused)
+
+        SpreadFocusStore.setActiveProfile("another-profile", defaults)
+        XCTAssertNil(SpreadFocusStore.visibleForWidget(
+            now: now.addingTimeInterval(20), enabled: true, defaults))
+    }
+
+    func testWidgetIgnoresFinishedSingleRoundAfterDeadline() {
+        let defaults = isolatedDefaults()
+        let single = SpreadFocusPlan(focusMinutes: 25, breakMinutes: 5, rounds: 1)
+        let running = start(.focus, round: 1, plan: single)
+        SpreadFocusStore.setActiveProfile(running.profileId, defaults)
+        SpreadFocusStore.save(running, defaults)
+        XCTAssertNil(SpreadFocusStore.visibleForWidget(
+            now: now.addingTimeInterval(1501), enabled: true, defaults))
+    }
 }

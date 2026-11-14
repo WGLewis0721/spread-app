@@ -292,8 +292,14 @@ public struct SpreadLiveRoot: View {
     }
 
     private func refreshWhenActive(_ phase: ScenePhase) {
-        if phase == .active { Task { await planner.refresh() } }
-        else { classicNavigationOpen = false }
+        if phase == .active {
+            Task { await planner.refresh() }
+        } else {
+            classicNavigationOpen = false
+            if phase == .background {
+                focusTimer.finishWidgetRefreshOnBackground()
+            }
+        }
     }
 
     /// Each profile opens where its own person left off, and nothing from the last profile carries over.
