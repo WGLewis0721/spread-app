@@ -71,7 +71,7 @@ struct LifeRoot: View {
                 LifePalette.canvas.ignoresSafeArea()
                 HStack(spacing: 0) {
                     if geometry.size.width >= 820 {
-                        VStack(spacing: 8) {
+                        VStack(spacing: Spread.space2) {
                             compactRail
                                 }
                     }
@@ -80,16 +80,16 @@ struct LifeRoot: View {
                     if let snapshot = planner.snapshot {
                         ScrollViewReader { proxy in
                             ScrollView {
-                                VStack(alignment: .leading, spacing: 20) {
+                                VStack(alignment: .leading, spacing: Spread.space5) {
                                     Color.clear.frame(height: 0).id("life-top")
                                     if let notice = planner.recoveryNotice {
                                         Text(notice).font(.body)
-                                        Button("Open More", action: onMore).frame(minHeight: 44)
+                                        Button("Open More", action: onMore).frame(minHeight: Spread.minimumTarget)
                                     }
                                     if planner.saveFailure != nil {
                                         Label("Changes are not saved. Open More to back up your plan.", systemImage: "exclamationmark.triangle")
                                             .font(.body).foregroundStyle(Spread.danger)
-                                        Button("Open More", action: onMore).frame(minHeight: 44)
+                                        Button("Open More", action: onMore).frame(minHeight: Spread.minimumTarget)
                                     }
                                     // Animate the page body only. Header, dock and week selector stay fixed.
                                     ZStack(alignment: .topLeading) {
@@ -101,7 +101,7 @@ struct LifeRoot: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                                 .frame(maxWidth: 700).frame(maxWidth: .infinity)
-                                .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 28)
+                                .padding(.horizontal, Spread.space4).padding(.top, Spread.space2).padding(.bottom, 28)
                             }
                             .scrollDismissesKeyboard(.interactively).scrollIndicators(.hidden)
                             // Cards pass through the shorter scroll area and only
@@ -248,28 +248,28 @@ struct LifeRoot: View {
     /// True while one Life card is in the Wallet-style focus state.
     private var lifeFocused: Bool { destination == .life && focusedRole != nil }
     private var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spread.space2) {
             if lifeFocused {
                 Button {
                     withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) { focusedRole = nil }
                 } label: {
-                    SpreadIcon(name: "lucide-x", size: 20).frame(width: 44, height: 44)
+                    SpreadIcon(name: "lucide-x", size: 20).frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                         .background(LifePalette.surface, in: Circle())
                 }.accessibilityLabel("Close Life area").accessibilityIdentifier("life-close-focus")
                     .transition(.opacity)
             } else {
                 Button { navigate(.life) } label: {
-                    HStack(spacing: 8) { SpreadBrandMark(size: 27); Text("Spread").font(.title3.bold()) }
-                        .frame(minHeight: 44)
+                    HStack(spacing: Spread.space2) { SpreadBrandMark(size: 27); Text("Spread").font(.title3.bold()) }
+                        .frame(minHeight: Spread.minimumTarget)
                 }.buttonStyle(.plain).accessibilityLabel("Spread, Life").accessibilityIdentifier("life-home")
                     .transition(.opacity)
             }
             Spacer(minLength: 4)
             Button(action: onMore) {
-                SpreadIcon(name: "lucide-ellipsis", size: 20).frame(width: 44, height: 44)
+                SpreadIcon(name: "lucide-ellipsis", size: 20).frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                     .background(LifePalette.surface, in: Circle())
             }.accessibilityLabel("More").accessibilityIdentifier("life-more")
-        }.padding(.horizontal, 16).padding(.vertical, 4)
+        }.padding(.horizontal, Spread.space4).padding(.vertical, Spread.space1)
             .background(LifePalette.canvas, ignoresSafeAreaEdges: .top)
             .zIndex(1)
     }
@@ -279,8 +279,8 @@ struct LifeRoot: View {
         case .hours:
             LifeHoursView(planner: planner, snapshot: snapshot, onHelp: { localSheet = .help }, selectedRole: $hoursSelectedRole)
         case .week:
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: Spread.space3) {
+                HStack(alignment: .center, spacing: Spread.space3) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Your week").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
                         Text("One day at a time.")
@@ -292,7 +292,7 @@ struct LifeRoot: View {
                     } label: {
                         Label { Text("Plan Ahead") } icon: { SpreadIcon(name: "lucide-calendar-clock", size: 18) }
                             .font(.subheadline.weight(.semibold))
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Spread.minimumTarget)
                     }
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("life-plan-ahead-open")
@@ -306,7 +306,7 @@ struct LifeRoot: View {
         }
     }
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Spread.space4) {
             if !lifeFocused {
                 lifeOverview(snapshot)
                     .transition(.opacity)
@@ -327,12 +327,12 @@ struct LifeRoot: View {
                     .zIndex(2)
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
-                HStack(spacing: 12) {
+                HStack(spacing: Spread.space3) {
                     Button {
                         localSheet = .manage(id)
                     } label: {
                         Label { Text("Details") } icon: { SpreadIcon(name: "lucide-sliders-horizontal", size: 18) }
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
                     }
                     .buttonStyle(.spreadPress)
                     .foregroundStyle(Spread.ink)
@@ -346,7 +346,7 @@ struct LifeRoot: View {
                         }
                     } label: {
                         Label { Text("Tasks") } icon: { SpreadIcon(name: "lucide-list-todo", size: 18) }
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
                     }
                     .buttonStyle(.spreadPress)
                     .foregroundStyle(Spread.ink)
@@ -356,14 +356,14 @@ struct LifeRoot: View {
                     .accessibilityHint("Show or hide this area's tasks")
                     .accessibilityIdentifier("life-tasks-button")
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Spread.space1)
                 details(role, snapshot: snapshot)
                     .id(id)
                     // Keep old and new fields visually connected as focus changes.
                     .transition(SpreadTactile.walletDetailReveal)
             } else if !snapshot.roles.isEmpty {
                 Text("Tap a card to view its details and tasks.").font(.subheadline).foregroundStyle(LifePalette.secondary)
-                    .frame(maxWidth: .infinity).padding(.top, 12)
+                    .frame(maxWidth: .infinity).padding(.top, Spread.space3)
             }
             if !snapshot.roles.isEmpty && !lifeFocused { newLifeArea }
         }.accessibilityElement(children: .contain).accessibilityIdentifier("life-page")
@@ -379,7 +379,7 @@ struct LifeRoot: View {
                     .foregroundStyle(Spread.ink)
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Spread.space4)
             .frame(maxWidth: .infinity, minHeight: 52)
             .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
             .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow)
@@ -393,7 +393,7 @@ struct LifeRoot: View {
     /// Weekly Time is now the primary full-width Life control, not a sidebar
     /// alongside a redundant Life heading. The budget editor stays attached.
     private func lifeOverview(_ snapshot: PlannerSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spread.space3) {
             timeBudgetControl(snapshot, compact: true)
                 .frame(maxWidth: .infinity)
             if let issue = snapshot.recurrenceIssue {
@@ -488,7 +488,7 @@ struct LifeRoot: View {
                         .keyboardType(.decimalPad)
                         .focused($capacityInputFocused)
                         .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
                         .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
                         .accessibilityIdentifier("life-budget-capacity-input")
                         .onAppear { capacityInputFocused = true }
@@ -501,7 +501,7 @@ struct LifeRoot: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(planner.busy)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                     .accessibilityIdentifier("life-budget-save-capacity")
                     Button("Cancel") {
                         budgetError = nil
@@ -509,7 +509,7 @@ struct LifeRoot: View {
                         capacityEntryVisible = false
                     }
                     .buttonStyle(.bordered)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                 }
             }
             HStack {
@@ -524,7 +524,7 @@ struct LifeRoot: View {
             if !snapshot.roles.isEmpty {
                 Text("Choose a Life area to adjust").font(.subheadline.weight(.semibold))
                 ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spread.space2) {
                         ForEach(snapshot.roles) { role in
                             let isSelected: Bool = budgetRoleID == role.id
                             let hoursText: String = SpreadHours.text(role.hours)
@@ -549,7 +549,7 @@ struct LifeRoot: View {
                 .scrollIndicators(.hidden)
             }
             if let selected = snapshot.roles.first(where: { $0.id == budgetRoleID }) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spread.space2) {
                     Text(selected.name).font(.headline)
                     SpreadArrowValueControl(
                         value: SpreadHours.text(selected.hours) + "h",
@@ -574,7 +574,7 @@ struct LifeRoot: View {
                     .accessibilityIdentifier("life-budget-error")
             }
         }
-        .padding(16)
+        .padding(Spread.space4)
         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
         .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard)
             .strokeBorder(Spread.line, lineWidth: 1))
@@ -622,20 +622,20 @@ struct LifeRoot: View {
         let weekdayHours = LifeCardWeekDistribution.hours(for: role.id, snapshot: snapshot)
         let placed = LifeCardWeekDistribution.assigned(weekdayHours)
         let remaining = snapshot.remainingHours(for: role.id)
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: Spread.space3) {
             if tasksOpen {
                 VStack(alignment: .leading, spacing: 0) {
                     LifeTaskRows(planner: planner, snapshot: snapshot,
                                  tasks: snapshot.tasks(for: role.id), onOpenTask: onOpenTask)
                     LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
-                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .padding(.horizontal, Spread.space3).padding(.vertical, 6)
                 }
                 .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("life-task-notebook")
             }
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: Spread.space3) {
+                VStack(alignment: .leading, spacing: Spread.space1) {
                     Text(SpreadHours.text(max(0, remaining)) + "h to plan")
                         .font(.headline)
                     Text(role.name + " · " + SpreadHours.text(placed) + "h on days")
@@ -644,7 +644,7 @@ struct LifeRoot: View {
                 Spacer(minLength: 0)
                 Button("Plan days") { localSheet = .reserve(role.id) }
                     .font(.subheadline.weight(.semibold))
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Spread.minimumTarget)
                     .padding(.horizontal, 14)
                     .background(Spread.accent, in: Capsule())
                     .foregroundStyle(Spread.onAccent)
@@ -657,7 +657,7 @@ struct LifeRoot: View {
             } label: {
                 Label { Text("Focus timer") } icon: { SpreadIcon(name: "lucide-timer", size: 18) }
                     .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
             }
             .foregroundStyle(Spread.accent)
             .buttonStyle(.spreadPress)
@@ -667,7 +667,7 @@ struct LifeRoot: View {
             } label: {
                 Label { Text("Adjust weekly hours") } icon: { SpreadIcon(name: "lucide-sliders-horizontal", size: 18) }
                     .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
             }
             .foregroundStyle(Spread.accent)
             .buttonStyle(.spreadPress)
@@ -695,7 +695,7 @@ struct LifeRoot: View {
                 .accessibilityIdentifier("life-planned-days")
             }
         }
-        .padding(16)
+        .padding(Spread.space4)
         .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
         .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard)
             .strokeBorder(Spread.line, lineWidth: 1))
@@ -715,7 +715,7 @@ struct LifeRoot: View {
         }
         .buttonStyle(.bordered)
         .tint(LifePalette.accent)
-        .padding(.horizontal, 10).padding(.vertical, 4)
+        .padding(.horizontal, 10).padding(.vertical, Spread.space1)
         .background(LifePalette.surface, in: Capsule())
         .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 0.5))
         .shadow(color: Spread.shadow, radius: 8, y: 4)
@@ -746,7 +746,7 @@ struct LifeRoot: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Spread.ink)
                         .padding(.horizontal, 14)
-                        .frame(minHeight: 44)
+                        .frame(minHeight: Spread.minimumTarget)
                         .background(Spread.elevated, in: Capsule())
                     }
                 }
@@ -757,18 +757,18 @@ struct LifeRoot: View {
             // Shared anchored feedback: independent of Life/Week page content.
             if historyVisible && (planner.undoId != nil || planner.redoId != nil) { history }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
+                HStack(spacing: Spread.space2) {
                     lifeWeekToggle
                     crown(snapshot)
                 }
-                VStack(spacing: 8) {
+                VStack(spacing: Spread.space2) {
                     lifeWeekToggle
                     crown(snapshot)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, Spread.space4)
+        .padding(.vertical, Spread.space2)
         .background(LifePalette.surface, ignoresSafeAreaEdges: .bottom)
     }
 
@@ -838,22 +838,22 @@ struct LifeRoot: View {
                                 SpreadIcon(name: destination == item ? "lucide-circle-check" : "lucide-chevron-right", size: 19)
                                     .accessibilityHidden(true)
                             }
-                            .padding(.horizontal, 12).frame(minHeight: 52)
+                            .padding(.horizontal, Spread.space3).frame(minHeight: 52)
                             .spreadChip(selected: destination == item)
                         }.buttonStyle(.spreadPress)
                             .accessibilityAddTraits(destination == item ? .isSelected : [])
                             .accessibilityIdentifier("life-nav-\(item.rawValue.lowercased())")
                     }
-                    Button("Gesture help") { closeNavigation(); localSheet = .help }.frame(minHeight: 44)
-                    Button("More") { closeNavigation(); onMore() }.frame(minHeight: 44)
-                }.padding(20)
+                    Button("Gesture help") { closeNavigation(); localSheet = .help }.frame(minHeight: Spread.minimumTarget)
+                    Button("More") { closeNavigation(); onMore() }.frame(minHeight: Spread.minimumTarget)
+                }.padding(Spread.space5)
             }
             HStack {
                 if !crownRight { Spacer(minLength: 0) }
                 Button {
                     closeNavigation()
                 } label: {
-                    SpreadIcon(name: "lucide-x", size: 20).frame(width: 44, height: 44)
+                    SpreadIcon(name: "lucide-x", size: 20).frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                 }
                 .accessibilityLabel("Close navigation")
                 .accessibilityIdentifier("life-navigation-close")
@@ -862,7 +862,7 @@ struct LifeRoot: View {
                 if crownRight { Spacer(minLength: 0) }
             }
             .frame(height: dockControlsHeight, alignment: .top)
-            .padding(.horizontal, 16).padding(.vertical, 8)
+            .padding(.horizontal, Spread.space4).padding(.vertical, Spread.space2)
             }
             .frame(width: trayWidth).frame(maxHeight: .infinity)
             .background(LifePalette.surface)
@@ -1025,7 +1025,7 @@ struct LifeRoot: View {
         case .addTask:
             SpreadSheetStack {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: Spread.space4) {
                         ForEach(planner.snapshot?.roles ?? []) { role in
                             Text(role.name).font(.headline)
                             LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: { role, task in
@@ -1034,7 +1034,7 @@ struct LifeRoot: View {
                             })
                         }
                         if planner.snapshot?.roles.isEmpty == true {
-                            Button("Add Life") { localSheet = nil; onNewRole() }.frame(minHeight: 44)
+                            Button("Add Life") { localSheet = nil; onNewRole() }.frame(minHeight: Spread.minimumTarget)
                         }
                     }.padding()
                 }.navigationTitle("Add task")
@@ -1072,7 +1072,7 @@ private struct LifeBudgetChip: View {
         .font(.subheadline)
         .foregroundStyle(Spread.ink)
         .padding(.horizontal, 10)
-        .frame(minHeight: 44)
+        .frame(minHeight: Spread.minimumTarget)
         .background(selected ? Spread.inset : Spread.elevated, in: Capsule())
         .overlay(Capsule().strokeBorder(selected ? Spread.accent : Spread.line, lineWidth: 1.5))
     }
