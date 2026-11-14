@@ -57,13 +57,13 @@ struct LifeManageSheet: View {
                     }
                 }
                 Section("Symbol") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5)) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Spread.space1), count: 5)) {
                         ForEach(PalettePanel.categories, id: \.id) { item in
                             Button {
                                 category = item.id
                                 color = PalettePanel.categoryColors[item.id] ?? color
                             } label: {
-                                RoleBadge(category: item.id, color: color, size: 30).frame(minWidth: 44, minHeight: 44)
+                                RoleBadge(category: item.id, color: color, size: 30).frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
                                     .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(category == item.id ? LifePalette.accent : .clear, lineWidth: 2))
                             }.buttonStyle(.plain).accessibilityLabel(item.label)
                                 .accessibilityAddTraits(category == item.id ? .isSelected : [])
@@ -71,10 +71,10 @@ struct LifeManageSheet: View {
                     }
                 }
                 Section("Color") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5)) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Spread.space1), count: 5)) {
                         ForEach(PalettePanel.colors, id: \.self) { hex in
                             Button { color = hex } label: {
-                                Circle().fill(Color(hex: hex)).frame(width: 26, height: 26).frame(minWidth: 44, minHeight: 44)
+                                Circle().fill(Color(hex: hex)).frame(width: 26, height: 26).frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
                                     .overlay(Circle().strokeBorder(color == hex ? LifePalette.ink : .clear, lineWidth: 2))
                             }.buttonStyle(.plain).accessibilityLabel("Color \(hex)")
                                 .accessibilityAddTraits(color == hex ? .isSelected : [])
@@ -151,7 +151,7 @@ struct LifeDeleteSheet: View {
     @State private var saving = false
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spread.space4) {
                 Text("Delete \(planner.snapshot?.roles.first { $0.id == roleId }?.name ?? "this Life area") from all weeks?")
                     .font(.title2.bold())
                 Text("This removes the Life area, its tasks and its hours from all weeks in this profile. Undo is available until another unrelated change.")
@@ -166,9 +166,9 @@ struct LifeDeleteSheet: View {
                         }
                         saving = false
                     }
-                }.frame(minHeight: 44).disabled(saving)
-                Button("Cancel") { dismiss() }.frame(minHeight: 44).disabled(saving)
-            }.padding(24)
+                }.frame(minHeight: Spread.minimumTarget).disabled(saving)
+                Button("Cancel") { dismiss() }.frame(minHeight: Spread.minimumTarget).disabled(saving)
+            }.padding(Spread.space6)
         }.background(Spread.canvas).tint(Spread.accent)
             .presentationBackground(Spread.canvas)
             .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
@@ -183,7 +183,7 @@ struct LifeReserveSheet: View {
         SpreadSheetStack {
             ScrollView {
                 if let snapshot = planner.snapshot, let role = snapshot.roles.first(where: { $0.id == roleId }) {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: Spread.space4) {
                         Text("\(SpreadHours.text(snapshot.remainingHours(for: roleId)))h still to place this week").font(.title2.bold())
                         Text("Reserve time on the days that fit. Move a day's tasks before returning its last reserved hour.")
                             .font(.subheadline).foregroundStyle(LifePalette.secondary)
@@ -206,10 +206,10 @@ struct LifeReserveSheet: View {
                         if let undo = planner.undoId {
                             Button("Undo last change") {
                                 Task { _ = await planner.send(["type": "undo", "editId": undo]) }
-                            }.frame(minHeight: 44)
+                            }.frame(minHeight: Spread.minimumTarget)
                         }
                         if let error = planner.error { Text(error).font(.body).foregroundStyle(Spread.danger) }
-                    }.padding(20)
+                    }.padding(Spread.space5)
                 }
             }.spreadListSurface()
             .navigationTitle("Place hours").navigationBarTitleDisplayMode(.inline)

@@ -62,7 +62,7 @@ struct LifeWalletStack: View {
             VStack(spacing: 6) {
                 ForEach(0..<count, id: \.self) { index in
                     Circle()
-                        .fill(first + index == selected ? Color.white : Color.white.opacity(0.35))
+                        .fill(first + index == selected ? Spread.tileGlyph : Spread.tileGlyph.opacity(0.35))
                         .frame(width: first + index == selected ? 6 : 4,
                                height: first + index == selected ? 6 : 4)
                 }
@@ -77,7 +77,7 @@ struct LifeWalletStack: View {
     var body: some View {
         Group {
             if typeSize.isAccessibilitySize {
-                VStack(spacing: 8) {
+                VStack(spacing: Spread.space2) {
                     ForEach(shown) { role in card(role, faceVisible: true) }
                 }
             } else {
@@ -255,7 +255,7 @@ private struct LifeWalletFace: View {
             .background {
                 LifeEditorialArtwork(category: role.category, roleColor: roleColor, editorial: editorialArt)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected ? 0.85 : 0.48), lineWidth: 1))
     }
 
@@ -271,7 +271,7 @@ private struct EditorialTapTarget: ViewModifier {
     let enabled: Bool
     func body(content: Content) -> some View {
         if enabled {
-            content.contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            content.contentShape(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
         } else {
             content
         }
@@ -301,7 +301,7 @@ struct LifeTaskRows: View {
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, Spread.space4)
                 .foregroundStyle(LifePalette.secondary)
                 .accessibilityElement(children: .combine)
             }
@@ -317,20 +317,24 @@ struct LifeTaskRows: View {
                         }
                     } label: {
                         SpreadIcon(name: task.done ? "lucide-circle-check" : "lucide-circle", size: 22)
-                            .font(.title3).frame(width: 44, height: 44)
+                            .font(.title3).frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                     }.buttonStyle(.spreadPress).foregroundStyle(task.done ? LifePalette.accent : LifePalette.secondary)
                         .disabled(planner.busy || pendingTasks.contains(task.id))
-                        .opacity(pendingTasks.contains(task.id) ? 0.6 : 1)
+                        .opacity(planner.busy || pendingTasks.contains(task.id) ? Spread.disabledOpacity : 1)
                         .accessibilityValue(pendingTasks.contains(task.id) ? "Saving" : task.done ? "Completed" : "Incomplete")
                         .accessibilityLabel("\(task.done ? "Reopen" : "Complete") \(task.text)")
                     Button { onOpenTask(task.roleId, task.id) } label: {
                         HStack {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: Spread.space1) {
                                 Text(task.text).font(.body).strikethrough(task.done).foregroundStyle(LifePalette.ink)
                                 if task.important == true {
-                                    Label { Text("High priority") } icon: { SpreadIcon(name: "lucide-flag", size: 14) }
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Spread.danger)
+                                    // One shared marker on every task row (OD1). The mark speaks "High priority";
+                                    // the visible words are hidden from VoiceOver so the phrase is heard once.
+                                    HStack(spacing: Spread.space2) {
+                                        TaskPriorityMark()
+                                        Text("High priority").accessibilityHidden(true)
+                                    }
+                                    .font(.caption.weight(.semibold))
                                 }
                                 Text(placement(task)).font(.subheadline).foregroundStyle(LifePalette.secondary)
                             }
@@ -365,10 +369,11 @@ struct LifeTaskRows: View {
                         SpreadIcon(name: "lucide-flag", size: 20)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(task.important == true ? Spread.danger : Spread.secondary)
-                            .frame(width: 44, height: 44)
+                            .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                     }
                     .buttonStyle(.spreadPress)
                     .disabled(planner.busy || pendingTasks.contains(task.id))
+                    .opacity(planner.busy || pendingTasks.contains(task.id) ? Spread.disabledOpacity : 1)
                     .accessibilityLabel((task.important == true
                         ? "Remove high priority from " : "Mark high priority: ") + task.text)
                     // Priority is shown by the red flag and the "High priority" label, and spoken as a state.
@@ -378,7 +383,7 @@ struct LifeTaskRows: View {
                     if day != nil {
                         SpreadIcon(name: "icon-drag", size: 18)
                             .font(.footnote).foregroundStyle(LifePalette.secondary)
-                            .frame(width: 44, height: 44)
+                            .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                             .draggable(SpreadDragPayload.task(id: task.id, roleId: task.roleId, label: task.text))
                             .accessibilityHidden(true)
                     }
@@ -401,7 +406,7 @@ struct LifeTaskRows: View {
                 Divider().overlay(Spread.line)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Spread.space3)
         .animation(reduceMotion ? nil : SpreadTactile.settle, value: tasks.map(\.id))
     }
 
@@ -435,27 +440,28 @@ struct LifeQuickAdd: View {
     @State private var saving = false
     @FocusState private var focused: Bool
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spread.space2) {
             if expanded {
                 TextField("Task name", text: $title).focused($focused).submitLabel(.done)
-                    .frame(minHeight: 44).onSubmit { Task { await save() } }
+                    .frame(minHeight: Spread.minimumTarget).onSubmit { Task { await save() } }
                     .accessibilityIdentifier("life-add-task-name")
                 HStack {
                     Button("Add task") { Task { await save() } }
                         .disabled(saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .opacity(saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Spread.disabledOpacity : 1)
                     Button("Cancel") {
                         withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
                         title = ""
                         focused = false
-                    }.disabled(saving)
-                }.frame(minHeight: 44)
+                    }.disabled(saving).opacity(saving ? Spread.disabledOpacity : 1)
+                }.frame(minHeight: Spread.minimumTarget)
             } else {
                 Button {
                     withAnimation(reduceMotion ? nil : SpreadTactile.settle) { expanded = true }
                     focused = true
                     LifeFeedback.selection()
                 } label: {
-                    Label { Text("Add a task") } icon: { SpreadIcon(name: "icon-add", size: 18) }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    Label { Text("Add a task") } icon: { SpreadIcon(name: "icon-add", size: 18) }.frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
                 }
             }
         }.font(.body).tint(LifePalette.accent)

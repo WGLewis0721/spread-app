@@ -36,6 +36,8 @@ rg -n 'Color\(hex6:|Color\(red:|Color\(hex: "|\.white|\.black|\.system\(size:|\.
 
 Files scanned: 70 (sources outside lane A, the widget target and the app host). With at least one literal: 26. With none: 44 (listed in section 5).
 
+Wave 2 note: these totals are the 2026-11-14 record from before wave 2. The six Life files in section 4 were re-audited in wave 2; section 6 summarises them.
+
 ## 3. Blockers and decisions for wave 2
 
 1. **The widget cannot use `Spread` tokens yet.** `ios/App/SpreadWidget/*.swift` compiles only `Widget/SpreadWidgetShared.swift` from the app sources. `Theme/SpreadTheme.swift` is not in the SpreadWidget target, so every `(widget)` row is blocked. Options: add the theme file to the target (a project change, outside lane A; needs owner or lane E approval), or move a token subset into `SpreadWidgetShared.swift`.
@@ -71,35 +73,33 @@ Rows are in file order. The code excerpt is trimmed to about 110 characters.
 | 256 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
 | 343 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
 
-### Life/LifeEditorialCard.swift (24 rows: Decide 5, Replace 12, Snap 7)
+### Life/LifeEditorialCard.swift (21 rows: Done 10, Snap 7, Decide 3, Allowed 1)
+
+Re-audited in wave 2 (W2-3) from origin/main `6f53a60`; line numbers are that commit's. **Done** rows were converted to a token in this PR (exact values only). **Snap** rows would change a value, so they stay. See section 6.
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 63 | Colour | `Color(red: 0.10, green: 0.13, blue: 0.15)` | Spread.tileGlyphOnBright (RGB distance 6) | Replace |
-| 78 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 79 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 80 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 86 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 123 | Spacing | `spacing: 5` | Spread.space1 (-1 pt) or keep off-grid | Snap |
-| 132 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-| 133 | Spacing | `.padding(.horizontal, 17)` | Spread.space4 (-1 pt) or keep off-grid | Snap |
-| 134 | Spacing | `.padding(.top, 13)` | Spread.space3 (-1 pt) or keep off-grid | Snap |
-| 135 | Spacing | `.padding(.bottom, 28)` | Spread.space8 (+4 pt) or keep off-grid | Snap |
-| 155 | Spacing | `spacing: 7` | Spread.space2 (+1 pt) or keep off-grid | Snap |
-| 158 | Font size | `.system(size: 11` | caption2 (Dynamic Type) | Decide |
-| 178 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 184 | Font size | `.system(size: 10` | caption2 (Dynamic Type) | Decide |
-| 216 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 219 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 221 | Font size | `.system(size: 9` | caption2 (Dynamic Type) | Decide |
-| 225 | Font size | `.system(size: 10` | caption2 (Dynamic Type) | Decide |
-| 231 | Spacing | `.padding(.vertical, 6)` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 233 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-| 233 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 234 | Radius | `cornerRadius: 7` | no radius token for 7 (snap to 16 or 24, or add one) | Decide |
-| 236 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 236 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-
+| 64 | Colour | `Color(red: 0.10, green: 0.13, blue: 0.15)` | Spread.artGround | Done |
+| 64 | Opacity | `.opacity(0.85)` | role colour alpha (role colour is data) | Allowed |
+| 79 | Colour | `Color.black.opacity(0.66)` | Spread.artScrimStrong | Done |
+| 80 | Colour | `Color.black.opacity(0.40)` | Spread.artScrimMid | Done |
+| 81 | Colour | `Color.black.opacity(0.12)` | Spread.artScrimSoft | Done |
+| 87 | Colour | `Color.black.opacity(0.40)` | Spread.artScrimMid | Done |
+| 130 | Spacing | `spacing: 5` | Spread.space1 (+1 pt) or keep off-grid | Snap |
+| 139 | Colour | `Color.white` | Spread.tileGlyph | Done |
+| 140 | Spacing | `.padding(.horizontal, 17)` | Spread.space4 (+1 pt) or keep off-grid | Snap |
+| 141 | Spacing | `.padding(.top, 13)` | Spread.space3 (+1 pt) or keep off-grid | Snap |
+| 142 | Spacing | `.padding(.bottom, 28)` | Spread.space8 (-4 pt) or keep off-grid | Snap |
+| 162 | Spacing | `spacing: 7` | Spread.space2 (-1 pt) or keep off-grid | Snap |
+| 183 | Spacing | `spacing: 10` | Spread.space3 (-2 pt) or keep off-grid | Snap |
+| 222 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 225 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 237 | Spacing | `.padding(.vertical, 6)` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 241 | Colour | `Color.black.opacity(0.6)` | Spread.artWell | Done |
+| 241 | Colour | `Color.white.opacity(0.91)` | by-use ink or contrast chooser; no exact token | Decide |
+| 242 | Radius | `cornerRadius: 7` | no radius token for 7 | Decide |
+| 244 | Colour | `Color.black.opacity(0.9)` | no token: black at this strength; the scrim tokens differ | Decide |
+| 244 | Colour | `Color.white` | Spread.tileGlyph | Done |
 ### Life/LifeHoursView.swift (27 rows: Allowed 6, Replace 19, Snap 2)
 
 | Line | Kind | Found | Token | Status |
@@ -132,24 +132,40 @@ Rows are in file order. The code excerpt is trimmed to about 110 characters.
 | 368 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
 | 380 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
 
-### Life/LifeManagementSheets.swift (13 rows: Decide 2, Replace 11)
+### Life/LifeManagementSheets.swift (28 rows: Done 11, Decide 3, Allowed 1, System 13)
+
+Re-audited in wave 2 (W2-3) from origin/main `6f53a60`; line numbers are that commit's. **Done** rows were converted to a token in this PR (exact values only). **Snap** rows would change a value, so they stay. See section 6.
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 60 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 66 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 67 | Radius | `cornerRadius: 10` | no radius token for 10 (snap to 16 or 24, or add one) | Decide |
-| 74 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 77 | Colour | `Color(hex: hex)` | check: non-literal colour source | Decide |
-| 77 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 156 | Spacing | `spacing: 16` | Spread.space4 | Replace |
-| 171 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 172 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 173 | Spacing | `.padding(24)` | Spread.space6 | Replace |
-| 188 | Spacing | `spacing: 16` | Spread.space4 | Replace |
-| 211 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 214 | Spacing | `.padding(20)` | Spread.space5 | Replace |
-
+| 41 | Disabled / structure | `.disabled(saving \|\| savingHours)` | Stepper: system disabled look | System |
+| 49 | Disabled / structure | `.disabled(saving \|\| savingHours \|\| planner.busy \|\| budgetHours == role.hours)` | Form row button: system | System |
+| 60 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 66 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 67 | Radius | `cornerRadius: 10` | no radius token for 10 | Decide |
+| 74 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 77 | Colour | `Color(hex: hex)` | role or artwork data (stored colour) | Allowed |
+| 77 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 88 | Disabled / structure | `.disabled(saving \|\| savingHours \|\| planner.busy)` | Form section button: system | System |
+| 98 | Disabled / structure | `.disabled(saving \|\| savingHours)` | toolbar item: system | System |
+| 101 | Colour | `.white` | by-use ink or contrast chooser; no exact token | Decide |
+| 101 | Disabled / structure | `.disabled(saving \|\| savingHours \|\| name ... isEmpty)` | toolbar item: system | System |
+| 140 | Colour | `.white` | by-use ink or contrast chooser; no exact token | Decide |
+| 154 | Spacing | `spacing: 16` | Spread.space4 | Done |
+| 169 | Disabled / structure | `.disabled(saving)` | default-style text button: system disabled tint; device check owed | System |
+| 169 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 170 | Disabled / structure | `.disabled(saving)` | default-style text button: system disabled tint; device check owed | System |
+| 170 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 171 | Spacing | `.padding(24)` | Spread.space6 | Done |
+| 186 | Spacing | `spacing: 16` | Spread.space4 | Done |
+| 209 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 212 | Spacing | `.padding(20)` | Spread.space5 | Done |
+| 227 | Disabled / structure | `container .disabled(planner.busy)` | container: would also dim its labels, so not converted | System |
+| 256 | Disabled / structure | `.disabled(working \|\| day.isEmpty)` | Form section button: system | System |
+| 257 | Disabled / structure | `.disabled(working \|\| day.isEmpty)` | Form section button: system | System |
+| 272 | Disabled / structure | `.disabled(working \|\| planner.state?.revision != previewRevision)` | Form section button: system | System |
+| 287 | Disabled / structure | `.disabled(working)` | Form section button: system | System |
+| 293 | Disabled / structure | `.disabled(working)` | toolbar item: system | System |
 ### Life/LifePlanAheadSheet.swift (11 rows: Replace 9, Snap 2)
 
 | Line | Kind | Found | Token | Status |
@@ -166,185 +182,208 @@ Rows are in file order. The code excerpt is trimmed to about 110 characters.
 | 408 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
 | 433 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
 
-### Life/LifeRoot.swift (86 rows: Allowed 1, Decide 3, Replace 61, Snap 21)
+### Life/LifeRoot.swift (86 rows: Done 54, Snap 18, Decide 8, Allowed 1, System 3, Left 2)
+
+Re-audited in wave 2 (W2-3) from origin/main `6f53a60`; line numbers are that commit's. **Done** rows were converted to a token in this PR (exact values only). **Snap** rows would change a value, so they stay. See section 6.
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 73 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 82 | Spacing | `spacing: 20` | Spread.space5 | Replace |
-| 86 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 91 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 103 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Replace |
-| 103 | Spacing | `.padding(.top, 8)` | Spread.space2 | Replace |
-| 103 | Spacing | `.padding(.bottom, 28)` | Spread.space8 (+4 pt) or keep off-grid | Snap |
-| 217 | Motion | `duration: 0.12` | SpreadMotion.fastSeconds (+0.04 s) or keep | Snap |
-| 222 | Motion | `duration: 0.12` | SpreadMotion.fastSeconds (+0.04 s) or keep | Snap |
-| 226 | Motion | `duration: 0.12` | SpreadMotion.fastSeconds (+0.04 s) or keep | Snap |
-| 250 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 255 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 261 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 262 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 268 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 271 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Replace |
-| 271 | Spacing | `.padding(.vertical, 4)` | Spread.space1 | Replace |
-| 281 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 282 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 283 | Spacing | `spacing: 3` | Spread.space1 (+1 pt) or keep off-grid | Snap |
-| 294 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 308 | Spacing | `spacing: 16` | Spread.space4 | Replace |
-| 323 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 328 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 341 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 350 | Spacing | `.padding(.horizontal, 4)` | Spread.space1 | Replace |
-| 357 | Spacing | `.padding(.top, 12)` | Spread.space3 | Replace |
-| 364 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 373 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Replace |
-| 387 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 442 | Spacing | `spacing: 14` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 477 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 482 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 483 | Radius | `cornerRadius: 12` | no radius token for 12 (snap to 16 or 24, or add one) | Decide |
-| 495 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 503 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 518 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 543 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 568 | Spacing | `.padding(16)` | Spread.space4 | Replace |
-| 620 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 626 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
-| 626 | Spacing | `.padding(.vertical, 6)` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 628 | Radius | `cornerRadius: 18` | no radius token for 18 (snap to 16 or 24, or add one) | Decide |
-| 632 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 633 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 642 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 643 | Spacing | `.padding(.horizontal, 14)` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 655 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Replace |
-| 665 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Replace |
-| 672 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 693 | Spacing | `.padding(16)` | Spread.space4 | Replace |
-| 713 | Spacing | `.padding(.horizontal, 10)` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 713 | Spacing | `.padding(.vertical, 4)` | Spread.space1 | Replace |
-| 723 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 731 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 743 | Spacing | `.padding(.horizontal, 14)` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 744 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 755 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 759 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 765 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Replace |
-| 766 | Spacing | `.padding(.vertical, 8)` | Spread.space2 | Replace |
-| 772 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 777 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 790 | Radius | `cornerRadius: 12` | no radius token for 12 (snap to 16 or 24, or add one) | Decide |
-| 799 | Spacing | `.padding(3)` | Spread.space1 (+1 pt) or keep off-grid | Snap |
-| 812 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 815 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 828 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 829 | Radius | `cornerRadius: 14` | Spread.radiusControl | Replace |
-| 841 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 846 | Spacing | `spacing: 18` | Spread.space5 (+2 pt) or keep off-grid | Snap |
-| 860 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
-| 870 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 871 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 872 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 873 | Spacing | `.padding(20)` | Spread.space5 | Replace |
-| 880 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 889 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Replace |
-| 889 | Spacing | `.padding(.vertical, 8)` | Spread.space2 | Replace |
-| 893 | Colour | `.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 907 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
-| 1052 | Spacing | `spacing: 16` | Spread.space4 | Replace |
-| 1061 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 1091 | Spacing | `spacing: 5` | Spread.space1 (-1 pt) or keep off-grid | Snap |
-| 1098 | Spacing | `.padding(.horizontal, 10)` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 1099 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 74 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 83 | Spacing | `spacing: 20` | Spread.space5 | Done |
+| 87 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 92 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 104 | Spacing | `.padding(.bottom, 28)` | Spread.space8 (-4 pt) or keep off-grid | Snap |
+| 104 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Done |
+| 104 | Spacing | `.padding(.top, 8)` | Spread.space2 | Done |
+| 218 | Motion | `duration: 0.12` | no named duration for this value | Decide |
+| 223 | Motion | `duration: 0.12` | no named duration for this value | Decide |
+| 227 | Motion | `duration: 0.12` | no named duration for this value | Decide |
+| 251 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 256 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 262 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 263 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 269 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 272 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Done |
+| 272 | Spacing | `.padding(.vertical, 4)` | Spread.space1 | Done |
+| 282 | Spacing | `spacing: 12` | Spread.space3 | Done |
+| 283 | Spacing | `spacing: 12` | Spread.space3 | Done |
+| 284 | Spacing | `spacing: 3` | Spread.space1 (-1 pt) or keep off-grid | Snap |
+| 295 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 309 | Spacing | `spacing: 16` | Spread.space4 | Done |
+| 316 | Spacing | `spacing: 6` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 330 | Spacing | `spacing: 12` | Spread.space3 | Done |
+| 335 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 349 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 359 | Spacing | `.padding(.horizontal, 4)` | Spread.space1 | Done |
+| 366 | Spacing | `.padding(.top, 12)` | Spread.space3 | Done |
+| 373 | Spacing | `spacing: 10` | Spread.space3 (-2 pt) or keep off-grid | Snap |
+| 382 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Done |
+| 396 | Spacing | `spacing: 12` | Spread.space3 | Done |
+| 451 | Spacing | `spacing: 14` | Spread.space4 (-2 pt) or keep off-grid | Snap |
+| 486 | Spacing | `spacing: 10` | Spread.space3 (-2 pt) or keep off-grid | Snap |
+| 491 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 492 | Radius | `cornerRadius: 12` | no radius token for 12 | Decide |
+| 503 | Disabled / structure | `.disabled(planner.busy)` | borderedProminent: the system dims disabled buttons; not dimmed twice | System |
+| 504 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 512 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 527 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 552 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 577 | Spacing | `.padding(16)` | Spread.space4 | Done |
+| 625 | Spacing | `spacing: 12` | Spread.space3 | Done |
+| 631 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done |
+| 631 | Spacing | `.padding(.vertical, 6)` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 633 | Radius | `cornerRadius: 18` | no radius token for 18 | Decide |
+| 637 | Spacing | `spacing: 12` | Spread.space3 | Done |
+| 638 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 647 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 648 | Spacing | `.padding(.horizontal, 14)` | Spread.space4 (-2 pt) or keep off-grid | Snap |
+| 660 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)` | Spread.minimumTarget (44 pt) | Done |
+| 670 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)` | Spread.minimumTarget (44 pt) | Done |
+| 677 | Spacing | `spacing: 6` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 698 | Spacing | `.padding(16)` | Spread.space4 | Done |
+| 710 | Disabled / structure | `.disabled(planner.undoId == nil \|\| planner.busy)` | bordered: the system dims disabled buttons | System |
+| 714 | Disabled / structure | `.disabled(planner.redoId == nil \|\| planner.busy)` | bordered: the system dims disabled buttons | System |
+| 718 | Spacing | `.padding(.horizontal, 10)` | Spread.space3 (-2 pt) or keep off-grid | Snap |
+| 718 | Spacing | `.padding(.vertical, 4)` | Spread.space1 | Done |
+| 728 | Spacing | `spacing: 6` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 736 | Spacing | `spacing: 8` | lane W2-2 owns this block (adjacent to line 737); not edited here | Left (W2-2) |
+| 737 | Disabled / structure | `SpreadIcon(name: session.currentKind == .rest ? "lucide-clock" ...)` | lane W2-2 owns this line (not edited here) | Left (W2-2) |
+| 748 | Spacing | `.padding(.horizontal, 14)` | Spread.space4 (-2 pt) or keep off-grid | Snap |
+| 749 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 760 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 764 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 770 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Done |
+| 771 | Spacing | `.padding(.vertical, 8)` | Spread.space2 | Done |
+| 777 | Spacing | `spacing: 2` | Spread.space1 (-2 pt) or keep off-grid | Snap |
+| 782 | Spacing | `spacing: 2` | Spread.space1 (-2 pt) or keep off-grid | Snap |
+| 795 | Radius | `cornerRadius: 12` | no radius token for 12 | Decide |
+| 805 | Spacing | `.padding(3)` | Spread.space1 (-1 pt) or keep off-grid | Snap |
+| 821 | Colour | `Color.black` | no token: black at this strength; the scrim tokens differ | Decide |
+| 826 | Spacing | `spacing: 18` | Spread.space5 (-2 pt) or keep off-grid | Snap |
+| 841 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done |
+| 847 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 848 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 849 | Spacing | `.padding(20)` | Spread.space5 | Done |
+| 856 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 865 | Spacing | `.padding(.horizontal, 16)` | Spread.space4 | Done |
+| 865 | Spacing | `.padding(.vertical, 8)` | Spread.space2 | Done |
+| 869 | Colour | `.black` | no token: black at this strength; the scrim tokens differ | Decide |
+| 883 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
+| 1028 | Spacing | `spacing: 16` | Spread.space4 | Done |
+| 1037 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 1067 | Spacing | `spacing: 5` | Spread.space1 (+1 pt) or keep off-grid | Snap |
+| 1074 | Spacing | `.padding(.horizontal, 10)` | Spread.space3 (-2 pt) or keep off-grid | Snap |
+| 1075 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+### Life/LifeWalletStack.swift (33 rows: Done 21, Snap 4, Decide 6, Allowed 2)
 
-### Life/LifeWalletStack.swift (22 rows: Allowed 2, Decide 2, Replace 15, Snap 3)
+Re-audited in wave 2 (W2-3) from origin/main `6f53a60`; line numbers are that commit's. **Done** rows were converted to a token in this PR (exact values only). **Snap** rows would change a value, so they stay. See section 6.
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 62 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 65 | Colour | `Color.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-| 70 | Spacing | `.padding(6)` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 71 | Colour | `Color.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 72 | Spacing | `.padding(.trailing, 5)` | Spread.space1 (-1 pt) or keep off-grid | Snap |
-| 80 | Spacing | `spacing: 8` | Spread.space2 | Replace |
+| 62 | Spacing | `spacing: 6` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 65 | Colour | `Color.white` | Spread.tileGlyph | Done |
+| 65 | Colour | `Color.white.opacity(0.35)` | Spread.tileGlyph.opacity(0.35) | Done |
+| 70 | Spacing | `.padding(6)` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 71 | Colour | `Color.black.opacity(0.25)` | no token: black at this strength; the scrim tokens differ | Decide |
+| 72 | Spacing | `.padding(.trailing, 5)` | Spread.space1 (+1 pt) or keep off-grid | Snap |
+| 80 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 98 | Opacity | `.opacity(hidden ? 0.35 : 1)` | hidden-card dim (not disabled); no opacity token | Decide |
 | 250 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
-| 258 | Radius | `cornerRadius: 24` | Spread.radiusCard | Replace |
+| 258 | Radius | `cornerRadius: 24` | Spread.radiusCard | Done |
 | 259 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
-| 259 | Radius | `cornerRadius: 23` | no radius token for 23 (snap to 16 or 24, or add one) | Decide |
-| 274 | Radius | `cornerRadius: 24` | Spread.radiusCard | Replace |
-| 294 | Spacing | `.padding(.vertical, 16)` | Spread.space4 | Replace |
-| 308 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 316 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 356 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 366 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 372 | Radius | `cornerRadius: 12` | no radius token for 12 (snap to 16 or 24, or add one) | Decide |
-| 389 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Replace |
-| 423 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 426 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 435 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 442 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leadi` | Spread.minimumTarget (44 pt) | Replace |
+| 259 | Radius | `cornerRadius: 23` | no radius token for 23 | Decide |
+| 274 | Radius | `cornerRadius: 24` | Spread.radiusCard | Done |
+| 295 | Spacing | `spacing: 6` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 304 | Spacing | `.padding(.vertical, 16)` | Spread.space4 | Done |
+| 320 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 322 | Disabled / structure | `.disabled(planner.busy \|\| pendingTasks.contains(task.id))` | OD17: the same condition now dims at Spread.disabledOpacity | Done |
+| 323 | Disabled / structure | `.opacity(pendingTasks.contains(task.id) ? 0.6 : 1)` | Spread.disabledOpacity (was 0.6); condition now includes planner.busy | Done |
+| 328 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 331 | Disabled / structure | `Label { Text("High priority") } icon: { lucide-flag }` | OD1: TaskPriorityMark(), visible words hidden from VoiceOver | Done |
+| 368 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 371 | Disabled / structure | `.disabled(planner.busy \|\| pendingTasks.contains(task.id))` | OD17: priority flag dims at Spread.disabledOpacity | Done |
+| 381 | Touch target | `.frame(width: 44, height: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 387 | Radius | `cornerRadius: 12` | no radius token for 12 | Decide |
+| 404 | Spacing | `.padding(.horizontal, 12)` | Spread.space3 | Done |
+| 438 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 441 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 445 | Colour | `.white` | by-use ink or contrast chooser; no exact token | Decide |
+| 445 | Disabled / structure | `.disabled(saving \|\| title ... isEmpty)` | OD17: Add task dims at Spread.disabledOpacity | Done |
+| 450 | Disabled / structure | `}.disabled(saving)` | OD17: Cancel dims at Spread.disabledOpacity | Done |
+| 451 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 458 | Touch target | `.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)` | Spread.minimumTarget (44 pt) | Done |
+| 466 | Colour | `.white` | by-use ink or contrast chooser; no exact token | Decide |
+### Life/LifeWeekView.swift (34 rows: Done 16, Snap 10, Decide 2, Allowed 6)
 
-### Life/LifeWeekView.swift (28 rows: Allowed 4, Decide 1, Replace 13, Snap 10)
+Re-audited in wave 2 (W2-3) from origin/main `6f53a60`; line numbers are that commit's. **Done** rows were converted to a token in this PR (exact values only). **Snap** rows would change a value, so they stay. See section 6.
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 33 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 36 | Spacing | `spacing: 3` | Spread.space1 (+1 pt) or keep off-grid | Snap |
-| 55 | Spacing | `spacing: 14` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 64 | Spacing | `.padding(.horizontal, 4)` | Spread.space1 | Replace |
-| 65 | Radius | `cornerRadius: 18` | no radius token for 18 (snap to 16 or 24, or add one) | Decide |
-| 66 | Spacing | `.padding(18)` | Spread.space5 (+2 pt) or keep off-grid | Snap |
-| 134 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 136 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 141 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 172 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 174 | Spacing | `.padding(12)` | Spread.space3 | Replace |
-| 188 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 191 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 202 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 209 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
+| 33 | Spacing | `spacing: 12` | Spread.space3 | Done |
+| 36 | Spacing | `spacing: 3` | Spread.space1 (-1 pt) or keep off-grid | Snap |
+| 55 | Spacing | `spacing: 14` | Spread.space4 (-2 pt) or keep off-grid | Snap |
+| 64 | Spacing | `.padding(.horizontal, 4)` | Spread.space1 | Done |
+| 65 | Radius | `cornerRadius: 18` | no radius token for 18 | Decide |
+| 66 | Spacing | `.padding(18)` | Spread.space5 (-2 pt) or keep off-grid | Snap |
+| 134 | Spacing | `spacing: 10` | Spread.space3 (-2 pt) or keep off-grid | Snap |
+| 136 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 141 | Spacing | `spacing: 2` | Spread.space1 (-2 pt) or keep off-grid | Snap |
+| 172 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 174 | Spacing | `.padding(12)` | Spread.space3 | Done |
+| 188 | Spacing | `spacing: 2` | Spread.space1 (-2 pt) or keep off-grid | Snap |
+| 191 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 202 | Spacing | `spacing: 6` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 209 | Spacing | `spacing: 2` | Spread.space1 (-2 pt) or keep off-grid | Snap |
 | 211 | Colour | `Color(hex: color)` | role or artwork data (stored colour) | Allowed |
-| 227 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 233 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 243 | Spacing | `.padding(.horizontal, 14)` | Spread.space4 (+2 pt) or keep off-grid | Snap |
-| 244 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 256 | Spacing | `.padding(12)` | Spread.space3 | Replace |
-| 266 | Spacing | `spacing: 12` | Spread.space3 | Replace |
-| 276 | Spacing | `spacing: 8` | Spread.space2 | Replace |
+| 216 | Opacity | `.opacity(... ? 1 : 0.4)` | out-of-month day dim, not a disabled state: no token (its value equals disabledOpacity, but the meaning differs) | Decide |
+| 218 | Disabled / structure | `.disabled(planner.busy)` | OD17: day button dims at Spread.disabledOpacity | Done |
+| 227 | Spacing | `spacing: 10` | Spread.space3 (-2 pt) or keep off-grid | Snap |
+| 233 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 243 | Spacing | `.padding(.horizontal, 14)` | Spread.space4 (-2 pt) or keep off-grid | Snap |
+| 244 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 256 | Spacing | `.padding(12)` | Spread.space3 | Done |
+| 266 | Spacing | `spacing: 12` | Spread.space3 | Done |
+| 275 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 277 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
+| 277 | Opacity | `.opacity(0.16)` | role colour alpha (role colour is data) | Allowed |
 | 278 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
 | 279 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
-| 280 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
-| 289 | Spacing | `.padding(.vertical, 8)` | Spread.space2 | Replace |
-| 295 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
+| 279 | Opacity | `.opacity(0.5)` | role colour alpha (role colour is data) | Allowed |
+| 285 | Disabled / structure | `.disabled(planner.busy \|\| snapshot.remainingHours(for:) < 1)` | OD17: plan-one-hour dims at Spread.disabledOpacity | Done |
+| 288 | Spacing | `.padding(.vertical, 8)` | Spread.space2 | Done |
+| 294 | Touch target | `.frame(minWidth: 44, minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 295 | Disabled / structure | `.disabled(planner.busy)` | OD17: week arrow (default style, icon) dims at Spread.disabledOpacity | Done |
+### Life/LifeWeeklyTimeBudget.swift (25 rows: Done 9, Snap 9, Decide 6, Allowed 1)
 
-### Life/LifeWeeklyTimeBudget.swift (23 rows: Allowed 1, Replace 13, Snap 9)
+Re-audited in wave 2 (W2-3) from origin/main `6f53a60`; line numbers are that commit's. **Done** rows were converted to a token in this PR (exact values only). **Snap** rows would change a value, so they stay. See section 6.
 
 | Line | Kind | Found | Token | Status |
 |---:|---|---|---|---|
-| 36 | Spacing | `.padding(.horizontal, compact ? 12 : 16)` | Spread.space3 | Replace |
-| 36 | Spacing | `.padding(.horizontal, compact ? 12 : 16)` | Spread.space4 | Replace |
-| 37 | Spacing | `.padding(.vertical, 12)` | Spread.space3 | Replace |
-| 47 | Spacing | `spacing: 6` | Spread.space2 (+2 pt) or keep off-grid | Snap |
-| 52 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 66 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 77 | Spacing | `spacing: 3` | Spread.space1 (+1 pt) or keep off-grid | Snap |
-| 86 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 96 | Spacing | `spacing: 8` | Spread.space2 | Replace |
-| 97 | Spacing | `spacing: 10` | Spread.space3 (+2 pt) or keep off-grid | Snap |
-| 98 | Spacing | `spacing: 3` | Spread.space1 (+1 pt) or keep off-grid | Snap |
-| 105 | Spacing | `spacing: 5` | Spread.space1 (-1 pt) or keep off-grid | Snap |
-| 120 | Spacing | `spacing: 2` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 131 | Spacing | `spacing: 5` | Spread.space1 (-1 pt) or keep off-grid | Snap |
-| 136 | Spacing | `spacing: 4` | Spread.space1 | Replace |
-| 142 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Replace |
-| 160 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
-| 161 | Colour | `.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-| 170 | Spacing | `.padding(.horizontal, 2)` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 190 | Spacing | `.padding(.horizontal, 2)` | Spread.space1 (+2 pt) or keep off-grid | Snap |
-| 283 | Colour | `.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-| 291 | Colour | `.black` | Spread.shadow or Spread.scrim (by use) | Replace |
-| 291 | Colour | `.white` | Spread.highlight, Spread.onAccent or Spread.tileGlyph (by use) | Replace |
-
+| 37 | Spacing | `.padding(.horizontal, compact ? 12 : 16)` | Spread.space3 | Done |
+| 38 | Spacing | `.padding(.vertical, 12)` | Spread.space3 | Done |
+| 48 | Spacing | `spacing: 6` | Spread.space2 (-2 pt) or keep off-grid | Snap |
+| 53 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 67 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 78 | Spacing | `spacing: 3` | Spread.space1 (-1 pt) or keep off-grid | Snap |
+| 87 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 99 | Spacing | `spacing: 8` | Spread.space2 | Done |
+| 100 | Spacing | `spacing: 10` | Spread.space3 (-2 pt) or keep off-grid | Snap |
+| 101 | Spacing | `spacing: 3` | Spread.space1 (-1 pt) or keep off-grid | Snap |
+| 108 | Spacing | `spacing: 5` | Spread.space1 (+1 pt) or keep off-grid | Snap |
+| 123 | Spacing | `spacing: 2` | Spread.space1 (-2 pt) or keep off-grid | Snap |
+| 134 | Spacing | `spacing: 5` | Spread.space1 (+1 pt) or keep off-grid | Snap |
+| 139 | Spacing | `spacing: 4` | Spread.space1 | Done |
+| 145 | Touch target | `.frame(minHeight: 44)` | Spread.minimumTarget (44 pt) | Done |
+| 165 | Colour | `Color(hex: role.color)` | role or artwork data (stored colour) | Allowed |
+| 166 | Colour | `.white.opacity(0.16)` | Spread.highlight.opacity(0.16) | Done |
+| 175 | Spacing | `.padding(.horizontal, 2)` | Spread.space1 (-2 pt) or keep off-grid | Snap |
+| 187 | Opacity | `.opacity(0.14)` | no opacity token | Decide |
+| 195 | Spacing | `.padding(.horizontal, 2)` | Spread.space1 (-2 pt) or keep off-grid | Snap |
+| 212 | Opacity | `.opacity(0.14)` | no opacity token | Decide |
+| 286 | Colour | `.white` | by-use ink or contrast chooser; no exact token | Decide |
+| 288 | Colour | `.white` | by-use ink or contrast chooser; no exact token | Decide |
+| 296 | Colour | `.black` | no token: black at this strength; the scrim tokens differ | Decide |
+| 296 | Colour | `.white` | by-use ink or contrast chooser; no exact token | Decide |
 ### Sheets/BackupRestoreSheet.swift (20 rows: Replace 7, Snap 13)
 
 | Line | Kind | Found | Token | Status |
@@ -923,3 +962,28 @@ Blocked until the widget target can see the theme (section 3, item 1).
 
 `ChalkTiming.swift`, `CrownTravel.swift`, `DialGeometry.swift`, `Focus/SpreadDayPlan.swift`, `Focus/SpreadDayPlanBuilder.swift`, `Focus/SpreadFocusActivityAttributes.swift`, `Focus/SpreadFocusIntents.swift`, `Focus/SpreadFocusLiveActivityController.swift`, `Focus/SpreadFocusSession.swift`, `Focus/SpreadFocusTimer.swift`, `Focus/SpreadLocalAlerts.swift`, `Gestures/SpreadGestures.swift`, `HourStrip.swift`, `Life/LifeAttachmentStore.swift`, `Life/LifeEditorialPresentation.swift`, `Life/LifeNotesEditor.swift`, `Life/LifeOutlineRules.swift`, `Life/LifePalette.swift`, `Life/LifeRecurringPlanForm.swift`, `Life/LifeTaskContent.swift`, `Life/PlanAheadPresets.swift`, `LifeCalendarRules.swift`, `Planner/LivePlanner.swift`, `Planner/LivePlannerBackup.swift`, `Planner/PersonalPreviewFixture.swift`, `Planner/PlannerOrder.swift`, `Planner/WeeklyHourStatus.swift`, `PlannerDates.swift`, `PlannerLayout.swift`, `PlannerSnapshot.swift`, `ReleaseNotes.swift`, `Sheets/WeekExport.swift`, `TactilePrecisionMath.swift`, `TaskDraftMemory.swift`, `WeekSwipeRules.swift`, `Widget/SpreadDayPlanPublisher.swift`, `Widget/SpreadFocusWidgetPublisher.swift`, `Widget/SpreadLifeCardsPublisher.swift`, `Widget/SpreadLifeCardsWidgetBuilder.swift`, `Widget/SpreadWidgetPublisher.swift`, `Widget/SpreadWidgetShared.swift`, `(app host) AppDelegate.swift`, `(app host) SceneDelegate.swift`, `(app host) SpreadBridgeViewController.swift`
 
+
+## 6. Wave 2 adoption (lane W2-3): changed, left and pending
+
+Recorded 2026-11-14 on branch `claude/finalize-w2-tokens-life`, from origin/main `6f53a60`. Nothing here is verified on a device. No Swift compiler ran in this lane, so `native-typecheck` in CI is the compile check, and device checks are owed.
+
+**Tokens added to `Theme/SpreadTheme.swift`.** `disabledOpacity` (OD17). `artGround`, `artScrimStrong`, `artScrimMid`, `artScrimSoft` and `artWell` name the Life artwork values, with their exact current values. `sidebarScrim` (OD16) is named but not adopted yet (see Pending).
+
+**Converted in this PR.** 121 rows marked **Done** in the six Life sections above. They are exact-value literals (spacing, the 44 pt target, card radius, art and white ink), plus the OD1 and OD17 changes below. 28 **Decide** rows, 12 **Allowed** rows and 16 **System** rows are left as they are.
+
+**Visible changes that need a device check (owed).**
+- **OD1.** The high-priority marker on Life task rows is the shared `TaskPriorityMark()` (a red "!" in a ring), beside the words "High priority". The flag stays the toggle. The words are hidden from VoiceOver, so the phrase is spoken once.
+- **OD17.** Disabled controls dim through `Spread.disabledOpacity` (0.4). The pending task toggle changes from 0.6 to 0.4 and now also dims while the planner is busy. New dims: the priority flag, Add task, Cancel, the week day buttons, plan-one-hour (when no hours remain) and the week arrow. System-styled disabled controls keep the system look (the System rows); they are not dimmed twice.
+
+**Snap rows left (48), because they would change a value.** Move them in a visual pass with device checks:
+- `LifeEditorialCard.swift`: 130 `spacing: 5`; 140 `.padding(.horizontal, 17)`; 141 `.padding(.top, 13)`; 142 `.padding(.bottom, 28)`; 162 `spacing: 7`; 183 `spacing: 10`; 237 `.padding(.vertical, 6)`
+- `LifeRoot.swift`: 104 `.padding(.bottom, 28)`; 284 `spacing: 3`; 316 `spacing: 6`; 373 `spacing: 10`; 451 `spacing: 14`; 486 `spacing: 10`; 631 `.padding(.vertical, 6)`; 648 `.padding(.horizontal, 14)`; 677 `spacing: 6`; 718 `.padding(.horizontal, 10)`; 728 `spacing: 6`; 748 `.padding(.horizontal, 14)`; 777 `spacing: 2`; 782 `spacing: 2`; 805 `.padding(3)`; 826 `spacing: 18`; 1067 `spacing: 5`; 1074 `.padding(.horizontal, 10)`
+- `LifeWalletStack.swift`: 62 `spacing: 6`; 70 `.padding(6)`; 72 `.padding(.trailing, 5)`; 295 `spacing: 6`
+- `LifeWeekView.swift`: 36 `spacing: 3`; 55 `spacing: 14`; 66 `.padding(18)`; 134 `spacing: 10`; 141 `spacing: 2`; 188 `spacing: 2`; 202 `spacing: 6`; 209 `spacing: 2`; 227 `spacing: 10`; 243 `.padding(.horizontal, 14)`
+- `LifeWeeklyTimeBudget.swift`: 48 `spacing: 6`; 78 `spacing: 3`; 100 `spacing: 10`; 101 `spacing: 3`; 108 `spacing: 5`; 123 `spacing: 2`; 134 `spacing: 5`; 175 `.padding(.horizontal, 2)`; 195 `.padding(.horizontal, 2)`
+
+**Decide rows left (no token yet).** Radius 7, 12, 18, 23; black and white literals with no exact token; the luminance contrast chooser in `LifeWeeklyTimeBudget` (`ink(for:)`, an algorithm, kept on purpose); durations; the out-of-month day dim at 0.4 in `LifeWeekView` (its value equals `disabledOpacity`, but it is not a disabled state, so it keeps its literal).
+
+**Pending adoption.** `sidebarScrim`: the Week sidebar's tap-to-dismiss overlay, `Color.black.opacity(0.12)`, at `Week/WeekFocusSurface.swift` line 194 on origin/main. Adopt it when lane W2-1 confirms the overlay survives OD19 (the file may be deleted). No value changes.
+
+**Outside this lane.** The Focus mini-bar in `LifeRoot.swift`: the rest-icon line 737 and its neighbour 736 belong to lane W2-2 and are not edited here. `Life/LifeHoursView.swift` and `Life/LifePlanAheadSheet.swift` are not in this lane.
