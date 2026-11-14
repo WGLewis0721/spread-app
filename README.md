@@ -16,7 +16,7 @@ Spread is a local-first weekly planner. You name the responsibilities in your li
 
 - **Vercel** builds every push to `main` and serves production at [thespreadapp.com](https://thespreadapp.com/). The previous `spread-app-teal.vercel.app` address remains an alternate production hostname. Branches get preview deployments.
 - **GitHub Pages** builds `dist-pages` from `main` with `scripts/export-pages.mjs` and serves [wglewis0721.github.io/spread-app](https://wglewis0721.github.io/spread-app/). Do not edit the compiled files by hand.
-- **iPhone (1.0 is iPhone only):** Capacitor with native SwiftUI/Classic/Life work committed to `main`. Build, signing, App Store status, supported-device claims, and hardware acceptance must be checked against the exact candidate; consult the [release plan](APP_STORE_RELEASE_PLAN.md) and [runbook](docs/IOS_RELEASE.md).
+- **iPhone-first iOS (iPhone and iPad compatible):** Capacitor with native SwiftUI/Classic/Life work committed to `main`. Build, signing, App Store status, supported-device claims, and hardware acceptance must be checked against the exact candidate; consult the [release plan](APP_STORE_RELEASE_PLAN.md) and [runbook](docs/IOS_RELEASE.md).
 
 Work goes on a branch, through a pull request, into `main`.
 
