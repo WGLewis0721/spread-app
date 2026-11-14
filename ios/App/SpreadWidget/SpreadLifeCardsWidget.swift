@@ -2,6 +2,8 @@ import WidgetKit
 import SwiftUI
 import AppIntents
 import Foundation
+import UIKit
+import ImageIO
 
 // Life cards on the Home Screen: a clone of the card in the app (the area's color, its serif name, the
 // weekly budget and the seven-day strip), drawn from a local snapshot the app writes into the shared
@@ -96,6 +98,28 @@ private struct SpreadLifeCardsProvider: TimelineProvider {
     }
 }
 
+
+/// Source art is copied from SpreadNativeV2/Resources/Editorial into the
+/// widget extension's own bundle. It is never sent through UserDefaults.
+private enum SpreadLifeWidgetArtwork {
+    private static let known: Set<String> = ["family", "fitness", "home", "personal", "school", "work"]
+    private static let cache = NSCache<NSString, UIImage>()
+
+    static func image(for rawCategory: String) -> UIImage? {
+        let category = rawCategory.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard known.contains(category) else { return nil }
+        let key = category as NSString
+        if let image = cache.object(forKey: key) { return image }
+        guard let url = Bundle.main.url(forResource: category,
+                                        withExtension: "webp", subdirectory: "Editorial"),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let pixels = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+        let image = UIImage(cgImage: pixels)
+        cache.setObject(image, forKey: key)
+        return image
+    }
+}
+
 /// The card's colors in the system's light or dark appearance. Dark keeps the app's look: the area's
 /// color fading to deep green-black, with white text. Light uses the brand cream with a soft wash of
 /// the area's color and navy text. Text stays high contrast in both.
@@ -134,10 +158,22 @@ private struct SpreadLifeCardPalette {
 /// the area's color.
 private struct SpreadLifeCardBackground: View {
     let colorHex: String
+    let category: String
     let scheme: ColorScheme
 
-    var body: some View {
-        if scheme == .dark {
+    @ViewBuilder var body: some View {
+        if let artwork = SpreadLifeWidgetArtwork.image(for: category) {
+            Image(uiImage: artwork)
+                .resizable()
+                .scaledToFill()
+                .overlay(
+                    LinearGradient(stops: [
+                        .init(color: Color.black.opacity(0.76), location: 0),
+                        .init(color: Color.black.opacity(0.50), location: 0.52),
+                        .init(color: Color.black.opacity(0.18), location: 1)
+                    ], startPoint: .leading, endPoint: .trailing))
+                .clipped()
+        } else if scheme == .dark {
             darkFace
         } else {
             lightFace
@@ -215,14 +251,35 @@ private struct SpreadLifeCardFace: View {
 
     @ViewBuilder private var nav: some View {
         if position.count > 1 {
+            // Home Screen widgets don't accept drag gestures. The arrows are
+            // genuine AppIntent controls, and the dots show position.
             HStack(spacing: 0) {
-                stepButton(.previous, symbol: "chevron.left", label: "Previous Life card")
-                Text("\(position.index) of \(position.count)")
-                    .font(.caption2.weight(.semibold))
-                    .monospacedDigit()
-                stepButton(.next, symbol: "chevron.right", label: "Next Life card")
+                stepButton(.previous, symbol: "chevron.up", label: "Previous Life card")
+                VStack(spacing: 3) {
+                    Text("\(position.index) of \(position.count)")
+                        .font(.caption2.weight(.semibold))
+                        .monospacedDigit()
+                    dots
+                }
+                .frame(minWidth: 45)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Life card \(position.index) of \(position.count)")
+                stepButton(.next, symbol: "chevron.down", label: "Next Life card")
             }
         }
+    }
+
+    private var brand: some View {
+        HStack(spacing: 6) {
+            Image("SpreadMark")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
+            Text("SPREAD")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(1.4)
+        }
+        .accessibilityHidden(true)
     }
 
     private func title(size: CGFloat) -> some View {
@@ -283,24 +340,28 @@ private struct SpreadLifeCardFace: View {
     }
 
     private var dots: some View {
-        HStack(spacing: 5) {
-            ForEach(0..<min(position.count, 12), id: \.self) { index in
+        let visible = min(position.count, 7)
+        let first = min(max(position.index - 4, 0), max(0, position.count - visible))
+        return HStack(spacing: 3) {
+            ForEach(0..<visible, id: \.self) { offset in
                 Circle()
-                    .fill(index == position.index - 1 ? palette.dotOn : palette.dotOff)
-                    .frame(width: 5, height: 5)
+                    .fill(first + offset == position.index - 1 ? palette.dotOn : palette.dotOff)
+                    .frame(width: 4, height: 4)
             }
         }
+        .accessibilityHidden(true)
     }
 
     private var mediumBody: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 0) {
-                title(size: 24)
-                Spacer(minLength: 4)
+                brand
+                Spacer(minLength: 3)
                 nav
             }
             .frame(height: 44)
-            budgetLine(size: 18)
+            title(size: 20)
+            budgetLine(size: 16)
             strip
         }
     }
@@ -308,9 +369,7 @@ private struct SpreadLifeCardFace: View {
     private var largeBody: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 0) {
-                Text("SPREAD")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .tracking(2.2)
+                brand
                 Spacer(minLength: 4)
                 nav
             }
@@ -322,7 +381,6 @@ private struct SpreadLifeCardFace: View {
                          total: max(card.budgetHours, 0.5))
                 .tint(palette.fill)
             strip
-            dots
             Spacer(minLength: 0)
         }
     }
@@ -364,9 +422,10 @@ private struct SpreadLifeCardsView: View {
                 card: card,
                 position: SpreadLifeCardsNav.position(of: card.id, in: snapshot.cards),
                 large: family == .systemLarge,
-                palette: SpreadLifeCardPalette.make(scheme))
+                palette: SpreadLifeCardPalette.make(
+                    SpreadLifeWidgetArtwork.image(for: card.category) == nil ? scheme : .dark))
             .containerBackground(for: .widget) {
-                SpreadLifeCardBackground(colorHex: card.colorHex, scheme: scheme)
+                SpreadLifeCardBackground(colorHex: card.colorHex, category: card.category, scheme: scheme)
             }
             .widgetURL(SpreadWidgetLink.lifeCard(card.id).url)
         } else {
@@ -384,7 +443,7 @@ struct SpreadLifeCardsWidget: Widget {
             SpreadLifeCardsView(entry: entry)
         }
         .configurationDisplayName("Life cards")
-        .description("Flip through your Life cards. Tap one to open it in Spread.")
+        .description("Browse your illustrated Life cards with Up and Down, see page dots, then tap to open Spread.")
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
