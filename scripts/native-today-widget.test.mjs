@@ -244,8 +244,8 @@ test("the Timer widget's controls are icons in 44 pt targets, and each size has 
   assert.match(timerWidgetSource, /var mediumBody: some View \{[\s\S]*face\(\.medium\)[\s\S]*controlRow/);
   assert.match(timerWidgetSource, /var smallBody: some View \{[\s\S]*face\(\.small\)[\s\S]*controlRow/);
   assert.match(timerWidgetSource, /var largeBody: some View \{[\s\S]*face\(\.large\)[\s\S]*controlRow[\s\S]*Divider\(\)/);
-  assert.match(timerWidgetSource, /SetSpreadFocusPlayingIntent\(sessionId: state\.sessionId\)/);
-  assert.match(timerWidgetSource, /SpreadTransportToggleStyle/);
+  assert.doesNotMatch(timerWidgetSource, /SetSpreadFocusPlayingIntent|SpreadTransportToggleStyle|Toggle\(isOn:/);
+  assert.match(timerWidgetSource, /case \.pause, \.resume:[\s\S]*SpreadFocusControlButton\(control: kind, sessionId: state\.sessionId,/);
   assert.match(timerWidgetSource, /\.contentMarginsDisabled\(\)/);
   assert.doesNotMatch(timerWidgetSource, /\.controlSize\(\.small\)/);
 });
@@ -379,11 +379,13 @@ test("the island opens the planned day, and a hand-started session still opens t
   });
 }
 
-test("Focus uses one session-scoped optimistic transport without changing the planner", () => {
-  assert.match(focusControls, /struct SetSpreadFocusPlayingIntent: SetValueIntent, LiveActivityIntent/);
-  assert.match(focusControls, /session\.id == sessionId/);
-  assert.match(focusControls, /if value \{[\s\S]*SpreadFocusMachine\.resume/);
-  assert.match(focusControls, /else \{[\s\S]*SpreadFocusMachine\.pause/);
+test("Focus uses session-scoped Pause and Resume buttons without changing the planner", () => {
+  assert.doesNotMatch(focusControls, /struct SetSpreadFocusPlayingIntent/);
+  assert.match(focusControls, /struct PauseSpreadFocusIntent: LiveActivityIntent[\s\S]*session\.id == sessionId,[\s\S]*SpreadFocusMachine\.pause/);
+  assert.match(focusControls, /struct ResumeSpreadFocusIntent: LiveActivityIntent[\s\S]*session\.id == sessionId,[\s\S]*SpreadFocusMachine\.resume/);
+  assert.match(timerWidgetSource, /case \.pause, \.resume:[\s\S]*SpreadFocusControlButton\(control: kind,/);
+  assert.match(timerWidgetSource, /case \.pause:\s*Button\(intent: PauseSpreadFocusIntent/);
+  assert.match(timerWidgetSource, /case \.resume:\s*Button\(intent: ResumeSpreadFocusIntent/);
   assert.match(focusSheet, /Image\(systemName: session\.phase == \.running \? "pause\.fill" : "play\.fill"\)/);
   assert.match(focusSheet, /Image\(systemName: "forward\.fill"\)/);
   assert.match(focusSheet, /Image\(systemName: "stop\.fill"\)/);
@@ -472,7 +474,7 @@ test("stale widget and island buttons cannot mutate a replacement focus session"
   assert.match(timerWidgetSource, /SpreadFocusControlButton\(control: kind, sessionId: state\.sessionId,/);
   assert.match(source, /SpreadFocusControlButton\(control: kind, sessionId: sessionId,/);
   assert.match(source, /sessionId: context\.attributes\.sessionId/);
-  assert.match(timerWidgetSource, /SetSpreadFocusPlayingIntent\(sessionId: state\.sessionId\)/);
+  assert.doesNotMatch(timerWidgetSource, /SetSpreadFocusPlayingIntent/);
 });
 
 
@@ -486,7 +488,7 @@ test("Apple's timer flow commits before perform returns; ActivityKit never block
   assert.doesNotMatch(focusControls, /await SpreadFocusLiveActivityController\.awaitSettled/);
   // The intent saves state, then returns. WidgetKit triggers its own reload after perform().
   const intentTypes = [
-    "StartSpreadBlockIntent", "StartSpreadFocusIntent", "SetSpreadFocusPlayingIntent",
+    "StartSpreadBlockIntent", "StartSpreadFocusIntent",
     "PauseSpreadFocusIntent", "ResumeSpreadFocusIntent",
     "ForwardSpreadFocusIntent", "StopSpreadFocusIntent", "CancelSpreadFocusIntent",
   ];
@@ -542,4 +544,17 @@ test("focus widget publishes after profile readiness and refreshes once on backg
 
   assert.ok(focusSession.includes("static func visibleForWidget("));
   assert.ok(!focusTimer.includes("Timer.scheduledTimer"), "no extra timer");
+});
+
+test("paused Home Screen widget dispatches the same Resume intent as the Dynamic Island", () => {
+  const buttons = timerWidgetSource.slice(timerWidgetSource.indexOf("struct SpreadFocusControlButton: View"),
+                                          timerWidgetSource.indexOf("/// What the Dynamic Island shows"));
+  const control = timerWidgetSource.slice(timerWidgetSource.indexOf("@ViewBuilder private func control(_ kind: SpreadFocusControl)"),
+                                          timerWidgetSource.indexOf("/// Every control this size"));
+  assert.match(buttons, /case \.pause:\s*Button\(intent: PauseSpreadFocusIntent\(sessionId: sessionId\)\)/);
+  assert.match(buttons, /case \.resume:\s*Button\(intent: ResumeSpreadFocusIntent\(sessionId: sessionId\)\)/);
+  assert.match(control, /case \.pause, \.resume:[\s\S]*SpreadFocusControlButton\(control: kind, sessionId: state\.sessionId/);
+  assert.doesNotMatch(control, /Toggle\(|SetSpreadFocusPlayingIntent|configuration\.isOn/);
+  assert.match(timerWidgetSource, /paused: state\.phase == \.paused/);
+  assert.match(shared, /running \? \.pause : \.resume/);
 });

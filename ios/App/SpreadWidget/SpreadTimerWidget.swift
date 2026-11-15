@@ -474,13 +474,12 @@ private struct SpreadTimerView: View {
             }
         case .pause, .resume:
             if let state = entry.state {
-                // WidgetKit optimistically flips this icon before the LiveActivityIntent returns.
-                Toggle(isOn: state.phase == .running,
-                       intent: SetSpreadFocusPlayingIntent(sessionId: state.sessionId)) {
-                    Text("Play or pause focus")
-                }
-                .toggleStyle(SpreadTransportToggleStyle())
-                .accessibilityIdentifier("widget-focus-play-pause")
+                // Match the Dynamic Island's working explicit intents. A cached
+                // optimistic Toggle can send another Pause when the user taps Play.
+                // The next timeline resolves the control from the saved phase.
+                SpreadFocusControlButton(control: kind, sessionId: state.sessionId,
+                                         nextLabel: state.nextLabel, iconOnly: true)
+                    .accessibilityIdentifier("widget-focus-play-pause")
             }
         case .forward:
             if let state = entry.state {
@@ -587,26 +586,6 @@ private struct SpreadTimerView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-/// WidgetKit renders both toggle states ahead of time. The custom style reads
-/// the optimistic configuration value, so the icon flips immediately.
-private struct SpreadTransportToggleStyle: ToggleStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Button {
-            configuration.isOn.toggle()
-        } label: {
-            Image(systemName: configuration.isOn ? "pause.fill" : "play.fill")
-                .font(.title3.weight(.semibold))
-                .frame(width: 44, height: 44)
-                .foregroundStyle(.primary)
-                .background(Color.primary.opacity(0.09), in: Circle())
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(configuration.isOn ? "Pause focus" : "Play focus")
-        .accessibilityValue(configuration.isOn ? "Playing" : "Paused")
     }
 }
 
