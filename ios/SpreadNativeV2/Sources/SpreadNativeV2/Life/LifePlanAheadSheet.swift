@@ -219,7 +219,7 @@ struct LifePlanAheadSheet: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 50)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
             .disabled(copySaving || copyPreviewing || planner.busy)
             .accessibilityIdentifier(copyPreview?.eligible == true
                                       ? "plan-ahead-copy-confirm" : "plan-ahead-copy-preview")
@@ -241,7 +241,7 @@ struct LifePlanAheadSheet: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 50)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
             .disabled(saving || previewing || planner.busy ||
                       role == nil || (dailyTransfer && availableDays.isEmpty))
             .accessibilityIdentifier(preview?.eligible == true
@@ -340,10 +340,10 @@ struct LifePlanAheadSheet: View {
                 preview = nil
                 planMode = "repeat"
             } label: {
-                Label { Text("Make a new plan") } icon: { SpreadIcon(name: "icon-add", size: 18) }
+                Label { Text("Make a new plan") } icon: { SpreadIcon(name: "lucide-plus", size: 18) }
                     .frame(maxWidth: .infinity, minHeight: 50)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
             .disabled(snapshot.roles.isEmpty)
             .accessibilityIdentifier("plan-ahead-new-schedule")
         }

@@ -16,7 +16,7 @@ test("Plan Ahead has one primary entry and groups secondary paths", () => {
   assert.match(list, /Text\("Other ways to plan"\)/);
   assert.match(list, /plan-ahead-copy-week/);
   assert.match(list, /plan-ahead-move-once/);
-  assert.equal((list.match(/\.buttonStyle\(\.borderedProminent\)/g) ?? []).length, 1);
+  assert.equal((list.match(/\.buttonStyle\(SpreadRefinedControlStyle\(prominent: true\)\)/g) ?? []).length, 1);
 });
 
 test("the three Plan Ahead review and commit actions remain persistent and guarded", () => {
