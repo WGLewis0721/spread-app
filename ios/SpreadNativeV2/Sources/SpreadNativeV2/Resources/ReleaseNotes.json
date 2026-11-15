@@ -2,6 +2,24 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-f28298ff6784",
+      "version": "1.0",
+      "date": "2026-11-15",
+      "title": "Recent updates",
+      "changes": [
+        "Timer and Focus controls look like raised buttons, and the Life card widget moves through your areas on its own every hour."
+      ]
+    },
+    {
+      "id": "notes-e78e65caf35f",
+      "version": "1.0",
+      "date": "2026-11-15",
+      "title": "Recent updates",
+      "changes": [
+        "The week and month navigator has raised arrow buttons, so it reads as a control."
+      ]
+    },
+    {
       "id": "notes-e18ff9867546",
       "version": "1.0",
       "date": "2026-11-14",
@@ -114,5 +132,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "e18ff9867546e68193b5469dbdc56b0466d21742"
+  "lastProcessedCommit": "f28298ff67845ac288662b646c4a4a915d01d030"
 }
