@@ -2,6 +2,15 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-08df3e6dbd88",
+      "version": "1.0",
+      "date": "2026-11-15",
+      "title": "Recent updates",
+      "changes": [
+        "Primary buttons in Focus Timer and Plan Ahead share one style, and the timer sheet has cleaner dividers."
+      ]
+    },
+    {
       "id": "notes-2676910aab2f",
       "version": "1.0",
       "date": "2026-11-15",
@@ -141,5 +150,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "2676910aab2f2ae40fc4af6ae9acb15d5b849c82"
+  "lastProcessedCommit": "08df3e6dbd88f8c2693ed28e6fabec8e87ca975f"
 }
