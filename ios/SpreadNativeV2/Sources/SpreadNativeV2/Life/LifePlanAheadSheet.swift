@@ -215,7 +215,7 @@ struct LifePlanAheadSheet: View {
                     if copySaving { Text("Copying…") }
                     else if copyPreviewing { Text("Checking…") }
                     else if copyPreview?.eligible == true { Text("Copy to these weeks") }
-                    else { Label { Text("Preview copy") } icon: { SpreadIcon(name: "lucide-eye", size: 18) } }
+                    else { SpreadCenteredLabel(title: "Preview copy", icon: SpreadIcon(name: "lucide-eye", size: 18)) }
                 }
                 .frame(maxWidth: .infinity, minHeight: 50)
             }
@@ -237,7 +237,7 @@ struct LifePlanAheadSheet: View {
                     if saving { Text("Saving…") }
                     else if previewing { Text("Checking…") }
                     else if preview?.eligible == true { Text("Move hours") }
-                    else { Label { Text("Preview transfer") } icon: { SpreadIcon(name: "lucide-eye", size: 18) } }
+                    else { SpreadCenteredLabel(title: "Preview transfer", icon: SpreadIcon(name: "lucide-eye", size: 18)) }
                 }
                 .frame(maxWidth: .infinity, minHeight: 50)
             }
@@ -340,7 +340,7 @@ struct LifePlanAheadSheet: View {
                 preview = nil
                 planMode = "repeat"
             } label: {
-                Label { Text("Make a new plan") } icon: { SpreadIcon(name: "lucide-plus", size: 18) }
+                SpreadCenteredLabel(title: "Make a new plan", icon: SpreadIcon(name: "lucide-plus", size: 18))
                     .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(SpreadRefinedControlStyle(prominent: true))
@@ -560,3 +560,19 @@ struct PlanAheadDetailRow: View {
 }
 
 #endif
+
+/// A title centered in its button, with an optional icon pinned to the leading edge. The title is centered on its
+/// own, so it does not shift when an icon is present. The title keeps clear of the icon at every text size.
+private struct SpreadCenteredLabel<Icon: View>: View {
+    let title: String
+    let icon: Icon
+
+    var body: some View {
+        Text(title)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, 32)
+            .overlay(alignment: .leading) {
+                icon.padding(.leading, 16)
+            }
+    }
+}
