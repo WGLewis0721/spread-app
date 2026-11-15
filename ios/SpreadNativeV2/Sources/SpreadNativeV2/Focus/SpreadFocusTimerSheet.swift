@@ -49,15 +49,18 @@ struct SpreadFocusTimerSheet: View {
             Text(SpreadBlockText.summary(offered.entry.plan))
                 .font(.subheadline)
                 .foregroundStyle(Spread.secondary)
-            Button("Start today's block") {
+            Button {
                 if timer.startBlock(offered, notify: notifyWhenDone) {
                     message = nil
                 } else {
                     message = "Finish your other active focus session before starting a new one."
                 }
+            } label: {
+                Text("Start today's block")
+                    .font(.system(.body, weight: .semibold))
+                    .frame(maxWidth: .infinity, minHeight: 50)
             }
-            .buttonStyle(.borderedProminent)
-            .frame(maxWidth: .infinity, minHeight: 50)
+            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
             .accessibilityIdentifier("focus-start-block")
         }
         .padding(.vertical, Spread.space1)
@@ -85,9 +88,10 @@ struct SpreadFocusTimerSheet: View {
                     timer.forward(profileId: profileId, notify: notifyWhenDone)
                 } label: {
                     Label(next ?? "Start next step", systemImage: "play.fill")
+                        .font(.system(.body, weight: .semibold))
                         .frame(maxWidth: .infinity, minHeight: 50)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(SpreadRefinedControlStyle(prominent: true))
                 .disabled(next == nil)
                 .accessibilityIdentifier("focus-play-next")
                 Button {
@@ -197,17 +201,23 @@ struct SpreadFocusTimerSheet: View {
             .minimumScaleFactor(0.65)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spread.space2)
-        Button(rounds > 1 ? "Start round 1" : "Start focus session") {
+            // The digits sit on their own, so no rule runs under them.
+            .listRowSeparator(.hidden)
+        Button {
             if !timer.startPlan(profileId: profileId, roleId: roleId, roleName: roleName,
                                 plan: plan, notify: notifyWhenDone) {
                 message = "Finish your other active focus session before starting a new one."
             } else {
                 message = nil
             }
+        } label: {
+            Text(rounds > 1 ? "Start round 1" : "Start focus session")
+                .font(.system(.body, weight: .semibold))
+                .frame(maxWidth: .infinity, minHeight: 50)
         }
-        .buttonStyle(.borderedProminent)
-        .frame(maxWidth: .infinity, minHeight: 50)
+        .buttonStyle(SpreadRefinedControlStyle(prominent: true))
         .disabled(roleId.isEmpty || !plan.isValid)
+        .listRowSeparator(.hidden)
         .accessibilityIdentifier("focus-start")
         Text("Focus time never changes scheduled hours or completes tasks. Breaks start only when tapped.")
             .font(.footnote)

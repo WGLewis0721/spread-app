@@ -217,6 +217,7 @@ struct LifePlanAheadSheet: View {
                     else if copyPreview?.eligible == true { Text("Copy to these weeks") }
                     else { SpreadCenteredLabel(title: "Preview copy", icon: SpreadIcon(name: "lucide-eye", size: 18)) }
                 }
+                .font(.system(.body, weight: .semibold))
                 .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(SpreadRefinedControlStyle(prominent: true))
@@ -239,6 +240,7 @@ struct LifePlanAheadSheet: View {
                     else if preview?.eligible == true { Text("Move hours") }
                     else { SpreadCenteredLabel(title: "Preview transfer", icon: SpreadIcon(name: "lucide-eye", size: 18)) }
                 }
+                .font(.system(.body, weight: .semibold))
                 .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(SpreadRefinedControlStyle(prominent: true))
@@ -569,6 +571,7 @@ private struct SpreadCenteredLabel<Icon: View>: View {
 
     var body: some View {
         Text(title)
+            .font(.system(.body, weight: .semibold))
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.horizontal, 32)
             .overlay(alignment: .leading) {
