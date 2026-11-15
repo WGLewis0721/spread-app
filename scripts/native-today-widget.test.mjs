@@ -121,10 +121,28 @@ test("the Today widget shows the timer on the medium size only", () => {
   assert.match(source, /\.supportedFamilies\(\[\.systemSmall, \.systemMedium, \.accessoryRectangular, \.accessoryCircular\]\)/);
 });
 
+test("the Life cards widget cycles through its cards by itself, one step an hour, and the arrows keep their place", () => {
+  // Each entry is one card, drawn at its own date, so the widget moves on without a tap.
+  assert.match(lifeCardsSource, /static let cycleStep: TimeInterval = 60 \* 60/);
+  assert.match(lifeCardsSource, /policy: \.after\(min\(cycleEnd, tomorrow\)\)/);
+  assert.match(lifeCardsSource, /private static func cycle\(snapshot: SpreadLifeCardsWidgetSnapshot\?, from selected: String\?,/);
+  // An arrow carries the card on screen, so a tap never jumps back to the saved selection.
+  assert.match(lifeCardsSource, /@Parameter\(title: "From card", default: ""\)/);
+  assert.match(lifeCardsSource, /from: from\.isEmpty \? defaults\?\.string\(forKey: SpreadWidgetShared\.lifeCardSelectedKey\) : Optional\(from\)/);
+});
+
+test("the widget controls use the refined style, not the system bordered style", () => {
+  assert.match(timerWidgetSource, /struct WidgetRefinedControlStyle: ButtonStyle/);
+  assert.match(timerWidgetSource, /\.buttonStyle\(WidgetRefinedControlStyle\(prominent: true\)\)/);
+  assert.match(get("ios/App/SpreadWidget/SpreadTodayWidget.swift"), /\.buttonStyle\(WidgetRefinedControlStyle\(\)\)/);
+  assert.match(lifeCardsSource, /\.buttonStyle\(WidgetRefinedControlStyle\(\)\)/);
+  assert.doesNotMatch(timerWidgetSource, /buttonBorderShape\(\.circle\)/);
+});
+
 test("the Life cards widget flips through cards and opens the tapped card", () => {
   assert.match(lifeCardsSource, /supportedFamilies\(\[\.systemMedium, \.systemLarge\]\)/);
   assert.match(lifeCardsSource, /struct SpreadLifeCardStepIntent: AppIntent/);
-  assert.match(lifeCardsSource, /Button\(intent: SpreadLifeCardStepIntent\(step: step\)\)/);
+  assert.match(lifeCardsSource, /Button\(intent: SpreadLifeCardStepIntent\(step: step, from: card\.id\)\)/);
   assert.match(lifeCardsSource, /widgetURL\(SpreadWidgetLink\.lifeCard\(card\.id\)\.url\)/);
   assert.match(lifeCardsSource, /Previous Life card/);
   assert.match(lifeCardsSource, /Next Life card/);

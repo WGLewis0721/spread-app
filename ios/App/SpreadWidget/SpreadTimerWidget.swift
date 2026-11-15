@@ -203,10 +203,12 @@ struct SpreadFocusControlButton: View {
             Button(intent: PauseSpreadFocusIntent(sessionId: sessionId)) {
                 Label("Pause", systemImage: "pause.fill")
             }
+            .buttonStyle(WidgetRefinedControlStyle(prominent: true))
         case .resume:
             Button(intent: ResumeSpreadFocusIntent(sessionId: sessionId)) {
                 Label("Resume", systemImage: "play.fill")
             }
+            .buttonStyle(WidgetRefinedControlStyle(prominent: true))
         case .forward:
             Button(intent: ForwardSpreadFocusIntent(sessionId: sessionId)) {
                 Label(nextLabel ?? "Forward", systemImage: "forward.fill")
@@ -589,13 +591,35 @@ private struct SpreadTimerView: View {
     }
 }
 
-/// The look of a widget's controls: bordered circles with an icon at the title size. Icons only, so no label wraps.
+/// The refined control for the widgets and the Dynamic Island: a raised 44 pt circle with a hairline edge,
+/// a soft shadow and a pressed state. `prominent` fills it with the accent for the one action that matters now.
+struct WidgetRefinedControlStyle: ButtonStyle {
+    var prominent = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(width: 44, height: 44)
+            .foregroundStyle(prominent ? Color(uiColor: .systemBackground) : Color.primary)
+            .background { circleFill }
+            .overlay(Circle().strokeBorder(Color.primary.opacity(prominent ? 0 : 0.14), lineWidth: 1))
+            .shadow(color: Color(uiColor: .systemGray).opacity(prominent ? 0.35 : 0.18), radius: 3, y: 2)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+    }
+
+    @ViewBuilder private var circleFill: some View {
+        if prominent {
+            Circle().fill(Color.accentColor)
+        } else {
+            Circle().fill(Color.primary.opacity(0.08))
+        }
+    }
+}
+
+/// The look of a widget's controls: refined circles with an icon at the title size. Icons only, so no label wraps.
 private extension View {
     func spreadFocusControls() -> some View {
         self
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
-            .controlSize(.regular)
+            .buttonStyle(WidgetRefinedControlStyle())
             .labelStyle(.iconOnly)
             .font(.title3.weight(.semibold))
     }

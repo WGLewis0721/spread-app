@@ -191,9 +191,7 @@ private struct SpreadFocusIslandControls: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.circle)
-        .controlSize(.regular)
+        .buttonStyle(WidgetRefinedControlStyle())
         .frame(maxWidth: .infinity)
     }
 }
