@@ -2,6 +2,15 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-2676910aab2f",
+      "version": "1.0",
+      "date": "2026-11-15",
+      "title": "Recent updates",
+      "changes": [
+        "Plan Ahead's main buttons match the rest of the app, and the new-plan button shows its plus icon again."
+      ]
+    },
+    {
       "id": "notes-f28298ff6784",
       "version": "1.0",
       "date": "2026-11-15",
@@ -132,5 +141,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "f28298ff67845ac288662b646c4a4a915d01d030"
+  "lastProcessedCommit": "2676910aab2f2ae40fc4af6ae9acb15d5b849c82"
 }
