@@ -18,3 +18,8 @@ Separate versioned revision. v7 (Hallie/Grady) sources, recordings, score, capti
 ## Review status
 Technical: renders, decodes cleanly, package check passes. Creative approval, listening review (docs/templates/REVIEW.md), merge and publication are **not** recorded.
 Known nit: two headline swaps crossfade ~0.15 s with both lines visible.
+
+## Correction (2026-11-15, after reading the iOS source)
+The provenance section above says the screens follow documented Spread behaviour. That overstates it. Checked against `ios/SpreadNativeV2` (source only, no device run), these V3 elements are **not** in the current Life build and were illustrative: dragging a task from the To place tray onto a day, per-role "hours left" chips in Week, typed "Purpose" text on a responsibility, Mon/Wed/Fri day cards with hour-bank squares, an Undo *toast* (native shows an Undo/Redo row), and four role rows with arrows shown at once (native selects one role, then adjusts in 0.5 h steps). V3 is a story-driven concept cut, not an accurate feature demo. See `../v4-social/BRIEF.md` for the full matrix.
+
+Headline overlap (two lines visible for ~0.13 s at about six swaps) is fixed in source; the corrected export is `Spread-Make-the-Hours-Count-V3-vertical-r1.mp4` (the original export is untouched).

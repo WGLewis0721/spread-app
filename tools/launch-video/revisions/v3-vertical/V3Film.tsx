@@ -50,8 +50,9 @@ const sy = (y: number) => PH_TOP + (14 + y) * S;
 /* ---------- headline with word reveal ---------- */
 type Word = { w: string; em?: boolean };
 const HeadLine = ({ t, a, b, kick, lines, tone }: { t: number; a: number; b: number; kick?: string; lines: Word[][]; tone: "paper" | "navy" }) => {
-  if (t < a - 0.02 || t > b + 0.6) return null;
-  const outp = P(t, b - 0.3, b + 0.2);
+  if (t < a - 0.02 || t > b + 0.05) return null;
+  // Outgoing line is fully gone before the next headline begins (no two-line overlap).
+  const outp = P(t, b - 0.32, b - 0.05);
   let k = 0;
   return (
     <div
