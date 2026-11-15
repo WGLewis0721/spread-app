@@ -511,7 +511,7 @@ private struct SpreadTimerView: View {
     /// Every active size has Play/Pause, Forward and Cancel. Use stable 44pt targets
     /// and a 2pt gap so a 141pt small widget fits a genuine three-button row.
     private var controlRow: some View {
-        HStack(spacing: family == .systemSmall ? 2 : 8) {
+        HStack(spacing: 8) {
             controlItems
         }
         .frame(maxWidth: .infinity, alignment: .center)
@@ -565,7 +565,7 @@ private struct SpreadTimerView: View {
 
     /// Medium uses the extra width for a legible timer, without hiding Cancel.
     @ViewBuilder private var mediumBody: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
             face(.medium)
             Spacer(minLength: 0)
             controlRow
@@ -602,7 +602,7 @@ struct WidgetRefinedControlStyle: ButtonStyle {
             .foregroundStyle(prominent ? Color(uiColor: .systemBackground) : Color.primary)
             .background { circleFill }
             .overlay(Circle().strokeBorder(Color.primary.opacity(prominent ? 0 : 0.14), lineWidth: 1))
-            .shadow(color: Color(uiColor: .systemGray).opacity(prominent ? 0.35 : 0.18), radius: 3, y: 2)
+            .shadow(color: Color(uiColor: .systemGray).opacity(prominent ? 0.35 : 0.18), radius: 4, y: 2)
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
     }
 

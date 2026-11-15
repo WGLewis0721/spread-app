@@ -576,3 +576,17 @@ test("paused Home Screen widget dispatches the same Resume intent as the Dynamic
   assert.match(timerWidgetSource, /paused: state\.phase == \.paused/);
   assert.match(shared, /running \? \.pause : \.resume/);
 });
+
+test("refined controls dim as a whole when disabled, and their rows sit on the 8 pt grid", () => {
+  const appStyle = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Theme/SpreadRefinedControlStyle.swift");
+  // A disabled Forward must not look live: the style reads isEnabled and uses the shared disabled token.
+  assert.match(appStyle, /@Environment\(\\.isEnabled\) private var isEnabled/);
+  assert.match(appStyle, /\.opacity\(isEnabled \? \(configuration\.isPressed \? 0\.9 : 1\) : Spread\.disabledOpacity\)/);
+  assert.doesNotMatch(appStyle, /0\.4\)/);
+  // Control rows use the 8 pt step, the same in the widget and the island.
+  assert.match(timerWidgetSource, /HStack\(spacing: 8\) \{\s*controlItems/);
+  assert.match(get("ios/App/SpreadWidget/SpreadTodayWidget.swift"), /HStack\(spacing: 8\) \{\s*ForEach\(Array\(controls\.enumerated\(\)\)/);
+  assert.doesNotMatch(timerWidgetSource, /spacing: 5\) \{\s*face\(\.medium\)/);
+  // The widget and the app use the same shadow, so controls read alike.
+  assert.match(timerWidgetSource, /radius: 4, y: 2\)/);
+});

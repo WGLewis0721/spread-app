@@ -46,3 +46,18 @@
 - The cycle: how often WidgetKit actually moves the card. The system may delay it. Confirm that a tap after an automatic step lands on the next card.
 - Dynamic Type at accessibility sizes on the timer controls and the Life card widget.
 - VoiceOver on each icon-only control.
+
+## 6. Audit and corrections (2026-11-15)
+
+Checked against the brand board's geometry (44 pt minimum targets, a 4 pt step, card and control radii) and the design-system rule of one spacing scale per surface.
+
+| Finding | Correction |
+| --- | --- |
+| The refined pill had no disabled state, so a disabled Forward in the timer sheet looked live | The style reads `isEnabled` and dims with the shared `Spread.disabledOpacity` token |
+| Island control row used 12 pt; the widget control row used 8 pt | Island row set to 8 pt, the same as the widget |
+| Medium widget stack used a 5 pt gap, which is off the 4 pt step | Set to 4 pt |
+| The Life card's page-count column used 3 pt | Set to 4 pt |
+| The Life card arrow sized itself twice (label and style) | The style owns the 44 pt size; the duplicate frame was removed |
+| Widget shadow radius 3, app shadow radius 4 | Both use radius 4, y 2 |
+
+The sheet's stack spacing already used the 8 pt token and was left as is. Targets stay at 44 pt or more throughout.

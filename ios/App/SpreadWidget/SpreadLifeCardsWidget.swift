@@ -264,7 +264,6 @@ private struct SpreadLifeCardFace: View {
         Button(intent: SpreadLifeCardStepIntent(step: step, from: card.id)) {
             Image(systemName: symbol)
                 .font(.system(size: 14, weight: .bold))
-                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
         .buttonStyle(WidgetRefinedControlStyle())
@@ -277,7 +276,7 @@ private struct SpreadLifeCardFace: View {
             // genuine AppIntent controls, and the dots show position.
             HStack(spacing: 0) {
                 stepButton(.previous, symbol: "chevron.up", label: "Previous Life card")
-                VStack(spacing: 3) {
+                VStack(spacing: 4) {
                     Text("\(position.index) of \(position.count)")
                         .font(.caption2.weight(.semibold))
                         .monospacedDigit()
