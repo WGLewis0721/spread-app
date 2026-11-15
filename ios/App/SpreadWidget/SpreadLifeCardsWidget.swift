@@ -29,10 +29,15 @@ struct SpreadLifeCardStepIntent: AppIntent {
     @Parameter(title: "Direction", default: "next")
     var direction: String
 
+    /// The card on screen when the arrow was tapped. The widget cycles on its own, so the saved selection can lag.
+    @Parameter(title: "From card", default: "")
+    var from: String
+
     init() {}
 
-    init(step: SpreadLifeCardsNav.Step) {
+    init(step: SpreadLifeCardsNav.Step, from: String? = nil) {
         self.direction = step.rawValue
+        self.from = from ?? ""
     }
 
     func perform() async throws -> some IntentResult {
@@ -41,7 +46,7 @@ struct SpreadLifeCardStepIntent: AppIntent {
            let snapshot = try? JSONDecoder().decode(SpreadLifeCardsWidgetSnapshot.self, from: data),
            let step = SpreadLifeCardsNav.Step(rawValue: direction),
            let next = SpreadLifeCardsNav.stepped(
-               step, from: defaults?.string(forKey: SpreadWidgetShared.lifeCardSelectedKey),
+               step, from: from.isEmpty ? defaults?.string(forKey: SpreadWidgetShared.lifeCardSelectedKey) : Optional(from),
                in: snapshot.cards) {
             defaults?.set(next, forKey: SpreadWidgetShared.lifeCardSelectedKey)
         }
@@ -75,13 +80,31 @@ private struct SpreadLifeCardsProvider: TimelineProvider {
         completion(Entry(date: .now, snapshot: Self.load(), selectedId: Self.selected()))
     }
 
+    /// One card per step, starting from the card on screen. WidgetKit draws each entry at its date, so the
+    /// widget moves on by itself. The arrows still work, because they carry the card they show.
+    static let cycleStep: TimeInterval = 60 * 60
+
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
         let now = Date()
         // Refresh at midnight so a snapshot from a finished week stops pretending to be live.
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1,
             to: Calendar.current.startOfDay(for: now)) ?? now.addingTimeInterval(86400)
-        completion(Timeline(entries: [Entry(date: now, snapshot: Self.load(), selectedId: Self.selected())],
-                            policy: .after(tomorrow)))
+        let entries = Self.cycle(snapshot: Self.load(), from: Self.selected(), start: now)
+        let cycleEnd = entries.last.map { $0.date.addingTimeInterval(Self.cycleStep) } ?? tomorrow
+        completion(Timeline(entries: entries, policy: .after(min(cycleEnd, tomorrow))))
+    }
+
+    private static func cycle(snapshot: SpreadLifeCardsWidgetSnapshot?, from selected: String?,
+                              start: Date) -> [Entry] {
+        guard let snapshot, !snapshot.cards.isEmpty else {
+            return [Entry(date: start, snapshot: nil, selectedId: selected)]
+        }
+        let ids = snapshot.cards.map(\.id)
+        let first = ids.firstIndex(of: selected ?? "") ?? 0
+        return ids.indices.map { step in
+            Entry(date: start.addingTimeInterval(Double(step) * cycleStep), snapshot: snapshot,
+                  selectedId: ids[(first + step) % ids.count])
+        }
     }
 
     private static func load() -> SpreadLifeCardsWidgetSnapshot? {
@@ -238,13 +261,12 @@ private struct SpreadLifeCardFace: View {
     }
 
     private func stepButton(_ step: SpreadLifeCardsNav.Step, symbol: String, label: String) -> some View {
-        Button(intent: SpreadLifeCardStepIntent(step: step)) {
+        Button(intent: SpreadLifeCardStepIntent(step: step, from: card.id)) {
             Image(systemName: symbol)
                 .font(.system(size: 14, weight: .bold))
-                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(WidgetRefinedControlStyle())
         .accessibilityLabel(label)
     }
 
@@ -254,7 +276,7 @@ private struct SpreadLifeCardFace: View {
             // genuine AppIntent controls, and the dots show position.
             HStack(spacing: 0) {
                 stepButton(.previous, symbol: "chevron.up", label: "Previous Life card")
-                VStack(spacing: 3) {
+                VStack(spacing: 4) {
                     Text("\(position.index) of \(position.count)")
                         .font(.caption2.weight(.semibold))
                         .monospacedDigit()

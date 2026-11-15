@@ -95,8 +95,7 @@ struct SpreadFocusTimerSheet: View {
                 } label: {
                     Image(systemName: "xmark").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
                 }
-                .buttonStyle(.bordered)
-                .tint(Spread.danger)
+                .buttonStyle(SpreadRefinedControlStyle(danger: true))
                 .accessibilityLabel("Cancel session")
                 .accessibilityHint("Ends the entire focus session")
                 .accessibilityIdentifier("focus-cancel")
@@ -131,7 +130,7 @@ struct SpreadFocusTimerSheet: View {
                 Image(systemName: session.phase == .running ? "pause.fill" : "play.fill")
                     .frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
             .accessibilityLabel(session.phase == .running ? "Pause" : "Resume")
             .accessibilityIdentifier(session.phase == .running ? "focus-pause" : "focus-resume")
             Button {
@@ -139,7 +138,7 @@ struct SpreadFocusTimerSheet: View {
             } label: {
                 Image(systemName: "forward.fill").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(SpreadRefinedControlStyle())
             .disabled(next == nil)
             .accessibilityLabel(next.map { "Forward to " + $0 } ?? "No next round")
             .accessibilityIdentifier("focus-forward")
@@ -154,7 +153,7 @@ struct SpreadFocusTimerSheet: View {
             } label: {
                 Image(systemName: "stop.fill").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(SpreadRefinedControlStyle())
             .accessibilityLabel("Stop this stretch")
             .accessibilityHint("Keeps any following round waiting for you")
             .accessibilityIdentifier("focus-stop")
@@ -163,8 +162,7 @@ struct SpreadFocusTimerSheet: View {
             } label: {
                 Image(systemName: "xmark").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
-            .buttonStyle(.bordered)
-            .tint(Spread.danger)
+            .buttonStyle(SpreadRefinedControlStyle(danger: true))
             .accessibilityLabel("Cancel session")
             .accessibilityHint("Ends the entire focus session")
             .accessibilityIdentifier("focus-cancel")
