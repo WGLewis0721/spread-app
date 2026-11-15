@@ -561,8 +561,6 @@ struct PlanAheadDetailRow: View {
     }
 }
 
-#endif
-
 /// A title centered in its button, with an optional icon pinned to the leading edge. The title is centered on its
 /// own, so it does not shift when an icon is present. The title keeps clear of the icon at every text size.
 private struct SpreadCenteredLabel<Icon: View>: View {
@@ -579,3 +577,5 @@ private struct SpreadCenteredLabel<Icon: View>: View {
             }
     }
 }
+
+#endif
