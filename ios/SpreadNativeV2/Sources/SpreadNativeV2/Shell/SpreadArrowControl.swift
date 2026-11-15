@@ -32,6 +32,8 @@ struct SpreadArrowButton: View {
             SpreadIcon(name: direction < 0 ? "lucide-chevron-left" : "lucide-chevron-right", size: 20)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(disabled ? Spread.secondary : Spread.ink)
+                .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
+                .background(refinedChip)
                 .frame(width: Spread.minimumTarget, height: 52)
                 .contentShape(Rectangle())
         }
@@ -47,6 +49,15 @@ struct SpreadArrowButton: View {
         .accessibilityLabel(label)
         .accessibilityHint(repeatsOnHold ? "Touch and hold to move faster" : "Adjust one step")
         .onDisappear { cancelTouch() }
+    }
+
+    /// A raised 44 pt chip with a hairline edge, so the arrow reads as a control rather than as text.
+    private var refinedChip: some View {
+        Circle()
+            .fill(LinearGradient(colors: [Spread.elevated, Spread.inset], startPoint: .top, endPoint: .bottom))
+            .overlay(Circle().strokeBorder(Spread.line, lineWidth: 1))
+            .shadow(color: Spread.shadow, radius: 3, y: 2)
+            .opacity(disabled ? 0.45 : 1)
     }
 
     private func beginTouch() {
@@ -129,10 +140,11 @@ struct SpreadArrowValueControl: View {
             SpreadArrowButton(direction: 1, label: rightLabel,
                               disabled: rightDisabled, repeatsOnHold: repeatsOnHold) { onMove(1) }
         }
-        .frame(maxWidth: .infinity, minHeight: 56)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusControl))
-        .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl)
-            .strokeBorder(Spread.line, lineWidth: 1))
+        .frame(maxWidth: .infinity, minHeight: 54)
+        .padding(3)
+        // Refined: an inset capsule with a hairline edge, holding raised arrow chips.
+        .background(Capsule().fill(Spread.inset))
+        .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
         .accessibilityElement(children: .contain)
     }
 }
