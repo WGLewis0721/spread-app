@@ -38,7 +38,7 @@ test("the sheet previews the copy first, and confirms only a preview that is eli
   assert.match(sheet, /\.disabled\(copySaving \|\| copyPreviewing \|\| planner\.busy\)/);
   assert.match(sheet, /planner\.send\(\["type": "copyWeekForward", "batch": copyBatch\]\)/);
   // Each week is listed with its status in words, not only by colour.
-  assert.match(sheet, /"Will be filled" : "Already planned, kept"/);
+  assert.match(sheet, /"Will be filled" : "Kept, already planned or set"/);
 });
 
 test("the planner reads the copy preview without changing the week, and checks the week did not move", () => {
