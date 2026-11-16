@@ -12,7 +12,6 @@
 import type { CSSProperties } from "react";
 import { AbsoluteFill, Easing, Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Audio } from "@remotion/media";
-import { CameraMotionBlur } from "@remotion/motion-blur";
 import { Base, C } from "../../src/design";
 
 /* ---------- helpers ---------- */
@@ -151,7 +150,7 @@ const World = ({ t, children }: { t: number; children: React.ReactNode }) => {
   );
 };
 
-const Chip3D = ({ t, i }: { t: number; i: number }) => {
+const Chip3D = ({ t, i, alpha = 1 }: { t: number; i: number; alpha?: number }) => {
   const label = LABELS[i % LABELS.length];
   const ang = rnd(i, 1) * Math.PI * 2, rad = 300 + rnd(i, 2) * 900;
   const bx = Math.cos(ang) * rad, by = Math.sin(ang) * rad * 1.35;
@@ -168,7 +167,7 @@ const Chip3D = ({ t, i }: { t: number; i: number }) => {
   const fp = clamp((t - t0) / (STAMP - 0.02 - t0));
   const f = Math.pow(fp, 2.3);
   const px = lerp(bx, tx, f), py = lerp(by, ty, f), pz = lerp(z, 0, f);
-  const fade = t > STAMP - 0.02 ? 0 : 1 - clamp((fp - 0.82) / 0.18);
+  const fade = (t > STAMP - 0.02 ? 0 : 1 - clamp((fp - 0.82) / 0.18)) * alpha;
   const col = DOTS[i % DOTS.length];
   return (
     <div style={{ position: "absolute", left: 540, top: 960, width: 500, height: 134, marginLeft: -250, marginTop: -67, padding: "0 36px", boxSizing: "border-box", background: C.sheet, borderRadius: 28, fontSize: 58, fontWeight: 580, letterSpacing: -1.5, color: C.ink, display: "flex", alignItems: "center", gap: 18, whiteSpace: "nowrap",
@@ -590,8 +589,14 @@ export const SpreadV5Impact = () => {
   const ry = (c.ry ?? 0) + flipAngle(t);
   const rx = c.rx ?? 0;
   const phoneIn = t >= 4.1 && t < 25.0 ? out(P(t, 4.1, 4.45)) : 0;
-  const blurOn = t < 2.1 || (t > 3.5 && t < 4.2);
-  const chips = <World t={t}>{Array.from({ length: NCH }, (_, i) => <Chip3D key={i} t={t} i={i} />)}</World>;
+  const trail = t < 2.1 || (t > 3.5 && t < 4.2);
+  const chips = (
+    <World t={t}>
+      {trail ? Array.from({ length: NCH }, (_, i) => <Chip3D key={`g2${i}`} t={Math.max(0, t - 0.07)} i={i} alpha={0.16} />) : null}
+      {trail ? Array.from({ length: NCH }, (_, i) => <Chip3D key={`g1${i}`} t={Math.max(0, t - 0.035)} i={i} alpha={0.3} />) : null}
+      {Array.from({ length: NCH }, (_, i) => <Chip3D key={i} t={t} i={i} />)}
+    </World>
+  );
   const flash = t >= FREEZE ? 0.85 * (1 - clamp((t - FREEZE) / 0.16)) : t < 0.12 ? 0.9 * (1 - t / 0.12) : 0;
 
   return (
@@ -611,7 +616,7 @@ export const SpreadV5Impact = () => {
         </div>
       </div>
 
-      {t < 4.35 ? (blurOn ? <CameraMotionBlur shutterAngle={170} samples={5}>{chips}</CameraMotionBlur> : chips) : null}
+      {t < 4.35 ? chips : null}
       <LandingCards t={t} />
       <StampFX t={t} />
 
