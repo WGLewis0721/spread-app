@@ -206,9 +206,15 @@ private struct LifeWalletFace: View {
     // Resolve formatting as String before entering SwiftUI's overloaded text builders.
     private var spokenLabel: String {
         // Keep the selected week, not baked artwork values, in the spoken card.
+        // The same unassigned and over-budget words as the editorial face, so the spoken card never omits status.
         let weekly = SpreadHours.spoken(role.hours)
         let booked = SpreadHours.spoken(snapshot.placedHours(for: role.id))
-        return role.name + ", " + weekly + " weekly budget, " + booked + " assigned"
+        let remaining = role.hours - snapshot.placedHours(for: role.id)
+        let status = remaining >= 0
+            ? SpreadHours.spoken(remaining) + " unassigned"
+            : SpreadHours.spoken(-remaining) + " over budget"
+        let parts: [String] = [role.name, weekly + " weekly budget", booked + " assigned", status]
+        return parts.joined(separator: ", ")
     }
 
     @ViewBuilder
@@ -389,7 +395,7 @@ struct LifeTaskRows: View {
                     }
                 }
                 .background(targetedTaskId == task.id ? LifePalette.fill : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 12))
+                            in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                 .animation(reduceMotion ? nil : SpreadTactile.snap, value: targetedTaskId)
                 .dropDestination(for: SpreadDragPayload.self) { items, _ in
                     guard let day, !planner.busy, let item = items.first, item.kind == .task,

@@ -78,6 +78,8 @@ public enum Spread {
     public static let chalkSpark = Color(hex6: 0xFFE066)
     /// Neutral grey for a responsibility without a usable colour. Matches the fallback in `Color(hex:)`.
     public static let roleFallback = Color(hex6: 0x8E8E93)
+    /// The same grey as a `#RRGGBB` string, for call sites that pass a stored colour string (`RoleBadge(color:)`).
+    public static let roleFallbackHex = "#8E8E93"
 
     // MARK: Life artwork scrims. Fixed values for legibility over authored artwork: they do not follow appearance, and
     // views use these names, never a copied literal.
@@ -118,6 +120,10 @@ public enum Spread {
     public static let radiusRow: CGFloat = 16      // rounded-2xl rows
     public static let radiusSheet: CGFloat = 28    // --radius-sheet
     public static let radiusControl: CGFloat = 14  // --radius-control
+    /// Small tiles and menus inside a card (the rounded-xl step). Already used at 12 pt in about seven places.
+    public static let radiusSmall: CGFloat = 12
+    /// Recessed panels and wells inside a card. Already used at 18 pt in about four places.
+    public static let radiusInset: CGFloat = 18
     /// Interactive targets are never smaller than 44 pt (HIG and the planner's own rule).
     public static let minimumTarget: CGFloat = 44
     /// Disabled controls dim through this one value (owner decision OD17). Custom-styled controls apply it. System-styled
@@ -138,6 +144,15 @@ public enum Spread {
 
     /// The signed-width Week/Spread destination rail corresponds to the planner's `bg-fill rounded-full p-1`.
     public static let railPadding: CGFloat = 4
+
+    // MARK: Icon frames (Lucide and SF Symbol). A tap target is still `minimumTarget` (44 pt), never an icon size.
+
+    /// Inline disclosure chevrons and captions beside text.
+    public static let iconSmall: CGFloat = 16
+    /// Row and toolbar actions and their labels.
+    public static let iconMedium: CGFloat = 20
+    /// Primary actions and the glyph inside a category tile.
+    public static let iconLarge: CGFloat = 24
 
     // MARK: Typography (styles.css: title 2.125rem, sheet 1.375rem, body 1.0625rem, callout, footnote)
 

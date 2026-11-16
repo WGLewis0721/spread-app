@@ -284,17 +284,17 @@ enum LifeBudgetBarMath {
 
     static func accessibilityLabel(roles: [Responsibility], capacity: Double?) -> String {
         let used = assigned(roles)
-        var parts = ["Weekly time", SpreadHours.text(used) + " hours budgeted"]
+        var parts = ["Weekly time", SpreadHours.spoken(used) + " budgeted"]
         if let capacity, capacity > 0 {
-            parts.append(SpreadHours.text(capacity) + " hours total")
+            parts.append(SpreadHours.spoken(capacity) + " total")
             let difference = capacity - used
-            parts.append(SpreadHours.text(abs(difference)) +
-                         (difference < 0 ? " hours over budget" : " hours available"))
+            parts.append(SpreadHours.spoken(abs(difference)) +
+                         (difference < 0 ? " over budget" : " available"))
         } else {
             parts.append("Weekly capacity not set")
         }
         parts += roles.filter { $0.hours > 0 }.map {
-            $0.name + ", " + SpreadHours.text($0.hours) + " hours"
+            $0.name + ", " + SpreadHours.spoken($0.hours)
         }
         parts.append("Adjust hours")
         return parts.joined(separator: ", ")

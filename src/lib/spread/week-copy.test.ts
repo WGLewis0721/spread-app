@@ -170,3 +170,37 @@ test("a copy carries no repeating-rule bookkeeping, so the copies are plain week
   const result = planWeekCopy(data, 1);
   assert.equal(result.data?.weeks["2026-11-23"].recurrenceSource, undefined);
 });
+
+test("a future week holding only a weekly total is kept, so the total the person set is not dropped", () => {
+  const base = profile();
+  const target = shiftKey(SRC, 1);
+  const data = profile({
+    weeks: {
+      ...base.weeks,
+      [target]: { boxes: [{ hatId: "work", hours: 0, tasks: [] }, { hatId: "health", hours: 0, tasks: [] }],
+        allocations: [], life: { version: 1, capacityHours: 40 } },
+    },
+  });
+  const result = planWeekCopy(data, 1);
+  const row = result.preview.targets.find((target) => target.key === shiftKey(SRC, 1));
+  assert.equal(row?.status, "filled");
+  assert.equal(result.preview.fillCount, WEEK_COPY_BATCH_WEEKS - 1);
+  assert.equal(result.data?.weeks[target].life?.capacityHours, 40);
+  assert.equal(result.data?.weeks[target].boxes.find((box) => box.hatId === "work")?.hours, 0);
+});
+
+test("the source week with only a weekly total has nothing to copy", () => {
+  const base = profile();
+  const data = profile({
+    weeks: { [SRC]: { boxes: [{ hatId: "work", hours: 0, tasks: [] }, { hatId: "health", hours: 0, tasks: [] }],
+      allocations: [], life: { version: 1, capacityHours: 30 } } },
+  });
+  const result = planWeekCopy(data, 1);
+  assert.equal(result.preview.eligible, false);
+  assert.match(result.preview.reason ?? "", /no hours or tasks/);
+  assert.equal(base.currentWeek, SRC);
+});
+
+function shiftKey(key: string, weeks: number): string {
+  return new Date(Date.parse(`${key}T00:00:00Z`) + weeks * 7 * 86400000).toISOString().slice(0, 10);
+}
