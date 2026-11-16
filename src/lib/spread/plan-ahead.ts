@@ -154,6 +154,10 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   } : box);
   const nextSource: WeekData = {
     ...source, boxes: sourceBoxes, allocations: sourceAllocations,
+    // Without a Life record, reload reads a budget equal to the hours already placed as a legacy bank and restores
+    // the role's default, silently undoing this move. A record with no capacity marks the week as Life-managed
+    // without inventing a weekly total.
+    ...(source.life ? {} : { life: { version: 1 as const } }),
     ...(source.recurrenceSource?.[request.roleId]
       ? { recurrenceSource: { ...source.recurrenceSource,
         [request.roleId]: { ...source.recurrenceSource[request.roleId], manual: true } } } : {}),

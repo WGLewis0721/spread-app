@@ -119,6 +119,21 @@ test("the preview shows the hours and Life total a recurring plan gives a future
   assert.equal(result.data.weeks[toDay].boxes.find((box) => box.hatId === roleId)?.hours, result.preview.targetBudgetAfter);
 });
 
+test("a transfer out of a week with no Life total survives reload and a week copy", () => {
+  // A week planned before Life totals existed has no capacity. Moving its unplaced hours leaves the budget equal to
+  // the hours already placed on days, which normalization reads as a legacy bank and restores to the role default.
+  const { data, key, roleId, toDay } = seed();
+  delete data.weeks[key].life;
+  const moved = planAheadTransfer(data, { roleId, toDay, hours: 5, targetCapacityHours: 40 });
+  assert.equal(moved.preview.eligible, true, moved.preview.reason);
+  assert.equal(moved.data.weeks[key].boxes[0].hours, 3, "in the open session the budget is 8 - 5");
+  const reloaded = normalizeData(JSON.parse(JSON.stringify(moved.data)));
+  assert.equal(reloaded.weeks[key].boxes[0].hours, 3, "after reload the budget is still 3, not the default");
+  const copied = planWeekCopy(moved.data, 1);
+  assert.equal(copied.preview.eligible, true, copied.preview.reason);
+  assert.equal(copied.data?.weeks[key].boxes[0].hours, 3, "copying the week does not revert the transfer");
+});
+
 test("importance survives the current normalization and is optional in old task records", () => {
   const { data, key } = seed();
   const normalized: SpreadData = normalizeData(data);
