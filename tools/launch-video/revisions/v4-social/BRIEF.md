@@ -1,6 +1,6 @@
 # Spread — V4 social commercial: pre-render brief (for approval)
 
-Status: **DRAFT for creative approval. Nothing is rendered. No narration has been generated. No credits spent.**
+Status: approved by owner ("Just go and make it", 2026-11-16). Rendered; see README.md. (Original draft text below.)
 Preserved: all v7 assets and the V3 export (`revisions/v3-vertical/Spread-Make-the-Hours-Count-V3-vertical.mp4`, sha256 `b9ab94e5…ad0`). PR #251 is not merged.
 
 Format: 1080x1920, 30 fps, 900 frames, native Remotion render. Vector UI, so close-ups stay sharp.
