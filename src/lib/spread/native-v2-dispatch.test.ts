@@ -989,3 +989,18 @@ test("native recurrence preview is read-only, save is undoable, later weeks alte
     assert.equal(useSpread.getState().data.weeks[first].boxes[0].tasks.length, 0);
   } finally { router.dispose(); }
 });
+
+test("Undo of a role's hours still works after another role is renamed, and keeps that rename", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const original = useSpread.getState().data.hats.find((hat) => hat.id === roleId)?.defaultHours;
+    const changed = await router.dispatch(request({ type: "setHours", roleId, hours: 6 }));
+    assert.equal(changed.ok, true);
+    const other = useSpread.getState().data.hats.find((hat) => hat.id !== roleId)!.id;
+    useSpread.getState().renameHat(other, "Other edit");
+    assert.equal((await router.dispatch(request({ type: "undo", editId: changed.undoId }))).ok, true);
+    const hats = useSpread.getState().data.hats;
+    assert.equal(hats.find((hat) => hat.id === roleId)?.defaultHours, original);
+    assert.equal(hats.find((hat) => hat.id === other)?.name, "Other edit", "the unrelated rename is not undone");
+  } finally { router.dispose(); }
+});

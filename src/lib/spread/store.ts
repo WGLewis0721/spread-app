@@ -456,12 +456,24 @@ type UndoEdit = WeekEdit & {
 let editStack: UndoEdit[] = [];
 let redoStack: UndoEdit[] = [];
 
-function hatsAre(data: SpreadData, edit: UndoEdit, side: "before" | "after"): boolean {
-  return !edit.hats || JSON.stringify(data.hats) === JSON.stringify(edit.hats[side]);
-}
-
+/**
+ * Puts back, or reapplies, only the roles this change altered, and only while each is still as the change left
+ * it. A later, unrelated edit to another role (a rename, a colour) never blocks Undo and is never overwritten.
+ */
 function withHats(data: SpreadData, edit: UndoEdit, side: "before" | "after"): SpreadData {
-  return edit.hats ? { ...data, hats: edit.hats[side] } : data;
+  if (!edit.hats) return data;
+  const from = side === "before" ? edit.hats.after : edit.hats.before;
+  const to = edit.hats[side];
+  let changed = false;
+  const hats = data.hats.map((hat) => {
+    const was = from.find((item) => item.id === hat.id);
+    const next = to.find((item) => item.id === hat.id);
+    if (!was || !next || JSON.stringify(was) === JSON.stringify(next) ||
+        JSON.stringify(hat) !== JSON.stringify(was)) return hat;
+    changed = true;
+    return next;
+  });
+  return changed ? { ...data, hats } : data;
 }
 
 function otherWeeksChanged(before: SpreadData, after: SpreadData): WeekChange[] {
@@ -1125,8 +1137,8 @@ export const useSpread = create<Store>((set, get) => ({
     const edit = editStack.find((item) => item.id === editId);
     if (!edit) return false;
     const state = get();
-    if (!canUndo(edit, state.activeId ?? "", state.data) || !weeksAre(state.data, edit.others, "after") ||
-        !hatsAre(state.data, edit, "after")) return false;
+    if (!canUndo(edit, state.activeId ?? "", state.data) ||
+        !weeksAre(state.data, edit.others, "after")) return false;
     editStack = editStack.filter((item) => item.id !== editId);
     const restored = withHats(withWeeks(state.data, edit.others, "before"), edit, "before");
     commit(set, dropRevivedDeletedTasks(applyUndo(edit, restored)));
@@ -1145,7 +1157,7 @@ export const useSpread = create<Store>((set, get) => ({
     const state = get();
     if (!edit || edit.profileId !== (state.activeId ?? "") ||
         JSON.stringify(state.data.weeks[edit.weekKey]) !== JSON.stringify(edit.before) ||
-        !weeksAre(state.data, edit.others, "before") || !hatsAre(state.data, edit, "before")) return false;
+        !weeksAre(state.data, edit.others, "before")) return false;
     redoStack = redoStack.filter((item) => item.id !== editId);
     const reapplied = withHats(
       withWeeks({ ...state.data, weeks: { ...state.data.weeks, [edit.weekKey]: edit.after } }, edit.others, "after"),
