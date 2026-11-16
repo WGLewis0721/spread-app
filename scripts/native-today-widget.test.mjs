@@ -689,3 +689,12 @@ test("What's New keeps its number column at least 28 pt wide, so it can grow wit
   assert.match(whatsNew, /\.frame\(minWidth: 28, alignment: \.leading\)/);
   assert.doesNotMatch(whatsNew, /\.frame\(width: 28/);
 });
+
+test("the active profile and the background widget refresh are recorded for Life, not only Classic", () => {
+  const root = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift");
+  // Everything from `public var body` to the first helper applies to both roots.
+  const body = root.slice(root.indexOf("public var body: some View"), root.indexOf("private var layers"));
+  assert.match(body, /\.task\(id: planner\.state\?\.envelope\.profileId\) \{\s*if let profile = planner\.state\?\.envelope\.profileId \{ focusTimer\.noteActiveProfile\(profile\) \}/);
+  assert.match(body, /\.onChange\(of: planner\.state\?\.envelope\.profileId\) \{ old, new in\s*if let new \{ focusTimer\.noteActiveProfile\(new\) \}/);
+  assert.match(body, /if phase == \.background \{ focusTimer\.finishWidgetRefreshOnBackground\(\) \}/);
+});

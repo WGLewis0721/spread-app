@@ -96,7 +96,16 @@ public struct SpreadLiveRoot: View {
             SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
             SpreadFocusWidgetPublisher.republishFromStore()
         }
+        // Life and Classic both need these. They used to sit only on Classic's layer, so in Life the widgets and
+        // the island kept validating against the profile that last started a timer.
+        .task(id: planner.state?.envelope.profileId) {
+            if let profile = planner.state?.envelope.profileId { focusTimer.noteActiveProfile(profile) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { focusTimer.finishWidgetRefreshOnBackground() }
+        }
         .onChange(of: planner.state?.envelope.profileId) { old, new in
+            if let new { focusTimer.noteActiveProfile(new) }
             if old != nil && old != new {
                 // Never show a previous profile's counts or Life cards after switching profiles.
                 SpreadWidgetPublisher.revoke()
