@@ -43,7 +43,11 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   const targetWeek = validDay(request.toDay) ? weekKey(parseKey(request.toDay)) : "";
   const initialSource = data.weeks[sourceWeek];
   const sourceBox = initialSource?.boxes.find((box) => box.hatId === request.roleId);
-  const targetExisting = data.weeks[targetWeek];
+  // The destination as the transfer will write it. A future week nobody has opened yet takes the hours and
+  // Life total its recurring plans give it, so the preview shows those rather than the role's default.
+  const targetExisting = validDay(request.toDay) && targetWeek > sourceWeek
+    ? ensureWeek({ ...data, currentWeek: targetWeek }).weeks[targetWeek]
+    : data.weeks[targetWeek];
   const targetBefore = targetExisting?.boxes.find((box) => box.hatId === request.roleId)?.hours
     ?? data.hats.find((hat) => hat.id === request.roleId)?.defaultHours ?? 0;
   const sourceBefore = sourceBox?.hours ?? 0;
@@ -150,6 +154,10 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   } : box);
   const nextSource: WeekData = {
     ...source, boxes: sourceBoxes, allocations: sourceAllocations,
+    // Without a Life record, reload reads a budget equal to the hours already placed as a legacy bank and restores
+    // the role's default, silently undoing this move. A record with no capacity marks the week as Life-managed
+    // without inventing a weekly total.
+    ...(source.life ? {} : { life: { version: 1 as const } }),
     ...(source.recurrenceSource?.[request.roleId]
       ? { recurrenceSource: { ...source.recurrenceSource,
         [request.roleId]: { ...source.recurrenceSource[request.roleId], manual: true } } } : {}),

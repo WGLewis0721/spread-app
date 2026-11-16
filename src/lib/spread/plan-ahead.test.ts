@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { defaultData, normalizeData, shiftWeek, type SpreadData } from "./model.ts";
 import { planAheadTransfer } from "./plan-ahead.ts";
+import { applyRecurringPlan } from "./recurring-plan.ts";
+import { planWeekCopy } from "./week-copy.ts";
 
 function seed() {
   const data = defaultData();
@@ -101,6 +103,35 @@ test("existing destination commitments are never replaced by Plan Ahead", () => 
   assert.equal(next.weeks[toDay].allocations[0].id, "dst");
   assert.equal(next.weeks[toDay].allocations[0].hours, 2);
   assert.equal(next.weeks[toDay].boxes[0].hours, 9);
+});
+
+test("the preview shows the hours and Life total a recurring plan gives a future week that has not been opened yet", () => {
+  // Future weeks are created when first opened. Until then the destination is what its recurring plans say it
+  // will be, so the preview must show those hours, not the role's default, or the person confirms a wrong total.
+  const { data, key, roleId, toDay } = seed();
+  const planned = applyRecurringPlan(data, { roleId, startWeek: shiftWeek(key, 1), everyWeeks: 1, hours: 2, capacityHours: 40 });
+  assert.equal(planned.preview.eligible, true, planned.preview.reason);
+  const result = planAheadTransfer(planned.data, { roleId, toDay, hours: 1 });
+  assert.equal(result.preview.eligible, true, result.preview.reason);
+  assert.equal(result.preview.targetBudgetBefore, 2, "the plan's 2 hours, not the default of 8");
+  assert.equal(result.preview.targetBudgetAfter, 3);
+  assert.equal(result.preview.targetCapacityHours, 40, "the plan's weekly total is known before the transfer");
+  assert.equal(result.data.weeks[toDay].boxes.find((box) => box.hatId === roleId)?.hours, result.preview.targetBudgetAfter);
+});
+
+test("a transfer out of a week with no Life total survives reload and a week copy", () => {
+  // A week planned before Life totals existed has no capacity. Moving its unplaced hours leaves the budget equal to
+  // the hours already placed on days, which normalization reads as a legacy bank and restores to the role default.
+  const { data, key, roleId, toDay } = seed();
+  delete data.weeks[key].life;
+  const moved = planAheadTransfer(data, { roleId, toDay, hours: 5, targetCapacityHours: 40 });
+  assert.equal(moved.preview.eligible, true, moved.preview.reason);
+  assert.equal(moved.data.weeks[key].boxes[0].hours, 3, "in the open session the budget is 8 - 5");
+  const reloaded = normalizeData(JSON.parse(JSON.stringify(moved.data)));
+  assert.equal(reloaded.weeks[key].boxes[0].hours, 3, "after reload the budget is still 3, not the default");
+  const copied = planWeekCopy(moved.data, 1);
+  assert.equal(copied.preview.eligible, true, copied.preview.reason);
+  assert.equal(copied.data?.weeks[key].boxes[0].hours, 3, "copying the week does not revert the transfer");
 });
 
 test("importance survives the current normalization and is optional in old task records", () => {
