@@ -899,6 +899,20 @@ test("Plan Ahead refuses missing destination capacity and keeps source planner i
   } finally { router.dispose(); }
 });
 
+test("Undo of a carry-over restores the exact prior planner, so the task is in one week and Redo carries it again", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const before = dataJSON();
+    const carried = await router.dispatch(request({ type: "carryOver", picks: [{ roleId, taskId: "task" }] }));
+    assert.equal(carried.ok, true);
+    const after = dataJSON();
+    assert.equal((await router.dispatch(request({ type: "undo", editId: carried.undoId }))).ok, true);
+    assert.equal(dataJSON(), before, "undo also removes the task from the week it was carried into");
+    assert.equal((await router.dispatch(request({ type: "redo", editId: carried.undoId }))).ok, true);
+    assert.equal(dataJSON(), after);
+  } finally { router.dispose(); }
+});
+
 test("native fixed-day schedule: preview shows the days, save places them, bad days are refused", async () => {
   const { router, request, roleId } = setup();
   try {
