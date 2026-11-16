@@ -590,3 +590,18 @@ test("refined controls dim as a whole when disabled, and their rows sit on the 8
   // The widget and the app use the same shadow, so controls read alike.
   assert.match(timerWidgetSource, /radius: 4, y: 2\)/);
 });
+
+test("the island never keeps another profile's stretch, running, paused or waiting", () => {
+  const session = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusSession.swift");
+  const controller = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusLiveActivityController.swift");
+  const timer = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimer.swift");
+  assert.match(session, /static func visibleOnIsland\([\s\S]*?activeProfile\(defaults\) == session\.profileId/);
+  // Both the entry point and the delayed ActivityKit work apply the rule, so a late update cannot bring it back.
+  assert.match(controller, /guard SpreadFocusStore\.visibleOnIsland\(session\) else \{\s*end\(\)\s*return\s*\}\s*update\(session\)/);
+  assert.equal(controller.match(/SpreadFocusStore\.visibleOnIsland\(/g).length, 3);
+  const leave = timer.match(/func pauseForProfileSwitch[\s\S]*?\n    \}/)[0];
+  // The island is released for every phase; only a running stretch is paused first.
+  assert.doesNotMatch(leave, /guard[^\n]*\n?[^\n]*current\.phase == \.running else/);
+  assert.match(leave, /if current\.phase == \.running \{ pause\(profileId: current\.profileId\) \}\s*(\/\/[^\n]*\s*)*SpreadFocusLiveActivityController\.end\(\)/);
+  assert.match(timer, /if changed \{ SpreadFocusLiveActivityController\.refresh\(session\) \}/);
+});

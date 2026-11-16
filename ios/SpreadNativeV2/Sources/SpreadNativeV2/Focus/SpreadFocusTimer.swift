@@ -33,6 +33,8 @@ final class SpreadFocusTimer: ObservableObject {
         // Preserve the previous launch-time completion behavior, but run it only
         // after the widget can validate the active profile.
         reconcile()
+        // Coming back to the profile that owns a paused or waiting stretch returns it to the island.
+        if changed { SpreadFocusLiveActivityController.refresh(session) }
         guard changed || publishedProfileId != profileId else { return }
         publishedProfileId = profileId
         widgetChangePendingBackground = true
@@ -137,9 +139,10 @@ final class SpreadFocusTimer: ObservableObject {
     }
 
     func pauseForProfileSwitch(to newProfileId: String) {
-        guard let current = session, current.profileId != newProfileId,
-              current.phase == .running else { return }
-        pause(profileId: current.profileId)
+        guard let current = session, current.profileId != newProfileId else { return }
+        if current.phase == .running { pause(profileId: current.profileId) }
+        // A paused stretch, or one waiting for a tap, leaves the island too: its title is the other
+        // profile's Life area, and its buttons no longer act.
         SpreadFocusLiveActivityController.end()
     }
 
