@@ -32,7 +32,7 @@ def boom(dur=1.4, f0=120, f1=34):
     body = np.sin(ph) * env_exp(n, 0.35)
     click = bandnoise(n, 800, 6000) * env_exp(n, 0.02) * 0.6
     air = bandnoise(n, 120, 1500) * env_exp(n, 0.28) * 0.35
-    return (body + click + air) * 0.9
+    return (body + click + air) * 1.5
 
 def whoosh(dur=0.7, up=True, lo=300, hi=7000):
     n = int(dur * SR); x = bandnoise(n, lo, hi); t = np.linspace(0, 1, n)
@@ -89,7 +89,7 @@ place(sfx, bell([784, 988, 1175], 1.2, 0.4), K(7) + 0.06, 0.6)
 place(sfx, whoosh(0.9, True, 300, 6000), K(8) + 0.05, 0.5)
 place(sfx, boom(0.9, 90, 40), K(11), 0.5); place(sfx, whoosh(0.5, True, 500, 8000), K(11) - 0.25, 0.5)
 # ---- touches ----
-taps = {8.47: 1500, 9.62: 1700, 11.58: 1600, 12.47: 1650, 17.15: 1500, 18.92: 1700, 19.7: 1600, 20.5: 1750, 21.6: 1550, 22.57: 1800}
+taps = {8.47: 1500, 9.62: 1700, 11.58: 1600, 12.47: 1650, 16.97: 1500, 18.92: 1700, 19.74: 1600, 20.5: 1750, 21.6: 1550, 22.57: 1800}
 for t0, f in taps.items(): place(sfx, tick(f), t0, 0.7)
 for i, t0 in enumerate([13.55, 13.95, 14.30, 14.60]):  # hold-arrow steps, rising pitch
     place(sfx, tick(1300 + i * 220, 0.1), t0, 0.8); place(sfx, bell([880 * 2 ** (i / 12 * 2)], 0.5, 0.3), t0 + 0.01, 0.5)
@@ -120,15 +120,14 @@ env = np.convolve(e, np.ones(k) / k, mode="same"); env = env / (env.max() + 1e-9
 speech = np.clip(env * 6, 0, 1); k2 = int(0.25 * SR); speech = np.convolve(speech, np.ones(k2) / k2, mode="same")
 duck *= 1 - 0.62 * np.clip(speech, 0, 1)
 score *= duck[:, None]
-sfx_duck = 1 - 0.35 * np.clip(speech, 0, 1)
+sfx_duck = 1 - 0.10 * np.clip(speech, 0, 1)
 mix = score + nar * 1.0 + sfx * sfx_duck[:, None] * 0.9
-peak = np.abs(mix).max()
-out = (mix / max(peak, 1e-9) * 0.9).astype(np.float32)
+out = np.clip(mix * 0.85, -1.5, 1.5).astype(np.float32)
 tmp = os.path.join(os.path.dirname(__file__), "_raw.f32")
 out.tofile(tmp)
 dst = os.path.join(ROOT, "public/assets/v5/mix-v5.wav")
 subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "2", "-i", tmp,
-                "-af", "loudnorm=I=-14:TP=-1.5:LRA=9", "-ar", "48000", dst], check=True)
+                "-af", "alimiter=limit=0.89:level=disabled,loudnorm=I=-14:TP=-1.5:LRA=9", "-ar", "48000", dst], check=True)
 os.remove(tmp)
 print("wrote", dst)
 for tt, nm in sorted(ev): print(f"  {tt:6.3f}s  {nm}")

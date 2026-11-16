@@ -53,8 +53,9 @@ const id = (t: number, fx: number, fy: number): KF => ({ t, k: 1, fx, fy, tx: sx
 const KFS: KF[] = [
   id(0, 195, 430),
   id(4.5, 195, 430),
-  { t: 6.2, k: 1.0, fx: 195, fy: 430, tx: sx(195), ty: sy(430), rx: 0, ry: 0 },
-  { t: 7.9, k: 1.4, fx: 195, fy: 330, tx: 540, ty: 1010, rx: 5, ry: -10 },
+  { t: 6.12, k: 1.0, fx: 195, fy: 430, tx: sx(195), ty: sy(430), rx: 0, ry: 0 },
+  { t: 6.27, k: 1.42, fx: 195, fy: 330, tx: 540, ty: 1010, rx: 5, ry: -10 },
+  { t: 8.1, k: 1.5, fx: 195, fy: 330, tx: 540, ty: 1010, rx: 5, ry: -9 },
   { t: 10.1, k: 1.4, fx: 195, fy: 330, tx: 540, ty: 1010, rx: 4, ry: -6 },
   { t: 11.0, k: 1.55, fx: 195, fy: 245, tx: 540, ty: 930, rx: 3, ry: 7 },
   { t: 16.2, k: 1.55, fx: 195, fy: 245, tx: 540, ty: 930, rx: 2, ry: 5 },
@@ -137,7 +138,7 @@ const jolt = (t: number, t0: number, amp: number) => (t < t0 ? 0 : amp * Math.ex
 
 const orbit = (t: number) => {
   const o = io(P(t, FREEZE + 0.05, SNAP0 + 0.1)) * (1 - io(P(t, SNAP0, SNAP0 + 0.5)));
-  return { ry: 38 * o, rx: 7 * o, dz: 260 * o };
+  return { ry: 30 * o, rx: 6 * o, dz: 90 * o };
 };
 
 const World = ({ t, children }: { t: number; children: React.ReactNode }) => {
@@ -154,7 +155,7 @@ const Chip3D = ({ t, i, alpha = 1 }: { t: number; i: number; alpha?: number }) =
   const label = LABELS[i % LABELS.length];
   const ang = rnd(i, 1) * Math.PI * 2, rad = 300 + rnd(i, 2) * 900;
   const bx = Math.cos(ang) * rad, by = Math.sin(ang) * rad * 1.35;
-  const zf = i % 3 === 0 ? lerp(60, 400, rnd(i, 3)) : lerp(-1300, 300, Math.pow(rnd(i, 3), 0.8));
+  const zf = i % 3 === 0 ? lerp(60, 300, rnd(i, 3)) : lerp(-1300, 300, Math.pow(rnd(i, 3), 0.8));
   const w = clamp(tau(t) / TF, 0, 1.02);
   const z = zf - 1700 * Math.pow(1 - w, 1.7);
   const rz = (rnd(i, 4) - 0.5) * 70 + (rnd(i, 5) - 0.5) * 55 * w;
@@ -192,7 +193,6 @@ const StormText = ({ t }: { t: number }) => {
   const out1 = 1 - io(P(t, SNAP0, SNAP0 + 0.2));
   const fam = lerp(6, 0, io(P(t, 0.3, 1.9)));
   const big: CSSProperties = { fontSize: 330, fontWeight: 700, letterSpacing: -20, lineHeight: 0.9, color: C.ink };
-  const mid: CSSProperties = { fontSize: 150, fontWeight: 620, letterSpacing: -8, color: C.ink };
   return (
     <div style={{ position: "absolute", inset: 0, opacity: out1 }}>
       <div style={{ position: "absolute", inset: 0, transform: `translateZ(${-520 * back1}px)`, opacity: 1 - 0.55 * back1 }}>
@@ -204,10 +204,21 @@ const StormText = ({ t }: { t: number }) => {
         <div style={{ fontSize: 30, fontWeight: 650, letterSpacing: 6, color: C.muted, textTransform: "uppercase" }}>Family this week</div>
         <div style={{ fontSize: 300, fontWeight: 640, letterSpacing: -16, lineHeight: 1, color: "#AF52DE" }}>{Math.max(0, Math.round(fam))}h</div>
       </div>
-      <div style={{ transform: "translateZ(620px)" }}>
-        <Slam t={t} t0={FREEZE + 0.08} y={1020} style={mid}>Still no room</Slam>
-        <Slam t={t} t0={FREEZE + 0.62} y={1170} style={{ ...mid, fontSize: 118, color: C.muted }}>for what</Slam>
-        <Slam t={t} t0={FREEZE + 1.12} y={1260} style={{ ...mid, fontSize: 210, fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, letterSpacing: -9 }}>matters.</Slam>
+    </div>
+  );
+};
+
+const Phrase2 = ({ t }: { t: number }) => {
+  if (t < FREEZE + 0.05 || t > SNAP0 + 0.25) return null;
+  const out1 = 1 - io(P(t, SNAP0, SNAP0 + 0.22));
+  const mid: CSSProperties = { fontSize: 156, fontWeight: 640, letterSpacing: -8, color: C.ink, textShadow: "0 0 26px rgba(246,241,231,.95), 0 0 8px rgba(246,241,231,.9)" };
+  const sway = Math.sin((t - FREEZE) * 1.4) * 2.2;
+  return (
+    <div style={{ position: "absolute", inset: 0, opacity: out1, perspective: 1300, zIndex: 40, pointerEvents: "none" }}>
+      <div style={{ position: "absolute", inset: 0, transform: `rotateY(${sway}deg)` }}>
+        <Slam t={t} t0={FREEZE + 0.08} y={960} style={mid}>Still no room</Slam>
+        <Slam t={t} t0={FREEZE + 0.62} y={1120} style={{ ...mid, fontSize: 120, color: C.muted }}>for what</Slam>
+        <Slam t={t} t0={FREEZE + 1.12} y={1215} style={{ ...mid, fontSize: 230, fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, letterSpacing: -10 }}>matters.</Slam>
       </div>
     </div>
   );
@@ -279,7 +290,7 @@ const PhoneScreen = ({ t }: { t: number }) => {
   const wtTop = 104;
   const stackTop = wtTop + wtH + 14;
   const cardsOn = t >= 4.0;
-  const hoverGlow = (i: number) => (i === 0 ? pulse(t, 5.95, 0.5) : i === 1 ? pulse(t, 6.8, 0.45) : i === 2 ? pulse(t, 7.75, 0.45) : 0);
+  const hoverGlow = (i: number) => pulse(t, [5.131, 5.648, 6.683, 7.2][i] ?? 0, 0.3);
 
   /* --- WEEK state --- */
   const toWeek = t >= FLIP_SWAP ? 1 : 0;
@@ -511,8 +522,8 @@ const PhoneScreen = ({ t }: { t: number }) => {
 const GP: { i: number; x: number; y: number; rot: number; w: number; kind: "card" | "pill" | "circles" | "check" | "day" }[] = [
   { i: 0, x: 215, y: 300, rot: -6, w: 480, kind: "card" }, { i: 1, x: 865, y: 360, rot: 6, w: 480, kind: "card" },
   { i: 2, x: 205, y: 1690, rot: 5, w: 480, kind: "card" }, { i: 3, x: 870, y: 1640, rot: -5, w: 480, kind: "card" },
-  { i: 0, x: 540, y: 1545, rot: 0, w: 520, kind: "circles" }, { i: 0, x: 120, y: 1060, rot: -9, w: 240, kind: "day" },
-  { i: 0, x: 945, y: 1090, rot: 8, w: 330, kind: "check" }, { i: 0, x: 540, y: 120, rot: 0, w: 520, kind: "pill" },
+  { i: 0, x: 540, y: 1580, rot: 0, w: 520, kind: "circles" }, { i: 0, x: 140, y: 640, rot: -9, w: 240, kind: "day" },
+  { i: 0, x: 905, y: 700, rot: 8, w: 330, kind: "check" }, { i: 0, x: 540, y: 120, rot: 0, w: 520, kind: "pill" },
 ];
 const Finale = ({ t }: { t: number }) => {
   const reveal = io(P(t, 24.72, 25.25));
@@ -617,11 +628,12 @@ export const SpreadV5Impact = () => {
       </div>
 
       {t < 4.35 ? chips : null}
+      <Phrase2 t={t} />
       <LandingCards t={t} />
       <StampFX t={t} />
 
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 560, background: `linear-gradient(to bottom, rgba(12,26,51,.97) 0, rgba(12,26,51,.9) 330px, rgba(12,26,51,0) 560px)`, opacity: clamp((c.k - 1.04) / 0.2) * (t > 4.5 && t < 24.6 ? 1 : 0), pointerEvents: "none" }} />
-      <HeadLine t={t} a={4.2} b={7.0} tone="navy" kick="Responsibilities" lines={[[{ w: "Spread" }, { w: "starts" }], [{ w: "with" }, { w: "your" }, { w: "life.", em: true }]]} />
+      <HeadLine t={t} a={4.2} b={6.15} tone="navy" kick="Responsibilities" lines={[[{ w: "Spread" }, { w: "starts" }], [{ w: "with" }, { w: "your" }, { w: "life.", em: true }]]} />
       <HeadLine t={t} a={10.35} b={16.4} tone="navy" kick="Hours" lines={[[{ w: "Give" }, { w: "each" }, { w: "one" }], [{ w: "real" }, { w: "hours.", em: true }]]} />
       <HeadLine t={t} a={17.6} b={19.0} tone="navy" kick="Week" lines={[[{ w: "Open" }, { w: "your" }], [{ w: "week.", em: true }]]} />
       <HeadLine t={t} a={19.1} b={21.7} tone="navy" lines={[[{ w: "An" }, { w: "hour" }, { w: "for" }], [{ w: "family", em: true }, { w: "on" }, { w: "Friday." }]]} />
