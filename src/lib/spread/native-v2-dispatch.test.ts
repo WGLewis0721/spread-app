@@ -913,6 +913,20 @@ test("Undo of a carry-over restores the exact prior planner, so the task is in o
   } finally { router.dispose(); }
 });
 
+test("Undo of a role's hours restores the role's default hours with the week, and Redo applies both again", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const before = dataJSON();
+    const changed = await router.dispatch(request({ type: "setHours", roleId, hours: 6 }));
+    assert.equal(changed.ok, true);
+    const after = dataJSON();
+    assert.equal((await router.dispatch(request({ type: "undo", editId: changed.undoId }))).ok, true);
+    assert.equal(dataJSON(), before, "undo restores the role's default, not only this week's budget");
+    assert.equal((await router.dispatch(request({ type: "redo", editId: changed.undoId }))).ok, true);
+    assert.equal(dataJSON(), after);
+  } finally { router.dispose(); }
+});
+
 test("native fixed-day schedule: preview shows the days, save places them, bad days are refused", async () => {
   const { router, request, roleId } = setup();
   try {

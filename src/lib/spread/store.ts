@@ -447,9 +447,22 @@ function persist(data: SpreadData) {
 /** A week another change also wrote (carry-over writes the week after the open one), as it was and as it became. */
 type WeekChange = { key: string; before: WeekData | undefined; after: WeekData | undefined };
 /** A reversible week change, plus what else it altered: Recently Deleted entries it created and other weeks it wrote. */
-type UndoEdit = WeekEdit & { deletions?: DeletedTask[]; others?: WeekChange[] };
+type UndoEdit = WeekEdit & {
+  deletions?: DeletedTask[];
+  others?: WeekChange[];
+  /** Role list before and after: setting hours also changes the role's default, which the week does not hold. */
+  hats?: { before: SpreadData["hats"]; after: SpreadData["hats"] };
+};
 let editStack: UndoEdit[] = [];
 let redoStack: UndoEdit[] = [];
+
+function hatsAre(data: SpreadData, edit: UndoEdit, side: "before" | "after"): boolean {
+  return !edit.hats || JSON.stringify(data.hats) === JSON.stringify(edit.hats[side]);
+}
+
+function withHats(data: SpreadData, edit: UndoEdit, side: "before" | "after"): SpreadData {
+  return edit.hats ? { ...data, hats: edit.hats[side] } : data;
+}
 
 function otherWeeksChanged(before: SpreadData, after: SpreadData): WeekChange[] {
   const keys = new Set([...Object.keys(before.weeks), ...Object.keys(after.weeks)]);
@@ -490,6 +503,7 @@ function withDeletions(data: SpreadData, entries: DeletedTask[] | undefined): Sp
   const kept = (data.deletedTasks ?? []).filter((item) => !entries.some((entry) => entry.id === item.id));
   return { ...data, deletedTasks: [...kept, ...entries] };
 }
+
 type LifeEdit = { id: string; profileId: string; weekKey: string; before: SpreadData; after: SpreadData; undone: boolean };
 let lifeEdits: LifeEdit[] = [];
 
@@ -1089,10 +1103,12 @@ export const useSpread = create<Store>((set, get) => ({
     if (!edit) return null;
     const deletions = deletionsCreated(before, after);
     const others = otherWeeksChanged(before, after);
+    const hatsChanged = JSON.stringify(before.hats) !== JSON.stringify(after.hats);
     const stored: UndoEdit = {
       ...edit,
       ...(deletions.length ? { deletions } : {}),
       ...(others.length ? { others } : {}),
+      ...(hatsChanged ? { hats: { before: before.hats, after: after.hats } } : {}),
     };
     editStack = pushEdit(editStack, stored);
     redoStack = [];
@@ -1109,9 +1125,11 @@ export const useSpread = create<Store>((set, get) => ({
     const edit = editStack.find((item) => item.id === editId);
     if (!edit) return false;
     const state = get();
-    if (!canUndo(edit, state.activeId ?? "", state.data) || !weeksAre(state.data, edit.others, "after")) return false;
+    if (!canUndo(edit, state.activeId ?? "", state.data) || !weeksAre(state.data, edit.others, "after") ||
+        !hatsAre(state.data, edit, "after")) return false;
     editStack = editStack.filter((item) => item.id !== editId);
-    commit(set, dropRevivedDeletedTasks(applyUndo(edit, withWeeks(state.data, edit.others, "before"))));
+    const restored = withHats(withWeeks(state.data, edit.others, "before"), edit, "before");
+    commit(set, dropRevivedDeletedTasks(applyUndo(edit, restored)));
     redoStack = pushEdit(redoStack, edit);
     return true;
   },
@@ -1127,9 +1145,11 @@ export const useSpread = create<Store>((set, get) => ({
     const state = get();
     if (!edit || edit.profileId !== (state.activeId ?? "") ||
         JSON.stringify(state.data.weeks[edit.weekKey]) !== JSON.stringify(edit.before) ||
-        !weeksAre(state.data, edit.others, "before")) return false;
+        !weeksAre(state.data, edit.others, "before") || !hatsAre(state.data, edit, "before")) return false;
     redoStack = redoStack.filter((item) => item.id !== editId);
-    const reapplied = withWeeks({ ...state.data, weeks: { ...state.data.weeks, [edit.weekKey]: edit.after } }, edit.others, "after");
+    const reapplied = withHats(
+      withWeeks({ ...state.data, weeks: { ...state.data.weeks, [edit.weekKey]: edit.after } }, edit.others, "after"),
+      edit, "after");
     commit(set, withDeletions(reapplied, edit.deletions));
     editStack = pushEdit(editStack, edit);
     return true;
