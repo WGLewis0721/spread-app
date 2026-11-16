@@ -28,6 +28,15 @@ struct LifeWeekView: View {
     private var profile: String { planner.state?.envelope.profileId ?? "" }
     private var date: String { selectedDate.isEmpty ? snapshot.weekKey : selectedDate }
     private var calendar: Calendar { PlannerDates.calendar }
+    /// Rows this month needs, from its real length: ceil((leading blank days + days in month) / 7).
+    /// A four- or five-week month shows no empty trailing row.
+    private var monthRowCount: Int {
+        let anchor = PlannerDates.date(date)
+        let first = calendar.date(from: calendar.dateComponents([.year, .month], from: anchor)) ?? anchor
+        let leading = (calendar.component(.weekday, from: first) + 5) % 7
+        let days = calendar.range(of: .day, in: .month, for: first)?.count ?? 31
+        return (leading + days + 6) / 7
+    }
     private var roles: [Responsibility] { LifeCalendarRules.dailyRoles(snapshot, day: date) }
     private var marksKey: String { "\(profile)|\(date.prefix(7))|\(planner.state?.sessionId ?? "")|\(planner.state?.revision ?? 0)" }
     private var selectionKey: String { "native.life.selectedDate.\(profile)" }
@@ -173,7 +182,7 @@ struct LifeWeekView: View {
                 }
             }
             VStack(spacing: 0) {
-                ForEach(0..<6, id: \.self) { row in
+                ForEach(0..<monthRowCount, id: \.self) { row in
                     let shown = expanded || row == selectedRow
                     HStack(spacing: 0) {
                         ForEach(Array(cells[(row * 7)..<(row * 7 + 7)]), id: \.self) { iso in
@@ -184,14 +193,31 @@ struct LifeWeekView: View {
                     .opacity(shown ? 1 : 0).clipped().allowsHitTesting(shown).accessibilityHidden(!shown)
                 }
             }
-            HStack {
-                Text(expanded ? "Choose a date to see its Life cards." : PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
-                    .font(.caption).foregroundStyle(LifePalette.secondary)
-                Spacer(minLength: 0)
-                if expanded { Button("Today") { choose(PlannerDates.localISO()) }.frame(minHeight: Spread.minimumTarget) }
+            // At accessibility sizes the footer stacks, so the caption wraps and Today keeps its 44 pt target.
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: Spread.space1) {
+                    footerText
+                    if expanded { todayButton }
+                }
+            } else {
+                HStack {
+                    footerText
+                    Spacer(minLength: 0)
+                    if expanded { todayButton }
+                }
             }
         }.padding(Spread.space3).spreadCard().accessibilityElement(children: .contain)
             .simultaneousGesture(daySwipe)
+    }
+
+    private var footerText: some View {
+        Text(expanded ? "Choose a date to see its Life cards." : PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
+            .font(.caption).foregroundStyle(LifePalette.secondary)
+    }
+
+    private var todayButton: some View {
+        Button("Today") { choose(PlannerDates.localISO()) }
+            .frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
     }
 
     private var monthControls: some View {
@@ -221,10 +247,12 @@ struct LifeWeekView: View {
             VStack(spacing: 6) {
                 Text(PlannerDates.label(PlannerDates.date(iso), pattern: "d"))
                     .font(.subheadline.weight(.semibold)).monospacedDigit()
+                    .lineLimit(1).minimumScaleFactor(0.6)
                     .frame(minWidth: 30, minHeight: 30)
                     .background(selected ? Spread.accent : Color.clear, in: Circle())
                     .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
-                    .overlay(Circle().strokeBorder(today ? Spread.accent : .clear, lineWidth: 1.5))
+                    // Today is a ring. Inside a selected fill the ring turns onAccent so it stays visible.
+                    .overlay(Circle().strokeBorder(today ? (selected ? Spread.onAccent : Spread.accent) : .clear, lineWidth: 1.5))
                 HStack(spacing: 2) {
                     ForEach(Array(mark.colors.prefix(4).enumerated()), id: \.offset) { _, color in
                         Circle().fill(Color(hex: color)).frame(width: 4, height: 4)
