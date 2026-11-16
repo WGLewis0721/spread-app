@@ -444,8 +444,23 @@ function persist(data: SpreadData) {
   put(activeStore, JSON.stringify(data));
 }
 
-let editStack: WeekEdit[] = [];
-let redoStack: WeekEdit[] = [];
+/** A reversible week change, plus the Recently Deleted entries it created (undo removes them with the task). */
+type UndoEdit = WeekEdit & { deletions?: DeletedTask[] };
+let editStack: UndoEdit[] = [];
+let redoStack: UndoEdit[] = [];
+
+/** Recently Deleted entries a change created. Its undo drops them, so its redo must put them back. */
+function deletionsCreated(before: SpreadData, after: SpreadData): DeletedTask[] {
+  const earlier = before.deletedTasks ?? [];
+  return (after.deletedTasks ?? []).filter((entry) =>
+    !earlier.some((item) => JSON.stringify(item) === JSON.stringify(entry)));
+}
+
+function withDeletions(data: SpreadData, entries: DeletedTask[] | undefined): SpreadData {
+  if (!entries?.length) return data;
+  const kept = (data.deletedTasks ?? []).filter((item) => !entries.some((entry) => entry.id === item.id));
+  return { ...data, deletedTasks: [...kept, ...entries] };
+}
 type LifeEdit = { id: string; profileId: string; weekKey: string; before: SpreadData; after: SpreadData; undone: boolean };
 let lifeEdits: LifeEdit[] = [];
 
@@ -1040,9 +1055,12 @@ export const useSpread = create<Store>((set, get) => ({
   undoable: (run) => {
     const before = get().data;
     run();
-    const edit = makeEdit(uid(), get().activeId ?? "", before, get().data);
+    const after = get().data;
+    const edit = makeEdit(uid(), get().activeId ?? "", before, after);
     if (!edit) return null;
-    editStack = pushEdit(editStack, edit);
+    const deletions = deletionsCreated(before, after);
+    const stored: UndoEdit = deletions.length ? { ...edit, deletions } : edit;
+    editStack = pushEdit(editStack, stored);
     redoStack = [];
     return edit.id;
   },
@@ -1076,7 +1094,7 @@ export const useSpread = create<Store>((set, get) => ({
     if (!edit || edit.profileId !== (state.activeId ?? "") ||
         JSON.stringify(state.data.weeks[edit.weekKey]) !== JSON.stringify(edit.before)) return false;
     redoStack = redoStack.filter((item) => item.id !== editId);
-    commit(set, { ...state.data, weeks: { ...state.data.weeks, [edit.weekKey]: edit.after } });
+    commit(set, withDeletions({ ...state.data, weeks: { ...state.data.weeks, [edit.weekKey]: edit.after } }, edit.deletions));
     editStack = pushEdit(editStack, edit);
     return true;
   },
