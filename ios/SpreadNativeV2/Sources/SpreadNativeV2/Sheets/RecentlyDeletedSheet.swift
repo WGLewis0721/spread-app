@@ -18,7 +18,7 @@ struct RecentlyDeletedSheet: View {
         SpreadSheetStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Tasks can be recovered for 30 days. Restored tasks return to To place in their original \"Life area" and week.")
+                    Text("Tasks can be recovered for 30 days. Restored tasks return to To place in their original Life area and week.")
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if !loaded {

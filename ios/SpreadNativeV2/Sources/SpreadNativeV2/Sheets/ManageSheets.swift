@@ -582,7 +582,7 @@ struct MoreSheet: View {
                                 .frame(minHeight: 48)
                                 .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                                 .accessibilityIdentifier("life-cards-widget-enabled")
-                            Text("\"Life area" names, colors and this week's hours appear on your Home Screen. Anyone who can see it can see them. Stays on this device.")
+                            Text("Life area names, colors and this week's hours appear on your Home Screen. Anyone who can see it can see them. Stays on this device.")
                                 .font(.footnote)
                                 .foregroundStyle(Spread.secondary)
                         }
