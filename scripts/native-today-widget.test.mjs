@@ -590,3 +590,18 @@ test("refined controls dim as a whole when disabled, and their rows sit on the 8
   // The widget and the app use the same shadow, so controls read alike.
   assert.match(timerWidgetSource, /radius: 4, y: 2\)/);
 });
+
+test("WidgetKit acknowledges Pause/Resume taps while the next timeline is pending", () => {
+  const panel = timerWidgetSource.slice(timerWidgetSource.indexOf("struct SpreadFocusPanel: View"),
+                                         timerWidgetSource.indexOf("/// One focus control"));
+  assert.match(panel, /Label\(face\.statusText, systemImage: face\.symbol\)[\s\S]*?\.invalidatableContent\(\)/);
+  assert.match(panel, /digits\s*\.invalidatableContent\(\)/);
+  assert.match(panel, /bar\s*\.invalidatableContent\(\)/);
+
+  // The reliable explicit app intents from PR #243 must not be replaced with
+  // a speculative optimistic toggle that previously broke Resume.
+  assert.match(timerWidgetSource, /case \.pause, \.resume:[\s\S]*SpreadFocusControlButton\(control: kind,/);
+  assert.match(timerWidgetSource, /case \.pause:\s*Button\(intent: PauseSpreadFocusIntent/);
+  assert.match(timerWidgetSource, /case \.resume:\s*Button\(intent: ResumeSpreadFocusIntent/);
+  assert.doesNotMatch(timerWidgetSource, /Toggle\(isOn:|SetSpreadFocusPlayingIntent|SpreadTransportToggleStyle/);
+});

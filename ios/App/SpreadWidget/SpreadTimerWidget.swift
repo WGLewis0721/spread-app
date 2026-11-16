@@ -154,14 +154,21 @@ struct SpreadFocusPanel: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .invalidatableContent()
             if showsRound, let round = face.roundText {
                 Text(round)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            // An App Intent button cannot synchronously replace the widget's
+            // timeline. Mark only its meaningful changing values so WidgetKit
+            // acknowledges the tap immediately until the new entry arrives.
+            // This does NOT claim that pause/resume has already committed.
             digits
+                .invalidatableContent()
             bar
+                .invalidatableContent()
             if showsTitle {
                 Text(state.title)
                     .font(.caption)
@@ -527,6 +534,7 @@ private struct SpreadTimerView: View {
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
+            .invalidatableContent()
         }
     }
 
