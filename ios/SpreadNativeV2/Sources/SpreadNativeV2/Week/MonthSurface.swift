@@ -171,7 +171,8 @@ struct MonthSurface: View {
         .buttonStyle(.spreadPress)
         .modifier(CalendarMorph(id: "calendar-day-\(cell.iso)", namespace: morphNamespace))
         .accessibilityLabel("\(isToday ? "Today, " : "")\(inOpenWeek ? "Open week, " : "")\(label). \(count == 0 ? "No responsibilities scheduled." : "\(count) \(count == 1 ? "responsibility" : "responsibilities") scheduled.")")
-        .accessibilityAddTraits(isToday ? .isSelected : [])
+        // "Selected" means the week that is open (its hairline), not today: today is a filled disc and says "Today" in its label.
+        .accessibilityAddTraits(inOpenWeek ? .isSelected : [])
         .accessibilityIdentifier("month-day-\(cell.iso)")
     }
 }
