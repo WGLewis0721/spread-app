@@ -437,9 +437,9 @@ export const SpreadV4Social = () => {
   return (
     <AbsoluteFill style={{ background: C.paper, fontFamily: "Spread, Arial, sans-serif", overflow: "hidden" }}>
       <Base><div /></Base>
+      <Hook t={t} />
       <HeadLine t={t} a={0.1} b={1.8} tone="paper" lines={[[{ w: "Busy" }, { w: "all" }, { w: "week." }]]} />
       <HeadLine t={t} a={1.9} b={4.0} tone="paper" lines={[[{ w: "Still" }, { w: "no" }, { w: "room" }], [{ w: "for" }, { w: "what" }, { w: "matters.", em: true }]]} />
-      <Hook t={t} />
 
       <div style={{ position: "absolute", inset: 0, clipPath: `circle(${navyR}px at 540px 1200px)`, background: `radial-gradient(90% 55% at 50% 12%, ${NAVY2} 0%, #112342 45%, ${NAVY} 100%)` }}>
       </div>
