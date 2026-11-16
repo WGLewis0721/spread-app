@@ -82,9 +82,11 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   const capacity = request.targetCapacityHours ?? target.life?.capacityHours;
   if (capacity === undefined) return reject("Set the destination week's planning hours first.");
   if (!validHalfHours(capacity)) return reject("Destination weekly hours must be valid half-hour steps.");
+  // A weekly total the destination already has is the person's own decision for that week. Plan Ahead never
+  // raises or lowers it as a side effect; the entered total is only used when the week has none.
   if (target.life?.capacityHours !== undefined && request.targetCapacityHours !== undefined &&
-      request.targetCapacityHours < target.life.capacityHours)
-    return reject("Do not silently shrink the destination's weekly hours.");
+      request.targetCapacityHours !== target.life.capacityHours)
+    return reject("That week already has a weekly total. Open that week to change it, then plan ahead.");
   const targetAssigned = target.boxes.reduce((sum, box) => sum + box.hours, 0);
   if (targetAssigned + request.hours > capacity)
     return reject("Not enough free hours in the destination week.");

@@ -140,3 +140,24 @@ test("importance survives the current normalization and is optional in old task 
   assert.equal(normalized.weeks[key].boxes[0].tasks[0].important, true);
   assert.equal(normalized.weeks[key].boxes[0].tasks[1].important, undefined);
 });
+
+test("Plan Ahead never changes a weekly total the destination week already has", () => {
+  // The entered total is for a week that has none. Raising an existing total to make room would grow that
+  // week's capacity without the person deciding it there; lowering it is refused for the same reason.
+  const { data, roleId, toDay } = seed();
+  const first = planAheadTransfer(data, { roleId, toDay, hours: 1, targetCapacityHours: 40 });
+  assert.equal(first.preview.eligible, true, first.preview.reason);
+  for (const entered of [60, 39.5]) {
+    const result = planAheadTransfer(first.data, { roleId, toDay, hours: 1, targetCapacityHours: entered });
+    assert.equal(result.preview.eligible, false);
+    assert.match(result.preview.reason ?? "", /already has a weekly total/);
+    assert.equal(result.data, first.data, "a refused request returns the same data");
+    assert.equal(result.data.weeks[toDay].life?.capacityHours, 40);
+  }
+  // The same total, or none entered, still moves hours inside the existing total.
+  for (const entered of [40, undefined]) {
+    const result = planAheadTransfer(first.data, { roleId, toDay, hours: 1, targetCapacityHours: entered });
+    assert.equal(result.preview.eligible, true, result.preview.reason);
+    assert.equal(result.data.weeks[toDay].life?.capacityHours, 40);
+  }
+});

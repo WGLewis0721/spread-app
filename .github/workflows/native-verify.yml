@@ -1,0 +1,171 @@
+name: Native verify (no publish)
+
+# Release-candidate verification on a hosted Mac. It never signs, archives, uploads or distributes:
+# every xcodebuild call sets CODE_SIGNING_ALLOWED=NO and there is no App Store Connect credential here.
+# Codemagic remains the only signed build and upload lane (docs/IOS_RELEASE.md).
+#
+# It runs on demand, and on a pull request only while that pull request changes this file, so it does
+# not add a simulator build to ordinary pull requests.
+#
+# What it proves: the Swift packages' tests pass on macOS, the app and widget build for the iOS
+# Simulator, both privacy manifests are inside the built app, and the app launches. The simulator
+# journeys are reported but do not gate, because they were written before Life became the default
+# screen. None of this is physical-device acceptance.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/native-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VITE_SPREAD_CLOUD_BACKUP: "0"
+  VITE_SPREAD_CLOUD_SYNC: "0"
+  DERIVED: artifacts/DerivedData
+  APP: artifacts/DerivedData/Build/Products/Debug-iphonesimulator/App.app
+
+jobs:
+  swift-packages:
+    name: Swift package tests
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Test SpreadNativeV2
+        run: swift test --package-path ios/SpreadNativeV2
+      - name: Test SpreadCloudCore
+        if: ${{ !cancelled() }}
+        run: swift test --package-path ios/App/SpreadCloudCore
+
+  simulator-build:
+    name: Simulator build, privacy manifests, launch
+    runs-on: macos-26
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Bundle the planner and sync the Capacitor app
+        run: |
+          set -eu
+          npm run ios:sync
+          python3 scripts/app-store-preflight.py --bundle dist-ios
+
+      - name: Build the app and widget for the iOS Simulator (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$DERIVED" \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tee artifacts-build.log | grep -E "error:|warning: unable|BUILD (SUCCEEDED|FAILED)|\*\* " || true
+          grep -q "BUILD SUCCEEDED" artifacts-build.log
+
+      - name: Verify both privacy manifests and the device families in the built app
+        run: |
+          set -eu
+          WIDGET="$APP/PlugIns/SpreadWidget.appex"
+          test -d "$APP" || { echo "Missing $APP" >&2; exit 1; }
+          test -d "$WIDGET" || { echo "The widget extension is not embedded" >&2; exit 1; }
+          for manifest in "$APP/PrivacyInfo.xcprivacy" "$WIDGET/PrivacyInfo.xcprivacy"; do
+            test -f "$manifest" || { echo "Missing $manifest" >&2; exit 1; }
+            plutil -lint "$manifest"
+            echo "--- $manifest"
+            plutil -p "$manifest"
+          done
+          python3 - "$APP" "$WIDGET" <<'PY'
+          import plistlib, sys
+          def load(path):
+              with open(path, "rb") as stream:
+                  return plistlib.load(stream)
+          app, widget = sys.argv[1], sys.argv[2]
+          def reasons(bundle):
+              return {entry["NSPrivacyAccessedAPIType"]: set(entry["NSPrivacyAccessedAPITypeReasons"])
+                      for entry in load(bundle + "/PrivacyInfo.xcprivacy")["NSPrivacyAccessedAPITypes"]}
+          app_reasons, widget_reasons = reasons(app), reasons(widget)
+          assert {"CA92.1", "1C8F.1"} <= app_reasons["NSPrivacyAccessedAPICategoryUserDefaults"], app_reasons
+          assert "35F9.1" in app_reasons["NSPrivacyAccessedAPICategorySystemBootTime"], app_reasons
+          assert "1C8F.1" in widget_reasons["NSPrivacyAccessedAPICategoryUserDefaults"], widget_reasons
+          for bundle in (app, widget):
+              family = load(bundle + "/Info.plist").get("UIDeviceFamily")
+              assert family == [1, 2], f"{bundle}: UIDeviceFamily {family}, expected [1, 2]"
+          print("Privacy manifests embedded in the app and the widget; both declare iPhone and iPad.")
+          PY
+
+      - name: Boot a simulator, install and launch
+        id: launch
+        run: |
+          set -eu
+          UDID="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = [(runtime, d) for runtime, items in devices.items() if ".iOS-" in runtime
+                    for d in items if d["name"].startswith("iPhone") and d.get("isAvailable", True)]
+          phones.sort(key=lambda pair: ([int(n) for n in pair[0].split(".iOS-")[1].split("-")], "Pro" in pair[1]["name"]))
+          runtime, device = phones[-1]
+          sys.stderr.write("Using %s on %s\n" % (device["name"], runtime))
+          print(device["udid"])
+          ')"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" com.graymatter.spread
+          sleep 25
+          mkdir -p artifacts/screens
+          xcrun simctl io "$UDID" screenshot artifacts/screens/launch.png
+          # The app must still be running: a crash on launch would have ended the process.
+          xcrun simctl spawn "$UDID" launchctl list | grep -F "UIKitApplication:com.graymatter.spread" \
+            || { echo "Spread is not running 25 seconds after launch" >&2; exit 1; }
+
+      - name: Simulator journeys for Undo, carry-over, profiles and week navigation (reported, not gating)
+        if: ${{ steps.launch.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project ios/App/App.xcodeproj \
+            -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=${{ steps.launch.outputs.udid }}" \
+            -derivedDataPath "$DERIVED" \
+            -parallel-testing-enabled NO \
+            -resultBundlePath artifacts/journeys.xcresult \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testF05_CompleteAndUndo \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testF06_CrownWeeks \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testF09_CarryUnfinishedWork \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testF10_2_ProfilesAreIsolated \
+            -only-testing:SpreadNativeUITests/PlannerUITests/testFlow4_MonthPickDayReturnsToWeek \
+            -only-testing:SpreadNativeUITests/LifeUITests/testLifeDeleteThroughDetailsRestoresExactAreaWithUndo \
+            -only-testing:SpreadNativeUITests/LifeUITests/testLifeWeekToggleAndCalendarNavigatorAreReachable \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee artifacts-journeys.log \
+            | grep -E "Test Case .* (passed|failed)|error:|Executed [0-9]+ tests|\*\* TEST" || true
+          grep -q "TEST SUCCEEDED" artifacts-journeys.log
+
+      - name: Keep the logs and the launch screenshot
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-verify
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            artifacts-build.log
+            artifacts-journeys.log
+            artifacts/screens

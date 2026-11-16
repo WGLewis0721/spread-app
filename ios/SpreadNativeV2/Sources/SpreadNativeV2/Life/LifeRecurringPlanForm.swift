@@ -402,7 +402,7 @@ struct LifeRecurringPlanForm: View {
                 }
                 Button("Cancel", role: .cancel) { stopCandidate = nil }
             } message: {
-                Text("Existing tasks and customized weeks are preserved. You can undo the change.")
+                Text("Weeks you changed by hand keep their hours and tasks, so their time stays in your plan until you change it. Untouched future weeks go back to the usual hours. You can undo this.")
             }
     }
     /// A stable fingerprint of a request, so the form can tell whether a change altered what would be saved.

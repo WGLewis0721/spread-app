@@ -124,7 +124,7 @@ struct LifePlanAheadSheet: View {
                                 TextField("Target weekly hours (if not set)", text: $targetCapacityText)
                                     .keyboardType(.decimalPad)
                                     .accessibilityIdentifier("plan-ahead-target-capacity")
-                                Text("Enter the destination week's total hours if it has not been set. Existing budgets are preserved.")
+                                Text("Enter the destination week's total hours only if that week has none. A total it already has is never changed here.")
                                     .font(.caption).foregroundStyle(Spread.secondary)
                             } header: { Text("To a future week") }
 

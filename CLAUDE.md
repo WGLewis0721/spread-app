@@ -3,12 +3,12 @@
 For **native Life card visuals**, start with [the editorial artwork handoff](docs/design/planner/CLAUDE_EDITORIAL_ART_HANDOFF.md), the [art sheet](docs/design/planner/SPREAD_LIFE_CARD_ART_DIRECTION.md), and the [implementation spec](docs/design/specs/2026-11-10-life-card-visual-implementation.md). The single, authoritative **image folder** is `ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/Editorial/`; `LifeEditorialArtworkRegistry` in `LifeEditorialCard.swift` loads `<category>.webp` or PNG, falling back to original `Resources/Chalk/`. Native SwiftUI paints names, live hours and the seven-day strip **over text-free artwork**; do not embed numbers, text or interface controls in image files. Keep category artwork, wallet gestures, haptics and planner data independent. Read the [design router](docs/design/README.md), [native board](docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md), [motion contract](docs/design/tactile-precision/MOTION_CONTRACT.md) and [iOS audit](docs/design/platforms/IOS27_BEHAVIOR_AUDIT.md). The generated rules block below comes from `docs/design/RULES_CARD.md`; do not edit it here. Project rules: [AGENTS.project.md](AGENTS.project.md). AI setup: [docs/design/AI_TOOL_SETUP.md](docs/design/AI_TOOL_SETUP.md).
 
 <!-- design-rules-card:start -->
-**Start here:** `docs/design/README.md` (router). Plans and specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens as data: `docs/design/tokens.json`. Read the task pack the router names, then only the section it points to.
+**Start here:** `docs/design/README.md` (router). Specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens: `docs/design/tokens.json`. Read the task pack it names, then only the section it points to.
 
 **Two products.** (1) The native iOS app in SwiftUI, iPhone-first, built for iPhone and iPad (family `1,2`), no Android; Codemagic builds `main` to TestFlight on demand. (2) The marketing website: promo, one-page walkthrough, App Store link. The React web planner, beta sign-up, iCloud, multiplayer and waitlist are suspended (snapshot: branch `parked/web-cloud-2026-11-11`). Changes under 50 lines need no spec; implement and test.
 
 **Look**
-- In **React**, use existing CSS tokens. **Native SwiftUI** follows `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` for solid navy/cream, editorial Life art, accessible controls and calendar-week navigation. No doodles, Liquid Glass, or metal Crown.
+- In **React**, use existing CSS tokens. **Native SwiftUI** follows `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` for solid navy/cream, editorial Life art, accessible controls and calendar-week navigation. No doodles or metal Crown; Liquid Glass only on the floating dock.
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week: day cards, expandable task inbox and Free time chips.
