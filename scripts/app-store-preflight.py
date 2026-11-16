@@ -87,6 +87,7 @@ class Checks:
                 for entry in categories
             )
             self.check("Required-reason declarations", valid, "Each declared API requires a reason")
+        self.required_reasons(root, privacy)
         self.release_notes(root)
         self.device_family(root)
         self.plist(self.file(root, "ios/App/SpreadWidget/Info.plist"), "Widget Info.plist")
@@ -107,6 +108,59 @@ class Checks:
             self.check("Native entry", "<WeekScreen />" in app, "Installed app opens straight into the planner")
         else:
             self.check("Native entry source", False, "Missing native, store, or app source")
+
+    # Required-reason APIs the native code is known to call, and the reason each needs.
+    # A manifest that omits one draws Apple's ITMS-91053 warning on upload.
+    REASON_APIS = (
+        (r"\bUserDefaults\b", "NSPrivacyAccessedAPICategoryUserDefaults", None),
+        (r"UserDefaults\(suiteName", "NSPrivacyAccessedAPICategoryUserDefaults", "1C8F.1"),
+        (r"\bsystemUptime\b", "NSPrivacyAccessedAPICategorySystemBootTime", None),
+    )
+
+    def undeclared_reasons(self, privacy, sources):
+        """Names of required-reason APIs used in `sources` that `privacy` does not declare."""
+        declared = {}
+        for entry in (privacy or {}).get("NSPrivacyAccessedAPITypes") or []:
+            if isinstance(entry, dict):
+                declared.setdefault(entry.get("NSPrivacyAccessedAPIType"), set()).update(
+                    reason for reason in entry.get("NSPrivacyAccessedAPITypeReasons") or []
+                    if isinstance(reason, str))
+        missing = []
+        for pattern, category, reason in self.REASON_APIS:
+            if not any(re.search(pattern, text) for text in sources):
+                continue
+            if category not in declared or (reason and reason not in declared[category]):
+                missing.append(f"{category}{' ' + reason if reason else ''}")
+        return missing
+
+    def required_reasons(self, root, app_privacy):
+        """The app and the widget extension each ship their own manifest for the APIs they call."""
+        def swift(*folders):
+            return [path.read_text(encoding="utf-8", errors="replace")
+                    for folder in folders for path in sorted((root / folder).rglob("*.swift"))]
+        if app_privacy is not None:
+            missing = self.undeclared_reasons(
+                app_privacy, swift("ios/App/App", "ios/SpreadNativeV2/Sources"))
+            self.check("App required-reason coverage", not missing,
+                       "Undeclared: " + ", ".join(missing) if missing
+                       else "Every required-reason API the app calls is declared")
+        widget = self.plist(self.file(root, "ios/App/SpreadWidget/PrivacyInfo.xcprivacy"),
+                            "Widget PrivacyInfo.xcprivacy")
+        if widget is None:
+            return
+        project = self.file(root, "ios/App/App.xcodeproj/project.pbxproj") or b""
+        resources = re.search(rb"/\* Widget resources \*/ = \{[^\n]*", project)
+        file_ids = re.findall(
+            rb"(\w+) /\* [^*]* \*/ = \{ isa = PBXFileReference;[^\n]*path = PrivacyInfo\.xcprivacy;", project)
+        build_ids = [build for build, ref in re.findall(
+            rb"(\w+) /\* [^*]* \*/ = \{ ?isa = PBXBuildFile; fileRef = (\w+)", project) if ref in file_ids]
+        embedded = bool(resources) and any(build in resources.group(0) for build in build_ids)
+        missing = self.undeclared_reasons(widget, swift("ios/App/SpreadWidget"))
+        self.check("Widget privacy manifest", embedded and not missing
+                   and widget.get("NSPrivacyTracking") is False,
+                   "Undeclared: " + ", ".join(missing) if missing
+                   else "The widget extension embeds its own manifest" if embedded
+                   else "PrivacyInfo.xcprivacy must be in the widget target's resources")
 
     def release_notes(self, root):
         """Ensure the version shipping from Xcode has a current, valid offline update note."""
@@ -223,6 +277,13 @@ class Checks:
                 privacy = self.plist(archive.read(manifest), "IPA privacy manifest") if manifest in names else None
                 self.check("IPA privacy manifest", privacy is not None,
                            "App-level privacy manifest must be embedded")
+                widget = root + "PlugIns/SpreadWidget.appex/"
+                if any(name.startswith(widget) for name in names):
+                    embedded = widget + "PrivacyInfo.xcprivacy"
+                    parsed = (self.plist(archive.read(embedded), "IPA widget privacy manifest")
+                              if embedded in names else None)
+                    self.check("IPA widget privacy manifest", parsed is not None,
+                               "The widget extension must embed its own privacy manifest")
         except (OSError, BadZipFile, KeyError) as error:
             self.check("IPA readable", False, str(error))
 

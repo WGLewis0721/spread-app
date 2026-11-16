@@ -38,11 +38,11 @@ This feature adds no accounts, analytics, remote polling, or planner writes.
 | Display name | Spread |
 | Version / build | 1.0 / 1 (raise the build number for every upload) |
 | Devices | iPhone and iPad (`TARGETED_DEVICE_FAMILY = "1,2"`). Build #73 was rejected by Apple (90101) after the iPhone-only change in PR #223; restored to the accepted build #72 device-family contract. iPhone-first UI; iPad compatibility requires device QA. |
-| Minimum iOS | 15.0 today. Target for 1.0: 17.0 (`CKSyncEngine`) |
+| Minimum iOS | 17.0 in every target (`IPHONEOS_DEPLOYMENT_TARGET`) |
 | Signing | Automatic, no team set in the repo (you choose it in Xcode) |
 | Encryption | `ITSAppUsesNonExemptEncryption = NO` (HTTPS and OS crypto only) |
 | App icon | `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`, from `public/icons/app-icon-spread-cards-square.svg` |
-| Privacy manifest | `ios/App/App/PrivacyInfo.xcprivacy` (no tracking, no collected data) |
+| Privacy manifest | App: `ios/App/App/PrivacyInfo.xcprivacy`. Widget extension: `ios/App/SpreadWidget/PrivacyInfo.xcprivacy`. No tracking, no collected data. Required-reason APIs: UserDefaults (`CA92.1`, app-group `1C8F.1`), file timestamp (`C617.1`), system boot time (`35F9.1`). The source preflight fails when native code calls one of these without declaring it. |
 
 ## What the installed app does differently from the website
 
