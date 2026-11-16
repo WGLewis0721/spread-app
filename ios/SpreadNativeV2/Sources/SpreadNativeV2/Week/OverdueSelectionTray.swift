@@ -46,7 +46,7 @@ struct OverdueSelectionTray: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                 .accessibilityFocused($messageFocused)
                 .accessibilityIdentifier("overdue-message")
             }
