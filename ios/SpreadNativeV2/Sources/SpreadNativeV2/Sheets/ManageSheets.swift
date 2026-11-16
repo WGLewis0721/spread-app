@@ -67,7 +67,7 @@ struct NewSpreadSheet: View {
                 }
                 .padding(Spread.space5)
             }
-            .navigationTitle"Add Life"
+            .navigationTitle("Add Life")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // Creating drafts discards them on Cancel, so the leading control is Cancel, not Close.
@@ -178,7 +178,7 @@ struct RoleSheet: View {
         SpreadSheetStack {
             if let snapshot = planner.snapshot, let role {
                 Form {
-                    Section"Life area" {
+                    Section("Life area") {
                         TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"))
                             .submitLabel(.done)
                             .onSubmit { rename(role) }
@@ -254,12 +254,12 @@ struct RoleSheet: View {
                         Button("Remove Life area", role: .destructive) { confirmRemoval = true }
                         .accessibilityIdentifier("delete-role-button")
                     } footer: {
-                        Text"The hours and tasks for this Life area leave every week."
+                        Text("The hours and tasks for this Life area leave every week.")
                     }
                         .listRowBackground(Spread.elevated)
                 }
                     .spreadListSurface()
-                .navigationTitle"Life area"
+                .navigationTitle("Life area")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
@@ -286,7 +286,7 @@ struct RoleSheet: View {
             .accessibilityIdentifier("confirm-delete-role")
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text"The hours and tasks for this Life area leave every week."
+            Text("The hours and tasks for this Life area leave every week.")
         }
     }
 
