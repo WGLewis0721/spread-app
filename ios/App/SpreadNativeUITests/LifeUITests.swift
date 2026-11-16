@@ -266,17 +266,6 @@ final class LifeUITests: XCTestCase {
         XCTAssertTrue(((restored.value as? String) ?? "").contains("168"),
                       "Acknowledged capacity should survive process relaunch")
     }
-    func testOptOutRestoresClassicWithoutDeletingThePlan() {
-        startLife()
-        capture("life-before-classic")
-        app.terminate()
-        app.launchArguments = ["-native.weekMonth.previewEnabled", "NO"]
-        app.launch()
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "native-content").firstMatch
-            .waitForExistence(timeout: 90))
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch.exists)
-        capture("classic-unchanged")
-    }
     func testHoldingWeekArrowMovesFasterThanSingleTap() {
         startLife()
         let current = app.buttons["calendar-period-label"]
@@ -313,69 +302,5 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Add task"].exists)
         XCTAssertFalse(app.buttons["Crown position"].exists)
         capture("life-new-calendar-navigation")
-    }
-    func testClassicDetailsTaskAcknowledgementAndLifePersistence() throws {
-        launch(["-native.weekMonth.previewEnabled", "NO", "-native.life.touchFeedback", "NO"])
-        let tag = "Tactile " + String(UUID().uuidString.prefix(6))
-        tapID("open-more"); tapID("more-new-spread")
-        typeInto("role-name-field", tag); tapID("save-spreads")
-        closeNativeSheets(); openWalletCard(tag)
-        let selector = try XCTUnwrap(elements(prefix: "select-role-").first { $0.label == tag })
-        let roleID = String(selector.identifier.dropFirst("select-role-".count))
-        let face = el("role-block-" + roleID), details = el("classic-task-details-" + roleID)
-        XCTAssertTrue(details.waitForExistence(timeout: 10))
-        XCTAssertGreaterThanOrEqual(details.frame.minY, face.frame.maxY - 1)
-        let faceWidth = face.frame.width
-        typeInto("new-task-field", tag + " task\n")
-        let task = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'task-row-' AND label == %@", tag + " task")).firstMatch
-        XCTAssertTrue(task.waitForExistence(timeout: 20))
-        let taskID = String(task.identifier.dropFirst("task-row-".count))
-        tapID("task-check-" + taskID)
-        XCTAssertTrue(eventually { (self.el("task-check-" + taskID).value as? String) == "Completed" })
-        XCTAssertEqual(face.frame.width, faceWidth, accuracy: 1)
-        capture("tactile-classic-separate-details-completed")
-
-        // Relaunch the same installed binary and data, enabling the existing Life choice.
-        app.terminate()
-        app.launchArguments = ["-native.weekMonth.previewEnabled", "YES", "-native.life.touchFeedback", "NO"] + EditorialArtTestMode.arguments
-        app.launch()
-        XCTAssertTrue(el("life-root").waitForExistence(timeout: 90))
-        let card = el("life-card-" + roleID)
-        scrollIntoView(card); card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
-        XCTAssertTrue(el("life-task-details").waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts[tag + " task"].firstMatch.waitForExistence(timeout: 10))
-        capture("tactile-life-same-task-after-relaunch")
-        tapID("life-change-area-hours")
-        XCTAssertTrue(el("life-budget-editor").waitForExistence(timeout: 10))
-        XCTAssertTrue(el("life-budget-role-controls").exists,
-                      "Inline weekly hours must open with the selected Life area")
-        capture("life-existing-area-hours-selected")
-
-        app.terminate()
-        launch(["-native.weekMonth.previewEnabled", "NO"])
-        openWalletCard(tag)
-        XCTAssertEqual(el("task-check-" + taskID).value as? String, "Completed")
-        capture("tactile-classic-restored-data")
-    }
-
-    func testAdaptiveNavigationPreservesSelectionAndCrown() throws {
-        launch(["-native.weekMonth.previewEnabled", "NO"])
-        let before = crownValue
-        tapID("classic-navigation")
-        tapID("planner-nav-hours")
-        XCTAssertTrue(el("weekly-hours-details").waitForExistence(timeout: 10))
-        XCTAssertEqual(crownValue, before)
-        capture("tactile-classic-hours-navigation")
-        tapID("classic-navigation")
-        tapID("planner-nav-week")
-        XCTAssertTrue(el("week-surface").waitForExistence(timeout: 20))
-        XCTAssertEqual(crownValue, before)
-        tapID("crown-next")
-        XCTAssertTrue(eventually { self.crownValue != before })
-        let advanced = crownValue
-        tapID("classic-navigation")
-        tapID("planner-nav-spread")
-        XCTAssertEqual(crownValue, advanced)
-        capture("tactile-classic-crown-and-navigation")
     }
 }

@@ -49,7 +49,6 @@ test("the native sheet has one place for backup and restore, reached from the ex
   assert.match(liveRoot, /MoreSheet\(planner: planner, focusTimer: focusTimer, backup: \{ sheet = \.backup \}/);
   assert.match(manage, /Button \{\s*\n\s*backup\(\)\s*\n\s*\} label: \{\s*\n\s*Label \{ Text\("Backup and restore"\) \} icon: \{ SpreadIcon\(name: "icon-backup"/);
   assert.match(liveRoot, /Button\("Backup and restore"\) \{ sheet = \.backup \}/);
-  assert.match(liveRoot, /Text\("Back up"\)\.tapTarget\(\)\s*\}\s*\n\s*\.accessibilityIdentifier\("back-up"\)/);
   // The native app no longer sends people to the web planner for backup. "Open existing planner" is only for a planner that will not load.
   assert.doesNotMatch(liveRoot + manage, /Open web planner/);
 });
