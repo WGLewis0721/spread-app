@@ -137,7 +137,13 @@ public struct SpreadLiveRoot: View {
         }
         .task(id: planner.snapshot != nil) {
             // Show only when the real planner is ready, not over its launch screen.
-            guard planner.snapshot != nil, sheet == nil, whatsNew == nil else { return }
+            guard let snapshot = planner.snapshot, sheet == nil, whatsNew == nil else { return }
+            // A brand-new plan has nothing to catch up on. Its first launch marks the current notes as seen, so
+            // What's New waits for the next update rather than covering the empty plan.
+            if lastSeenReleaseID.isEmpty, snapshot.roles.isEmpty {
+                lastSeenReleaseID = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion)?.id ?? ""
+                return
+            }
             let unseen = SpreadReleaseNotes.unseen(
                 for: SpreadReleaseNotes.appVersion, lastSeenID: lastSeenReleaseID)
             // One assignment: the item carries the notes, so the sheet cannot open with an empty list.
