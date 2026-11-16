@@ -87,7 +87,7 @@ struct NewSpreadSheet: View {
     /// colour as soon as it is picked.
     private func draftCard(_ index: Int) -> some View {
         let draft = drafts[index]
-        let colorHex: String = draft.category.flatMap { PalettePanel.categoryColors[$0] } ?? "#8E8E93"
+        let colorHex: String = draft.category.flatMap { PalettePanel.categoryColors[$0] } ?? Spread.roleFallbackHex
         let tint = Color(hex: colorHex)
         return VStack(alignment: .leading, spacing: Spread.space3) {
             HStack(spacing: Spread.space3) {
@@ -116,7 +116,7 @@ struct NewSpreadSheet: View {
                 ForEach(PalettePanel.categories, id: \.id) { item in
                     let selected = draft.category == item.id
                     Button { drafts[index].category = item.id } label: {
-                        RoleBadge(category: item.id, color: PalettePanel.categoryColors[item.id] ?? "#8E8E93", size: 36)
+                        RoleBadge(category: item.id, color: PalettePanel.categoryColors[item.id] ?? Spread.roleFallbackHex, size: 36)
                             .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                             .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(Spread.ink, lineWidth: selected ? 2 : 0).frame(width: Spread.minimumTarget, height: Spread.minimumTarget))
                             .contentShape(Rectangle())

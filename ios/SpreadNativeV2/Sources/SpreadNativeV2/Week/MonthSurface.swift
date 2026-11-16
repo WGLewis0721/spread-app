@@ -160,13 +160,13 @@ struct MonthSurface: View {
             }
             .frame(maxWidth: .infinity, minHeight: 56)
             .padding(.vertical, 4)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Spread.elevated))
+            .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
             // The open week's seven days carry a blue hairline, so the way Week sits inside Month stays visible.
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous)
                     .strokeBorder(inOpenWeek ? Spread.accent.opacity(0.75) : Spread.line, lineWidth: inOpenWeek ? 1.5 : 0.5)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous))
         }
         .buttonStyle(.spreadPress)
         .modifier(CalendarMorph(id: "calendar-day-\(cell.iso)", namespace: morphNamespace))

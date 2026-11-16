@@ -109,7 +109,7 @@ struct BackupRestoreSheet: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Spread.elevated))
+        .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
         .accessibilityElement(children: .combine)
     }
 
@@ -235,7 +235,7 @@ struct BackupRestoreSheet: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
-                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Spread.elevated))
+                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
                         .accessibilityElement(children: .combine)
                     }
                 }
