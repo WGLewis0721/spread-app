@@ -3,14 +3,16 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Spread";
+const SITE_DESCRIPTION =
+  "A weekly planner that starts with time. Name your responsibilities, give each one hours, then plan real days. Your planning stays on your device.";
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" },
-      { title: APP_NAME },
-      { name: "description", content: "Be Spread out, not Spread too thin" },
+      { title: `${APP_NAME} · A little more room for what matters` },
+      { name: "description", content: SITE_DESCRIPTION },
       { name: "theme-color", content: "#000000" },
     ],
     links: [

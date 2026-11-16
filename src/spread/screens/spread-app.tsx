@@ -165,7 +165,8 @@ function UnlockScreen() {
   }
 
   return (
-    <main className="spread-site min-h-dvh" data-site-theme={dark ? "dark" : "light"}>
+    <main id="main" className="spread-site min-h-dvh" data-site-theme={dark ? "dark" : "light"}>
+      <a className="site-skip" href="#top">Skip to content</a>
       <nav className="site-nav" aria-label="Main navigation">
         <a className="site-brand" href="#top" aria-label="Spread home">
           <BrandMark size={36} />
@@ -182,7 +183,7 @@ function UnlockScreen() {
         </div>
       </nav>
 
-      <section id="top" className="site-hero">
+      <section id="top" tabIndex={-1} className="site-hero">
         <div className="site-hero-copy">
           <p className="site-kicker">A weekly planner for real life</p>
           <h1><span className="site-line"><span>A little more room</span></span><span className="site-line"><span>for <em>what matters.</em></span></span></h1>
@@ -254,7 +255,7 @@ function UnlockScreen() {
         </div>
       </section>
 
-      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><a href="https://thespreadapp.com/privacy.html">Privacy policy</a><span>Made by Gray Matter</span></footer>
+      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><a href="/privacy.html">Privacy policy</a><a href="mailto:graymattertechllc@gmail.com">Support</a><span>Made by Gray Matter</span></footer>
     </main>
   );
 }
