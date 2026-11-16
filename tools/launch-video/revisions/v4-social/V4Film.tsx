@@ -143,7 +143,7 @@ const Hook = ({ t }: { t: number }) => {
         const p = clamp((t - t0) / 0.6);
         const fall = 1 - back(p);
         return (
-          <div key={lb} style={{ position: "absolute", left: 0, top: 0, padding: "22px 34px", background: C.sheet, borderRadius: 24, fontSize: 40, fontWeight: 540, letterSpacing: -1, color: C.ink, display: "flex", gap: 18, alignItems: "center", whiteSpace: "nowrap", boxShadow: "0 2px 0 rgba(0,0,0,.04),0 18px 36px -12px rgba(60,40,10,.35),0 0 0 1px rgba(60,40,10,.07)", opacity: p > 0 ? 1 : 0, transform: `translate(${x}px,${y + 90 - fall * 1100}px) rotate(${rot}deg)` }}>
+          <div key={lb} style={{ position: "absolute", left: 0, top: 0, padding: "22px 34px", background: C.sheet, borderRadius: 24, fontSize: 40, fontWeight: 540, letterSpacing: -1, color: C.ink, display: "flex", gap: 18, alignItems: "center", whiteSpace: "nowrap", boxShadow: "0 2px 0 rgba(0,0,0,.04),0 18px 36px -12px rgba(60,40,10,.35),0 0 0 1px rgba(60,40,10,.07)", opacity: clamp(p * 5), transform: `translate(${x}px,${y + 90 - fall * 360}px) rotate(${rot}deg)` }}>
             <span style={{ width: 18, height: 18, borderRadius: 9, background: col }} />{lb}
           </div>
         );
