@@ -97,7 +97,8 @@ struct WhatsNewSheet: View {
                     Text(String(format: "%02d", index + 1))
                         .font(.caption.monospacedDigit().weight(.semibold))
                         .foregroundStyle(Spread.accent)
-                        .frame(width: 28, alignment: .leading)
+                        // A minimum, not a fixed width, so the number keeps room at larger text sizes.
+                        .frame(minWidth: 28, alignment: .leading)
                         .accessibilityHidden(true)
                     Text(change)
                         .font(.body)
