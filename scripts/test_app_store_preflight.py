@@ -247,6 +247,46 @@ class PreflightTests(unittest.TestCase):
             checks.required_reasons(copy, None)
             self.assertFalse(checks.items[-1][1], "A missing widget manifest fails closed")
 
+    def test_signed_ipa_checks_actual_widget_manifest_not_post_archive_project(self):
+        root = Path(__file__).resolve().parent.parent
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = Path(tmp)
+            for relative in ("ios/App/SpreadWidget/PrivacyInfo.xcprivacy",
+                             "ios/App/App.xcodeproj/project.pbxproj"):
+                (copy / relative).parent.mkdir(parents=True, exist_ok=True)
+                (copy / relative).write_bytes((root / relative).read_bytes())
+            project = copy / "ios/App/App.xcodeproj/project.pbxproj"
+            project.write_text(project.read_text(encoding="utf-8").replace(
+                " FACA00000000000000000035,);", ");"), encoding="utf-8")
+
+            source = preflight.Checks()
+            source.required_reasons(copy, None)
+            self.assertFalse(source.items[-1][1], "Source check must still catch missing target membership")
+
+            signed = preflight.Checks()
+            signed.required_reasons(copy, None, verify_widget_source_resources=False)
+            self.assertTrue(signed.items[-1][1], "IPA mode must not depend on the post-archive project")
+
+            ipa = copy / "App.ipa"
+            for with_manifest in (False, True):
+                with self.subTest(with_manifest=with_manifest):
+                    with ZipFile(ipa, "w") as archive:
+                        archive.writestr("Payload/App.app/Info.plist", plistlib.dumps({
+                            "CFBundleIdentifier": "com.graymatter.spread",
+                            "CFBundleVersion": "14", "CFBundleShortVersionString": "1.0",
+                            "ITSAppUsesNonExemptEncryption": False, "UIDeviceFamily": [1, 2]}))
+                        archive.writestr("Payload/App.app/PrivacyInfo.xcprivacy",
+                                         plistlib.dumps({"NSPrivacyTracking": False}))
+                        archive.writestr("Payload/App.app/PlugIns/SpreadWidget.appex/Info.plist",
+                                         plistlib.dumps({"CFBundleIdentifier": "com.graymatter.spread.widget"}))
+                        if with_manifest:
+                            archive.writestr("Payload/App.app/PlugIns/SpreadWidget.appex/PrivacyInfo.xcprivacy",
+                                             (copy / "ios/App/SpreadWidget/PrivacyInfo.xcprivacy").read_bytes())
+                    result = preflight.Checks()
+                    result.ipa(ipa)
+                    self.assertEqual({name: ok for name, ok, _ in result.items}[
+                        "IPA widget privacy manifest"], with_manifest)
+
     def test_release_notes_are_valid_and_version_matched(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
