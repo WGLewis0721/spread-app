@@ -100,7 +100,7 @@ struct LifeWeekReviewSheet: View {
                     .foregroundStyle(Spread.accent)
                 Spacer(minLength: 48)
                 Text("A week of your life.")
-                    .font(.system(.largeTitle, weight: .bold, design: .rounded))
+                    .font(.system(.largeTitle, design: .rounded).weight(.bold))
                     .foregroundStyle(Spread.ink)
                 Text("The time you planned, the priorities you chose, and the things you finished.")
                     .font(Spread.body).foregroundStyle(Spread.secondary)
@@ -716,7 +716,7 @@ struct LifeJourneySheet: View {
     private func numberTile(_ value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: Spread.space2) {
             Text(value)
-                .font(.system(.largeTitle, weight: .bold, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded).weight(.bold))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
