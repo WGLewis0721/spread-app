@@ -17,6 +17,19 @@ final class LifeUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch
             .waitForExistence(timeout: 90), "The opted-in native Life root did not load.")
+        if !showWhatsNew {
+            let done = app.buttons["whats-new-done"]
+            if done.waitForExistence(timeout: 4) { done.tap() }
+            waitUntilHittable(app.buttons["life-more"])
+        }
+    }
+
+    private func waitUntilHittable(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            element.exists && element.isHittable
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 12), .completed,
+                       "Control did not become tappable: \(element)", file: file, line: line)
     }
 
     private func navigate(_ page: String) {
@@ -38,6 +51,90 @@ final class LifeUITests: XCTestCase {
         attachment.name = title
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    func testAuditPlannerScreens() {
+        startLife()
+        let week = app.buttons["life-nav-week"]
+        waitUntilHittable(week)
+        week.tap()
+        let planner = app.buttons["life-plan-ahead-open"]
+        waitUntilHittable(planner)
+        capture("audit-week")
+        planner.tap()
+        XCTAssertTrue(app.navigationBars["Planner"].waitForExistence(timeout: 10))
+        capture("audit-planner")
+    }
+
+    func testAuditMoreScreens() {
+        startLife()
+        app.buttons["life-more"].tap()
+        let destinations = [
+            ("more-week-in-review", "Week in Review", "week-in-review"),
+            ("more-week-ahead", "Week Ahead", "week-ahead"),
+            ("more-your-journey", "Your Journey", "your-journey")
+        ]
+        for (id, title, file) in destinations {
+            let entry = app.buttons[id]
+            waitUntilHittable(entry)
+            if id == "more-week-in-review" { capture("audit-more") }
+            entry.tap()
+            let sheet = app.navigationBars[title]
+            XCTAssertTrue(sheet.waitForExistence(timeout: 10))
+            capture("audit-" + file)
+            if id == "more-week-ahead" {
+                let next = app.buttons["week-ahead-review-role"]
+                for _ in 0..<12 where next.exists { next.tap() }
+                if app.staticTexts["Week reviewed"].exists { capture("audit-week-ahead-complete") }
+            }
+            sheet.buttons["Done"].tap()
+        }
+    }
+
+    func testAuditQuickStart() {
+        startLife()
+        let addLife = app.buttons["life-new-area"]
+        let window = app.windows.firstMatch
+        // A button behind the floating dock can still report isHittable.
+        // Scroll down the middle of Life and clear the dock before tapping.
+        let dockTop = window.frame.maxY - 116
+        for _ in 0..<4 {
+            if addLife.isHittable && addLife.frame.maxY < dockTop { break }
+            window.coordinate(withNormalizedOffset: CGVector(dx: 0.53, dy: 0.77))
+                .press(forDuration: 0.05, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.53, dy: 0.44)))
+        }
+        XCTAssertTrue(addLife.isHittable && addLife.frame.midY < dockTop, "Add Life is behind the dock")
+        capture("audit-add-life-entry")
+        addLife.tap()
+        XCTAssertTrue(app.navigationBars["Add Life"].waitForExistence(timeout: 10))
+        capture("audit-add-life-quick-start")
+        for category in ["work", "home", "family", "health", "personal"] {
+            let preset = app.buttons["quick-life-" + category]
+            waitUntilHittable(preset)
+            preset.tap()
+        }
+        capture("audit-add-life-five-drafts")
+    }
+
+    func testAuditCardIntention() {
+        startLife()
+        let setup = app.buttons["life-card-setup-health"]
+        for _ in 0..<4 where !setup.isHittable { app.swipeUp() }
+        waitUntilHittable(setup)
+        capture("audit-life-card-setup")
+        setup.tap()
+        let editor = app.navigationBars["Details"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 10))
+        let intention = app.descendants(matching: .any).matching(identifier: "role-intention-field").firstMatch
+        waitUntilHittable(intention)
+        capture("audit-life-intention-editor")
+        intention.tap()
+        intention.typeText("Take a walk before the day gets busy.")
+        editor.buttons["Save"].tap()
+        let card = app.descendants(matching: .any).matching(identifier: "life-card-health").firstMatch
+        waitUntilHittable(card)
+        XCTAssertTrue(card.label.contains("Take a walk before the day gets busy."))
+        capture("audit-life-card-intention")
     }
 
     func testWhatsNewAppearsOnUpdateAndCanBeReopenedFromMore() {
