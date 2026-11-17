@@ -66,6 +66,11 @@ enum SpreadFocusLiveActivityController {
             end()
             return
         }
+        // Another profile's stretch never stays on the island, whatever its phase.
+        guard SpreadFocusStore.visibleOnIsland(session) else {
+            end()
+            return
+        }
         update(session)
     }
 
@@ -81,6 +86,7 @@ enum SpreadFocusLiveActivityController {
         // Read the latest shared session after any earlier ActivityKit operation.
         // A delayed update must never resurrect or overwrite a newer focus stretch.
         guard let session = SpreadFocusStore.load(), session.id == requested.id,
+              SpreadFocusStore.visibleOnIsland(session),
               SpreadFocusPreferences.liveActivityEnabled() else { return }
 
         let all = Activity<SpreadFocusActivityAttributes>.activities
@@ -88,6 +94,7 @@ enum SpreadFocusLiveActivityController {
             await old.end(nil, dismissalPolicy: .immediate)
         }
         guard let current = SpreadFocusStore.load(), current.id == requested.id,
+              SpreadFocusStore.visibleOnIsland(current),
               SpreadFocusPreferences.liveActivityEnabled() else { return }
 
         let matching = Activity<SpreadFocusActivityAttributes>.activities

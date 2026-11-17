@@ -43,7 +43,11 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   const targetWeek = validDay(request.toDay) ? weekKey(parseKey(request.toDay)) : "";
   const initialSource = data.weeks[sourceWeek];
   const sourceBox = initialSource?.boxes.find((box) => box.hatId === request.roleId);
-  const targetExisting = data.weeks[targetWeek];
+  // The destination as the transfer will write it. A future week nobody has opened yet takes the hours and
+  // Life total its recurring plans give it, so the preview shows those rather than the role's default.
+  const targetExisting = validDay(request.toDay) && targetWeek > sourceWeek
+    ? ensureWeek({ ...data, currentWeek: targetWeek }).weeks[targetWeek]
+    : data.weeks[targetWeek];
   const targetBefore = targetExisting?.boxes.find((box) => box.hatId === request.roleId)?.hours
     ?? data.hats.find((hat) => hat.id === request.roleId)?.defaultHours ?? 0;
   const sourceBefore = sourceBox?.hours ?? 0;
@@ -78,9 +82,11 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   const capacity = request.targetCapacityHours ?? target.life?.capacityHours;
   if (capacity === undefined) return reject("Set the destination week's planning hours first.");
   if (!validHalfHours(capacity)) return reject("Destination weekly hours must be valid half-hour steps.");
+  // A weekly total the destination already has is the person's own decision for that week. Plan Ahead never
+  // raises or lowers it as a side effect; the entered total is only used when the week has none.
   if (target.life?.capacityHours !== undefined && request.targetCapacityHours !== undefined &&
-      request.targetCapacityHours < target.life.capacityHours)
-    return reject("Do not silently shrink the destination's weekly hours.");
+      request.targetCapacityHours !== target.life.capacityHours)
+    return reject("That week already has a weekly total. Open that week to change it, then plan ahead.");
   const targetAssigned = target.boxes.reduce((sum, box) => sum + box.hours, 0);
   if (targetAssigned + request.hours > capacity)
     return reject("Not enough free hours in the destination week.");
@@ -150,6 +156,10 @@ export function planAheadTransfer(data: SpreadData, request: PlanAheadRequest): 
   } : box);
   const nextSource: WeekData = {
     ...source, boxes: sourceBoxes, allocations: sourceAllocations,
+    // Without a Life record, reload reads a budget equal to the hours already placed as a legacy bank and restores
+    // the role's default, silently undoing this move. A record with no capacity marks the week as Life-managed
+    // without inventing a weekly total.
+    ...(source.life ? {} : { life: { version: 1 as const } }),
     ...(source.recurrenceSource?.[request.roleId]
       ? { recurrenceSource: { ...source.recurrenceSource,
         [request.roleId]: { ...source.recurrenceSource[request.roleId], manual: true } } } : {}),

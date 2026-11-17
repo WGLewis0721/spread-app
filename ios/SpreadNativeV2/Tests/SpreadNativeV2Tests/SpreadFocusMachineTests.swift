@@ -243,6 +243,22 @@ final class SpreadFocusMachineTests: XCTestCase {
             now: now.addingTimeInterval(20), enabled: true, defaults))
     }
 
+    func testIslandShowsASessionOnlyForTheProfileOnScreen() {
+        let defaults = isolatedDefaults()
+        let running = start(.focus, round: 1)
+        // No known profile yet: nothing is shown.
+        XCTAssertFalse(SpreadFocusStore.visibleOnIsland(running, defaults))
+        SpreadFocusStore.setActiveProfile(running.profileId, defaults)
+        XCTAssertTrue(SpreadFocusStore.visibleOnIsland(running, defaults))
+        // Regression: a paused stretch stayed on the island, with its Life area name, after a profile switch.
+        let paused = SpreadFocusMachine.pause(running, now: now.addingTimeInterval(15))!
+        SpreadFocusStore.setActiveProfile("another-profile", defaults)
+        XCTAssertFalse(SpreadFocusStore.visibleOnIsland(paused, defaults))
+        XCTAssertFalse(SpreadFocusStore.visibleOnIsland(running, defaults))
+        SpreadFocusStore.setActiveProfile(running.profileId, defaults)
+        XCTAssertTrue(SpreadFocusStore.visibleOnIsland(paused, defaults))
+    }
+
     func testWidgetIgnoresFinishedSingleRoundAfterDeadline() {
         let defaults = isolatedDefaults()
         let single = SpreadFocusPlan(focusMinutes: 25, breakMinutes: 5, rounds: 1)

@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 /// Week swipe arbitration, lifted directly from `src/spread/gestures/swipe.ts`.
 /// A swipe is 64 points of horizontal travel that dominates vertical travel 1.5 to 1, and never starts within

@@ -193,7 +193,7 @@ struct WeekSurface: View {
                         } label: {
                             HStack(spacing: 8) {
                                 SpreadIcon(name: "icon-add", size: 19).font(.system(.footnote, weight: .bold))
-                                Circle().fill(Color(hex: role?.color ?? "#8E8E93")).frame(width: 8, height: 8)
+                                Circle().fill(Color(hex: role?.color ?? Spread.roleFallbackHex)).frame(width: 8, height: 8)
                                 Text(role?.name ?? "").foregroundStyle(Spread.ink)
                                 Text(String(item.dayLabel.prefix(3))).foregroundStyle(Spread.ink)
                                 Text("\(SpreadHours.text(item.hours))h").foregroundStyle(Spread.ink).monospacedDigit()
@@ -443,6 +443,8 @@ struct DayCard: View {
                     .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).strokeBorder(Spread.accent.opacity(0.45), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                // Say the day as well, so the button is not just "Add Work" to VoiceOver.
+                .accessibilityLabel("Add \(name) to \(label)")
                 .accessibilityIdentifier("add-to-\(day)")
             }
         }
@@ -580,7 +582,7 @@ struct AllocationRow: View {
                             TaskLine(planner: planner, snapshot: snapshot, task: task, currentAllocation: allocation, onOpenTask: onOpenTask)
                         }
                     }
-                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: 12))
+                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                     .padding(.horizontal, 8).padding(.bottom, 8)
                 }
             }

@@ -258,8 +258,12 @@ test("the Timer widget's controls are icons in 44 pt targets, and each size has 
   assert.match(timerWidgetSource, /func spreadFocusControls\(\) -> some View \{[\s\S]*\.labelStyle\(\.iconOnly\)[\s\S]*\}/);
   assert.match(timerWidgetSource, /\.frame\(width: 44, height: 44\)/);
   assert.match(timerWidgetSource, /SpreadFocusControlButton\(control: kind, sessionId: state\.sessionId,/);
-  // Every active family renders the three 44pt controls. Medium uses a bottom row.
-  assert.match(timerWidgetSource, /var mediumBody: some View \{[\s\S]*face\(\.medium\)[\s\S]*controlRow/);
+  // Every active family renders the three 44pt controls. Medium uses a bottom row, and drops its progress bar and
+  // round line in tiers when the height runs short, so the top line is never clipped.
+  assert.match(timerWidgetSource, /var mediumBody: some View \{\s*ViewThatFits\(in: \.vertical\)[\s\S]*mediumStack\(showsRound: true, showsBar: true\)[\s\S]*controlRow/);
+  assert.match(timerWidgetSource, /func mediumStack\(showsRound: Bool, showsBar: Bool\) -> some View \{[\s\S]*face\(\.medium, showsRound: showsRound, showsBar: showsBar\)[\s\S]*controlRow/);
+  assert.match(timerWidgetSource, /var showsBar = true/);
+  assert.match(timerWidgetSource, /if showsBar \{\s*bar\b/);
   assert.match(timerWidgetSource, /var smallBody: some View \{[\s\S]*face\(\.small\)[\s\S]*controlRow/);
   assert.match(timerWidgetSource, /var largeBody: some View \{[\s\S]*face\(\.large\)[\s\S]*controlRow[\s\S]*Divider\(\)/);
   assert.doesNotMatch(timerWidgetSource, /SetSpreadFocusPlayingIntent|SpreadTransportToggleStyle|Toggle\(isOn:/);
@@ -589,4 +593,108 @@ test("refined controls dim as a whole when disabled, and their rows sit on the 8
   assert.doesNotMatch(timerWidgetSource, /spacing: 5\) \{\s*face\(\.medium\)/);
   // The widget and the app use the same shadow, so controls read alike.
   assert.match(timerWidgetSource, /radius: 4, y: 2\)/);
+});
+
+test("the island never keeps another profile's stretch, running, paused or waiting", () => {
+  const session = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusSession.swift");
+  const controller = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusLiveActivityController.swift");
+  const timer = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Focus/SpreadFocusTimer.swift");
+  assert.match(session, /static func visibleOnIsland\([\s\S]*?activeProfile\(defaults\) == session\.profileId/);
+  // Both the entry point and the delayed ActivityKit work apply the rule, so a late update cannot bring it back.
+  assert.match(controller, /guard SpreadFocusStore\.visibleOnIsland\(session\) else \{\s*end\(\)\s*return\s*\}\s*update\(session\)/);
+  assert.equal(controller.match(/SpreadFocusStore\.visibleOnIsland\(/g).length, 3);
+  const leave = timer.match(/func pauseForProfileSwitch[\s\S]*?\n {4}\}/)[0];
+  // The island is released for every phase; only a running stretch is paused first.
+  assert.doesNotMatch(leave, /guard[^\n]*\n?[^\n]*current\.phase == \.running else/);
+  assert.match(leave, /if current\.phase == \.running \{ pause\(profileId: current\.profileId\) \}\s*(\/\/[^\n]*\s*)*SpreadFocusLiveActivityController\.end\(\)/);
+  assert.match(timer, /if changed \{ SpreadFocusLiveActivityController\.refresh\(session\) \}/);
+});
+
+test("WidgetKit acknowledges Pause/Resume taps while the next timeline is pending", () => {
+  const panel = timerWidgetSource.slice(timerWidgetSource.indexOf("struct SpreadFocusPanel: View"),
+                                         timerWidgetSource.indexOf("/// One focus control"));
+  assert.match(panel, /Label\(face\.statusText, systemImage: face\.symbol\)[\s\S]*?\.invalidatableContent\(\)/);
+  assert.match(panel, /digits\s*\.invalidatableContent\(\)/);
+  assert.match(panel, /bar\s*\.invalidatableContent\(\)/);
+
+  // The reliable explicit app intents from PR #243 must not be replaced with
+  // a speculative optimistic toggle that previously broke Resume.
+  assert.match(timerWidgetSource, /case \.pause, \.resume:[\s\S]*SpreadFocusControlButton\(control: kind,/);
+  assert.match(timerWidgetSource, /case \.pause:\s*Button\(intent: PauseSpreadFocusIntent/);
+  assert.match(timerWidgetSource, /case \.resume:\s*Button\(intent: ResumeSpreadFocusIntent/);
+  assert.doesNotMatch(timerWidgetSource, /Toggle\(isOn:|SetSpreadFocusPlayingIntent|SpreadTransportToggleStyle/);
+});
+
+// --- Widget audit (W4, 2026-11-14): fit, Dynamic Type, text size, VoiceOver ----------------------
+
+const fixedFontSize = /\.system\(size:\s*(?:[0-9]|10)\b/;
+
+test("text in every widget uses a text style, never a fixed point size below 11 pt", () => {
+  // A fixed size ignores Dynamic Type. The Life cards widget had 9 and 10 pt labels; they are now text styles,
+  // which start at 11 pt at the default size.
+  assert.doesNotMatch(lifeCardsSource, fixedFontSize);
+  assert.doesNotMatch(timerWidgetSource, fixedFontSize);
+  assert.doesNotMatch(source, fixedFontSize);
+  assert.match(lifeCardsSource, /\.font\(\.caption2\.weight\(\.bold\)\)|\.font\(\.caption2\.weight\(\.semibold\)\)/);
+  assert.match(lifeCardsSource, /private func title\(_ style: Font\.TextStyle\) -> some View/);
+  assert.match(lifeCardsSource, /private func budgetLine\(_ style: Font\.TextStyle\) -> some View/);
+  assert.match(lifeCardsSource, /\.font\(\.system\(\.caption2, design: \.rounded, weight: \.bold\)\)/);
+});
+
+test("the Life cards medium size fits its height: the header stays 44 pt, the budget line gives way first", () => {
+  // The header holds the 44 pt arrows. Medium tries the full card, then drops the budget line at larger text.
+  assert.match(lifeCardsSource, /private var header: some View \{[\s\S]*\.frame\(height: 44\)/);
+  assert.match(lifeCardsSource, /private var mediumBody: some View \{\s*ViewThatFits\(in: \.vertical\)\s*\{[\s\S]*budgetLine\(\.subheadline\)[\s\S]*\}\s*VStack[\s\S]*strip/);
+  assert.match(lifeCardsSource, /title\(\.headline\)/);
+  assert.match(lifeCardsSource, /title\(\.largeTitle\)/);
+  assert.match(lifeCardsSource, /budgetLine\(\.title\)/);
+});
+
+test("the Timer widget's icon row stops at xxxLarge text, so the icons cannot overlap their neighbours", () => {
+  assert.match(timerWidgetSource, /\.dynamicTypeSize\(\.\.\.DynamicTypeSize\.xxxLarge\)/);
+  // The cap sits on the control row, not on the face, so the countdown and the status still scale.
+  const row = timerWidgetSource.slice(timerWidgetSource.indexOf("private var controlRow"));
+  assert.match(row.slice(0, row.indexOf("@ViewBuilder private var endsAt")), /dynamicTypeSize/);
+});
+
+test("VoiceOver names every icon-only focus control, and Forward says what it starts", () => {
+  assert.match(timerWidgetSource, /Label\(nextLabel\.map \{ "Forward: " \+ \$0 \} \?\? "Forward", systemImage: "forward\.fill"\)/);
+  assert.match(focusSheet, /\.accessibilityLabel\(next\.map \{ "Forward: " \+ \$0 \} \?\? "Forward unavailable, no next step"\)/);
+  // Glyphs on the Dynamic Island are read by their meaning, not their symbol name.
+  assert.match(source, /\.accessibilityLabel\(SpreadFocusLiveActivityWidget\.status\(context\)\.headline\)/);
+  assert.match(timerWidgetSource, /Image\(systemName: status\.isPaused \? "pause\.fill" : \(status\.isWaiting \? "bell\.fill" : "checkmark"\)\)[\s\S]{0,80}\.accessibilityLabel\(status\.caption\)/);
+  assert.match(timerWidgetSource, /Image\(systemName: status\.symbol\)\s*\.accessibilityLabel\(status\.headline\)/);
+});
+
+test("the Today widget's counters fit the small widget at default text size", () => {
+  // The column rhythm is 6 pt, down from 8, so the counters and the hours line fit a 126 pt content height.
+  assert.match(source, /private var todayColumn: some View \{[\s\S]*VStack\(alignment: \.leading, spacing: 6\)/);
+});
+
+test("What's New copy: every change fits 200 characters and no entry describes the old one-control widget", () => {
+  const notes = JSON.parse(get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Resources/ReleaseNotes.json"));
+  assert.equal(notes.formatVersion, 1);
+  for (const release of notes.releases) {
+    for (const change of release.changes) {
+      assert.ok(change.length <= 200, `change is ${change.length} characters: ${change}`);
+    }
+  }
+  const all = notes.releases.flatMap((release) => release.changes).join("\n");
+  // The Timer widget shows three controls at every active size, so no line may say small shows one control.
+  assert.doesNotMatch(all, /small shows the timer and one control/);
+});
+
+test("What's New keeps its number column at least 28 pt wide, so it can grow with the text", () => {
+  const whatsNew = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Sheets/WhatsNewSheet.swift");
+  assert.match(whatsNew, /\.frame\(minWidth: 28, alignment: \.leading\)/);
+  assert.doesNotMatch(whatsNew, /\.frame\(width: 28/);
+});
+
+test("the active profile and the background widget refresh are recorded for Life, not only Classic", () => {
+  const root = get("ios/SpreadNativeV2/Sources/SpreadNativeV2/Shell/SpreadLiveRoot.swift");
+  // Everything from `public var body` to the first helper applies to both roots.
+  const body = root.slice(root.indexOf("public var body: some View"), root.indexOf("private var layers"));
+  assert.match(body, /\.task\(id: planner\.state\?\.envelope\.profileId\) \{\s*if let profile = planner\.state\?\.envelope\.profileId \{ focusTimer\.noteActiveProfile\(profile\) \}/);
+  assert.match(body, /\.onChange\(of: planner\.state\?\.envelope\.profileId\) \{ old, new in\s*if let new \{ focusTimer\.noteActiveProfile\(new\) \}/);
+  assert.match(body, /if phase == \.background \{ focusTimer\.finishWidgetRefreshOnBackground\(\) \}/);
 });
