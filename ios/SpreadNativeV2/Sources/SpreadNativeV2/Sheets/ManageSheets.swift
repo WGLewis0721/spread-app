@@ -481,6 +481,7 @@ struct MoreSheet: View {
     @State private var showReminders = false
     @State private var showFocusTimer = false
     @State private var showWeekReview = false
+    @State private var weekReviewSnapshot: PlannerSnapshot?
     @State private var openAheadAfterReview = false
     @State private var showWeekAhead = false
     @State private var showJourney = false
@@ -575,7 +576,11 @@ struct MoreSheet: View {
                             sectionLabel("Planning and reflection")
                             LazyVGrid(columns: columns, spacing: Spread.space2) {
                                 tile("Week in Review", symbol: "calendar.badge.checkmark",
-                                     id: "more-week-in-review") { showWeekReview = true }
+                                     id: "more-week-in-review") {
+                                    guard let snapshot = planner.snapshot else { return }
+                                    weekReviewSnapshot = snapshot
+                                    showWeekReview = true
+                                }
                                 tile("Week Ahead", symbol: "calendar.badge.clock",
                                      id: "more-week-ahead") { showWeekAhead = true }
                                 tile("Your Journey", symbol: "chart.line.uptrend.xyaxis",
@@ -790,13 +795,14 @@ struct MoreSheet: View {
                                           roles: snapshot.roles, preferredRoleId: nil)
                 }
             }
-            .sheet(isPresented: $showWeekReview, onDismiss: {
+            .fullScreenCover(isPresented: $showWeekReview, onDismiss: {
+                weekReviewSnapshot = nil
                 if openAheadAfterReview {
                     openAheadAfterReview = false
                     showWeekAhead = true
                 }
             }) {
-                if let snapshot = planner.snapshot {
+                if let snapshot = weekReviewSnapshot {
                     LifeWeekReviewSheet(snapshot: snapshot, onWeekAhead: {
                         openAheadAfterReview = true
                         showWeekReview = false

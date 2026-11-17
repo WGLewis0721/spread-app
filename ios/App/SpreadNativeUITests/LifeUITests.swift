@@ -243,12 +243,123 @@ final class LifeUITests: XCTestCase {
             let entry = app.buttons[id]
             XCTAssertTrue(entry.isHittable)
             entry.tap()
-            let destination = app.navigationBars[title]
-            XCTAssertTrue(destination.waitForExistence(timeout: 5))
-            destination.buttons["Done"].tap()
+            if id == "more-week-in-review" {
+                let close = app.buttons["week-review-close"]
+                XCTAssertTrue(close.waitForExistence(timeout: 5))
+                close.tap()
+            } else {
+                let destination = app.navigationBars[title]
+                XCTAssertTrue(destination.waitForExistence(timeout: 5))
+                destination.buttons["Done"].tap()
+            }
         }
         capture("life-more")
     }
+    func testWeekReviewHoldResumesAndHandoffNeedsAnExplicitTap() throws {
+        startLife()
+        app.buttons["life-more"].tap()
+        app.buttons["more-week-in-review"].tap()
+        let heading = app.staticTexts["week-review-story-heading"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 5))
+        let playback = app.buttons["week-review-playback"]
+        guard playback.label == "Pause stories" else {
+            throw XCTSkip("Run with default Dynamic Type, VoiceOver off and Reduce Motion off for autoplay.")
+        }
+
+        XCTAssertEqual(heading.label, "A week of your life.")
+        let storyEdge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        storyEdge.press(forDuration: 6.5)
+        XCTAssertEqual(heading.label, "A week of your life.", "Holding past the deadline must pause the story.")
+        capture("review-opening")
+        expectation(for: NSPredicate(format: "label == %@", "You made room for"), evaluatedWith: heading)
+        waitForExpectations(timeout: 8)
+
+        playback.tap()
+        let next = app.buttons["week-review-continue"]
+        let back = app.buttons["week-review-back"]
+        let handoff = app.buttons["week-review-plan-next"]
+        next.tap()
+        let firstArea = heading.label
+        XCTAssertFalse(firstArea.isEmpty)
+        capture("review-first-life-area")
+        back.tap()
+        XCTAssertEqual(heading.label, "You made room for")
+        next.tap()
+        XCTAssertEqual(heading.label, firstArea)
+        let deadline = Date().addingTimeInterval(60)
+        while next.exists && Date() < deadline { next.tap() }
+        XCTAssertTrue(handoff.exists)
+        capture("review-highlight")
+        XCTAssertFalse(app.navigationBars["Week Ahead"].exists)
+        handoff.tap()
+        XCTAssertTrue(app.navigationBars["Week Ahead"].waitForExistence(timeout: 10))
+        capture("ahead-week-choice")
+    }
+
+    func testWeekAheadKeepsExistingPlanAndPersistsAnExplicitTask() {
+        startLife()
+        app.buttons["life-more"].tap()
+        app.buttons["more-week-ahead"].tap()
+        app.buttons["week-ahead-plan-selected"].tap()
+        let capacity = app.textFields["week-ahead-capacity"]
+        if capacity.exists {
+            capacity.tap()
+            capacity.typeText("168")
+            app.buttons["week-ahead-save-capacity"].tap()
+        }
+
+        let next = app.buttons["week-ahead-next"]
+        XCTAssertTrue(next.waitForExistence(timeout: 15))
+        let currentBudget = next.label
+        XCTAssertTrue(currentBudget.hasPrefix("Keep "))
+        capture("ahead-hours")
+        next.tap()
+        capture("ahead-days")
+        app.buttons["Back"].tap()
+        XCTAssertEqual(next.label, currentBudget)
+        next.tap()
+        next.tap()
+
+        let task = app.textFields["week-ahead-task-name"]
+        XCTAssertTrue(task.waitForExistence(timeout: 10))
+        capture("ahead-tasks")
+        let name = "Ritual QA " + String(UUID().uuidString.prefix(8))
+        if !task.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        task.tap()
+        task.typeText(name + "\n")
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 10), "The task should appear after an ACK.")
+
+        startLife()
+        app.buttons["life-more"].tap()
+        app.buttons["more-week-ahead"].tap()
+        app.buttons["week-ahead-plan-selected"].tap()
+        XCTAssertTrue(next.waitForExistence(timeout: 15))
+        XCTAssertEqual(next.label, currentBudget)
+        next.tap()
+        next.tap()
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 10), "The task should survive relaunch.")
+        let skip = app.buttons["week-ahead-skip-area"]
+        let done = app.buttons["week-ahead-finish"]
+        let deadline = Date().addingTimeInterval(60)
+        while skip.exists && Date() < deadline { skip.tap() }
+        XCTAssertTrue(done.exists)
+        capture("ahead-finish")
+        done.tap()
+
+        app.buttons["more-your-journey"].tap()
+        let savedWeeks = app.descendants(matching: .any).matching(identifier: "journey-weeks").firstMatch
+        XCTAssertTrue(savedWeeks.waitForExistence(timeout: 10))
+        XCTAssertTrue(savedWeeks.label.contains("Saved weeks"))
+        capture("journey-totals")
+        let history = app.staticTexts["Week by week"]
+        for _ in 0..<25 {
+            if history.exists && history.isHittable { break }
+            app.scrollViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(history.isHittable)
+        capture("journey-history")
+    }
+
     func testCapacityUsesRealStoreAndSurvivesRelaunch() {
         startLife()
         let toggle = app.buttons["life-budget-toggle"]

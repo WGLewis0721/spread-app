@@ -1,189 +1,337 @@
 #if os(iOS)
 import SwiftUI
 
-/// Saturday: a short story based on saved planner facts. Planned time is never called time spent.
+/// A full-screen retrospective of the selected week's saved planner activity.
 struct LifeWeekReviewSheet: View {
     let snapshot: PlannerSnapshot
     let onWeekAhead: () -> Void
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.scenePhase) private var scenePhase
+    @AccessibilityFocusState private var focusedPage: Int?
     @State private var page = 0
+    @State private var elapsed = 0.0
+    @State private var playbackPreference: Bool?
+    @State private var holding = false
+    @State private var didHold = false
+    @State private var forward = true
 
-    private let lastPage = 4
-    private var budget: Double { snapshot.roles.reduce(0) { $0 + $1.hours } }
+    private enum Scene {
+        case opening, hours, area(Responsibility), noAreas, tasks, highlight
+
+        var seconds: Double {
+            if case .area = self { return 8 }
+            return 6
+        }
+    }
+
+    private var scenes: [Scene] {
+        let areas: [Scene] = snapshot.roles.isEmpty ? [.noAreas] : snapshot.roles.map(Scene.area)
+        return [.opening, .hours] + areas + [.tasks, .highlight]
+    }
+
+    private var scene: Scene { scenes[page] }
+    private var lastPage: Int { scenes.count - 1 }
+    private var manualMode: Bool { voiceOver || reduceMotion || typeSize.isAccessibilitySize }
+    private var autoplay: Bool { playbackPreference ?? !manualMode }
+    private var playing: Bool {
+        autoplay && !holding && scenePhase == .active && page < lastPage
+    }
+
     private var placed: Double { snapshot.allocations.reduce(0) { $0 + $1.hours } }
+    private var budget: Double { snapshot.roles.reduce(0) { $0 + $1.hours } }
     private var completed: Int { snapshot.tasks.filter(\.done).count }
     private var topRole: Responsibility? {
-        snapshot.roles.max {
+        snapshot.roles.filter { snapshot.placedHours(for: $0.id) > 0 }.max {
             let a = snapshot.placedHours(for: $0.id)
             let b = snapshot.placedHours(for: $1.id)
             return a == b ? $0.name > $1.name : a < b
         }
     }
-    private var weekLabel: String { PlannerDates.weekRange(base: snapshot.weekKey, offset: 0) }
+
+    private var artworkRole: Responsibility? {
+        switch scene {
+        case .opening: topRole ?? snapshot.roles.first
+        case .area(let role): role
+        case .highlight: topRole
+        default: nil
+        }
+    }
 
     var body: some View {
-        SpreadSheetStack {
+        GeometryReader { viewport in
             VStack(spacing: 0) {
-                HStack(spacing: Spread.space1) {
-                    ForEach(0...lastPage, id: \.self) { index in
-                        Capsule()
-                            .fill(index <= page ? Spread.accent : Spread.fill)
-                            .frame(height: 5)
-                            .accessibilityHidden(true)
-                    }
-                }
-                .padding(.horizontal, Spread.space4)
-                .padding(.top, Spread.space4)
-
+                header
                 ScrollView {
-                    VStack(alignment: .leading, spacing: Spread.space5) {
-                        Text(weekLabel)
-                            .font(Spread.callout)
-                            .foregroundStyle(Spread.secondary)
-                        story
-                            .id(page)
-                            .transition(.opacity)
-                    }
-                    .padding(Spread.space5)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    sceneContent
+                        .frame(maxWidth: 640, minHeight: max(0, viewport.size.height * 0.57),
+                               alignment: .bottomLeading)
+                        .padding(.horizontal, Spread.space6)
+                        .padding(.vertical, Spread.space4)
+                        .frame(maxWidth: .infinity)
                 }
-                .scrollIndicators(.hidden)
-                .safeAreaInset(edge: .bottom) {
-                    HStack(spacing: Spread.space3) {
-                        if page > 0 {
-                            Button("Back") { changePage(-1) }
-                                .frame(minWidth: 76, minHeight: Spread.minimumTarget)
-                                .accessibilityIdentifier("week-review-back")
-                        }
-                        Button {
-                            if page == lastPage { onWeekAhead() }
-                            else { changePage(1) }
-                        } label: {
-                            Text(page == lastPage ? "Plan the week ahead" : "Continue")
-                                .font(Spread.headline)
-                                .foregroundStyle(Spread.onAccent)
-                                .frame(maxWidth: .infinity, minHeight: 52)
-                                .background(Spread.accentGradient, in: Capsule())
-                        }
-                        .buttonStyle(.spreadPress)
-                        .accessibilityIdentifier(page == lastPage ? "week-review-plan-next" : "week-review-continue")
-                    }
-                    .padding(Spread.space4)
-                    .background(Spread.canvas)
+                .id(page)
+                .transition(.asymmetric(
+                    insertion: .offset(x: forward ? 24 : -24, y: 0).combined(with: .opacity),
+                    removal: .opacity
+                ))
+                .clipped()
+                .contentShape(Rectangle())
+                .onLongPressGesture(minimumDuration: 0.2) {
+                    didHold = true
+                } onPressingChanged: { pressed in
+                    if pressed { didHold = false }
+                    holding = pressed
                 }
-            }
-            .navigationTitle("Week in Review")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.frame(minHeight: Spread.minimumTarget)
-                }
+                .simultaneousGesture(SpatialTapGesture().onEnded { tap in
+                    guard !didHold, !voiceOver else { return }
+                    if tap.location.x < viewport.size.width * 0.22 { move(-1) }
+                    if tap.location.x > viewport.size.width * 0.78 { move(1) }
+                })
+                .safeAreaInset(edge: .bottom, spacing: 0) { controls }
             }
         }
-        .presentationDetents([.large])
+        .background { backdrop }
+        .foregroundStyle(.white)
+        .statusBarHidden()
         .accessibilityIdentifier("week-in-review-sheet")
-    }
-
-    private func changePage(_ delta: Int) {
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: SpreadMotion.normalSeconds)) {
-            page = min(lastPage, max(0, page + delta))
+        .task(id: playing ? page : nil) {
+            guard playing else { return }
+            let clock = ContinuousClock()
+            let start = clock.now
+            let initial = elapsed
+            let duration = scene.seconds
+            let startPage = page
+            while !Task.isCancelled && playing {
+                do { try await Task.sleep(for: .milliseconds(33)) }
+                catch { return }
+                guard !Task.isCancelled, playing, page == startPage else { return }
+                let time = start.duration(to: clock.now).components
+                elapsed = min(duration, initial + Double(time.seconds) + Double(time.attoseconds) / 1e18)
+                if elapsed >= duration {
+                    move(1)
+                    return
+                }
+            }
         }
+        .onChange(of: manualMode) { _, _ in playbackPreference = nil }
+        .onChange(of: page) { _, page in focusedPage = page }
     }
 
-    @ViewBuilder private var story: some View {
-        switch page {
-        case 0:
-            storyPanel {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 44, weight: .light))
-                    .foregroundStyle(Spread.accent)
-                Spacer(minLength: 48)
-                Text("A week of your life.")
-                    .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                    .foregroundStyle(Spread.ink)
-                Text("The time you planned, the priorities you chose, and the things you finished.")
-                    .font(Spread.body).foregroundStyle(Spread.secondary)
-            }
-        case 1:
-            storyPanel {
-                Text("01 / THE TIME YOU MADE ROOM FOR")
-                    .font(Spread.footnote).foregroundStyle(Spread.secondary)
-                Spacer(minLength: 32)
-                Text("\(SpreadHours.text(placed))h")
-                    .font(.system(size: 68, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.65)
-                    .lineLimit(1)
-                    .monospacedDigit()
-                Text("placed on days this week")
-                    .font(Spread.headline)
-                Text("\(SpreadHours.text(budget))h in your weekly budgets. Scheduled time is not measured time spent.")
-                    .font(Spread.callout).foregroundStyle(Spread.secondary)
-            }
-        case 2:
-            storyPanel {
-                Text("02 / YOUR PRIORITIES")
-                    .font(Spread.footnote).foregroundStyle(Spread.secondary)
-                Text("Where you made room")
-                    .font(.title.bold())
-                ForEach(snapshot.roles) { role in
-                    HStack(spacing: Spread.space3) {
-                        Circle().fill(Color(hex: role.color)).frame(width: 12, height: 12)
-                        Text(role.name).font(Spread.body)
-                        Spacer()
-                        Text(SpreadHours.text(snapshot.placedHours(for: role.id)) + "h")
-                            .font(Spread.headline).monospacedDigit()
+    private var backdrop: some View {
+        ZStack {
+            Spread.artGround
+            if let role = artworkRole {
+                LifeEditorialArtwork(category: role.category, roleColor: Color(hex: role.color))
+                    .overlay(alignment: .bottom) {
+                        LinearGradient(colors: [.clear, Spread.artGround],
+                                       startPoint: .top, endPoint: .bottom)
                     }
-                    .padding(Spread.space3)
-                    .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
-                }
-                if snapshot.roles.isEmpty {
-                    Text("Create a Life area to start building your story.")
-                        .foregroundStyle(Spread.secondary)
+                    .id(role.id)
+                    .transition(.opacity)
+            }
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Spread.space2) {
+            HStack(spacing: scenes.count > 24 ? 1 : Spread.space1) {
+                ForEach(scenes.indices, id: \.self) { index in
+                    GeometryReader { geometry in
+                        Capsule().fill(.white.opacity(0.35))
+                            .overlay(alignment: .leading) {
+                                Capsule().fill(.white)
+                                    .frame(width: geometry.size.width * progress(at: index))
+                            }
+                    }
                 }
             }
-        case 3:
-            storyPanel {
-                Text("03 / FOLLOW-THROUGH")
-                    .font(Spread.footnote).foregroundStyle(Spread.secondary)
-                Spacer(minLength: 32)
-                Text("\(completed)")
-                    .font(.system(size: 80, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                Text(completed == 1 ? "task completed" : "tasks completed")
-                    .font(.title2.bold())
-                Text("A real action you marked done, not a prediction about your productivity.")
-                    .font(Spread.callout).foregroundStyle(Spread.secondary)
-            }
-        default:
-            storyPanel {
-                Text("04 / THIS WEEK'S HIGHLIGHT")
-                    .font(Spread.footnote).foregroundStyle(Spread.secondary)
-                Spacer(minLength: 32)
-                if let role = topRole, snapshot.placedHours(for: role.id) > 0 {
-                    Circle().fill(Color(hex: role.color)).frame(width: 24, height: 24)
-                    Text(role.name).font(.largeTitle.bold())
-                    Text("You made room for \(role.name) on your calendar.")
-                        .font(.title3)
-                } else {
-                    Text("Your next chapter is yours to plan.")
-                        .font(.largeTitle.bold())
-                    Text("There are no reserved hours to highlight this week.")
-                        .foregroundStyle(Spread.secondary)
+            .frame(height: 4)
+            .accessibilityHidden(true)
+
+            HStack {
+                VStack(alignment: .leading, spacing: Spread.space1) {
+                    Text("Week in Review").font(Spread.headline)
+                    Text(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
+                        .font(Spread.footnote)
                 }
-                Spacer(minLength: 16)
-                Text("Ready to make room for what matters next?")
-                    .font(Spread.callout).foregroundStyle(Spread.secondary)
+                .accessibilityElement(children: .combine)
+                .accessibilityValue("Story \(page + 1) of \(scenes.count)")
+                Spacer(minLength: Spread.space2)
+                if page < lastPage {
+                    Button {
+                        playbackPreference = !autoplay
+                    } label: {
+                        Image(systemName: autoplay ? "pause.fill" : "play.fill")
+                            .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
+                    }
+                    .accessibilityLabel(autoplay ? "Pause stories" : "Play stories")
+                    .accessibilityIdentifier("week-review-playback")
+                }
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
+                }
+                .accessibilityLabel("Close Week in Review")
+                .accessibilityIdentifier("week-review-close")
+                .keyboardShortcut(.cancelAction)
             }
+        }
+        .padding(Spread.space4)
+        .background(chrome)
+        .buttonStyle(.plain)
+    }
+
+    private var controls: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spread.space3) {
+                if page > 0 { back }
+                next
+            }
+            VStack(spacing: Spread.space2) {
+                next
+                if page > 0 { back }
+            }
+        }
+        .padding(Spread.space4)
+        .frame(maxWidth: 680)
+        .frame(maxWidth: .infinity)
+        .background(chrome)
+    }
+
+    private var chrome: Color {
+        reduceTransparency ? Spread.artGround : Spread.artGround.opacity(0.88)
+    }
+
+    private var back: some View {
+        Button { move(-1) } label: {
+            Label("Back", systemImage: "chevron.backward")
+                .font(Spread.headline)
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, Spread.space2)
+                .frame(minHeight: Spread.minimumTarget)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("week-review-back")
+    }
+
+    private var next: some View {
+        Button {
+            if page == lastPage { onWeekAhead() }
+            else { move(1) }
+        } label: {
+            Text(page == lastPage ? "Plan the week ahead" : "Next")
+                .font(Spread.headline)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spread.space3)
+                .padding(.vertical, Spread.space2)
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(Spread.onAccent)
+                .background(Spread.accentGradient, in: Capsule())
+        }
+        .buttonStyle(.spreadPress)
+        .accessibilityIdentifier(page == lastPage ? "week-review-plan-next" : "week-review-continue")
+    }
+
+    private func progress(at index: Int) -> CGFloat {
+        if index < page || index == lastPage && index == page { return 1 }
+        return index == page ? CGFloat(elapsed / scene.seconds) : 0
+    }
+
+    private func move(_ delta: Int) {
+        let destination = page + delta
+        guard scenes.indices.contains(destination) else { return }
+        forward = delta > 0
+        elapsed = 0
+        withAnimation(SpreadMotion.resolved(SpreadMotion.lifeWeekPage, reduceMotion: reduceMotion)) {
+            page = destination
         }
     }
 
-    private func storyPanel<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Spread.space4, content: content)
-            .frame(maxWidth: .infinity, minHeight: 400, alignment: .topLeading)
-            .padding(Spread.space5)
-            .spreadCard()
-            .accessibilityElement(children: .contain)
+    private var sceneContent: some View {
+        VStack(alignment: .leading, spacing: Spread.space3) {
+            switch scene {
+            case .opening:
+                heading("A week of your life.")
+                detail("The time you made room for and the things you finished.")
+            case .hours:
+                heading("You made room for")
+                RitualNumber(value: SpreadHours.text(placed), unit: "h", size: 88)
+                detail("Hours placed on days · \(SpreadHours.spoken(budget)) budgeted")
+            case .area(let role):
+                heading(role.name)
+                RitualNumber(value: SpreadHours.text(snapshot.placedHours(for: role.id)), unit: "h", size: 84)
+                detail("Hours placed · \(SpreadHours.spoken(role.hours)) budgeted")
+                let count = snapshot.tasks(for: role.id).filter(\.done).count
+                detail(count == 1 ? "1 task finished" : "\(count) tasks finished")
+            case .noAreas:
+                heading("Your story starts with Life.")
+                detail("Add a Life area to see it in your weekly review.")
+            case .tasks:
+                heading(completed == 0 ? "Room for what’s next." : "You followed through.")
+                RitualNumber(value: completed.formatted(), size: 88)
+                detail(completed == 1 ? "Task finished this week" : "Tasks finished this week")
+            case .highlight:
+                if let role = topRole {
+                    heading("You made the most room for \(role.name).")
+                    RitualNumber(value: SpreadHours.text(snapshot.placedHours(for: role.id)), unit: "h", size: 76)
+                    detail("Hours placed on days for \(role.name)")
+                } else {
+                    heading("The next week is yours.")
+                    detail("There were no placed hours to highlight this week.")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func heading(_ title: String) -> some View {
+        Text(title)
+            .font(.system(.largeTitle, design: .serif).weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityFocused($focusedPage, equals: page)
+            .accessibilityIdentifier("week-review-story-heading")
+    }
+
+    private func detail(_ text: String) -> some View {
+        Text(text).font(Spread.body).fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Keeps the number and its unit on the same baseline as Dynamic Type scales.
+private struct RitualNumber: View {
+    let value: String
+    let unit: String?
+    @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat
+    @ScaledMetric(relativeTo: .title2) private var unitSize: CGFloat = 24
+
+    init(value: String, unit: String? = nil, size: CGFloat) {
+        self.value = value
+        self.unit = unit
+        _displaySize = ScaledMetric(wrappedValue: size, relativeTo: .largeTitle)
+    }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spread.space1) {
+            Text(value)
+                .font(.system(size: displaySize, weight: .semibold, design: .serif))
+                .monospacedDigit()
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+            if let unit {
+                Text(unit)
+                    .font(.system(size: unitSize, weight: .semibold))
+                    .accessibilityLabel(unit == "h" ? "hours" : unit)
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -192,9 +340,16 @@ struct LifeWeekAheadSheet: View {
     @ObservedObject var planner: LivePlanner
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var weekChosen = false
+    @State private var chosenWeek: String?
+    @AccessibilityFocusState private var questionFocused: Bool
     @State private var areaIndex = 0
-    @State private var step = 0 // 0 hours, 1 days, 2 tasks
+    @State private var step = Step.hours
+
+    private enum Step: String, CaseIterable {
+        case hours = "Hours"
+        case days = "Days"
+        case tasks = "Tasks"
+    }
     @State private var selectedDay = ""
     @State private var capacityText = ""
     @State private var taskText = ""
@@ -207,49 +362,48 @@ struct LifeWeekAheadSheet: View {
         guard snapshot.roles.indices.contains(areaIndex) else { return nil }
         return snapshot.roles[areaIndex]
     }
-    private func day(in snapshot: PlannerSnapshot) -> String {
+    private var saving: Bool { busy || planner.busy }
+
+    private func day(for role: Responsibility, in snapshot: PlannerSnapshot) -> String {
         let days = LifeCalendarRules.week(snapshot.weekKey)
-        return days.contains(selectedDay) ? selectedDay : days.first ?? snapshot.weekKey
+        if days.contains(selectedDay) { return selectedDay }
+        return days.first { day in
+            snapshot.allocations.contains { $0.roleId == role.id && $0.day == day && $0.hours > 0 }
+        } ?? days.first ?? snapshot.weekKey
     }
 
     var body: some View {
         SpreadSheetStack {
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: Spread.space4) {
-                        if let snapshot {
+            Group {
+                if let snapshot {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: Spread.space4) {
                             Text(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
-                                .font(Spread.callout)
+                                .font(Spread.callout.weight(.medium))
                                 .foregroundStyle(Spread.secondary)
-                        }
-                        if let message {
-                            Label(message, systemImage: "exclamationmark.circle")
-                                .font(Spread.callout).foregroundStyle(Spread.danger)
-                                .accessibilityIdentifier("week-ahead-error")
-                        }
-                        if let snapshot {
-                            if !weekChosen {
-                                weekPicker(snapshot)
+                            if chosenWeek != snapshot.weekKey {
+                                weekIntro
                             } else if snapshot.roles.isEmpty {
-                                ContentUnavailableView("Add a Life area first", systemImage: "calendar.badge.plus",
-                                    description: Text("Your responsibilities form the path through the week."))
+                                ContentUnavailableView("Add a Life area first", systemImage: "calendar.badge.plus")
                             } else if finished {
                                 summary(snapshot)
+                            } else if snapshot.life?.capacityHours == nil {
+                                capacityEditor()
                             } else if let role = role(in: snapshot) {
                                 areaPanel(role: role, snapshot: snapshot)
                             }
-                        } else {
-                            ProgressView("Opening your week…")
                         }
+                        .padding(Spread.space5)
+                        .frame(maxWidth: 680)
+                        .frame(maxWidth: .infinity)
                     }
-                    .padding(Spread.space5)
-                }
-                .scrollDismissesKeyboard(.interactively)
-                .safeAreaInset(edge: .bottom) {
-                    if let snapshot, weekChosen, !finished, let role = role(in: snapshot),
-                       snapshot.life?.capacityHours != nil {
-                        actionBar(snapshot: snapshot, role: role)
+                    .id(stage)
+                    .scrollDismissesKeyboard(.interactively)
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        inset(snapshot)
                     }
+                } else {
+                    ProgressView("Opening your week…")
                 }
             }
             .navigationTitle("Week Ahead")
@@ -257,27 +411,37 @@ struct LifeWeekAheadSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                        .disabled(busy)
+                        .disabled(saving)
                         .frame(minHeight: Spread.minimumTarget)
                 }
             }
         }
         .presentationDetents([.large])
-        .interactiveDismissDisabled(busy)
-        .onChange(of: planner.state?.envelope.profileId) { _, _ in reset() }
-        .onChange(of: planner.snapshot?.weekKey) { _, _ in
-            selectedDay = ""
-            areaIndex = 0
-            step = 0
-            finished = false
+        .interactiveDismissDisabled(saving)
+        .onChange(of: planner.state?.envelope.profileId) { _, _ in
+            chosenWeek = nil
+            resetProgress()
         }
+        .onChange(of: planner.snapshot?.weekKey) { _, week in
+            if let chosenWeek, chosenWeek != week {
+                self.chosenWeek = nil
+                resetProgress()
+            }
+        }
+        .onChange(of: stage) { _, _ in questionFocused = true }
         .accessibilityIdentifier("week-ahead-sheet")
     }
 
-    private func reset() {
-        weekChosen = false
+    private var stage: String {
+        guard let snapshot, chosenWeek == snapshot.weekKey else { return "week" }
+        if finished { return "finish" }
+        if snapshot.life?.capacityHours == nil { return "capacity" }
+        return "\(snapshot.weekKey)-\(areaIndex)-\(step.rawValue)"
+    }
+
+    private func resetProgress() {
         areaIndex = 0
-        step = 0
+        step = .hours
         selectedDay = ""
         capacityText = ""
         taskText = ""
@@ -285,95 +449,81 @@ struct LifeWeekAheadSheet: View {
         finished = false
     }
 
-    private func weekPicker(_ snapshot: PlannerSnapshot) -> some View {
+    private var weekIntro: some View {
         VStack(alignment: .leading, spacing: Spread.space4) {
             Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 44, weight: .light)).foregroundStyle(Spread.accent)
-            Text("Make room for next week.")
-                .font(.largeTitle.bold())
-            Text("Walk through each Life area. Choose hours, put them on days, and add what you want to do.")
+                .font(.largeTitle.weight(.light)).foregroundStyle(Spread.accent)
+                .accessibilityHidden(true)
+            question("Which week are you planning?")
+            Text("Start with the hours and days you’ve already saved. Change anything as you go.")
                 .font(Spread.body).foregroundStyle(Spread.secondary)
-            Button("Plan the week shown") {
-                weekChosen = true
-                message = nil
-            }
-            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
-            .frame(minHeight: Spread.minimumTarget)
-            .accessibilityIdentifier("week-ahead-plan-selected")
-            Button {
-                submit(["type": "changeWeek", "direction": 1]) { weekChosen = true }
-            } label: {
-                Label("Plan the following week", systemImage: "arrow.right")
-                    .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
-            }
-            .disabled(busy || planner.busy)
-            .accessibilityIdentifier("week-ahead-plan-next-week")
         }
-        .padding(Spread.space4)
+        .padding(Spread.space5)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .spreadCard()
     }
 
-    @ViewBuilder private func areaPanel(role: Responsibility, snapshot: PlannerSnapshot) -> some View {
-        HStack {
-            Text("LIFE \(areaIndex + 1) OF \(snapshot.roles.count)")
-                .font(Spread.footnote).foregroundStyle(Spread.secondary)
-            Spacer()
-            Text(["Hours", "Days", "Tasks"][step])
-                .font(Spread.footnote.weight(.semibold))
-                .foregroundStyle(Spread.secondary)
-        }
-        HStack(spacing: Spread.space1) {
-            ForEach(snapshot.roles.indices, id: \.self) { index in
-                Capsule().fill(index <= areaIndex ? Spread.accent : Spread.fill).frame(height: 5)
+    private func areaPanel(role: Responsibility, snapshot: PlannerSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: Spread.space4) {
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    areaPosition.fixedSize()
+                    Spacer()
+                    stepPosition.fixedSize()
+                }
+                VStack(alignment: .leading, spacing: Spread.space1) {
+                    areaPosition
+                    stepPosition
+                }
             }
-        }
-        VStack(alignment: .leading, spacing: Spread.space3) {
-            HStack(spacing: Spread.space3) {
-                Circle().fill(Color(hex: role.color)).frame(width: 20, height: 20)
-                Text(role.name).font(.title.bold())
+            HStack(spacing: Spread.space1) {
+                ForEach(Step.allCases, id: \.self) { item in
+                    Capsule()
+                        .fill(item == step ? Spread.accent : Spread.fill)
+                        .frame(height: 4)
+                }
             }
-            if let intention = role.intention {
-                Text(intention).font(Spread.callout).foregroundStyle(Spread.secondary)
-            }
-            Text("\(SpreadHours.text(role.hours))h weekly budget · \(SpreadHours.text(snapshot.placedHours(for: role.id)))h on days")
-                .font(Spread.callout).foregroundStyle(Spread.secondary)
-        }
-        .padding(Spread.space4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .spreadCard(edge: Color(hex: role.color))
-
-        if snapshot.life?.capacityHours == nil {
-            capacityEditor()
-        } else {
+            .accessibilityHidden(true)
+            RitualAreaHeader(role: role, caption: role.intention)
             switch step {
-            case 0: hoursEditor(role: role, snapshot: snapshot)
-            case 1: daysEditor(role: role, snapshot: snapshot)
-            default: tasksEditor(role: role, snapshot: snapshot)
+            case .hours: hoursEditor(role: role, snapshot: snapshot)
+            case .days: daysEditor(role: role, snapshot: snapshot)
+            case .tasks: tasksEditor(role: role, snapshot: snapshot)
             }
         }
+        .transition(.opacity)
+    }
+
+    private var areaPosition: some View {
+        Text("Life area \(areaIndex + 1) of \(snapshot?.roles.count ?? 0)")
+            .font(Spread.footnote).foregroundStyle(Spread.secondary)
+    }
+
+    private var stepPosition: some View {
+        Text("\(step.rawValue) · \((Step.allCases.firstIndex(of: step) ?? 0) + 1) of 3")
+            .font(Spread.footnote.weight(.semibold)).foregroundStyle(Spread.ink)
+    }
+
+    private func question(_ title: String) -> some View {
+        Text(title)
+            .font(.title2.weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityFocused($questionFocused)
+            .accessibilityIdentifier("week-ahead-question")
     }
 
     private func capacityEditor() -> some View {
         VStack(alignment: .leading, spacing: Spread.space3) {
-            Text("First, set your available hours.")
-                .font(.title3.bold())
+            question("How many hours are available?")
             Text("This is your total capacity for the selected week. Nothing will be assigned automatically.")
                 .foregroundStyle(Spread.secondary)
             TextField("Weekly hours (0–168)", text: $capacityText)
                 .keyboardType(.decimalPad)
                 .textFieldStyle(.roundedBorder)
+                .frame(minHeight: Spread.minimumTarget)
                 .accessibilityIdentifier("week-ahead-capacity")
-            Button("Set weekly capacity") {
-                let text = capacityText.replacingOccurrences(of: ",", with: ".")
-                guard let value = Double(text), value > 0, value <= 168,
-                      (value * 2).rounded() == value * 2 else {
-                    message = "Enter a valid half-hour amount between 0.5 and 168."
-                    return
-                }
-                submit(["type": "setLifeCapacity", "hours": value]) {}
-            }
-            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
-            .disabled(busy || planner.busy)
+                .disabled(saving)
         }
         .padding(Spread.space4)
         .spreadCard()
@@ -381,21 +531,18 @@ struct LifeWeekAheadSheet: View {
 
     private func hoursEditor(role: Responsibility, snapshot: PlannerSnapshot) -> some View {
         VStack(alignment: .leading, spacing: Spread.space4) {
-            Text("How much time will you give \(role.name)?")
-                .font(.title3.bold())
+            question("How much time will you set aside?")
             HStack {
                 Button {
                     changeBudget(role: role, to: role.hours - 0.5)
                 } label: {
                     Image(systemName: "minus").frame(width: 52, height: 52)
                 }
-                .disabled(role.hours <= snapshot.placedHours(for: role.id) || busy || planner.busy)
+                .disabled(role.hours - 0.5 < max(0, snapshot.placedHours(for: role.id)) || saving)
                 .accessibilityLabel("Decrease \(role.name) by half an hour")
 
                 Spacer()
-                Text(SpreadHours.text(role.hours) + "h")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .monospacedDigit()
+                RitualNumber(value: SpreadHours.text(role.hours), unit: "h", size: 50)
                 Spacer()
 
                 Button {
@@ -418,10 +565,9 @@ struct LifeWeekAheadSheet: View {
     }
 
     private func daysEditor(role: Responsibility, snapshot: PlannerSnapshot) -> some View {
-        let current = day(in: snapshot)
+        let current = day(for: role, in: snapshot)
         return VStack(alignment: .leading, spacing: Spread.space4) {
-            Text("Where will \(role.name) fit?")
-                .font(.title3.bold())
+            question("Which days work for you?")
             ScrollView(.horizontal) {
                 HStack(spacing: Spread.space2) {
                     ForEach(LifeCalendarRules.week(snapshot.weekKey), id: \.self) { iso in
@@ -448,6 +594,7 @@ struct LifeWeekAheadSheet: View {
                         .buttonStyle(.spreadPress)
                         .accessibilityLabel("\(PlannerDates.label(PlannerDates.date(iso), pattern: "EEEE, MMM d")), \(SpreadHours.spoken(reserved)) reserved")
                         .accessibilityAddTraits(current == iso ? .isSelected : [])
+                        .disabled(saving)
                     }
                 }
             }
@@ -457,25 +604,41 @@ struct LifeWeekAheadSheet: View {
             Button {
                 submit(["type": "allocate", "roleId": role.id, "day": current, "hours": 1.0]) {}
             } label: {
-                Text("Place 1 hour on this day").frame(maxWidth: .infinity, minHeight: 50)
+                Text("Place 1 hour on \(PlannerDates.label(PlannerDates.date(current), pattern: "EEE"))")
+                    .frame(maxWidth: .infinity, minHeight: 48)
             }
-            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
-            .disabled(snapshot.remainingHours(for: role.id) < 1 || busy || planner.busy)
+            .buttonStyle(SpreadRefinedControlStyle())
+            .disabled(snapshot.remainingHours(for: role.id) < 1 || saving)
             .accessibilityIdentifier("week-ahead-place-hour")
-            Text("Select another day to place more. The existing planner checks capacity.")
-                .font(Spread.footnote).foregroundStyle(Spread.secondary)
         }
         .padding(Spread.space4).spreadCard()
     }
 
     private func tasksEditor(role: Responsibility, snapshot: PlannerSnapshot) -> some View {
-        let chosen = day(in: snapshot)
+        let chosen = day(for: role, in: snapshot)
         let hasHours = snapshot.allocations.contains {
             $0.roleId == role.id && $0.day == chosen && $0.hours > 0
         }
         return VStack(alignment: .leading, spacing: Spread.space3) {
-            Text("What will you do for \(role.name)?")
-                .font(.title3.bold())
+            question("Anything you’d like to do?")
+            let destination = hasHours ? PlannerDates.label(PlannerDates.date(chosen), pattern: "EEEE, MMM d") : "To place"
+            Text("New tasks go to \(destination).")
+                .font(Spread.callout).foregroundStyle(Spread.secondary)
+            TextField("Add an optional task", text: $taskText)
+                .textFieldStyle(.roundedBorder)
+                .frame(minHeight: Spread.minimumTarget)
+                .submitLabel(.done)
+                .onSubmit { addTask(role: role, day: hasHours ? chosen : nil) }
+                .disabled(saving)
+                .accessibilityIdentifier("week-ahead-task-name")
+            Button { addTask(role: role, day: hasHours ? chosen : nil) } label: {
+                Text("Add task")
+                    .padding(.horizontal, Spread.space4)
+                    .frame(minHeight: Spread.minimumTarget)
+            }
+            .buttonStyle(SpreadRefinedControlStyle())
+            .disabled(taskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || saving)
+            .accessibilityIdentifier("week-ahead-add-task")
             ForEach(snapshot.tasks(for: role.id)) { task in
                 HStack(spacing: Spread.space2) {
                     Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
@@ -485,21 +648,6 @@ struct LifeWeekAheadSheet: View {
                 }
                 .padding(Spread.space2)
                 .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
-            }
-            TextField("Add a task", text: $taskText)
-                .textFieldStyle(.roundedBorder)
-                .submitLabel(.done)
-                .onSubmit { addTask(role: role, day: hasHours ? chosen : nil) }
-                .accessibilityIdentifier("week-ahead-task-name")
-            Button(hasHours ? "Add task to selected day" : "Add task to To place") {
-                addTask(role: role, day: hasHours ? chosen : nil)
-            }
-            .buttonStyle(SpreadRefinedControlStyle(prominent: true))
-            .disabled(taskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || busy || planner.busy)
-            .accessibilityIdentifier("week-ahead-add-task")
-            if !hasHours {
-                Text("No hours on the selected day. This task will stay in To place until you schedule it.")
-                    .font(Spread.footnote).foregroundStyle(Spread.secondary)
             }
         }
         .padding(Spread.space4).spreadCard()
@@ -516,88 +664,172 @@ struct LifeWeekAheadSheet: View {
         submit(action) { taskText = "" }
     }
 
-    private func actionBar(snapshot: PlannerSnapshot, role: Responsibility) -> some View {
+    private func inset(_ snapshot: PlannerSnapshot) -> some View {
         VStack(spacing: Spread.space1) {
-        HStack(spacing: Spread.space3) {
-            Button {
-                if step > 0 { step -= 1 }
-                else if areaIndex > 0 { areaIndex -= 1; step = 2 }
-                else { weekChosen = false }
-                message = nil
-            } label: {
-                Text("Back").frame(minWidth: 56, minHeight: Spread.minimumTarget)
+            if let message {
+                Label(message, systemImage: "exclamationmark.circle")
+                    .font(Spread.callout).foregroundStyle(Spread.danger)
+                    .accessibilityIdentifier("week-ahead-error")
+            } else if saving {
+                ProgressView("Saving…").font(Spread.callout)
             }
-            .disabled(busy || planner.busy)
-            Button {
-                advance(snapshot)
-            } label: {
-                Text(step == 2 && areaIndex == snapshot.roles.count - 1 ? "Finish my week" :
-                        step == 2 ? "Next Life area" : "Continue")
-                    .foregroundStyle(Spread.onAccent)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Spread.accentGradient, in: Capsule())
+
+            if chosenWeek != snapshot.weekKey {
+                primary("Plan \(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))",
+                        id: "week-ahead-plan-selected") {
+                    resetProgress()
+                    chosenWeek = snapshot.weekKey
+                }
+                Button {
+                    submit(["type": "changeWeek", "direction": 1]) {
+                        resetProgress()
+                        chosenWeek = planner.snapshot?.weekKey
+                    }
+                } label: {
+                    Text("Plan the following week")
+                        .frame(minHeight: Spread.minimumTarget)
+                }
+                .disabled(saving)
+                .accessibilityIdentifier("week-ahead-plan-next-week")
+            } else if finished || snapshot.roles.isEmpty {
+                primary("Done", id: "week-ahead-finish") { dismiss() }
+            } else if snapshot.life?.capacityHours == nil {
+                primary("Set weekly capacity", id: "week-ahead-save-capacity", action: saveCapacity)
+                Button {
+                    chosenWeek = nil
+                    resetProgress()
+                } label: {
+                    Text("Back").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
+                }
+                .disabled(saving)
+            } else if let role = role(in: snapshot) {
+                actionBar(snapshot: snapshot, role: role)
             }
-            .buttonStyle(.spreadPress)
-            .disabled(busy || planner.busy)
-            .accessibilityIdentifier("week-ahead-next")
-        }
-        Button("Skip this Life area") {
-            message = nil
-            if areaIndex + 1 < snapshot.roles.count {
-                areaIndex += 1
-                step = 0
-                selectedDay = ""
-                taskText = ""
-            } else {
-                finished = true
-            }
-        }
-        .font(Spread.callout)
-        .frame(minHeight: Spread.minimumTarget)
-        .disabled(busy || planner.busy)
-        .accessibilityIdentifier("week-ahead-skip-area")
         }
         .padding(Spread.space4)
+        .frame(maxWidth: 680)
+        .frame(maxWidth: .infinity)
         .background(Spread.canvas)
     }
 
-    private func advance(_ snapshot: PlannerSnapshot) {
-        message = nil
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: SpreadMotion.normalSeconds)) {
-            if step < 2 { step += 1 }
-            else if areaIndex + 1 < snapshot.roles.count {
-                areaIndex += 1
-                step = 0
-                taskText = ""
-                selectedDay = ""
-            } else {
-                finished = true
+    private func primary(_ title: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(Spread.headline)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spread.space3)
+                .padding(.vertical, Spread.space2)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .foregroundStyle(Spread.onAccent)
+                .background(Spread.accentGradient, in: Capsule())
+        }
+        .buttonStyle(.spreadPress)
+        .disabled(saving)
+        .accessibilityIdentifier(id)
+    }
+
+    private func saveCapacity() {
+        let text = capacityText.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(text), value > 0, value <= 168,
+              (value * 2).rounded() == value * 2 else {
+            message = "Enter an amount between 0.5 and 168 in half-hour increments."
+            return
+        }
+        submit(["type": "setLifeCapacity", "hours": value]) {}
+    }
+
+    private func actionBar(snapshot: PlannerSnapshot, role: Responsibility) -> some View {
+        let label: String = switch step {
+        case .hours: "Keep \(SpreadHours.spoken(role.hours))"
+        case .days: snapshot.placedHours(for: role.id) > 0 ? "Keep current days" : "Continue"
+        case .tasks: areaIndex == snapshot.roles.count - 1 ? "Finish my week" : "Next Life area"
+        }
+        return VStack(spacing: Spread.space1) {
+            primary(label, id: "week-ahead-next") { navigate { advance(snapshot) } }
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    backControl.fixedSize()
+                    Spacer()
+                    skipControl(snapshot).fixedSize()
+                }
+                VStack {
+                    backControl
+                    skipControl(snapshot)
+                }
             }
+        }
+    }
+
+    private var backControl: some View {
+        Button {
+            navigate {
+                switch step {
+                case .tasks: step = .days
+                case .days: step = .hours
+                case .hours:
+                    if areaIndex > 0 {
+                        areaIndex -= 1
+                        step = .tasks
+                        selectedDay = ""
+                        taskText = ""
+                    } else {
+                        chosenWeek = nil
+                        resetProgress()
+                    }
+                }
+            }
+        } label: {
+            Label("Back", systemImage: "chevron.backward")
+                .frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
+        }
+        .disabled(saving)
+    }
+
+    private func skipControl(_ snapshot: PlannerSnapshot) -> some View {
+        Button { navigate { nextArea(snapshot) } } label: {
+            Text("Skip this Life area").frame(minHeight: Spread.minimumTarget)
+        }
+        .disabled(saving)
+        .accessibilityIdentifier("week-ahead-skip-area")
+    }
+
+    private func navigate(_ change: () -> Void) {
+        message = nil
+        withAnimation(SpreadMotion.resolved(SpreadMotion.lifeWeekPage, reduceMotion: reduceMotion), change)
+    }
+
+    private func advance(_ snapshot: PlannerSnapshot) {
+        switch step {
+        case .hours: step = .days
+        case .days: step = .tasks
+        case .tasks: nextArea(snapshot)
+        }
+    }
+
+    private func nextArea(_ snapshot: PlannerSnapshot) {
+        if areaIndex + 1 < snapshot.roles.count {
+            areaIndex += 1
+            step = .hours
+            taskText = ""
+            selectedDay = ""
+        } else {
+            finished = true
         }
     }
 
     private func summary(_ snapshot: PlannerSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: Spread.space4) {
-            Image(systemName: "checkmark.circle")
-                .font(.system(size: 46)).foregroundStyle(Spread.success)
-            Text(snapshot.allocations.isEmpty ? "Your Life areas are ready." : "Your week has a plan.")
-                .font(.largeTitle.bold())
-            Text("\(SpreadHours.text(snapshot.allocations.reduce(0) { $0 + $1.hours }))h reserved on days across \(snapshot.roles.count) Life areas.")
-                .font(Spread.body).foregroundStyle(Spread.secondary)
+        let placed = snapshot.allocations.reduce(0) { $0 + $1.hours }
+        return VStack(alignment: .leading, spacing: Spread.space4) {
+            question(placed > 0 ? "You made room for your week." : "Your week is ready to revisit.")
+            RitualNumber(value: SpreadHours.text(placed), unit: "h", size: 72)
+            Text("Placed on days").font(Spread.callout).foregroundStyle(Spread.secondary)
             ForEach(snapshot.roles) { role in
-                HStack {
-                    Circle().fill(Color(hex: role.color)).frame(width: 12, height: 12)
-                    Text(role.name)
-                    Spacer()
-                    Text(SpreadHours.text(snapshot.placedHours(for: role.id)) + "h")
-                        .monospacedDigit()
-                }
+                RitualAreaHeader(role: role, caption: "\(SpreadHours.spoken(snapshot.placedHours(for: role.id))) placed")
             }
-            Button("Finish for now") { dismiss() }
-                .buttonStyle(SpreadRefinedControlStyle(prominent: true))
-                .accessibilityIdentifier("week-ahead-finish")
         }
         .padding(Spread.space4)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .spreadCard()
     }
 
@@ -605,101 +837,76 @@ struct LifeWeekAheadSheet: View {
         guard !busy && !planner.busy else { return }
         busy = true
         message = nil
+        let profile = planner.state?.envelope.profileId
         Task { @MainActor in
             let success = await planner.send(action)
             busy = false
+            guard planner.state?.envelope.profileId == profile else { return }
             if success { afterSuccess() }
-            else { message = planner.error ?? "The change could not be saved. Your plan is unchanged." }
+            else { message = planner.error ?? "The change could not be saved. Try again." }
         }
     }
 }
 
-/// Your Journey: numerical scoreboard across saved weeks. No score or time-spent inference.
+/// Gives each area the same live name and local artwork it has in the Life wallet.
+private struct RitualAreaHeader: View {
+    let role: Responsibility
+    let caption: String?
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spread.space1) {
+            Text(role.name)
+                .font(.system(.title2, design: .serif).weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            if let caption, !caption.isEmpty {
+                Text(caption)
+                    .font(Spread.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(Spread.space4)
+        .frame(maxWidth: .infinity, minHeight: 104, alignment: .bottomLeading)
+        .background {
+            LifeEditorialArtwork(category: role.category, roleColor: Color(hex: role.color))
+                .overlay {
+                    Spread.artGround.opacity(reduceTransparency ? 0.75 : 0.3)
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Spread.radiusCard))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Your Journey compares saved plans and completed tasks across recorded weeks.
 struct LifeJourneySheet: View {
     let snapshot: PlannerSnapshot
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var history: [NativeWeekHistory] { snapshot.history ?? [] }
     private var placedTotal: Double { history.reduce(0) { $0 + $1.placedHours } }
     private var completedTotal: Int { history.reduce(0) { $0 + $1.completedTasks } }
-    private func placed(for id: String) -> Double {
-        history.reduce(0) { sum, week in
-            sum + (week.byRole.first { $0.roleId == id }?.placedHours ?? 0)
-        }
-    }
-    private func completed(for id: String) -> Int {
-        history.reduce(0) { sum, week in
-            sum + (week.byRole.first { $0.roleId == id }?.completedTasks ?? 0)
-        }
-    }
+    private var maxWeek: Double { history.map(\.placedHours).max() ?? 0 }
 
     var body: some View {
         SpreadSheetStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Spread.space5) {
-                    VStack(alignment: .leading, spacing: Spread.space2) {
-                        Text("THE TIME YOU MADE ROOM FOR")
-                            .font(Spread.footnote).foregroundStyle(Spread.secondary)
-                        Text("Your Journey")
-                            .font(.largeTitle.bold())
-                        Text("A scoreboard of saved plans through the selected week, not measured time spent.")
-                            .font(Spread.callout).foregroundStyle(Spread.secondary)
-                    }
-
+                VStack(alignment: .leading, spacing: Spread.space6) {
                     if history.isEmpty {
-                        ContentUnavailableView("No saved weeks to score yet", systemImage: "chart.bar",
-                            description: Text("Schedule time or complete a task to begin your record."))
+                        ContentUnavailableView("No saved weeks yet", systemImage: "chart.bar",
+                            description: Text("Weeks with saved plans will appear here."))
+                            .accessibilityIdentifier("journey-empty")
                     } else {
-                        HStack(spacing: Spread.space3) {
-                            numberTile(SpreadHours.text(placedTotal) + "h", label: "Hours placed")
-                            numberTile("\(completedTotal)", label: "Tasks finished")
-                        }
-                        numberTile("\(history.count)", label: "Saved weeks represented")
-
-                        Text("By Life area").font(.title2.bold())
-                        ForEach(snapshot.roles) { role in
-                            VStack(alignment: .leading, spacing: Spread.space2) {
-                                HStack {
-                                    Circle().fill(Color(hex: role.color)).frame(width: 12, height: 12)
-                                    Text(role.name).font(Spread.headline)
-                                    Spacer()
-                                    Text(SpreadHours.text(placed(for: role.id)) + "h")
-                                        .font(Spread.headline).monospacedDigit()
-                                }
-                                GeometryReader { proxy in
-                                    ZStack(alignment: .leading) {
-                                        Capsule().fill(Spread.fill)
-                                        Capsule().fill(Color(hex: role.color))
-                                            .frame(width: max(0, proxy.size.width * CGFloat(
-                                                placedTotal > 0 ? placed(for: role.id) / placedTotal : 0)))
-                                    }
-                                }
-                                .frame(height: 8)
-                                Text("\(completed(for: role.id)) tasks completed")
-                                    .font(Spread.caption).foregroundStyle(Spread.secondary)
-                            }
-                            .padding(Spread.space3)
-                            .spreadCard(edge: Color(hex: role.color))
-                            .accessibilityElement(children: .combine)
-                        }
-
-                        Text("Week by week").font(.title2.bold())
-                        ForEach(history) { week in
-                            HStack {
-                                Text(PlannerDates.label(PlannerDates.date(week.weekKey), pattern: "MMM d"))
-                                    .font(Spread.callout)
-                                Spacer()
-                                Text(SpreadHours.text(week.placedHours) + "h placed")
-                                    .font(Spread.callout).monospacedDigit()
-                                Text("· \(week.completedTasks) done")
-                                    .font(Spread.caption).foregroundStyle(Spread.secondary)
-                            }
-                            .padding(Spread.space3)
-                            .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
-                        }
+                        scoreboard
+                        if !snapshot.roles.isEmpty { roleBreakdown }
+                        timeline
                     }
                 }
                 .padding(Spread.space5)
+                .frame(maxWidth: 680)
+                .frame(maxWidth: .infinity)
             }
             .navigationTitle("Your Journey")
             .navigationBarTitleDisplayMode(.inline)
@@ -713,19 +920,113 @@ struct LifeJourneySheet: View {
         .accessibilityIdentifier("your-journey-sheet")
     }
 
-    private func numberTile(_ value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: Spread.space2) {
-            Text(value)
-                .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+    private var scoreboard: some View {
+        VStack(alignment: .leading, spacing: Spread.space4) {
+            Text("The time you made room for")
+                .font(.system(.title2, design: .serif).weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+            Text("Saved weeks through \(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))")
+                .font(Spread.callout).foregroundStyle(Spread.secondary)
+            metric(SpreadHours.text(placedTotal), unit: "h", label: "Placed on days",
+                   size: 82, id: "journey-hours")
+            Divider()
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spread.space4))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: Spread.space4))
+            layout {
+                metric(completedTotal.formatted(), label: "Tasks finished", size: 42, id: "journey-tasks")
+                metric(history.count.formatted(), label: "Saved weeks", size: 42, id: "journey-weeks")
+            }
+        }
+        .padding(Spread.space5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .spreadCard()
+    }
+
+    private var roleBreakdown: some View {
+        VStack(alignment: .leading, spacing: Spread.space3) {
+            sectionTitle("By Life area")
+            ForEach(snapshot.roles) { role in
+                let entries = history.compactMap { week in week.byRole.first { $0.roleId == role.id } }
+                let hours = entries.reduce(0) { $0 + $1.placedHours }
+                let tasks = entries.reduce(0) { $0 + $1.completedTasks }
+                let color = Color(hex: role.color)
+                VStack(alignment: .leading, spacing: Spread.space2) {
+                    Label {
+                        Text(role.name).font(Spread.headline)
+                    } icon: {
+                        Circle().fill(color).frame(width: 12, height: 12)
+                    }
+                    bar(value: hours, maximum: placedTotal, color: color)
+                    values(hours: hours, tasks: tasks)
+                }
+                .padding(Spread.space4)
+                .spreadCard(edge: color)
+                .accessibilityElement(children: .combine)
+            }
+        }
+    }
+
+    private var timeline: some View {
+        VStack(alignment: .leading, spacing: Spread.space3) {
+            sectionTitle("Week by week")
+            ForEach(history) { week in
+                VStack(alignment: .leading, spacing: Spread.space2) {
+                    Text(PlannerDates.weekRange(base: week.weekKey, offset: 0)).font(Spread.headline)
+                    bar(value: week.placedHours, maximum: maxWeek, color: Spread.accent)
+                    values(hours: week.placedHours, tasks: week.completedTasks)
+                }
+                .padding(Spread.space4)
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .accessibilityIdentifier("journey-week-history")
+    }
+
+    private func sectionTitle(_ label: String) -> some View {
+        Text(label).font(.title2.weight(.semibold)).accessibilityAddTraits(.isHeader)
+    }
+
+    private func metric(_ value: String, unit: String? = nil, label: String,
+                        size: CGFloat, id: String) -> some View {
+        VStack(alignment: .leading, spacing: Spread.space1) {
+            RitualNumber(value: value, unit: unit, size: size)
             Text(label).font(Spread.callout).foregroundStyle(Spread.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spread.space4)
-        .spreadCard()
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(id)
+    }
+
+    private func values(hours: Double, tasks: Int) -> some View {
+        let hoursLabel = Text("\(SpreadHours.spoken(hours)) placed").font(Spread.callout.weight(.semibold))
+        let tasksLabel = Text(tasks == 1 ? "1 task finished" : "\(tasks.formatted()) tasks finished")
+            .font(Spread.callout).foregroundStyle(Spread.secondary)
+        return ViewThatFits(in: .horizontal) {
+            HStack {
+                hoursLabel.fixedSize()
+                Spacer(minLength: Spread.space2)
+                tasksLabel.fixedSize()
+            }
+            VStack(alignment: .leading, spacing: Spread.space1) {
+                hoursLabel
+                tasksLabel
+            }
+        }
+        .monospacedDigit()
+    }
+
+    private func bar(value: Double, maximum: Double, color: Color) -> some View {
+        let fraction = maximum > 0 ? CGFloat(min(1, max(0, value / maximum))) : 0
+        return GeometryReader { geometry in
+            Capsule().fill(Spread.fill)
+                .overlay(alignment: .leading) {
+                    Capsule().fill(color).frame(width: geometry.size.width * fraction)
+                }
+        }
+        .frame(height: 6)
+        .accessibilityHidden(true)
     }
 }
 #endif
