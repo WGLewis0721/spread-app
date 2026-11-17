@@ -517,6 +517,7 @@ struct LifeWeekAheadSheet: View {
     }
 
     private func actionBar(snapshot: PlannerSnapshot, role: Responsibility) -> some View {
+        VStack(spacing: Spread.space1) {
         HStack(spacing: Spread.space3) {
             Button {
                 if step > 0 { step -= 1 }
@@ -539,6 +540,22 @@ struct LifeWeekAheadSheet: View {
             .buttonStyle(.spreadPress)
             .disabled(busy || planner.busy)
             .accessibilityIdentifier("week-ahead-next")
+        }
+        Button("Skip this Life area") {
+            message = nil
+            if areaIndex + 1 < snapshot.roles.count {
+                areaIndex += 1
+                step = 0
+                selectedDay = ""
+                taskText = ""
+            } else {
+                finished = true
+            }
+        }
+        .font(Spread.callout)
+        .frame(minHeight: Spread.minimumTarget)
+        .disabled(busy || planner.busy)
+        .accessibilityIdentifier("week-ahead-skip-area")
         }
         .padding(Spread.space4)
         .background(Spread.canvas)
@@ -563,7 +580,7 @@ struct LifeWeekAheadSheet: View {
         VStack(alignment: .leading, spacing: Spread.space4) {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 46)).foregroundStyle(Spread.success)
-            Text("Your week has a plan.")
+            Text(snapshot.allocations.isEmpty ? "Your Life areas are ready." : "Your week has a plan.")
                 .font(.largeTitle.bold())
             Text("\(SpreadHours.text(snapshot.allocations.reduce(0) { $0 + $1.hours }))h reserved on days across \(snapshot.roles.count) Life areas.")
                 .font(Spread.body).foregroundStyle(Spread.secondary)
