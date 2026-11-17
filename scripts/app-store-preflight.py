@@ -45,7 +45,7 @@ class Checks:
             return None
         return parsed
 
-    def source(self, root):
+    def source(self, root, *, verify_widget_source_resources=True):
         raw = self.file(root, "capacitor.config.json")
         if raw:
             try:
@@ -87,7 +87,7 @@ class Checks:
                 for entry in categories
             )
             self.check("Required-reason declarations", valid, "Each declared API requires a reason")
-        self.required_reasons(root, privacy)
+        self.required_reasons(root, privacy, verify_widget_source_resources=verify_widget_source_resources)
         self.release_notes(root)
         self.device_family(root)
         self.plist(self.file(root, "ios/App/SpreadWidget/Info.plist"), "Widget Info.plist")
@@ -133,7 +133,7 @@ class Checks:
                 missing.append(f"{category}{' ' + reason if reason else ''}")
         return missing
 
-    def required_reasons(self, root, app_privacy):
+    def required_reasons(self, root, app_privacy, *, verify_widget_source_resources=True):
         """The app and the widget extension each ship their own manifest for the APIs they call."""
         def swift(*folders):
             return [path.read_text(encoding="utf-8", errors="replace")
@@ -148,17 +148,23 @@ class Checks:
                             "Widget PrivacyInfo.xcprivacy")
         if widget is None:
             return
-        project = self.file(root, "ios/App/App.xcodeproj/project.pbxproj") or b""
-        resources = re.search(rb"/\* Widget resources \*/ = \{[^\n]*", project)
-        file_ids = re.findall(
-            rb"(\w+) /\* [^*]* \*/ = \{ isa = PBXFileReference;[^\n]*path = PrivacyInfo\.xcprivacy;", project)
-        build_ids = [build for build, ref in re.findall(
-            rb"(\w+) /\* [^*]* \*/ = \{ ?isa = PBXBuildFile; fileRef = (\w+)", project) if ref in file_ids]
-        embedded = bool(resources) and any(build in resources.group(0) for build in build_ids)
+        # Before signing, check the Xcode resource mapping. After signing, the
+        # actual IPA is authoritative even if Xcode/Codemagic rewrote the project.
+        embedded = True
+        if verify_widget_source_resources:
+            project = self.file(root, "ios/App/App.xcodeproj/project.pbxproj") or b""
+            resources = re.search(rb"/\* Widget resources \*/ = \{[^\n]*", project)
+            file_ids = re.findall(
+                rb"(\w+) /\* [^*]* \*/ = \{ isa = PBXFileReference;[^\n]*path = PrivacyInfo\.xcprivacy;", project)
+            build_ids = [build for build, ref in re.findall(
+                rb"(\w+) /\* [^*]* \*/ = \{ ?isa = PBXBuildFile; fileRef = (\w+)", project) if ref in file_ids]
+            embedded = bool(resources) and any(build in resources.group(0) for build in build_ids)
         missing = self.undeclared_reasons(widget, swift("ios/App/SpreadWidget"))
         self.check("Widget privacy manifest", embedded and not missing
                    and widget.get("NSPrivacyTracking") is False,
                    "Undeclared: " + ", ".join(missing) if missing
+                   else "The signed IPA is checked separately for widget embedding"
+                   if not verify_widget_source_resources
                    else "The widget extension embeds its own manifest" if embedded
                    else "PrivacyInfo.xcprivacy must be in the widget target's resources")
 
@@ -308,7 +314,7 @@ def main(argv=None):
     parser.add_argument("--ipa", type=Path, help="Signed IPA to inspect read-only")
     args = parser.parse_args(argv)
     checks = Checks()
-    checks.source(args.root)
+    checks.source(args.root, verify_widget_source_resources=args.ipa is None)
     if args.bundle is not None:
         checks.bundle(args.bundle)
     if args.ipa is not None:
