@@ -20,7 +20,7 @@ The PR #258 screens are utility sheets rather than the emotional payoff of a wee
 
 - [Repo] PR #258 introduced the three More destinations and basic screens in LifeEngagementSheets.swift.
 - [Repo] The authoritative planner is src/lib/spread/store.ts. LivePlanner.send routes mutations through its guarded bridge.
-- [Repo] [Owner iPhone references](../../../evidence/life-ios-reference/owner-captures-2026-11-17/README.md) and the native editorial art direction govern app identity.
+- [Repo] [Owner iPhone references](../../evidence/life-ios-reference/owner-captures-2026-11-17/README.md) and the native editorial art direction govern app identity.
 - [Owner] Review feels like Spotify Wrapped or Apple Music Replay, Ahead like onboarding through all Life areas, Journey like a numerical scoreboard.
 - [Repo] The app records budgets, day reservations and completed tasks. It does NOT measure actual time physically spent. Never label reserved time as time spent.
 
