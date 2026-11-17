@@ -550,6 +550,10 @@ export function repairDuplicateIds(weeks: Record<string, WeekData>): Record<stri
   return changed ? out : weeks;
 }
 
+export function normalizeLifeIntention(value: unknown): string | undefined {
+  return typeof value === "string" ? Array.from(value.trim()).slice(0, 120).join("").trimEnd() || undefined : undefined;
+}
+
 function normalizeHat(hat: Hat): Hat {
   const next: Hat = {
     id: hat.id,
@@ -559,7 +563,8 @@ function normalizeHat(hat: Hat): Hat {
   };
   const category = isSpreadCategory(hat.category) ? hat.category : isSpreadCategory(hat.id) ? hat.id : undefined;
   if (category) next.category = category;
-  if (typeof hat.intention === "string" && hat.intention.trim()) next.intention = hat.intention.trim().slice(0, 120);
+  const intention = normalizeLifeIntention(hat.intention);
+  if (intention) next.intention = intention;
   return next;
 }
 

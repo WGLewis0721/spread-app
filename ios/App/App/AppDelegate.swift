@@ -16,9 +16,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         defer { completionHandler() }
-        guard response.notification.request.content.userInfo["destination"] as? String == "today",
-              let url = URL(string: "spread://today") else { return }
-        UIApplication.shared.open(url)
+        guard response.actionIdentifier == UNNotificationDefaultActionIdentifier,
+              response.notification.request.content.userInfo["destination"] as? String == "today" else { return }
+        Task { @MainActor in SceneDelegate.requestToday() }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

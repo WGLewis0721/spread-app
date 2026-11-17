@@ -6,6 +6,7 @@ struct LifeManageSheet: View {
     let roleId: String
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
+    @State private var intention = ""
     @State private var color = ""
     @State private var category = ""
     @State private var revision: Int?
@@ -13,6 +14,9 @@ struct LifeManageSheet: View {
     @State private var savingHours = false
     @State private var budgetHours = 0.0
     @State private var hoursSaved = false
+
+    private var trimmedIntention: String { intention.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var intentionTooLong: Bool { trimmedIntention.unicodeScalars.count > 120 }
 
     private var hourRange: ClosedRange<Double> {
         guard let snapshot = planner.snapshot,
@@ -29,6 +33,17 @@ struct LifeManageSheet: View {
                 Section("Life area") {
                     TextField("Name", text: $name).accessibilityIdentifier("life-area-name")
                     Text("Names, colors and symbols apply to all weeks.").font(.subheadline)
+                }
+                Section {
+                    TextField("What matters here?", text: $intention, axis: .vertical)
+                        .lineLimit(1...3)
+                        .disabled(saving || savingHours)
+                        .accessibilityIdentifier("role-intention-field")
+                } header: {
+                    Text("Intention")
+                } footer: {
+                    Text(intentionTooLong ? "Use 120 characters or fewer." : "Optional. Shown on this Life area’s card.")
+                        .foregroundStyle(intentionTooLong ? Spread.danger : Spread.secondary)
                 }
                 if let snapshot = planner.snapshot,
                    let role = snapshot.roles.first(where: { $0.id == roleId }) {
@@ -98,13 +113,15 @@ struct LifeManageSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(saving || savingHours) }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(saving || savingHours || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(saving || savingHours || planner.busy || intentionTooLong ||
+                                  name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
         .task {
             guard let role = planner.snapshot?.roles.first(where: { $0.id == roleId }) else { return }
             name = role.name; color = role.color; category = role.category
+            intention = role.intention ?? ""
             budgetHours = role.hours; revision = planner.state?.revision
         }
         .interactiveDismissDisabled(saving || savingHours)
@@ -133,12 +150,13 @@ struct LifeManageSheet: View {
     }
 
     private func save() async {
-        guard !saving && !savingHours else { return }
+        guard !saving && !savingHours && !intentionTooLong else { return }
         saving = true
         defer { saving = false }
         if await planner.send(["type": "editLifeRole", "roleId": roleId,
                                "name": name.trimmingCharacters(in: .whitespacesAndNewlines),
-                               "color": color, "category": category], expectedRevision: revision) {
+                               "color": color, "category": category,
+                               "intention": trimmedIntention], expectedRevision: revision) {
             dismiss()
         }
     }

@@ -17,21 +17,20 @@ struct LifeWeekReviewSheet: View {
                 VStack(alignment: .leading, spacing: Spread.space4) {
                     Text(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
-                    metric("\(SpreadHours.text(planned))h", "planned across \(snapshot.roles.count) Life areas")
-                    metric("\(SpreadHours.text(placed))h", "placed on days")
-                    metric("\(completed)", completed == 1 ? "completed task" : "completed tasks")
-                    Text("Planned time is not measured time spent.")
-                        .font(Spread.footnote).foregroundStyle(Spread.secondary)
                     if snapshot.roles.isEmpty {
                         ContentUnavailableView("Nothing to review yet", systemImage: "calendar",
                                                description: Text("Add a Life area and plan a week first."))
+                    } else {
+                        metric("\(SpreadHours.text(planned)) h", "Weekly budget")
+                        metric("\(SpreadHours.text(placed)) h", "Reserved on days")
+                        metric("\(completed)", completed == 1 ? "Task completed" : "Tasks completed")
                     }
                 }
                 .padding(Spread.space5)
             }
             .navigationTitle("Week in Review")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button { dismiss() } label: { Text("Done").tapTarget() } } }
         }
         .presentationDetents([.large])
         .accessibilityIdentifier("week-in-review-sheet")
@@ -44,7 +43,8 @@ struct LifeWeekReviewSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spread.space4)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        .spreadCard()
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -53,7 +53,6 @@ struct LifeWeekAheadSheet: View {
     let snapshot: PlannerSnapshot
     @Environment(\.dismiss) private var dismiss
     @State private var roleIndex = 0
-    @State private var reviewed = Set<String>()
 
     private var currentRole: Responsibility? {
         guard snapshot.roles.indices.contains(roleIndex) else { return nil }
@@ -66,46 +65,50 @@ struct LifeWeekAheadSheet: View {
                 VStack(alignment: .leading, spacing: Spread.space4) {
                     Text(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
-                    if let role = currentRole {
+                    if snapshot.roles.isEmpty {
+                        ContentUnavailableView("No Life areas to review", systemImage: "calendar.badge.plus",
+                                               description: Text("Add a Life area to get started."))
+                    } else if let role = currentRole {
                         VStack(alignment: .leading, spacing: Spread.space3) {
                             HStack {
                                 Circle().fill(Color(hex: role.color)).frame(width: 12, height: 12)
-                                Text(role.name).font(.title2.bold())
+                                Text(role.name).font(Spread.headline)
                                 Spacer()
                                 Text("\(roleIndex + 1) of \(snapshot.roles.count)")
                                     .font(Spread.footnote).foregroundStyle(Spread.secondary)
                             }
-                            Text("\(SpreadHours.text(role.hours)) hours this week")
-                                .font(.title3.weight(.semibold))
-                            Text("Review hours, days, and tasks for this Life area. Use Week to make changes.")
+                            Text("\(SpreadHours.text(role.hours)) h budgeted · \(SpreadHours.text(snapshot.placedHours(for: role.id))) h reserved")
+                                .font(Spread.body)
+                            Text("Use Week to change the plan.")
                                 .font(Spread.callout).foregroundStyle(Spread.secondary)
-                            Button("Mark reviewed") {
-                                reviewed.insert(role.id)
-                                if roleIndex < snapshot.roles.count - 1 { roleIndex += 1 }
+                            Button {
+                                roleIndex += 1
+                            } label: {
+                                Text("Mark reviewed")
+                                    .font(Spread.headline)
+                                    .foregroundStyle(Spread.onAccent)
+                                    .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
+                                    .background(Capsule().fill(Spread.accentGradient))
                             }
-                            .buttonStyle(.borderedProminent)
-                            .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
+                            .buttonStyle(.spreadPress)
                             .accessibilityIdentifier("week-ahead-review-role")
                         }
                         .padding(Spread.space4)
-                        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+                        .spreadCard(edge: Color(hex: role.color))
                     } else {
-                        ContentUnavailableView("No Life areas to plan", systemImage: "calendar.badge.plus",
-                                               description: Text("Add a Life area first."))
-                    }
-                    if !snapshot.roles.isEmpty && reviewed.count == snapshot.roles.count {
                         Label("Week reviewed", systemImage: "checkmark.circle.fill")
                             .font(.title3.bold()).foregroundStyle(Spread.accent)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(Spread.space4)
-                            .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+                            .spreadCard()
+                            .accessibilityAddTraits(.isHeader)
                     }
                 }
                 .padding(Spread.space5)
             }
             .navigationTitle("Week Ahead")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button { dismiss() } label: { Text("Done").tapTarget() } } }
         }
         .presentationDetents([.large])
         .accessibilityIdentifier("week-ahead-sheet")
@@ -121,7 +124,7 @@ struct LifeJourneySheet: View {
         SpreadSheetStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spread.space3) {
-                    Text("Your current planning history starts with this week.")
+                    Text(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
                     ForEach(snapshot.roles) { role in
                         let placed = snapshot.placedHours(for: role.id)
@@ -138,20 +141,19 @@ struct LifeJourneySheet: View {
                             Spacer(minLength: 0)
                         }
                         .padding(Spread.space4)
-                        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                        .spreadCard(edge: Color(hex: role.color), radius: Spread.radiusRow)
+                        .accessibilityElement(children: .combine)
                     }
                     if snapshot.roles.isEmpty {
                         ContentUnavailableView("Your Journey begins here", systemImage: "chart.line.uptrend.xyaxis",
                                                description: Text("Plan a Life area to begin building history."))
                     }
-                    Text("These are planning facts, not measured time spent or a productivity score.")
-                        .font(Spread.footnote).foregroundStyle(Spread.secondary)
                 }
                 .padding(Spread.space5)
             }
             .navigationTitle("Your Journey")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button { dismiss() } label: { Text("Done").tapTarget() } } }
         }
         .presentationDetents([.large])
         .accessibilityIdentifier("your-journey-sheet")

@@ -71,7 +71,8 @@ const action = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("previewLifePriority"), roleId: id, goalHours: hours, day }),
   z.strictObject({ type: z.literal("applyLifePriority"), roleId: id, goalHours: hours, day }),
   z.strictObject({ type: z.literal("editLifeRole"), roleId: id, name: text,
-    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/), category: z.union([z.literal("custom"), z.string().refine(isSpreadCategory)]) }),
+    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/), category: z.union([z.literal("custom"), z.string().refine(isSpreadCategory)]),
+    intention: z.string().trim().refine((value) => Array.from(value).length <= 120).optional() }),
   z.strictObject({ type: z.literal("removeLifeRole"), roleId: id }),
   z.strictObject({ type: z.literal("setLifeBudget"), roleId: id, hours }),
   z.strictObject({ type: z.literal("setLifePriority"), priorityRoleId: id.nullable(), goalHours: hours.optional(), day: day.optional() }),
@@ -104,7 +105,6 @@ const action = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("allocationHours"), allocationId: id, hours }),
   z.strictObject({ type: z.literal("removeAllocation"), allocationId: id }),
   z.strictObject({ type: z.literal("renameRole"), roleId: id, name: text }),
-  z.strictObject({ type: z.literal("setRoleIntention"), roleId: id, intention: z.string().max(120) }),
   z.strictObject({ type: z.literal("removeRole"), roleId: id }),
   z.strictObject({ type: z.literal("switchProfile"), profileId: id }),
   z.strictObject({ type: z.literal("addProfile"), name: text }),
@@ -410,7 +410,7 @@ export function createNativeV2Dispatcher(sessionId: string) {
             break;
           case "editLifeRole":
             if (!state.editLifeRole(a.roleId, a.name, a.color, a.category === "custom" ? undefined :
-              a.category as Parameters<typeof state.setHatCategory>[1])) throw new Error("role-edit-refused");
+              a.category as Parameters<typeof state.setHatCategory>[1], a.intention)) throw new Error("role-edit-refused");
             break;
           case "removeLifeRole":
             state.removeHat(a.roleId);
@@ -481,9 +481,6 @@ export function createNativeV2Dispatcher(sessionId: string) {
             break;
           case "renameRole":
             state.renameHat(a.roleId, a.name);
-            break;
-          case "setRoleIntention":
-            state.setHatIntention(a.roleId, a.intention);
             break;
           case "removeRole":
             state.removeHat(a.roleId);

@@ -28,6 +28,11 @@ struct LifeWalletStack: View {
         return max(minimumFaceHeight, min(318, available * 0.58))
     }
     private var focusedHeight: CGFloat { closedHeight + 12 }
+    private var intentionHeight: CGFloat { 52 }
+    private var visibleFaceHeight: CGFloat {
+        let front = selectedRole.flatMap { id in roles.first { $0.id == id } } ?? ordered.last
+        return (selectedRole == nil ? closedHeight : focusedHeight) + (front?.intention == nil ? 0 : intentionHeight)
+    }
     private var stackStep: CGFloat { (closedHeight * 0.40).rounded() }
 
     private var ordered: [Responsibility] {
@@ -113,8 +118,8 @@ struct LifeWalletStack: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .top)
-                .frame(height: focusActive ? focusedHeight :
-                    CGFloat(max(0, ordered.count - 1)) * stackStep + (selectedRole == nil ? closedHeight : focusedHeight),
+                    .frame(height: focusActive ? visibleFaceHeight :
+                        CGFloat(max(0, ordered.count - 1)) * stackStep + visibleFaceHeight,
                     alignment: .top)
                 // Intentionally no stack-level clipping: outgoing sibling faces
                 // remain whole while the scroll viewport clips their device exit.
@@ -143,19 +148,21 @@ struct LifeWalletStack: View {
                        selected: selectedRole == role.id,
                        faceVisible: faceVisible,
                        onSelect: { select(role.id) },
+                       onEditIntention: onSetup.map { action in { action(role.id) } },
                        closedHeight: closedHeight,
                        focusedHeight: focusedHeight,
+                       intentionHeight: intentionHeight,
                        presentationWidth: min(700, max(0, viewportWidth - 32)),
                        editorialArt: editorialArt)
             .overlay(alignment: .topTrailing) {
-                if let onSetup {
+                if faceVisible, role.intention == nil, let onSetup {
                     Button { onSetup(role.id) } label: {
                         SpreadIcon(name: "lucide-pencil", size: 16).tapTarget()
                     }
                     .buttonStyle(.spreadPress)
                     .foregroundStyle(Spread.tileGlyph)
                     .background(Color.black.opacity(0.22), in: Circle())
-                    .padding(8)
+                    .padding(.trailing, 36)
                     .accessibilityLabel("Set up \(role.name)")
                     .accessibilityHint("Add an intention, hours, color, and symbol")
                     .accessibilityIdentifier("life-card-setup-\(role.id)")
@@ -197,13 +204,17 @@ private struct LifeWalletFace: View {
     let selected: Bool
     let faceVisible: Bool
     let onSelect: () -> Void
+    let onEditIntention: (() -> Void)?
     let closedHeight: CGFloat
     let focusedHeight: CGFloat
+    let intentionHeight: CGFloat
     let presentationWidth: CGFloat
     let editorialArt: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
-    private var cardHeight: CGFloat { selected ? focusedHeight : closedHeight }
+    private var cardHeight: CGFloat {
+        (selected ? focusedHeight : closedHeight) + (role.intention == nil ? 0 : intentionHeight)
+    }
     private var reserved: Double {
         snapshot.allocations.filter { $0.roleId == role.id && (day == nil || $0.day == day) }.reduce(0) { $0 + $1.hours }
     }
@@ -228,7 +239,8 @@ private struct LifeWalletFace: View {
         let status = remaining >= 0
             ? SpreadHours.spoken(remaining) + " unassigned"
             : SpreadHours.spoken(-remaining) + " over budget"
-        let parts: [String] = [role.name, weekly + " weekly budget", booked + " assigned", status]
+        var parts: [String] = [role.name, weekly + " weekly budget", booked + " assigned", status]
+        if let intention = role.intention { parts.append("Intention: " + intention) }
         return parts.joined(separator: ", ")
     }
 
@@ -266,6 +278,11 @@ private struct LifeWalletFace: View {
             .accessibilityAddTraits(.isButton)
             .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityAction { onSelect() }
+            .accessibilityActions {
+                if role.intention != nil, let onEditIntention {
+                    Button("Edit intention", action: onEditIntention)
+                }
+            }
     }
 
     private var roleColor: Color { Color(hex: role.color) }
@@ -282,7 +299,8 @@ private struct LifeWalletFace: View {
 
     private var face: some View {
         LifeEditorialFace(role: role, snapshot: snapshot, selected: selected,
-                          titleSafeWidth: presentationWidth * 0.61)
+                          titleSafeWidth: presentationWidth * 0.61,
+                          onEditIntention: faceVisible ? onEditIntention : nil)
     }
 
 }

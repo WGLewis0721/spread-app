@@ -38,6 +38,7 @@ import {
   bankedHours,
   ensureWeek,
   normalizeData,
+  normalizeLifeIntention,
   ROLE_COLORS,
   SPREAD_CATEGORIES,
   shiftWeek,
@@ -128,9 +129,8 @@ type Store = {
   setLifePriority: (hatId: string | null, goalHours?: number, day?: string) => boolean;
   applyLifePriority: (hatId: string, goalHours: number, day: string) => boolean;
   lifeUndoable: (run: () => void) => string | null;
-  editLifeRole: (hatId: string, name: string, color: string, category: SpreadCategory | undefined) => boolean;
+  editLifeRole: (hatId: string, name: string, color: string, category: SpreadCategory | undefined, intention?: string) => boolean;
   renameHat: (hatId: string, name: string) => void;
-  setHatIntention: (hatId: string, intention: string) => void;
   removeHat: (hatId: string) => void;
   addHat: (name: string, hours: number, options?: { category?: SpreadCategory }) => void;
   addTask: (hatId: string, text: string, life?: boolean) => void;
@@ -810,11 +810,15 @@ export const useSpread = create<Store>((set, get) => ({
       life: { ...week.life, version: 1, priorityRoleId: hatId, priorityGoalHours: goalHours, priorityDay: day } }));
     return true;
   },
-  editLifeRole: (hatId, name, color, category) => {
+  editLifeRole: (hatId, name, color, category, intention) => {
     const trimmed = name.trim();
     const data = get().data;
     if (!trimmed || !/^#[0-9A-Fa-f]{6}$/.test(color) || !data.hats.some((hat) => hat.id === hatId)) return false;
-    commit(set, { ...data, hats: data.hats.map((hat) => hat.id === hatId ? { ...hat, name: trimmed, color, category } : hat) });
+    const hats = data.hats.map((hat) => hat.id === hatId
+      ? { ...hat, name: trimmed, color, category,
+          ...(intention === undefined ? {} : { intention: normalizeLifeIntention(intention) }) }
+      : hat);
+    commit(set, { ...data, hats });
     return true;
   },
   renameHat: (hatId, name) => {
@@ -822,13 +826,6 @@ export const useSpread = create<Store>((set, get) => ({
     if (!trimmed) return;
     const data = get().data;
     const next = { ...data, hats: data.hats.map((hat) => (hat.id === hatId ? { ...hat, name: trimmed } : hat)) };
-    commit(set, next);
-  },
-  setHatIntention: (hatId, intention) => {
-    const trimmed = intention.trim().slice(0, 120);
-    const data = get().data;
-    const next = { ...data, hats: data.hats.map((hat) =>
-      hat.id === hatId ? { ...hat, intention: trimmed || undefined } : hat) };
     commit(set, next);
   },
   removeHat: (hatId) => {

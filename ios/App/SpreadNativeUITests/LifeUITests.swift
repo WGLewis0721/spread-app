@@ -207,6 +207,7 @@ final class LifeUITests: XCTestCase {
             .matching(identifier: "calendar-week-navigator").firstMatch.exists)
         navigate("week")
         XCTAssertTrue(app.buttons["life-plan-ahead-open"].waitForExistence(timeout: 20))
+        XCTAssertEqual(app.buttons["life-plan-ahead-open"].label, "Planner")
         app.buttons["life-plan-ahead-open"].tap()
         // Plan Ahead opens to the plans list; one-time moves are one tap away.
         XCTAssertTrue(app.buttons["plan-ahead-move-once"].waitForExistence(timeout: 20))
@@ -237,6 +238,15 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["more-new-spread"].exists)
         XCTAssertFalse(app.buttons["more-review-tasks"].exists)
         XCTAssertFalse(app.buttons["more-rollover"].exists)
+        for (id, title) in [("more-week-in-review", "Week in Review"), ("more-week-ahead", "Week Ahead"),
+                            ("more-your-journey", "Your Journey")] {
+            let entry = app.buttons[id]
+            XCTAssertTrue(entry.isHittable)
+            entry.tap()
+            let destination = app.navigationBars[title]
+            XCTAssertTrue(destination.waitForExistence(timeout: 5))
+            destination.buttons["Done"].tap()
+        }
         capture("life-more")
     }
     func testCapacityUsesRealStoreAndSurvivesRelaunch() {

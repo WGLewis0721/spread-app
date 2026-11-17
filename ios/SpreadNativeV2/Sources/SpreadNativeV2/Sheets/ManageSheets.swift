@@ -6,6 +6,7 @@ import SwiftUI
 struct NewSpreadSheet: View {
     @ObservedObject var planner: LivePlanner
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private struct Draft: Identifiable {
         let id: Int
@@ -25,10 +26,10 @@ struct NewSpreadSheet: View {
     private var roleWord: String { "Life area" }
     private var roleWords: String { "Life areas" }
     private func fieldName(_ index: Int) -> String { "Life area \(index + 1)" }
-    private let quickStarts = [
-        ("Work", "work"), ("Home", "home"), ("Family", "family"),
-        ("Health", "health"), ("Personal", "personal")
-    ]
+    private let quickStarts = ["work", "home", "family", "health", "personal"]
+    private var emptyDraftIndex: Int? {
+        drafts.firstIndex { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.category == nil }
+    }
 
     var body: some View {
         SpreadSheetStack {
@@ -38,23 +39,32 @@ struct NewSpreadSheet: View {
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
                     VStack(alignment: .leading, spacing: Spread.space2) {
                         Text("Quick start").font(Spread.footnote).foregroundStyle(Spread.secondary)
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-                            ForEach(quickStarts, id: \.1) { item in
-                                let selected = drafts.contains { $0.category == item.1 }
-                                Button { addQuickStart(name: item.0, category: item.1) } label: {
-                                    Label(item.0, systemImage: selected ? "checkmark" : "plus")
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 180 : 96),
+                                                      spacing: Spread.space2)], spacing: Spread.space2) {
+                            ForEach(quickStarts, id: \.self) { category in
+                                let name = PalettePanel.categories.first { $0.id == category }?.label ?? category.capitalized
+                                let selected = drafts.contains { $0.category == category }
+                                Button { addQuickStart(name: name, category: category) } label: {
+                                    Label(name, systemImage: selected ? "checkmark" : "plus")
                                         .font(.caption.weight(.semibold))
                                         .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
                                 }
                                 .buttonStyle(.spreadPress)
                                 .spreadChip(selected: selected)
-                                .disabled(selected || drafts.count >= 5)
-                                .accessibilityIdentifier("quick-life-" + item.1)
+                                .disabled(saving || selected || (drafts.count >= 5 && emptyDraftIndex == nil))
+                                .accessibilityAddTraits(selected ? .isSelected : [])
+                                .accessibilityIdentifier("quick-life-" + category)
                             }
                         }
                     }
-                    ForEach(drafts.indices, id: \.self) { index in
-                        draftCard(index)
+                    if saving {
+                        ProgressView("Saving Life areas…")
+                    } else {
+                        ForEach(drafts) { draft in
+                            if let index = drafts.firstIndex(where: { $0.id == draft.id }) {
+                                draftCard(index)
+                            }
+                        }
                     }
                     Button {
                         drafts.append(Draft(id: nextId))
@@ -69,6 +79,7 @@ struct NewSpreadSheet: View {
                         .spreadChip(selected: false)
                     }
                     .buttonStyle(.spreadPress)
+                    .disabled(saving)
                     .accessibilityIdentifier("add-another-spread")
                     if let saveFailure = saveFailure {
                         Text(saveFailure)
@@ -94,11 +105,13 @@ struct NewSpreadSheet: View {
                 // Creating drafts discards them on Cancel, so the leading control is Cancel, not Close.
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel").tapTarget() }
+                        .disabled(saving)
                         .accessibilityIdentifier("add-life-cancel")
                 }
             }
         }
         .presentationDetents([.large])
+        .interactiveDismissDisabled(saving)
         .presentationDragIndicator(.visible)
     }
 
@@ -152,11 +165,10 @@ struct NewSpreadSheet: View {
     }
 
     private func addQuickStart(name: String, category: String) {
-        guard drafts.count <= 5, !drafts.contains(where: { $0.category == category }) else { return }
-        if drafts.count == 1, drafts[0].name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-           drafts[0].category == nil {
-            drafts[0].name = name
-            drafts[0].category = category
+        guard !saving, !drafts.contains(where: { $0.category == category }) else { return }
+        if let index = emptyDraftIndex {
+            drafts[index].name = name
+            drafts[index].category = category
         } else if drafts.count < 5 {
             drafts.append(Draft(id: nextId, name: name, category: category))
             nextId += 1
@@ -165,7 +177,7 @@ struct NewSpreadSheet: View {
 
     private func save() {
         let rows = drafts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        guard !rows.isEmpty else { return }
+        guard !saving, !rows.isEmpty else { return }
         saving = true
         saveFailure = nil
         Task {
@@ -201,7 +213,6 @@ struct RoleSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var intention = ""
     @State private var placeDay = ""
     @State private var placeHours = 1.0
     @State private var confirmRemoval = false
@@ -217,13 +228,6 @@ struct RoleSheet: View {
                             .submitLabel(.done)
                             .onSubmit { rename(role) }
                             .accessibilityIdentifier("role-name-field")
-                        TextField("What matters here?", text: $intention, axis: .vertical)
-                            .lineLimit(1...3)
-                            .onSubmit { saveIntention(role) }
-                            .accessibilityIdentifier("role-intention-field")
-                        Button("Save intention") { saveIntention(role) }
-                            .disabled(intention.trimmingCharacters(in: .whitespacesAndNewlines) == (role.intention ?? ""))
-                            .accessibilityIdentifier("save-role-intention")
                         HStack {
                             Text("Hours each week")
                             Spacer()
@@ -309,7 +313,6 @@ struct RoleSheet: View {
                 }
                 .onAppear {
                     name = role.name
-                    intention = role.intention ?? ""
                     placeDay = PlannerOrder.day(weekKey: snapshot.weekKey, displayPosition: 0)
                 }
             } else {
@@ -338,12 +341,6 @@ struct RoleSheet: View {
         Task { await planner.send(["type": "renameRole", "roleId": role.id, "name": trimmed]) }
     }
 
-    private func saveIntention(_ role: Responsibility) {
-        let trimmed = String(intention.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120))
-        guard trimmed != (role.intention ?? "") else { return }
-        intention = trimmed
-        Task { await planner.send(["type": "setRoleIntention", "roleId": role.id, "intention": trimmed]) }
-    }
 }
 
 

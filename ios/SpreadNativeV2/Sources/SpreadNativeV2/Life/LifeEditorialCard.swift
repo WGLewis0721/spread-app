@@ -101,6 +101,7 @@ struct LifeEditorialFace: View {
     let snapshot: PlannerSnapshot
     let selected: Bool
     let titleSafeWidth: CGFloat
+    let onEditIntention: (() -> Void)?
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat = 37
     // Every text size on the face scales with Dynamic Type (defaults match the original fixed sizes).
@@ -148,15 +149,23 @@ struct LifeEditorialFace: View {
 
     @ViewBuilder
     private var intentionReminder: some View {
-        if let intention = role.intention, !intention.isEmpty {
-            HStack(spacing: 5) {
+        if let intention = role.intention {
+            HStack(spacing: 0) {
                 Text(intention)
-                    .font(.caption.weight(.medium))
-                    .lineLimit(2)
-                SpreadIcon(name: "lucide-pencil", size: 12)
+                    .font(Spread.caption)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                    .padding(.leading, Spread.space2)
+                    .padding(.vertical, Spread.space1)
+                if let onEditIntention {
+                    Button(action: onEditIntention) {
+                        SpreadIcon(name: "lucide-pencil", size: 16).tapTarget()
+                    }
+                    .buttonStyle(.spreadPress)
+                    .accessibilityLabel("Edit intention")
+                }
             }
-            .frame(maxWidth: titleSafeWidth, alignment: .leading)
-            .accessibilityLabel("Intention: \(intention). Edit in Life area details.")
+            .background(Spread.artWell, in: RoundedRectangle(cornerRadius: Spread.radiusInset))
+            .frame(maxWidth: typeSize.isAccessibilitySize ? nil : titleSafeWidth, alignment: .leading)
         }
     }
 
