@@ -157,7 +157,7 @@ struct LifeWalletStack: View {
             .overlay(alignment: .topTrailing) {
                 if faceVisible, role.intention == nil, let onSetup {
                     Button { onSetup(role.id) } label: {
-                        SpreadIcon(name: "lucide-pencil", size: 16).tapTarget()
+                        SpreadIcon(name: "icon-edit", size: 16).tapTarget()
                     }
                     .buttonStyle(.spreadPress)
                     .foregroundStyle(Spread.tileGlyph)

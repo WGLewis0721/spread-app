@@ -158,7 +158,7 @@ struct LifeEditorialFace: View {
                     .padding(.vertical, Spread.space1)
                 if let onEditIntention {
                     Button(action: onEditIntention) {
-                        SpreadIcon(name: "lucide-pencil", size: 16).tapTarget()
+                        SpreadIcon(name: "icon-edit", size: 16).tapTarget()
                     }
                     .buttonStyle(.spreadPress)
                     .accessibilityLabel("Edit intention")
