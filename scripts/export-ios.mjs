@@ -49,6 +49,8 @@ mkdirSync(join(out, "assets"), { recursive: true });
 writeFileSync(join(out, "index.html"), cleaned);
 cpSync(join(root, ".vercel/output/static/assets"), join(out, "assets"), { recursive: true });
 cpSync(join(root, ".vercel/output/static/favicon.svg"), join(out, "favicon.svg"));
+// The privacy link is part of the installed app too; it cannot rely on the web server.
+cpSync(join(root, "public/privacy.html"), join(out, "privacy.html"));
 cpSync(join(root, ".vercel/output/static/fonts"), join(out, "fonts"), { recursive: true });
 cpSync(join(root, ".vercel/output/static/icons"), join(out, "icons"), { recursive: true });
 cpSync(join(root, "public/icons"), join(out, "icons"), { recursive: true });
