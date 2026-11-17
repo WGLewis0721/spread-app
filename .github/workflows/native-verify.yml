@@ -215,7 +215,7 @@ jobs:
         run: |
           {
             echo "### Native screenshots"
-            echo "Commit: `$GITHUB_SHA`"
+            printf 'Commit: `%s`\n' "$GITHUB_SHA"
             echo "UI test outcome: $JOURNEY_OUTCOME"
             echo "See the **native-verify** artifact for screenshots and logs."
             find artifacts/screens -name 'audit-*.png' -print 2>/dev/null | sort | sed 's/^/- /'
