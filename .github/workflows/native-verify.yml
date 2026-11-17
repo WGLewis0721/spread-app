@@ -63,6 +63,22 @@ jobs:
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
+      - name: Start the iPhone simulator
+        id: simulator
+        run: |
+          set -eu
+          UDID="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = [(runtime, d) for runtime, items in devices.items() if ".iOS-" in runtime
+                    for d in items if d["name"].startswith("iPhone") and d.get("isAvailable", True)]
+          phones.sort(key=lambda pair: ([int(n) for n in pair[0].split(".iOS-")[1].split("-")], "Pro" in pair[1]["name"]))
+          runtime, device = phones[-1]
+          sys.stderr.write("Using %s on %s\n" % (device["name"], runtime))
+          print(device["udid"])
+          ')"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -123,23 +139,13 @@ jobs:
         id: launch
         env:
           AUDIT_APPEARANCE: ${{ inputs.appearance || 'light' }}
+          UDID: ${{ steps.simulator.outputs.udid }}
         run: |
           set -eu
-          UDID="$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          phones = [(runtime, d) for runtime, items in devices.items() if ".iOS-" in runtime
-                    for d in items if d["name"].startswith("iPhone") and d.get("isAvailable", True)]
-          phones.sort(key=lambda pair: ([int(n) for n in pair[0].split(".iOS-")[1].split("-")], "Pro" in pair[1]["name"]))
-          runtime, device = phones[-1]
-          sys.stderr.write("Using %s on %s\n" % (device["name"], runtime))
-          print(device["udid"])
-          ')"
-          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
-          xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl ui "$UDID" appearance "$AUDIT_APPEARANCE"
-          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState unplugged --batteryLevel 100
+          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100 \
+            || echo "::warning::Could not apply the cosmetic status bar override"
           xcrun simctl install "$UDID" "$APP"
           xcrun simctl launch "$UDID" com.graymatter.spread
           sleep 25
@@ -171,7 +177,7 @@ jobs:
           xcodebuild test \
             -project ios/App/App.xcodeproj \
             -scheme SpreadNativeUITests \
-            -destination "platform=iOS Simulator,id=${{ steps.launch.outputs.udid }}" \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -derivedDataPath "$DERIVED" \
             -parallel-testing-enabled NO \
             -resultBundlePath artifacts/journeys.xcresult \
