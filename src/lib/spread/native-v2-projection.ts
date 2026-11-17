@@ -21,7 +21,47 @@ export type NativeV2Snapshot = {
   recurrenceIssue?: string;
   /** Present only when requested. Read-only forecast of the weeks after the selected one. */
   outlook?: NativeOutlookWeek[];
+  /** Optional summaries of saved weeks through the selected week, never measured time spent. */
+  history?: NativeWeekHistory[];
 };
+
+/** A read-only numeric summary of one saved week. Does not measure actual time spent. */
+export type NativeWeekHistory = {
+  weekKey: string;
+  budgetedHours: number;
+  placedHours: number;
+  completedTasks: number;
+  byRole: { roleId: string; budgetedHours: number; placedHours: number; completedTasks: number }[];
+};
+
+/** Existing stored weeks only; no simulated past, no mutation, no inferred activity. */
+export function projectWeekHistory(data: Readonly<SpreadData>, limit: number): NativeWeekHistory[] {
+  const count = Number.isFinite(limit) ? Math.min(52, Math.max(0, Math.trunc(limit))) : 0;
+  return Object.entries(data.weeks)
+    .filter(([week]) => /^\d{4}-\d{2}-\d{2}$/.test(week) && week <= data.currentWeek)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, count)
+    .map(([weekKey, week]) => {
+      const byRole = data.hats.map((hat) => {
+        const box = week.boxes.find((item) => item.hatId === hat.id);
+        const placedHours = (week.allocations ?? []).filter((item) => item.hatId === hat.id && item.hours > 0)
+          .reduce((sum, item) => sum + item.hours, 0);
+        return {
+          roleId: hat.id,
+          budgetedHours: box?.hours ?? 0,
+          placedHours,
+          completedTasks: box?.tasks.filter((task) => task.done).length ?? 0,
+        };
+      });
+      return {
+        weekKey,
+        budgetedHours: byRole.reduce((sum, role) => sum + role.budgetedHours, 0),
+        placedHours: byRole.reduce((sum, role) => sum + role.placedHours, 0),
+        completedTasks: byRole.reduce((sum, role) => sum + role.completedTasks, 0),
+        byRole,
+      };
+    });
+}
 
 /** One future week in the Plan Ahead outlook. Never written back to storage. */
 export type NativeOutlookWeek = {
@@ -76,7 +116,7 @@ export function projectOutlook(data: Readonly<SpreadData>, weeks: number): Nativ
 export function projectNativeV2(
   data: Readonly<SpreadData>,
   profileId: string,
-  options: { outlookWeeks?: number } = {},
+  options: { outlookWeeks?: number; historyWeeks?: number } = {},
 ): NativeV2Envelope {
   if (!profileId.trim()) throw new Error("Native v2 projection requires an active profile ID.");
 
@@ -115,6 +155,7 @@ export function projectNativeV2(
       ...(data.recurringPlans?.length ? { recurringPlans: data.recurringPlans } : {}),
       ...(week?.recurrenceIssue ? { recurrenceIssue: week.recurrenceIssue } : {}),
       ...(options.outlookWeeks ? { outlook: projectOutlook(data, options.outlookWeeks) } : {}),
+      ...(options.historyWeeks ? { history: projectWeekHistory(data, options.historyWeeks) } : {}),
       tasks: data.hats.flatMap((hat) =>
         (boxes.get(hat.id)?.tasks ?? []).map((task) => ({
           id: task.id,

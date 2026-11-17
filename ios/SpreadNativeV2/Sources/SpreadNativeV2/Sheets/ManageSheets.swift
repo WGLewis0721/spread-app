@@ -481,6 +481,7 @@ struct MoreSheet: View {
     @State private var showReminders = false
     @State private var showFocusTimer = false
     @State private var showWeekReview = false
+    @State private var openAheadAfterReview = false
     @State private var showWeekAhead = false
     @State private var showJourney = false
     @AppStorage(SpreadWidgetPublisher.enabledKey) private var todayWidgetsEnabled = false
@@ -789,11 +790,21 @@ struct MoreSheet: View {
                                           roles: snapshot.roles, preferredRoleId: nil)
                 }
             }
-            .sheet(isPresented: $showWeekReview) {
-                if let snapshot = planner.snapshot { LifeWeekReviewSheet(snapshot: snapshot) }
+            .sheet(isPresented: $showWeekReview, onDismiss: {
+                if openAheadAfterReview {
+                    openAheadAfterReview = false
+                    showWeekAhead = true
+                }
+            }) {
+                if let snapshot = planner.snapshot {
+                    LifeWeekReviewSheet(snapshot: snapshot, onWeekAhead: {
+                        openAheadAfterReview = true
+                        showWeekReview = false
+                    })
+                }
             }
             .sheet(isPresented: $showWeekAhead) {
-                if let snapshot = planner.snapshot { LifeWeekAheadSheet(snapshot: snapshot) }
+                if planner.snapshot != nil { LifeWeekAheadSheet(planner: planner) }
             }
             .sheet(isPresented: $showJourney) {
                 if let snapshot = planner.snapshot { LifeJourneySheet(snapshot: snapshot) }
