@@ -2,6 +2,18 @@
   "formatVersion": 1,
   "releases": [
     {
+      "id": "notes-35fdc1552a42",
+      "version": "1.0",
+      "date": "2026-11-16",
+      "title": "Recent updates",
+      "changes": [
+        "Moving hours to a future week now stays moved after you reopen Spread.",
+        "Undo and Redo keep deleted and carried-over tasks exactly where they belong.",
+        "A Focus session from another profile no longer stays on the Dynamic Island.",
+        "Widgets and the timer fit better at large text sizes and read more clearly with VoiceOver."
+      ]
+    },
+    {
       "id": "notes-08df3e6dbd88",
       "version": "1.0",
       "date": "2026-11-15",
@@ -150,5 +162,5 @@
       ]
     }
   ],
-  "lastProcessedCommit": "08df3e6dbd88f8c2693ed28e6fabec8e87ca975f"
+  "lastProcessedCommit": "35fdc1552a421096f36262bead59684812f3d894"
 }
