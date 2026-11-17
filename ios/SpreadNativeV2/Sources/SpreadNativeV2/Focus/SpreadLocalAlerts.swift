@@ -64,8 +64,9 @@ enum SpreadLocalAlerts {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [dailyId])
         let content = UNMutableNotificationContent()
-        content.title = "Plan your day"
-        content.body = "Open Spread to review how you'll use today's hours."
+        content.title = "Today"
+        content.body = "Your hours are ready. View today's plan."
+        content.userInfo = ["destination": "today"]
         content.sound = .default
         var components = DateComponents()
         components.hour = hour

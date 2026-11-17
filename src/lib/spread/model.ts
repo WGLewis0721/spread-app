@@ -23,6 +23,8 @@ export type Hat = {
   defaultHours: number;
   color: string;
   category?: SpreadCategory;
+  /** A short, gentle reminder shown on the Life card. */
+  intention?: string;
 };
 /** A task removed from the active plan but recoverable for 30 days. */
 export type DeletedTask = { id: string; hatId: string; weekKey: string; task: Task; deletedAt: number };
@@ -557,6 +559,7 @@ function normalizeHat(hat: Hat): Hat {
   };
   const category = isSpreadCategory(hat.category) ? hat.category : isSpreadCategory(hat.id) ? hat.id : undefined;
   if (category) next.category = category;
+  if (typeof hat.intention === "string" && hat.intention.trim()) next.intention = hat.intention.trim().slice(0, 120);
   return next;
 }
 

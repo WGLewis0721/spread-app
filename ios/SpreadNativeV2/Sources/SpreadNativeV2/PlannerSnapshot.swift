@@ -108,13 +108,15 @@ public struct Responsibility: Codable, Equatable, Identifiable, Sendable {
     public let category: String
     public let color: String
     public let hours: Double
+    public let intention: String?
 
-    public init(id: String, name: String, category: String, color: String, hours: Double) {
+    public init(id: String, name: String, category: String, color: String, hours: Double, intention: String? = nil) {
         self.id = id
         self.name = name
         self.category = category
         self.color = color
         self.hours = hours
+        self.intention = intention
     }
 }
 

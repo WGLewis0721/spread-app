@@ -104,6 +104,7 @@ const action = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("allocationHours"), allocationId: id, hours }),
   z.strictObject({ type: z.literal("removeAllocation"), allocationId: id }),
   z.strictObject({ type: z.literal("renameRole"), roleId: id, name: text }),
+  z.strictObject({ type: z.literal("setRoleIntention"), roleId: id, intention: z.string().max(120) }),
   z.strictObject({ type: z.literal("removeRole"), roleId: id }),
   z.strictObject({ type: z.literal("switchProfile"), profileId: id }),
   z.strictObject({ type: z.literal("addProfile"), name: text }),
@@ -480,6 +481,9 @@ export function createNativeV2Dispatcher(sessionId: string) {
             break;
           case "renameRole":
             state.renameHat(a.roleId, a.name);
+            break;
+          case "setRoleIntention":
+            state.setHatIntention(a.roleId, a.intention);
             break;
           case "removeRole":
             state.removeHat(a.roleId);

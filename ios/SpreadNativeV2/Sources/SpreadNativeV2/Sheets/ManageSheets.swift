@@ -25,6 +25,10 @@ struct NewSpreadSheet: View {
     private var roleWord: String { "Life area" }
     private var roleWords: String { "Life areas" }
     private func fieldName(_ index: Int) -> String { "Life area \(index + 1)" }
+    private let quickStarts = [
+        ("Work", "work"), ("Home", "home"), ("Family", "family"),
+        ("Health", "health"), ("Personal", "personal")
+    ]
 
     var body: some View {
         SpreadSheetStack {
@@ -32,6 +36,23 @@ struct NewSpreadSheet: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("What would you like to make time for?")
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
+                    VStack(alignment: .leading, spacing: Spread.space2) {
+                        Text("Quick start").font(Spread.footnote).foregroundStyle(Spread.secondary)
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
+                            ForEach(quickStarts, id: \.1) { item in
+                                let selected = drafts.contains { $0.category == item.1 }
+                                Button { addQuickStart(name: item.0, category: item.1) } label: {
+                                    Label(item.0, systemImage: selected ? "checkmark" : "plus")
+                                        .font(.caption.weight(.semibold))
+                                        .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
+                                }
+                                .buttonStyle(.spreadPress)
+                                .spreadChip(selected: selected)
+                                .disabled(selected || drafts.count >= 5)
+                                .accessibilityIdentifier("quick-life-" + item.1)
+                            }
+                        }
+                    }
                     ForEach(drafts.indices, id: \.self) { index in
                         draftCard(index)
                     }
@@ -130,6 +151,18 @@ struct NewSpreadSheet: View {
         .spreadCard(edge: draft.category == nil ? nil : tint, active: draft.category != nil)
     }
 
+    private func addQuickStart(name: String, category: String) {
+        guard drafts.count <= 5, !drafts.contains(where: { $0.category == category }) else { return }
+        if drafts.count == 1, drafts[0].name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           drafts[0].category == nil {
+            drafts[0].name = name
+            drafts[0].category = category
+        } else if drafts.count < 5 {
+            drafts.append(Draft(id: nextId, name: name, category: category))
+            nextId += 1
+        }
+    }
+
     private func save() {
         let rows = drafts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         guard !rows.isEmpty else { return }
@@ -168,6 +201,7 @@ struct RoleSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
+    @State private var intention = ""
     @State private var placeDay = ""
     @State private var placeHours = 1.0
     @State private var confirmRemoval = false
@@ -183,6 +217,13 @@ struct RoleSheet: View {
                             .submitLabel(.done)
                             .onSubmit { rename(role) }
                             .accessibilityIdentifier("role-name-field")
+                        TextField("What matters here?", text: $intention, axis: .vertical)
+                            .lineLimit(1...3)
+                            .onSubmit { saveIntention(role) }
+                            .accessibilityIdentifier("role-intention-field")
+                        Button("Save intention") { saveIntention(role) }
+                            .disabled(intention.trimmingCharacters(in: .whitespacesAndNewlines) == (role.intention ?? ""))
+                            .accessibilityIdentifier("save-role-intention")
                         HStack {
                             Text("Hours each week")
                             Spacer()
@@ -268,6 +309,7 @@ struct RoleSheet: View {
                 }
                 .onAppear {
                     name = role.name
+                    intention = role.intention ?? ""
                     placeDay = PlannerOrder.day(weekKey: snapshot.weekKey, displayPosition: 0)
                 }
             } else {
@@ -294,6 +336,13 @@ struct RoleSheet: View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed != role.name else { name = role.name; return }
         Task { await planner.send(["type": "renameRole", "roleId": role.id, "name": trimmed]) }
+    }
+
+    private func saveIntention(_ role: Responsibility) {
+        let trimmed = String(intention.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120))
+        guard trimmed != (role.intention ?? "") else { return }
+        intention = trimmed
+        Task { await planner.send(["type": "setRoleIntention", "roleId": role.id, "intention": trimmed]) }
     }
 }
 
@@ -434,6 +483,9 @@ struct MoreSheet: View {
     @State private var showWhatsNew = false
     @State private var showReminders = false
     @State private var showFocusTimer = false
+    @State private var showWeekReview = false
+    @State private var showWeekAhead = false
+    @State private var showJourney = false
     @AppStorage(SpreadWidgetPublisher.enabledKey) private var todayWidgetsEnabled = false
     @AppStorage(SpreadLifeCardsPublisher.enabledKey) private var lifeCardsWidgetsEnabled = false
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
@@ -521,6 +573,17 @@ struct MoreSheet: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spread.space3) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Planning and reflection")
+                            LazyVGrid(columns: columns, spacing: Spread.space2) {
+                                tile("Week in Review", symbol: "calendar.badge.checkmark",
+                                     id: "more-week-in-review") { showWeekReview = true }
+                                tile("Week Ahead", symbol: "calendar.badge.clock",
+                                     id: "more-week-ahead") { showWeekAhead = true }
+                                tile("Your Journey", symbol: "chart.line.uptrend.xyaxis",
+                                     id: "more-your-journey") { showJourney = true }
+                            }
+                        }
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Appearance")
                             appearanceLayout {
@@ -728,6 +791,15 @@ struct MoreSheet: View {
                     SpreadFocusTimerSheet(timer: focusTimer, profileId: profileId,
                                           roles: snapshot.roles, preferredRoleId: nil)
                 }
+            }
+            .sheet(isPresented: $showWeekReview) {
+                if let snapshot = planner.snapshot { LifeWeekReviewSheet(snapshot: snapshot) }
+            }
+            .sheet(isPresented: $showWeekAhead) {
+                if let snapshot = planner.snapshot { LifeWeekAheadSheet(snapshot: snapshot) }
+            }
+            .sheet(isPresented: $showJourney) {
+                if let snapshot = planner.snapshot { LifeJourneySheet(snapshot: snapshot) }
             }
             .sheet(isPresented: $showWhatsNew, onDismiss: {
                 if let latest = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion) {

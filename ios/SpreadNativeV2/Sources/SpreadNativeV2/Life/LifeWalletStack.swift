@@ -10,6 +10,7 @@ struct LifeWalletStack: View {
     var day: String? = nil
     var viewportHeight: CGFloat = 800
     var viewportWidth: CGFloat = 393
+    var onSetup: ((String) -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -146,6 +147,20 @@ struct LifeWalletStack: View {
                        focusedHeight: focusedHeight,
                        presentationWidth: min(700, max(0, viewportWidth - 32)),
                        editorialArt: editorialArt)
+            .overlay(alignment: .topTrailing) {
+                if let onSetup {
+                    Button { onSetup(role.id) } label: {
+                        SpreadIcon(name: "lucide-pencil", size: 16).tapTarget()
+                    }
+                    .buttonStyle(.spreadPress)
+                    .foregroundStyle(Spread.tileGlyph)
+                    .background(Color.black.opacity(0.22), in: Circle())
+                    .padding(8)
+                    .accessibilityLabel("Set up \(role.name)")
+                    .accessibilityHint("Add an intention, hours, color, and symbol")
+                    .accessibilityIdentifier("life-card-setup-\(role.id)")
+                }
+            }
             // Editorial cards are capped at the presentation width. Artwork must never
             // widen the card beyond the margins, which it did at height x 5/3.
             .frame(maxWidth: editorialArt ? min(700, max(0, viewportWidth - 32)) : .infinity)

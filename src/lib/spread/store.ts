@@ -130,6 +130,7 @@ type Store = {
   lifeUndoable: (run: () => void) => string | null;
   editLifeRole: (hatId: string, name: string, color: string, category: SpreadCategory | undefined) => boolean;
   renameHat: (hatId: string, name: string) => void;
+  setHatIntention: (hatId: string, intention: string) => void;
   removeHat: (hatId: string) => void;
   addHat: (name: string, hours: number, options?: { category?: SpreadCategory }) => void;
   addTask: (hatId: string, text: string, life?: boolean) => void;
@@ -821,6 +822,13 @@ export const useSpread = create<Store>((set, get) => ({
     if (!trimmed) return;
     const data = get().data;
     const next = { ...data, hats: data.hats.map((hat) => (hat.id === hatId ? { ...hat, name: trimmed } : hat)) };
+    commit(set, next);
+  },
+  setHatIntention: (hatId, intention) => {
+    const trimmed = intention.trim().slice(0, 120);
+    const data = get().data;
+    const next = { ...data, hats: data.hats.map((hat) =>
+      hat.id === hatId ? { ...hat, intention: trimmed || undefined } : hat) };
     commit(set, next);
   },
   removeHat: (hatId) => {

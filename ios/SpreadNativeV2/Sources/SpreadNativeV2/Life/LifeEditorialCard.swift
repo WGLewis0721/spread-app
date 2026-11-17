@@ -133,6 +133,7 @@ struct LifeEditorialFace: View {
             responsibilityTitle
             weeklyBudget
             assignmentSummary
+            intentionReminder
             Spacer(minLength: 10)
             distributionFooter
         }
@@ -143,6 +144,20 @@ struct LifeEditorialFace: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spokenCardLabel)
+    }
+
+    @ViewBuilder
+    private var intentionReminder: some View {
+        if let intention = role.intention, !intention.isEmpty {
+            HStack(spacing: 5) {
+                Text(intention)
+                    .font(.caption.weight(.medium))
+                    .lineLimit(2)
+                SpreadIcon(name: "lucide-pencil", size: 12)
+            }
+            .frame(maxWidth: titleSafeWidth, alignment: .leading)
+            .accessibilityLabel("Intention: \(intention). Edit in Life area details.")
+        }
     }
 
     private var spokenCardLabel: String {
