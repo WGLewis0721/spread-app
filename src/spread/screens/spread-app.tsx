@@ -165,7 +165,8 @@ function UnlockScreen() {
   }
 
   return (
-    <main className="spread-site min-h-dvh" data-site-theme={dark ? "dark" : "light"}>
+    <main id="main" className="spread-site min-h-dvh" data-site-theme={dark ? "dark" : "light"}>
+      <a className="site-skip" href="#top">Skip to content</a>
       <nav className="site-nav" aria-label="Main navigation">
         <a className="site-brand" href="#top" aria-label="Spread home">
           <BrandMark size={36} />
@@ -182,7 +183,7 @@ function UnlockScreen() {
         </div>
       </nav>
 
-      <section id="top" className="site-hero">
+      <section id="top" tabIndex={-1} className="site-hero">
         <div className="site-hero-copy">
           <p className="site-kicker">A weekly planner for real life</p>
           <h1><span className="site-line"><span>A little more room</span></span><span className="site-line"><span>for <em>what matters.</em></span></span></h1>
@@ -195,7 +196,7 @@ function UnlockScreen() {
         </div>
 
         <SpreadStack />
-        <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
+        <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Life areas</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
       </section>
 
       <HowItWorks
@@ -238,7 +239,7 @@ function UnlockScreen() {
 
       <section className="site-privacy">
         <div><span className="privacy-mark"><LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" /></span></div>
-        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>The iPhone app needs no account. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
+        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>The iPhone and iPad app needs no account. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
         <PrivacyFacts />
       </section>
 
@@ -246,7 +247,7 @@ function UnlockScreen() {
         <div className="site-start-copy">
           <p className="site-kicker">Start where you are</p>
           <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
-          <p>Spread is in private beta on TestFlight. Join below to try the iPhone app. Everything you plan stays on your device.</p>
+          <p>Spread is in private beta on TestFlight for iPhone and iPad. Join below to try it. Everything you plan stays on your device.</p>
           <HourGrid />
         </div>
         <div className="site-start-card">
@@ -254,7 +255,7 @@ function UnlockScreen() {
         </div>
       </section>
 
-      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><a href="https://thespreadapp.com/privacy.html">Privacy policy</a><span>Made by Gray Matter</span></footer>
+      <footer className="site-footer"><a href="#top" className="site-brand"><BrandMark size={28} /><span>Spread</span></a><span>A little room for what matters.</span><a href="/privacy.html">Privacy policy</a><a href="mailto:graymattertechllc@gmail.com">Support</a><span>Made by Gray Matter</span></footer>
     </main>
   );
 }

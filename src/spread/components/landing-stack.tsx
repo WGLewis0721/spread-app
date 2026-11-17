@@ -410,7 +410,7 @@ export function SpreadStack() {
   }
 
   const remaining = placed.filter((value) => !value).length;
-  const guide = note || (remaining === cards.length ? "Drag each task onto its spread." : `${remaining} left. Drag each onto its spread.`);
+  const guide = note || (remaining === cards.length ? "Drag each task onto its Life area." : `${remaining} left. Drag each onto its Life area.`);
 
   return (
     <div
@@ -443,7 +443,7 @@ export function SpreadStack() {
           type="button"
           className="stack-toggle"
           aria-pressed={open}
-          aria-label={open ? "Stack the sample spreads" : "Spread out the sample spreads"}
+          aria-label="Spread out the sample Life areas"
           onClick={() => { setSpread((value) => !value); setHover(false); }}
         />
 
