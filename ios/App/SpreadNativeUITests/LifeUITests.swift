@@ -94,9 +94,20 @@ final class LifeUITests: XCTestCase {
     func testAuditQuickStart() {
         startLife()
         let addLife = app.buttons["life-new-area"]
-        for _ in 0..<4 where !addLife.isHittable { app.swipeUp() }
-        waitUntilHittable(addLife)
+        let window = app.windows.firstMatch
+        // A button behind the floating dock can still report isHittable.
+        // Scroll down the middle of Life and clear the dock before tapping.
+        let dockTop = window.frame.maxY - 116
+        for _ in 0..<4 {
+            if addLife.isHittable && addLife.frame.maxY < dockTop { break }
+            window.coordinate(withNormalizedOffset: CGVector(dx: 0.53, dy: 0.77))
+                .press(forDuration: 0.05, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.53, dy: 0.44)))
+        }
+        XCTAssertTrue(addLife.isHittable && addLife.frame.midY < dockTop, "Add Life is behind the dock")
+        capture("audit-add-life-entry")
         addLife.tap()
+        XCTAssertTrue(app.navigationBars["Add Life"].waitForExistence(timeout: 10))
+        capture("audit-add-life-quick-start")
         for category in ["work", "home", "family", "health", "personal"] {
             let preset = app.buttons["quick-life-" + category]
             waitUntilHittable(preset)
