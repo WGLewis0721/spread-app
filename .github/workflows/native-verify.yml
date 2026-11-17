@@ -12,6 +12,17 @@ name: Native verify (no publish)
 # journeys are reported but do not gate until they have a record of passing on a hosted simulator. None of this is physical-device acceptance.
 on:
   workflow_dispatch:
+    inputs:
+      journeys:
+        description: Simulator test selection
+        type: choice
+        options: [regression, visual-audit]
+        default: regression
+      appearance:
+        description: Simulator appearance
+        type: choice
+        options: [light, dark]
+        default: light
   pull_request:
     paths:
       - ".github/workflows/native-verify.yml"
@@ -110,6 +121,8 @@ jobs:
 
       - name: Boot a simulator, install and launch
         id: launch
+        env:
+          AUDIT_APPEARANCE: ${{ inputs.appearance || 'light' }}
         run: |
           set -eu
           UDID="$(xcrun simctl list devices available -j | python3 -c '
@@ -125,6 +138,8 @@ jobs:
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl ui "$UDID" appearance "$AUDIT_APPEARANCE"
+          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState unplugged --batteryLevel 100
           xcrun simctl install "$UDID" "$APP"
           xcrun simctl launch "$UDID" com.graymatter.spread
           sleep 25
@@ -135,10 +150,24 @@ jobs:
             || { echo "Spread is not running 25 seconds after launch" >&2; exit 1; }
 
       - name: Simulator journeys for Life (reported, not gating)
+        id: journeys
         if: ${{ steps.launch.outcome == 'success' }}
         continue-on-error: true
+        env:
+          JOURNEYS: ${{ inputs.journeys || 'regression' }}
         run: |
           set -o pipefail
+          suite=SpreadNativeUITests/LifeUITests
+          if [[ "$JOURNEYS" == visual-audit ]]; then
+            tests=(testAuditPlannerScreens testAuditMoreScreens testAuditQuickStart testAuditCardIntention)
+          else
+            tests=(testLifeDeleteThroughDetailsRestoresExactAreaWithUndo
+                   testLifeWeekToggleAndCalendarNavigatorAreReachable
+                   testLifeWeekAndMoreReachability testCapacityUsesRealStoreAndSurvivesRelaunch
+                   testFocusedLifeDetailsAndTasksAreContextual)
+          fi
+          selection=()
+          for test in "${tests[@]}"; do selection+=("-only-testing:$suite/$test"); done
           xcodebuild test \
             -project ios/App/App.xcodeproj \
             -scheme SpreadNativeUITests \
@@ -146,16 +175,29 @@ jobs:
             -derivedDataPath "$DERIVED" \
             -parallel-testing-enabled NO \
             -resultBundlePath artifacts/journeys.xcresult \
-            -only-testing:SpreadNativeUITests/LifeUITests/testLifeDeleteThroughDetailsRestoresExactAreaWithUndo \
-            -only-testing:SpreadNativeUITests/LifeUITests/testLifeWeekToggleAndCalendarNavigatorAreReachable \
-            -only-testing:SpreadNativeUITests/LifeUITests/testLifeWeekAndMoreReachability \
-            -only-testing:SpreadNativeUITests/LifeUITests/testCapacityUsesRealStoreAndSurvivesRelaunch \
-            -only-testing:SpreadNativeUITests/LifeUITests/testFocusedLifeDetailsAndTasksAreContextual \
+            "${selection[@]}" \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee artifacts-journeys.log \
             | grep -E "Test Case .* (passed|failed)|error:|Executed [0-9]+ tests|\*\* TEST" || true
           grep -q "TEST SUCCEEDED" artifacts-journeys.log
 
-      - name: Keep the logs and the launch screenshot
+      - name: Export screenshots from the test result
+        if: ${{ always() && hashFiles('artifacts/journeys.xcresult/Info.plist') != '' }}
+        run: |
+          xcrun xcresulttool export attachments --path artifacts/journeys.xcresult --output-path artifacts/screens/attachments
+          python3 - <<'PY'
+          import json, pathlib, re, shutil
+          root = pathlib.Path("artifacts/screens")
+          attachments = root / "attachments"
+          for test in json.loads((attachments / "manifest.json").read_text()):
+              for attachment in test["attachments"]:
+                  source = attachments / attachment["exportedFileName"]
+                  name = attachment["suggestedHumanReadableName"]
+                  match = re.match(r"^(audit-[a-z0-9-]+)", name)
+                  if match and source.suffix.lower() == ".png":
+                      shutil.copyfile(source, root / (match[1] + ".png"))
+          PY
+
+      - name: Keep the logs and simulator screenshots
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -166,3 +208,15 @@ jobs:
             artifacts-build.log
             artifacts-journeys.log
             artifacts/screens
+      - name: Summarize screenshot evidence
+        if: ${{ always() }}
+        env:
+          JOURNEY_OUTCOME: ${{ steps.journeys.outcome }}
+        run: |
+          {
+            echo "### Native screenshots"
+            echo "Commit: `$GITHUB_SHA`"
+            echo "UI test outcome: $JOURNEY_OUTCOME"
+            echo "See the **native-verify** artifact for screenshots and logs."
+            find artifacts/screens -name 'audit-*.png' -print 2>/dev/null | sort | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
