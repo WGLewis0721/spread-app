@@ -19,7 +19,7 @@ struct TaskSheet: View {
     @ObservedObject var planner: LivePlanner
     let roleId: String
     let taskId: String
-    var lifeMode = false
+    var lifeMode = true
     @AppStorage("native.life.touchFeedback") private var lifeTouchFeedback = true
 
     @Environment(\.dismiss) private var dismiss
@@ -254,7 +254,7 @@ struct TaskSheet: View {
               let allocation = planner.snapshot?.allocations.first(where: { $0.id == allocationId }) else {
             return "Not placed on a day"
         }
-        let scope = lifeMode ? "Life area" : "responsibility"
+        let scope = "Life area"
         return PlannerDates.label(PlannerDates.date(allocation.day), pattern: "EEEE, MMM d") + " · " + SpreadHours.text(allocation.hours) + "h for this " + scope
     }
 

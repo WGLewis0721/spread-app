@@ -24,13 +24,6 @@ test("the disabled Save button dims through the one disabled token", () => {
   assert.doesNotMatch(manage, /\.opacity\(ready \? 1 : 0\.4\)/);
 });
 
-test("a failed move in Open tasks reports the store's reason and keeps the picks", () => {
-  assert.match(manage, /status = planner\.error \?\? "Couldn't move these tasks\. Try again\."/);
-  assert.doesNotMatch(manage, /Nothing to move\./);
-  assert.match(manage, /Button\("Cancel"\) \{ dismiss\(\) \}/);
-  assert.doesNotMatch(manage, /Not now/);
-});
-
 test("the More switch names the Focus timer it also gates, and its footnote says so", () => {
   assert.match(manage, /Toggle\("Show Today and Focus timer on widgets", isOn: \$todayWidgetsEnabled\)/);
   assert.match(manage, /Turns on the Today and Focus timer widgets\. Only task counts, hours placed today and a running focus timer are shared on this device\./);

@@ -498,10 +498,8 @@ enum LiveSheet: Identifiable, Equatable {
     case newRole
     case role(String)
     case task(String, String)      // roleId, taskId
-    case review
     case more
     case profiles
-    case confirmRollover
     case backup
 
     var id: String {
@@ -509,10 +507,8 @@ enum LiveSheet: Identifiable, Equatable {
         case .newRole: return "newRole"
         case .role(let id): return "role-" + id
         case .task(let role, let task): return "task-" + role + "-" + task
-        case .review: return "review"
         case .more: return "more"
         case .profiles: return "profiles"
-        case .confirmRollover: return "confirmRollover"
         case .backup: return "backup"
         }
     }

@@ -6,8 +6,6 @@ import SwiftUI
 struct NewSpreadSheet: View {
     @ObservedObject var planner: LivePlanner
     @Environment(\.dismiss) private var dismiss
-    /// The root's flag (`SpreadLiveRoot` reads the same key): on is Life, off is Classic.
-    @AppStorage("native.weekMonth.previewEnabled") private var lifeMode = true
 
     private struct Draft: Identifiable {
         let id: Int
@@ -24,9 +22,9 @@ struct NewSpreadSheet: View {
 
     private var ready: Bool { drafts.contains { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
     /// OD7: Life says "Life area", Classic says "responsibility". "Spread" is the app name only.
-    private var roleWord: String { lifeMode ? "Life area" : "responsibility" }
-    private var roleWords: String { lifeMode ? "Life areas" : "responsibilities" }
-    private func fieldName(_ index: Int) -> String { lifeMode ? "Life area \(index + 1)" : "Responsibility \(index + 1)" }
+    private var roleWord: String { "Life area" }
+    private var roleWords: String { "Life areas" }
+    private func fieldName(_ index: Int) -> String { "Life area \(index + 1)" }
 
     var body: some View {
         SpreadSheetStack {
@@ -69,7 +67,7 @@ struct NewSpreadSheet: View {
                 }
                 .padding(Spread.space5)
             }
-            .navigationTitle(lifeMode ? "Add Life" : "Add responsibility")
+            .navigationTitle("Add Life")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // Creating drafts discards them on Cancel, so the leading control is Cancel, not Close.
@@ -106,7 +104,7 @@ struct NewSpreadSheet: View {
             HStack {
                 Text("Hours each week").font(Spread.callout).foregroundStyle(Spread.secondary)
                 Spacer()
-                HourStepper(value: draft.hours, label: lifeMode ? "Hours for Life area \(index + 1)" : "Hours for responsibility \(index + 1)", step: 0.5) { hours in
+                HourStepper(value: draft.hours, label: "Hours for Life area \(index + 1)", step: 0.5) { hours in
                     drafts[index].hours = hours
                 }
             }
@@ -173,8 +171,6 @@ struct RoleSheet: View {
     @State private var placeDay = ""
     @State private var placeHours = 1.0
     @State private var confirmRemoval = false
-    /// Reached from Life's "Adjust hours" alert as well as Classic, so it reads the root's flag (OD7).
-    @AppStorage("native.weekMonth.previewEnabled") private var lifeMode = true
 
     private var role: Responsibility? { planner.snapshot?.roles.first { $0.id == roleId } }
 
@@ -182,7 +178,7 @@ struct RoleSheet: View {
         SpreadSheetStack {
             if let snapshot = planner.snapshot, let role {
                 Form {
-                    Section(lifeMode ? "Life area" : "Responsibility") {
+                    Section("Life area") {
                         TextField("Name", text: $name, prompt: Spread.fieldPrompt("Name"))
                             .submitLabel(.done)
                             .onSubmit { rename(role) }
@@ -255,15 +251,15 @@ struct RoleSheet: View {
                     }
                         .listRowBackground(Spread.elevated)
                     Section {
-                        Button(lifeMode ? "Remove Life area" : "Remove responsibility", role: .destructive) { confirmRemoval = true }
+                        Button("Remove Life area", role: .destructive) { confirmRemoval = true }
                         .accessibilityIdentifier("delete-role-button")
                     } footer: {
-                        Text(lifeMode ? "The hours and tasks for this Life area leave every week." : "The hours and tasks for this responsibility leave every week.")
+                        Text("The hours and tasks for this Life area leave every week.")
                     }
                         .listRowBackground(Spread.elevated)
                 }
                     .spreadListSurface()
-                .navigationTitle(lifeMode ? "Life area" : "Responsibility")
+                .navigationTitle("Life area")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
@@ -275,14 +271,14 @@ struct RoleSheet: View {
                     placeDay = PlannerOrder.day(weekKey: snapshot.weekKey, displayPosition: 0)
                 }
             } else {
-                ContentUnavailableView(lifeMode ? "This Life area is no longer in the plan." : "This responsibility is no longer in the plan.", systemImage: "square.stack")
+                ContentUnavailableView("This Life area is no longer in the plan.", systemImage: "square.stack")
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
-        .confirmationDialog("Remove \(role?.name ?? (lifeMode ? "this Life area" : "this responsibility"))?", isPresented: $confirmRemoval, titleVisibility: .visible) {
-            Button(lifeMode ? "Remove Life area" : "Remove responsibility", role: .destructive) {
+        .confirmationDialog("Remove \(role?.name ?? "this Life area")?", isPresented: $confirmRemoval, titleVisibility: .visible) {
+            Button("Remove Life area", role: .destructive) {
                 Task {
                     if await planner.send(["type": "removeRole", "roleId": roleId]) { dismiss() }
                 }
@@ -290,7 +286,7 @@ struct RoleSheet: View {
             .accessibilityIdentifier("confirm-delete-role")
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(lifeMode ? "The hours and tasks for this Life area leave every week." : "The hours and tasks for this responsibility leave every week.")
+            Text("The hours and tasks for this Life area leave every week.")
         }
     }
 
@@ -301,86 +297,6 @@ struct RoleSheet: View {
     }
 }
 
-/// Open tasks (`CarryOverSheet`): every unfinished task this week, all chosen at first. Untick what stays,
-/// then "Move N" carries the chosen tasks to next week through the store's carry-over action.
-struct CarryOverSheet: View {
-    @ObservedObject var planner: LivePlanner
-    @Environment(\.dismiss) private var dismiss
-    @State private var unchecked: Set<String> = []
-    @State private var status: String?
-
-    private var items: [PlannerTask] { planner.snapshot?.tasks.filter { !$0.done } ?? [] }
-    private var chosen: [PlannerTask] { items.filter { !unchecked.contains($0.id) } }
-
-    var body: some View {
-        SpreadSheetStack {
-            List {
-                Section {
-                    if items.isEmpty {
-                        Text("No open tasks this week.").foregroundStyle(Spread.secondary)
-                    }
-                    ForEach(items) { task in
-                        Button {
-                            if unchecked.contains(task.id) { unchecked.remove(task.id) } else { unchecked.insert(task.id) }
-                        } label: {
-                            HStack(spacing: Spread.space3) {
-                                Image(systemName: chosen.contains(where: { $0.id == task.id }) ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(.title2))
-                                    .foregroundStyle(chosen.contains(where: { $0.id == task.id }) ? Spread.accent : Spread.tertiary)
-                                Text(task.text.isEmpty ? "Untitled task" : task.text).lineLimit(2)
-                                Spacer(minLength: 0)
-                                Text(planner.snapshot?.roles.first { $0.id == task.roleId }?.name ?? "")
-                                    .font(Spread.caption).foregroundStyle(Spread.secondary)
-                            }
-                            .frame(minHeight: Spread.minimumTarget)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(chosen.contains(where: { $0.id == task.id }) ? .isSelected : [])
-                        .accessibilityIdentifier("carry-\(task.id)")
-                    }
-                } header: {
-                    Text("Pick what moves to next week. The rest stays here. Next week’s own tasks and days are not touched.")
-                        .textCase(nil)
-                }
-                    .listRowBackground(Spread.elevated)
-                if let status {
-                    Section { Text(status).foregroundStyle(Spread.secondary) }
-                        .listRowBackground(Spread.elevated)
-                }
-            }
-                .spreadListSurface()
-            .navigationTitle("Open tasks")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.frame(minHeight: Spread.minimumTarget)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(chosen.isEmpty ? "Move" : "Move \(chosen.count)") { move() }
-                        .disabled(chosen.isEmpty)
-                        .accessibilityIdentifier("carry-selected")
-                }
-            }
-        }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
-    }
-
-    private func move() {
-        let picks = chosen.map { ["roleId": $0.roleId, "taskId": $0.id] }
-        Task {
-            let ok = await planner.send(["type": "carryOver", "picks": picks])
-            if ok {
-                dismiss()
-            } else {
-                // The sheet stays open with the picks. The store's reason is shown here, not behind the sheet.
-                status = planner.error ?? "Couldn't move these tasks. Try again."
-                planner.error = nil
-            }
-        }
-    }
-}
 
 /// Profiles (`ProfilesSection`): switch, rename, remove, and create, up to the ten-profile limit.
 /// Each profile keeps its own spreads and weeks.
@@ -511,7 +427,6 @@ struct MoreSheet: View {
     let backup: () -> Void
     let showProfiles: () -> Void
     @Binding var appearance: SpreadAppearance
-    @Binding var weekFocusEnabled: Bool
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -621,25 +536,6 @@ struct MoreSheet: View {
                                     .accessibilityAddTraits(appearance == item ? .isSelected : [])
                                     .accessibilityIdentifier("appearance-" + item.rawValue)
                                 }
-                                // A native Menu: the system checkmark marks the active design, so no label carries "(current)".
-                                Menu {
-                                    Section {
-                                        Picker("Calendar design", selection: $weekFocusEnabled) {
-                                            Text("Life").tag(true)
-                                            Text("Classic").tag(false)
-                                        }
-                                    } header: {
-                                        Text("Life uses the same tasks, hours and planning data. Choose Classic anytime to return.")
-                                    }
-                                } label: {
-                                    SpreadIcon(name: "lucide-calendar-days", size: 20)
-                                        .font(.system(.body, weight: .semibold))
-                                        .foregroundStyle(Spread.accent)
-                                        .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
-                                        .contentShape(Rectangle())
-                                }
-                                .accessibilityLabel(weekFocusEnabled ? "Calendar design: Life" : "Calendar design: Classic")
-                                .accessibilityIdentifier("calendar-design-picker")
                             }
                             .padding(6)
                             .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
@@ -686,7 +582,7 @@ struct MoreSheet: View {
                                 .frame(minHeight: 48)
                                 .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                                 .accessibilityIdentifier("life-cards-widget-enabled")
-                            Text("\(weekFocusEnabled ? "Life area" : "Responsibility") names, colors and this week's hours appear on your Home Screen. Anyone who can see it can see them. Stays on this device.")
+                            Text("Life area names, colors and this week's hours appear on your Home Screen. Anyone who can see it can see them. Stays on this device.")
                                 .font(.footnote)
                                 .foregroundStyle(Spread.secondary)
                         }

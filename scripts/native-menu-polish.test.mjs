@@ -82,9 +82,3 @@ test("the Focus sheet separates active controls, completed rounds and optional s
   assert.match(focus, /accessibilityIdentifier\("focus-start-block"\)/);
 });
 
-test("Open tasks dismisses with Cancel, the leading word every draft sheet uses, and keeps Move (OD33, X8)", () => {
-  const manage = get(root + "Sheets/ManageSheets.swift");
-  assert.doesNotMatch(manage, /Not now/);
-  assert.match(manage, /ToolbarItem\(placement: \.cancellationAction\) \{\s*Button\("Cancel"\) \{ dismiss\(\) \}/);
-  assert.match(manage, /\? "Move" : "Move /);
-});

@@ -5,14 +5,14 @@ For **native Life card visuals**, start with [the editorial artwork handoff](doc
 <!-- design-rules-card:start -->
 **Start here:** `docs/design/README.md` (router). Specs: `docs/design/PLAN_SPEC_PROTOCOL.md`. Tokens: `docs/design/tokens.json`. Read the task pack it names, then only the section it points to.
 
-**Two products.** (1) The native iOS app in SwiftUI, iPhone-first, built for iPhone and iPad (family `1,2`), no Android; Codemagic builds `main` to TestFlight on demand. (2) The marketing website: promo, one-page walkthrough, App Store link. The React web planner, beta sign-up, iCloud, multiplayer and waitlist are suspended (snapshot: branch `parked/web-cloud-2026-11-11`). Changes under 50 lines need no spec; implement and test.
+**Two products.** (1) The native iOS app in SwiftUI, iPhone-first, built for iPhone and iPad (family `1,2`), no Android; Codemagic builds `main` to TestFlight on demand. (2) The marketing website: promo, one-page walkthrough, App Store link. The React web planner, beta sign-up, iCloud, multiplayer and waitlist are suspended (snapshot: `parked/web-cloud-2026-11-11`). Changes under 50 lines need no spec.
 
 **Look**
 - In **React**, use existing CSS tokens. **Native SwiftUI** follows `docs/design/planner/SPREAD_NATIVE_BRAND_BOARD.md` for solid navy/cream, editorial Life art, accessible controls and calendar-week navigation. No doodles or metal Crown; Liquid Glass only on the floating dock.
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week: day cards, expandable task inbox and Free time chips.
-- Native has ONE Wallet-style Life Stack. A focused card offers Details (edit/delete with Undo) and Tasks. The inline weekly time strip edits capacity and role budgets through the existing store. Use the Spread logo for Life. Weekly Time is full-width; budget values and week navigation use compact arrow/value/arrow controls. Hold week arrows to accelerate. No global Life Edit, swipe-delete or redundant dock plus. Classic retains its own rules.
+- Native has ONE Wallet-style Life Stack. A focused card offers Details (edit/delete with Undo) and Tasks. The inline weekly time strip edits capacity and role budgets through the existing store. Use the Spread logo for Life. Weekly Time is full-width; budget values and week navigation use compact arrow/value/arrow controls. Hold week arrows to accelerate. No global Life Edit, swipe-delete or redundant dock plus. Classic is archived (`parked/classic-2026-11-16`).
 - The landing page is separate (`docs/design/landing/DESIGN.md`): one focal object per section, both modes.
 
 **Behavior**

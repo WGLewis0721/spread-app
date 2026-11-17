@@ -9,8 +9,7 @@ name: Native verify (no publish)
 #
 # What it proves: the Swift packages' tests pass on macOS, the app and widget build for the iOS
 # Simulator, both privacy manifests are inside the built app, and the app launches. The simulator
-# journeys are reported but do not gate, because they were written before Life became the default
-# screen. None of this is physical-device acceptance.
+# journeys are reported but do not gate until they have a record of passing on a hosted simulator. None of this is physical-device acceptance.
 on:
   workflow_dispatch:
   pull_request:
@@ -135,7 +134,7 @@ jobs:
           xcrun simctl spawn "$UDID" launchctl list | grep -F "UIKitApplication:com.graymatter.spread" \
             || { echo "Spread is not running 25 seconds after launch" >&2; exit 1; }
 
-      - name: Simulator journeys for Undo, carry-over, profiles and week navigation (reported, not gating)
+      - name: Simulator journeys for Life (reported, not gating)
         if: ${{ steps.launch.outcome == 'success' }}
         continue-on-error: true
         run: |
@@ -147,13 +146,11 @@ jobs:
             -derivedDataPath "$DERIVED" \
             -parallel-testing-enabled NO \
             -resultBundlePath artifacts/journeys.xcresult \
-            -only-testing:SpreadNativeUITests/PlannerUITests/testF05_CompleteAndUndo \
-            -only-testing:SpreadNativeUITests/PlannerUITests/testF06_CrownWeeks \
-            -only-testing:SpreadNativeUITests/PlannerUITests/testF09_CarryUnfinishedWork \
-            -only-testing:SpreadNativeUITests/PlannerUITests/testF10_2_ProfilesAreIsolated \
-            -only-testing:SpreadNativeUITests/PlannerUITests/testFlow4_MonthPickDayReturnsToWeek \
             -only-testing:SpreadNativeUITests/LifeUITests/testLifeDeleteThroughDetailsRestoresExactAreaWithUndo \
             -only-testing:SpreadNativeUITests/LifeUITests/testLifeWeekToggleAndCalendarNavigatorAreReachable \
+            -only-testing:SpreadNativeUITests/LifeUITests/testLifeWeekAndMoreReachability \
+            -only-testing:SpreadNativeUITests/LifeUITests/testCapacityUsesRealStoreAndSurvivesRelaunch \
+            -only-testing:SpreadNativeUITests/LifeUITests/testFocusedLifeDetailsAndTasksAreContextual \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee artifacts-journeys.log \
             | grep -E "Test Case .* (passed|failed)|error:|Executed [0-9]+ tests|\*\* TEST" || true
           grep -q "TEST SUCCEEDED" artifacts-journeys.log
