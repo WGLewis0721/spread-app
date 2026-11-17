@@ -203,6 +203,24 @@ test("Undo of a delete takes the task back out of Recently Deleted, so a later r
   }
 });
 
+test("Redo after Undo of a delete leaves the task in Recently Deleted, never in neither place", async () => {
+  const { router, request, roleId, saved, week } = setup();
+  try {
+    const deleted = await router.dispatch(request({ type: "deleteTask", roleId, taskId: "a" }));
+    assert.equal(deleted.ok, true);
+    assert.equal((await router.dispatch(request({ type: "undo", editId: deleted.undoId }))).ok, true);
+    assert.equal(saved().deletedTasks?.length ?? 0, 0, "undo takes the task out of Recently Deleted");
+    assert.equal((await router.dispatch(request({ type: "redo", editId: deleted.undoId }))).ok, true);
+    const planned = Object.values(saved().weeks).flatMap((w) => w.boxes.flatMap((b) => b.tasks.map((t) => t.id)));
+    assert.equal(planned.includes("a"), false, "redo takes the task off the plan again");
+    assert.deepEqual(saved().deletedTasks?.map((d) => d.id), ["a"], "and it is still recoverable");
+    assert.equal((await router.dispatch(request({ type: "restoreDeletedTask", taskId: "a" }))).ok, true);
+    assert.equal(saved().weeks[week].boxes[0].tasks.filter((t) => t.id === "a").length, 1, "restored exactly once");
+  } finally {
+    router.dispose();
+  }
+});
+
 test("a drag reorder within a day offers Undo, and Undo puts the previous day order back", async () => {
   const { router, request, roleId, saved, week } = setup();
   try {

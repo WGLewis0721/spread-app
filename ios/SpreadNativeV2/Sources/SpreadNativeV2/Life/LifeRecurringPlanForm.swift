@@ -162,6 +162,14 @@ struct LifeRecurringPlanForm: View {
                         .foregroundStyle(Spread.danger)
                 }
             }
+            if editingPlanId == nil, snapshot.life?.capacityHours == nil {
+                Section {
+                    Label("Set this week's weekly hours in Life first. A new schedule uses that total.",
+                          systemImage: "info.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(Spread.secondary)
+                }
+            }
             if let preset = initialPreset, preset.roleId == roleId, editingPlanId == nil {
                 Section {
                     Text("Pre-filled from this week. Change anything before you confirm.")
@@ -170,15 +178,11 @@ struct LifeRecurringPlanForm: View {
                 }
             }
             Section {
-                Picker("Life area", selection: $roleId) {
-                    ForEach(snapshot.roles) { role in
-                        Text(role.name).tag(role.id)
-                    }
-                }
-                .disabled(editingPlanId != nil)
+                LifeAreaMenuRow(title: "Life area", selection: $roleId, roles: snapshot.roles)
+                    .disabled(editingPlanId != nil)
                 if dayHours.isEmpty {
                     Stepper(value: $hours, in: 0.5...168, step: 0.5) {
-                        Text(SpreadHours.text(hours) + " hours per scheduled week")
+                        Text(SpreadHours.spoken(hours) + " per scheduled week")
                             .font(.body)
                     }
                 }
@@ -230,8 +234,8 @@ struct LifeRecurringPlanForm: View {
                                 .frame(maxWidth: .infinity, minHeight: 44)
                                 .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
                                 .background(selected ? Spread.accent : Spread.canvas,
-                                            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            in: RoundedRectangle(cornerRadius: Spread.radiusSmall, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: Spread.radiusSmall, style: .continuous)
                                     .strokeBorder(Spread.accent.opacity(selected ? 1 : 0.24), lineWidth: 1))
                         }
                         .buttonStyle(.plain)
@@ -254,7 +258,7 @@ struct LifeRecurringPlanForm: View {
                         ForEach(Self.weekdays) { day in
                             if dayHours[day.code] != nil {
                                 Stepper(value: dayAmount(day.code), in: 0.5...24, step: 0.5) {
-                                    Text(SpreadHours.text(dayHours[day.code] ?? 1) + " hours on " + day.name)
+                                    Text(SpreadHours.spoken(dayHours[day.code] ?? 1) + " on " + day.name)
                                         .font(.body)
                                 }
                             }
@@ -267,7 +271,7 @@ struct LifeRecurringPlanForm: View {
             } footer: {
                 Text(dayHours.isEmpty
                      ? "Select days to place fixed hours. Without chosen days, only weekly hours repeat."
-                     : "Total " + SpreadHours.text(weeklyHours) + " hours per scheduled week.")
+                     : "Total " + SpreadHours.spoken(weeklyHours) + " per scheduled week.")
             }
             if selectedRule != nil {
                 Section("Change") {
@@ -294,7 +298,7 @@ struct LifeRecurringPlanForm: View {
                 }
             }
             if let preview {
-                Section("Review before confirming") {
+                Section("Preview before confirming") {
                     if preview.eligible {
                         Text(lifeName + " · " + SpreadHours.text(preview.hours) +
                              "h every " + (preview.everyWeeks == 1 ? "week" : "\(preview.everyWeeks) weeks"))
@@ -345,7 +349,7 @@ struct LifeRecurringPlanForm: View {
                 }
             } label: {
                 Text(saving ? "Saving…" : checking ? "Checking…" :
-                     preview?.eligible == true ? "Confirm schedule" : "Review schedule")
+                     preview?.eligible == true ? "Confirm schedule" : "Preview schedule")
                     .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.borderedProminent)
@@ -398,7 +402,7 @@ struct LifeRecurringPlanForm: View {
                 }
                 Button("Cancel", role: .cancel) { stopCandidate = nil }
             } message: {
-                Text("Existing tasks and customized weeks are preserved. You can undo the change.")
+                Text("Weeks you changed by hand keep their hours and tasks, so their time stays in your plan until you change it. Untouched future weeks go back to the usual hours. You can undo this.")
             }
     }
     /// A stable fingerprint of a request, so the form can tell whether a change altered what would be saved.

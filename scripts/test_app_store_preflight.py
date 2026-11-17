@@ -90,6 +90,28 @@ class PreflightTests(unittest.TestCase):
             self.assertTrue(checks.items)
             self.assertTrue(all(ok for _, ok, _ in checks.items))
 
+    def test_signed_ipa_widget_must_embed_its_privacy_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for label, with_manifest in (("embedded", True), ("missing", False)):
+                with self.subTest(case=label):
+                    ipa = Path(tmp) / f"{label}.ipa"
+                    with ZipFile(ipa, "w") as bundle:
+                        bundle.writestr("Payload/App.app/Info.plist", plistlib.dumps({
+                            "CFBundleIdentifier": "com.graymatter.spread", "CFBundleVersion": "10",
+                            "CFBundleShortVersionString": "1.0", "UIDeviceFamily": [1, 2],
+                            "ITSAppUsesNonExemptEncryption": False}))
+                        bundle.writestr("Payload/App.app/PrivacyInfo.xcprivacy",
+                                        plistlib.dumps({"NSPrivacyTracking": False}))
+                        bundle.writestr("Payload/App.app/PlugIns/SpreadWidget.appex/Info.plist",
+                                        plistlib.dumps({"CFBundleIdentifier": "com.graymatter.spread.widget"}))
+                        if with_manifest:
+                            bundle.writestr("Payload/App.app/PlugIns/SpreadWidget.appex/PrivacyInfo.xcprivacy",
+                                            plistlib.dumps({"NSPrivacyTracking": False}))
+                    checks = preflight.Checks()
+                    checks.ipa(ipa)
+                    results = {name: ok for name, ok, _ in checks.items}
+                    self.assertEqual(results["IPA widget privacy manifest"], with_manifest)
+
     def test_signed_ipa_must_preserve_iphone_and_ipad(self):
         with tempfile.TemporaryDirectory() as tmp:
             for label, family, expected in (
@@ -175,6 +197,55 @@ class PreflightTests(unittest.TestCase):
             "UIInterfaceOrientationLandscapeLeft",
             "UIInterfaceOrientationLandscapeRight",
         ])
+
+    def test_required_reason_apis_must_be_declared(self):
+        def manifest(*entries):
+            return {"NSPrivacyAccessedAPITypes": [
+                {"NSPrivacyAccessedAPIType": category, "NSPrivacyAccessedAPITypeReasons": list(reasons)}
+                for category, reasons in entries]}
+        checks = preflight.Checks()
+        defaults = "NSPrivacyAccessedAPICategoryUserDefaults"
+        boot = "NSPrivacyAccessedAPICategorySystemBootTime"
+        group = ['let shared = UserDefaults(suiteName: "group.example")']
+        self.assertEqual(checks.undeclared_reasons(manifest((defaults, ["1C8F.1"])), group), [])
+        # The app-only reason does not cover defaults shared with an extension through an app group.
+        self.assertEqual(checks.undeclared_reasons(manifest((defaults, ["CA92.1"])), group),
+                         [defaults + " 1C8F.1"])
+        self.assertEqual(checks.undeclared_reasons(manifest(), ["UserDefaults.standard"]), [defaults])
+        uptime = ["let now = ProcessInfo.processInfo.systemUptime"]
+        self.assertEqual(checks.undeclared_reasons(manifest((defaults, ["CA92.1"])), uptime), [boot])
+        self.assertEqual(checks.undeclared_reasons(manifest((boot, ["35F9.1"])), uptime), [])
+        self.assertEqual(checks.undeclared_reasons(None, ["let total = 1"]), [])
+
+    def test_committed_app_and_widget_declare_the_apis_they_call(self):
+        root = Path(__file__).resolve().parent.parent
+        checks = preflight.Checks()
+        app = plistlib.loads((root / "ios/App/App/PrivacyInfo.xcprivacy").read_bytes())
+        checks.required_reasons(root, app)
+        self.assertEqual([name for name, _, _ in checks.items],
+                         ["App required-reason coverage", "Widget privacy manifest"])
+        for name, ok, detail in checks.items:
+            with self.subTest(check=name):
+                self.assertTrue(ok, detail)
+
+    def test_widget_manifest_must_be_embedded_in_the_widget_target(self):
+        root = Path(__file__).resolve().parent.parent
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = Path(tmp)
+            for relative in ("ios/App/SpreadWidget/PrivacyInfo.xcprivacy",
+                             "ios/App/App.xcodeproj/project.pbxproj"):
+                (copy / relative).parent.mkdir(parents=True, exist_ok=True)
+                (copy / relative).write_bytes((root / relative).read_bytes())
+            project = copy / "ios/App/App.xcodeproj/project.pbxproj"
+            project.write_text(project.read_text(encoding="utf-8").replace(
+                " FACA00000000000000000035,);", ");"), encoding="utf-8")
+            checks = preflight.Checks()
+            checks.required_reasons(copy, None)
+            self.assertFalse(checks.items[-1][1], "A manifest left out of the target's resources does not ship")
+            (copy / "ios/App/SpreadWidget/PrivacyInfo.xcprivacy").unlink()
+            checks = preflight.Checks()
+            checks.required_reasons(copy, None)
+            self.assertFalse(checks.items[-1][1], "A missing widget manifest fails closed")
 
     def test_release_notes_are_valid_and_version_matched(self):
         with tempfile.TemporaryDirectory() as tmp:

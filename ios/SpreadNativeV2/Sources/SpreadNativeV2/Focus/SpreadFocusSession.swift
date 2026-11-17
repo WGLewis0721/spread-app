@@ -309,6 +309,13 @@ enum SpreadFocusStore {
         return SpreadFocusMachine.isOnScreen(current) ? current : nil
     }
 
+    /// The island follows the widgets' privacy rule: a session, and the Life area name in its title, is shown
+    /// only for the profile on screen. A missing or different active profile hides it.
+    static func visibleOnIsland(_ session: SpreadFocusSession,
+                                _ defaults: UserDefaults = SpreadFocusStore.shared) -> Bool {
+        activeProfile(defaults) == session.profileId
+    }
+
     /// Whether a widget or the island may start work now: nothing is running, paused or waiting for a tap, and
     /// either today's planned block is available for the profile on screen, or the last plan belongs to it.
     static func canStartFromWidget(now: Date = Date(), _ defaults: UserDefaults = SpreadFocusStore.shared) -> Bool {

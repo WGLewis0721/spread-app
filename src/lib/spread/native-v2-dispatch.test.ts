@@ -899,6 +899,34 @@ test("Plan Ahead refuses missing destination capacity and keeps source planner i
   } finally { router.dispose(); }
 });
 
+test("Undo of a carry-over restores the exact prior planner, so the task is in one week and Redo carries it again", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const before = dataJSON();
+    const carried = await router.dispatch(request({ type: "carryOver", picks: [{ roleId, taskId: "task" }] }));
+    assert.equal(carried.ok, true);
+    const after = dataJSON();
+    assert.equal((await router.dispatch(request({ type: "undo", editId: carried.undoId }))).ok, true);
+    assert.equal(dataJSON(), before, "undo also removes the task from the week it was carried into");
+    assert.equal((await router.dispatch(request({ type: "redo", editId: carried.undoId }))).ok, true);
+    assert.equal(dataJSON(), after);
+  } finally { router.dispose(); }
+});
+
+test("Undo of a role's hours restores the role's default hours with the week, and Redo applies both again", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const before = dataJSON();
+    const changed = await router.dispatch(request({ type: "setHours", roleId, hours: 6 }));
+    assert.equal(changed.ok, true);
+    const after = dataJSON();
+    assert.equal((await router.dispatch(request({ type: "undo", editId: changed.undoId }))).ok, true);
+    assert.equal(dataJSON(), before, "undo restores the role's default, not only this week's budget");
+    assert.equal((await router.dispatch(request({ type: "redo", editId: changed.undoId }))).ok, true);
+    assert.equal(dataJSON(), after);
+  } finally { router.dispose(); }
+});
+
 test("native fixed-day schedule: preview shows the days, save places them, bad days are refused", async () => {
   const { router, request, roleId } = setup();
   try {
@@ -959,5 +987,20 @@ test("native recurrence preview is read-only, save is undoable, later weeks alte
     assert.equal((await router.dispatch(request({ type: "openWeek", weekKey: first }))).ok, true);
     assert.equal(router.read()?.envelope.snapshot.roles.find((r) => r.id === roleId)?.hours, 3);
     assert.equal(useSpread.getState().data.weeks[first].boxes[0].tasks.length, 0);
+  } finally { router.dispose(); }
+});
+
+test("Undo of a role's hours still works after another role is renamed, and keeps that rename", async () => {
+  const { router, request, roleId } = setup();
+  try {
+    const original = useSpread.getState().data.hats.find((hat) => hat.id === roleId)?.defaultHours;
+    const changed = await router.dispatch(request({ type: "setHours", roleId, hours: 6 }));
+    assert.equal(changed.ok, true);
+    const other = useSpread.getState().data.hats.find((hat) => hat.id !== roleId)!.id;
+    useSpread.getState().renameHat(other, "Other edit");
+    assert.equal((await router.dispatch(request({ type: "undo", editId: changed.undoId }))).ok, true);
+    const hats = useSpread.getState().data.hats;
+    assert.equal(hats.find((hat) => hat.id === roleId)?.defaultHours, original);
+    assert.equal(hats.find((hat) => hat.id === other)?.name, "Other edit", "the unrelated rename is not undone");
   } finally { router.dispose(); }
 });

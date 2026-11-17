@@ -16,6 +16,7 @@
 - [ ] `python3 -m unittest discover -s scripts -p test_app_store_preflight.py -v`
 - [ ] `python3 scripts/app-store-preflight.py` (bundle ID, localStorage origin, native no-login path, lazy web-auth startup, privacy manifest, purpose string, app icon source).
 - [ ] The same preflight prevents Apple error 90101: all six app/widget/test configurations retain `TARGETED_DEVICE_FAMILY = "1,2"`; the app retains its four iPad orientations and the signed IPA declares `UIDeviceFamily` `[1, 2]`.
+- [ ] The same preflight confirms the app and the widget extension each embed a privacy manifest that declares the required-reason APIs their code calls (UserDefaults incl. app group, system boot time); the `--ipa` mode confirms both manifests are inside the signed IPA.
 - [ ] `npm run typecheck`, `npm run lint`, `npm run test:spread`, `swift test --package-path ios/App/SpreadCloudCore`.
 - [ ] `npm run ios:sync`, then `python3 scripts/app-store-preflight.py --bundle dist-ios`: all entry-page local assets exist and the web-only injector is excluded.
 - [ ] Inspect the **actual signed release IPA** with `python3 scripts/app-store-preflight.py --ipa path/to/Spread.ipa`. Confirm resolved build number, App Store bundle ID, privacy manifest and export-compliance key. Independently verify distribution signing/capabilities.

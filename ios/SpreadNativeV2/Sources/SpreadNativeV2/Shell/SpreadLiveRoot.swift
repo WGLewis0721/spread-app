@@ -96,7 +96,16 @@ public struct SpreadLiveRoot: View {
             SpreadDayPlanPublisher.publish(snapshot: snapshot, profileId: profile)
             SpreadFocusWidgetPublisher.republishFromStore()
         }
+        // Life and Classic both need these. They used to sit only on Classic's layer, so in Life the widgets and
+        // the island kept validating against the profile that last started a timer.
+        .task(id: planner.state?.envelope.profileId) {
+            if let profile = planner.state?.envelope.profileId { focusTimer.noteActiveProfile(profile) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { focusTimer.finishWidgetRefreshOnBackground() }
+        }
         .onChange(of: planner.state?.envelope.profileId) { old, new in
+            if let new { focusTimer.noteActiveProfile(new) }
             if old != nil && old != new {
                 // Never show a previous profile's counts or Life cards after switching profiles.
                 SpreadWidgetPublisher.revoke()
@@ -137,7 +146,13 @@ public struct SpreadLiveRoot: View {
         }
         .task(id: planner.snapshot != nil) {
             // Show only when the real planner is ready, not over its launch screen.
-            guard planner.snapshot != nil, sheet == nil, whatsNew == nil else { return }
+            guard let snapshot = planner.snapshot, sheet == nil, whatsNew == nil else { return }
+            // A brand-new plan has nothing to catch up on. Its first launch marks the current notes as seen, so
+            // What's New waits for the next update rather than covering the empty plan.
+            if lastSeenReleaseID.isEmpty, snapshot.roles.isEmpty {
+                lastSeenReleaseID = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion)?.id ?? ""
+                return
+            }
             let unseen = SpreadReleaseNotes.unseen(
                 for: SpreadReleaseNotes.appVersion, lastSeenID: lastSeenReleaseID)
             // One assignment: the item carries the notes, so the sheet cannot open with an empty list.

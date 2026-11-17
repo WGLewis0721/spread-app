@@ -100,10 +100,14 @@ struct LifeRoot: View {
                                 .padding(.horizontal, Spread.space4).padding(.top, Spread.space2).padding(.bottom, 28)
                             }
                             .scrollDismissesKeyboard(.interactively).scrollIndicators(.hidden)
-                            // Cards pass through the shorter scroll area and only
-                            // disappear at the actual device/window edge. Without
-                            // this the dock boundary prematurely crops full cards.
+                            // Wallet cards still pass through the scroll area (clip disabled).
                             .scrollClipDisabled()
+                            // The dock is an inset on the scroll area, not a sibling above it. The scroll
+                            // area runs under the dock, and the inset reserves the dock's measured height,
+                            // so the last card rests above the dock instead of beneath it.
+                            .safeAreaInset(edge: .bottom, spacing: 0) {
+                                bottom(snapshot, wide: geometry.size.width >= 820)
+                            }
                             .onChange(of: destination) { _, _ in proxy.scrollTo("life-top", anchor: .top) }
                             // Stack, Focus, Stack in one motion. Opening returns the page to its
                             // top so the card lands in a fixed slot. Closing scrolls only as far
@@ -120,7 +124,6 @@ struct LifeRoot: View {
                                 }
                             }
                         }
-                        bottom(snapshot, wide: geometry.size.width >= 820)
                     } else {
                         ProgressView("Opening your plan…").frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -473,6 +476,12 @@ struct LifeRoot: View {
                 }
             )
             .accessibilityIdentifier("life-budget-capacity-controls")
+            if capacity == nil {
+                Text("Set your weekly total first. Area hours unlock after that.")
+                    .font(.caption)
+                    .foregroundStyle(Spread.secondary)
+                    .accessibilityIdentifier("life-budget-capacity-required")
+            }
             if capacityEntryVisible {
                 HStack(spacing: 10) {
                     TextField("Weekly hours", text: $budgetCapacityText)
@@ -480,7 +489,7 @@ struct LifeRoot: View {
                         .focused($capacityInputFocused)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
-                        .background(Spread.inset, in: RoundedRectangle(cornerRadius: 12))
+                        .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                         .accessibilityIdentifier("life-budget-capacity-input")
                         .onAppear { capacityInputFocused = true }
                     Button("Set") {
@@ -519,7 +528,7 @@ struct LifeRoot: View {
                         ForEach(snapshot.roles) { role in
                             let isSelected: Bool = budgetRoleID == role.id
                             let hoursText: String = SpreadHours.text(role.hours)
-                            let spokenName: String = role.name + ", " + hoursText + " hours"
+                            let spokenName: String = role.name + ", " + SpreadHours.spoken(role.hours)
                             let traits: AccessibilityTraits = isSelected ? AccessibilityTraits.isSelected : []
                             Button {
                                 budgetRoleID = role.id
@@ -621,7 +630,7 @@ struct LifeRoot: View {
                     LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
                         .padding(.horizontal, Spread.space3).padding(.vertical, 6)
                 }
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: 18))
+                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusInset))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("life-task-notebook")
             }
@@ -808,7 +817,7 @@ struct LifeRoot: View {
         .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
         .frame(width: 51).frame(minHeight: 52)
         .background(selected ? Spread.accent : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 12))
+                    in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
         .contentShape(Rectangle())
     }
     private func crown(_ snapshot: PlannerSnapshot) -> some View {

@@ -297,27 +297,28 @@ private struct SpreadLifeCardFace: View {
                 .scaledToFit()
                 .frame(width: 20, height: 20)
             Text("SPREAD")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded, weight: .bold))
                 .tracking(1.4)
         }
         .accessibilityHidden(true)
     }
 
-    private func title(size: CGFloat) -> some View {
+    /// The card name. Text styles scale with Dynamic Type; the widget never uses a fixed point size.
+    private func title(_ style: Font.TextStyle) -> some View {
         Text(card.name)
-            .font(.system(size: size, weight: .semibold, design: .serif))
+            .font(.system(style, design: .serif, weight: .semibold))
             .italic()
             .lineLimit(1)
             .minimumScaleFactor(0.6)
     }
 
-    private func budgetLine(size: CGFloat) -> some View {
+    private func budgetLine(_ style: Font.TextStyle) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(hoursText(card.budgetHours) + " h")
-                .font(.system(size: size, weight: .semibold, design: .serif))
+                .font(.system(style, design: .serif, weight: .semibold))
                 .monospacedDigit()
             Text("THIS WEEK")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .tracking(1.4)
                 .foregroundStyle(palette.secondary)
         }
@@ -338,15 +339,15 @@ private struct SpreadLifeCardFace: View {
         let value = index < card.days.count ? card.days[index] : 0
         return VStack(spacing: 2) {
             Text(large ? Self.longDays[index] : Self.shortDays[index])
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption2.weight(.semibold))
             Text(hoursText(value) + (large ? "h" : ""))
-                .font(.system(size: large ? 11 : 10, weight: .bold))
+                .font(.caption2.weight(.bold))
                 .monospacedDigit()
         }
         .lineLimit(1)
         .minimumScaleFactor(0.6)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, large ? 7 : 4)
+        .padding(.vertical, large ? 7 : 2)
         .background(value > 0 ? palette.pillOn : palette.pillOff,
                     in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         .foregroundStyle(value > 0 ? palette.pillOnText : palette.pillOffText)
@@ -373,30 +374,40 @@ private struct SpreadLifeCardFace: View {
         .accessibilityHidden(true)
     }
 
-    private var mediumBody: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 0) {
-                brand
-                Spacer(minLength: 3)
-                nav
-            }
-            .frame(height: 44)
-            title(size: 20)
-            budgetLine(size: 16)
-            strip
+    /// The brand line and its arrows. The row is 44 pt tall so each arrow keeps its 44 pt target.
+    private var header: some View {
+        HStack(spacing: 0) {
+            brand
+            Spacer(minLength: 3)
+            nav
         }
+        .frame(height: 44)
+    }
+
+    /// Medium: the header, the name, the budget line and the seven-day strip. The budget line goes first when
+    /// Dynamic Type or a smaller iPhone leaves too little height, so the strip is never clipped.
+    private var mediumBody: some View {
+        ViewThatFits(in: .vertical) {
+            VStack(alignment: .leading, spacing: 2) {
+                header
+                title(.headline)
+                budgetLine(.subheadline)
+                strip
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                header
+                title(.headline)
+                strip
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var largeBody: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 0) {
-                brand
-                Spacer(minLength: 4)
-                nav
-            }
-            .frame(height: 44)
-            title(size: 34)
-            budgetLine(size: 28)
+            header
+            title(.largeTitle)
+            budgetLine(.title)
             summary
             ProgressView(value: min(card.placedHours, max(card.budgetHours, 0.5)),
                          total: max(card.budgetHours, 0.5))

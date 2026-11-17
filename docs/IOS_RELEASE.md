@@ -8,6 +8,7 @@
 
 - **GitHub checks only:** `CI` runs typecheck, lint, planner tests and script tests on pull requests and `main`. `App Store preflight` checks source/bundle policy statically. Path-scoped cloud checks may run for cloud/bridge code; they are not a native application build.
 - **No GitHub iOS builds or simulator workflows:** The GitHub `iOS shell`, SwiftUI native compile, simulator UI journeys, layout/visual/Duo matrices and unsigned archive workflows were retired. Their Swift/XCTest source remains versioned for future use in an appropriate native test environment.
+- **Manual native verification (owner decision, 2026-11-16):** `.github/workflows/native-verify.yml` runs on demand, never on ordinary pull requests. It runs both Swift packages' tests on macOS, builds the app and widget unsigned for the iOS Simulator, checks that both privacy manifests and device family `1,2` are in the built app, and launches it. It cannot sign, upload or distribute, and it is not device acceptance.
 - **Codemagic is the only signed iOS build/upload lane:** Manually run `Spread - signed iOS upload` from `main` after reviewing GitHub checks. It independently runs source/Swift package checks, prepares the Capacitor app, verifies Apple build numbers, signs and validates the IPA, and uploads to App Store Connect without submitting for review. It does **not** run XCTest UI simulator journeys.
 - **Performance:** Scoped SwiftPM and Xcode compilation caches may accelerate **subsequent** Codemagic signed builds; measure actual results. The first build has a cold cache.
 - **Release gate:** Do not claim simulator or real-device acceptance from GitHub checks. Complete physical iPhone testing, accessibility/persistence checks, and release checklist review separately before approving a release.
@@ -38,11 +39,11 @@ This feature adds no accounts, analytics, remote polling, or planner writes.
 | Display name | Spread |
 | Version / build | 1.0 / 1 (raise the build number for every upload) |
 | Devices | iPhone and iPad (`TARGETED_DEVICE_FAMILY = "1,2"`). Build #73 was rejected by Apple (90101) after the iPhone-only change in PR #223; restored to the accepted build #72 device-family contract. iPhone-first UI; iPad compatibility requires device QA. |
-| Minimum iOS | 15.0 today. Target for 1.0: 17.0 (`CKSyncEngine`) |
+| Minimum iOS | 17.0 in every target (`IPHONEOS_DEPLOYMENT_TARGET`) |
 | Signing | Automatic, no team set in the repo (you choose it in Xcode) |
 | Encryption | `ITSAppUsesNonExemptEncryption = NO` (HTTPS and OS crypto only) |
 | App icon | `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`, from `public/icons/app-icon-spread-cards-square.svg` |
-| Privacy manifest | `ios/App/App/PrivacyInfo.xcprivacy` (no tracking, no collected data) |
+| Privacy manifest | App: `ios/App/App/PrivacyInfo.xcprivacy`. Widget extension: `ios/App/SpreadWidget/PrivacyInfo.xcprivacy`. No tracking, no collected data. Required-reason APIs: UserDefaults (`CA92.1`, app-group `1C8F.1`), file timestamp (`C617.1`), system boot time (`35F9.1`). The source preflight fails when native code calls one of these without declaring it. |
 
 ## What the installed app does differently from the website
 
