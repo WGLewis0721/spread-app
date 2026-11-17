@@ -14,6 +14,27 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
     private var resumeButton: UIButton?
     private var readyHandler: PlannerReadyHandler?
 
+    #if DEBUG && targetEnvironment(simulator)
+    override func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
+        let configuration = super.webViewConfiguration(for: instanceConfiguration)
+        guard let fixture = ProcessInfo.processInfo.environment["SPREAD_RITUAL_AUDIT_FIXTURE"],
+              let encoded = try? JSONEncoder().encode(fixture),
+              let literal = String(data: encoded, encoding: .utf8) else { return configuration }
+
+        // A fresh WebKit store isolates the seeded audit from any installed planner profile.
+        configuration.websiteDataStore = .nonPersistent()
+        let script = """
+        if (location.protocol === 'capacitor:' && location.hostname === 'localhost') {
+          localStorage.setItem('spread.v1', \(literal));
+        }
+        """
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: script, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        )
+        return configuration
+    }
+    #endif
+
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(SpreadCloudPlugin())
         bridge?.registerPluginInstance(SpreadLifeFilesPlugin())

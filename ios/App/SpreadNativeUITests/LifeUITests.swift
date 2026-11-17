@@ -9,11 +9,14 @@ final class LifeUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    private func startLife(showWhatsNew: Bool = false) {
+    private func startLife(showWhatsNew: Bool = false, ritualFixture: Bool = false, withCapacity: Bool = true) {
         if app.state != .notRunning { app.terminate() }
         let seen = showWhatsNew ? "test-previous-release" : "2026-11-11-life-week"
         app.launchArguments = ["-native.weekMonth.previewEnabled", "YES",
                                "-native.whatsNew.lastSeenRelease", seen] + EditorialArtTestMode.arguments
+        app.launchEnvironment = ritualFixture ? [
+            "SPREAD_RITUAL_AUDIT_FIXTURE": ritualData(withCapacity: withCapacity)
+        ] : [:]
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root").firstMatch
             .waitForExistence(timeout: 90), "The opted-in native Life root did not load.")
@@ -67,27 +70,167 @@ final class LifeUITests: XCTestCase {
     }
 
     func testAuditMoreScreens() {
-        startLife()
+        startLife(ritualFixture: true)
         app.buttons["life-more"].tap()
-        let destinations = [
-            ("more-week-in-review", "Week in Review", "week-in-review"),
-            ("more-week-ahead", "Week Ahead", "week-ahead"),
-            ("more-your-journey", "Your Journey", "your-journey")
+        let review = app.buttons["more-week-in-review"]
+        waitUntilHittable(review)
+        capture("audit-more")
+        review.tap()
+
+        let playback = app.buttons["week-review-playback"]
+        waitUntilHittable(playback)
+        if playback.label == "Pause stories" { playback.tap() }
+        XCTAssertEqual(playback.label, "Play stories")
+        let heading = app.staticTexts["week-review-story-heading"]
+        let next = app.buttons["week-review-continue"]
+        let scenes = [
+            ("A week of your life.", "week-in-review"),
+            ("You made room for", "week-review-hours"),
+            ("Work", "week-review-work"),
+            ("Home", "week-review-home"),
+            ("Health", "week-review-health"),
+            ("You followed through.", "week-review-tasks"),
+            ("You made the most room for Work.", "week-review-highlight")
         ]
-        for (id, title, file) in destinations {
-            let entry = app.buttons[id]
-            waitUntilHittable(entry)
-            if id == "more-week-in-review" { capture("audit-more") }
-            entry.tap()
-            let sheet = app.navigationBars[title]
-            XCTAssertTrue(sheet.waitForExistence(timeout: 10))
-            capture("audit-" + file)
-            if id == "more-week-ahead" {
-                let next = app.buttons["week-ahead-review-role"]
-                for _ in 0..<12 where next.exists { next.tap() }
-                if app.staticTexts["Week reviewed"].exists { capture("audit-week-ahead-complete") }
+        for (index, scene) in scenes.enumerated() {
+            if index > 0 {
+                waitUntilHittable(next)
+                next.tap()
             }
-            sheet.buttons["Done"].tap()
+            let expected = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "label == %@", scene.0), object: heading
+            )
+            XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 6), .completed)
+            if index < scenes.count - 1 { XCTAssertEqual(playback.label, "Play stories") }
+            capture("audit-" + scene.1)
+        }
+        let handoff = app.buttons["week-review-plan-next"]
+        waitUntilHittable(handoff)
+        handoff.tap()
+
+        XCTAssertTrue(app.navigationBars["Week Ahead"].waitForExistence(timeout: 10))
+        let choose = app.buttons["week-ahead-plan-selected"]
+        waitUntilHittable(choose)
+        capture("audit-week-ahead")
+        choose.tap()
+        let advance = app.buttons["week-ahead-next"]
+        let location = app.staticTexts["week-ahead-question"]
+        XCTAssertTrue(location.waitForExistence(timeout: 8))
+        waitUntilHittable(advance)
+        XCTAssertEqual(advance.label, "Keep 8 hours")
+        capture("audit-week-ahead-hours")
+        advance.tap()
+        let place = app.buttons["week-ahead-place-hour"]
+        XCTAssertTrue(place.waitForExistence(timeout: 8))
+        XCTAssertEqual(advance.label, "Keep current days")
+        capture("audit-week-ahead-days")
+        advance.tap()
+
+        let field = app.textFields["week-ahead-task-name"]
+        waitUntilHittable(field)
+        capture("audit-week-ahead-tasks")
+        field.tap()
+        field.typeText("Draft the weekly outline\n")
+        let added = app.staticTexts["Draft the weekly outline"]
+        XCTAssertTrue(added.waitForExistence(timeout: 12))
+        waitUntilHittable(advance)
+        advance.tap()
+        waitUntilHittable(advance)
+        XCTAssertEqual(advance.label, "Keep 4 hours")
+        capture("audit-week-ahead-next-area")
+        let skip = app.buttons["week-ahead-skip-area"]
+        waitUntilHittable(skip)
+        skip.tap()
+        waitUntilHittable(advance)
+        XCTAssertEqual(advance.label, "Keep 3 hours")
+        capture("audit-week-ahead-after-skip")
+        for _ in 0..<3 {
+            waitUntilHittable(advance)
+            advance.tap()
+        }
+        let finish = app.buttons["week-ahead-finish"]
+        waitUntilHittable(finish)
+        XCTAssertEqual(location.label, "You made room for your week.")
+        capture("audit-week-ahead-complete")
+        finish.tap()
+
+        let journey = app.buttons["more-your-journey"]
+        waitUntilHittable(journey)
+        journey.tap()
+        XCTAssertTrue(app.navigationBars["Your Journey"].waitForExistence(timeout: 10))
+        for (id, value) in [("journey-hours", "21"), ("journey-tasks", "6"), ("journey-weeks", "3")] {
+            let metric = app.descendants(matching: .any).matching(identifier: id).firstMatch
+            XCTAssertTrue(metric.waitForExistence(timeout: 8))
+            XCTAssertTrue(metric.label.contains(value), "Unexpected value for \(id): \(metric.label)")
+        }
+        capture("audit-your-journey")
+        let contributions = app.staticTexts["By Life area"]
+        for _ in 0..<4 where !contributions.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        XCTAssertTrue(contributions.isHittable)
+        capture("audit-your-journey-contributions")
+        let history = app.staticTexts["Week by week"]
+        for _ in 0..<8 where !history.isHittable { app.scrollViews.firstMatch.swipeUp() }
+        XCTAssertTrue(history.isHittable)
+        capture("audit-your-journey-history")
+    }
+
+    func testAuditRitualValidationError() {
+        startLife(ritualFixture: true, withCapacity: false)
+        app.buttons["life-more"].tap()
+        let ahead = app.buttons["more-week-ahead"]
+        waitUntilHittable(ahead)
+        ahead.tap()
+        let choose = app.buttons["week-ahead-plan-selected"]
+        waitUntilHittable(choose)
+        choose.tap()
+        let capacity = app.textFields["week-ahead-capacity"]
+        waitUntilHittable(capacity)
+        capacity.tap()
+        capacity.typeText("999")
+        let save = app.buttons["week-ahead-save-capacity"]
+        waitUntilHittable(save)
+        save.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "week-ahead-error").firstMatch.waitForExistence(timeout: 8))
+        XCTAssertEqual(capacity.value as? String, "999")
+        capture("audit-week-ahead-error")
+    }
+
+    private func ritualData(withCapacity: Bool) -> String {
+        let weeks = [
+            ("2026-11-02", 4, 1, 1, 0),
+            ("2026-11-09", 5, 2, 1, 1),
+            ("2026-11-16", 6, 3, 2, 1)
+        ]
+        let hats: [[String: Any]] = [
+            ["id": "work", "name": "Work", "defaultHours": 8, "color": "#34C759", "category": "work"],
+            ["id": "home", "name": "Home", "defaultHours": 4, "color": "#FF9500", "category": "home"],
+            ["id": "health", "name": "Health", "defaultHours": 3, "color": "#30B0C7", "category": "health"]
+        ]
+        let saved: [String: [String: Any]] = Dictionary(uniqueKeysWithValues: weeks.map {
+            (date, workHours, homeHours, workDone, homeDone) in
+            let boxes: [[String: Any]] = [
+                ["hatId": "work", "hours": 8, "tasks": (0..<workDone).map { index in
+                    ["id": "work-\(date)-\(index)", "text": ["Share the proposal", "Send the recap"][index], "done": true]
+                }],
+                ["hatId": "home", "hours": 4, "tasks": (0..<homeDone).map { _ in
+                    ["id": "home-\(date)", "text": "Plan Sunday dinner", "done": true]
+                }],
+                ["hatId": "health", "hours": 3, "tasks": []]
+            ]
+            let allocations: [[String: Any]] = [
+                ["id": "work-slot-\(date)", "hatId": "work", "day": date, "hours": workHours, "order": 0],
+                ["id": "home-slot-\(date)", "hatId": "home", "day": date, "hours": homeHours, "order": 1]
+            ]
+            let life = withCapacity ? ["version": 1, "capacityHours": 20] : ["version": 1]
+            return (date, ["boxes": boxes, "allocations": allocations, "life": life])
+        })
+        let data: [String: Any] = ["currentWeek": "2026-11-16", "hats": hats, "weeks": saved]
+        do {
+            let json = try JSONSerialization.data(withJSONObject: data, options: .sortedKeys)
+            return String(decoding: json, as: UTF8.self)
+        } catch {
+            XCTFail("Could not serialize the ritual fixture: \(error)")
+            return "{}"
         }
     }
 
