@@ -196,7 +196,7 @@ function UnlockScreen() {
         </div>
 
         <SpreadStack />
-        <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Responsibilities</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
+        <div className="site-principle"><span className="site-principle-intro">A simple change in order.</span><p><span>Life areas</span><span aria-hidden="true">→</span><span>Hours</span><span aria-hidden="true">→</span><span>Week</span><span aria-hidden="true">→</span><span>Tasks</span></p></div>
       </section>
 
       <HowItWorks
@@ -239,7 +239,7 @@ function UnlockScreen() {
 
       <section className="site-privacy">
         <div><span className="privacy-mark"><LockKeyhole size={25} strokeWidth={1.5} aria-hidden="true" /></span></div>
-        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>The iPhone app needs no account. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
+        <div><p className="site-kicker">Private by design</p><h2>Your life doesn’t need another account.</h2><p>The iPhone and iPad app needs no account. Your planning stays on this device. Profiles, backup and restore help you keep different parts of life separate without turning Spread into another cloud workspace.</p></div>
         <PrivacyFacts />
       </section>
 
@@ -247,7 +247,7 @@ function UnlockScreen() {
         <div className="site-start-copy">
           <p className="site-kicker">Start where you are</p>
           <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
-          <p>Spread is in private beta on TestFlight. Join below to try the iPhone app. Everything you plan stays on your device.</p>
+          <p>Spread is in private beta on TestFlight for iPhone and iPad. Join below to try it. Everything you plan stays on your device.</p>
           <HourGrid />
         </div>
         <div className="site-start-card">

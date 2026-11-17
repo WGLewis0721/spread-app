@@ -1330,7 +1330,8 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 }
 .mini-brand { display: flex; align-items: center; gap: 9px; font-size: .9375rem; font-weight: 650; letter-spacing: -.02em; }
 .preview-label { margin-left: auto; color: var(--site-device-muted); font-size: .6875rem; font-weight: 450; }
-.mini-crown { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 16px; padding: 12px 10px; border-radius: 13px; background: linear-gradient(#e7e7ea, #c6c6cc 52%, #e3e3e7); box-shadow: inset 0 1px #fff, 0 1px 2px #0006; color: #171717; font-size: .875rem; font-weight: 650; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+/* Life's week navigator: plain arrow, value, arrow. No metal, no Crown. Text inherits the surface ink. */
+.mini-week-nav { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 16px; padding: 12px 10px; border-radius: 13px; color: inherit; font-size: .875rem; font-weight: 650; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .mini-toggle { display: flex; width: max-content; margin: 0 auto 22px; padding: 3px; border-radius: 999px; background: #242426; }
 .mini-toggle b, .mini-toggle span { padding: 6px 18px; border-radius: 999px; font-size: .75rem; font-weight: 550; }
 .mini-toggle b { background: #3f3f43; color: #62b1ff; }
@@ -1385,7 +1386,7 @@ html:has(.spread-site) { scroll-behavior: smooth; scroll-padding-top: calc(var(-
 }
 .week-wire-heading { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px; font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; }
 .week-wire-heading > span:last-child { color: var(--site-device-muted); font-size: .75rem; font-weight: 450; letter-spacing: 0; }
-.week-wireframe .mini-crown { margin: 16px 0 12px; }
+.week-wireframe .mini-week-nav { margin: 16px 0 12px; }
 .week-wire-day { margin-top: 8px; padding: 12px 12px 13px; border-radius: 18px; background: var(--site-device-card); animation: site-preview-enter .45s var(--ease-out) both; }
 .week-wire-day:nth-child(2) { animation-delay: .06s; }
 .week-wire-day:nth-child(3) { animation-delay: .12s; }

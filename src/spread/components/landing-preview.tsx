@@ -98,9 +98,9 @@ export function PaperToProduct() {
       </div>
       <div className="product-plan">
         <div className="mini-brand"><SpreadIcon name="app-icon-spread-cards.svg" size={32} /><span>Spread</span><span className="preview-label">A sample week</span></div>
-        <div className="mini-crown"><ChevronLeft size={14} /><span>Sep 21 – Sep 27</span><ChevronRight size={14} /></div>
-        <div className="mini-toggle"><b>Spread</b><span>Week</span></div>
-        <div className="mini-section-label"><span>Your responsibilities</span><span>Hours</span></div>
+        <div className="mini-week-nav"><ChevronLeft size={14} /><span>Sep 21 – Sep 27</span><ChevronRight size={14} /></div>
+        <div className="mini-toggle"><b>Life</b><span>Week</span></div>
+        <div className="mini-section-label"><span>Life areas</span><span>Hours</span></div>
         {examples.map((item, index) => (
           <div className="mini-role" key={item.name} style={{ "--role-index": index } as CSSProperties}>
             <i style={{ background: item.color }} /><span>{item.name}</span><b>{item.hours}<small>h</small></b>
@@ -126,7 +126,7 @@ export function WeekPreview({ selected: controlled, onSelect }: { selected?: num
       <div
         className="week-preview-controls"
         role="group"
-        aria-label="Explore a sample responsibility"
+        aria-label="Explore a sample Life area"
       >
         {examples.map((item, index) => (
           <button
@@ -142,7 +142,7 @@ export function WeekPreview({ selected: controlled, onSelect }: { selected?: num
         ))}
       </div>
       <p className="week-preview-hint">
-        Choose a responsibility. See where its hours go.
+        Choose a Life area. See where its hours go.
         <ArrowDown size={14} aria-hidden="true" />
       </p>
       <div className="week-wireframe" aria-live="polite" aria-atomic="true">
@@ -150,7 +150,7 @@ export function WeekPreview({ selected: controlled, onSelect }: { selected?: num
           <span>Week</span>
           <span>Sample plan</span>
         </div>
-        <div className="mini-crown">
+        <div className="mini-week-nav">
           <ChevronLeft size={14} />
           <span>Sep 21 – Sep 27</span>
           <ChevronRight size={14} />

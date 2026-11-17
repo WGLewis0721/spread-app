@@ -4,7 +4,7 @@ import appCss from "../styles.css?url";
 
 const APP_NAME = "Spread";
 const SITE_DESCRIPTION =
-  "A weekly planner that starts with time. Name your responsibilities, give each one hours, then plan real days. Your planning stays on your device.";
+  "A weekly planner that starts with time. Name your Life areas, give each one hours, then plan real days. Your planning stays on your device.";
 
 export const Route = createRootRoute({
   head: () => ({

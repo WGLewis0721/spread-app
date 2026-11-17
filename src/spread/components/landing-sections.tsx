@@ -39,9 +39,9 @@ function useSeen<T extends Element>(threshold = 0.35) {
 /* ---------------------------------------------------------------- How it works */
 
 const steps = [
-  { label: "01 / Responsibilities", title: "Start with your life.", body: "Work, school, family, health. Name the responsibilities that deserve a real place in your week." },
-  { label: "02 / Hours", title: "Give it some time.", body: "A simple weekly hour bank makes the tradeoffs visible before your calendar fills itself." },
-  { label: "03 / Week → Tasks", title: "Make room to do it.", body: "Put those hours on real days. Then add the specific things you want to do with them." },
+  { label: "01 / Life areas", title: "Start with your life.", body: "Work, school, family, health. Name the Life areas that deserve a real place in your week." },
+  { label: "02 / Hours", title: "Give it some time.", body: "Weekly Time shows each Life area’s hours against your week’s capacity, before your calendar fills itself." },
+  { label: "03 / Week → Tasks", title: "Make room to do it.", body: "Put those hours on real days. Each task goes on its own Life area’s day." },
 ];
 const builderStatus = ["Three parts of your life.", "15 hours, with intention.", "All 15 hours have a place."];
 
@@ -156,7 +156,7 @@ export function WeekMetric({ selected }: { selected: number }) {
   const total = roles.reduce((sum, role) => sum + role.hours, 0);
   return (
     <div ref={ref} className={`week-metric${seen ? " is-seen" : ""}`}>
-      <span className="week-metric-label">Time is the starting point.</span>
+      <span className="week-metric-label">Weekly Time</span>
       <p className="week-metric-figure"><strong>{total}</strong><span>of 168 hours</span></p>
       <div className="week-metric-bar" aria-hidden="true">
         {roles.map((role, index) => (
@@ -217,7 +217,7 @@ export function ListVersusSpread() {
       </figure>
       <span className="versus-arrow" aria-hidden="true"><ArrowRight size={18} /></span>
       <figure className="versus-spread">
-        <figcaption>A spread</figcaption>
+        <figcaption>Life areas, with time</figcaption>
         {roles.map((role, r) => (
           <div key={role.name} className="versus-role" style={{ "--role": role.color, "--r": r } as CSSProperties}>
             <header><i /><b>{role.name}</b><span>{role.hours}<small>h</small></span></header>
@@ -296,7 +296,7 @@ export function WeekBand() {
       <div className="band-copy">
         <p className="site-kicker">From intention to a real week</p>
         <h2>Good intentions.<br /><em>Meet real days.</em></h2>
-        <p>Spread gives the important parts of your life time first. Tasks come after the time exists.</p>
+        <p>Spread gives the important parts of your life time first. Tasks come after the time exists. Plan Ahead moves hours to a later week only after you preview and confirm.</p>
         <a href="#start" className="site-text-link">Make space for your week <ChevronRight size={16} aria-hidden="true" /></a>
       </div>
       <WeekMetric selected={selected} />
