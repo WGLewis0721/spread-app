@@ -718,8 +718,11 @@ test("Life all-weeks responsibility deletion and global editing restore exact fu
     const next = shiftWeek(data.currentWeek, 1);
     useSpread.setState({ data: { ...data, weeks: { ...data.weeks, [next]: cloneWeek(data.weeks[data.currentWeek]) } } });
     const before = JSON.stringify(useSpread.getState().data);
-    const edited = await router.dispatch(request({ type: "editLifeRole", roleId, name: "Renamed", color: "#123456", category: "custom" }));
+    const edited = await router.dispatch(request({ type: "editLifeRole", roleId, name: "Renamed", color: "#123456",
+      category: "custom", intention: "  Leave time for the people I love.  " }));
     assert.ok(edited.undoId); assert.equal(edited.ok, true);
+    const saved = normalizeData(JSON.parse(JSON.stringify(useSpread.getState().data)));
+    assert.equal(saved.hats.find((hat) => hat.id === roleId)?.intention, "Leave time for the people I love.");
     assert.equal((await router.dispatch(request({ type: "undo", editId: edited.undoId }))).ok, true);
     assert.equal(JSON.stringify(useSpread.getState().data), before);
     await router.dispatch(request({ type: "setLifePriority", priorityRoleId: roleId, goalHours: 6, day: data.currentWeek }));

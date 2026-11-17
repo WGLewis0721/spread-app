@@ -18,8 +18,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func handleWidgetURL(_ url: URL) {
         guard url.scheme == "spread" else { return }
         if url.host == "today" {
-            UserDefaults.standard.set(true, forKey: "native.widget.openToday")
-            NotificationCenter.default.post(name: Notification.Name("SpreadOpenToday"), object: nil)
+            Self.requestToday()
         } else if url.host == "focus" {
             UserDefaults.standard.set(true, forKey: "native.widget.openFocus")
             NotificationCenter.default.post(name: Notification.Name("SpreadOpenFocus"), object: nil)
@@ -31,6 +30,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             UserDefaults.standard.set(card, forKey: "native.widget.openLifeCard")
             NotificationCenter.default.post(name: Notification.Name("SpreadOpenLifeCard"), object: nil)
         }
+    }
+
+    @MainActor
+    static func requestToday() {
+        UserDefaults.standard.set(true, forKey: "native.widget.openToday")
+        NotificationCenter.default.post(name: Notification.Name("SpreadOpenToday"), object: nil)
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

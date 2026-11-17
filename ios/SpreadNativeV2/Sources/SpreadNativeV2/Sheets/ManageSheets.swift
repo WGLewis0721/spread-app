@@ -6,6 +6,7 @@ import SwiftUI
 struct NewSpreadSheet: View {
     @ObservedObject var planner: LivePlanner
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private struct Draft: Identifiable {
         let id: Int
@@ -25,6 +26,10 @@ struct NewSpreadSheet: View {
     private var roleWord: String { "Life area" }
     private var roleWords: String { "Life areas" }
     private func fieldName(_ index: Int) -> String { "Life area \(index + 1)" }
+    private let quickStarts = ["work", "home", "family", "health", "personal"]
+    private var emptyDraftIndex: Int? {
+        drafts.firstIndex { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.category == nil }
+    }
 
     var body: some View {
         SpreadSheetStack {
@@ -32,8 +37,34 @@ struct NewSpreadSheet: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("What would you like to make time for?")
                         .font(Spread.callout).foregroundStyle(Spread.secondary)
-                    ForEach(drafts.indices, id: \.self) { index in
-                        draftCard(index)
+                    VStack(alignment: .leading, spacing: Spread.space2) {
+                        Text("Quick start").font(Spread.footnote).foregroundStyle(Spread.secondary)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 180 : 96),
+                                                      spacing: Spread.space2)], spacing: Spread.space2) {
+                            ForEach(quickStarts, id: \.self) { category in
+                                let name = PalettePanel.categories.first { $0.id == category }?.label ?? category.capitalized
+                                let selected = drafts.contains { $0.category == category }
+                                Button { addQuickStart(name: name, category: category) } label: {
+                                    Label(name, systemImage: selected ? "checkmark" : "plus")
+                                        .font(.caption.weight(.semibold))
+                                        .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
+                                }
+                                .buttonStyle(.spreadPress)
+                                .spreadChip(selected: selected)
+                                .disabled(saving || selected || (drafts.count >= 5 && emptyDraftIndex == nil))
+                                .accessibilityAddTraits(selected ? .isSelected : [])
+                                .accessibilityIdentifier("quick-life-" + category)
+                            }
+                        }
+                    }
+                    if saving {
+                        ProgressView("Saving Life areas…")
+                    } else {
+                        ForEach(drafts) { draft in
+                            if let index = drafts.firstIndex(where: { $0.id == draft.id }) {
+                                draftCard(index)
+                            }
+                        }
                     }
                     Button {
                         drafts.append(Draft(id: nextId))
@@ -48,6 +79,7 @@ struct NewSpreadSheet: View {
                         .spreadChip(selected: false)
                     }
                     .buttonStyle(.spreadPress)
+                    .disabled(saving)
                     .accessibilityIdentifier("add-another-spread")
                     if let saveFailure = saveFailure {
                         Text(saveFailure)
@@ -73,11 +105,13 @@ struct NewSpreadSheet: View {
                 // Creating drafts discards them on Cancel, so the leading control is Cancel, not Close.
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("Cancel").tapTarget() }
+                        .disabled(saving)
                         .accessibilityIdentifier("add-life-cancel")
                 }
             }
         }
         .presentationDetents([.large])
+        .interactiveDismissDisabled(saving)
         .presentationDragIndicator(.visible)
     }
 
@@ -130,9 +164,20 @@ struct NewSpreadSheet: View {
         .spreadCard(edge: draft.category == nil ? nil : tint, active: draft.category != nil)
     }
 
+    private func addQuickStart(name: String, category: String) {
+        guard !saving, !drafts.contains(where: { $0.category == category }) else { return }
+        if let index = emptyDraftIndex {
+            drafts[index].name = name
+            drafts[index].category = category
+        } else if drafts.count < 5 {
+            drafts.append(Draft(id: nextId, name: name, category: category))
+            nextId += 1
+        }
+    }
+
     private func save() {
         let rows = drafts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        guard !rows.isEmpty else { return }
+        guard !saving, !rows.isEmpty else { return }
         saving = true
         saveFailure = nil
         Task {
@@ -295,6 +340,7 @@ struct RoleSheet: View {
         guard !trimmed.isEmpty, trimmed != role.name else { name = role.name; return }
         Task { await planner.send(["type": "renameRole", "roleId": role.id, "name": trimmed]) }
     }
+
 }
 
 
@@ -434,6 +480,9 @@ struct MoreSheet: View {
     @State private var showWhatsNew = false
     @State private var showReminders = false
     @State private var showFocusTimer = false
+    @State private var showWeekReview = false
+    @State private var showWeekAhead = false
+    @State private var showJourney = false
     @AppStorage(SpreadWidgetPublisher.enabledKey) private var todayWidgetsEnabled = false
     @AppStorage(SpreadLifeCardsPublisher.enabledKey) private var lifeCardsWidgetsEnabled = false
     @AppStorage(SpreadReleaseNotes.lastSeenKey) private var lastSeenReleaseID = ""
@@ -521,6 +570,17 @@ struct MoreSheet: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spread.space3) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            sectionLabel("Planning and reflection")
+                            LazyVGrid(columns: columns, spacing: Spread.space2) {
+                                tile("Week in Review", symbol: "calendar.badge.checkmark",
+                                     id: "more-week-in-review") { showWeekReview = true }
+                                tile("Week Ahead", symbol: "calendar.badge.clock",
+                                     id: "more-week-ahead") { showWeekAhead = true }
+                                tile("Your Journey", symbol: "chart.line.uptrend.xyaxis",
+                                     id: "more-your-journey") { showJourney = true }
+                            }
+                        }
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Appearance")
                             appearanceLayout {
@@ -728,6 +788,15 @@ struct MoreSheet: View {
                     SpreadFocusTimerSheet(timer: focusTimer, profileId: profileId,
                                           roles: snapshot.roles, preferredRoleId: nil)
                 }
+            }
+            .sheet(isPresented: $showWeekReview) {
+                if let snapshot = planner.snapshot { LifeWeekReviewSheet(snapshot: snapshot) }
+            }
+            .sheet(isPresented: $showWeekAhead) {
+                if let snapshot = planner.snapshot { LifeWeekAheadSheet(snapshot: snapshot) }
+            }
+            .sheet(isPresented: $showJourney) {
+                if let snapshot = planner.snapshot { LifeJourneySheet(snapshot: snapshot) }
             }
             .sheet(isPresented: $showWhatsNew, onDismiss: {
                 if let latest = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion) {

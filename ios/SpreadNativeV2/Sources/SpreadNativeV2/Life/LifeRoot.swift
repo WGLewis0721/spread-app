@@ -284,7 +284,7 @@ struct LifeRoot: View {
                     Button {
                         showPlanAhead = true
                     } label: {
-                        Label { Text("Plan Ahead") } icon: { SpreadIcon(name: "lucide-calendar-clock", size: 18) }
+                        Label { Text("Planner") } icon: { SpreadIcon(name: "lucide-calendar-clock", size: 18) }
                             .font(.subheadline.weight(.semibold))
                             .frame(minHeight: Spread.minimumTarget)
                     }
@@ -317,7 +317,8 @@ struct LifeRoot: View {
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole,
-                                viewportHeight: viewportHeight, viewportWidth: viewportWidth)
+                                viewportHeight: viewportHeight, viewportWidth: viewportWidth,
+                                onSetup: { localSheet = .manage($0) })
                     .zIndex(2)
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
@@ -454,7 +455,7 @@ struct LifeRoot: View {
                 .accessibilityIdentifier("life-budget-done")
             }
             if snapshot.recurringPlans?.isEmpty == false {
-                Text("Changes here affect only this week. Edit repeating schedules in Plan Ahead.")
+                Text("Changes here affect only this week. Edit repeating schedules in Planner.")
                     .font(.caption)
                     .foregroundStyle(Spread.secondary)
             }

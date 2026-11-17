@@ -219,3 +219,11 @@ test("native v2 outlook follows a repeat schedule, including a 12-week interval 
   assert.equal(twelve[0].hours.find((h) => h.roleId === "work")!.hours, 2);
   assert.equal(twelve[2].hours.find((h) => h.roleId === "work")!.hours, 0);
 });
+
+test("native v2 projects a Life intention without inventing one", () => {
+  const data = source();
+  data.hats[0].intention = "Protect time for deep work";
+  const roles = projectNativeV2(data, "p1").snapshot.roles;
+  assert.equal(roles[0].intention, "Protect time for deep work");
+  assert.equal(roles[1].intention, undefined);
+});

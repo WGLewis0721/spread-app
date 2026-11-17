@@ -172,7 +172,7 @@ struct LifePlanAheadSheet: View {
                     }
                 }
             }
-            .navigationTitle("Plan Ahead")
+            .navigationTitle("Planner")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

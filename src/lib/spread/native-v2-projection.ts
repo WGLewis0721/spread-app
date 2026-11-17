@@ -10,7 +10,7 @@ import { isSpreadCategory, planPlacements, recurringForRole, shiftWeek, type Spr
  */
 export type NativeV2Snapshot = {
   weekKey: string;
-  roles: { id: string; name: string; category: string; color: string; hours: number }[];
+  roles: { id: string; name: string; category: string; color: string; hours: number; intention?: string }[];
   allocations: { id: string; roleId: string; day: string; hours: number; order: number }[];
   tasks: { id: string; roleId: string; text: string; done: boolean; allocationId: string | null; estimateMinutes?: number; important?: boolean }[];
   /** Only present when the user has manually reordered tasks in Week. */
@@ -101,6 +101,7 @@ export function projectNativeV2(
         category: hat.category && isSpreadCategory(hat.category) ? hat.category : "custom",
         color: hat.color,
         hours: boxes.get(hat.id)?.hours ?? hat.defaultHours,
+        ...(hat.intention ? { intention: hat.intention } : {}),
       })),
       allocations: allocations.map((allocation) => ({
         id: allocation.id,
