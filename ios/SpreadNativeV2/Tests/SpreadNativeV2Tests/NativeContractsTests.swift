@@ -85,6 +85,21 @@ final class NativeContractsTests: XCTestCase {
                           SpreadHoldPace.repeatDelayMilliseconds(afterStep: 0))
     }
 
+    func testJourneyProjectionDecodesOptionalHistoryWithoutReplacingPlanner() throws {
+        let old = PlannerSnapshot(weekKey: "2026-11-02", roles: [], allocations: [], tasks: [])
+        XCTAssertNil(old.history)
+        let payload = """
+        {"weekKey":"2026-11-02","roles":[],"allocations":[],"tasks":[],
+        "history":[{"weekKey":"2026-11-02","budgetedHours":5,"placedHours":3.5,"completedTasks":2,
+        "byRole":[{"roleId":"work","budgetedHours":5,"placedHours":3.5,"completedTasks":2}]}]}
+        """
+        let restored = try JSONDecoder().decode(PlannerSnapshot.self, from: Data(payload.utf8))
+        XCTAssertEqual(restored.history?.first?.placedHours, 3.5)
+        XCTAssertEqual(restored.history?.first?.completedTasks, 2)
+        XCTAssertEqual(restored.history?.first?.byRole.first?.roleId, "work")
+        XCTAssertEqual(restored.weekKey, "2026-11-02")
+    }
+
     func testNativeTaskImportanceIsOptionalAndBackwardCompatible() throws {
         let old = """
         {"id":"t1","roleId":"work","text":"Read","done":false,"allocationId":null}
