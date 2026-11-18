@@ -72,7 +72,7 @@ struct LifeFirstWeekPrompt: View {
 
     private var primaryAction: some View {
         Button(action: onAction) {
-            Text(actionTitle).font(.body.semibold())
+            Text(actionTitle).font(.body.weight(.semibold))
                 .frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
                 .padding(.horizontal, Spread.space2)
         }
