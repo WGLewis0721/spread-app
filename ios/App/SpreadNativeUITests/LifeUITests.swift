@@ -455,14 +455,14 @@ final class LifeUITests: XCTestCase {
     }
 
     func testFirstWeekFailedSaveLeavesDraftAndStepAvailable() {
-        let name = "First week retry marker"
+        let name = "Home"
         launchEmptyFirstWeek(forceWelcome: true, failedSave: name)
         assertFirstWeekPrompt("Make room for what matters.")
         app.buttons["life-first-week-action"].tap()
+        let preset = app.buttons["quick-life-home"]
+        waitUntilHittable(preset)
+        preset.tap()
         let field = app.textFields["role-name-field"].firstMatch
-        waitUntilHittable(field)
-        field.tap()
-        field.typeText(name)
         let save = app.buttons["save-spreads"]
         revealFirstWeekControl(save)
         save.tap()

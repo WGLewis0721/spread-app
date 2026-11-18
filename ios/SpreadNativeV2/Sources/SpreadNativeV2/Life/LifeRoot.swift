@@ -37,6 +37,7 @@ struct LifeRoot: View {
     let onMore: () -> Void
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
+    let canOfferFirstWeek: Bool
     let firstWeekReplay: Int
     @AccessibilityFocusState private var navigationFocused: Bool
     @AccessibilityFocusState private var openerFocused: Bool
@@ -64,9 +65,7 @@ struct LifeRoot: View {
     @State private var historyVisible = false
     @State private var showFocusTimer = false
     @State private var preferredFocusRoleId: String?
-    @AppStorage(LifeFirstWeekStep.handledKey) private var firstWeekHandled = false
-    // Capture install status before the shell's What's New task marks this release as seen.
-    @State private var freshInstall = (UserDefaults.standard.string(forKey: SpreadReleaseNotes.lastSeenKey) ?? "").isEmpty
+    @State private var checkedFirstWeekOffer = false
     @State private var firstWeekScope: FirstWeekScope?
     @State private var firstWeekStep: LifeFirstWeekStep?
     @State private var firstWeekTaskRole: String?
@@ -193,7 +192,7 @@ struct LifeRoot: View {
             focusedRole = nil
             tasksOpen = false
             budgetExpanded = false
-            firstWeekHandled = true
+            UserDefaults.standard.set(true, forKey: LifeFirstWeekStep.handledKey)
             firstWeekScope = scope
             firstWeekStep = .next(in: snapshot)
             navigate(.life)
@@ -440,9 +439,10 @@ struct LifeRoot: View {
         if let firstWeekScope {
             guard firstWeekScope == scope, let firstWeekStep else { return }
             self.firstWeekStep = .next(in: snapshot, preferredRoleID: firstWeekStep.roleID)
-        } else if !firstWeekHandled {
-            firstWeekHandled = true
-            if freshInstall, planner.recoveryNotice == nil, snapshot.roles.isEmpty,
+        } else if canOfferFirstWeek && !checkedFirstWeekOffer {
+            checkedFirstWeekOffer = true
+            UserDefaults.standard.set(true, forKey: LifeFirstWeekStep.handledKey)
+            if planner.recoveryNotice == nil, snapshot.roles.isEmpty,
                snapshot.allocations.isEmpty, snapshot.tasks.isEmpty, snapshot.life?.capacityHours == nil {
                 firstWeekScope = scope
             }

@@ -10,6 +10,8 @@ public struct SpreadLiveRoot: View {
     @ObservedObject var planner: LivePlanner
     @StateObject private var focusTimer = SpreadFocusTimer()
     let recovery: () -> Void
+    // Capture eligibility before the launch task records the current release as seen.
+    private let canOfferFirstWeek: Bool
 
     @State private var appearance: SpreadAppearance = SpreadAppearancePreference.read()
     @State private var sheet: LiveSheet?
@@ -38,6 +40,9 @@ public struct SpreadLiveRoot: View {
             UserDefaults.standard.removeObject(forKey: SpreadReleaseNotes.lastSeenKey)
         }
         #endif
+        let defaults = UserDefaults.standard
+        canOfferFirstWeek = !defaults.bool(forKey: LifeFirstWeekStep.handledKey)
+            && (defaults.string(forKey: SpreadReleaseNotes.lastSeenKey) ?? "").isEmpty
     }
 
     public var body: some View {
@@ -47,6 +52,7 @@ public struct SpreadLiveRoot: View {
             onMore: { sheet = .more },
             onOpenTask: { sheet = .task($0, $1) },
             onNewRole: { sheet = .newRole },
+            canOfferFirstWeek: canOfferFirstWeek,
             firstWeekReplay: firstWeekReplay
         )
         .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
