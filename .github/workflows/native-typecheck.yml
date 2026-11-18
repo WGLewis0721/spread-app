@@ -27,6 +27,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  first-week-package-tests:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test --package-path ios/SpreadNativeV2 --filter LifeFirstWeekGuideTests
+
+  first-week-simulator-tests:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 55
+    env:
+      VITE_SPREAD_CLOUD_BACKUP: "0"
+      VITE_SPREAD_CLOUD_SYNC: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare the unsigned simulator build
+        run: |
+          npm ci
+          npm run ios:sync
+      - name: Run first-week XCTest journeys
+        run: |
+          set -eu
+          export UDID="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          models = ["iPhone 17e", "iPhone 16", "iPhone 17", "iPhone 17 Pro"]
+          phones = [d for runtime, items in devices.items() if ".iOS-" in runtime
+                    for d in items if d["name"].startswith("iPhone")]
+          chosen = min(phones, key=lambda d: models.index(d["name"]) if d["name"] in models else len(models))
+          print(chosen["name"], file=sys.stderr)
+          print(chosen["udid"])
+          ')"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcodebuild test -project ios/App/App.xcodeproj -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,id=$UDID" -parallel-testing-enabled NO \
+            -only-testing:SpreadNativeUITests/LifeUITests/testFreshLifeGuideCanBeSkippedAndReopenedFromMore \
+            -only-testing:SpreadNativeUITests/LifeUITests/testFirstWeekGuideBuildsARealPlan \
+            -only-testing:SpreadNativeUITests/LifeUITests/testFirstWeekFailedSaveLeavesDraftAndStepAvailable \
+            CODE_SIGNING_ALLOWED=NO
+
   native-typecheck:
     name: native-typecheck
     runs-on: macos-26
