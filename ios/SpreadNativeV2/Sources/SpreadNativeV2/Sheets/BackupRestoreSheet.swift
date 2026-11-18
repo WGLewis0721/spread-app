@@ -18,12 +18,12 @@ struct BackupRestoreSheet: View {
     @State private var removeItems = false
 
     var body: some View {
-        SpreadSheetStack {
+        SpreadSheetStack(canvas: LifePalette.canvas) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     section("Back up") {
                         Text("Back up Spread makes two files. The .spread backup restores everything, and it can't be edited: a changed file is rejected. The plan file (.json) is your schedule in plain text. You can edit it yourself or give it to an AI tool. It leaves out settings, attachments, rich notes, recurring plans and the recycle bin. Whatever you share goes to whoever receives it.")
-                            .font(Spread.callout).foregroundStyle(Spread.secondary)
+                            .font(Spread.callout).foregroundStyle(LifePalette.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Button { makeBackup() } label: {
                             Label("Back up Spread", systemImage: "square.and.arrow.up")
@@ -37,7 +37,7 @@ struct BackupRestoreSheet: View {
 
                     section("Restore and merge") {
                         Text("Choose a .spread backup or a plan file (.json). A backup, or a plan that creates a profile, adds it as a new profile. A plan that changes this profile is previewed first, and nothing changes until you choose Merge. Your other profiles are not changed.")
-                            .font(Spread.callout).foregroundStyle(Spread.secondary)
+                            .font(Spread.callout).foregroundStyle(LifePalette.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Button { importing = true } label: {
                             Label("Choose a file", systemImage: "square.and.arrow.down")
@@ -59,7 +59,7 @@ struct BackupRestoreSheet: View {
 
                     if let message {
                         Text(message)
-                            .font(Spread.callout).foregroundStyle(Spread.secondary)
+                            .font(Spread.callout).foregroundStyle(LifePalette.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("backup-message")
                     }
@@ -88,7 +88,7 @@ struct BackupRestoreSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.system(.footnote, weight: .semibold))
-                .foregroundStyle(Spread.secondary)
+                .foregroundStyle(LifePalette.secondary)
                 .accessibilityAddTraits(.isHeader)
             content()
         }
@@ -100,7 +100,7 @@ struct BackupRestoreSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(.body, weight: .semibold))
-                .foregroundStyle(danger ? Spread.danger : Spread.secondary)
+                .foregroundStyle(danger ? Spread.danger : LifePalette.secondary)
             ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                 Text("• \(line)")
                     .font(.footnote)
@@ -109,7 +109,7 @@ struct BackupRestoreSheet: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
+        .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(LifePalette.surface))
         .accessibilityElement(children: .combine)
     }
 
@@ -125,7 +125,7 @@ struct BackupRestoreSheet: View {
     private func profilesSection(_ preview: BackupPreview) -> some View {
         section("Profiles in this file") {
             Text("\(preview.profiles.count) profiles · \(preview.weeks) weeks · \(preview.tasks) tasks")
-                .font(Spread.callout).foregroundStyle(Spread.secondary)
+                .font(Spread.callout).foregroundStyle(LifePalette.secondary)
             ForEach(preview.profiles) { profile in
                 if profile.readable {
                     Toggle(isOn: binding(profile.id)) {
@@ -169,7 +169,7 @@ struct BackupRestoreSheet: View {
                 }
             }
             Text("Merging changes only this profile. Rich notes, the recycle bin and settings are kept. A safety copy of this profile is saved first.")
-                .font(.footnote).foregroundStyle(Spread.secondary)
+                .font(.footnote).foregroundStyle(LifePalette.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             mergeButton(merge)
         }
@@ -197,7 +197,7 @@ struct BackupRestoreSheet: View {
     private func choiceLabel(_ title: String, _ detail: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.body)
-            Text(detail).font(.footnote).foregroundStyle(Spread.secondary)
+            Text(detail).font(.footnote).foregroundStyle(LifePalette.secondary)
         }
     }
 
@@ -222,7 +222,7 @@ struct BackupRestoreSheet: View {
         return VStack(alignment: .leading, spacing: 10) {
             if tiles.isEmpty {
                 Text("Nothing in this file changes this profile.")
-                    .font(Spread.callout).foregroundStyle(Spread.secondary)
+                    .font(Spread.callout).foregroundStyle(LifePalette.secondary)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 10)], alignment: .leading, spacing: 10) {
                     ForEach(Array(tiles.enumerated()), id: \.offset) { _, tile in
@@ -230,12 +230,12 @@ struct BackupRestoreSheet: View {
                             Text("\(tile.1)")
                                 .font(.system(.title2, design: .rounded, weight: .semibold))
                             Text(tile.0)
-                                .font(.footnote).foregroundStyle(Spread.secondary)
+                                .font(.footnote).foregroundStyle(LifePalette.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
-                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
+                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(LifePalette.surface))
                         .accessibilityElement(children: .combine)
                     }
                 }
@@ -251,12 +251,12 @@ struct BackupRestoreSheet: View {
                         .font(.system(.caption, weight: .semibold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .overlay(Capsule().stroke(Spread.secondary.opacity(0.5), lineWidth: 1))
+                        .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 1))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(area.name).font(.body)
                         if let detail = areaDetail(area) {
                             Text(detail)
-                                .font(.footnote).foregroundStyle(Spread.secondary)
+                                .font(.footnote).foregroundStyle(LifePalette.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -265,7 +265,7 @@ struct BackupRestoreSheet: View {
             }
             if merge.areasOmitted > 0 {
                 Text("And \(merge.areasOmitted) more areas.")
-                    .font(.footnote).foregroundStyle(Spread.secondary)
+                    .font(.footnote).foregroundStyle(LifePalette.secondary)
             }
         }
     }
@@ -303,7 +303,7 @@ struct BackupRestoreSheet: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(profile.name).font(.body)
             Text("\(profile.weeks) weeks · \(profile.tasks) tasks · \(profile.range)")
-                .font(.footnote).foregroundStyle(Spread.secondary)
+                .font(.footnote).foregroundStyle(LifePalette.secondary)
         }
     }
 

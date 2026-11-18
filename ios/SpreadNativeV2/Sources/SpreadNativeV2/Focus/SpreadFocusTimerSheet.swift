@@ -45,10 +45,10 @@ struct SpreadFocusTimerSheet: View {
         VStack(alignment: .leading, spacing: Spread.space2) {
             Text("\(name) · \(SpreadBlockText.hours(offered.entry.hours)) planned")
                 .font(.headline)
-                .foregroundStyle(Spread.ink)
+                .foregroundStyle(LifePalette.ink)
             Text(SpreadBlockText.summary(offered.entry.plan))
                 .font(.subheadline)
-                .foregroundStyle(Spread.secondary)
+                .foregroundStyle(LifePalette.secondary)
             Button {
                 if timer.startBlock(offered, notify: notifyWhenDone) {
                     message = nil
@@ -99,7 +99,7 @@ struct SpreadFocusTimerSheet: View {
                 } label: {
                     Image(systemName: "xmark").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
                 }
-                .buttonStyle(SpreadRefinedControlStyle(danger: true))
+                .buttonStyle(SpreadRefinedControlStyle(danger: true, usesLifePalette: true))
                 .accessibilityLabel("Cancel session")
                 .accessibilityHint("Ends the entire focus session")
                 .accessibilityIdentifier("focus-cancel")
@@ -142,7 +142,7 @@ struct SpreadFocusTimerSheet: View {
             } label: {
                 Image(systemName: "forward.fill").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
-            .buttonStyle(SpreadRefinedControlStyle())
+            .buttonStyle(SpreadRefinedControlStyle(usesLifePalette: true))
             .disabled(next == nil)
             .accessibilityLabel(next.map { "Forward: " + $0 } ?? "Forward unavailable, no next step")
             .accessibilityIdentifier("focus-forward")
@@ -157,7 +157,7 @@ struct SpreadFocusTimerSheet: View {
             } label: {
                 Image(systemName: "stop.fill").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
-            .buttonStyle(SpreadRefinedControlStyle())
+            .buttonStyle(SpreadRefinedControlStyle(usesLifePalette: true))
             .accessibilityLabel("Stop this stretch")
             .accessibilityHint("Keeps any following round waiting for you")
             .accessibilityIdentifier("focus-stop")
@@ -166,7 +166,7 @@ struct SpreadFocusTimerSheet: View {
             } label: {
                 Image(systemName: "xmark").frame(minWidth: Spread.minimumTarget, minHeight: Spread.minimumTarget)
             }
-            .buttonStyle(SpreadRefinedControlStyle(danger: true))
+            .buttonStyle(SpreadRefinedControlStyle(danger: true, usesLifePalette: true))
             .accessibilityLabel("Cancel session")
             .accessibilityHint("Ends the entire focus session")
             .accessibilityIdentifier("focus-cancel")
@@ -221,11 +221,11 @@ struct SpreadFocusTimerSheet: View {
         .accessibilityIdentifier("focus-start")
         Text("Focus time never changes scheduled hours or completes tasks. Breaks start only when tapped.")
             .font(.footnote)
-            .foregroundStyle(Spread.secondary)
+            .foregroundStyle(LifePalette.secondary)
     }
 
     var body: some View {
-        SpreadSheetStack {
+        SpreadSheetStack(canvas: LifePalette.canvas) {
             Form {
                 if let current, current.phase != .finished {
                     Section("Focus timer") {
@@ -233,13 +233,15 @@ struct SpreadFocusTimerSheet: View {
                             Text("Life area")
                             Spacer(minLength: 8)
                             Text(current.roleName)
-                                .foregroundStyle(Spread.secondary)
+                                .foregroundStyle(LifePalette.secondary)
                                 .multilineTextAlignment(.trailing)
                         }
+                        .listRowBackground(LifePalette.surface)
                         Text(stageText(current))
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Spread.secondary)
+                            .foregroundStyle(LifePalette.secondary)
                             .accessibilityIdentifier("focus-stage")
+                            .listRowBackground(LifePalette.surface)
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text(SpreadFocusClock.display(current.remaining(at: context.date)))
                                 .font(.system(size: countdownSize, weight: .medium, design: .rounded))
@@ -252,7 +254,8 @@ struct SpreadFocusTimerSheet: View {
                                 .accessibilityValue(SpreadFocusClock.display(current.remaining(at: context.date)))
                         }
                         .accessibilityIdentifier("focus-time-remaining")
-                        transportRow(current)
+                        .listRowBackground(LifePalette.surface)
+                        transportRow(current).listRowBackground(LifePalette.surface)
                     }
                 } else if let current, isWaiting(current) {
                     Section("Next step") {
@@ -262,31 +265,34 @@ struct SpreadFocusTimerSheet: View {
                                 ? "Break is over. Start the next focus round when you're ready."
                                 : "Round \(current.roundNumber) is done. Start your break when you're ready."))
                             .font(.subheadline)
-                            .foregroundStyle(Spread.secondary)
+                            .foregroundStyle(LifePalette.secondary)
                             .accessibilityIdentifier("focus-waiting")
-                        transportRow(current)
+                            .listRowBackground(LifePalette.surface)
+                        transportRow(current).listRowBackground(LifePalette.surface)
                     }
                 } else {
                     if let offered = SpreadDayPlanStore.nextBlock(now: Date()) {
                         Section("Today's block") {
-                            todaysBlockRows(offered)
+                            todaysBlockRows(offered).listRowBackground(LifePalette.surface)
                         }
                         Section {
                             DisclosureGroup("Set your own focus session", isExpanded: $customFocusExpanded) {
-                                customFocusFields
+                                customFocusFields.listRowBackground(LifePalette.surface)
                             }
+                            .listRowBackground(LifePalette.surface)
                         }
                     } else {
                         if SpreadDayPlanStore.allDoneToday(now: Date()) {
                             Section {
                                 Text("Today's planned blocks are done. Nothing else is started for you.")
                                     .font(.subheadline)
-                                    .foregroundStyle(Spread.secondary)
+                                    .foregroundStyle(LifePalette.secondary)
                                     .accessibilityIdentifier("focus-blocks-done")
+                                    .listRowBackground(LifePalette.surface)
                             }
                         }
                         Section("Custom focus") {
-                            customFocusFields
+                            customFocusFields.listRowBackground(LifePalette.surface)
                         }
                     }
                 }
@@ -294,25 +300,32 @@ struct SpreadFocusTimerSheet: View {
                     DisclosureGroup("Display & reminders", isExpanded: $outsideSettingsExpanded) {
                         Toggle("Notify when a stretch ends", isOn: $notifyWhenDone)
                             .accessibilityIdentifier("focus-notification-toggle")
+                            .listRowBackground(LifePalette.surface)
                         Toggle("Show active timer on Lock Screen and Dynamic Island", isOn: $showLiveTimer)
                             .accessibilityIdentifier("focus-live-activity-toggle")
+                            .listRowBackground(LifePalette.surface)
                         Toggle("Show Life area name outside Spread", isOn: $showNameOutsideApp)
                             .disabled(current?.phase == .running)
                             .accessibilityIdentifier("focus-live-activity-name")
+                            .listRowBackground(LifePalette.surface)
                         Text("Notifications are optional and only requested when you turn them on. Life area names appear on the Lock Screen, the Dynamic Island and the timer widget only while the name switch is on. It can't change during a session.")
                             .font(.footnote)
-                            .foregroundStyle(Spread.secondary)
+                            .foregroundStyle(LifePalette.secondary)
+                            .listRowBackground(LifePalette.surface)
                     }
                     .accessibilityIdentifier("focus-outside-settings")
+                    .listRowBackground(LifePalette.surface)
                 }
                 if let message {
                     Section {
                         Label(message, systemImage: "info.circle")
-                            .foregroundStyle(Spread.secondary)
+                            .foregroundStyle(LifePalette.secondary)
+                            .listRowBackground(LifePalette.surface)
                     }
                 }
             }
-            .spreadListSurface()
+            .scrollContentBackground(.hidden)
+            .background(LifePalette.canvas)
             .navigationTitle("Focus Timer")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
