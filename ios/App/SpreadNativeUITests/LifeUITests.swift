@@ -468,8 +468,13 @@ final class LifeUITests: XCTestCase {
         save.tap()
         XCTAssertTrue(app.staticTexts["add-life-error"].waitForExistence(timeout: 10))
         XCTAssertEqual(field.value as? String, name)
-        app.buttons["add-life-cancel"].tap()
-        assertFirstWeekPrompt("What matters in your week?")
+        XCTAssertEqual(save.label, "Retry saving")
+        save.tap()
+        assertFirstWeekPrompt("Choose your weekly hours")
+        let matchingCards = app.descendants(matching: .any).matching(NSPredicate(
+            format: "identifier BEGINSWITH 'life-card-' AND label BEGINSWITH %@", name
+        ))
+        XCTAssertEqual(matchingCards.count, 1)
     }
 
     private func launchEmptyFirstWeek(forceWelcome: Bool, failedSave: String? = nil) {

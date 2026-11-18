@@ -453,20 +453,23 @@ struct LifeQuickAdd: View {
     @State private var expanded = false
     @State private var title = ""
     @State private var saving = false
+    @State private var pendingTaskID: String?
     @FocusState private var focused: Bool
     var body: some View {
         VStack(alignment: .leading, spacing: Spread.space2) {
             if expanded {
                 TextField("Task name", text: $title).focused($focused).submitLabel(.done)
                     .frame(minHeight: Spread.minimumTarget).onSubmit { Task { await save() } }
+                    .disabled(pendingTaskID != nil)
                     .accessibilityIdentifier("life-add-task-name")
                 HStack {
-                    Button("Add task") { Task { await save() } }
+                    Button(pendingTaskID == nil ? "Add task" : "Retry saving") { Task { await save() } }
                         .disabled(saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .opacity(saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Spread.disabledOpacity : 1)
                     Button("Cancel") {
                         withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
                         title = ""
+                        pendingTaskID = nil
                         focused = false
                     }.disabled(saving).opacity(saving ? Spread.disabledOpacity : 1)
                 }.frame(minHeight: Spread.minimumTarget)
@@ -490,13 +493,27 @@ struct LifeQuickAdd: View {
         defer { saving = false }
         let profile = planner.state?.envelope.profileId
         let week = planner.snapshot?.weekKey
-        let before = Set(planner.snapshot?.tasks.map(\.id) ?? [])
-        var action: [String: Any] = ["type": day == nil ? "addTask" : "addTaskForDay",
-                                     "roleId": roleId, "text": name, "life": true]
-        if let day { action["day"] = day }
-        guard await planner.send(action),
-              planner.state?.envelope.profileId == profile, planner.snapshot?.weekKey == week,
-              let task = planner.snapshot?.tasks.first(where: { $0.roleId == roleId && !before.contains($0.id) }) else { return }
+        let task: PlannerTask?
+        let saved: Bool
+        if let pendingTaskID, let pending = planner.snapshot?.tasks.first(where: { $0.id == pendingTaskID }) {
+            // Retry persisting the task already in the store instead of adding it again.
+            task = pending
+            if planner.saveFailure == nil { saved = true }
+            else { saved = await planner.send(["type": "retrySave"]) }
+        } else {
+            let before = Set(planner.snapshot?.tasks.map(\.id) ?? [])
+            var action: [String: Any] = ["type": day == nil ? "addTask" : "addTaskForDay",
+                                         "roleId": roleId, "text": name, "life": true]
+            if let day { action["day"] = day }
+            saved = await planner.send(action)
+            task = planner.snapshot?.tasks.first { $0.roleId == roleId && !before.contains($0.id) }
+        }
+        guard planner.state?.envelope.profileId == profile, planner.snapshot?.weekKey == week else { return }
+        guard saved, let task else {
+            pendingTaskID = planner.saveFailure != nil ? task?.id : nil
+            return
+        }
+        pendingTaskID = nil
         title = ""
         withAnimation(reduceMotion ? nil : SpreadTactile.snap) { expanded = false }
         onOpenTask(roleId, task.id)
