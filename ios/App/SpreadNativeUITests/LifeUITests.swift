@@ -267,18 +267,26 @@ final class LifeUITests: XCTestCase {
         for category in ["work", "home", "family", "health", "personal"] {
             let preset = app.buttons["quick-life-" + category]
             waitUntilHittable(preset)
+            XCTAssertEqual(preset.label, category.capitalized)
             preset.tap()
+            XCTAssertTrue(preset.isSelected)
+            XCTAssertFalse(preset.isEnabled)
         }
         capture("audit-add-life-five-drafts")
     }
 
     func testAuditCardIntention() {
         startLife()
-        let setup = app.buttons["life-card-setup-health"]
-        for _ in 0..<4 where !setup.isHittable { app.swipeUp() }
-        waitUntilHittable(setup)
-        capture("audit-life-card-setup")
-        setup.tap()
+        let card = app.descendants(matching: .any).matching(identifier: "life-card-health").firstMatch
+        waitUntilHittable(card)
+        XCTAssertFalse(app.buttons["life-card-setup-health"].exists)
+        capture("audit-life-card-collapsed")
+        card.tap()
+        let details = app.buttons["life-details-button"]
+        for _ in 0..<4 where !details.isHittable { app.swipeUp() }
+        waitUntilHittable(details)
+        capture("audit-life-card-focused")
+        details.tap()
         let editor = app.navigationBars["Details"]
         XCTAssertTrue(editor.waitForExistence(timeout: 10))
         let intention = app.descendants(matching: .any).matching(identifier: "role-intention-field").firstMatch
@@ -287,9 +295,9 @@ final class LifeUITests: XCTestCase {
         intention.tap()
         intention.typeText("Take a walk before the day gets busy.")
         editor.buttons["Save"].tap()
-        let card = app.descendants(matching: .any).matching(identifier: "life-card-health").firstMatch
         waitUntilHittable(card)
         XCTAssertTrue(card.label.contains("Take a walk before the day gets busy."))
+        XCTAssertFalse(app.buttons["Edit intention"].exists)
         capture("audit-life-card-intention")
     }
 

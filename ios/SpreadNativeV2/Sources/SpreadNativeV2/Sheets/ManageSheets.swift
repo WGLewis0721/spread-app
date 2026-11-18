@@ -45,9 +45,14 @@ struct NewSpreadSheet: View {
                                 let name = PalettePanel.categories.first { $0.id == category }?.label ?? category.capitalized
                                 let selected = drafts.contains { $0.category == category }
                                 Button { addQuickStart(name: name, category: category) } label: {
-                                    Label(name, systemImage: selected ? "checkmark" : "plus")
-                                        .font(.caption.weight(.semibold))
-                                        .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
+                                    HStack(spacing: 4) {
+                                        Image(systemName: selected ? "checkmark" : "plus")
+                                            .accessibilityHidden(true)
+                                        Text(name)
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    .font(.caption.bold())
+                                    .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
                                 }
                                 .buttonStyle(.spreadPress)
                                 .spreadChip(selected: selected)

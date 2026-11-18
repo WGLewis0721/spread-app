@@ -64,12 +64,18 @@ struct LifeWeekView: View {
             }
             if !roles.isEmpty {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: roles,
-                    selectedRole: $selectedRole, day: date, onSetup: onManage)
+                    selectedRole: $selectedRole, day: date)
                 if let roleID = selectedRole, let role = roles.first(where: { $0.id == roleID }) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text(role.name).font(.title3.weight(.semibold))
                         Text("\(SpreadHours.text(snapshot.allocations.filter { $0.day == date && $0.roleId == roleID }.reduce(0) { $0 + $1.hours })) h reserved for \(PlannerDates.label(PlannerDates.date(date), pattern: "EEEE"))")
                             .font(.subheadline).foregroundStyle(LifePalette.secondary)
+                        Button { onManage(roleID) } label: {
+                            Label { Text("Details") } icon: { SpreadIcon(name: "lucide-sliders-horizontal", size: 18) }
+                                .frame(minHeight: Spread.minimumTarget)
+                        }
+                        .buttonStyle(.spreadPress)
+                        .accessibilityIdentifier("week-life-details-button")
                         VStack(alignment: .leading, spacing: 0) {
                         LifeTaskRows(planner: planner, snapshot: snapshot,
                             tasks: LifeCalendarRules.dailyTasks(snapshot, day: date, roleId: roleID),

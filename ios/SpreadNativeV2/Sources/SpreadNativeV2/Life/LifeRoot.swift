@@ -317,8 +317,7 @@ struct LifeRoot: View {
             } else {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole,
-                                viewportHeight: viewportHeight, viewportWidth: viewportWidth,
-                                onSetup: { localSheet = .manage($0) })
+                                viewportHeight: viewportHeight, viewportWidth: viewportWidth)
                     .zIndex(2)
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
@@ -333,7 +332,7 @@ struct LifeRoot: View {
                     .foregroundStyle(Spread.ink)
                     .background(Spread.elevated, in: Capsule())
                     .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
-                    .accessibilityHint("Edit the name, weekly hours, symbol and color, or delete this Life area")
+                    .accessibilityHint("Edit the name, intention, weekly hours, symbol and color, or delete this Life area")
                     .accessibilityIdentifier("life-details-button")
                     Button {
                         withAnimation(reduceMotion ? nil : SpreadTactile.snap) {

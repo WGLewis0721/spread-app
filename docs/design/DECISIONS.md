@@ -29,6 +29,7 @@ Resolve an open decision here and in its source document together, then move the
 
 | Date | Decision | Where |
 | --- | --- | --- |
+| 2026-11-17 | Native Life card faces show the saved role badge. This narrows the old Life logo rule to the dock. Intentions sit directly on the artwork and are edited through Details. Add Life groups the plus or check with a bold preset name. | [Rules card](RULES_CARD.md), [issue #261](https://github.com/WGLewis0721/spread-app/issues/261) |
 | 2026-11-14 | W5 (More, sheets, first run): no in-app completion-haptic switch. The one light impact follows the system's haptics setting, so a switch would add a control iOS already provides. The owner may reverse this. | [W5 spec](specs/2026-11-14-w5-more-sheets-first-run.md), section 11 |
 | 2026-11-14 | W5: the More switch reads "Show Today and Focus timer on widgets", because it also gates the timer mirror. A brand-new plan no longer opens What's New over the empty plan. A failed create or Open tasks move keeps its sheet and shows the store's reason. "Not now" becomes "Cancel". | [W5 spec](specs/2026-11-14-w5-more-sheets-first-run.md), sections 6 and 11 |
 | 2026-11-14 | W5: native honours the system text size (OD10). Fixed point sizes in the sheets and What's New were removed. Accessibility sizes are not yet verified on a device. | [W5 spec](specs/2026-11-14-w5-more-sheets-first-run.md), section 11 |

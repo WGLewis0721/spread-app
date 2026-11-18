@@ -10,7 +10,6 @@ struct LifeWalletStack: View {
     var day: String? = nil
     var viewportHeight: CGFloat = 800
     var viewportWidth: CGFloat = 393
-    var onSetup: ((String) -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -84,7 +83,7 @@ struct LifeWalletStack: View {
         Group {
             if typeSize.isAccessibilitySize {
                 VStack(spacing: Spread.space2) {
-                    ForEach(shown) { role in card(role, faceVisible: true) }
+                    ForEach(shown) { role in card(role) }
                 }
             } else {
                 // Preserve every role's identity and full width during focus.
@@ -93,7 +92,7 @@ struct LifeWalletStack: View {
                 ZStack(alignment: .top) {
                     ForEach(Array(ordered.enumerated()), id: \.element.id) { index, role in
                         let hidden = focusActive && selectedRole != role.id
-                        card(role, faceVisible: focusActive || index == ordered.count - 1 || selectedRole == role.id)
+                        card(role)
                             .offset(y: focusActive
                                 ? (selectedRole == role.id ? 0 :
                                    max(viewportHeight + focusedHeight + CGFloat(index) * 24,
@@ -143,31 +142,15 @@ struct LifeWalletStack: View {
             }
         }
     }
-    private func card(_ role: Responsibility, faceVisible: Bool) -> some View {
+    private func card(_ role: Responsibility) -> some View {
         LifeWalletFace(role: role, snapshot: snapshot, day: day,
                        selected: selectedRole == role.id,
-                       faceVisible: faceVisible,
                        onSelect: { select(role.id) },
-                       onEditIntention: onSetup.map { action in { action(role.id) } },
                        closedHeight: closedHeight,
                        focusedHeight: focusedHeight,
                        intentionHeight: intentionHeight,
                        presentationWidth: min(700, max(0, viewportWidth - 32)),
                        editorialArt: editorialArt)
-            .overlay(alignment: .topTrailing) {
-                if faceVisible, role.intention == nil, let onSetup {
-                    Button { onSetup(role.id) } label: {
-                        SpreadIcon(name: "icon-edit", size: 16).tapTarget()
-                    }
-                    .buttonStyle(.spreadPress)
-                    .foregroundStyle(Spread.tileGlyph)
-                    .background(Color.black.opacity(0.22), in: Circle())
-                    .padding(.trailing, 36)
-                    .accessibilityLabel("Set up \(role.name)")
-                    .accessibilityHint("Add an intention, hours, color, and symbol")
-                    .accessibilityIdentifier("life-card-setup-\(role.id)")
-                }
-            }
             // Editorial cards are capped at the presentation width. Artwork must never
             // widen the card beyond the margins, which it did at height x 5/3.
             .frame(maxWidth: editorialArt ? min(700, max(0, viewportWidth - 32)) : .infinity)
@@ -202,9 +185,7 @@ private struct LifeWalletFace: View {
     let snapshot: PlannerSnapshot
     let day: String?
     let selected: Bool
-    let faceVisible: Bool
     let onSelect: () -> Void
-    let onEditIntention: (() -> Void)?
     let closedHeight: CGFloat
     let focusedHeight: CGFloat
     let intentionHeight: CGFloat
@@ -278,11 +259,6 @@ private struct LifeWalletFace: View {
             .accessibilityAddTraits(.isButton)
             .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityAction { onSelect() }
-            .accessibilityActions {
-                if role.intention != nil, let onEditIntention {
-                    Button("Edit intention", action: onEditIntention)
-                }
-            }
     }
 
     private var roleColor: Color { Color(hex: role.color) }
@@ -291,7 +267,8 @@ private struct LifeWalletFace: View {
             .frame(maxWidth: .infinity)
             .frame(height: typeSize.isAccessibilitySize ? nil : cardHeight, alignment: .top)
             .background {
-                LifeEditorialArtwork(category: role.category, roleColor: roleColor, editorial: editorialArt)
+                LifeEditorialArtwork(category: role.category, roleColor: roleColor,
+                                     editorial: editorialArt, protectsIntention: role.intention != nil)
             }
             .clipShape(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(Color(hex: role.color).opacity(selected ? 0.85 : 0.48), lineWidth: 1))
@@ -299,8 +276,7 @@ private struct LifeWalletFace: View {
 
     private var face: some View {
         LifeEditorialFace(role: role, snapshot: snapshot, selected: selected,
-                          titleSafeWidth: presentationWidth * 0.61,
-                          onEditIntention: faceVisible ? onEditIntention : nil)
+                          titleSafeWidth: presentationWidth * 0.61)
     }
 
 }

@@ -57,6 +57,8 @@ struct LifeEditorialArtwork: View {
     let category: String
     let roleColor: Color
     var editorial = true
+    var protectsIntention = false
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         LinearGradient(
@@ -77,7 +79,10 @@ struct LifeEditorialArtwork: View {
             LinearGradient(
                 stops: [
                     .init(color: Spread.artScrimStrong, location: 0),
-                    .init(color: Spread.artScrimMid, location: 0.50),
+                    .init(color: protectsIntention
+                          ? Color.black.opacity(contrast == .increased ? 0.72 : 0.59)
+                          : Spread.artScrimMid,
+                          location: protectsIntention ? 0.64 : 0.50),
                     .init(color: Spread.artScrimSoft, location: 1)
                 ],
                 startPoint: .leading, endPoint: .trailing
@@ -101,7 +106,6 @@ struct LifeEditorialFace: View {
     let snapshot: PlannerSnapshot
     let selected: Bool
     let titleSafeWidth: CGFloat
-    let onEditIntention: (() -> Void)?
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat = 37
     // Every text size on the face scales with Dynamic Type (defaults match the original fixed sizes).
@@ -129,7 +133,7 @@ struct LifeEditorialFace: View {
     // composed from small, separately type-checked editorial components.
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            brandHeader
+            identityHeader
             Spacer(minLength: 7)
             responsibilityTitle
             weeklyBudget
@@ -150,22 +154,13 @@ struct LifeEditorialFace: View {
     @ViewBuilder
     private var intentionReminder: some View {
         if let intention = role.intention {
-            HStack(spacing: 0) {
-                Text(intention)
-                    .font(Spread.caption)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-                    .padding(.leading, Spread.space2)
-                    .padding(.vertical, Spread.space1)
-                if let onEditIntention {
-                    Button(action: onEditIntention) {
-                        SpreadIcon(name: "icon-edit", size: 16).tapTarget()
-                    }
-                    .buttonStyle(.spreadPress)
-                    .accessibilityLabel("Edit intention")
-                }
-            }
-            .background(Spread.artWell, in: RoundedRectangle(cornerRadius: Spread.radiusInset))
-            .frame(maxWidth: typeSize.isAccessibilitySize ? nil : titleSafeWidth, alignment: .leading)
+            Text(intention)
+                .font(.caption.weight(.medium))
+                .shadow(color: .black, radius: 2, y: 1)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, Spread.space1)
+                .frame(maxWidth: titleSafeWidth, alignment: .leading)
         }
     }
 
@@ -182,9 +177,9 @@ struct LifeEditorialFace: View {
             assignedText + " assigned, " + remainingText + ". " + dayDescription
     }
 
-    private var brandHeader: some View {
+    private var identityHeader: some View {
         HStack(spacing: 7) {
-            SpreadBrandMark(size: 16)
+            RoleBadge(category: role.category, color: role.color, size: 20)
             Text("SPREAD")
                 .font(.system(size: brandSize, weight: .bold, design: .rounded))
                 .tracking(2.2)
