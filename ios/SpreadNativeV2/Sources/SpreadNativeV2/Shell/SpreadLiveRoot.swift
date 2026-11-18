@@ -10,9 +10,12 @@ public struct SpreadLiveRoot: View {
     @ObservedObject var planner: LivePlanner
     @StateObject private var focusTimer = SpreadFocusTimer()
     let recovery: () -> Void
+    // Capture eligibility before the launch task records the current release as seen.
+    private let canOfferFirstWeek: Bool
 
     @State private var appearance: SpreadAppearance = SpreadAppearancePreference.read()
     @State private var sheet: LiveSheet?
+    @State private var firstWeekReplay = 0
     /// The launch What's New splash. It carries its own notes, so the sheet is built from exactly the notes that
     /// caused it to open, rather than from a separate value that may not have been set yet.
     @State private var whatsNew: WhatsNewPresentation?
@@ -29,6 +32,17 @@ public struct SpreadLiveRoot: View {
     public init(planner: LivePlanner, recovery: @escaping () -> Void) {
         self.planner = planner
         self.recovery = recovery
+        #if DEBUG && targetEnvironment(simulator)
+        // Reset only the guide and release-note preferences for an isolated UI test install.
+        if ProcessInfo.processInfo.environment["SPREAD_RITUAL_AUDIT_FIXTURE"] != nil,
+           ProcessInfo.processInfo.arguments.contains("-SpreadResetFirstWeekGuide") {
+            UserDefaults.standard.removeObject(forKey: LifeFirstWeekStep.handledKey)
+            UserDefaults.standard.removeObject(forKey: SpreadReleaseNotes.lastSeenKey)
+        }
+        #endif
+        let defaults = UserDefaults.standard
+        canOfferFirstWeek = !defaults.bool(forKey: LifeFirstWeekStep.handledKey)
+            && (defaults.string(forKey: SpreadReleaseNotes.lastSeenKey) ?? "").isEmpty
     }
 
     public var body: some View {
@@ -37,7 +51,9 @@ public struct SpreadLiveRoot: View {
             focusTimer: focusTimer,
             onMore: { sheet = .more },
             onOpenTask: { sheet = .task($0, $1) },
-            onNewRole: { sheet = .newRole }
+            onNewRole: { sheet = .newRole },
+            canOfferFirstWeek: canOfferFirstWeek,
+            firstWeekReplay: firstWeekReplay
         )
         .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
         .sheet(item: $sheet) { current in sheetContent(current) }
@@ -154,7 +170,11 @@ public struct SpreadLiveRoot: View {
         case .task(let roleId, let taskId):
             TaskSheet(planner: planner, roleId: roleId, taskId: taskId)
         case .more:
-            MoreSheet(planner: planner, focusTimer: focusTimer, backup: { sheet = .backup }, showProfiles: { sheet = .profiles }, appearance: $appearance)
+            MoreSheet(planner: planner, focusTimer: focusTimer, backup: { sheet = .backup },
+                      showProfiles: { sheet = .profiles }, replayFirstWeek: {
+                          sheet = nil
+                          firstWeekReplay += 1
+                      }, appearance: $appearance)
         case .profiles:
             ProfilesSheet(planner: planner)
         case .backup:

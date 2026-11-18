@@ -375,6 +375,131 @@ final class LifeUITests: XCTestCase {
             .matching(identifier: "life-budget-editor").firstMatch.waitForExistence(timeout: 20))
         capture("life-expanded-weekly-hours")
     }
+    func testFreshLifeGuideCanBeSkippedAndReopenedFromMore() {
+        launchEmptyFirstWeek(forceWelcome: true)
+        assertFirstWeekPrompt("Make room for what matters.")
+        XCTAssertFalse(app.buttons["whats-new-done"].exists)
+        app.buttons["life-first-week-skip"].tap()
+        XCTAssertTrue(app.buttons["life-new-area"].waitForExistence(timeout: 10))
+        app.terminate()
+
+        launchEmptyFirstWeek(forceWelcome: false)
+        XCTAssertTrue(app.buttons["life-new-area"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["life-first-week-action"].exists)
+        app.buttons["life-more"].tap()
+        let guide = app.buttons["more-first-week-guide"]
+        revealFirstWeekControl(guide)
+        guide.tap()
+        assertFirstWeekPrompt("What matters in your week?")
+    }
+
+    func testFirstWeekGuideBuildsARealPlan() {
+        launchEmptyFirstWeek(forceWelcome: true)
+        assertFirstWeekPrompt("Make room for what matters.")
+        app.buttons["life-first-week-action"].tap()
+        XCTAssertTrue(app.navigationBars["Add Life"].waitForExistence(timeout: 10))
+        app.buttons["add-life-cancel"].tap()
+        assertFirstWeekPrompt("What matters in your week?")
+        app.buttons["life-first-week-action"].tap()
+        let home = app.buttons["quick-life-home"]
+        waitUntilHittable(home)
+        home.tap()
+        let saveLife = app.buttons["save-spreads"]
+        revealFirstWeekControl(saveLife)
+        saveLife.tap()
+        assertFirstWeekPrompt("Choose your weekly hours")
+
+        app.buttons["life-first-week-action"].tap()
+        let capacity = app.buttons["life-budget-capacity-value"]
+        revealFirstWeekControl(capacity)
+        capacity.tap()
+        let hours = app.textFields["life-budget-capacity-input"]
+        waitUntilHittable(hours)
+        hours.tap()
+        let previous = hours.value as? String ?? ""
+        hours.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: previous.count) + "12")
+        app.buttons["life-budget-save-capacity"].tap()
+        waitUntilHittable(app.buttons["life-budget-done"])
+        app.buttons["life-budget-done"].tap()
+        app.swipeDown()
+        assertFirstWeekPrompt("Give that time a place")
+        let next = app.buttons["life-first-week-action"]
+        waitUntilHittable(next)
+        next.tap()
+        let placeHours = app.navigationBars["Place hours"]
+        XCTAssertTrue(placeHours.waitForExistence(timeout: 10))
+        let increase = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Increase Home on ")).firstMatch
+        waitUntilHittable(increase)
+        increase.tap()
+        placeHours.buttons["Done"].tap()
+
+        assertFirstWeekPrompt("Add one thing to do")
+        waitUntilHittable(next)
+        next.tap()
+        let addTask = app.buttons["Add a task"].firstMatch
+        waitUntilHittable(addTask)
+        addTask.tap()
+        let taskName = app.textFields["life-add-task-name"]
+        waitUntilHittable(taskName)
+        taskName.tap()
+        taskName.typeText("Make dinner")
+        app.buttons["Add task"].tap()
+        let done = app.buttons["task-sheet-done"]
+        waitUntilHittable(done)
+        done.tap()
+        app.swipeDown()
+        assertFirstWeekPrompt("Your week has a starting point.")
+        waitUntilHittable(next)
+        next.tap()
+        XCTAssertTrue(app.staticTexts["Your week"].waitForExistence(timeout: 15))
+    }
+
+    func testFirstWeekFailedSaveLeavesDraftAndStepAvailable() {
+        let name = "Home"
+        launchEmptyFirstWeek(forceWelcome: true, failedSave: name)
+        assertFirstWeekPrompt("Make room for what matters.")
+        app.buttons["life-first-week-action"].tap()
+        let preset = app.buttons["quick-life-home"]
+        waitUntilHittable(preset)
+        preset.tap()
+        let field = app.textFields["role-name-field"].firstMatch
+        let save = app.buttons["save-spreads"]
+        revealFirstWeekControl(save)
+        save.tap()
+        XCTAssertTrue(app.staticTexts["add-life-error"].waitForExistence(timeout: 10))
+        XCTAssertEqual(field.value as? String, name)
+        XCTAssertEqual(save.label, "Retry saving")
+        save.tap()
+        assertFirstWeekPrompt("Choose your weekly hours")
+        let matchingCards = app.descendants(matching: .any).matching(NSPredicate(
+            format: "identifier BEGINSWITH 'life-card-' AND label BEGINSWITH %@", name
+        ))
+        XCTAssertEqual(matchingCards.count, 1)
+    }
+
+    private func launchEmptyFirstWeek(forceWelcome: Bool, failedSave: String? = nil) {
+        app.launchArguments = ["-SpreadPauseReviewForAudit"]
+        if forceWelcome { app.launchArguments += ["-SpreadResetFirstWeekGuide"] }
+        if let failedSave { app.launchArguments += ["-SpreadFailSaveMarker", failedSave] }
+        app.launchEnvironment = ["SPREAD_RITUAL_AUDIT_FIXTURE":
+            #"{"currentWeek":"2026-11-16","hats":[],"weeks":{"2026-11-16":{"boxes":[],"allocations":[]}}}"#]
+        app.launch()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root")
+            .firstMatch.waitForExistence(timeout: 90), "The native Life planner did not load")
+        waitUntilHittable(app.buttons["life-more"])
+    }
+
+    private func assertFirstWeekPrompt(_ text: String) {
+        XCTAssertTrue(app.staticTexts.matching(identifier: "life-first-week-title")
+            .matching(NSPredicate(format: "label == %@", text)).firstMatch.waitForExistence(timeout: 15),
+            "Expected first-week prompt: \(text)")
+    }
+
+    private func revealFirstWeekControl(_ control: XCUIElement) {
+        for _ in 0..<5 where !control.isHittable { app.swipeUp() }
+        waitUntilHittable(control)
+    }
+
     func testFocusedLifeDetailsAndTasksAreContextual() {
         startLife()
         let card = app.descendants(matching: .any)

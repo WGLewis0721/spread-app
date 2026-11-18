@@ -18,6 +18,18 @@ private enum LifeLocalSheet: Identifiable {
     }
 }
 
+private struct FirstWeekScope: Equatable {
+    let sessionID: String
+    let profileID: String
+    let weekKey: String
+
+    init(_ state: LiveState) {
+        sessionID = state.sessionId
+        profileID = state.envelope.profileId
+        weekKey = state.envelope.snapshot.weekKey
+    }
+}
+
 /// Life owns transient presentation only. Every edit is an awaited planner intent.
 struct LifeRoot: View {
     @ObservedObject var planner: LivePlanner
@@ -25,6 +37,8 @@ struct LifeRoot: View {
     let onMore: () -> Void
     let onOpenTask: (String, String) -> Void
     let onNewRole: () -> Void
+    let canOfferFirstWeek: Bool
+    let firstWeekReplay: Int
     @AccessibilityFocusState private var navigationFocused: Bool
     @AccessibilityFocusState private var openerFocused: Bool
     @State private var destination: LifeDestination = .life
@@ -51,6 +65,11 @@ struct LifeRoot: View {
     @State private var historyVisible = false
     @State private var showFocusTimer = false
     @State private var preferredFocusRoleId: String?
+    @State private var checkedFirstWeekOffer = false
+    @State private var firstWeekScope: FirstWeekScope?
+    @State private var firstWeekStep: LifeFirstWeekStep?
+    @State private var firstWeekTaskRole: String?
+    @State private var firstWeekTaskScroll = 0
     /// A Life card a widget asked to open. It waits for today's week to be on screen, then focuses.
     @State private var pendingWidgetCard: String?
     // The Crown position setting is retired (owner decision, 2026-11-11): the tray always opens from the leading edge.
@@ -113,15 +132,34 @@ struct LifeRoot: View {
                             // top so the card lands in a fixed slot. Closing scrolls only as far
                             // as needed to show the closed card's strip in the stack.
                             .onChange(of: focusedRole) { old, new in
-                                tasksOpen = false
+                                let guideOpensTasks = new != nil && new == firstWeekTaskRole
+                                tasksOpen = guideOpensTasks
                                 if new != nil { budgetExpanded = false }
                                 withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
-                                    if new != nil {
+                                    if new != nil && !guideOpensTasks {
                                         proxy.scrollTo("life-top", anchor: .top)
                                     } else if let old {
                                         proxy.scrollTo("life-slot-" + old)
                                     }
                                 }
+                            }
+                            .onChange(of: tasksOpen) { _, isOpen in
+                                guard isOpen, firstWeekTaskRole != nil else { return }
+                                firstWeekTaskRole = nil
+                                firstWeekTaskScroll += 1
+                            }
+                            .onChange(of: firstWeekTaskScroll) { _, _ in
+                                withAnimation(reduceMotion ? nil : SpreadTactile.snap) {
+                                    proxy.scrollTo("life-task-notebook", anchor: .center)
+                                }
+                            }
+                            .onChange(of: budgetExpanded) { _, expanded in
+                                if expanded, case .hours = firstWeekStep {
+                                    proxy.scrollTo("life-budget-editor", anchor: .top)
+                                }
+                            }
+                            .onChange(of: firstWeekReplay) { _, _ in
+                                proxy.scrollTo("life-top", anchor: .top)
                             }
                         }
                     } else {
@@ -143,6 +181,22 @@ struct LifeRoot: View {
             }
         }
         .foregroundStyle(LifePalette.ink).tint(LifePalette.accent)
+        .onChange(of: planner.snapshot, initial: true) { _, _ in refreshFirstWeek() }
+        .onChange(of: planner.busy) { _, _ in refreshFirstWeek() }
+        .onChange(of: planner.saveFailure) { _, _ in refreshFirstWeek() }
+        .onChange(of: currentFirstWeekScope) { _, scope in
+            if firstWeekScope != nil && firstWeekScope != scope { dismissFirstWeek() }
+        }
+        .onChange(of: firstWeekReplay) { _, _ in
+            guard let scope = currentFirstWeekScope, let snapshot = planner.snapshot else { return }
+            focusedRole = nil
+            tasksOpen = false
+            budgetExpanded = false
+            UserDefaults.standard.set(true, forKey: LifeFirstWeekStep.handledKey)
+            firstWeekScope = scope
+            firstWeekStep = .next(in: snapshot)
+            navigate(.life)
+        }
         .task { await planner.refresh() }
         .task(id: planner.snapshot != nil) {
             if planner.snapshot != nil {
@@ -301,11 +355,14 @@ struct LifeRoot: View {
     }
     private func life(_ snapshot: PlannerSnapshot, viewportHeight: CGFloat, viewportWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: Spread.space4) {
+            if showsFirstWeek {
+                firstWeekPrompt
+            }
             if !lifeFocused {
                 lifeOverview(snapshot)
                     .transition(.opacity)
             }
-            if snapshot.roles.isEmpty {
+            if snapshot.roles.isEmpty && !showsFirstWeek {
                 // Designed empty state: a heading, one plain sentence and the single creation action.
                 VStack(alignment: .leading, spacing: 6) {
                     Text("No Life areas yet").font(.title3.bold()).foregroundStyle(LifePalette.ink)
@@ -314,7 +371,7 @@ struct LifeRoot: View {
                         .font(.body).foregroundStyle(LifePalette.secondary)
                 }
                 newLifeArea
-            } else {
+            } else if !snapshot.roles.isEmpty {
                 LifeWalletStack(planner: planner, snapshot: snapshot, roles: snapshot.roles,
                                 selectedRole: $focusedRole,
                                 viewportHeight: viewportHeight, viewportWidth: viewportWidth)
@@ -367,6 +424,83 @@ struct LifeRoot: View {
             if !snapshot.roles.isEmpty && !lifeFocused { newLifeArea }
         }.accessibilityElement(children: .contain).accessibilityIdentifier("life-page")
     }
+
+    private var currentFirstWeekScope: FirstWeekScope? {
+        planner.state.map(FirstWeekScope.init)
+    }
+
+    private var showsFirstWeek: Bool {
+        firstWeekScope != nil && firstWeekScope == currentFirstWeekScope
+    }
+
+    private func refreshFirstWeek() {
+        guard let scope = currentFirstWeekScope, let snapshot = planner.snapshot,
+              !planner.busy, planner.saveFailure == nil else { return }
+        if let firstWeekScope {
+            guard firstWeekScope == scope, let firstWeekStep else { return }
+            self.firstWeekStep = .next(in: snapshot, preferredRoleID: firstWeekStep.roleID)
+        } else if canOfferFirstWeek && !checkedFirstWeekOffer {
+            checkedFirstWeekOffer = true
+            UserDefaults.standard.set(true, forKey: LifeFirstWeekStep.handledKey)
+            if planner.recoveryNotice == nil, snapshot.roles.isEmpty,
+               snapshot.allocations.isEmpty, snapshot.tasks.isEmpty, snapshot.life?.capacityHours == nil {
+                firstWeekScope = scope
+            }
+        }
+    }
+
+    private func dismissFirstWeek() {
+        firstWeekScope = nil
+        firstWeekStep = nil
+        firstWeekTaskRole = nil
+    }
+
+    @ViewBuilder private var firstWeekPrompt: some View {
+        switch firstWeekStep {
+        case nil:
+            LifeFirstWeekPrompt(title: "Make room for what matters.",
+                message: "Start with the parts of life you want to make time for.",
+                actionTitle: "Get started", dismissTitle: "Skip",
+                onAction: { firstWeekStep = .area; onNewRole() }, onDismiss: dismissFirstWeek)
+        case .area:
+            LifeFirstWeekPrompt(title: "What matters in your week?",
+                message: "Add one Life area, such as Home, Work, or Health.",
+                actionTitle: "Add Life", onAction: onNewRole, onDismiss: dismissFirstWeek)
+        case .hours(let id):
+            LifeFirstWeekPrompt(title: "Choose your weekly hours",
+                message: "Set the time you want to plan, then give your Life area a share of it.",
+                actionTitle: "Weekly Time", onAction: { openBudget(for: id) }, onDismiss: dismissFirstWeek)
+        case .days(let id):
+            LifeFirstWeekPrompt(title: "Give that time a place",
+                message: "Pick a day for some of the hours you set aside.",
+                actionTitle: "Plan days", onAction: { localSheet = .reserve(id) }, onDismiss: dismissFirstWeek)
+        case .task(let id):
+            LifeFirstWeekPrompt(title: "Add one thing to do",
+                message: "Pick a task that would make this week feel worthwhile.",
+                actionTitle: "Open Tasks", onAction: { openFirstWeekTasks(for: id) }, onDismiss: dismissFirstWeek)
+        case .complete:
+            LifeFirstWeekPrompt(title: "Your week has a starting point.",
+                message: "Your time and task are saved. Keep planning whenever you’re ready.",
+                actionTitle: "View Week", dismissTitle: nil,
+                onAction: { dismissFirstWeek(); navigate(.week) }, onDismiss: dismissFirstWeek)
+        }
+    }
+
+    private func openFirstWeekTasks(for roleID: String) {
+        firstWeekTaskRole = roleID
+        withAnimation(reduceMotion ? nil : SpreadTactile.walletFocus) {
+            if focusedRole == roleID {
+                if tasksOpen {
+                    firstWeekTaskRole = nil
+                    firstWeekTaskScroll += 1
+                } else {
+                    tasksOpen = true
+                }
+            } else {
+                focusedRole = roleID
+            }
+        }
+    }
     private var newLifeArea: some View {
         Button(action: onNewRole) {
             HStack(spacing: 10) {
@@ -405,6 +539,7 @@ struct LifeRoot: View {
                 budgetEditor(snapshot)
                     .transition(SpreadTactile.walletDetailReveal)
                     .accessibilityIdentifier("life-budget-editor")
+                    .id("life-budget-editor")
             }
         }
         .accessibilityElement(children: .contain)
@@ -639,6 +774,7 @@ struct LifeRoot: View {
                 .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: Spread.radiusInset))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("life-task-notebook")
+                .id("life-task-notebook")
             }
             HStack(spacing: Spread.space3) {
                 VStack(alignment: .leading, spacing: Spread.space1) {

@@ -20,6 +20,7 @@ struct NewSpreadSheet: View {
     @State private var saving = false
     /// Shown inside the sheet when a save fails, so the entries stay here and the message is not left behind it.
     @State private var saveFailure: String?
+    @State private var pendingWrite: (rowID: Int, roleID: String)?
 
     private var ready: Bool { drafts.contains { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
     /// OD7: Life says "Life area", Classic says "responsibility". "Spread" is the app name only.
@@ -68,6 +69,7 @@ struct NewSpreadSheet: View {
                         ForEach(drafts) { draft in
                             if let index = drafts.firstIndex(where: { $0.id == draft.id }) {
                                 draftCard(index)
+                                    .disabled(pendingWrite?.rowID == draft.id)
                             }
                         }
                     }
@@ -93,7 +95,8 @@ struct NewSpreadSheet: View {
                             .accessibilityIdentifier("add-life-error")
                     }
                     Button { save() } label: {
-                        Text("Save \(roleWords)").font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
+                        Text(pendingWrite == nil ? "Save \(roleWords)" : "Retry saving")
+                            .font(.system(.body, weight: .semibold)).foregroundStyle(Spread.onAccent)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(Capsule().fill(Spread.accentGradient))
                     }
@@ -186,16 +189,33 @@ struct NewSpreadSheet: View {
         saving = true
         saveFailure = nil
         Task {
+            let profile = planner.state?.envelope.profileId
             for row in rows {
-                let ok = await planner.send([
-                    "type": "addRole",
-                    "name": row.name.trimmingCharacters(in: .whitespacesAndNewlines),
-                    "hours": row.hours,
-                    "category": row.category ?? "custom",
-                ])
+                let ok: Bool
+                if let pendingWrite, pendingWrite.rowID == row.id,
+                   planner.snapshot?.roles.contains(where: { $0.id == pendingWrite.roleID }) == true {
+                    // The bridge already created this role in memory. Retry its storage write.
+                    if planner.saveFailure == nil { ok = true }
+                    else { ok = await planner.send(["type": "retrySave"]) }
+                } else {
+                    if pendingWrite?.rowID == row.id { pendingWrite = nil }
+                    let before = Set(planner.snapshot?.roles.map(\.id) ?? [])
+                    ok = await planner.send([
+                        "type": "addRole",
+                        "name": row.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                        "hours": row.hours,
+                        "category": row.category ?? "custom",
+                    ])
+                    if !ok, planner.state?.envelope.profileId == profile, planner.saveFailure != nil,
+                       let created = planner.snapshot?.roles.first(where: { !before.contains($0.id) }) {
+                        pendingWrite = (row.id, created.id)
+                    }
+                }
+                guard planner.state?.envelope.profileId == profile else { saving = false; return }
                 if ok {
                     // A saved row leaves the form, so a retry never adds it twice.
                     drafts.removeAll { $0.id == row.id }
+                    if pendingWrite?.rowID == row.id { pendingWrite = nil }
                 } else {
                     // Stay open with every unsaved entry. The store's message is shown here, not behind the sheet.
                     saveFailure = planner.error ?? "Couldn't save. Your entries are still here."
@@ -477,6 +497,7 @@ struct MoreSheet: View {
     @ObservedObject var focusTimer: SpreadFocusTimer
     let backup: () -> Void
     let showProfiles: () -> Void
+    let replayFirstWeek: () -> Void
     @Binding var appearance: SpreadAppearance
 
     @Environment(\.dismiss) private var dismiss
@@ -734,6 +755,15 @@ struct MoreSheet: View {
                         }
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("About Spread")
+                            Button(action: replayFirstWeek) {
+                                Label("First week guide", systemImage: "questionmark.circle")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
+                                    .padding(.horizontal, 14)
+                                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                            }
+                            .buttonStyle(.spreadPress)
+                            .accessibilityIdentifier("more-first-week-guide")
                             Button {
                                 showWhatsNew = true
                             } label: {
