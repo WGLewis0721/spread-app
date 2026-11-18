@@ -14,7 +14,7 @@ This card is the single source for the always-loaded design rules. `npm run docs
 - Role colors are data (`ROLE_COLORS` in `src/lib/spread/model.ts`). Status is never color alone.
 - Cards are `rounded-3xl bg-elevated`. Touch targets are at least 44 pt.
 - Week: day cards, expandable task inbox and Free time chips.
-- Native has ONE Wallet-style Life Stack. A focused card offers Details (edit/delete with Undo) and Tasks. The inline weekly time strip edits capacity and role budgets through the existing store. Use the Spread logo for Life. Weekly Time is full-width; budget values and week navigation use compact arrow/value/arrow controls. Hold week arrows to accelerate. No global Life Edit, swipe-delete or redundant dock plus. Classic is archived (`parked/classic-2026-11-16`).
+- One native Wallet Life Stack. Focused cards offer Details (edit/delete with Undo) and Tasks. Weekly Time edits capacity and role budgets in the existing store. Saved role badges on cards, Spread logo in the Life dock. Weekly Time is full-width; budgets and week navigation use compact arrow/value/arrow controls. Hold week arrows to accelerate. No global Life Edit, swipe-delete or redundant dock plus. Classic is archived (`parked/classic-2026-11-16`).
 - The landing page is separate (`docs/design/landing/DESIGN.md`): one focal object per section, both modes.
 
 **Behavior**
