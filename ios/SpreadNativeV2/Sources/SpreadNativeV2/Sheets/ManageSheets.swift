@@ -477,6 +477,7 @@ struct MoreSheet: View {
     @ObservedObject var focusTimer: SpreadFocusTimer
     let backup: () -> Void
     let showProfiles: () -> Void
+    let replayFirstWeek: () -> Void
     @Binding var appearance: SpreadAppearance
 
     @Environment(\.dismiss) private var dismiss
@@ -734,6 +735,15 @@ struct MoreSheet: View {
                         }
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("About Spread")
+                            Button(action: replayFirstWeek) {
+                                Label("First week guide", systemImage: "questionmark.circle")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
+                                    .padding(.horizontal, 14)
+                                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                            }
+                            .buttonStyle(.spreadPress)
+                            .accessibilityIdentifier("more-first-week-guide")
                             Button {
                                 showWhatsNew = true
                             } label: {

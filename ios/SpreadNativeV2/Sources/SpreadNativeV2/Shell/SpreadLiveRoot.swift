@@ -13,6 +13,7 @@ public struct SpreadLiveRoot: View {
 
     @State private var appearance: SpreadAppearance = SpreadAppearancePreference.read()
     @State private var sheet: LiveSheet?
+    @State private var firstWeekReplay = 0
     /// The launch What's New splash. It carries its own notes, so the sheet is built from exactly the notes that
     /// caused it to open, rather than from a separate value that may not have been set yet.
     @State private var whatsNew: WhatsNewPresentation?
@@ -37,7 +38,8 @@ public struct SpreadLiveRoot: View {
             focusTimer: focusTimer,
             onMore: { sheet = .more },
             onOpenTask: { sheet = .task($0, $1) },
-            onNewRole: { sheet = .newRole }
+            onNewRole: { sheet = .newRole },
+            firstWeekReplay: firstWeekReplay
         )
         .onChange(of: appearance) { _, value in SpreadAppearancePreference.write(value) }
         .sheet(item: $sheet) { current in sheetContent(current) }
@@ -154,7 +156,11 @@ public struct SpreadLiveRoot: View {
         case .task(let roleId, let taskId):
             TaskSheet(planner: planner, roleId: roleId, taskId: taskId)
         case .more:
-            MoreSheet(planner: planner, focusTimer: focusTimer, backup: { sheet = .backup }, showProfiles: { sheet = .profiles }, appearance: $appearance)
+            MoreSheet(planner: planner, focusTimer: focusTimer, backup: { sheet = .backup },
+                      showProfiles: { sheet = .profiles }, replayFirstWeek: {
+                          sheet = nil
+                          firstWeekReplay += 1
+                      }, appearance: $appearance)
         case .profiles:
             ProfilesSheet(planner: planner)
         case .backup:
