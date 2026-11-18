@@ -29,6 +29,7 @@ Resolve an open decision here and in its source document together, then move the
 
 | Date | Decision | Where |
 | --- | --- | --- |
+| 2026-11-18 | First-week setup starts on a full-screen story for a fresh empty plan. It shares Week in Review’s segmented progress and botanical Life artwork. Setup chapters advance from saved planner milestones and can be revisited by tapping or using Back and Next. Skip ends the guide, and More can replay it. | [Native Life rituals](specs/2026-11-17-life-weekly-rituals.md) |
 | 2026-11-17 | Life offers an optional first-week guide in the empty planner. It advances through saved areas, weekly hours, day placements and tasks using the existing editors. More can reopen the guide for the current plan. | [Issue #263](https://github.com/WGLewis0721/spread-app/issues/263) |
 | 2026-11-17 | Native Life adopts neutral charcoal and ivory surfaces. Spread blue remains the global action color. The focused responsibility lends its stored color to bounded related accents. | [Native board](planner/SPREAD_NATIVE_BRAND_BOARD.md), [issue #262](https://github.com/WGLewis0721/spread-app/issues/262) |
 | 2026-11-17 | Native Life card faces show the saved role badge. This narrows the old Life logo rule to the dock. Intentions sit directly on the artwork and are edited through Details. Add Life groups the plus or check with a bold preset name. | [Rules card](RULES_CARD.md), [issue #261](https://github.com/WGLewis0721/spread-app/issues/261) |

@@ -68,6 +68,7 @@ struct LifeRoot: View {
     @State private var checkedFirstWeekOffer = false
     @State private var firstWeekScope: FirstWeekScope?
     @State private var firstWeekStep: LifeFirstWeekStep?
+    @State private var firstWeekStoryOpen = false
     @State private var firstWeekTaskRole: String?
     @State private var firstWeekTaskScroll = 0
     /// A Life card a widget asked to open. It waits for today's week to be on screen, then focuses.
@@ -181,9 +182,28 @@ struct LifeRoot: View {
             }
         }
         .foregroundStyle(LifePalette.ink).tint(LifePalette.accent)
+        .accessibilityHidden(showsFirstWeek && firstWeekStoryOpen)
+        .allowsHitTesting(!(showsFirstWeek && firstWeekStoryOpen))
+        .overlay {
+            ZStack {
+                if showsFirstWeek && firstWeekStoryOpen {
+                    LifeFirstWeekStory(chapter: firstWeekChapter, onAction: performFirstWeekAction, onSkip: finishFirstWeek)
+                        .id(firstWeekChapter)
+                        .transition(.asymmetric(
+                            insertion: .offset(x: 24, y: 0).combined(with: .opacity),
+                            removal: .opacity
+                        ))
+                }
+            }
+            .animation(SpreadMotion.resolved(SpreadMotion.lifeWeekPage, reduceMotion: reduceMotion),
+                       value: firstWeekChapter)
+        }
         .onChange(of: planner.snapshot, initial: true) { _, _ in refreshFirstWeek() }
         .onChange(of: planner.busy) { _, _ in refreshFirstWeek() }
         .onChange(of: planner.saveFailure) { _, _ in refreshFirstWeek() }
+        .onChange(of: budgetExpanded) { _, expanded in
+            if !expanded { refreshFirstWeek() }
+        }
         .onChange(of: currentFirstWeekScope) { _, scope in
             if firstWeekScope != nil && firstWeekScope != scope { dismissFirstWeek() }
         }
@@ -192,9 +212,9 @@ struct LifeRoot: View {
             focusedRole = nil
             tasksOpen = false
             budgetExpanded = false
-            UserDefaults.standard.set(true, forKey: LifeFirstWeekStep.handledKey)
             firstWeekScope = scope
             firstWeekStep = .next(in: snapshot)
+            firstWeekStoryOpen = true
             navigate(.life)
         }
         .task { await planner.refresh() }
@@ -438,51 +458,71 @@ struct LifeRoot: View {
               !planner.busy, planner.saveFailure == nil else { return }
         if let firstWeekScope {
             guard firstWeekScope == scope, let firstWeekStep else { return }
-            self.firstWeekStep = .next(in: snapshot, preferredRoleID: firstWeekStep.roleID)
+            // Let people finish editing both the weekly total and their area budget.
+            if budgetExpanded, case .hours = firstWeekStep { return }
+            let next = LifeFirstWeekStep.next(in: snapshot, preferredRoleID: firstWeekStep.roleID)
+            if next.chapter != firstWeekStep.chapter { firstWeekStoryOpen = true }
+            self.firstWeekStep = next
         } else if canOfferFirstWeek && !checkedFirstWeekOffer {
             checkedFirstWeekOffer = true
-            UserDefaults.standard.set(true, forKey: LifeFirstWeekStep.handledKey)
-            if planner.recoveryNotice == nil, snapshot.roles.isEmpty,
-               snapshot.allocations.isEmpty, snapshot.tasks.isEmpty, snapshot.life?.capacityHours == nil {
-                firstWeekScope = scope
+            let defaults = UserDefaults.standard
+            let pendingProfile = defaults.string(forKey: LifeFirstWeekStep.pendingProfileKey)
+            let empty = snapshot.roles.isEmpty && snapshot.allocations.isEmpty
+                && snapshot.tasks.isEmpty && snapshot.life?.capacityHours == nil
+            guard planner.recoveryNotice == nil, pendingProfile == scope.profileID || (pendingProfile == nil && empty)
+                else { return }
+            firstWeekScope = scope
+            firstWeekStoryOpen = true
+            if pendingProfile != nil, !empty {
+                firstWeekStep = .next(in: snapshot)
             }
+            defaults.set(scope.profileID, forKey: LifeFirstWeekStep.pendingProfileKey)
         }
     }
 
     private func dismissFirstWeek() {
         firstWeekScope = nil
         firstWeekStep = nil
+        firstWeekStoryOpen = false
         firstWeekTaskRole = nil
     }
 
-    @ViewBuilder private var firstWeekPrompt: some View {
+    private func finishFirstWeek() {
+        UserDefaults.standard.set(true, forKey: LifeFirstWeekStep.handledKey)
+        UserDefaults.standard.removeObject(forKey: LifeFirstWeekStep.pendingProfileKey)
+        dismissFirstWeek()
+    }
+
+    private var firstWeekChapter: LifeFirstWeekChapter { firstWeekStep?.chapter ?? .welcome }
+
+    private var firstWeekPrompt: some View {
+        LifeFirstWeekPrompt(title: firstWeekChapter.title, message: firstWeekChapter.message,
+                            actionTitle: firstWeekChapter.actionTitle, onAction: performFirstWeekAction,
+                            onDismiss: finishFirstWeek)
+    }
+
+    private func performFirstWeekAction() {
+        if firstWeekStep == nil {
+            firstWeekStep = .area
+            firstWeekStoryOpen = true
+            return
+        }
+        firstWeekStoryOpen = false
         switch firstWeekStep {
-        case nil:
-            LifeFirstWeekPrompt(title: "Make room for what matters.",
-                message: "Start with the parts of life you want to make time for.",
-                actionTitle: "Get started", dismissTitle: "Skip",
-                onAction: { firstWeekStep = .area; onNewRole() }, onDismiss: dismissFirstWeek)
+        case nil: return
         case .area:
-            LifeFirstWeekPrompt(title: "What matters in your week?",
-                message: "Add one Life area, such as Home, Work, or Health.",
-                actionTitle: "Add Life", onAction: onNewRole, onDismiss: dismissFirstWeek)
+            onNewRole()
         case .hours(let id):
-            LifeFirstWeekPrompt(title: "Choose your weekly hours",
-                message: "Set the time you want to plan, then give your Life area a share of it.",
-                actionTitle: "Weekly Time", onAction: { openBudget(for: id) }, onDismiss: dismissFirstWeek)
+            navigate(.life)
+            openBudget(for: id)
         case .days(let id):
-            LifeFirstWeekPrompt(title: "Give that time a place",
-                message: "Pick a day for some of the hours you set aside.",
-                actionTitle: "Plan days", onAction: { localSheet = .reserve(id) }, onDismiss: dismissFirstWeek)
+            localSheet = .reserve(id)
         case .task(let id):
-            LifeFirstWeekPrompt(title: "Add one thing to do",
-                message: "Pick a task that would make this week feel worthwhile.",
-                actionTitle: "Open Tasks", onAction: { openFirstWeekTasks(for: id) }, onDismiss: dismissFirstWeek)
+            navigate(.life)
+            openFirstWeekTasks(for: id)
         case .complete:
-            LifeFirstWeekPrompt(title: "Your week has a starting point.",
-                message: "Your time and task are saved. Keep planning whenever you’re ready.",
-                actionTitle: "View Week", dismissTitle: nil,
-                onAction: { dismissFirstWeek(); navigate(.week) }, onDismiss: dismissFirstWeek)
+            finishFirstWeek()
+            navigate(.week)
         }
     }
 

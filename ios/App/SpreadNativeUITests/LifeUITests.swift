@@ -396,6 +396,9 @@ final class LifeUITests: XCTestCase {
     func testFirstWeekGuideBuildsARealPlan() {
         launchEmptyFirstWeek(forceWelcome: true)
         assertFirstWeekPrompt("Make room for what matters.")
+        XCTAssertFalse(app.buttons["life-more"].exists, "The welcome story should be the first screen")
+        app.buttons["life-first-week-action"].tap()
+        assertFirstWeekPrompt("What matters in your week?")
         app.buttons["life-first-week-action"].tap()
         XCTAssertTrue(app.navigationBars["Add Life"].waitForExistence(timeout: 10))
         app.buttons["add-life-cancel"].tap()
@@ -407,6 +410,10 @@ final class LifeUITests: XCTestCase {
         let saveLife = app.buttons["save-spreads"]
         revealFirstWeekControl(saveLife)
         saveLife.tap()
+        assertFirstWeekPrompt("Choose your weekly hours")
+        app.buttons["life-first-week-story-back"].tap()
+        assertFirstWeekPrompt("What matters in your week?")
+        app.buttons["life-first-week-story-next"].tap()
         assertFirstWeekPrompt("Choose your weekly hours")
 
         app.buttons["life-first-week-action"].tap()
@@ -421,7 +428,6 @@ final class LifeUITests: XCTestCase {
         app.buttons["life-budget-save-capacity"].tap()
         waitUntilHittable(app.buttons["life-budget-done"])
         app.buttons["life-budget-done"].tap()
-        app.swipeDown()
         assertFirstWeekPrompt("Give that time a place")
         let next = app.buttons["life-first-week-action"]
         waitUntilHittable(next)
@@ -459,6 +465,8 @@ final class LifeUITests: XCTestCase {
         launchEmptyFirstWeek(forceWelcome: true, failedSave: name)
         assertFirstWeekPrompt("Make room for what matters.")
         app.buttons["life-first-week-action"].tap()
+        assertFirstWeekPrompt("What matters in your week?")
+        app.buttons["life-first-week-action"].tap()
         let preset = app.buttons["quick-life-home"]
         waitUntilHittable(preset)
         preset.tap()
@@ -471,6 +479,7 @@ final class LifeUITests: XCTestCase {
         XCTAssertEqual(save.label, "Retry saving")
         save.tap()
         assertFirstWeekPrompt("Choose your weekly hours")
+        app.buttons["life-first-week-skip"].tap()
         let matchingCards = app.descendants(matching: .any).matching(NSPredicate(
             format: "identifier BEGINSWITH 'life-card-' AND label BEGINSWITH %@", name
         ))
@@ -486,7 +495,12 @@ final class LifeUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root")
             .firstMatch.waitForExistence(timeout: 90), "The native Life planner did not load")
-        waitUntilHittable(app.buttons["life-more"])
+        if forceWelcome {
+            let story = app.descendants(matching: .any).matching(identifier: "life-first-week-story").firstMatch
+            XCTAssertTrue(story.waitForExistence(timeout: 30))
+        } else {
+            waitUntilHittable(app.buttons["life-more"])
+        }
     }
 
     private func assertFirstWeekPrompt(_ text: String) {
