@@ -9,7 +9,8 @@ name: Native verify (no publish)
 #
 # What it proves: the Swift packages' tests pass on macOS, the app and widget build for the iOS
 # Simulator, both privacy manifests are inside the built app, and the app launches. The simulator
-# journeys are reported but do not gate until they have a record of passing on a hosted simulator. None of this is physical-device acceptance.
+# regression journeys are reported. Visual audits require passing journeys and all expected screenshots.
+# None of this is physical-device acceptance.
 on:
   workflow_dispatch:
     inputs:
@@ -31,7 +32,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: native-verify-${{ github.ref }}
+  group: native-verify-${{ github.ref }}-${{ github.event_name }}-${{ inputs.journeys || 'regression' }}-${{ inputs.appearance || 'light' }}
   cancel-in-progress: true
 
 env:
@@ -65,16 +66,24 @@ jobs:
       - uses: actions/checkout@v4
       - name: Start the iPhone simulator
         id: simulator
+        env:
+          JOURNEYS: ${{ inputs.journeys || 'regression' }}
         run: |
           set -eu
           UDID="$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
+          import json, os, sys
           devices = json.load(sys.stdin)["devices"]
           phones = [(runtime, d) for runtime, items in devices.items() if ".iOS-" in runtime
                     for d in items if d["name"].startswith("iPhone") and d.get("isAvailable", True)]
+          if os.environ["JOURNEYS"] == "visual-audit":
+              phones = [pair for pair in phones if pair[1]["name"] == "iPhone 17 Pro Max"]
+              if not phones:
+                  sys.exit("The visual-audit iPhone 17 Pro Max is unavailable.")
           phones.sort(key=lambda pair: ([int(n) for n in pair[0].split(".iOS-")[1].split("-")], "Pro" in pair[1]["name"]))
           runtime, device = phones[-1]
           sys.stderr.write("Using %s on %s\n" % (device["name"], runtime))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print("model=%s\nruntime=%s" % (device["name"], runtime), file=output)
           print(device["udid"])
           ')"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
@@ -150,22 +159,28 @@ jobs:
           xcrun simctl launch "$UDID" com.graymatter.spread
           sleep 25
           mkdir -p artifacts/screens
+          {
+            printf 'Commit: %s\nAppearance: %s\nDevice: %s\nRuntime: %s\n' \
+              "$GITHUB_SHA" "$AUDIT_APPEARANCE" '${{ steps.simulator.outputs.model }}' '${{ steps.simulator.outputs.runtime }}'
+            xcodebuild -version
+          } > artifacts/screens/provenance.txt
           xcrun simctl io "$UDID" screenshot artifacts/screens/launch.png
           # The app must still be running: a crash on launch would have ended the process.
           xcrun simctl spawn "$UDID" launchctl list | grep -F "UIKitApplication:com.graymatter.spread" \
             || { echo "Spread is not running 25 seconds after launch" >&2; exit 1; }
 
-      - name: Simulator journeys for Life (reported, not gating)
+      - name: Simulator journeys for Life
         id: journeys
         if: ${{ steps.launch.outcome == 'success' }}
-        continue-on-error: true
+        continue-on-error: ${{ inputs.journeys != 'visual-audit' }}
         env:
           JOURNEYS: ${{ inputs.journeys || 'regression' }}
         run: |
           set -o pipefail
           suite=SpreadNativeUITests/LifeUITests
           if [[ "$JOURNEYS" == visual-audit ]]; then
-            tests=(testAuditPlannerScreens testAuditMoreScreens testAuditQuickStart testAuditCardIntention)
+            tests=(testAuditWeekReview testAuditWeekAhead testAuditJourney testAuditRitualValidationError
+                   testWeekReviewHoldResumesAndHandoffNeedsAnExplicitTap)
           else
             tests=(testLifeDeleteThroughDetailsRestoresExactAreaWithUndo
                    testLifeWeekToggleAndCalendarNavigatorAreReachable
@@ -188,10 +203,12 @@ jobs:
 
       - name: Export screenshots from the test result
         if: ${{ always() && hashFiles('artifacts/journeys.xcresult/Info.plist') != '' }}
+        env:
+          JOURNEYS: ${{ inputs.journeys || 'regression' }}
         run: |
           xcrun xcresulttool export attachments --path artifacts/journeys.xcresult --output-path artifacts/screens/attachments
           python3 - <<'PY'
-          import json, pathlib, re, shutil
+          import json, os, pathlib, re, shutil
           root = pathlib.Path("artifacts/screens")
           attachments = root / "attachments"
           for test in json.loads((attachments / "manifest.json").read_text()):
@@ -201,13 +218,23 @@ jobs:
                   match = re.match(r"^(audit-[a-z0-9-]+)", name)
                   if match and source.suffix.lower() == ".png":
                       shutil.copyfile(source, root / (match[1] + ".png"))
+          if os.environ["JOURNEYS"] == "visual-audit":
+              required = """
+                week-in-review week-review-hours week-review-work week-review-home week-review-health
+                week-review-tasks week-review-highlight week-ahead week-ahead-hours week-ahead-days
+                week-ahead-tasks week-ahead-next-area week-ahead-after-skip week-ahead-complete week-ahead-error
+                your-journey your-journey-contributions your-journey-history
+              """.split()
+              missing = [name for name in required if not (root / f"audit-{name}.png").is_file()]
+              if missing:
+                  raise SystemExit("Missing required visual evidence: " + ", ".join(missing))
           PY
 
       - name: Keep the logs and simulator screenshots
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: native-verify
+          name: native-verify-${{ inputs.journeys || 'regression' }}-${{ inputs.appearance || 'light' }}
           if-no-files-found: ignore
           retention-days: 7
           path: |

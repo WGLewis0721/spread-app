@@ -10,6 +10,7 @@ A spec is a plan, not approval. When its decisions land, update the governing do
 
 | Date | Spec | Status |
 | --- | --- | --- |
+| 2026-11-17 | [Life weekly rituals and scoreboard](2026-11-17-life-weekly-rituals.md) | Implementation branch in review; Codex visual pass and native/device QA owed. No merge approval. |
 | 2026-11-14 | [W1 design foundations and native tokens](2026-11-14-w1-design-foundations.md) | In review, draft pull request. Adds semantic tokens in `Theme/`, 28 exact-duplicate swaps, a component state matrix in UI_KIT, and a contrast test. Ten exceptions (E1 to E10) await the owner. Value-neutral; not compiled in Xcode here and not device verified. |
 | 2026-11-14 | [Focus timer, widgets, Live Activity and What's New: audit and fit (W4)](2026-11-14-w4-widgets-focus-whats-new-audit.md) | Draft pull request on `claude/w4-focus-widgets-whats-new`. Fits the medium Timer and Life widgets with tiers, moves Life text to text styles, uses semantic colours outside full colour, labels icon and glyph controls, and corrects What's New copy. Six owner exceptions (E1 to E6). Swift not compiled here; device checks owed. |
 | 2026-11-13 | [Plan Ahead and Focus Timer menu polish](2026-11-13-plan-ahead-focus-menu-polish.md) | **Implemented on review branch; not merged or device verified.** One primary Plan Ahead action, adaptive day selection, persistent confirmation, distinctive media controls, correct next-state action and collapsed optional settings. |

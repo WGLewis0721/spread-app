@@ -227,3 +227,35 @@ test("native v2 projects a Life intention without inventing one", () => {
   assert.equal(roles[0].intention, "Protect time for deep work");
   assert.equal(roles[1].intention, undefined);
 });
+
+
+test("native Journey aggregates only saved weeks, existing roles and actual completed tasks", () => {
+  const data = source();
+  const before = structuredClone(data);
+  data.weeks["2026-11-09"] = {
+    boxes: [{ hatId: "work", hours: 99, tasks: [{ id: "future", text: "Not done", done: true }] }],
+    allocations: [{ id: "future-a", hatId: "work", day: "2026-11-09", hours: 25, order: 0 }],
+  };
+  data.weeks["2026-10-26"].boxes.push({ hatId: "removed", hours: 35, tasks: [{ id: "removed-task", text: "Old", done: true }] });
+  data.weeks["2026-10-26"].allocations.push({ id: "orphan", hatId: "removed", day: "2026-10-26", hours: 20, order: 0 });
+  const unchanged = structuredClone(data);
+  const result = projectNativeV2(data, "p1", { historyWeeks: 26 }).snapshot.history!;
+  assert.deepEqual(result.map((week) => week.weekKey), ["2026-11-02", "2026-10-26"]);
+  assert.equal(result[0].budgetedHours, 11.5);
+  assert.equal(result[0].placedHours, 3.5);
+  assert.equal(result[0].completedTasks, 1);
+  assert.equal(result[1].budgetedHours, 6);
+  assert.equal(result[1].placedHours, 0);
+  assert.equal(result[1].completedTasks, 0);
+  assert.deepEqual(data, unchanged);
+  assert.equal(before.currentWeek, data.currentWeek);
+});
+
+test("Journey history remains opt-in, bounded and contains no task text", () => {
+  const data = source();
+  assert.equal(projectNativeV2(data, "p1").snapshot.history, undefined);
+  assert.equal(projectNativeV2(data, "p1", { historyWeeks: 1 }).snapshot.history?.length, 1);
+  const history = projectNativeV2(data, "p1", { historyWeeks: 26 }).snapshot.history!;
+  assert.equal(JSON.stringify(history).includes("Private notes"), false);
+  assert.equal(JSON.stringify(history).includes("Review roadmap"), false);
+});
