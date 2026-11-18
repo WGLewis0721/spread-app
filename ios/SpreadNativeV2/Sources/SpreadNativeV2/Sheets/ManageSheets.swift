@@ -33,13 +33,13 @@ struct NewSpreadSheet: View {
     }
 
     var body: some View {
-        SpreadSheetStack {
+        SpreadSheetStack(canvas: LifePalette.canvas) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("What would you like to make time for?")
-                        .font(Spread.callout).foregroundStyle(Spread.secondary)
+                        .font(Spread.callout).foregroundStyle(LifePalette.secondary)
                     VStack(alignment: .leading, spacing: Spread.space2) {
-                        Text("Quick start").font(Spread.footnote).foregroundStyle(Spread.secondary)
+                        Text("Quick start").font(Spread.footnote).foregroundStyle(LifePalette.secondary)
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 180 : 96),
                                                       spacing: Spread.space2)], spacing: Spread.space2) {
                             ForEach(quickStarts, id: \.self) { category in
@@ -56,7 +56,7 @@ struct NewSpreadSheet: View {
                                     .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
                                 }
                                 .buttonStyle(.spreadPress)
-                                .spreadChip(selected: selected)
+                                .spreadChip(selected: selected, usesLifePalette: true)
                                 .disabled(saving || selected || (drafts.count >= 5 && emptyDraftIndex == nil))
                                 .accessibilityAddTraits(selected ? .isSelected : [])
                                 .accessibilityIdentifier("quick-life-" + category)
@@ -83,7 +83,7 @@ struct NewSpreadSheet: View {
                         }
                         .foregroundStyle(Spread.accent)
                         .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
-                        .spreadChip(selected: false)
+                        .spreadChip(selected: false, usesLifePalette: true)
                     }
                     .buttonStyle(.spreadPress)
                     .disabled(saving)
@@ -133,32 +133,32 @@ struct NewSpreadSheet: View {
             HStack(spacing: Spread.space3) {
                 RoleBadge(category: draft.category, color: colorHex, size: 48)
                 VStack(alignment: .leading, spacing: Spread.space1) {
-                    Text(fieldName(index)).font(.system(.footnote)).foregroundStyle(Spread.secondary)
-                    TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }), prompt: Spread.fieldPrompt("Parent, shop, study"))
+                    Text(fieldName(index)).font(.system(.footnote)).foregroundStyle(LifePalette.secondary)
+                    TextField("Parent, shop, study", text: Binding(get: { drafts[index].name }, set: { drafts[index].name = $0 }), prompt: Text("Parent, shop, study").foregroundStyle(LifePalette.secondary))
                         .font(.system(.body))
                         .padding(.horizontal, Spread.space3).frame(minHeight: Spread.minimumTarget)
-                        .background(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).fill(Spread.inset))
-                        .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(Spread.line, lineWidth: 0.5))
+                        .background(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).fill(LifePalette.fill))
+                        .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(LifePalette.line, lineWidth: 0.5))
                         .accessibilityLabel("\(fieldName(index)) name")
                         .accessibilityIdentifier("role-name-field")
                 }
             }
             HStack {
-                Text("Hours each week").font(Spread.callout).foregroundStyle(Spread.secondary)
+                Text("Hours each week").font(Spread.callout).foregroundStyle(LifePalette.secondary)
                 Spacer()
                 HourStepper(value: draft.hours, label: "Hours for Life area \(index + 1)", step: 0.5) { hours in
                     drafts[index].hours = hours
                 }
             }
             Text("Symbol" + (draft.category.flatMap { id in PalettePanel.categories.first { $0.id == id }?.label }.map { " · " + $0 } ?? ""))
-                .font(Spread.footnote).foregroundStyle(Spread.secondary)
+                .font(Spread.footnote).foregroundStyle(LifePalette.secondary)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Spread.space1), count: 5), spacing: 6) {
                 ForEach(PalettePanel.categories, id: \.id) { item in
                     let selected = draft.category == item.id
                     Button { drafts[index].category = item.id } label: {
                         RoleBadge(category: item.id, color: PalettePanel.categoryColors[item.id] ?? Spread.roleFallbackHex, size: 36)
                             .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
-                            .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(Spread.ink, lineWidth: selected ? 2 : 0).frame(width: Spread.minimumTarget, height: Spread.minimumTarget))
+                            .overlay(RoundedRectangle(cornerRadius: Spread.radiusControl, style: .continuous).strokeBorder(LifePalette.ink, lineWidth: selected ? 2 : 0).frame(width: Spread.minimumTarget, height: Spread.minimumTarget))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.spreadPress)
@@ -169,7 +169,7 @@ struct NewSpreadSheet: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .spreadCard(edge: draft.category == nil ? nil : tint, active: draft.category != nil)
+        .spreadCard(edge: draft.category == nil ? nil : tint, active: draft.category != nil, usesLifePalette: true)
     }
 
     private func addQuickStart(name: String, category: String) {
@@ -541,7 +541,7 @@ struct MoreSheet: View {
     private func sectionLabel(_ title: String) -> some View {
         Text(title)
             .font(.system(.footnote, weight: .semibold))
-            .foregroundStyle(Spread.secondary)
+            .foregroundStyle(LifePalette.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
     }
@@ -563,7 +563,7 @@ struct MoreSheet: View {
                     .frame(minHeight: 26)
                 Text(title)
                     .font(.system(.caption, weight: .semibold))
-                    .foregroundStyle(Spread.ink)
+                    .foregroundStyle(LifePalette.ink)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -571,7 +571,7 @@ struct MoreSheet: View {
             }
             .frame(maxWidth: .infinity, minHeight: 78)
             .padding(.horizontal, 5)
-            .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(Spread.elevated))
+            .background(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous).fill(LifePalette.surface))
             .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow, style: .continuous))
         }
         // The tappable control, not just its label, owns the full tile bounds.
@@ -593,7 +593,7 @@ struct MoreSheet: View {
     }
 
     var body: some View {
-        SpreadSheetStack {
+        SpreadSheetStack(canvas: LifePalette.canvas) {
             GeometryReader { geometry in
                 // Three columns on regular phones. Two columns only when a scene
                 // really narrows or Dynamic Type needs more space.
@@ -625,7 +625,7 @@ struct MoreSheet: View {
                                             .font(.system(.subheadline, weight: .semibold))
                                             .lineLimit(1)
                                             .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
-                                            .spreadChip(selected: appearance == item)
+                                            .spreadChip(selected: appearance == item, usesLifePalette: true)
                                     }
                                     .buttonStyle(.spreadPress)
                                     .accessibilityAddTraits(appearance == item ? .isSelected : [])
@@ -633,7 +633,7 @@ struct MoreSheet: View {
                                 }
                             }
                             .padding(6)
-                            .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                            .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(LifePalette.surface))
                             .accessibilityElement(children: .contain)
                             .accessibilityIdentifier("appearance-picker")
                         }
@@ -645,7 +645,7 @@ struct MoreSheet: View {
                                     .font(.subheadline.weight(.semibold))
                                     .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                                     .padding(.horizontal, Spread.space3)
-                                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                                    .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                             }
                             .buttonStyle(.spreadPress)
                             .accessibilityIdentifier("more-focus-timer")
@@ -654,7 +654,7 @@ struct MoreSheet: View {
                                     .font(.subheadline.weight(.semibold))
                                     .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                                     .padding(.horizontal, Spread.space3)
-                                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                                    .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                             }
                             .buttonStyle(.spreadPress)
                             .accessibilityIdentifier("spread-reminder-settings")
@@ -666,30 +666,30 @@ struct MoreSheet: View {
                                 .font(.subheadline.weight(.semibold))
                                 .padding(.horizontal, Spread.space3)
                                 .frame(minHeight: 48)
-                                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                                .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                                 .accessibilityIdentifier("today-widget-enabled")
                             Text("Turns on the Today and Focus timer widgets. Only task counts, hours placed today and a running focus timer are shared on this device. No task names or accounts.")
                                 .font(.footnote)
-                                .foregroundStyle(Spread.secondary)
+                                .foregroundStyle(LifePalette.secondary)
                             Toggle("Show Life cards on widgets", isOn: $lifeCardsWidgetsEnabled)
                                 .font(.subheadline.weight(.semibold))
                                 .padding(.horizontal, Spread.space3)
                                 .frame(minHeight: 48)
-                                .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                                .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                                 .accessibilityIdentifier("life-cards-widget-enabled")
                             Text("Life area names, colors and this week's hours appear on your Home Screen. Anyone who can see it can see them. Stays on this device.")
                                 .font(.footnote)
-                                .foregroundStyle(Spread.secondary)
+                                .foregroundStyle(LifePalette.secondary)
                         }
                         VStack(alignment: .leading, spacing: 6) {
                             sectionLabel("Profiles")
                             HStack(spacing: 10) {
                                 Image(systemName: "person.crop.circle")
-                                    .foregroundStyle(Spread.secondary)
+                                    .foregroundStyle(LifePalette.secondary)
                                     .accessibilityHidden(true)
                                 Text(activeProfileName)
                                     .font(.system(.subheadline, weight: .semibold))
-                                    .foregroundStyle(Spread.ink)
+                                    .foregroundStyle(LifePalette.ink)
                                     .lineLimit(1)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 Button { showProfiles() } label: {
@@ -704,7 +704,7 @@ struct MoreSheet: View {
                             }
                             .padding(.horizontal, Spread.space3)
                             .frame(minHeight: 48)
-                            .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                            .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(LifePalette.surface))
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
@@ -732,22 +732,22 @@ struct MoreSheet: View {
                                 } label: {
                                     Label { Text("Backup and restore") } icon: { SpreadIcon(name: "icon-backup", size: 18) }
                                         .font(.system(.subheadline, weight: .semibold))
-                                        .foregroundStyle(Spread.ink)
+                                        .foregroundStyle(LifePalette.ink)
                                         .lineLimit(2)
                                         .frame(maxWidth: .infinity, minHeight: 48)
                                         .padding(.horizontal, Spread.space2)
-                                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(LifePalette.surface))
                                 }
                                 .buttonStyle(.spreadPress)
                                 .accessibilityIdentifier("backup-and-restore")
                                 Button { showRecentlyDeleted = true } label: {
                                     Label { Text("Recently Deleted") } icon: { SpreadIcon(name: "icon-trash", size: 18) }
                                         .font(.system(.subheadline, weight: .semibold))
-                                        .foregroundStyle(Spread.ink)
+                                        .foregroundStyle(LifePalette.ink)
                                         .lineLimit(2)
                                         .frame(maxWidth: .infinity, minHeight: 48)
                                         .padding(.horizontal, Spread.space2)
-                                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(Spread.elevated))
+                                        .background(RoundedRectangle(cornerRadius: Spread.radiusRow).fill(LifePalette.surface))
                                 }
                                 .buttonStyle(.spreadPress)
                                 .accessibilityIdentifier("more-recently-deleted")
@@ -760,7 +760,7 @@ struct MoreSheet: View {
                                     .font(.subheadline.weight(.semibold))
                                     .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
                                     .padding(.horizontal, 14)
-                                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                                    .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                             }
                             .buttonStyle(.spreadPress)
                             .accessibilityIdentifier("more-first-week-guide")
@@ -776,10 +776,10 @@ struct MoreSheet: View {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text("What's New")
                                             .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(Spread.ink)
+                                            .foregroundStyle(LifePalette.ink)
                                         Text("Version " + SpreadReleaseNotes.appVersion)
                                             .font(.caption)
-                                            .foregroundStyle(Spread.secondary)
+                                            .foregroundStyle(LifePalette.secondary)
                                     }
                                     Spacer(minLength: 8)
                                     if SpreadReleaseNotes.shouldPresent(
@@ -791,12 +791,12 @@ struct MoreSheet: View {
                                     }
                                     SpreadIcon(name: "lucide-chevron-right", size: 18)
                                         .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Spread.secondary)
+                                        .foregroundStyle(LifePalette.secondary)
                                         .accessibilityHidden(true)
                                 }
                                 .padding(.horizontal, 14)
                                 .frame(maxWidth: .infinity, minHeight: 54)
-                                .background(Spread.elevated,
+                                .background(LifePalette.surface,
                                             in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                                 .contentShape(RoundedRectangle(cornerRadius: Spread.radiusRow))
                             }

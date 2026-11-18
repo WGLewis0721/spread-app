@@ -37,12 +37,14 @@ public struct SpreadLiveRoot: View {
         if ProcessInfo.processInfo.environment["SPREAD_RITUAL_AUDIT_FIXTURE"] != nil,
            ProcessInfo.processInfo.arguments.contains("-SpreadResetFirstWeekGuide") {
             UserDefaults.standard.removeObject(forKey: LifeFirstWeekStep.handledKey)
+            UserDefaults.standard.removeObject(forKey: LifeFirstWeekStep.pendingProfileKey)
             UserDefaults.standard.removeObject(forKey: SpreadReleaseNotes.lastSeenKey)
         }
         #endif
         let defaults = UserDefaults.standard
         canOfferFirstWeek = !defaults.bool(forKey: LifeFirstWeekStep.handledKey)
-            && (defaults.string(forKey: SpreadReleaseNotes.lastSeenKey) ?? "").isEmpty
+            && ((defaults.string(forKey: SpreadReleaseNotes.lastSeenKey) ?? "").isEmpty
+                || defaults.string(forKey: LifeFirstWeekStep.pendingProfileKey) != nil)
     }
 
     public var body: some View {

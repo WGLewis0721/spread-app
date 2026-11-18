@@ -481,12 +481,13 @@ struct SpreadCardStyle: ViewModifier {
     var edge: Color?
     var active: Bool
     var radius: CGFloat
+    var usesLifePalette = false
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.colorSchemeContrast) private var contrast
 
     private var edgeColor: Color {
-        guard let edge else { return Spread.line }
+        guard let edge else { return usesLifePalette ? LifePalette.line : Spread.line }
         let strength: Double = active ? 0.95 : (scheme == .dark ? 0.52 : 0.60)
         return edge.opacity(contrast == .increased ? 1 : strength)
     }
@@ -500,7 +501,13 @@ struct SpreadCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         return content
-            .background(shape.fill(Spread.cardFill))
+            .background {
+                if usesLifePalette {
+                    shape.fill(LifePalette.surface)
+                } else {
+                    shape.fill(Spread.cardFill)
+                }
+            }
             .overlay(shape.strokeBorder(edgeColor, lineWidth: edgeWidth))
             .shadow(color: glowColor, radius: active ? 14 : 8, y: edge == nil ? 4 : 2)
     }
@@ -508,30 +515,32 @@ struct SpreadCardStyle: ViewModifier {
 
 extension View {
     /// The shared Spread card: quiet navy surface (cream/white in light), hairline, optional role edge light.
-    func spreadCard(edge: Color? = nil, active: Bool = false, radius: CGFloat = Spread.radiusCard) -> some View {
-        modifier(SpreadCardStyle(edge: edge, active: active, radius: radius))
+    func spreadCard(edge: Color? = nil, active: Bool = false, radius: CGFloat = Spread.radiusCard,
+                    usesLifePalette: Bool = false) -> some View {
+        modifier(SpreadCardStyle(edge: edge, active: active, radius: radius, usesLifePalette: usesLifePalette))
     }
 
     /// A small capsule control: a recessed trough when idle, the lit action blue when selected.
-    func spreadChip(selected: Bool) -> some View {
-        modifier(SpreadChipStyle(selected: selected))
+    func spreadChip(selected: Bool, usesLifePalette: Bool = false) -> some View {
+        modifier(SpreadChipStyle(selected: selected, usesLifePalette: usesLifePalette))
     }
 }
 
 struct SpreadChipStyle: ViewModifier {
     let selected: Bool
+    var usesLifePalette = false
 
     func body(content: Content) -> some View {
         content
-            .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+            .foregroundStyle(selected ? Spread.onAccent : (usesLifePalette ? LifePalette.ink : Spread.ink))
             .background {
                 if selected {
                     Capsule().fill(Spread.accentGradient)
                 } else {
-                    Capsule().fill(Spread.inset)
+                    Capsule().fill(usesLifePalette ? LifePalette.fill : Spread.inset)
                 }
             }
-            .overlay(Capsule().strokeBorder(selected ? Color.clear : Spread.line, lineWidth: 0.5))
+            .overlay(Capsule().strokeBorder(selected ? Color.clear : (usesLifePalette ? LifePalette.line : Spread.line), lineWidth: 0.5))
     }
 }
 
@@ -541,17 +550,18 @@ struct SpreadChipStyle: ViewModifier {
 /// its tint, and the drag indicator. Using one container keeps New Spread, the responsibility editor, Open tasks,
 /// Profiles, More and the Task sheet looking like one product.
 struct SpreadSheetStack<Content: View>: View {
+    var canvas: Color = Spread.canvas
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         NavigationStack {
             content()
-                .background(Spread.canvas.ignoresSafeArea())
-                .toolbarBackground(Spread.canvas, for: .navigationBar)
+                .background(canvas.ignoresSafeArea())
+                .toolbarBackground(canvas, for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
         }
         .tint(Spread.accent)
-        .presentationBackground(Spread.canvas)
+        .presentationBackground(canvas)
         .presentationDragIndicator(.visible)
     }
 }

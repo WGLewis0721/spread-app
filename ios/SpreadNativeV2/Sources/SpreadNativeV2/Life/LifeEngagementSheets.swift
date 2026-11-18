@@ -2,6 +2,51 @@
 import SwiftUI
 import UIKit
 
+struct LifeStoryProgress: View {
+    let count: Int
+    let progress: (Int) -> CGFloat
+
+    var body: some View {
+        HStack(spacing: count > 24 ? 1 : Spread.space1) {
+            ForEach(0..<count, id: \.self) { index in
+                GeometryReader { geometry in
+                    Capsule().fill(.white.opacity(0.35))
+                        .overlay(alignment: .leading) {
+                            Capsule().fill(.white)
+                                .frame(width: geometry.size.width * progress(index))
+                        }
+                }
+            }
+        }
+        .frame(height: 4)
+        .accessibilityHidden(true)
+    }
+}
+
+struct LifeStoryBackdrop: View {
+    let category: String?
+    let tint: Color
+    var identity: String? = nil
+
+    var body: some View {
+        ZStack {
+            Spread.artGround
+            if let category {
+                LifeEditorialArtwork(category: category, roleColor: tint)
+                    .overlay(alignment: .bottom) {
+                        LinearGradient(colors: [.clear, Spread.artGround],
+                                       startPoint: .top, endPoint: .bottom)
+                    }
+                    .id(identity ?? category)
+                    .transition(.opacity)
+            }
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+}
+
 /// A full-screen retrospective of the selected week's saved planner activity.
 struct LifeWeekReviewSheet: View {
     let snapshot: PlannerSnapshot
@@ -135,37 +180,14 @@ struct LifeWeekReviewSheet: View {
     }
 
     private var backdrop: some View {
-        ZStack {
-            Spread.artGround
-            if let role = artworkRole {
-                LifeEditorialArtwork(category: role.category, roleColor: Color(hex: role.color))
-                    .overlay(alignment: .bottom) {
-                        LinearGradient(colors: [.clear, Spread.artGround],
-                                       startPoint: .top, endPoint: .bottom)
-                    }
-                    .id(role.id)
-                    .transition(.opacity)
-            }
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+        LifeStoryBackdrop(category: artworkRole?.category,
+                          tint: Color(hex: artworkRole?.color ?? Spread.roleFallbackHex),
+                          identity: artworkRole?.id)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Spread.space2) {
-            HStack(spacing: scenes.count > 24 ? 1 : Spread.space1) {
-                ForEach(scenes.indices, id: \.self) { index in
-                    GeometryReader { geometry in
-                        Capsule().fill(.white.opacity(0.35))
-                            .overlay(alignment: .leading) {
-                                Capsule().fill(.white)
-                                    .frame(width: geometry.size.width * progress(at: index))
-                            }
-                    }
-                }
-            }
-            .frame(height: 4)
-            .accessibilityHidden(true)
+            LifeStoryProgress(count: scenes.count, progress: progress)
 
             HStack {
                 VStack(alignment: .leading, spacing: Spread.space1) {
