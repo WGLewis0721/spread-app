@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { LifeBadge } from "@/spread/components/landing-life";
+import { lifeStyle } from "@/spread/components/landing-life-data";
 
 // Illustrative landing-page data. This never reads or writes a visitor's planner.
 type StackCard = { name: string; hours: number; color: string; tasks: string[] };
@@ -471,17 +473,14 @@ export function SpreadStack() {
                 "--fan-r": fan[index].r,
                 "--grid-x": grid[index].x,
                 "--grid-y": grid[index].y,
-                "--role": card.color,
+                ...lifeStyle(card),
               } as CSSProperties}
             >
               <header>
-                <i />
+                <LifeBadge />
                 <b>{card.name}</b>
                 <span>{card.hours}<small>h</small></span>
               </header>
-              <div className="stack-bank" aria-hidden="true">
-                {Array.from({ length: 8 }, (_, hour) => <em key={hour} className={hour < card.hours ? "is-set" : ""} />)}
-              </div>
               <ul>
                 {tasks.map((task) => <li key={task} className="stack-task"><span aria-hidden="true" /><em>{task}</em></li>)}
                 {tasks.length < 2 && <li className="stack-task is-empty" aria-hidden="true"><span />&nbsp;</li>}

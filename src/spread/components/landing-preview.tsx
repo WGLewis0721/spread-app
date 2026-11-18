@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowDown, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { SpreadIcon } from "@/spread/components/spread-icon";
+import { LifeBadge, WeeklyTimeBar } from "@/spread/components/landing-life";
+import { lifeStyle, SAMPLE_CAPACITY } from "@/spread/components/landing-life-data";
 
 // Illustrative landing-page data. This never reads or writes a visitor's planner.
 const examples = [
@@ -38,6 +40,9 @@ const examples = [
     ],
   },
 ];
+
+const sampleWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const sampleHours = examples.reduce((total, area) => total + area.hours, 0);
 
 export function PaperToProduct() {
   const root = useRef<HTMLDivElement>(null);
@@ -98,15 +103,17 @@ export function PaperToProduct() {
       </div>
       <div className="product-plan">
         <div className="mini-brand"><SpreadIcon name="app-icon-spread-cards.svg" size={32} /><span>Spread</span><span className="preview-label">A sample week</span></div>
-        <div className="mini-week-nav"><ChevronLeft size={14} /><span>Sep 21 – Sep 27</span><ChevronRight size={14} /></div>
-        <div className="mini-toggle"><b>Life</b><span>Week</span></div>
-        <div className="mini-section-label"><span>Life areas</span><span>Hours</span></div>
+        <div className="mini-section-label"><span>Weekly Time</span><span>{sampleHours}h of {SAMPLE_CAPACITY}h</span></div>
+        <WeeklyTimeBar roles={examples} />
         {examples.map((item, index) => (
-          <div className="mini-role" key={item.name} style={{ "--role-index": index } as CSSProperties}>
-            <i style={{ background: item.color }} /><span>{item.name}</span><b>{item.hours}<small>h</small></b>
+          <div className="mini-role" key={item.name} style={{ ...lifeStyle(item), "--role-index": index } as CSSProperties}>
+            <LifeBadge /><span>{item.name}</span><b>{item.hours}<small>h</small></b>
           </div>
         ))}
-        <div className="mini-summary"><span>Three parts of your life.</span><strong>15 hours, with intention.</strong></div>
+        <div className="landing-mini-dock">
+          <div className="mini-toggle"><b>Life</b><span>Week</span></div>
+          <div className="mini-week-nav"><ChevronLeft size={14} /><span>Sep 21 – Sep 27</span><ChevronRight size={14} /></div>
+        </div>
       </div>
       <div className="hero-object-caption"><span>Born on paper.</span><span>Made for real life.</span></div>
     </div>
@@ -147,8 +154,17 @@ export function WeekPreview({ selected: controlled, onSelect }: { selected?: num
       </p>
       <div className="week-wireframe" aria-live="polite" aria-atomic="true">
         <div className="week-wire-heading">
-          <span>Week</span>
+          <span>Your week</span>
           <span>Sample plan</span>
+        </div>
+        <div className="landing-week-strip" aria-hidden="true" style={{ "--role": example.color } as CSSProperties}>
+          {sampleWeek.map((day, index) => {
+            const date = 21 + index;
+            const scheduled = example.days.some((entry) => entry.date === `09/${date}`);
+            return <span key={day} className={scheduled ? "is-scheduled" : ""}>
+              <small>{day}</small><b>{date}</b><i />
+            </span>;
+          })}
         </div>
         <div className="mini-week-nav">
           <ChevronLeft size={14} />

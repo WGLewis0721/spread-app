@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ArchiveRestore, ArrowRight, Check, ChevronRight, Smartphone, UserRoundX, UsersRound } from "lucide-react";
 import { WeekPreview } from "@/spread/components/landing-preview";
+import { LifeBadge, WeeklyTimeBar } from "@/spread/components/landing-life";
+import { lifeStyle, SAMPLE_CAPACITY } from "@/spread/components/landing-life-data";
 
 // Illustrative landing-page data. None of this reads or writes a visitor's planner.
 type Role = { name: string; hours: number; color: string; days: Record<string, number>; task: string };
@@ -112,20 +114,18 @@ function WeekBuilder({ step }: { step: number }) {
         <span>Sep 21 – Sep 27</span>
         <span className="builder-dots" aria-hidden="true">{steps.map((_, index) => <i key={index} className={index <= step ? "is-on" : ""} />)}</span>
       </header>
+      <div className="builder-reveal is-bank">
+        <div><WeeklyTimeBar roles={roles} /></div>
+      </div>
       <div className="builder-days" aria-hidden="true">
         {DAYS.map((day) => <b key={day}>{day}</b>)}
       </div>
       {roles.map((role, index) => (
-        <div className="builder-row" key={role.name} style={{ "--role": role.color, "--r": index } as CSSProperties}>
+        <div className="builder-row" key={role.name} style={{ ...lifeStyle(role), "--r": index } as CSSProperties}>
           <div className="builder-head">
-            <i />
+            <LifeBadge />
             <b>{role.name}</b>
             <span className="builder-hours">{role.hours}<small>h</small></span>
-          </div>
-          <div className="builder-reveal is-bank">
-            <div className="builder-bank">
-              {Array.from({ length: 8 }, (_, hour) => <em key={hour} className={hour < role.hours ? "is-set" : ""} style={{ "--h": hour } as CSSProperties} />)}
-            </div>
           </div>
           <div className="builder-reveal is-week">
             <div>
@@ -152,21 +152,13 @@ function WeekBuilder({ step }: { step: number }) {
 /* ---------------------------------------------------------------- week band */
 
 export function WeekMetric({ selected }: { selected: number }) {
-  const [ref, seen] = useSeen<HTMLDivElement>(0.4);
   const total = roles.reduce((sum, role) => sum + role.hours, 0);
   return (
-    <div ref={ref} className={`week-metric${seen ? " is-seen" : ""}`}>
+    <div className="week-metric">
       <span className="week-metric-label">Weekly Time</span>
-      <p className="week-metric-figure"><strong>{total}</strong><span>of 168 hours</span></p>
-      <div className="week-metric-bar" aria-hidden="true">
-        {roles.map((role, index) => (
-          <i
-            key={role.name}
-            className={index === selected ? "is-selected" : ""}
-            style={{ "--role": role.color, "--share": role.hours, "--r": index } as CSSProperties}
-          />
-        ))}
-      </div>
+      <p className="week-metric-figure"><strong>{total}h</strong><span>of {SAMPLE_CAPACITY}h</span></p>
+      <WeeklyTimeBar roles={roles} />
+      <p className="landing-time-label">{SAMPLE_CAPACITY - total}h available</p>
       <ul className="week-metric-legend">
         {roles.map((role, index) => (
           <li key={role.name} className={index === selected ? "is-selected" : ""} style={{ "--role": role.color } as CSSProperties}>
@@ -219,8 +211,8 @@ export function ListVersusSpread() {
       <figure className="versus-spread">
         <figcaption>Life areas, with time</figcaption>
         {roles.map((role, r) => (
-          <div key={role.name} className="versus-role" style={{ "--role": role.color, "--r": r } as CSSProperties}>
-            <header><i /><b>{role.name}</b><span>{role.hours}<small>h</small></span></header>
+          <div key={role.name} className="versus-role" style={{ ...lifeStyle(role), "--r": r } as CSSProperties}>
+            <header><LifeBadge /><b>{role.name}</b><span>{role.hours}<small>h</small></span></header>
             <ul>
               {listItems.map((item, index) => item.role === r && (
                 <li key={item.task} className={focus === index ? "is-focus" : ""}><span aria-hidden="true" />{item.task}</li>
