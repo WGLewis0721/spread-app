@@ -40,9 +40,9 @@ struct LifeWeeklyTimeBudget: View {
         .padding(.horizontal, compact ? Spread.space3 : Spread.space4)
         .padding(.vertical, Spread.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Spread.cardFill, in: RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
+        .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard, style: .continuous)
-            .strokeBorder(Spread.line, lineWidth: 1))
+            .strokeBorder(LifePalette.line, lineWidth: 1))
     }
 
     /// Life says "over budget" (OD32). When the week is over budget, the card explains why, in Classic's
@@ -65,7 +65,7 @@ struct LifeWeeklyTimeBudget: View {
             Text("WEEKLY TIME")
                 .font(.caption2.weight(.semibold))
                 .tracking(1.2)
-                .foregroundStyle(Spread.secondary)
+                .foregroundStyle(LifePalette.secondary)
             HStack(alignment: .firstTextBaseline, spacing: Spread.space1) {
                 Text(SpreadHours.text(assigned) + "h")
                     .font(.title3.bold())
@@ -74,7 +74,7 @@ struct LifeWeeklyTimeBudget: View {
                     .minimumScaleFactor(0.8)
                 Text(hasCapacity ? "of " + SpreadHours.text(capacity ?? 0) + "h" : "budgeted")
                     .font(.caption)
-                    .foregroundStyle(Spread.secondary)
+                    .foregroundStyle(LifePalette.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
@@ -86,7 +86,7 @@ struct LifeWeeklyTimeBudget: View {
                                       : SpreadHours.text(available ?? 0) + "h available")
                     : "Weekly hours not set")
                     .font(.caption2)
-                    .foregroundStyle(overBudget > 0 ? Spread.danger : Spread.secondary)
+                    .foregroundStyle(overBudget > 0 ? Spread.danger : LifePalette.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
@@ -118,20 +118,20 @@ struct LifeWeeklyTimeBudget: View {
                     Text("WEEKLY TIME")
                         .font(.caption2.weight(.semibold))
                         .tracking(1.7)
-                        .foregroundStyle(Spread.secondary)
+                        .foregroundStyle(LifePalette.secondary)
 
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .firstTextBaseline, spacing: 5) {
                             Text(SpreadHours.text(assigned) + "h")
                                 .font(.system(.title2, weight: .bold)).monospacedDigit()
                             Text(capacityCopy)
-                                .font(.subheadline).foregroundStyle(Spread.secondary)
+                                .font(.subheadline).foregroundStyle(LifePalette.secondary)
                         }
                         VStack(alignment: .leading, spacing: 0) {
                             Text(SpreadHours.text(assigned) + "h")
                                 .font(.system(.title2, weight: .bold)).monospacedDigit()
                             Text(capacityCopy)
-                                .font(.caption).foregroundStyle(Spread.secondary)
+                                .font(.caption).foregroundStyle(LifePalette.secondary)
                         }
                     }
                 }
@@ -140,7 +140,7 @@ struct LifeWeeklyTimeBudget: View {
                     Text(!hasCapacity ? "—" : SpreadHours.text(overBudget > 0 ? overBudget : available ?? 0) + "h")
                         .font(.system(.title3, weight: .bold)).monospacedDigit()
                     Text(!hasCapacity ? "Set weekly hours" : (overBudget > 0 ? "Over budget" : "Available"))
-                        .font(.caption).foregroundStyle(hasCapacity && overBudget > 0 ? Spread.danger : Spread.secondary)
+                        .font(.caption).foregroundStyle(hasCapacity && overBudget > 0 ? Spread.danger : LifePalette.secondary)
                         .multilineTextAlignment(.trailing)
                 }
             }
@@ -149,7 +149,7 @@ struct LifeWeeklyTimeBudget: View {
 
             HStack(spacing: 5) {
                 Text("\(roles.count) Life \(roles.count == 1 ? "area" : "areas")")
-                    .font(.caption2).foregroundStyle(Spread.secondary)
+                    .font(.caption2).foregroundStyle(LifePalette.secondary)
                 Spacer(minLength: 8)
                 Button(action: onToggle) {
                     HStack(spacing: Spread.space1) {
@@ -198,14 +198,14 @@ struct LifeWeeklyTimeBudget: View {
                     if let available, available > 0 {
                         let width = LifeBudgetBarMath.width(hours: available, track: track, totalWidth: geometry.size.width)
                         ZStack {
-                            Spread.inset
+                            LifePalette.fill
                             LifeBudgetHatch()
-                                .stroke(Spread.secondary.opacity(0.14), lineWidth: 5)
+                                .stroke(LifePalette.secondary.opacity(0.14), lineWidth: 5)
                             if width >= minimumAvailableLabelWidth {
                                 Text(SpreadHours.text(available) + "h")
                                     .font(.caption.weight(.bold))
                                     .monospacedDigit()
-                                    .foregroundStyle(Spread.ink)
+                                    .foregroundStyle(LifePalette.ink)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
                                     .padding(.horizontal, 2)
@@ -216,23 +216,23 @@ struct LifeWeeklyTimeBudget: View {
                     }
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height, alignment: .leading)
-                .background(Spread.inset)
+                .background(LifePalette.fill)
                 .clipShape(Capsule())
-                .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+                .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 1))
             } else {
                 // A missing weekly capacity is unknown, not a 100%-filled
                 // budget. Defer proportions until the user sets Hours.
                 ZStack {
-                    Spread.inset
+                    LifePalette.fill
                     LifeBudgetHatch()
-                        .stroke(Spread.secondary.opacity(0.14), lineWidth: 5)
+                        .stroke(LifePalette.secondary.opacity(0.14), lineWidth: 5)
                     Text("Set weekly hours")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(Spread.secondary)
+                        .foregroundStyle(LifePalette.secondary)
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .clipShape(Capsule())
-                .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+                .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 1))
             }
             Color.clear
                 .contentShape(Rectangle())

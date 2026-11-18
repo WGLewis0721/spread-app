@@ -417,6 +417,27 @@ final class LifeUITests: XCTestCase {
         XCTAssertFalse(tasks.exists)
     }
 
+    func testFocusedLifeActionsFollowTheSelectedRole() {
+        startLife(ritualFixture: true)
+        let actions = app.buttons["life-tasks-button"]
+        let planDays = app.buttons["life-place-hours"]
+
+        for role in ["work", "home", "health"] {
+            let card = app.descendants(matching: .any).matching(identifier: "life-card-" + role).firstMatch
+            waitUntilHittable(card)
+            let strip = card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+            strip.tap()
+            XCTAssertTrue(planDays.waitForExistence(timeout: 10))
+            XCTAssertEqual(actions.value as? String, "Closed")
+            XCTAssertTrue(card.label.contains(role.capitalized))
+            capture("audit-life-palette-" + role)
+
+            strip.tap()
+            XCTAssertFalse(planDays.exists)
+            XCTAssertFalse(actions.exists)
+        }
+    }
+
     func testLifeDeleteThroughDetailsRestoresExactAreaWithUndo() {
         startLife()
         let card = app.descendants(matching: .any)

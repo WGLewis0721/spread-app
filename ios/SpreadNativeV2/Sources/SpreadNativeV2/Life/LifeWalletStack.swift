@@ -383,7 +383,7 @@ struct LifeTaskRows: View {
                     } label: {
                         SpreadIcon(name: "lucide-flag", size: 20)
                             .font(.body.weight(.semibold))
-                            .foregroundStyle(task.important == true ? Spread.danger : Spread.secondary)
+                            .foregroundStyle(task.important == true ? Spread.danger : LifePalette.secondary)
                             .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
                     }
                     .buttonStyle(.spreadPress)
@@ -418,7 +418,7 @@ struct LifeTaskRows: View {
                     }
                     return true
                 } isTargeted: { targeted in targetedTaskId = targeted ? task.id : nil }
-                Divider().overlay(Spread.line)
+                Divider().overlay(LifePalette.line)
             }
         }
         .padding(.horizontal, Spread.space3)

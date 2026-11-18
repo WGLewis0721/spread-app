@@ -321,6 +321,7 @@ struct LifeRoot: View {
                     .zIndex(2)
             }
             if let id = focusedRole, let role = snapshot.roles.first(where: { $0.id == id }) {
+                let roleTint = Color(hex: role.color)
                 HStack(spacing: Spread.space3) {
                     Button {
                         localSheet = .manage(id)
@@ -329,9 +330,9 @@ struct LifeRoot: View {
                             .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
                     }
                     .buttonStyle(.spreadPress)
-                    .foregroundStyle(Spread.ink)
-                    .background(Spread.elevated, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+                    .foregroundStyle(LifePalette.ink)
+                    .background(LifePalette.surface, in: Capsule())
+                    .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 1))
                     .accessibilityHint("Edit the name, intention, weekly hours, symbol and color, or delete this Life area")
                     .accessibilityIdentifier("life-details-button")
                     Button {
@@ -339,13 +340,17 @@ struct LifeRoot: View {
                             tasksOpen.toggle()
                         }
                     } label: {
-                        Label { Text("Tasks") } icon: { SpreadIcon(name: "lucide-list-todo", size: 18) }
+                        Label {
+                            Text("Tasks")
+                        } icon: {
+                            SpreadIcon(name: tasksOpen ? "lucide-chevron-up" : "lucide-list-todo", size: 18)
+                        }
                             .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
                     }
                     .buttonStyle(.spreadPress)
-                    .foregroundStyle(Spread.ink)
-                    .background(tasksOpen ? Spread.inset : Spread.elevated, in: Capsule())
-                    .overlay(Capsule().strokeBorder(tasksOpen ? Spread.accent : Spread.line, lineWidth: 1))
+                    .foregroundStyle(LifePalette.ink)
+                    .background(tasksOpen ? LifePalette.fill : LifePalette.surface, in: Capsule())
+                    .overlay(Capsule().strokeBorder(tasksOpen ? roleTint.opacity(0.72) : LifePalette.line, lineWidth: 1))
                     .accessibilityValue(tasksOpen ? "Open" : "Closed")
                     .accessibilityHint("Show or hide this area's tasks")
                     .accessibilityIdentifier("life-tasks-button")
@@ -370,14 +375,14 @@ struct LifeRoot: View {
                     .foregroundStyle(Spread.accent)
                 Text("Add Life")
                     .font(.headline)
-                    .foregroundStyle(Spread.ink)
+                    .foregroundStyle(LifePalette.ink)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, Spread.space4)
             .frame(maxWidth: .infinity, minHeight: 52)
-            .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+            .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
             .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow)
-                .strokeBorder(Spread.line, lineWidth: 1))
+                .strokeBorder(LifePalette.line, lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.spreadPress)
@@ -456,7 +461,7 @@ struct LifeRoot: View {
             if snapshot.recurringPlans?.isEmpty == false {
                 Text("Changes here affect only this week. Edit repeating schedules in Planner.")
                     .font(.caption)
-                    .foregroundStyle(Spread.secondary)
+                    .foregroundStyle(LifePalette.secondary)
             }
             SpreadArrowValueControl(
                 value: capacity.map { SpreadHours.text($0) + "h" } ?? "Set hours",
@@ -479,7 +484,7 @@ struct LifeRoot: View {
             if capacity == nil {
                 Text("Set your weekly total first. Area hours unlock after that.")
                     .font(.caption)
-                    .foregroundStyle(Spread.secondary)
+                    .foregroundStyle(LifePalette.secondary)
                     .accessibilityIdentifier("life-budget-capacity-required")
             }
             if capacityEntryVisible {
@@ -489,7 +494,7 @@ struct LifeRoot: View {
                         .focused($capacityInputFocused)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget)
-                        .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
+                        .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
                         .accessibilityIdentifier("life-budget-capacity-input")
                         .onAppear { capacityInputFocused = true }
                     Button("Set") {
@@ -519,7 +524,7 @@ struct LifeRoot: View {
                      ?? "Set weekly hours")
             }
             .font(.subheadline)
-            .foregroundStyle(Spread.secondary)
+            .foregroundStyle(LifePalette.secondary)
             .accessibilityElement(children: .combine)
             if !snapshot.roles.isEmpty {
                 Text("Choose a Life area to adjust").font(.subheadline.weight(.semibold))
@@ -575,9 +580,9 @@ struct LifeRoot: View {
             }
         }
         .padding(Spread.space4)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
         .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard)
-            .strokeBorder(Spread.line, lineWidth: 1))
+            .strokeBorder(LifePalette.line, lineWidth: 1))
         .accessibilityElement(children: .contain)
     }
 
@@ -619,6 +624,7 @@ struct LifeRoot: View {
 
     /// One obvious planning action, with extra details shown only when needed.
     private func details(_ role: Responsibility, snapshot: PlannerSnapshot) -> some View {
+        let roleTint = Color(hex: role.color)
         let weekdayHours = LifeCardWeekDistribution.hours(for: role.id, snapshot: snapshot)
         let placed = LifeCardWeekDistribution.assigned(weekdayHours)
         let remaining = snapshot.remainingHours(for: role.id)
@@ -630,7 +636,7 @@ struct LifeRoot: View {
                     LifeQuickAdd(planner: planner, roleId: role.id, onOpenTask: onOpenTask)
                         .padding(.horizontal, Spread.space3).padding(.vertical, 6)
                 }
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusInset))
+                .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: Spread.radiusInset))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("life-task-notebook")
             }
@@ -639,15 +645,17 @@ struct LifeRoot: View {
                     Text(SpreadHours.text(max(0, remaining)) + "h to plan")
                         .font(.headline)
                     Text(role.name + " · " + SpreadHours.text(placed) + "h on days")
-                        .font(.subheadline).foregroundStyle(Spread.secondary)
+                        .font(.subheadline).foregroundStyle(LifePalette.secondary)
                 }
                 Spacer(minLength: 0)
                 Button("Plan days") { localSheet = .reserve(role.id) }
                     .font(.subheadline.weight(.semibold))
                     .frame(minHeight: Spread.minimumTarget)
                     .padding(.horizontal, 14)
-                    .background(Spread.accent, in: Capsule())
-                    .foregroundStyle(Spread.onAccent)
+                    .foregroundStyle(LifePalette.ink)
+                    .background(roleTint.opacity(0.14), in: Capsule())
+                    .background(LifePalette.surface, in: Capsule())
+                    .overlay(Capsule().strokeBorder(roleTint.opacity(0.82), lineWidth: 1.5))
                     .buttonStyle(.spreadPress)
                     .accessibilityIdentifier("life-place-hours")
             }
@@ -659,7 +667,7 @@ struct LifeRoot: View {
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
             }
-            .foregroundStyle(Spread.accent)
+            .foregroundStyle(LifePalette.ink)
             .buttonStyle(.spreadPress)
             .accessibilityIdentifier("life-focus-timer")
             Button {
@@ -669,7 +677,7 @@ struct LifeRoot: View {
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: Spread.minimumTarget, alignment: .leading)
             }
-            .foregroundStyle(Spread.accent)
+            .foregroundStyle(LifePalette.ink)
             .buttonStyle(.spreadPress)
             .accessibilityIdentifier("life-change-area-hours")
             if placed > 0 {
@@ -691,14 +699,14 @@ struct LifeRoot: View {
                         }
                     }
                 }
-                .tint(Spread.accent)
+                .tint(LifePalette.ink)
                 .accessibilityIdentifier("life-planned-days")
             }
         }
         .padding(Spread.space4)
-        .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
+        .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusCard))
         .overlay(RoundedRectangle(cornerRadius: Spread.radiusCard)
-            .strokeBorder(Spread.line, lineWidth: 1))
+            .strokeBorder(LifePalette.line, lineWidth: 1))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-task-details")
     }
@@ -744,10 +752,10 @@ struct LifeRoot: View {
                             SpreadIcon(name: "lucide-chevron-up", size: 18)
                         }
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Spread.ink)
+                        .foregroundStyle(LifePalette.ink)
                         .padding(.horizontal, 14)
                         .frame(minHeight: Spread.minimumTarget)
-                        .background(Spread.elevated, in: Capsule())
+                        .background(LifePalette.surface, in: Capsule())
                     }
                 }
                 .buttonStyle(.spreadPress)
@@ -780,9 +788,9 @@ struct LifeRoot: View {
             }
         }
         .padding(3)
-        .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+        .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
         .overlay(RoundedRectangle(cornerRadius: Spread.radiusRow)
-            .strokeBorder(Spread.line, lineWidth: 1))
+            .strokeBorder(LifePalette.line, lineWidth: 1))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("life-week-toggle")
     }
@@ -814,7 +822,7 @@ struct LifeRoot: View {
             Text(item.rawValue)
                 .font(.caption2.weight(.semibold))
         }
-        .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+        .foregroundStyle(selected ? Spread.onAccent : LifePalette.ink)
         .frame(width: 51).frame(minHeight: 52)
         .background(selected ? Spread.accent : Color.clear,
                     in: RoundedRectangle(cornerRadius: Spread.radiusSmall))
@@ -1064,11 +1072,11 @@ private struct LifeBudgetChip: View {
             Text(hours).monospacedDigit()
         }
         .font(.subheadline)
-        .foregroundStyle(Spread.ink)
+        .foregroundStyle(LifePalette.ink)
         .padding(.horizontal, 10)
         .frame(minHeight: Spread.minimumTarget)
-        .background(selected ? Spread.inset : Spread.elevated, in: Capsule())
-        .overlay(Capsule().strokeBorder(selected ? Spread.accent : Spread.line, lineWidth: 1.5))
+        .background(selected ? LifePalette.fill : LifePalette.surface, in: Capsule())
+        .overlay(Capsule().strokeBorder(selected ? Spread.accent : LifePalette.line, lineWidth: 1.5))
     }
 }
 
