@@ -7,6 +7,29 @@ const root = "ios/SpreadNativeV2/Sources/SpreadNativeV2/";
 const plan = get(root + "Life/LifePlanAheadSheet.swift");
 const recurrence = get(root + "Life/LifeRecurringPlanForm.swift");
 const focus = get(root + "Focus/SpreadFocusTimerSheet.swift");
+const engagement = get(root + "Life/LifeEngagementSheets.swift");
+const backup = get(root + "Sheets/BackupRestoreSheet.swift");
+
+test("More destinations use Life neutrals on their sheets and nested surfaces", () => {
+  const weekAhead = engagement.slice(engagement.indexOf("struct LifeWeekAheadSheet"), engagement.indexOf("private struct RitualAreaHeader"));
+  const journey = engagement.slice(engagement.indexOf("struct LifeJourneySheet"));
+  const timer = focus.slice(0, focus.indexOf("struct SpreadReminderSettingsSheet"));
+
+  for (const [name, sheet] of Object.entries({ weekAhead, journey, timer, backup })) {
+    assert.match(sheet, /SpreadSheetStack\(canvas: LifePalette\.canvas\)/, name);
+    assert.doesNotMatch(sheet, /Spread\.(canvas|elevated|inset|secondary|ink|line|fill)\b/, name);
+    assert.doesNotMatch(sheet, /\.spreadListSurface\(\)/, name);
+    for (const card of sheet.matchAll(/\.spreadCard\(([^)]*)\)/g)) {
+      assert.match(card[1], /usesLifePalette: true/, name);
+    }
+  }
+
+  assert.match(weekAhead, /private func planningField[\s\S]*?\.background\(LifePalette\.fill/);
+  assert.match(journey, /private var timeline[\s\S]*?\.background\(LifePalette\.fill/);
+  assert.match(timer, /customFocusFields\.listRowBackground\(LifePalette\.surface\)/);
+  assert.match(timer, /SpreadRefinedControlStyle\(danger: true, usesLifePalette: true\)/);
+  assert.match(backup, /private func countTiles[\s\S]*?\.fill\(LifePalette\.surface\)/);
+});
 
 test("Plan Ahead has one primary entry and groups secondary paths", () => {
   const list = plan.slice(plan.indexOf("private var plansSections"), plan.indexOf("private var copyFirstWeek"));

@@ -409,14 +409,14 @@ struct LifeWeekAheadSheet: View {
     }
 
     var body: some View {
-        SpreadSheetStack {
+        SpreadSheetStack(canvas: LifePalette.canvas) {
             Group {
                 if let snapshot {
                     ScrollView {
                         VStack(alignment: .leading, spacing: Spread.space4) {
                             Text(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))
                                 .font(Spread.callout.weight(.medium))
-                                .foregroundStyle(Spread.secondary)
+                                .foregroundStyle(LifePalette.secondary)
                             if chosenWeek != snapshot.weekKey {
                                 weekIntro
                             } else if snapshot.roles.isEmpty {
@@ -492,11 +492,11 @@ struct LifeWeekAheadSheet: View {
                 .accessibilityHidden(true)
             question("Which week are you planning?")
             Text("Start with the hours and days you’ve already saved. Change anything as you go.")
-                .font(Spread.body).foregroundStyle(Spread.secondary)
+                .font(Spread.body).foregroundStyle(LifePalette.secondary)
         }
         .padding(Spread.space5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .spreadCard()
+        .spreadCard(usesLifePalette: true)
     }
 
     private func areaPanel(role: Responsibility, snapshot: PlannerSnapshot) -> some View {
@@ -515,7 +515,7 @@ struct LifeWeekAheadSheet: View {
             HStack(spacing: Spread.space1) {
                 ForEach(Step.allCases, id: \.self) { item in
                     Capsule()
-                        .fill(item == step ? Spread.accent : Spread.fill)
+                        .fill(item == step ? Spread.accent : LifePalette.line)
                         .frame(height: 4)
                 }
             }
@@ -532,12 +532,12 @@ struct LifeWeekAheadSheet: View {
 
     private var areaPosition: some View {
         Text("Life area \(areaIndex + 1) of \(snapshot?.roles.count ?? 0)")
-            .font(Spread.footnote).foregroundStyle(Spread.secondary)
+            .font(Spread.footnote).foregroundStyle(LifePalette.secondary)
     }
 
     private var stepPosition: some View {
         Text("\(step.rawValue) · \((Step.allCases.firstIndex(of: step) ?? 0) + 1) of 3")
-            .font(Spread.footnote.weight(.semibold)).foregroundStyle(Spread.ink)
+            .font(Spread.footnote.weight(.semibold)).foregroundStyle(LifePalette.ink)
     }
 
     private func question(_ title: String) -> some View {
@@ -553,16 +553,14 @@ struct LifeWeekAheadSheet: View {
         VStack(alignment: .leading, spacing: Spread.space3) {
             question("How many hours are available?")
             Text("This is your total capacity for the selected week. Nothing will be assigned automatically.")
-                .foregroundStyle(Spread.secondary)
-            TextField("Weekly hours (0–168)", text: $capacityText)
+                .foregroundStyle(LifePalette.secondary)
+            planningField("Weekly hours (0–168)", text: $capacityText)
                 .keyboardType(.decimalPad)
-                .textFieldStyle(.roundedBorder)
-                .frame(minHeight: Spread.minimumTarget)
                 .accessibilityIdentifier("week-ahead-capacity")
                 .disabled(saving)
         }
         .padding(Spread.space4)
-        .spreadCard()
+        .spreadCard(usesLifePalette: true)
     }
 
     private func hoursEditor(role: Responsibility, snapshot: PlannerSnapshot) -> some View {
@@ -590,9 +588,9 @@ struct LifeWeekAheadSheet: View {
                 .accessibilityLabel("Increase \(role.name) by half an hour")
             }
             Text("Changes save immediately. Existing hours on days are preserved.")
-                .font(Spread.footnote).foregroundStyle(Spread.secondary)
+                .font(Spread.footnote).foregroundStyle(LifePalette.secondary)
         }
-        .padding(Spread.space4).spreadCard()
+        .padding(Spread.space4).spreadCard(usesLifePalette: true)
     }
 
     private func changeBudget(role: Responsibility, to hours: Double) {
@@ -623,8 +621,8 @@ struct LifeWeekAheadSheet: View {
                                     .font(Spread.caption)
                             }
                             .frame(minWidth: 54, minHeight: 76)
-                            .foregroundStyle(current == iso ? Spread.onAccent : Spread.ink)
-                            .background(current == iso ? Spread.accent : Spread.inset,
+                            .foregroundStyle(current == iso ? Spread.onAccent : LifePalette.ink)
+                            .background(current == iso ? Spread.accent : LifePalette.fill,
                                         in: RoundedRectangle(cornerRadius: Spread.radiusControl))
                         }
                         .buttonStyle(.spreadPress)
@@ -636,18 +634,18 @@ struct LifeWeekAheadSheet: View {
             }
             .scrollIndicators(.hidden)
             Text(SpreadHours.text(max(0, snapshot.remainingHours(for: role.id))) + "h left to place for this area")
-                .font(Spread.callout).foregroundStyle(Spread.secondary)
+                .font(Spread.callout).foregroundStyle(LifePalette.secondary)
             Button {
                 submit(["type": "allocate", "roleId": role.id, "day": current, "hours": 1.0]) {}
             } label: {
                 Text("Place 1 hour on \(PlannerDates.label(PlannerDates.date(current), pattern: "EEE"))")
                     .frame(maxWidth: .infinity, minHeight: 48)
             }
-            .buttonStyle(SpreadRefinedControlStyle())
+            .buttonStyle(SpreadRefinedControlStyle(usesLifePalette: true))
             .disabled(snapshot.remainingHours(for: role.id) < 1 || saving)
             .accessibilityIdentifier("week-ahead-place-hour")
         }
-        .padding(Spread.space4).spreadCard()
+        .padding(Spread.space4).spreadCard(usesLifePalette: true)
     }
 
     private func tasksEditor(role: Responsibility, snapshot: PlannerSnapshot) -> some View {
@@ -659,10 +657,8 @@ struct LifeWeekAheadSheet: View {
             question("Anything you’d like to do?")
             let destination = hasHours ? PlannerDates.label(PlannerDates.date(chosen), pattern: "EEEE, MMM d") : "To place"
             Text("New tasks go to \(destination).")
-                .font(Spread.callout).foregroundStyle(Spread.secondary)
-            TextField("Add an optional task", text: $taskText)
-                .textFieldStyle(.roundedBorder)
-                .frame(minHeight: Spread.minimumTarget)
+                .font(Spread.callout).foregroundStyle(LifePalette.secondary)
+            planningField("Add an optional task", text: $taskText)
                 .submitLabel(.done)
                 .onSubmit { addTask(role: role, day: hasHours ? chosen : nil) }
                 .disabled(saving)
@@ -672,21 +668,35 @@ struct LifeWeekAheadSheet: View {
                     .padding(.horizontal, Spread.space4)
                     .frame(minHeight: Spread.minimumTarget)
             }
-            .buttonStyle(SpreadRefinedControlStyle())
+            .buttonStyle(SpreadRefinedControlStyle(usesLifePalette: true))
             .disabled(taskText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || saving)
             .accessibilityIdentifier("week-ahead-add-task")
             ForEach(snapshot.tasks(for: role.id)) { task in
                 HStack(spacing: Spread.space2) {
                     Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(task.done ? Spread.success : Spread.secondary)
+                        .foregroundStyle(task.done ? Spread.success : LifePalette.secondary)
                     Text(task.text).font(Spread.callout).lineLimit(2)
                     Spacer(minLength: 0)
                 }
                 .padding(Spread.space2)
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
             }
         }
-        .padding(Spread.space4).spreadCard()
+        .padding(Spread.space4).spreadCard(usesLifePalette: true)
+    }
+
+    private func planningField(_ title: String, text: Binding<String>) -> some View {
+        TextField(title, text: text, prompt: Text(title).foregroundStyle(LifePalette.secondary))
+            .textFieldStyle(.plain)
+            .foregroundStyle(LifePalette.ink)
+            .padding(.horizontal, Spread.space3)
+            .frame(minHeight: Spread.minimumTarget)
+            .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: Spread.radiusControl))
+            .overlay {
+                RoundedRectangle(cornerRadius: Spread.radiusControl)
+                    .strokeBorder(LifePalette.line, lineWidth: 1)
+                    .allowsHitTesting(false)
+            }
     }
 
     private func addTask(role: Responsibility, day: String?) {
@@ -745,7 +755,7 @@ struct LifeWeekAheadSheet: View {
         .padding(Spread.space4)
         .frame(maxWidth: 680)
         .frame(maxWidth: .infinity)
-        .background(Spread.canvas)
+        .background(LifePalette.canvas)
     }
 
     private func primary(_ title: String, id: String, action: @escaping () -> Void) -> some View {
@@ -859,14 +869,14 @@ struct LifeWeekAheadSheet: View {
         return VStack(alignment: .leading, spacing: Spread.space4) {
             question(placed > 0 ? "You made room for your week." : "Your week is ready to revisit.")
             RitualNumber(value: SpreadHours.text(placed), unit: "h", size: 72)
-            Text("Placed on days").font(Spread.callout).foregroundStyle(Spread.secondary)
+            Text("Placed on days").font(Spread.callout).foregroundStyle(LifePalette.secondary)
             ForEach(snapshot.roles) { role in
                 RitualAreaHeader(role: role, caption: "\(SpreadHours.spoken(snapshot.placedHours(for: role.id))) placed")
             }
         }
         .padding(Spread.space4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .spreadCard()
+        .spreadCard(usesLifePalette: true)
     }
 
     private func submit(_ action: [String: Any], afterSuccess: @escaping () -> Void) {
@@ -927,7 +937,7 @@ struct LifeJourneySheet: View {
     private var maxWeek: Double { history.map(\.placedHours).max() ?? 0 }
 
     var body: some View {
-        SpreadSheetStack {
+        SpreadSheetStack(canvas: LifePalette.canvas) {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spread.space6) {
                     if history.isEmpty {
@@ -962,7 +972,7 @@ struct LifeJourneySheet: View {
                 .font(.system(.title2, design: .serif).weight(.semibold))
                 .accessibilityAddTraits(.isHeader)
             Text("Saved weeks through \(PlannerDates.weekRange(base: snapshot.weekKey, offset: 0))")
-                .font(Spread.callout).foregroundStyle(Spread.secondary)
+                .font(Spread.callout).foregroundStyle(LifePalette.secondary)
             metric(SpreadHours.text(placedTotal), unit: "h", label: "Placed on days",
                    size: 82, id: "journey-hours")
             Divider()
@@ -976,7 +986,7 @@ struct LifeJourneySheet: View {
         }
         .padding(Spread.space5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .spreadCard()
+        .spreadCard(usesLifePalette: true)
     }
 
     private var roleBreakdown: some View {
@@ -997,7 +1007,7 @@ struct LifeJourneySheet: View {
                     values(hours: hours, tasks: tasks)
                 }
                 .padding(Spread.space4)
-                .spreadCard(edge: color)
+                .spreadCard(edge: color, usesLifePalette: true)
                 .accessibilityElement(children: .combine)
             }
         }
@@ -1013,7 +1023,7 @@ struct LifeJourneySheet: View {
                     values(hours: week.placedHours, tasks: week.completedTasks)
                 }
                 .padding(Spread.space4)
-                .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                 .accessibilityElement(children: .combine)
             }
         }
@@ -1028,7 +1038,7 @@ struct LifeJourneySheet: View {
                         size: CGFloat, id: String) -> some View {
         VStack(alignment: .leading, spacing: Spread.space1) {
             RitualNumber(value: value, unit: unit, size: size)
-            Text(label).font(Spread.callout).foregroundStyle(Spread.secondary)
+            Text(label).font(Spread.callout).foregroundStyle(LifePalette.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -1038,7 +1048,7 @@ struct LifeJourneySheet: View {
     private func values(hours: Double, tasks: Int) -> some View {
         let hoursLabel = Text("\(SpreadHours.spoken(hours)) placed").font(Spread.callout.weight(.semibold))
         let tasksLabel = Text(tasks == 1 ? "1 task finished" : "\(tasks.formatted()) tasks finished")
-            .font(Spread.callout).foregroundStyle(Spread.secondary)
+            .font(Spread.callout).foregroundStyle(LifePalette.secondary)
         return ViewThatFits(in: .horizontal) {
             HStack {
                 hoursLabel.fixedSize()
@@ -1056,7 +1066,7 @@ struct LifeJourneySheet: View {
     private func bar(value: Double, maximum: Double, color: Color) -> some View {
         let fraction = maximum > 0 ? CGFloat(min(1, max(0, value / maximum))) : 0
         return GeometryReader { geometry in
-            Capsule().fill(Spread.fill)
+            Capsule().fill(LifePalette.line)
                 .overlay(alignment: .leading) {
                     Capsule().fill(color).frame(width: geometry.size.width * fraction)
                 }
