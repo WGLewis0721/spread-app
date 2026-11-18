@@ -82,8 +82,8 @@ struct LifeWeekView: View {
                             day: date, onOpenTask: onOpenTask)
                         LifeQuickAdd(planner: planner, roleId: roleID, day: date, onOpenTask: onOpenTask)
                         }.padding(.horizontal, Spread.space1)
-                            .background(Spread.inset, in: RoundedRectangle(cornerRadius: Spread.radiusInset, style: .continuous))
-                    }.padding(18).spreadCard()
+                            .background(LifePalette.fill, in: RoundedRectangle(cornerRadius: Spread.radiusInset, style: .continuous))
+                    }.padding(18).lifeSurface()
                     .id(roleID)
                     .transition(SpreadTactile.detailReveal)
                 }
@@ -212,7 +212,7 @@ struct LifeWeekView: View {
                     if expanded { todayButton }
                 }
             }
-        }.padding(Spread.space3).spreadCard().accessibilityElement(children: .contain)
+        }.padding(Spread.space3).lifeSurface().accessibilityElement(children: .contain)
             .simultaneousGesture(daySwipe)
     }
 
@@ -256,7 +256,7 @@ struct LifeWeekView: View {
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .frame(minWidth: 30, minHeight: 30)
                     .background(selected ? Spread.accent : Color.clear, in: Circle())
-                    .foregroundStyle(selected ? Spread.onAccent : Spread.ink)
+                    .foregroundStyle(selected ? Spread.onAccent : LifePalette.ink)
                     // Today is a ring. Inside a selected fill the ring turns onAccent so it stays visible.
                     .overlay(Circle().strokeBorder(today ? (selected ? Spread.onAccent : Spread.accent) : .clear, lineWidth: 1.5))
                 HStack(spacing: 2) {
@@ -293,11 +293,11 @@ struct LifeWeekView: View {
                         SpreadIcon(name: inboxOpen ? "lucide-chevron-up" : "lucide-chevron-down", size: 18)
                             .font(.caption.weight(.semibold))
                     }
-                    .foregroundStyle(Spread.ink)
+                    .foregroundStyle(LifePalette.ink)
                     .padding(.horizontal, 14)
                     .frame(minHeight: Spread.minimumTarget)
-                    .background(Spread.elevated, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+                    .background(LifePalette.surface, in: Capsule())
+                    .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 1))
                 }
                 .buttonStyle(.spreadPress)
                 .accessibilityLabel("Tasks to place, \(tasks.count)")
@@ -308,7 +308,7 @@ struct LifeWeekView: View {
             if inboxOpen && !tasks.isEmpty {
                 LifeTaskRows(planner: planner, snapshot: snapshot, tasks: tasks, onOpenTask: onOpenTask)
                     .padding(Spread.space3)
-                    .background(Spread.elevated, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
+                    .background(LifePalette.surface, in: RoundedRectangle(cornerRadius: Spread.radiusRow))
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -325,11 +325,11 @@ struct LifeWeekView: View {
                 overdueCount
                     .font(.subheadline.weight(.semibold))
             }
-            .foregroundStyle(Spread.ink)
+            .foregroundStyle(LifePalette.ink)
             .padding(.horizontal, 14)
             .frame(minHeight: Spread.minimumTarget)
-            .background(Spread.elevated, in: Capsule())
-            .overlay(Capsule().strokeBorder(Spread.line, lineWidth: 1))
+            .background(LifePalette.surface, in: Capsule())
+            .overlay(Capsule().strokeBorder(LifePalette.line, lineWidth: 1))
         }
         .buttonStyle(.spreadPress)
         .accessibilityLabel("Overdue tasks")
@@ -374,7 +374,7 @@ struct LifeWeekView: View {
                                     Circle().fill(Color(hex: role.color).opacity(0.16))
                                     Circle().strokeBorder(Color(hex: role.color), lineWidth: 2)
                                         .shadow(color: Color(hex: role.color).opacity(0.5), radius: 6)
-                                    Text("+1h").font(.headline).foregroundStyle(Spread.ink)
+                                    Text("+1h").font(.headline).foregroundStyle(LifePalette.ink)
                                 }.frame(width: 52, height: 52)
                                 Text(role.name).font(.caption).lineLimit(2)
                             }.frame(width: max(56, (geometry.size.width - 36) / 4))
