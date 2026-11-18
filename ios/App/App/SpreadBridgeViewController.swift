@@ -17,20 +17,9 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
     #if DEBUG && targetEnvironment(simulator)
     override func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
         let configuration = super.webViewConfiguration(for: instanceConfiguration)
-        guard let fixture = ProcessInfo.processInfo.environment["SPREAD_RITUAL_AUDIT_FIXTURE"],
-              let encoded = try? JSONEncoder().encode(fixture),
-              let literal = String(data: encoded, encoding: .utf8) else { return configuration }
-
-        // A fresh WebKit store isolates the seeded audit from any installed planner profile.
-        configuration.websiteDataStore = .nonPersistent()
-        let script = """
-        if (location.protocol === 'capacitor:' && location.hostname === 'localhost') {
-          localStorage.setItem('spread.v1', \(literal));
+        if ProcessInfo.processInfo.environment["SPREAD_RITUAL_AUDIT_FIXTURE"] != nil {
+            configuration.websiteDataStore = .nonPersistent()
         }
-        """
-        configuration.userContentController.addUserScript(
-            WKUserScript(source: script, injectionTime: .atDocumentStart, forMainFrameOnly: true)
-        )
         return configuration
     }
     #endif
@@ -42,6 +31,21 @@ final class SpreadBridgeViewController: CAPBridgeViewController {
         readyHandler = handler
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "spreadPlannerReady")
         webView?.configuration.userContentController.add(handler, name: "spreadPlannerReady")
+        #if DEBUG && targetEnvironment(simulator)
+        // Capacitor installs its content controller after webViewConfiguration.
+        // Register the seed here, on that controller, before the first document loads.
+        if let fixture = ProcessInfo.processInfo.environment["SPREAD_RITUAL_AUDIT_FIXTURE"],
+           let encoded = try? JSONEncoder().encode(fixture), let literal = String(data: encoded, encoding: .utf8) {
+            let script = """
+            if (location.protocol === 'capacitor:' && location.hostname === 'localhost') {
+              localStorage.setItem('spread.v1', \(literal));
+            }
+            """
+            webView?.configuration.userContentController.addUserScript(
+                WKUserScript(source: script, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            )
+        }
+        #endif
         #if DEBUG
         let launchArguments = ProcessInfo.processInfo.arguments
         if launchArguments.contains("-SpreadDisableMirror") {

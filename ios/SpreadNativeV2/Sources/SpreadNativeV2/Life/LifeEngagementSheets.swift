@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import UIKit
 
 /// A full-screen retrospective of the selected week's saved planner activity.
 struct LifeWeekReviewSheet: View {
@@ -11,11 +12,11 @@ struct LifeWeekReviewSheet: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @Environment(\.dynamicTypeSize) private var typeSize
-    @Environment(\.scenePhase) private var scenePhase
     @AccessibilityFocusState private var focusedPage: Int?
     @State private var page = 0
     @State private var elapsed = 0.0
     @State private var playbackPreference: Bool?
+    @State private var appIsActive = UIApplication.shared.applicationState == .active
     @State private var holding = false
     @State private var didHold = false
     @State private var forward = true
@@ -36,10 +37,15 @@ struct LifeWeekReviewSheet: View {
 
     private var scene: Scene { scenes[page] }
     private var lastPage: Int { scenes.count - 1 }
-    private var manualMode: Bool { voiceOver || reduceMotion || typeSize.isAccessibilitySize }
+    private var manualMode: Bool {
+        #if DEBUG && targetEnvironment(simulator)
+        if ProcessInfo.processInfo.arguments.contains("-SpreadPauseReviewForAudit") { return true }
+        #endif
+        return voiceOver || reduceMotion || typeSize.isAccessibilitySize
+    }
     private var autoplay: Bool { playbackPreference ?? !manualMode }
     private var playing: Bool {
-        autoplay && !holding && scenePhase == .active && page < lastPage
+        autoplay && !holding && appIsActive && page < lastPage
     }
 
     private var placed: Double { snapshot.allocations.reduce(0) { $0 + $1.hours } }
@@ -98,7 +104,13 @@ struct LifeWeekReviewSheet: View {
         .background { backdrop }
         .foregroundStyle(.white)
         .statusBarHidden()
-        .accessibilityIdentifier("week-in-review-sheet")
+        .onAppear { appIsActive = UIApplication.shared.applicationState == .active }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            appIsActive = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            appIsActive = false
+        }
         .task(id: playing ? page : nil) {
             guard playing else { return }
             let clock = ContinuousClock()
@@ -170,6 +182,7 @@ struct LifeWeekReviewSheet: View {
                     } label: {
                         Image(systemName: autoplay ? "pause.fill" : "play.fill")
                             .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
+                            .contentShape(Rectangle())
                     }
                     .accessibilityLabel(autoplay ? "Pause stories" : "Play stories")
                     .accessibilityIdentifier("week-review-playback")
@@ -177,6 +190,7 @@ struct LifeWeekReviewSheet: View {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .frame(width: Spread.minimumTarget, height: Spread.minimumTarget)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Close Week in Review")
                 .accessibilityIdentifier("week-review-close")

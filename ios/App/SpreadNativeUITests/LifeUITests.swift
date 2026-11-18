@@ -14,6 +14,7 @@ final class LifeUITests: XCTestCase {
         let seen = showWhatsNew ? "test-previous-release" : "2026-11-11-life-week"
         app.launchArguments = ["-native.weekMonth.previewEnabled", "YES",
                                "-native.whatsNew.lastSeenRelease", seen] + EditorialArtTestMode.arguments
+            + (ritualFixture ? ["-SpreadPauseReviewForAudit"] : [])
         app.launchEnvironment = ritualFixture ? [
             "SPREAD_RITUAL_AUDIT_FIXTURE": ritualData(withCapacity: withCapacity)
         ] : [:]
