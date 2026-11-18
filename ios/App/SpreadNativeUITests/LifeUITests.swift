@@ -69,7 +69,7 @@ final class LifeUITests: XCTestCase {
         capture("audit-planner")
     }
 
-    func testAuditMoreScreens() {
+    func testAuditWeekReview() {
         startLife(ritualFixture: true)
         app.buttons["life-more"].tap()
         let review = app.buttons["more-week-in-review"]
@@ -107,7 +107,15 @@ final class LifeUITests: XCTestCase {
         let handoff = app.buttons["week-review-plan-next"]
         waitUntilHittable(handoff)
         handoff.tap()
+        XCTAssertTrue(app.navigationBars["Week Ahead"].waitForExistence(timeout: 10))
+    }
 
+    func testAuditWeekAhead() {
+        startLife(ritualFixture: true)
+        app.buttons["life-more"].tap()
+        let ahead = app.buttons["more-week-ahead"]
+        waitUntilHittable(ahead)
+        ahead.tap()
         XCTAssertTrue(app.navigationBars["Week Ahead"].waitForExistence(timeout: 10))
         let choose = app.buttons["week-ahead-plan-selected"]
         waitUntilHittable(choose)
@@ -153,7 +161,11 @@ final class LifeUITests: XCTestCase {
         XCTAssertEqual(location.label, "You made room for your week.")
         capture("audit-week-ahead-complete")
         finish.tap()
+    }
 
+    func testAuditJourney() {
+        startLife(ritualFixture: true)
+        app.buttons["life-more"].tap()
         let journey = app.buttons["more-your-journey"]
         waitUntilHittable(journey)
         journey.tap()

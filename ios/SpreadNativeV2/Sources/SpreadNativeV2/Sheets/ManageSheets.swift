@@ -480,8 +480,12 @@ struct MoreSheet: View {
     @State private var showWhatsNew = false
     @State private var showReminders = false
     @State private var showFocusTimer = false
-    @State private var showWeekReview = false
-    @State private var weekReviewSnapshot: PlannerSnapshot?
+    private struct WeekReview: Identifiable {
+        let snapshot: PlannerSnapshot
+        var id: String { snapshot.weekKey }
+    }
+
+    @State private var weekReview: WeekReview?
     @State private var openAheadAfterReview = false
     @State private var showWeekAhead = false
     @State private var showJourney = false
@@ -578,8 +582,7 @@ struct MoreSheet: View {
                                 tile("Week in Review", symbol: "calendar.badge.checkmark",
                                      id: "more-week-in-review") {
                                     guard let snapshot = planner.snapshot else { return }
-                                    weekReviewSnapshot = snapshot
-                                    showWeekReview = true
+                                    weekReview = WeekReview(snapshot: snapshot)
                                 }
                                 tile("Week Ahead", symbol: "calendar.badge.clock",
                                      id: "more-week-ahead") { showWeekAhead = true }
@@ -795,19 +798,16 @@ struct MoreSheet: View {
                                           roles: snapshot.roles, preferredRoleId: nil)
                 }
             }
-            .fullScreenCover(isPresented: $showWeekReview, onDismiss: {
-                weekReviewSnapshot = nil
+            .fullScreenCover(item: $weekReview, onDismiss: {
                 if openAheadAfterReview {
                     openAheadAfterReview = false
                     showWeekAhead = true
                 }
-            }) {
-                if let snapshot = weekReviewSnapshot {
-                    LifeWeekReviewSheet(snapshot: snapshot, onWeekAhead: {
-                        openAheadAfterReview = true
-                        showWeekReview = false
-                    })
-                }
+            }) { review in
+                LifeWeekReviewSheet(snapshot: review.snapshot, onWeekAhead: {
+                    openAheadAfterReview = true
+                    weekReview = nil
+                })
             }
             .sheet(isPresented: $showWeekAhead) {
                 if planner.snapshot != nil { LifeWeekAheadSheet(planner: planner) }

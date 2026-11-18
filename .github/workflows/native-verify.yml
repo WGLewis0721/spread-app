@@ -179,7 +179,7 @@ jobs:
           set -o pipefail
           suite=SpreadNativeUITests/LifeUITests
           if [[ "$JOURNEYS" == visual-audit ]]; then
-            tests=(testAuditPlannerScreens testAuditMoreScreens testAuditRitualValidationError testAuditQuickStart testAuditCardIntention
+            tests=(testAuditWeekReview testAuditWeekAhead testAuditJourney testAuditRitualValidationError
                    testWeekReviewHoldResumesAndHandoffNeedsAnExplicitTap)
           else
             tests=(testLifeDeleteThroughDetailsRestoresExactAreaWithUndo
