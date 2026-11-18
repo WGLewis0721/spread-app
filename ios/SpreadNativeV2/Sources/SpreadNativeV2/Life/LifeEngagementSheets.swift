@@ -309,7 +309,7 @@ struct LifeWeekReviewSheet: View {
 private struct RitualNumber: View {
     let value: String
     let unit: String?
-    @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat
+    @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat = 82
     @ScaledMetric(relativeTo: .title2) private var unitSize: CGFloat = 24
 
     init(value: String, unit: String? = nil, size: CGFloat) {
