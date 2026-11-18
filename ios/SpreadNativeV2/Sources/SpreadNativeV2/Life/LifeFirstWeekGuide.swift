@@ -1,5 +1,7 @@
 /// Read-only milestones in the actual weekly plan.
 enum LifeFirstWeekStep: Equatable {
+    static let handledKey = "native.life.firstWeekHandled"
+
     case area
     case hours(String)
     case days(String)

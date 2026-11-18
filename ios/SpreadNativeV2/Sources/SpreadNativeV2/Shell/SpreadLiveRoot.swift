@@ -30,6 +30,14 @@ public struct SpreadLiveRoot: View {
     public init(planner: LivePlanner, recovery: @escaping () -> Void) {
         self.planner = planner
         self.recovery = recovery
+        #if DEBUG && targetEnvironment(simulator)
+        // Reset only the guide and release-note preferences for an isolated UI test install.
+        if ProcessInfo.processInfo.environment["SPREAD_RITUAL_AUDIT_FIXTURE"] != nil,
+           ProcessInfo.processInfo.arguments.contains("-SpreadResetFirstWeekGuide") {
+            UserDefaults.standard.removeObject(forKey: LifeFirstWeekStep.handledKey)
+            UserDefaults.standard.removeObject(forKey: SpreadReleaseNotes.lastSeenKey)
+        }
+        #endif
     }
 
     public var body: some View {

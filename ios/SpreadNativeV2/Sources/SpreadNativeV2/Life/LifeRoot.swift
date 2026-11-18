@@ -64,7 +64,7 @@ struct LifeRoot: View {
     @State private var historyVisible = false
     @State private var showFocusTimer = false
     @State private var preferredFocusRoleId: String?
-    @AppStorage("native.life.firstWeekHandled") private var firstWeekHandled = false
+    @AppStorage(LifeFirstWeekStep.handledKey) private var firstWeekHandled = false
     // Capture install status before the shell's What's New task marks this release as seen.
     @State private var freshInstall = (UserDefaults.standard.string(forKey: SpreadReleaseNotes.lastSeenKey) ?? "").isEmpty
     @State private var firstWeekScope: FirstWeekScope?

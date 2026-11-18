@@ -478,19 +478,21 @@ final class LifeUITests: XCTestCase {
     }
 
     private func launchEmptyFirstWeek(forceWelcome: Bool, failedSave: String? = nil) {
-        app.launchArguments = ["-native.whatsNew.lastSeenRelease", "",
-                               "-SpreadPauseReviewForAudit"]
-        if forceWelcome { app.launchArguments += ["-native.life.firstWeekHandled", "NO"] }
+        app.launchArguments = ["-SpreadPauseReviewForAudit"]
+        if forceWelcome { app.launchArguments += ["-SpreadResetFirstWeekGuide"] }
         if let failedSave { app.launchArguments += ["-SpreadFailSaveMarker", failedSave] }
         app.launchEnvironment = ["SPREAD_RITUAL_AUDIT_FIXTURE":
             #"{"currentWeek":"2026-11-16","hats":[],"weeks":{"2026-11-16":{"boxes":[],"allocations":[]}}}"#]
         app.launch()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root")
+            .firstMatch.waitForExistence(timeout: 90), "The native Life planner did not load")
         waitUntilHittable(app.buttons["life-more"])
     }
 
     private func assertFirstWeekPrompt(_ text: String) {
         XCTAssertTrue(app.staticTexts.matching(identifier: "life-first-week-title")
-            .matching(NSPredicate(format: "label == %@", text)).firstMatch.waitForExistence(timeout: 15))
+            .matching(NSPredicate(format: "label == %@", text)).firstMatch.waitForExistence(timeout: 15),
+            "Expected first-week prompt: \(text)")
     }
 
     private func revealFirstWeekControl(_ control: XCUIElement) {
