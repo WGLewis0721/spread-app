@@ -35,4 +35,13 @@ final class LifeFirstWeekGuideTests: XCTestCase {
         week.roles.removeFirst()
         XCTAssertEqual(LifeFirstWeekStep.next(in: week, preferredRoleID: work.id), .task(home.id))
     }
+
+    func testNewInstallWithDefaultLifeAreasCountsAsFirstRun() {
+        var week = emptyWeek()
+        week.roles = [home, work]
+        XCTAssertTrue(week.isUntouchedFirstRun)
+        week.life = LifeWeekSnapshot(version: 1, capacityHours: 12, priorityRoleId: nil,
+                                     priorityGoalHours: nil, priorityDay: nil)
+        XCTAssertFalse(week.isUntouchedFirstRun)
+    }
 }

@@ -179,7 +179,7 @@ function UnlockScreen() {
             <button type="button" aria-pressed={!dark} aria-label="Light mode" onClick={() => chooseTheme("light")}><Sun size={15} strokeWidth={1.8} aria-hidden="true" /></button>
             <button type="button" aria-pressed={dark} aria-label="Dark mode" onClick={() => chooseTheme("dark")}><Moon size={15} strokeWidth={1.8} aria-hidden="true" /></button>
           </div>
-          <a href="#start" className="site-nav-cta">Join the beta</a>
+          <a href={TESTFLIGHT_URL} className="site-nav-cta" target="_blank" rel="noopener noreferrer">Join the beta</a>
         </div>
       </nav>
 
@@ -189,10 +189,10 @@ function UnlockScreen() {
           <h1><span className="site-line"><span>A little more room</span></span><span className="site-line"><span>for <em>what matters.</em></span></span></h1>
           <p className="site-lede">Work. Home. Yourself. Give every part of your life a place in your week—with a planner that starts with your time.</p>
           <div className="site-hero-actions">
-            <a href="#start" className="site-button">Start this week <ChevronRight size={17} aria-hidden="true" /></a>
+            <a href={TESTFLIGHT_URL} className="site-button" target="_blank" rel="noopener noreferrer">Join the beta <ChevronRight size={17} aria-hidden="true" /></a>
             <a href="#how" className="site-text-link">See how it works <span aria-hidden="true">↗</span></a>
           </div>
-          <p className="site-hero-note">Private beta. On your device. At your pace.</p>
+          <p className="site-hero-note">Private beta on TestFlight. On your device. At your pace.</p>
         </div>
 
         <SpreadStack />
@@ -247,7 +247,7 @@ function UnlockScreen() {
         <div className="site-start-copy">
           <p className="site-kicker">Start where you are</p>
           <h2>You have 168 hours.<br /><em>Make them yours.</em></h2>
-          <p>Spread is in private beta on TestFlight for iPhone and iPad. Join below to try it. Everything you plan stays on your device.</p>
+          <p>Spread is in private beta on TestFlight for iPhone and iPad. Tap below on your iPhone or iPad: Apple’s TestFlight app installs first, then Spread. Everything you plan stays on your device.</p>
           <HourGrid />
         </div>
         <div className="site-start-card">
