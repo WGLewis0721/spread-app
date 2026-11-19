@@ -378,7 +378,6 @@ final class LifeUITests: XCTestCase {
     func testFreshLifeGuideCanBeSkippedAndReopenedFromMore() {
         launchEmptyFirstWeek(forceWelcome: true)
         assertFirstWeekPrompt("Make room for what matters.")
-        XCTAssertFalse(app.buttons["whats-new-done"].exists)
         app.buttons["life-first-week-skip"].tap()
         XCTAssertTrue(app.buttons["life-new-area"].waitForExistence(timeout: 10))
         app.terminate()
@@ -495,6 +494,9 @@ final class LifeUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "life-root")
             .firstMatch.waitForExistence(timeout: 90), "The native Life planner did not load")
+        // A first launch opens the newest patch notes above the guide. Close them to reach the guide.
+        let notes = app.buttons["whats-new-done"]
+        if notes.waitForExistence(timeout: 6) { notes.tap() }
         if forceWelcome {
             let story = app.descendants(matching: .any).matching(identifier: "life-first-week-story").firstMatch
             XCTAssertTrue(story.waitForExistence(timeout: 30))
