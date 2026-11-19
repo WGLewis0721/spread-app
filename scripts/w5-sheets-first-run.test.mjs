@@ -44,9 +44,9 @@ test("What's New keeps its icon on the text scale instead of a fixed point size"
   assert.match(whatsNew, /\.font\(\.system\(\.title, weight: \.medium\)\)/);
 });
 
-test("a brand-new plan does not open What's New; it marks the current notes as seen", () => {
+test("a first launch opens the newest What's New instead of marking it seen", () => {
   assert.match(liveRoot, /guard let snapshot = planner\.snapshot, sheet == nil, whatsNew == nil else \{ return \}/);
-  assert.match(liveRoot, /if lastSeenReleaseID\.isEmpty, snapshot\.isUntouchedFirstRun \{\s*\n\s*lastSeenReleaseID = SpreadReleaseNotes\.newest\(for: SpreadReleaseNotes\.appVersion\)\?\.id \?\? ""/);
+  assert.doesNotMatch(liveRoot, /lastSeenReleaseID = SpreadReleaseNotes\.newest/);
   // The launch assignment is unchanged, so the sheet still opens from one item that carries its notes.
   assert.match(liveRoot, /if !unseen\.isEmpty \{ whatsNew = WhatsNewPresentation\(notes: unseen\) \}/);
 });
