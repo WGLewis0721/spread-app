@@ -467,8 +467,7 @@ struct LifeRoot: View {
             checkedFirstWeekOffer = true
             let defaults = UserDefaults.standard
             let pendingProfile = defaults.string(forKey: LifeFirstWeekStep.pendingProfileKey)
-            let empty = snapshot.roles.isEmpty && snapshot.allocations.isEmpty
-                && snapshot.tasks.isEmpty && snapshot.life?.capacityHours == nil
+            let empty = snapshot.isUntouchedFirstRun
             guard planner.recoveryNotice == nil, pendingProfile == scope.profileID || (pendingProfile == nil && empty)
                 else { return }
             firstWeekScope = scope

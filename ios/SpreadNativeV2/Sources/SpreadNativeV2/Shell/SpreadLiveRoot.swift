@@ -16,6 +16,7 @@ public struct SpreadLiveRoot: View {
     @State private var appearance: SpreadAppearance = SpreadAppearancePreference.read()
     @State private var sheet: LiveSheet?
     @State private var firstWeekReplay = 0
+    @State private var countedLaunch = false
     /// The launch What's New splash. It carries its own notes, so the sheet is built from exactly the notes that
     /// caused it to open, rather than from a separate value that may not have been set yet.
     @State private var whatsNew: WhatsNewPresentation?
@@ -38,12 +39,13 @@ public struct SpreadLiveRoot: View {
            ProcessInfo.processInfo.arguments.contains("-SpreadResetFirstWeekGuide") {
             UserDefaults.standard.removeObject(forKey: LifeFirstWeekStep.handledKey)
             UserDefaults.standard.removeObject(forKey: LifeFirstWeekStep.pendingProfileKey)
+            UserDefaults.standard.removeObject(forKey: LifeFirstWeekStep.launchCountKey)
             UserDefaults.standard.removeObject(forKey: SpreadReleaseNotes.lastSeenKey)
         }
         #endif
         let defaults = UserDefaults.standard
         canOfferFirstWeek = !defaults.bool(forKey: LifeFirstWeekStep.handledKey)
-            && ((defaults.string(forKey: SpreadReleaseNotes.lastSeenKey) ?? "").isEmpty
+            && (defaults.integer(forKey: LifeFirstWeekStep.launchCountKey) == 0
                 || defaults.string(forKey: LifeFirstWeekStep.pendingProfileKey) != nil)
     }
 
@@ -110,11 +112,18 @@ public struct SpreadLiveRoot: View {
             }
         }
         .task(id: planner.snapshot != nil) {
+            // Count a launch only once the plan is on screen, so a launch that dies while loading is not spent.
+            if planner.snapshot != nil, !countedLaunch {
+                countedLaunch = true
+                let defaults = UserDefaults.standard
+                defaults.set(defaults.integer(forKey: LifeFirstWeekStep.launchCountKey) + 1,
+                             forKey: LifeFirstWeekStep.launchCountKey)
+            }
             // Show only when the real planner is ready, not over its launch screen.
             guard let snapshot = planner.snapshot, sheet == nil, whatsNew == nil else { return }
             // A brand-new plan has nothing to catch up on. Its first launch marks the current notes as seen, so
             // What's New waits for the next update rather than covering the empty plan.
-            if lastSeenReleaseID.isEmpty, snapshot.roles.isEmpty {
+            if lastSeenReleaseID.isEmpty, snapshot.isUntouchedFirstRun {
                 lastSeenReleaseID = SpreadReleaseNotes.newest(for: SpreadReleaseNotes.appVersion)?.id ?? ""
                 return
             }

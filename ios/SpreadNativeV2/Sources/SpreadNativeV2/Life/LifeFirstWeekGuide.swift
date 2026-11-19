@@ -1,7 +1,18 @@
+extension PlannerSnapshot {
+    /// A new install starts with default Life areas, so "untouched" means nothing a person did: no weekly
+    /// hours set, no hours placed on days and no tasks.
+    var isUntouchedFirstRun: Bool {
+        allocations.isEmpty && tasks.isEmpty && life?.capacityHours == nil
+    }
+}
+
 /// Read-only milestones in the actual weekly plan.
 enum LifeFirstWeekStep: Equatable {
     static let handledKey = "native.life.firstWeekHandled"
     static let pendingProfileKey = "native.life.firstWeekPendingProfile"
+    /// Launches that reached a loaded plan. It is stored on the device and removed with the app, so 0 means a
+    /// new install or a reinstall.
+    static let launchCountKey = "native.app.launchCount"
 
     case area
     case hours(String)
