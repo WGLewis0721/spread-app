@@ -136,3 +136,103 @@ workflows:
           PY
     artifacts:
       - artifacts/store-status/*-summary.json
+
+  # Manual only. Captures the native Life experience on a simulator for App Store and marketing.
+  # Uploads nothing: no signing, no App Store Connect publishing, no build-number changes.
+  # Reusable: change SCREENSHOT_DEVICE and SCREENSHOT_SIZE for another simulator, then run again.
+  spread-ios-screenshots:
+    name: Spread - iOS App Store screenshots (manual, no upload)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    cache:
+      cache_paths:
+        - $HOME/Library/Caches/org.swift.swiftpm
+    environment:
+      vars:
+        # Simulator name as shown by `xcrun simctl list devices available`.
+        SCREENSHOT_DEVICE: "iPhone 17 Pro Max"
+        # Native pixel size of that simulator's screen (width x height). The export fails on any other size.
+        SCREENSHOT_SIZE: "1320x2868"
+        VITE_SPREAD_CLOUD_BACKUP: "0"
+        VITE_SPREAD_CLOUD_SYNC: "0"
+      node: 22
+      xcode: 27.1
+    scripts:
+      - name: Require local-only screenshot settings
+        script: |
+          set -eu
+          test "$VITE_SPREAD_CLOUD_BACKUP" = 0 || exit 1
+          test "$VITE_SPREAD_CLOUD_SYNC" = 0 || exit 1
+      - name: Install and bundle the app the same way as the release
+        script: |
+          set -eu
+          npm ci
+          npm run ios:sync
+      - name: Confirm the simulator is installed
+        script: |
+          set -eu
+          if ! xcrun simctl list devices available | grep -F "$SCREENSHOT_DEVICE (" >/dev/null; then
+            echo "Simulator '$SCREENSHOT_DEVICE' is not installed. Available devices:" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+      - name: Capture screenshots on the simulator
+        # Continue on failure so the export step still packages every state that was reached.
+        ignore_failure: true
+        script: |
+          set -u
+          OUT="$CM_BUILD_DIR/artifacts/screenshots"
+          rm -rf "$OUT"
+          mkdir -p "$OUT"
+          set +e
+          xcodebuild test \
+            -project ios/App/App.xcodeproj \
+            -scheme SpreadNativeUITests \
+            -destination "platform=iOS Simulator,name=$SCREENSHOT_DEVICE,OS=latest" \
+            -only-testing:SpreadNativeUITests/ScreenshotCaptureUITests \
+            -parallel-testing-enabled NO \
+            -resultBundlePath "$OUT/capture.xcresult" \
+            CODE_SIGNING_ALLOWED=NO > "$OUT/xcodebuild.log" 2>&1
+          STATUS=$?
+          set -e
+          echo "$STATUS" > "$OUT/test-status.txt"
+          echo "xcodebuild test exited with $STATUS"
+          exit "$STATUS"
+      - name: Export attachments, validate, and package
+        ignore_failure: true
+        script: |
+          set -u
+          OUT="$CM_BUILD_DIR/artifacts/screenshots"
+          mkdir -p "$OUT/raw"
+          if test -d "$OUT/capture.xcresult"; then
+            xcrun xcresulttool export attachments --path "$OUT/capture.xcresult" --output-path "$OUT/raw" \
+              || echo "xcresulttool could not export attachments" >&2
+          else
+            echo "No result bundle was produced; the test did not run." >&2
+          fi
+          python3 scripts/export_screenshots.py \
+            --input "$SCREENSHOT_DEVICE=$OUT/raw:$SCREENSHOT_SIZE" \
+            --out "$OUT/package" \
+            --zip-name "spread-app-store-screenshots-${CM_BUILD_ID:-local}.zip" \
+            --commit "${CM_COMMIT:-}" \
+            --branch "${CM_BRANCH:-}" \
+            --build-id "${CM_BUILD_ID:-}"
+          echo "$?" > "$OUT/export-status.txt"
+      - name: Keep the result bundle and fail if any screenshot is missing
+        script: |
+          set -eu
+          OUT="$CM_BUILD_DIR/artifacts/screenshots"
+          (cd "$OUT" && zip -rq capture.xcresult.zip capture.xcresult)
+          TEST_STATUS="$(cat "$OUT/test-status.txt" 2>/dev/null || echo missing)"
+          EXPORT_STATUS="$(cat "$OUT/export-status.txt" 2>/dev/null || echo missing)"
+          echo "xcodebuild status: $TEST_STATUS. Export status: $EXPORT_STATUS."
+          test "$TEST_STATUS" = 0 && test "$EXPORT_STATUS" = 0 || {
+            echo "Screenshot capture is incomplete. Read $OUT/package/summary.txt." >&2
+            exit 1
+          }
+    artifacts:
+      - artifacts/screenshots/package/*.zip
+      - artifacts/screenshots/package/manifest.json
+      - artifacts/screenshots/package/summary.txt
+      - artifacts/screenshots/xcodebuild.log
+      - artifacts/screenshots/capture.xcresult.zip
